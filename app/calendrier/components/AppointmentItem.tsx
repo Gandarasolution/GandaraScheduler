@@ -3,8 +3,7 @@ import React,{ useState, useRef, use, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { Appointment } from '../types';
 import { addMinutes, differenceInMinutes, setMinutes, setHours } from 'date-fns';
-import { CELL_WIDTH } from '../pages/index'
-import { is } from 'date-fns/locale';
+import { CELL_WIDTH, HALF_DAY_INTERVALS} from '../pages/index'
 
 interface AppointmentItemProps {
   appointment: Appointment;
@@ -35,39 +34,41 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
   
   // Largeur d'une cellule (intervalle)
   const INTERVAL_WIDTH = CELL_WIDTH/2;
+  const HALF_DAY_DURATION = 12 * 60 * 60 * 1000; // 12 heures en millisecondes
 
 
   // Nombre d'intervalles (matin/après-midi) entre start et end
   const getIntervalCount = (start: Date, end: Date) => {
     const diff = end.getTime() - start.getTime();
-    // 1 intervalle = 4h = 14400000 ms (ex: 8h-12h ou 13h-17h)
-    return Math.max(1, Math.round(diff / (4 * 60 * 60 * 1000)));
+    return Math.max(1, Math.round(diff / HALF_DAY_DURATION)); // Au moins 1 intervalle
   };
   
 
   function addInterval(date: Date, n: number) {
-    
+
+    const morning = HALF_DAY_INTERVALS[0];
+    const afternoon = HALF_DAY_INTERVALS[1];
+
     const h = date.getHours();
     let next = new Date(date);
     for (let i = 0; i < Math.abs(n); i++) {
       if (n > 0) {
         // Avance d'un intervalle
-        if (h >= 17 ) {
+        if (h >= afternoon.endHour ) {
             next.setDate(next.getDate() + 1);
-            next.setHours(9, 0, 0, 0); // après-midi -> matin du lendemain
+            next.setHours(morning.endHour, 0, 0, 0); // après-midi -> matin du lendemain
         } 
-        //Les intervalles sont 9-13 / 13-17
-        else if (h >= 9 && h < 13) {
-          next.setHours(13, 0, 0, 0); // matin -> après-midi
+        else if (h >= morning.endHour) {
+          next.setHours(afternoon.endHour, 0, 0, 0); // matin -> après-midi
         }
         
       } else {
         // Recule d'un intervalle
-        if (h < 9) {
+        if (h < morning.startHour) {
           next.setDate(next.getDate() - 1);
-          next.setHours(17, 0, 0, 0); // matin -> après-midi du jour précédent
-        } else if (h >= 13 && h < 17) {
-          next.setHours(9, 0, 0, 0); // après-midi -> matin
+          next.setHours(afternoon.startHour, 0, 0, 0); // matin -> après-midi du jour précédent
+        } else if (h <= afternoon.startHour) {
+          next.setHours(morning.startHour, 0, 0, 0); // après-midi -> matin
         } 
       }
     }
@@ -150,18 +151,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
    // Affichage en temps réel
   const start = tempStart ?? appointment.startDate;
   const end = tempEnd ?? appointment.endDate;
-
-  console.log(`Start: ${start}, End: ${end}`);
-  
-
   const intervalCount = getIntervalCount(start, end);
-
-  console.log(intervalCount);
-  
-
   const calcultedWidth = intervalCount * INTERVAL_WIDTH;
-  console.log(`Interval Count: ${intervalCount}, Calculated Width: ${calcultedWidth}`);
   
+  if (appointment.id === 1) {
+      console.log(`Start: ${start}, End: ${end}`);
+    console.log(intervalCount);
+    console.log(`Interval Count: ${intervalCount}, Calculated Width: ${calcultedWidth}`);
+  }
 
   return (
     <div
