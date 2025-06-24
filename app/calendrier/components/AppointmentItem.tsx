@@ -2,7 +2,7 @@
 import React,{ useState, useRef, use, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { Appointment } from '../types';
-import { addMinutes, differenceInMinutes, setMinutes, setHours } from 'date-fns';
+import { addDays, set } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS} from '../pages/index'
 
 interface AppointmentItemProps {
@@ -12,6 +12,7 @@ interface AppointmentItemProps {
 }
 
 const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick, onResize }) => {
+
   const [{ isDragging }, drag] = useDrag({
     type: 'appointment',
     item: { id: appointment.id, type: 'appointment' },
@@ -26,11 +27,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
 
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
-  const [tempStart, setTempStart] = useState<Date | null>(null);
-  const [tempEnd, setTempEnd] = useState<Date | null>(null);
+  const [dragStart, setDragStart] = useState<Date>(appointment.startDate);
+  const [dragEnd, setDragEnd] = useState<Date>(appointment.endDate);
+  const dragStartRef = useRef<Date>(appointment.startDate);
+  const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
-  const initialStart = useRef<Date>(appointment.startDate);
-  const initialEnd = useRef<Date>(appointment.endDate);
   
   // Largeur d'une cellule (intervalle)
   const INTERVAL_WIDTH = CELL_WIDTH/2;
@@ -43,31 +44,40 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
     return Math.max(1, Math.round(diff / HALF_DAY_DURATION)); // Au moins 1 intervalle
   };
   
+  const setDragStartSafe = (date: Date) => {
+    dragStartRef.current = date;
+    setDragStart(date);
+  };
+  const setDragEndSafe = (date: Date) => {
+    dragEndRef.current = date;
+    setDragEnd(date);
+  };
 
   function addInterval(date: Date, n: number) {
 
     const morning = HALF_DAY_INTERVALS[0];
     const afternoon = HALF_DAY_INTERVALS[1];
 
-    const h = date.getHours();
+    let h;
     let next = new Date(date);
     for (let i = 0; i < Math.abs(n); i++) {
+      h = next.getHours();
       if (n > 0) {
         // Avance d'un intervalle
-        if (h >= afternoon.endHour ) {
-            next.setDate(next.getDate() + 1);
-            next.setHours(morning.endHour, 0, 0, 0); // après-midi -> matin du lendemain
+        if (h === afternoon.endHour ) {
+            next = addDays(next, 1); // Après-midi -> matin du lendemain
+            next.setHours(morning.endHour, 0, 0, 0); // après-midi -> matin du lendemain  
         } 
-        else if (h >= morning.endHour) {
+        else if (h === morning.endHour) {          
           next.setHours(afternoon.endHour, 0, 0, 0); // matin -> après-midi
         }
         
       } else {
         // Recule d'un intervalle
-        if (h < morning.startHour) {
-          next.setDate(next.getDate() - 1);
-          next.setHours(afternoon.startHour, 0, 0, 0); // matin -> après-midi du jour précédent
-        } else if (h <= afternoon.startHour) {
+        if (h === morning.startHour) {
+          next = addDays(next, -1); // Matin -> après-midi du jour précédent
+          next.setHours(afternoon.startHour, 0, 0, 0);
+        } else if (h === afternoon.startHour) {
           next.setHours(morning.startHour, 0, 0, 0); // après-midi -> matin
         } 
       }
@@ -79,10 +89,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
   const handleMouseDown = (e: React.MouseEvent, handleType: 'left' | 'right') => {
      e.stopPropagation();
     initialX.current = e.clientX;
-    initialStart.current = appointment.startDate;
-    initialEnd.current = appointment.endDate;
-    setTempStart(appointment.startDate);
-    setTempEnd(appointment.endDate);
+    setDragStart(appointment.startDate);
+    setDragEnd(appointment.endDate);
     if (handleType === 'left') setIsResizingLeft(true);
     else setIsResizingRight(true);
   };
@@ -91,48 +99,39 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
     if (!isResizingLeft && !isResizingRight) return;
     const dx = e.clientX - initialX.current;
     let intervalsMoved = Math.round(dx / INTERVAL_WIDTH);
+    const initialStart = dragStartRef.current;
+    const initialEnd = dragEndRef.current;
 
     // Pour éviter les petits déplacements involontaires
     if (Math.abs(dx) < INTERVAL_WIDTH / 2) intervalsMoved = 0;
 
-    let newStartDate = initialStart.current;
-    let newEndDate = initialEnd.current;
+    let newStartDate = initialStart;
+    let newEndDate = initialEnd;
 
-    
 
     if (isResizingLeft && intervalsMoved !== 0) {
-      newStartDate = addInterval(initialStart.current, intervalsMoved);
+      newStartDate = addInterval(initialStart, intervalsMoved);
       
       // Ne pas dépasser la fin
       if (newStartDate >= appointment.endDate) newStartDate = new Date(appointment.endDate.getTime() - 4 * 60 * 60 * 1000);
-      setTempStart(newStartDate);
+      setDragStartSafe(newStartDate);
 
     }
-    if (isResizingRight && intervalsMoved !== 0) {
+    if (isResizingRight && intervalsMoved !== 0) {      
       newEndDate = addInterval(appointment.endDate, intervalsMoved);
-
-      // console.log('intervalsMoved: ' + intervalsMoved);
-      
-      // console.log(`New End Date: ${newEndDate}`);
-      // console.log(`Initial Start: ${appointment.endDate}`);
-      
-
-      //console.log(intervalCount, calcultedWidth);
       
       // Ne pas précéder le début
       if (newEndDate <= appointment.startDate) newEndDate = new Date(appointment.startDate.getTime() + 4 * 60 * 60 * 1000);
-      setTempEnd(newEndDate);
+      setDragEndSafe(newEndDate);
     }
   };
 
   const handleMouseUp = () => {
-    if (tempStart && tempEnd) {
-      onResize(appointment.id, tempStart, tempEnd);
+    if (dragStartRef.current && dragEndRef.current) {      
+      onResize(appointment.id, dragStartRef.current, dragEndRef.current);
     }
     setIsResizingLeft(false);
     setIsResizingRight(false);
-    setTempStart(null);
-    setTempEnd(null);
   };
 
    useEffect(() => {
@@ -145,20 +144,18 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
       document.removeEventListener('mouseup', handleMouseUp);
     };
     // eslint-disable-next-line
-  }, [isResizingLeft, isResizingRight, tempStart, tempEnd]);
+  }, [isResizingLeft, isResizingRight]);
 
-
-   // Affichage en temps réel
-  const start = tempStart ?? appointment.startDate;
-  const end = tempEnd ?? appointment.endDate;
-  const intervalCount = getIntervalCount(start, end);
-  const calcultedWidth = intervalCount * INTERVAL_WIDTH;
   
-  if (appointment.id === 1) {
-      console.log(`Start: ${start}, End: ${end}`);
-    console.log(intervalCount);
-    console.log(`Interval Count: ${intervalCount}, Calculated Width: ${calcultedWidth}`);
-  }
+  useEffect(() => {
+    // Met à jour les dates de début et de fin en fonction des props
+    setDragStartSafe(appointment.startDate);
+    setDragEndSafe(appointment.endDate);
+  }, [appointment.startDate, appointment.endDate]);
+
+  // Affichage en temps réel
+  const intervalCount = getIntervalCount(dragStart, dragEnd);
+  const calcultedWidth = intervalCount * INTERVAL_WIDTH;
 
   return (
     <div
@@ -169,14 +166,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
       className={`
         relative bg-green-100 border border-green-500 rounded p-1 text-sm
         flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-opacity duration-100 w-24 h-10 z-20
+        cursor-grab transition-opacity duration-100 w-24 h-10 z-10
         ${isDragging ? 'opacity-50' : 'opacity-100'}
       `}
       title={appointment.title}
       style={{
         width: `${calcultedWidth}px`,
         minWidth: `${INTERVAL_WIDTH}px`,
-        zIndex: isResizingLeft || isResizingRight ? 100 : 20,
         pointerEvents: isDragging ? 'none' : 'auto',
       }}
     >

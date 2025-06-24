@@ -75,7 +75,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       id: idx + 1,
       title: titles[idx % titles.length],
       description: `Rendez-vous pour ${emp.name}`,
-      startDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 0, 0),
+      startDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 1, 0),
       endDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 12, 0),
       imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png',
       employeeId: emp.id,

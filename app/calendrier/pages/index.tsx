@@ -35,8 +35,8 @@ export const DAY_CELL_HEIGHT = '100px'; // Hauteur des cellules de jour
 export const sizeCell = `${DAY_CELL_WIDTH} ${DAY_CELL_HEIGHT}`;
 export const TEAM_HEADER_HEIGHT = '50px'; // Hauteur de l'en-tête de l'équipe
 export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
-  { name: 'morning', startHour: 0, endHour: 12 },
-  { name: 'afternoon', startHour: 13, endHour: 23 },
+  { name: 'morning', startHour: 1, endHour: 12 },
+  { name: 'afternoon', startHour: 13, endHour:  0},
 ];
 
 export default function HomePage() {
@@ -101,6 +101,8 @@ export default function HomePage() {
 
   const moveAppointment = useCallback(
     (id: number, newStartDate: Date, newEndDate: Date , newEmployeeId: number) => {
+      console.log(newStartDate, newEndDate, newEmployeeId);
+      
       setAppointments((prev) =>
         prev.map((app) =>
           app.id === id
@@ -132,6 +134,11 @@ export default function HomePage() {
     },
     []
   );
+
+  useEffect(() => {
+    console.log(appointments[0]);
+  }, [appointments]);
+    
 
   useEffect(() => {
     // Si aujourd'hui est dans le mois affiché, scroll vers aujourd'hui
