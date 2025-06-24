@@ -1,0 +1,66 @@
+
+.drawer-container {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 0;
+  z-index: 1050;
+  pointer-events: none;
+  transition: width 0.3s cubic-bezier(.4,0,.2,1);
+
+  &.open {
+    width: 300px; // largeur visible du tiroir
+    pointer-events: auto;
+  }
+
+  .drawer-content {
+    background: #fff;
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+    box-shadow: 0 -2px 16px rgba(0,0,0,0.12);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    left: 0; right: 0; bottom: 0;
+  }
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px 8px 20px;
+    border-bottom: 1px solid #eee;
+    font-weight: bold;
+  }
+  .drawer-body {
+    flex: 1;
+    padding: 12px 20px;
+    display: flex;
+    gap: 12px;
+  }
+}
+
+
+.btn-add {
+  background-color: black;
+  color: white;
+  position: fixed;
+  bottom: 30px;
+  right: 40px;
+  z-index: 1100; // au-dessus du drawer
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.4s ease;
+
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+}
