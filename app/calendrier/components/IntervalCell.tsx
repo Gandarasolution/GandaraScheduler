@@ -29,6 +29,8 @@ interface DragItem {
   type: 'appointment';
   title?: string;
   sourceType?: 'external';
+  startDate: Date;
+  endDate: Date;
 }
 
 
@@ -68,6 +70,11 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         return;
       }
 
+      console.log(item);
+      console.log(date, intervalName);
+      
+      
+
       let targetDate = date;
       let targetInterval = intervalName;
 
@@ -84,7 +91,10 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       if (item.sourceType === 'external') {
         onExternalDragDrop(item.title || 'Nouveau rendez-vous', targetDate, targetInterval, employeeId);
       } else {
-        onAppointmentMoved(item.id, intervalStart, intervalEnd, employeeId);
+        // Si c'est un rendez-vous interne, on le déplace
+        const diff = item.endDate.getTime() - item.startDate.getTime(); // Différence en millisecondes
+        const newDate = new Date(intervalStart.getTime() + diff);
+        onAppointmentMoved(item.id, intervalStart, newDate, employeeId);
       }
     },
     collect: (monitor) => ({

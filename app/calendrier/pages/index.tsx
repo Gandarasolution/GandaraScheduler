@@ -35,8 +35,8 @@ export const DAY_CELL_HEIGHT = '100px'; // Hauteur des cellules de jour
 export const sizeCell = `${DAY_CELL_WIDTH} ${DAY_CELL_HEIGHT}`;
 export const TEAM_HEADER_HEIGHT = '50px'; // Hauteur de l'en-tête de l'équipe
 export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
-  { name: 'morning', startHour: 1, endHour: 12 },
-  { name: 'afternoon', startHour: 13, endHour:  0},
+  { name: 'morning', startHour: 0, endHour: 11 },
+  { name: 'afternoon', startHour: 12, endHour:  23},
 ];
 
 export default function HomePage() {

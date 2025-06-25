@@ -109,7 +109,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           <React.Fragment key={team.id} >
             <React.Fragment key={team.id}>
               <div 
-                className={`${sizeCell} sticky left-0 z-10 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200 cursor-pointer`}
+                className={`${sizeCell} sticky left-0 z-20 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200 cursor-pointer`}
                 onClick={() => toggleTeam(team.id)}
               >
                 <div

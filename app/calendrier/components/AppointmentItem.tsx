@@ -2,8 +2,9 @@
 import React,{ useState, useRef, use, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { Appointment } from '../types';
-import { addDays, set } from 'date-fns';
+import { add, addDays, set } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS} from '../pages/index'
+import { off } from 'process';
 
 interface AppointmentItemProps {
   appointment: Appointment;
@@ -15,7 +16,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
 
   const [{ isDragging }, drag] = useDrag({
     type: 'appointment',
-    item: { id: appointment.id, type: 'appointment' },
+    item: { 
+      id: appointment.id, 
+      type: 'appointment',
+      startDate: appointment.startDate,
+      endDate: appointment.endDate,
+    },
     canDrag(monitor) {
       // Empêche le glisser-déposer si le rendez-vous est en cours de redimensionnement
       return !isResizingLeft && !isResizingRight;
@@ -43,6 +49,21 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
     const diff = end.getTime() - start.getTime();
     return Math.max(1, Math.round(diff / HALF_DAY_DURATION)); // Au moins 1 intervalle
   };
+   // Affichage en temps réel
+  const intervalCount = getIntervalCount(dragStart, dragEnd);
+  const calcultedWidth = intervalCount * INTERVAL_WIDTH;
+  let offsetIntervals = Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / HALF_DAY_DURATION);
+  let offsetPx = offsetIntervals * INTERVAL_WIDTH;
+
+  if (appointment.id === 1) {
+    console.log('diff', dragStart.getTime() - appointment.endDate.getTime());
+    console.log(dragStart, appointment.endDate);
+  };
+
+  // console.log(new Date(2025, 5, 24, 11, 0, 0, 0).getTime() - new Date(2025, 5, 24, 0, 0, 0, 0).getTime());
+  // console.log(new Date(2025, 5, 23, 23, 0, 0, 0).getTime() - new Date(2025, 5, 24, 0, 0, 0, 0).getTime());
+  
+  
   
   const setDragStartSafe = (date: Date) => {
     dragStartRef.current = date;
@@ -71,15 +92,28 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
         else if (h === morning.endHour) {          
           next.setHours(afternoon.endHour, 0, 0, 0); // matin -> après-midi
         }
+        else if (h === morning.startHour) {
+          next.setHours(afternoon.startHour, 0, 0, 0); // matin -> après-midi
+        }
+        else if (h === afternoon.startHour) {
+          next = addDays(next, 1); // Après-midi -> matin du lendemain
+          next.setHours(morning.startHour, 0, 0, 0); // après-midi -> fin de l'après-midi
+        }
         
-      } else {
+      } else {        
         // Recule d'un intervalle
-        if (h === morning.startHour) {
+        if (h === morning.endHour) {
+          next = addDays(next, -1); // Matin -> après-midi du jour précédent
+          next.setHours(afternoon.endHour, 0, 0, 0);
+        } else if (h === afternoon.endHour) {
+          next.setHours(morning.endHour, 0, 0, 0); // après-midi -> matin
+        } 
+        else if (h === afternoon.startHour) {
+          next.setHours(morning.startHour, 0, 0, 0); // après-midi -> matin
+        } else if (h === morning.startHour) {
           next = addDays(next, -1); // Matin -> après-midi du jour précédent
           next.setHours(afternoon.startHour, 0, 0, 0);
-        } else if (h === afternoon.startHour) {
-          next.setHours(morning.startHour, 0, 0, 0); // après-midi -> matin
-        } 
+        }
       }
     }
     
@@ -87,7 +121,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
   }
 
   const handleMouseDown = (e: React.MouseEvent, handleType: 'left' | 'right') => {
-     e.stopPropagation();
+    e.stopPropagation();
     initialX.current = e.clientX;
     setDragStart(appointment.startDate);
     setDragEnd(appointment.endDate);
@@ -96,36 +130,52 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
   };
 
   const handleMouseMove = (e: MouseEvent) => {
+    e.preventDefault();
     if (!isResizingLeft && !isResizingRight) return;
-    const dx = e.clientX - initialX.current;
-    let intervalsMoved = Math.round(dx / INTERVAL_WIDTH);
-    const initialStart = dragStartRef.current;
-    const initialEnd = dragEndRef.current;
 
-    // Pour éviter les petits déplacements involontaires
-    if (Math.abs(dx) < INTERVAL_WIDTH / 2) intervalsMoved = 0;
+    // Calcule la différence en pixels depuis le clic initial de la souris.
+    const currentDx = e.clientX - initialX.current;
 
-    let newStartDate = initialStart;
-    let newEndDate = initialEnd;
+    // Détermine le nombre d'intervalles déplacés en fonction du déplacement total actuel.
+    // Nous voulons calculer le déplacement total depuis le *début* de l'opération de redimensionnement.
+    let intervalsMoved = Math.round(currentDx / INTERVAL_WIDTH);
 
+    // Initialise les nouvelles dates de début et de fin avec les valeurs actuelles des refs
+    // pour que les calculs subséquents se basent sur l'état courant et non l'état initial.
+    let newStartDate = dragStartRef.current;
+    let newEndDate = dragEndRef.current;
 
-    if (isResizingLeft && intervalsMoved !== 0) {
-      newStartDate = addInterval(initialStart, intervalsMoved);
-      
-      // Ne pas dépasser la fin
-      if (newStartDate >= appointment.endDate) newStartDate = new Date(appointment.endDate.getTime() - 4 * 60 * 60 * 1000);
-      setDragStartSafe(newStartDate);
+    console.log(intervalsMoved);
+    
 
+    if (isResizingLeft) {      
+        // Lors du redimensionnement à gauche, nous ajustons la date de début.
+        // `intervalsMoved` sera négatif si le déplacement est vers la gauche, positif vers la droite.
+        newStartDate = addInterval(appointment.startDate, intervalsMoved); // Baser sur la date de début originale
+        
+        // S'assurer que la nouvelle date de début ne dépasse pas la date de fin actuelle
+        // moins une durée minimale pour éviter une durée nulle ou négative.
+        // L'ajustement est de 1 intervalle pour assurer une durée minimale.
+        if (newStartDate >= dragEndRef.current) {
+            newStartDate = addInterval(dragEndRef.current, -1);
+        }
+        setDragStartSafe(newStartDate);
     }
-    if (isResizingRight && intervalsMoved !== 0) {      
-      newEndDate = addInterval(appointment.endDate, intervalsMoved);
-      
-      // Ne pas précéder le début
-      if (newEndDate <= appointment.startDate) newEndDate = new Date(appointment.startDate.getTime() + 4 * 60 * 60 * 1000);
-      setDragEndSafe(newEndDate);
+
+    if (isResizingRight) {
+        // Lors du redimensionnement à droite, nous ajustons la date de fin.
+        // `intervalsMoved` sera positif si le déplacement est vers la droite, négatif vers la gauche.
+        newEndDate = addInterval(appointment.endDate, intervalsMoved); // Baser sur la date de fin originale
+
+        // S'assurer que la nouvelle date de fin ne précède pas la date de début actuelle
+        // plus une durée minimale pour éviter une durée nulle ou négative.
+        // L'ajustement est de 1 intervalle pour assurer une durée minimale.
+        if (newEndDate <= dragStartRef.current) {
+            newEndDate = addInterval(dragStartRef.current, 1);
+        }
+        setDragEndSafe(newEndDate);
     }
   };
-
   const handleMouseUp = () => {
     if (dragStartRef.current && dragEndRef.current) {      
       onResize(appointment.id, dragStartRef.current, dragEndRef.current);
@@ -153,9 +203,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
     setDragEndSafe(appointment.endDate);
   }, [appointment.startDate, appointment.endDate]);
 
-  // Affichage en temps réel
-  const intervalCount = getIntervalCount(dragStart, dragEnd);
-  const calcultedWidth = intervalCount * INTERVAL_WIDTH;
+ 
 
   return (
     <div
@@ -166,7 +214,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
       className={`
         relative bg-green-100 border border-green-500 rounded p-1 text-sm
         flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-opacity duration-100 w-24 h-10 z-10
+        cursor-grab transition-opacity duration-100 w-24 h-10 z-10 transition-[width, left]
         ${isDragging ? 'opacity-50' : 'opacity-100'}
       `}
       title={appointment.title}
@@ -174,6 +222,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
         width: `${calcultedWidth}px`,
         minWidth: `${INTERVAL_WIDTH}px`,
         pointerEvents: isDragging ? 'none' : 'auto',
+        left: `${offsetPx}px`, 
+        position: 'absolute',
       }}
     >
       <div
