@@ -3,7 +3,7 @@ import React,{ useState, useRef, memo, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { Appointment } from '../types';
 import { add, addDays, set } from 'date-fns';
-import { CELL_WIDTH, HALF_DAY_INTERVALS} from '../pages/index'
+import { DAY_CELL_WIDTH, HALF_DAY_INTERVALS} from '../pages/index'
 import { off } from 'process';
 
 interface AppointmentItemProps {
@@ -40,7 +40,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
   const initialX = useRef(0);
   
   // Largeur d'une cellule (intervalle)
-  const INTERVAL_WIDTH = CELL_WIDTH/2;
+  const INTERVAL_WIDTH = DAY_CELL_WIDTH/2;
   const HALF_DAY_DURATION = 12 * 60 * 60 * 1000; // 12 heures en millisecondes
 
 

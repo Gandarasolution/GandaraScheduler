@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {DndProvider, useDragLayer } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { 
@@ -30,11 +30,11 @@ const eventTypes = [
 
 
 export const CELL_WIDTH = 60; 
-export const EMPLOYEE_COLUMN_WIDTH = '150px'; // Largeur de la colonne des employés
-export const DAY_CELL_WIDTH = `${CELL_WIDTH}px`; // Largeur des cellules de jour
-export const DAY_CELL_HEIGHT = '100px'; // Hauteur des cellules de jour
+export const EMPLOYEE_COLUMN_WIDTH = 150; // Largeur de la colonne des employés
+export const DAY_CELL_WIDTH = CELL_WIDTH; // Largeur des cellules de jour
+export const DAY_CELL_HEIGHT = 80; // Hauteur des cellules de jour
 export const sizeCell = `${DAY_CELL_WIDTH} ${DAY_CELL_HEIGHT}`;
-export const TEAM_HEADER_HEIGHT = '50px'; // Hauteur de l'en-tête de l'équipe
+export const TEAM_HEADER_HEIGHT = DAY_CELL_HEIGHT; // Hauteur de l'en-tête de l'équipe
 export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
   { name: 'morning', startHour: 0, endHour: 11 },
   { name: 'afternoon', startHour: 12, endHour:  23},
@@ -47,7 +47,11 @@ export default function HomePage() {
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const today = new Date();
   const todayIndex = daysInMonth.findIndex(day => isSameDay(day, today));
-  const dayInTimeline = eachDayOfInterval({ start: monthStart, end: addMonths(monthStart, 3)});
+  const [timelineStart, setTimelineStart] = useState(startOfMonth(new Date()));
+  const [timelineEnd, setTimelineEnd] = useState(addMonths(startOfMonth(new Date()), 3));
+  const dayInTimeline = useMemo(() => {
+    return eachDayOfInterval({ start: timelineStart, end: timelineEnd });
+  }, [timelineStart, timelineEnd]);
 
   const employees = useRef<Employee[]>(initialEmployees);
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
@@ -55,11 +59,21 @@ export default function HomePage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number } | null>(null);
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);const gridRef = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(true);
   const { isDragging } = useDragLayer((monitor) => ({
     isDragging: monitor.isDragging(),
   }));
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+
+   // Fonction pour charger plus de jours (vers la gauche ou la droite)
+  const loadMoreDays = useCallback((direction: 'forward' | 'backward') => {
+    if (direction === 'forward') {
+      setTimelineEnd((prevEnd) => addMonths(prevEnd, 1)); // Étendre d'un mois
+    } else {
+      setTimelineStart((prevStart) => subMonths(prevStart, 1)); // Étendre d'un mois
+    }
+  }, []);
 
   const handleSaveAppointment = useCallback((appointment: Appointment) => {
     if (appointment.id) {
@@ -123,20 +137,9 @@ export default function HomePage() {
         employeeId: employeeId,
       };
       setAppointments((prev) => [...prev, newApp]);
-    }, []);
+  }, []);
 
-  useEffect(() => {
-    // Si aujourd'hui est dans le mois affiché, scroll vers aujourd'hui
-    if (todayIndex !== -1 && gridRef.current) {
-      const cellWidth = parseFloat(DAY_CELL_WIDTH);
-      const scrollLeft = todayIndex * cellWidth;
-      console.log(`Scrolling to index ${todayIndex}, scrollLeft: ${scrollLeft}`);
-      setTimeout(() => {
-        gridRef.current?.scrollTo({ left: scrollLeft });
-      }, 500); // Assurez-vous que le scroll est terminé avant de marquer le calendrier comme
-      setReady(true); // Indique que le calendrier est prêt après le scroll
-    }
-  }, [todayIndex]);
+  
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -160,6 +163,7 @@ export default function HomePage() {
               onCellDoubleClick={handleOpenNewModal}
               onAppointmentClick={handleOpenEditModal}
               onExternalDragDrop={createAppointmentFromDrag}
+              loadMoreDays={loadMoreDays}
             />
           </div>
         </div>
