@@ -1,5 +1,5 @@
 "use client";
-import React, {useState}from 'react';
+import React, {useState, useMemo, memo}from 'react';
 import {
   format,
   isSameDay,
@@ -14,7 +14,7 @@ interface CalendarGridProps {
   employees: Employee[];
   appointments: Appointment[];
   initialTeams: Groupe[];
-  daysInMonth: Date[];
+  dayInTimeline: Date[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
   onCellDoubleClick: (date: Date, employeeId: number) => void;
@@ -32,7 +32,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   employees,
   appointments,
   initialTeams,
-  daysInMonth,
+  dayInTimeline,
   HALF_DAY_INTERVALS,
   onAppointmentMoved,
   onCellDoubleClick,
@@ -42,12 +42,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
  
   const [openTeams, setOpenTeams] = useState<number[]>(initialTeams.map(team => team.id)); // État pour gérer les équipes ouvertes
 
-
-
-  const employeesByTeam = initialTeams.map(team => ({
-    ...team,
-    employees: employees.filter(emp => emp.groupId === team.id)
-  }));
+  const employeesByTeam = useMemo(() => 
+    initialTeams.map(team => ({
+      ...team,
+      employees: employees.filter(emp => emp.groupId === team.id)
+    })
+  ), [employees, initialTeams]);
   
 
   const toggleTeam = (teamId: number) => {
@@ -74,11 +74,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         className="grid bg-white"
         style={{
           // Définir les colonnes: 1 pour l'employé, puis X pour les jours fixes
-          gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH} repeat(${daysInMonth.length}, ${DAY_CELL_WIDTH})`,
+          gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH} repeat(${dayInTimeline.length}, ${DAY_CELL_WIDTH})`,
           // Définir les lignes: 1 pour l'en-tête des jours, puis X pour chaque employé
           gridTemplateRows: `auto repeat(${employees.length}, minmax(${DAY_CELL_HEIGHT}, auto))`, // Hauteur min pour chaque ligne d'employé
           // Pour s'assurer que la grille prend toute la largeur et hauteur nécessaire pour le défilement
-          width: `calc(${EMPLOYEE_COLUMN_WIDTH} + ${daysInMonth.length} * ${DAY_CELL_WIDTH})`,
+          width: `calc(${EMPLOYEE_COLUMN_WIDTH} + ${dayInTimeline.length} * ${DAY_CELL_WIDTH})`,
           minHeight: `calc(auto + ${employees.length} * ${DAY_CELL_HEIGHT})`, // Ajustez 140px si les cellules sont plus grandes/petites
         }}
       >
@@ -88,7 +88,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         {/* En-tête des jours (fixe en haut) */}
       
         {/* Jours du mois */}
-        {daysInMonth.map((day, index) => (
+        {dayInTimeline.map((day, index) => (
           <div
             key={`header-day-${format(day, 'yyyy-MM-dd')}`}
             className={`flex flex-col-reverse justify-end sticky top-0 z-20 bg-gray-200 border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1 ${isWeekend(day) ? 'bg-gray-100' : ''}`}
@@ -134,7 +134,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 <span className="font-semibold text-sm text-gray-800 text-center">{team.name}</span>
               </div>
 
-              {daysInMonth.map((day) => {
+              {dayInTimeline.map((day) => {
 
                 return (
                   <DayCell
@@ -158,7 +158,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
               team.employees.map((employee) =>(
                 <React.Fragment key={employee.id}>
                   {/* Colonne de l'employé (fixe à gauche) */}
-                  <div className={`${sizeCell} sticky left-0 z-10 p-2 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200`}>
+                  <div className={`${sizeCell} sticky left-0 z-20 p-2 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200`}>
                     {employee.avatarUrl && (
                       <img src={employee.avatarUrl} alt={employee.name} className="w-10 h-10 rounded-full mb-1 mr-2" />
                     )}
@@ -168,7 +168,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   {/* Cellules de jour pour cet employé */}
 
                   {/* Cellules des jours du mois */}
-                  {daysInMonth.map((day) => {
+                  {dayInTimeline.map((day) => {
                     const dayEmployeeAppointments = appointments.filter((app) =>
                       isSameDay(app.startDate, day) && app.employeeId === employee.id
                     );
@@ -198,4 +198,4 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   );
 };
 
-export default CalendarGrid;
+export default memo(CalendarGrid);

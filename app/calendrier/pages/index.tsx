@@ -13,6 +13,7 @@ import {
   endOfMonth, 
   isSameDay,
   eachDayOfInterval,
+  addYears,
 } from 'date-fns';
 import { Appointment, Employee, HalfDayInterval} from '../types';
 import CalendarGrid from '../components/CalendarGrid';
@@ -40,34 +41,25 @@ export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
 ];
 
 export default function HomePage() {
-  const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
+  const currentMonth = useRef(startOfMonth(new Date()));
+  const monthStart = startOfMonth(currentMonth.current);
+  const monthEnd = endOfMonth(currentMonth.current);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const today = new Date();
   const todayIndex = daysInMonth.findIndex(day => isSameDay(day, today));
+  const dayInTimeline = eachDayOfInterval({ start: monthStart, end: addMonths(monthStart, 3)});
 
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const employees = useRef<Employee[]>(initialEmployees);
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number } | null>(null);
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);const gridRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
-
-
   const { isDragging } = useDragLayer((monitor) => ({
     isDragging: monitor.isDragging(),
   }));
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
-  const handlePrevMonth = useCallback(() => {
-    setCurrentMonth((prev) => subMonths(prev, 1));
-  }, []);
-
-  const handleNextMonth = useCallback(() => {
-    setCurrentMonth((prev) => addMonths(prev, 1));
-  }, []);
 
   const handleSaveAppointment = useCallback((appointment: Appointment) => {
     if (appointment.id) {
@@ -131,14 +123,7 @@ export default function HomePage() {
         employeeId: employeeId,
       };
       setAppointments((prev) => [...prev, newApp]);
-    },
-    []
-  );
-
-  useEffect(() => {
-    console.log(appointments[0]);
-  }, [appointments]);
-    
+    }, []);
 
   useEffect(() => {
     // Si aujourd'hui est dans le mois affiché, scroll vers aujourd'hui
@@ -155,14 +140,7 @@ export default function HomePage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="p-5 font-sans h-screen flex flex-col"> {/* Ajout de h-screen et flex-col */}
-
-        <div className="flex justify-center items-center mb-5 flex-shrink-0">
-          <button onClick={handlePrevMonth} className="px-4 py-2 mr-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">&lt; Mois précédent</button>
-          <h2 className="text-2xl font-semibold">{format(currentMonth, 'MMMM yyyy')}</h2> {/* Correction format année */}
-          <button onClick={handleNextMonth} className="px-4 py-2 ml-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">Mois suivant &gt;</button>
-        </div>
-
+      <div className="font-sans h-screen flex flex-col"> {/* Ajout de h-screen et flex-col */}
         <div className="flex flex-grow overflow-hidden"> {/* flex-grow et overflow-hidden pour que le calendrier prenne l'espace restant et gère son propre défilement */}
 
           {/* Grille du calendrier avec employés */}
@@ -173,10 +151,10 @@ export default function HomePage() {
             }}
           >
             <CalendarGrid
-              employees={employees}
+              employees={employees.current}
               appointments={appointments}
               initialTeams={initialTeams}
-              daysInMonth={daysInMonth}
+              dayInTimeline={dayInTimeline}
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
               onAppointmentMoved={moveAppointment}
               onCellDoubleClick={handleOpenNewModal}

@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, {memo}from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
 import IntervalCell from './IntervalCell';
 import { Appointment, HalfDayInterval } from '../types';
@@ -81,4 +81,4 @@ const DayCell: React.FC<DayCellProps> = ({
   );
 };
 
-export default DayCell;
+export default memo(DayCell);

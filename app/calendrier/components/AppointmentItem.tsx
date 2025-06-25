@@ -1,5 +1,5 @@
 "use client";
-import React,{ useState, useRef, use, useEffect } from 'react';
+import React,{ useState, useRef, memo, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { Appointment } from '../types';
 import { add, addDays, set } from 'date-fns';
@@ -256,4 +256,4 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
   );
 };
 
-export default AppointmentItem;
+export default memo(AppointmentItem);

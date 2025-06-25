@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, memo} from 'react';
 import { useDrop } from 'react-dnd';
 import { format } from 'date-fns';
 import AppointmentItem from './AppointmentItem';
@@ -166,4 +166,4 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   );
 };
 
-export default IntervalCell;
+export default memo(IntervalCell);
