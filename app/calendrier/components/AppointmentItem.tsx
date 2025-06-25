@@ -56,8 +56,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
   let offsetPx = offsetIntervals * INTERVAL_WIDTH;
 
   if (appointment.id === 1) {
-    console.log('diff', dragStart.getTime() - appointment.endDate.getTime());
-    console.log(dragStart, appointment.endDate);
+    // console.log('diff', dragStart.getTime() - appointment.endDate.getTime());
+    // console.log(dragStart, appointment.endDate);
   };
 
   // console.log(new Date(2025, 5, 24, 11, 0, 0, 0).getTime() - new Date(2025, 5, 24, 0, 0, 0, 0).getTime());
@@ -156,9 +156,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
         // S'assurer que la nouvelle date de début ne dépasse pas la date de fin actuelle
         // moins une durée minimale pour éviter une durée nulle ou négative.
         // L'ajustement est de 1 intervalle pour assurer une durée minimale.
+        console.log(newStartDate, dragEndRef.current);
+        console.log(newStartDate >= dragEndRef.current);
+        
         if (newStartDate >= dragEndRef.current) {
-            newStartDate = addInterval(dragEndRef.current, -1);
+            newStartDate = addInterval(newStartDate, -1);
         }
+        console.log('newStartDate', newStartDate);
+        
         setDragStartSafe(newStartDate);
     }
 
@@ -171,7 +176,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
         // plus une durée minimale pour éviter une durée nulle ou négative.
         // L'ajustement est de 1 intervalle pour assurer une durée minimale.
         if (newEndDate <= dragStartRef.current) {
-            newEndDate = addInterval(dragStartRef.current, 1);
+            newEndDate = addInterval(newEndDate, 1);
         }
         setDragEndSafe(newEndDate);
     }
