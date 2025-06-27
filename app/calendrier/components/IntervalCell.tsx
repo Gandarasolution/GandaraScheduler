@@ -1,11 +1,11 @@
 "use client";
-import React, { useState, memo} from 'react';
+import React, { useState, memo, useCallback} from 'react';
 import { useDrop } from 'react-dnd';
-import { format } from 'date-fns';
+import { format, addDays, interval } from 'date-fns';
 import AppointmentItem from './AppointmentItem';
 import InfoBubble from './InfoBubble';
 import { Appointment } from '../types';
-import { CELL_WIDTH } from '../pages/index'
+import { CELL_WIDTH, CELL_HEIGHT } from '../pages/index'
 
 interface IntervalCellProps {
   date: Date;
@@ -16,8 +16,9 @@ interface IntervalCellProps {
   appointments: Appointment[];
   isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
-  isHoliday: boolean; // Pour appliquer des styles de jour férié si besoin
+  isFerie: boolean; // Pour appliquer des styles de jour férié si besoin
   holidays: { date: string }[]; // Liste des jours fériés, si nécessaire
+  isHoliday: (day: Date, holidays: { date: string }[]) => boolean; // Fonction pour vérifier si un jour est férié
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
   onCellDoubleClick: (date: Date, employeeId: number) => void;
   onAppointmentClick: (appointment: Appointment) => void;
@@ -34,13 +35,6 @@ interface DragItem {
 }
 
 
-function getNextWeekday(date: Date): Date {
-  let next = new Date(date);
-  do {
-    next.setDate(next.getDate() + 1);
-  } while (next.getDay() === 0 || next.getDay() === 6); // 0 = dimanche, 6 = samedi
-  return next;
-}
 
 const IntervalCell: React.FC<IntervalCellProps> = ({
   date,
@@ -51,8 +45,9 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   appointments = [],
   isCellActive = true,
   isWeekend,
-  isHoliday,
+  isFerie,
   holidays = [],
+  isHoliday,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentClick,
@@ -62,6 +57,14 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   const [bubbleContent, setBubbleContent] = useState('');
   const [bubblePosition, setBubblePosition] = useState({ x: 0, y: 0 });
 
+  const getNextWeekday = useCallback((date: Date): Date => {
+    let next = new Date(date);
+    do {
+      next = addDays(next, 1);
+    } while (next.getDay() === 0 || next.getDay() === 6 || isHoliday(next, holidays)); // 0 = dimanche, 6 = samedi
+    return next;
+  }, [])
+
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ['appointment', 'external-item'],
     drop: (item: DragItem, monitor) => {
@@ -70,31 +73,21 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         return;
       }
 
-      console.log(item);
-      console.log(date, intervalName);
-      
-      
-
-      let targetDate = date;
+      let targetDate = intervalStart;
       let targetInterval = intervalName;
 
-      if (isWeekend) {
+      if (isWeekend || isFerie) {
         targetDate = getNextWeekday(date);
         targetInterval = 'morning'; // Par défaut, on place les rendez-vous le matin du jour suivant
       }
-
-      if (isHoliday) {
-        
-      }
-
       
       if (item.sourceType === 'external') {
         onExternalDragDrop(item.title || 'Nouveau rendez-vous', targetDate, targetInterval, employeeId);
       } else {
         // Si c'est un rendez-vous interne, on le déplace
         const diff = item.endDate.getTime() - item.startDate.getTime(); // Différence en millisecondes
-        const newDate = new Date(intervalStart.getTime() + diff);
-        onAppointmentMoved(item.id, intervalStart, newDate, employeeId);
+        const newDate = new Date(targetDate.getTime() + diff);
+        onAppointmentMoved(item.id, targetDate, newDate, employeeId);
       }
     },
     collect: (monitor) => ({
@@ -141,7 +134,10 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       onDoubleClick={isCellActive && employeeId ? handleCellDoubleClick : undefined}
       className={`relative flex-1 border-b ${isCellActive ? 'border-r' : ''} ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-gray-200  ${bgColor} ${canDrop ? 'cursor-pointer' : ''}
                   flex flex-row items-start gap-1`}
-      style={{width: CELL_WIDTH/2}}
+      style={{
+        width: CELL_WIDTH/2,
+        height: CELL_HEIGHT,
+      }}
     >
       {isCellActive && appointments.map((app) => (
         <AppointmentItem

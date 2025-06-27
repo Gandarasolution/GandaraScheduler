@@ -13,7 +13,7 @@ import {
   endOfMonth, 
   isSameDay,
   eachDayOfInterval,
-  addYears,
+  addDays,
 } from 'date-fns';
 import { Appointment, Employee, HalfDayInterval} from '../types';
 import CalendarGrid from '../components/CalendarGrid';
@@ -29,37 +29,40 @@ const eventTypes = [
 ];
 
 
-export const CELL_WIDTH = 60; 
+const DAYS_TO_ADD = 15;
+const THRESHOLD_MAX = 80;
+const THRESHOLD_MIN = 20;
+const WINDOW_SIZE = 120; // nombre de jours affichés (ex: 60 avant, 60 après)
 export const EMPLOYEE_COLUMN_WIDTH = '150px'; // Largeur de la colonne des employés
-export const DAY_CELL_WIDTH = `${CELL_WIDTH}px`; // Largeur des cellules de jour
-export const DAY_CELL_HEIGHT = '100px'; // Hauteur des cellules de jour
-export const sizeCell = `${DAY_CELL_WIDTH} ${DAY_CELL_HEIGHT}`;
+export const CELL_WIDTH = 60; 
+export const CELL_HEIGHT = 100; // Hauteur des cellules
+export const sizeCell = `${CELL_WIDTH}px ${CELL_HEIGHT}px`;
 export const TEAM_HEADER_HEIGHT = '50px'; // Hauteur de l'en-tête de l'équipe
 export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
-  { name: 'morning', startHour: 0, endHour: 11 },
-  { name: 'afternoon', startHour: 12, endHour:  23},
+  { name: 'morning', startHour: 0, endHour: 12 },
+  { name: 'afternoon', startHour: 12, endHour:  24},
 ];
 
 export default function HomePage() {
-  const currentMonth = useRef(startOfMonth(new Date()));
-  const monthStart = startOfMonth(currentMonth.current);
-  const monthEnd = endOfMonth(currentMonth.current);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const today = new Date();
-  const todayIndex = daysInMonth.findIndex(day => isSameDay(day, today));
-  const dayInTimeline = eachDayOfInterval({ start: monthStart, end: addMonths(monthStart, 3)});
-
+  const [dayInTimeline, setDayInTimeline] = useState(eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE/2), end: addDays(new Date(), WINDOW_SIZE/2) }));
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreDays = useRef(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const employees = useRef<Employee[]>(initialEmployees);
+  const [isLoading, setIsLoading] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number } | null>(null);
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);const gridRef = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
   const { isDragging } = useDragLayer((monitor) => ({
     isDragging: monitor.isDragging(),
   }));
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+
+
+  //Fonction 
+
 
   const handleSaveAppointment = useCallback((appointment: Appointment) => {
     if (appointment.id) {
@@ -125,42 +128,109 @@ export default function HomePage() {
       setAppointments((prev) => [...prev, newApp]);
     }, []);
 
-  useEffect(() => {
-    // Si aujourd'hui est dans le mois affiché, scroll vers aujourd'hui
-    if (todayIndex !== -1 && gridRef.current) {
-      const cellWidth = parseFloat(DAY_CELL_WIDTH);
-      const scrollLeft = todayIndex * cellWidth;
-      console.log(`Scrolling to index ${todayIndex}, scrollLeft: ${scrollLeft}`);
-      setTimeout(() => {
-        gridRef.current?.scrollTo({ left: scrollLeft });
-      }, 500); // Assurez-vous que le scroll est terminé avant de marquer le calendrier comme
-      setReady(true); // Indique que le calendrier est prêt après le scroll
-    }
-  }, [todayIndex]);
 
+  const handleScroll = useCallback(() => {
+    console.log("Scroll event triggered");
+    
+    if (!mainScrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = mainScrollRef.current;
+    const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
+
+    if (isLoadingMoreDays.current) return;
+
+    // Ajout à droite
+    if (scrollPercentage >= THRESHOLD_MAX) {
+      isLoadingMoreDays.current = true;
+        setIsLoading(true);
+
+      setDayInTimeline(prevDays => {
+        const lastDay = prevDays[prevDays.length - 1];
+        const newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
+        // Supprime les jours trop anciens à gauche si la fenêtre devient trop grande
+        const allDays = [...prevDays, ...newDays];
+        return allDays.slice(-WINDOW_SIZE);
+      });
+      setTimeout(() => {
+          if (mainScrollRef.current) {
+            mainScrollRef.current.scrollLeft -= (DAYS_TO_ADD + 5) * CELL_WIDTH;
+          }
+      }, 0);
+      setTimeout(() => { isLoadingMoreDays.current = false; }, 200);
+    }
+    // Ajout à gauche
+    else if (scrollPercentage <= THRESHOLD_MIN) {
+      isLoadingMoreDays.current = true;
+      setIsLoading(true);
+      setDayInTimeline(prevDays => {
+        const firstDay = prevDays[0];
+        const newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
+        // Supprime les jours trop anciens à droite si la fenêtre devient trop grande
+        const allDays = [...newDays, ...prevDays];
+        // Décale le scroll pour garder la même date visible
+        setTimeout(() => {
+          if (mainScrollRef.current) {
+            mainScrollRef.current.scrollLeft += (DAYS_TO_ADD + 5 ) * CELL_WIDTH;
+          }
+        }, 0);
+        return allDays.slice(0, WINDOW_SIZE);
+      });
+
+      setTimeout(() => { 
+        isLoadingMoreDays.current = false; 
+        setIsLoading(false);
+      }, 200);
+    }
+  }, []);
+
+  const goToday = useCallback(() => {
+    const todayCell = document.getElementById('today-cell');
+    if (todayCell && mainScrollRef.current) {
+      // Calcule la position horizontale de la cellule par rapport au conteneur
+      const container = mainScrollRef.current;
+      const cellRect = todayCell.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const scrollLeft = container.scrollLeft 
+        + (cellRect.left - containerRect.left) 
+        - (container.clientWidth / 2) 
+        + (todayCell.clientWidth / 2);
+      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+    }
+  }, []);
+
+  useEffect(() => {
+    goToday();
+  }, []);
+
+  // Rendu du calendrier
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="font-sans h-screen flex flex-col"> {/* Ajout de h-screen et flex-col */}
-        <div className="flex flex-grow overflow-hidden"> {/* flex-grow et overflow-hidden pour que le calendrier prenne l'espace restant et gère son propre défilement */}
-
-          {/* Grille du calendrier avec employés */}
-          <div ref={gridRef}  
-            className="flex-grow overflow-auto border border-gray-300 rounded-lg shadow-md"
-            style={{
-              visibility: ready ? 'visible' : 'hidden', // Masquer la grille jusqu'à ce qu'elle soit prête
-            }}
+      <div className="h-screen flex flex-col overflow-hidden"> {/* Ajout de h-screen et flex-col */}
+        {/* Header sticky */}
+        <div className="sticky top-0 z-20 bg-white shadow px-4 py-2">
+          <button onClick={goToday}>Aujourd'hui</button>
+        </div>
+        {/* Grille qui prend tout le reste */}
+        <div className="flex-1 flex flex-col max-h-full max-w-full overflow-hidden">
+          <div 
+            className="flex flex-grow overflow-auto"
+            ref={mainScrollRef}
+            onScroll={handleScroll}
           >
-            <CalendarGrid
-              employees={employees.current}
-              appointments={appointments}
-              initialTeams={initialTeams}
-              dayInTimeline={dayInTimeline}
-              HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
-              onAppointmentMoved={moveAppointment}
-              onCellDoubleClick={handleOpenNewModal}
-              onAppointmentClick={handleOpenEditModal}
-              onExternalDragDrop={createAppointmentFromDrag}
-            />
+            <div
+              className={`flex-grow rounded-lg shadow-md snap-x snap-mandatory ${isLoading ? 'pointer-events-none opacity-60' : ''}`}
+            >
+              <CalendarGrid
+                employees={employees.current}
+                appointments={appointments}
+                initialTeams={initialTeams}
+                dayInTimeline={dayInTimeline}
+                HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+                onAppointmentMoved={moveAppointment}
+                onCellDoubleClick={handleOpenNewModal}
+                onAppointmentClick={handleOpenEditModal}
+                onExternalDragDrop={createAppointmentFromDrag}
+              />
+            </div>
           </div>
         </div>
 
@@ -215,6 +285,11 @@ export default function HomePage() {
         >
           +
         </button>
+        {isLoading && (
+          <div className="absolute top-0 left-0 w-full h-1 bg-blue-200 z-50">
+            <div className="h-full bg-blue-600 animate-pulse" style={{ width: '30%' }} />
+          </div>
+        )}
     </DndProvider>
   );
 }

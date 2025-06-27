@@ -55,19 +55,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
   let offsetIntervals = Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / HALF_DAY_DURATION);
   let offsetPx = offsetIntervals * INTERVAL_WIDTH;
 
-  if (appointment.id === 1) {
-    // console.log('diff', dragStart.getTime() - appointment.endDate.getTime());
-    // console.log(dragStart, appointment.endDate);
-  };
-
-  // console.log(new Date(2025, 5, 24, 11, 0, 0, 0).getTime() - new Date(2025, 5, 24, 0, 0, 0, 0).getTime());
-  // console.log(new Date(2025, 5, 23, 23, 0, 0, 0).getTime() - new Date(2025, 5, 24, 0, 0, 0, 0).getTime());
-  
   
   
   const setDragStartSafe = (date: Date) => {
     dragStartRef.current = date;
     setDragStart(date);
+    
   };
   const setDragEndSafe = (date: Date) => {
     dragEndRef.current = date;
@@ -125,6 +118,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
     initialX.current = e.clientX;
     setDragStart(appointment.startDate);
     setDragEnd(appointment.endDate);
+    console.log(handleType);
+    
     if (handleType === 'left') setIsResizingLeft(true);
     else setIsResizingRight(true);
   };
@@ -143,27 +138,16 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
     // Initialise les nouvelles dates de début et de fin avec les valeurs actuelles des refs
     // pour que les calculs subséquents se basent sur l'état courant et non l'état initial.
     let newStartDate = dragStartRef.current;
-    let newEndDate = dragEndRef.current;
+    let newEndDate = dragEndRef.current;    
 
-    console.log(intervalsMoved);
-    
+    if (isResizingLeft) {
+        // Calcule la nouvelle date de début selon le déplacement
+        newStartDate = addInterval(appointment.startDate, intervalsMoved);
 
-    if (isResizingLeft) {      
-        // Lors du redimensionnement à gauche, nous ajustons la date de début.
-        // `intervalsMoved` sera négatif si le déplacement est vers la gauche, positif vers la droite.
-        newStartDate = addInterval(appointment.startDate, intervalsMoved); // Baser sur la date de début originale
-        
-        // S'assurer que la nouvelle date de début ne dépasse pas la date de fin actuelle
-        // moins une durée minimale pour éviter une durée nulle ou négative.
-        // L'ajustement est de 1 intervalle pour assurer une durée minimale.
-        console.log(newStartDate, dragEndRef.current);
-        console.log(newStartDate >= dragEndRef.current);
-        
+        // Bloque la date de début à la limite autorisée (fin - 1 intervalle)
         if (newStartDate >= dragEndRef.current) {
-            newStartDate = addInterval(newStartDate, -1);
+            newStartDate = addInterval(dragEndRef.current, -1);
         }
-        console.log('newStartDate', newStartDate);
-        
         setDragStartSafe(newStartDate);
     }
 
@@ -171,12 +155,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick,
         // Lors du redimensionnement à droite, nous ajustons la date de fin.
         // `intervalsMoved` sera positif si le déplacement est vers la droite, négatif vers la gauche.
         newEndDate = addInterval(appointment.endDate, intervalsMoved); // Baser sur la date de fin originale
-
+        
         // S'assurer que la nouvelle date de fin ne précède pas la date de début actuelle
         // plus une durée minimale pour éviter une durée nulle ou négative.
         // L'ajustement est de 1 intervalle pour assurer une durée minimale.
         if (newEndDate <= dragStartRef.current) {
-            newEndDate = addInterval(newEndDate, 1);
+            newEndDate = addInterval(dragStartRef.current, 1);
         }
         setDragEndSafe(newEndDate);
     }

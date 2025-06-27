@@ -8,7 +8,7 @@ import {
 import DayCell from './DayCell'; // Sera utilisé pour les cellules de rendez-vous
 import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
 import { fr } from 'date-fns/locale';
-import {EMPLOYEE_COLUMN_WIDTH, DAY_CELL_WIDTH, DAY_CELL_HEIGHT, sizeCell, TEAM_HEADER_HEIGHT} from '../pages/index'; // Importez les constantes définies dans un fichier séparé
+import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT, sizeCell, TEAM_HEADER_HEIGHT} from '../pages/index'; // Importez les constantes définies dans un fichier séparé
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -41,6 +41,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 }) => {
  
   const [openTeams, setOpenTeams] = useState<number[]>(initialTeams.map(team => team.id)); // État pour gérer les équipes ouvertes
+  const todayIndex = dayInTimeline.findIndex(day => 
+    format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+  );
 
   const employeesByTeam = useMemo(() => 
     initialTeams.map(team => ({
@@ -71,17 +74,32 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     <div className="relative h-full w-full"> {/* Conteneur principal qui gère le défilement de son contenu */}
       {/* La grille principale du calendrier */}
       <div
-        className="grid bg-white"
+        className="grid bg-white relative"
         style={{
           // Définir les colonnes: 1 pour l'employé, puis X pour les jours fixes
-          gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH} repeat(${dayInTimeline.length}, ${DAY_CELL_WIDTH})`,
+          gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH} repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
           // Définir les lignes: 1 pour l'en-tête des jours, puis X pour chaque employé
-          gridTemplateRows: `auto repeat(${employees.length}, minmax(${DAY_CELL_HEIGHT}, auto))`, // Hauteur min pour chaque ligne d'employé
+          gridTemplateRows: `auto repeat(${employees.length}, minmax(${CELL_HEIGHT}px, auto))`, // Hauteur min pour chaque ligne d'employé
           // Pour s'assurer que la grille prend toute la largeur et hauteur nécessaire pour le défilement
-          width: `calc(${EMPLOYEE_COLUMN_WIDTH} + ${dayInTimeline.length} * ${DAY_CELL_WIDTH})`,
-          minHeight: `calc(auto + ${employees.length} * ${DAY_CELL_HEIGHT})`, // Ajustez 140px si les cellules sont plus grandes/petites
+          width: `calc(${EMPLOYEE_COLUMN_WIDTH} + ${dayInTimeline.length} * ${CELL_WIDTH}px)`,
+          minHeight: `calc(auto + ${employees.length} * ${CELL_HEIGHT}px)`, // Ajustez 140px si les cellules sont plus grandes/petites
         }}
       >
+        {/* Ligne rouge pour la date du jour */}
+        {todayIndex !== -1 && (
+          <div
+            style={{
+              position: 'absolute',
+              left: `calc(${EMPLOYEE_COLUMN_WIDTH} + ${todayIndex + 0.5} * ${CELL_WIDTH}px)`,
+              top: 0,
+              width: '2px',
+              height: '100%',
+              background: 'red',
+              zIndex: 20,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
         {/* Coin supérieur gauche vide */}
         <div className={`sticky top-0 left-0 z-30 bg-gray-200 border-b border-r border-gray-300 w-[${EMPLOYEE_COLUMN_WIDTH}]`}></div>
 
@@ -96,8 +114,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             {day.getDay() === 1 && (
               <div className='bg-blue-400' style={{fontWeight: 'bold'}}>{getWeekNumber(day)}</div>
             )}
-            <span className="block text-xs text-gray-500">{format(day, 'EEE', { locale: fr })}</span> {/* Nom du jour court (Lun, Mar...) */}
             <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span> {/* Numéro du jour */}
+            <span className="block text-xs text-gray-500">{format(day, 'MMM', { locale: fr })}</span> {/* Mois court (Jan, Fév...) */}
+            <span className="block text-xs text-gray-500">{format(day, 'yyyy', { locale: fr })}</span> {/* Année */}
           </div>
         ))}
 

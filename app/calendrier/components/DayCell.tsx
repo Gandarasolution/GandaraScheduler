@@ -21,6 +21,7 @@ interface DayCellProps {
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
+  
 }
 
 const DayCell: React.FC<DayCellProps> = ({
@@ -34,6 +35,7 @@ const DayCell: React.FC<DayCellProps> = ({
   onAppointmentClick,
   onExternalDragDrop,
   isWeekend,
+  
 }) => {
   function isHoliday(day: Date, holidays: { date: string }[]) {
     const dayStr = format(day, 'yyyy-MM-dd');
@@ -47,7 +49,10 @@ const DayCell: React.FC<DayCellProps> = ({
   }`;
 
   return (
-    <div className={cellClasses}>
+    <div 
+      className={cellClasses + ' snap-center'}
+      id={format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'today-cell' : undefined}
+    >
       {/* Le numéro du jour est maintenant géré par l'en-tête global dans CalendarGrid */}
       {intervals.map((interval) => {
         const intervalStart = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.startHour), 0), 0), 0);
@@ -72,7 +77,8 @@ const DayCell: React.FC<DayCellProps> = ({
             onExternalDragDrop={onExternalDragDrop}
             isCellActive={isCellActive}
             isWeekend={isWeekend}
-            isHoliday={isFerie}
+            isHoliday={isHoliday}
+            isFerie={isFerie}
             holidays={holidays}
           />
         );
