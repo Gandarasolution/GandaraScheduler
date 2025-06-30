@@ -7,6 +7,20 @@ import InfoBubble from './InfoBubble';
 import { Appointment } from '../types';
 import { CELL_WIDTH, CELL_HEIGHT } from '../pages/index'
 
+
+const colors = [
+  'blue-500',
+  'emerald-500',
+  'amber-400',
+  'rose-500',
+  'purple-500',
+  'pink-400',
+  'gray-500',
+  'sky-500',
+  'orange-400',
+  'teal-500',
+];
+
 interface IntervalCellProps {
   date: Date;
   employeeId: number; // Peut être null si la cellule n'est pas active ou pour un jour sans employé
@@ -20,7 +34,7 @@ interface IntervalCellProps {
   holidays: { date: string }[]; // Liste des jours fériés, si nécessaire
   isHoliday: (day: Date, holidays: { date: string }[]) => boolean; // Fonction pour vérifier si un jour est férié
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
-  onCellDoubleClick: (date: Date, employeeId: number) => void;
+  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
 }
@@ -56,6 +70,9 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   const [showInfoBubble, setShowInfoBubble] = useState(false);
   const [bubbleContent, setBubbleContent] = useState('');
   const [bubblePosition, setBubblePosition] = useState({ x: 0, y: 0 });
+
+
+
 
   const getNextWeekday = useCallback((date: Date): Date => {
     let next = new Date(date);
@@ -120,7 +137,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   };
 
   const handleCellDoubleClick = () => {
-    onCellDoubleClick(date, employeeId);
+    onCellDoubleClick(date, employeeId, intervalName);
   };
 
   return (
@@ -147,7 +164,8 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
           onResize={(id,newStartDate, newEndDate) => {
             // Mets à jour l'event dans le state global
             onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number);
-        }}
+          }}
+          color={`bg-${colors[app.employeeId as number % colors.length]}`}
         />
       ))}
 

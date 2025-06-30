@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Appointment, Employee } from '../types';
 import { format, parseISO, setHours, setMinutes, isSameDay } from 'date-fns';
+import { chantier, absences, autres } from '../../datasource'
 
 interface AppointmentFormProps {
   appointment: Appointment | null;
@@ -36,6 +37,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         }
   );
 
+
   useEffect(() => {
     if (appointment) {
       setFormData({ ...appointment, startDate: appointment.startDate, endDate: appointment.endDate });
@@ -54,6 +56,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    if (name === 'employeeId') {
+      // Si l'ID de l'employé change, on met à jour le champ employeeId
+      setFormData((prev) => ({ ...prev, employeeId: Number(value) }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -89,7 +96,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault();    
     onSave(formData as Appointment);
   };
 
@@ -101,21 +108,32 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="text-xl font-bold mb-4">{appointment ? 'Modifier' : 'Créer'} un rendez-vous</h2>
-
       <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Titre:</label>
-        <input
-          type="text"
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Chantier:</label>
+        <select
           id="title"
           name="title"
           value={formData.title}
           onChange={handleChange}
           required
           className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-        />
+        >
+          {appointment?.type === 'Chantier' ? chantier.map((c) => (
+            <option key={c.id} value={c.label}>
+              {c.label}
+            </option>
+          )) : appointment?.type === 'Absence' ? absences.map((a) => (
+            <option key={a.id} value={a.label}>
+              {a.label}
+            </option>
+          )) : appointment?.type === 'Autre' ? autres.map((o) => (
+            <option key={o.id} value={o.label}>
+              {o.label}
+            </option>
+          )) : null}
+        </select>
       </div>
-
+  
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description:</label>
         <textarea

@@ -17,7 +17,7 @@ interface DayCellProps {
   intervals: HalfDayInterval[];
   isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
-  onCellDoubleClick: (date: Date, employeeId: number) => void;
+  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
@@ -51,7 +51,7 @@ const DayCell: React.FC<DayCellProps> = ({
   return (
     <div 
       className={cellClasses + ' snap-center'}
-      id={format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'today-cell' : undefined}
+      id={format(day, 'yyyy-MM-dd')}
     >
       {/* Le numéro du jour est maintenant géré par l'en-tête global dans CalendarGrid */}
       {intervals.map((interval) => {
@@ -72,7 +72,7 @@ const DayCell: React.FC<DayCellProps> = ({
             intervalEnd={intervalEnd}
             appointments={intervalAppointments}
             onAppointmentMoved={onAppointmentMoved}
-            onCellDoubleClick={() => onCellDoubleClick(intervalStart, employeeId)}
+            onCellDoubleClick={() => onCellDoubleClick(intervalStart, employeeId, interval.name)}
             onAppointmentClick={onAppointmentClick}
             onExternalDragDrop={onExternalDragDrop}
             isCellActive={isCellActive}

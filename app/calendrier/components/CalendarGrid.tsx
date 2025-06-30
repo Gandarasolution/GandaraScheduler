@@ -17,7 +17,7 @@ interface CalendarGridProps {
   dayInTimeline: Date[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
-  onCellDoubleClick: (date: Date, employeeId: number) => void;
+  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
 }

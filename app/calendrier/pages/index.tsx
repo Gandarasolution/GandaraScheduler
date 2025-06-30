@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, JSX } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -13,6 +13,8 @@ import {
 } from "date-fns";
 import { Appointment, Employee, HalfDayInterval } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
+import Modal from "../components/Modal";
+import AppointmentForm from "../components/AppointmentForm";
 import DraggableSource from "../components/DraggableSource";
 import Drawer from "../components/Drawer";
 import {
@@ -26,8 +28,8 @@ import {
 
 const eventTypes = [
   { label: "Chantier", color: "primary", dataSource: chantier, placeholder: "Sélectionnez un chantier" },
-  { label: "Absences", color: "warning", dataSource: absences, placeholder: "Sélectionnez une absence" },
-  { label: "Autres", color: "secondary", dataSource: autres, placeholder: "Sélectionnez autre" },
+  { label: "Absence", color: "warning", dataSource: absences, placeholder: "Sélectionnez une absence" },
+  { label: "Autre", color: "secondary", dataSource: autres, placeholder: "Sélectionnez autre" },
 ];
 
 const DAYS_TO_ADD = 30;
@@ -56,6 +58,7 @@ export default function HomePage() {
   const [dayInTimeline, setDayInTimeline] = useState(
     eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) })
   );
+  const [addAppointmentStep, setAddAppointmentStep] = useState<"select" | "form" | "">("");
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
@@ -67,7 +70,7 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>(initialAppointments);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number } | null>(null);
+  const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number ; intervalName: "morning" | "afternoon"} | null>(null);
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);
   const lastScrollLeft = useRef(0);
   const lastScrollTime = useRef(Date.now());
@@ -151,18 +154,17 @@ export default function HomePage() {
   }, [dayInTimeline]);
 
   // Centrage sur aujourd'hui
-  const goToday = useCallback(() => {
+  const goToDate = useCallback((date: Date) => {
     if (!mainScrollRef.current) return;
     setIsLoading(true);
-    const today = new Date();
     setDayInTimeline(
       eachDayOfInterval({
-        start: addDays(today, -WINDOW_SIZE / 2),
-        end: addDays(today, WINDOW_SIZE / 2),
+        start: addDays(date, -WINDOW_SIZE / 2),
+        end: addDays(date, WINDOW_SIZE / 2),
       })
     );
     setTimeout(() => {
-      const todayCell = document.getElementById('today-cell');
+      const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
       if (todayCell && mainScrollRef.current) {
         isAutoScrolling.current = true;
         const container = mainScrollRef.current;
@@ -181,7 +183,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    goToday();
+    goToDate(new Date());
   }, []); // Centrage initial
 
 
@@ -208,10 +210,10 @@ export default function HomePage() {
     setIsModalOpen(true);
   }, []);
 
-  const handleOpenNewModal = useCallback((date: Date, employeeId: number) => {
+  const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon") => {
+    setAddAppointmentStep("select");
     setSelectedAppointment(null);
-    setNewAppointmentInfo({ date, employeeId });
-    setIsModalOpen(true);
+    setNewAppointmentInfo({ date, employeeId, intervalName });
   }, []);
 
   const moveAppointment = useCallback(
@@ -270,31 +272,34 @@ export default function HomePage() {
     <DndProvider backend={HTML5Backend}>
       <div className="h-screen flex flex-col overflow-hidden">
         <div className="sticky top-0 z-20 bg-white shadow px-4 py-2 flex items-center justify-between">
-          <button
-            className="btn btn-primary cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              goToday();
+          <input
+            type="date"
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            value={format(dayInTimeline[Math.floor(WINDOW_SIZE / 2)], "yyyy-MM-dd")}
+            onChange={(e) => {
+              const selectedDate = new Date(e.target.value);
+              goToDate(selectedDate);
             }}
-          >
-            Aujourd'hui
-          </button>
-          <div>
-            <label htmlFor="search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Search</label>
+          />
+         
+          <div className="w-80 max-w-full">
+            <label htmlFor="search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">
+              Recherche
+            </label>
             <div className="relative">
               <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                <svg className="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
                   <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
                 </svg>
               </div>
-              <input 
-                  type="search" 
-                  id="search" 
-                  className="block p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50" 
-                  placeholder="Search"
-                  value={searchInput || ""}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
+              <input
+                type="search"
+                id="search"
+                className="block w-full p-3 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 focus:ring-blue-500 focus:border-blue-500 transition"
+                placeholder="Rechercher un rendez-vous"
+                value={searchInput || ""}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
             </div>
           </div>
         </div>
@@ -323,6 +328,33 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        {/* Modal pour le formulaire de rendez-vous */}
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={() => 
+          setIsModalOpen(false)}
+          title={selectedAppointment ? "Modifier le rendez-vous" : "Ajouter un rendez-vous"}
+          >
+          <AppointmentForm
+            appointment={selectedAppointment}
+            initialDate={newAppointmentInfo?.date || null}
+            initialEmployeeId={newAppointmentInfo?.employeeId || null}
+            employees={employees.current}
+            onSave={handleSaveAppointment}
+            onDelete={handleDeleteAppointment}
+            onClose={() => setIsModalOpen(false)}
+          />
+        </Modal>
+        <ChoiceAppointmentType
+          setAddAppointmentStep={setAddAppointmentStep}
+          newAppointmentInfo={newAppointmentInfo}
+          isOpen={addAppointmentStep === "select"}
+          onSelect={(appointment) => {
+            setAddAppointmentStep("form");
+            setSelectedAppointment(appointment);
+            setIsModalOpen(true);
+          }}
+        />
         <Drawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} isDragging={isDrawerOpen}>
           <div className={"flex flex-col items-center"}>
             <div className="mb-3 text-muted" style={{ fontSize: 13 }}>
@@ -337,7 +369,7 @@ export default function HomePage() {
             >
               {eventTypes.map((ev) => (
                 <option key={ev.label} value={ev.label}>
-                  {ev.label}
+                  {ev.label + "s"}
                 </option>
               ))}
             </select>
@@ -367,3 +399,114 @@ export default function HomePage() {
     </DndProvider>
   );
 }
+
+
+
+type ChoiceAppointmentTypeProps = {
+  onSelect: (appointment: Appointment) => void;
+  isOpen: boolean;
+  setAddAppointmentStep?: (step: "select" | "form" | "") => void;
+  newAppointmentInfo: { date: Date; employeeId: number; intervalName: "morning" | "afternoon" } | null;
+};
+
+const typeIcons: Record<string, JSX.Element> = {
+  Chantier: (
+    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2M16 11V7a4 4 0 10-8 0v4M12 17v-6" />
+    </svg>
+  ),
+  Absence: (
+    <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  Autre: (
+    <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v4l3 3" />
+    </svg>
+  ),
+};
+
+const colorMap: Record<string, string> = {
+  Chantier: "blue",
+  Absence: "yellow",
+  Autre: "purple",
+};
+
+const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
+  onSelect,
+  isOpen,
+  setAddAppointmentStep,
+  newAppointmentInfo,
+}) => {
+  // Sécurité : valeurs par défaut si jamais newAppointmentInfo est null
+  const date = newAppointmentInfo?.date ?? new Date();
+  const intervalName = newAppointmentInfo?.intervalName ?? "morning";
+  const employeeId = newAppointmentInfo?.employeeId ?? 0;
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={() => setAddAppointmentStep?.("") || null}
+      title="Choisissez le type de rendez-vous"
+    >
+      <div className="mb-4 text-lg font-semibold text-center">
+        Quel type souhaitez-vous ajouter&nbsp;?
+      </div>
+      <div className="flex flex-col gap-3">
+        {eventTypes.map((eventType) => (
+          <button
+            key={eventType.label}
+            type="button"
+            className={`
+              flex items-center gap-4 p-4 rounded-xl border border-gray-200
+              bg-white hover:bg-${colorMap[eventType.label]}-50
+              shadow-sm cursor-pointer
+              focus:outline-none focus:ring-2
+              group
+              hover:scale-105 origin-top-center transition-transform duration-300
+            `}
+            style={{ minHeight: 64 }}
+            onClick={() => {
+              onSelect({
+                id: Date.now(),
+                title: "",
+                description: "",
+                startDate: setHours(
+                  setMinutes(date, 0),
+                  intervalName === "morning"
+                    ? HALF_DAY_INTERVALS[0].startHour
+                    : HALF_DAY_INTERVALS[1].startHour
+                ),
+                endDate: setHours(
+                  setMinutes(date, 0),
+                  intervalName === "morning"
+                    ? HALF_DAY_INTERVALS[0].endHour
+                    : HALF_DAY_INTERVALS[1].endHour
+                ),
+                imageUrl: "",
+                employeeId,
+                type: eventType.label as "Chantier" | "Absence" | "Autre",
+              });
+            }}
+          >
+            <span className="flex items-center justify-center rounded-full group-hover:bg-white transition-colors">
+              {typeIcons[eventType.label]}
+            </span>
+            <span className={`text-${colorMap[eventType.label]}-700 font-semibold text-lg`}>
+              {eventType.label}
+            </span>
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => setAddAppointmentStep?.("")}
+        className="mt-6 w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition"
+      >
+        Annuler
+      </button>
+    </Modal>
+  );
+};

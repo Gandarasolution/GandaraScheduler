@@ -10,9 +10,10 @@ interface AppointmentItemProps {
   appointment: Appointment;
   onClick: () => void;
   onResize: (id: number, newStart: Date, newEnd: Date) => void;
+  color?: string; // Optionnel, si tu veux personnaliser la couleur
 }
 
-const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick, onResize }) => {
+const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick, onResize, color }) => {
 
   const [{ isDragging }, drag] = useDrag({
     type: 'appointment',

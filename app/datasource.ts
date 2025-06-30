@@ -24,61 +24,59 @@ export const initialEmployees: Employee[] = [
 ];
 
 export const chantier = [
-    { id: 1 , label: '1052 Logements Vesoul',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 2 , label: 'Résidence Les Jardins de Paris',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 3 , label: 'Chantier Lycée Jean Moulin' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 4 , label: 'Rénovation Hôtel de Ville',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 5 , label: 'Extension Usine Renault Flins',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 6 , label: 'Construction EHPAD Les Lilas',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 7 , label: 'Réhabilitation Collège Victor Hugo' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 8 , label: 'Immeuble Le Belvédère Lyon' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 9 , label: 'Bâtiment Industriel Toulouse' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 10 , label: 'Résidence Étudiante Marseille' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' }
+    { id: 1 , label: '1052 Logements Vesoul', imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
+    { id: 2 , label: 'Résidence Les Jardins de Paris',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
+    { id: 3 , label: 'Chantier Lycée Jean Moulin' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
+    { id: 4 , label: 'Rénovation Hôtel de Ville',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
+    { id: 5 , label: 'Extension Usine Renault Flins',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
+    { id: 6 , label: 'Construction EHPAD Les Lilas',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
+    { id: 7 , label: 'Réhabilitation Collège Victor Hugo' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
+    { id: 8 , label: 'Immeuble Le Belvédère Lyon' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
+    { id: 9 , label: 'Bâtiment Industriel Toulouse' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
+    { id: 10 , label: 'Résidence Étudiante Marseille' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' }
 ];
 
 export const absences = [
-    { id: 1, label: 'RTT' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 2, label: 'Maladie',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 3, label: 'Congés payés',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 4, label: 'Sans solde',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 5, label: 'Autre',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' }
+    { id: 1, label: 'RTT' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' },
+    { id: 2, label: 'Maladie',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' },
+    { id: 3, label: 'Congés payés',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' },
+    { id: 4, label: 'Sans solde',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' },
+    { id: 5, label: 'Autre',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' }
 ]
 
 export const autres = [
     { id: 1, label: 'Heures SUP',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
     { id: 2, label: 'Formation',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 3, label: 'Réunion' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 4, label: 'Déplacement',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 5, label: 'Maintenance' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' }
+    { id: 3, label: 'Réunion' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Autre' },
+    { id: 4, label: 'Déplacement',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Autre' },
+    { id: 5, label: 'Maintenance' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Autre' }
 ]
 
 function generateAppointments(employees: Employee[]): Appointment[] {
   const baseDate = new Date(2025, 5, 24); // 24 juin 2025
   const titles = [
-    "Chantier Vesoul",
-    "Congés payés",
-    "Formation",
-    "Chantier Paris",
-    "RTT",
-    "Maintenance",
-    "Réunion",
-    "Audit",
-    "Déplacement",
-    "Télétravail",
-    "Visite médicale",
-    "Entretien"
+    chantier[0],
+    absences[0],
+    autres[0],
+    chantier[1],
+    absences[1],
+    autres[1],
+    autres[2],
+    autres[3],
+    autres[4]
   ];
 
   return employees.map((emp, idx) => {
     const dayOffset = idx % 7; // Un rendez-vous par jour sur une semaine
     return {
       id: idx + 1,
-      title: titles[idx % titles.length],
+      title: titles[idx % titles.length].label,
       description: `Rendez-vous pour ${emp.name}`,
       startDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 0, 0),
       endDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 12, 0),
       imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png',
       employeeId: emp.id,
+      type: titles[idx % titles.length].type as 'Chantier' | 'Absence' | 'Autre'
     };
   });
 }
