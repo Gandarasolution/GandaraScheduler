@@ -5,16 +5,24 @@ import { Appointment, Employee } from '../types';
 import { format, parseISO, setHours, setMinutes, isSameDay } from 'date-fns';
 import { chantier, absences, autres } from '../../datasource'
 
+/**
+ * Props du composant AppointmentForm
+ * Formulaire pour créer ou éditer un rendez-vous (chantier, absence, autre).
+ */
 interface AppointmentFormProps {
   appointment: Appointment | null;
   initialDate?: Date | null;
   initialEmployeeId?: number | null; // Nouvelle prop
-  employees: Employee[]; // Nouvelle prop : liste de tous les employés
+  employees: Employee[]; // Liste de tous les employés
   onSave: (appointment: Appointment) => void;
   onDelete: (id: number) => void;
   onClose: () => void;
 }
 
+/**
+ * Formulaire de création/édition de rendez-vous.
+ * Gère les champs, la validation, la sélection du type, l'affectation à un employé, etc.
+ */
 const AppointmentForm: React.FC<AppointmentFormProps> = ({
   appointment,
   initialDate,
@@ -24,6 +32,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   onDelete,
   onClose,
 }) => {
+  // État local pour les champs du formulaire
   const [formData, setFormData] = useState<Omit<Appointment, 'id'> & { id?: number }>(
     appointment
       ? { ...appointment, startDate: appointment.startDate, endDate: appointment.endDate }
@@ -37,7 +46,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         }
   );
 
-
+  // Met à jour le formulaire si l'appointment ou les props changent
   useEffect(() => {
     if (appointment) {
       setFormData({ ...appointment, startDate: appointment.startDate, endDate: appointment.endDate });
@@ -54,16 +63,17 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
   }, [appointment, initialDate, initialEmployeeId, employees]);
 
+  // Gère les changements de champ texte/select
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'employeeId') {
-      // Si l'ID de l'employé change, on met à jour le champ employeeId
       setFormData((prev) => ({ ...prev, employeeId: Number(value) }));
       return;
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Gère le changement de date (date picker)
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const datePart = parseISO(value);
@@ -80,6 +90,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
   };
 
+  // Gère le changement d'heure (time picker)
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const [hours, minutes] = value.split(':').map(Number);
@@ -95,19 +106,23 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
   };
 
+  // Soumission du formulaire
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();    
     onSave(formData as Appointment);
   };
 
+  // Suppression du rendez-vous
   const handleDelete = () => {
     if (formData.id && confirm('Êtes-vous sûr de vouloir supprimer ce rendez-vous ?')) {
       onDelete(formData.id);
     }
   };
 
+  // Rendu du formulaire
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* Sélection du type (chantier, absence, autre) */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Chantier:</label>
         <select
@@ -134,6 +149,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </select>
       </div>
   
+      {/* Description */}
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description:</label>
         <textarea
@@ -146,6 +162,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         ></textarea>
       </div>
 
+      {/* Image (optionnelle) */}
       <div>
         <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1">URL Image (optionnel):</label>
         <input
@@ -158,6 +175,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         />
       </div>
 
+      {/* Affectation à un employé */}
       <div>
         <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 mb-1">Assigné à:</label>
         <select
@@ -176,6 +194,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </select>
       </div>
 
+      {/* Dates et heures de début/fin */}
       <div className="flex gap-4">
         <div className="flex-1">
           <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">Date de début:</label>
@@ -230,6 +249,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </div>
       </div>
 
+      {/* Boutons d'action */}
       <div className="flex justify-end gap-3 mt-4">
         {appointment && (
           <button

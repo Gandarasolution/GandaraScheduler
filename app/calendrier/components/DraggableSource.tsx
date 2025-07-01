@@ -2,11 +2,19 @@
 import React from 'react';
 import { useDrag } from 'react-dnd';
 
+/**
+ * Props du composant DraggableSource
+ * Permet de rendre un élément externe draggable (ex: source de rendez-vous à glisser dans le calendrier).
+ */
 interface DraggableSourceProps {
   id: string;
   title: string;
 }
 
+/**
+ * Composant DraggableSource
+ * Utilisé pour rendre un élément draggable depuis une source externe.
+ */
 const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'external-item',

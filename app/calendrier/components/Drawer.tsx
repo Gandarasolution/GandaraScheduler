@@ -2,6 +2,11 @@
 
 import React, { useEffect } from "react";
 
+/**
+ * Props du composant Drawer
+ * Affiche un tiroir latéral (drawer) pour afficher un formulaire ou du contenu additionnel.
+ * Peut être masqué pendant un drag & drop.
+ */
 interface DrawerProps {
   open: boolean;
   children: React.ReactNode;
@@ -9,6 +14,11 @@ interface DrawerProps {
   isDragging: boolean;
 }
 
+/**
+ * Composant Drawer
+ * Affiche un panneau latéral avec en-tête, bouton de fermeture et contenu.
+ * Se ferme avec la touche Escape ou le bouton.
+ */
 const Drawer: React.FC<DrawerProps> = ({ open, children, onClose, isDragging }) => {
 
   useEffect(() => {
@@ -22,7 +32,7 @@ const Drawer: React.FC<DrawerProps> = ({ open, children, onClose, isDragging }) 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  })
+  });
 
   return(
     <div className={`drawer-container${open ? " open" : ""} ${isDragging ? "hide-during-drag" : ""}`}>

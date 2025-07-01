@@ -1,5 +1,6 @@
 "use client";
 
+// Imports React, hooks, DnD, date-fns, types, composants, et données
 import React, { useState, useCallback, useRef, useEffect, JSX } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -26,12 +27,14 @@ import {
   autres,
 } from "../../datasource";
 
+// Définition des types d'événements pour le drawer
 const eventTypes = [
   { label: "Chantier", color: "primary", dataSource: chantier, placeholder: "Sélectionnez un chantier" },
   { label: "Absence", color: "warning", dataSource: absences, placeholder: "Sélectionnez une absence" },
   { label: "Autre", color: "secondary", dataSource: autres, placeholder: "Sélectionnez autre" },
 ];
 
+// Constantes pour la timeline et les cellules
 const DAYS_TO_ADD = 30;
 const THRESHOLD_MAX = 80;
 const THRESHOLD_MIN = 20;
@@ -46,6 +49,7 @@ export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
   { name: "afternoon", startHour: 12, endHour: 24 },
 ];
 
+// Petite fonction utilitaire pour éviter les appels trop fréquents (scroll, etc.)
 function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
   let timeout: NodeJS.Timeout;
   return (...args: Parameters<T>) => {
@@ -54,7 +58,9 @@ function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
   };
 }
 
+// Composant principal de la page calendrier
 export default function HomePage() {
+  // Etats principaux
   const [dayInTimeline, setDayInTimeline] = useState(
     eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) })
   );
@@ -75,8 +81,7 @@ export default function HomePage() {
   const lastScrollLeft = useRef(0);
   const lastScrollTime = useRef(Date.now());
 
-
-  // Utilitaire pour savoir si on est au bord du scroll
+  // Utilitaire pour savoir si on est au bord du scroll horizontal
   function isAtMinOrMaxScroll(container: HTMLDivElement) {
     const { scrollLeft, scrollWidth, clientWidth } = container;
     const isAtMin = scrollLeft === 0;
@@ -84,7 +89,7 @@ export default function HomePage() {
     return { isAtMin, isAtMax };
   }
 
-  // Scroll infini fluide
+  // Gestion du scroll infini horizontal (ajout de jours à gauche/droite)
   const handleScroll = useCallback(
     debounce(() => {
       if (isAutoScrolling.current || isLoadingMoreDays.current || !mainScrollRef.current) return;
@@ -99,7 +104,7 @@ export default function HomePage() {
       lastScrollLeft.current = scrollLeft;
       lastScrollTime.current = now;
 
-      // Ajout à droite
+      // Ajout de jours à droite si on approche du bord droit
       if (scrollPercentage >= THRESHOLD_MAX) {
         isLoadingMoreDays.current = true;
         if (Math.abs(speed) < 0.5) setIsLoading(true);
@@ -110,11 +115,10 @@ export default function HomePage() {
           return [...prevDays, ...newDays];
         });
 
-        // Pas besoin d'ajuster scrollLeft lors de l'ajout à droite
         isLoadingMoreDays.current = false;
         setIsLoading(false);
       }
-      // Ajout à gauche
+      // Ajout de jours à gauche si on approche du bord gauche
       else if (scrollPercentage <= THRESHOLD_MIN) {
         isLoadingMoreDays.current = true;
         if (Math.abs(speed) < 0.5) setIsLoading(true);
@@ -153,7 +157,7 @@ export default function HomePage() {
     // eslint-disable-next-line
   }, [dayInTimeline]);
 
-  // Centrage sur aujourd'hui
+  // Centrage sur aujourd'hui au chargement
   const goToDate = useCallback((date: Date) => {
     if (!mainScrollRef.current) return;
     setIsLoading(true);
@@ -186,8 +190,7 @@ export default function HomePage() {
     goToDate(new Date());
   }, []); // Centrage initial
 
-
-  // Gestion des rendez-vous (inchangé)
+  // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback((appointment: Appointment) => {
     if (appointment.id) {
       setFilteredAppointments((prev) => prev.map((app) => (app.id === appointment.id ? appointment : app)));
@@ -216,6 +219,7 @@ export default function HomePage() {
     setNewAppointmentInfo({ date, employeeId, intervalName });
   }, []);
 
+  // Déplacement d'un rendez-vous (drag & drop ou resize)
   const moveAppointment = useCallback(
     (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => {
       setFilteredAppointments((prev) =>
@@ -229,6 +233,7 @@ export default function HomePage() {
     []
   );
 
+  // Création d'un rendez-vous depuis un drag externe
   const createAppointmentFromDrag = useCallback(
     (title: string, date: Date, intervalName: "morning" | "afternoon", employeeId: number) => {
       const newApp: Appointment = {
@@ -251,6 +256,22 @@ export default function HomePage() {
     []
   );
 
+  // Création d'un rendez-vous (utilisé lors du resize fractionné)
+  const createAppointment = useCallback(
+    (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => {
+      const newApp: Appointment = {
+        id: Number(Date.now()),
+        title,
+        description: `Nouvel élément ${title}`,
+        startDate,
+        endDate,
+        imageUrl,
+        employeeId,
+      };
+      setFilteredAppointments((prev) => [...prev, newApp]);
+    }, []);
+
+  // Recherche dans les rendez-vous
   const searchAppointments = useCallback((query: string) => {    
     if (!query) {
       setFilteredAppointments(appointments.current);
@@ -268,9 +289,11 @@ export default function HomePage() {
     searchAppointments(searchInput);
   }, [searchInput]);
 
+  // Rendu principal de la page
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="h-screen flex flex-col overflow-hidden">
+        {/* Barre du haut : date, recherche */}
         <div className="sticky top-0 z-20 bg-white shadow px-4 py-2 flex items-center justify-between">
           <input
             type="date"
@@ -282,6 +305,7 @@ export default function HomePage() {
             }}
           />
          
+          {/* Champ de recherche */}
           <div className="w-80 max-w-full">
             <label htmlFor="search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">
               Recherche
@@ -303,6 +327,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        {/* Grille principale du calendrier */}
         <div className="flex-1 flex flex-col max-h-full max-w-full overflow-hidden">
           <div
             className="flex flex-grow overflow-auto snap-x snap-mandatory scrollbar-hide"
@@ -324,6 +349,7 @@ export default function HomePage() {
                 onCellDoubleClick={handleOpenNewModal}
                 onAppointmentClick={handleOpenEditModal}
                 onExternalDragDrop={createAppointmentFromDrag}
+                createAppointment={createAppointment}
               />
             </div>
           </div>
@@ -345,6 +371,7 @@ export default function HomePage() {
             onClose={() => setIsModalOpen(false)}
           />
         </Modal>
+        {/* Modal pour choisir le type de rendez-vous */}
         <ChoiceAppointmentType
           setAddAppointmentStep={setAddAppointmentStep}
           newAppointmentInfo={newAppointmentInfo}
@@ -355,6 +382,7 @@ export default function HomePage() {
             setIsModalOpen(true);
           }}
         />
+        {/* Drawer latéral pour ajouter un rendez-vous par drag & drop */}
         <Drawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} isDragging={isDrawerOpen}>
           <div className={"flex flex-col items-center"}>
             <div className="mb-3 text-muted" style={{ fontSize: 13 }}>
@@ -380,6 +408,7 @@ export default function HomePage() {
             </div>
           </div>
         </Drawer>
+        {/* Bouton pour ouvrir le drawer */}
         <button
           onClick={() => setIsDrawerOpen(true)}
           className="btn-add"
@@ -390,6 +419,7 @@ export default function HomePage() {
         >
           +
         </button>
+        {/* Barre de chargement */}
         {isLoading && (
           <div className="absolute top-0 left-0 w-full h-1 bg-blue-200 z-50">
             <div className="h-full bg-blue-600 animate-pulse" style={{ width: "30%" }} />
@@ -400,8 +430,7 @@ export default function HomePage() {
   );
 }
 
-
-
+// Composant pour choisir le type de rendez-vous à créer
 type ChoiceAppointmentTypeProps = {
   onSelect: (appointment: Appointment) => void;
   isOpen: boolean;
@@ -409,6 +438,7 @@ type ChoiceAppointmentTypeProps = {
   newAppointmentInfo: { date: Date; employeeId: number; intervalName: "morning" | "afternoon" } | null;
 };
 
+// Icônes pour chaque type d'événement
 const typeIcons: Record<string, JSX.Element> = {
   Chantier: (
     <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -428,12 +458,14 @@ const typeIcons: Record<string, JSX.Element> = {
   ),
 };
 
+// Couleurs pour chaque type d'événement
 const colorMap: Record<string, string> = {
   Chantier: "blue",
   Absence: "yellow",
   Autre: "purple",
 };
 
+// Composant pour choisir le type de rendez-vous à créer (modal)
 const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
   onSelect,
   isOpen,

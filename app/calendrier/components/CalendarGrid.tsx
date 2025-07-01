@@ -5,10 +5,10 @@ import {
   isSameDay,
   isWeekend,
 } from 'date-fns';
-import DayCell from './DayCell'; // Sera utilisé pour les cellules de rendez-vous
+import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
 import { fr } from 'date-fns/locale';
-import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT, sizeCell, TEAM_HEADER_HEIGHT} from '../pages/index'; // Importez les constantes définies dans un fichier séparé
+import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT, sizeCell, TEAM_HEADER_HEIGHT} from '../pages/index'; // Constantes de style
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -20,14 +20,10 @@ interface CalendarGridProps {
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
+  createAppointment: (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => void;
 }
 
-
-
-
-
-
-
+// Grille principale du calendrier, affiche les équipes, employés, jours et rendez-vous
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   employees,
   appointments,
@@ -38,13 +34,17 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onCellDoubleClick,
   onAppointmentClick,
   onExternalDragDrop,
+  createAppointment
 }) => {
  
-  const [openTeams, setOpenTeams] = useState<number[]>(initialTeams.map(team => team.id)); // État pour gérer les équipes ouvertes
+  // État pour gérer les équipes ouvertes (affichées)
+  const [openTeams, setOpenTeams] = useState<number[]>(initialTeams.map(team => team.id));
+  // Trouve l'index du jour courant dans la timeline
   const todayIndex = dayInTimeline.findIndex(day => 
     format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
   );
 
+  // Regroupe les employés par équipe
   const employeesByTeam = useMemo(() => 
     initialTeams.map(team => ({
       ...team,
@@ -52,7 +52,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     })
   ), [employees, initialTeams]);
   
-
+  // Ouvre/ferme une équipe dans la vue
   const toggleTeam = (teamId: number) => {
     setOpenTeams(open =>
       open.includes(teamId)
@@ -61,6 +61,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     );
   };
 
+  // Calcule le numéro de semaine pour un jour donné
   const getWeekNumber = (d: Date) => {
       d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
       const dayNum = d.getUTCDay() || 7;
@@ -69,23 +70,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
   };
 
-
   return (
-    <div className="relative h-full w-full"> {/* Conteneur principal qui gère le défilement de son contenu */}
-      {/* La grille principale du calendrier */}
+    <div className="relative h-full w-full">
+      {/* Grille principale */}
       <div
         className="grid bg-white relative"
         style={{
-          // Définir les colonnes: 1 pour l'employé, puis X pour les jours fixes
+          // Colonnes : 1 pour l'employé, puis X pour les jours
           gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH} repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-          // Définir les lignes: 1 pour l'en-tête des jours, puis X pour chaque employé
-          gridTemplateRows: `auto repeat(${employees.length}, minmax(${CELL_HEIGHT}px, auto))`, // Hauteur min pour chaque ligne d'employé
-          // Pour s'assurer que la grille prend toute la largeur et hauteur nécessaire pour le défilement
+          // Lignes : 1 pour l'en-tête, puis X pour chaque employé
+          gridTemplateRows: `auto repeat(${employees.length}, minmax(${CELL_HEIGHT}px, auto))`,
           width: `calc(${EMPLOYEE_COLUMN_WIDTH} + ${dayInTimeline.length} * ${CELL_WIDTH}px)`,
-          minHeight: `calc(auto + ${employees.length} * ${CELL_HEIGHT}px)`, // Ajustez 140px si les cellules sont plus grandes/petites
+          minHeight: `calc(auto + ${employees.length} * ${CELL_HEIGHT}px)`,
         }}
       >
-        {/* Ligne rouge pour la date du jour */}
+        {/* Ligne rouge verticale pour la date du jour */}
         {todayIndex !== -1 && (
           <div
             style={{
@@ -100,40 +99,36 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             }}
           />
         )}
-        {/* Coin supérieur gauche vide */}
+        {/* Coin supérieur gauche vide (fixe) */}
         <div className={`sticky top-0 left-0 z-30 bg-gray-200 border-b border-r border-gray-300 w-[${EMPLOYEE_COLUMN_WIDTH}]`}></div>
 
-        {/* En-tête des jours (fixe en haut) */}
-      
-        {/* Jours du mois */}
+        {/* En-tête des jours (ligne du haut) */}
         {dayInTimeline.map((day, index) => (
           <div
             key={`header-day-${format(day, 'yyyy-MM-dd')}`}
             className={`flex flex-col-reverse justify-end sticky top-0 z-20 bg-gray-200 border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1 ${isWeekend(day) ? 'bg-gray-100' : ''}`}
           >
+            {/* Affiche le numéro de semaine en début de semaine */}
             {day.getDay() === 1 && (
               <div className='bg-blue-400' style={{fontWeight: 'bold'}}>{getWeekNumber(day)}</div>
             )}
-            <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span> {/* Numéro du jour */}
-            <span className="block text-xs text-gray-500">{format(day, 'MMM', { locale: fr })}</span> {/* Mois court (Jan, Fév...) */}
-            <span className="block text-xs text-gray-500">{format(day, 'yyyy', { locale: fr })}</span> {/* Année */}
+            <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span>
+            <span className="block text-xs text-gray-500">{format(day, 'MMM', { locale: fr })}</span>
+            <span className="block text-xs text-gray-500">{format(day, 'yyyy', { locale: fr })}</span>
           </div>
         ))}
 
-        
-
-        
-        {/* Lignes pour chaque employé */}
+        {/* Pour chaque équipe */}
         {employeesByTeam.map((team) => (
           <React.Fragment key={team.id} >
+            {/* Ligne d'en-tête de l'équipe */}
             <React.Fragment key={team.id}>
               <div 
                 className={`${sizeCell} sticky left-0 z-20 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200 cursor-pointer`}
                 onClick={() => toggleTeam(team.id)}
               >
-                <div
-                  className=" text-left p-2 font-bold"
-                >
+                {/* Chevron pour ouvrir/fermer l'équipe */}
+                <div className=" text-left p-2 font-bold">
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
                     width="20" 
@@ -152,9 +147,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 </div>
                 <span className="font-semibold text-sm text-gray-800 text-center">{team.name}</span>
               </div>
-
+              {/* Cellules vides pour l'équipe (ligne grisée) */}
               {dayInTimeline.map((day) => {
-
                 return (
                   <DayCell
                     key={`${format(day, 'yyyy-MM-dd')}-${0}`}
@@ -167,12 +161,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     onCellDoubleClick={onCellDoubleClick}
                     onAppointmentClick={onAppointmentClick}
                     onExternalDragDrop={onExternalDragDrop}
-                    isWeekend={isWeekend(day)} // Passe le statut du week-end
+                    isWeekend={isWeekend(day)}
                   />
                 );
               })}
-              
             </React.Fragment>
+            {/* Pour chaque employé de l'équipe (si l'équipe est ouverte) */}
             {openTeams.includes(team.id) && (
               team.employees.map((employee) =>(
                 <React.Fragment key={employee.id}>
@@ -183,15 +177,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     )}
                     <span className="font-semibold text-sm text-gray-800 text-center">{employee.name}</span>
                   </div>
-
                   {/* Cellules de jour pour cet employé */}
-
-                  {/* Cellules des jours du mois */}
                   {dayInTimeline.map((day) => {
+                    // Filtre les rendez-vous de cet employé pour ce jour
                     const dayEmployeeAppointments = appointments.filter((app) =>
                       isSameDay(app.startDate, day) && app.employeeId === employee.id
                     );
-
                     return (
                       <DayCell
                         key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
@@ -203,7 +194,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         onCellDoubleClick={onCellDoubleClick}
                         onAppointmentClick={onAppointmentClick}
                         onExternalDragDrop={onExternalDragDrop}
-                        isWeekend={isWeekend(day)} // Passe le statut du week-end
+                        isWeekend={isWeekend(day)}
+                        createAppointment={createAppointment}
                       />
                     );
                   })}

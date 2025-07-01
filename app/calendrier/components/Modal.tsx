@@ -1,5 +1,10 @@
 import { useEffect } from "react";
 
+/**
+ * Props du composant Modal
+ * Affiche une fenêtre modale avec un titre, un bouton de fermeture et du contenu.
+ * Se ferme avec la touche Escape ou le bouton.
+ */
 interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -7,9 +12,11 @@ interface ModalProps {
     title?: string;
 }
 
+/**
+ * Composant Modal
+ * Affiche une boîte de dialogue modale centrée à l'écran.
+ */
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title }) => {
-    
-    
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
