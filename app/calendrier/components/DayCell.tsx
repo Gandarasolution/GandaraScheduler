@@ -17,12 +17,12 @@ interface DayCellProps {
   appointments: Appointment[];
   intervals: HalfDayInterval[];
   isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
+  isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   createAppointment?: (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => void;
-  isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
 }
 
 /**
@@ -36,12 +36,12 @@ const DayCell: React.FC<DayCellProps> = ({
   appointments = [],
   intervals = [],
   isCellActive = true,
+  isWeekend,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentClick,
   onExternalDragDrop,
   createAppointment,
-  isWeekend,
 }) => {
   // Détermine si le jour est férié (en France)
   function isHoliday(day: Date, holidays: { date: string }[]) {

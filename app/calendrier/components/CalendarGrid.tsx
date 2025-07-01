@@ -34,7 +34,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onCellDoubleClick,
   onAppointmentClick,
   onExternalDragDrop,
-  createAppointment
+  createAppointment,
 }) => {
  
   // État pour gérer les équipes ouvertes (affichées)

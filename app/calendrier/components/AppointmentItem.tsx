@@ -15,6 +15,7 @@ interface AppointmentItemProps {
   holidays?: { date: string }[]; // Liste des jours fériés
   isHoliday: (date: Date, holidays: { date: string }[]) => boolean
   createAppointment?: (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => void;
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment') => void; // Fonction pour gérer le clic droit
 }
 
 /**
@@ -28,7 +29,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   color,
   holidays = [],
   isHoliday,
-  createAppointment
+  createAppointment,
+  handleContextMenu
 }) => {
 
   // Gestion du drag & drop avec react-dnd
@@ -49,7 +51,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     }),
   });
 
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   // États pour le redimensionnement
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
@@ -264,136 +265,58 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     setDragEndSafe(appointment.endDate);
   }, [appointment.startDate, appointment.endDate]);
 
-  // Gestion du clic droit
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY });
-  };
-
-  // Fermer le menu contextuel
-  const closeContextMenu = () => setContextMenu(null);
-
+  
 
   // Rendu du composant
   return (
-    <div
-      ref={(node) => {
-        if (node) drag(node);
-      }}
-      onClick={onClick}
-      onContextMenu={handleContextMenu}
-      className={`
-        relative bg-green-100 border border-green-500 rounded p-1 text-sm
-        flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-opacity duration-100 w-24 h-10 transition-[width, left]
-        ${isDragging ? 'opacity-50' : 'opacity-100'}
-      `}
-      title={appointment.title}
-      style={{
-        width: `${calcultedWidth}px`,
-        minWidth: `${INTERVAL_WIDTH}px`,
-        pointerEvents: isDragging ? 'none' : 'auto',
-        left: `${offsetPx}px`, 
-        position: 'absolute',
-      }}
-    >
-      {/* Handle de redimensionnement à gauche */}
+    <>
       <div
-        className="absolute left-0 top-0 h-full w-2 bg-green-400 cursor-ew-resize rounded-r opacity-0"
-        style={{ zIndex: 10 }}
-        title="Redimensionner"
-        onMouseDown={(e) => handleMouseDown(e, 'left')}
-      />
-      {/* Image éventuelle */}
-      {appointment.imageUrl && (
-        <img
-          src={appointment.imageUrl}
-          alt="Icône"
-          className="w-5 h-5 rounded-full object-cover"
-        />
-      )}
-      {/* Titre du rendez-vous */}
-      <span className="flex-grow text-gray-800">{appointment.title}</span>
-      {/* Handle de redimensionnement à droite */}
-      <div
-        className="absolute right-0 top-0 h-full w-2 bg-green-400 cursor-ew-resize rounded-r opacity-0"
-        style={{ zIndex: 10 }}
-        title="Redimensionner"
-        onMouseDown={(e) => handleMouseDown(e, 'right')}
-      />
-
-      {/* Menu contextuel personnalisé */}
-      {contextMenu && (
+        ref={(node) => {
+          if (node) drag(node);
+        }}
+        onClick={onClick}
+        onContextMenu={(e) => handleContextMenu(e, 'appointment')}
+        className={`
+          relative bg-green-100 border border-green-500 rounded p-1 text-sm
+          flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis
+          cursor-grab transition-opacity duration-100 w-24 z-10 h-10 transition-[width, left]
+          ${isDragging ? 'opacity-50' : 'opacity-100'}
+        `}
+        title={appointment.title}
+        style={{
+          width: `${calcultedWidth}px`,
+          minWidth: `${INTERVAL_WIDTH}px`,
+          pointerEvents: isDragging ? 'none' : 'auto',
+          left: `${offsetPx}px`, 
+          position: 'absolute',
+        }}
+      >
+        {/* Handle de redimensionnement à gauche */}
         <div
-          className="fixed bg-white border border-gray-300 rounded shadow-lg p-4 min-w-[220px] z-30"
-          style={{
-            top: contextMenu.y,
-            left: contextMenu.x,
-          }}
-          onClick={closeContextMenu}
-        >
-          <strong className="block mb-2 text-gray-800">Ajouter une récurrence</strong>
-          <form
-            className="flex flex-col gap-2 mt-2"
-            onClick={e => e.stopPropagation()}
-            onSubmit={e => {
-              e.preventDefault();
-              // Récupère les valeurs du formulaire ici et appelle ta logique de récurrence
-              closeContextMenu();
-            }}
-          >
-            <label className="flex items-center gap-2 text-sm">
-              Nombre
-              <input
-                type="number"
-                name="count"
-                min={1}
-                defaultValue={1}
-                className="w-16 border border-gray-300 rounded px-2 py-1"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              Période
-              <select
-                name="period"
-                defaultValue="semaine"
-                className="border border-gray-300 rounded px-2 py-1"
-              >
-                <option value="jour">Jour</option>
-                <option value="semaine">Semaine</option>
-                <option value="mois">Mois</option>
-              </select>
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              Répéter
-              <input
-                type="number"
-                name="repeat"
-                min={1}
-                defaultValue={1}
-                className="w-16 border border-gray-300 rounded px-2 py-1"
-              />
-              fois
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              ou jusqu'au
-              <input
-                type="date"
-                name="until"
-                className="border border-gray-300 rounded px-2 py-1"
-              />
-            </label>
-            <button
-              type="submit"
-              className="mt-2 bg-blue-600 text-white rounded px-3 py-1 hover:bg-blue-700 transition-colors text-sm"
-            >
-              Valider
-            </button>
-          </form>
-        </div>
-      )}
-    </div>
+          className="absolute left-0 top-0 h-full w-2 bg-green-400 cursor-ew-resize rounded-r opacity-0"
+          style={{ zIndex: 10 }}
+          title="Redimensionner"
+          onMouseDown={(e) => handleMouseDown(e, 'left')}
+        />
+        {/* Image éventuelle */}
+        {appointment.imageUrl && (
+          <img
+            src={appointment.imageUrl}
+            alt="Icône"
+            className="w-5 h-5 rounded-full object-cover"
+          />
+        )}
+        {/* Titre du rendez-vous */}
+        <span className="flex-grow text-gray-800">{appointment.title}</span>
+        {/* Handle de redimensionnement à droite */}
+        <div
+          className="absolute right-0 top-0 h-full w-2 bg-green-400 cursor-ew-resize rounded-r opacity-0"
+          style={{ zIndex: 10 }}
+          title="Redimensionner"
+          onMouseDown={(e) => handleMouseDown(e, 'right')}
+        />
+      </div>
+    </>
   );
 };
 

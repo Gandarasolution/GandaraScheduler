@@ -18,6 +18,7 @@ import Modal from "../components/Modal";
 import AppointmentForm from "../components/AppointmentForm";
 import DraggableSource from "../components/DraggableSource";
 import Drawer from "../components/Drawer";
+import RightClickComponent from "../components/RightClickComponent";
 import {
   initialTeams,
   initialEmployees,
@@ -65,6 +66,7 @@ export default function HomePage() {
     eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) })
   );
   const [addAppointmentStep, setAddAppointmentStep] = useState<"select" | "form" | "">("");
+  const appointmentContextMenu = useRef<Appointment | null>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
@@ -88,6 +90,9 @@ export default function HomePage() {
     const isAtMax = Math.abs(scrollLeft + clientWidth - scrollWidth) < 1;
     return { isAtMin, isAtMax };
   }
+
+
+
 
   // Gestion du scroll infini horizontal (ajout de jours à gauche/droite)
   const handleScroll = useCallback(
@@ -433,6 +438,8 @@ export default function HomePage() {
             <div className="h-full bg-blue-600 animate-pulse" style={{ width: "30%" }} />
           </div>
         )}
+        
+        
       </div>
     </DndProvider>
   );
