@@ -213,7 +213,7 @@ export default function HomePage() {
     setIsModalOpen(true);
   }, []);
 
-  const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon") => {
+  const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon") => {    
     setAddAppointmentStep("select");
     setSelectedAppointment(null);
     setNewAppointmentInfo({ date, employeeId, intervalName });
@@ -235,7 +235,7 @@ export default function HomePage() {
 
   // Création d'un rendez-vous depuis un drag externe
   const createAppointmentFromDrag = useCallback(
-    (title: string, date: Date, intervalName: "morning" | "afternoon", employeeId: number) => {
+    (title: string, date: Date, intervalName: "morning" | "afternoon", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
       const newApp: Appointment = {
         id: Number(Date.now()),
         title,
@@ -248,8 +248,9 @@ export default function HomePage() {
           intervalName === "morning"
             ? setHours(setMinutes(date, 0), HALF_DAY_INTERVALS[0].endHour)
             : setHours(setMinutes(date, 0), HALF_DAY_INTERVALS[1].endHour),
-        imageUrl: "https://via.placeholder.com/30/808080/FFFFFF?text=DR",
+        imageUrl: imageUrl,
         employeeId,
+        type: typeEvent,
       };
       setFilteredAppointments((prev) => [...prev, newApp]);
     },
@@ -301,6 +302,7 @@ export default function HomePage() {
             value={format(dayInTimeline[Math.floor(WINDOW_SIZE / 2)], "yyyy-MM-dd")}
             onChange={(e) => {
               const selectedDate = new Date(e.target.value);
+              if (isNaN(selectedDate.getTime())) return;
               goToDate(selectedDate);
             }}
           />
@@ -403,7 +405,13 @@ export default function HomePage() {
             </select>
             <div className="d-flex gap-3 flex-column">
               {drawerOptionsSelected?.dataSource?.map((ev) => (
-                <DraggableSource id={ev.label} title={ev.label} key={ev.label} />
+                <DraggableSource 
+                  id={ev.label} 
+                  title={ev.label} 
+                  key={ev.label} 
+                  imageUrl={ev.imageUrl} 
+                  type={drawerOptionsSelected.label as "Chantier" | "Absence" | "Autre"}
+                />
               ))}
             </div>
           </div>
@@ -502,8 +510,7 @@ const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
             style={{ minHeight: 64 }}
             onClick={() => {
               onSelect({
-                id: Date.now(),
-                title: "",
+                title: eventType.dataSource[0].label,
                 description: "",
                 startDate: setHours(
                   setMinutes(date, 0),
@@ -520,10 +527,10 @@ const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
                 imageUrl: "",
                 employeeId,
                 type: eventType.label as "Chantier" | "Absence" | "Autre",
-              });
+              } as Appointment);
             }}
           >
-            <span className="flex items-center justify-center rounded-full group-hover:bg-white transition-colors">
+            <span className="flex items-center justify-center rounded-full transition-colors">
               {typeIcons[eventType.label]}
             </span>
             <span className={`text-${colorMap[eventType.label]}-700 font-semibold text-lg`}>

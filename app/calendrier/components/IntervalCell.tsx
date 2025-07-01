@@ -37,7 +37,7 @@ interface IntervalCellProps {
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
+  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   createAppointment?: (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => void;
 }
 
@@ -49,6 +49,8 @@ interface DragItem {
   sourceType?: 'external';
   startDate: Date;
   endDate: Date;
+  imageUrl: string;
+  typeEvent: 'Chantier' | 'Absence' | 'Autre';
 }
 
 /**
@@ -107,8 +109,17 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       }
       
       if (item.sourceType === 'external') {
+        console.log(item);
+        
         // Création d'un rendez-vous depuis une source externe
-        onExternalDragDrop(item.title || 'Nouveau rendez-vous', targetDate, targetInterval, employeeId);
+        onExternalDragDrop(
+          item.title || 'Nouveau rendez-vous', 
+          targetDate, 
+          targetInterval, 
+          employeeId,
+          item.imageUrl,
+          item.typeEvent
+        );
       } else {
         // Déplacement d'un rendez-vous existant
         const diff = item.endDate.getTime() - item.startDate.getTime(); // Durée du rendez-vous
@@ -148,7 +159,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   };
 
   // Double-clic pour créer un rendez-vous
-  const handleCellDoubleClick = () => {
+  const handleCellDoubleClick = () => {    
     onCellDoubleClick(date, employeeId, intervalName);
   };
 
@@ -160,7 +171,9 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         } : undefined
       }
       onClick={handleCellClick}
-      onDoubleClick={isCellActive && employeeId ? handleCellDoubleClick : undefined}
+      onDoubleClick={() =>{  
+        if (isCellActive && !!employeeId) handleCellDoubleClick();
+      }}
       className={`relative flex-1 border-b ${isCellActive ? 'border-r' : ''} ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-gray-200  ${bgColor} ${canDrop ? 'cursor-pointer' : ''}
                   flex flex-row items-start gap-1`}
       style={{

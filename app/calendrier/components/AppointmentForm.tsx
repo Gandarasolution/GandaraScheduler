@@ -124,7 +124,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {/* Sélection du type (chantier, absence, autre) */}
       <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Chantier:</label>
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+          {appointment?.type}
+        </label>
         <select
           id="title"
           name="title"
@@ -251,7 +253,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
       {/* Boutons d'action */}
       <div className="flex justify-end gap-3 mt-4">
-        {appointment && (
+        {appointment?.id && (
           <button
             type="button"
             onClick={handleDelete}
@@ -270,6 +272,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         <button
           type="submit"
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          onClick={() =>onSave(formData as Appointment)}
         >
           {appointment ? 'Enregistrer les modifications' : 'Créer le rendez-vous'}
         </button>

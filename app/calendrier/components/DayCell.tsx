@@ -20,7 +20,7 @@ interface DayCellProps {
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
+  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   createAppointment?: (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => void;
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
 }

@@ -24,32 +24,32 @@ export const initialEmployees: Employee[] = [
 ];
 
 export const chantier = [
-    { id: 1 , label: '1052 Logements Vesoul', imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
-    { id: 2 , label: 'Résidence Les Jardins de Paris',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
-    { id: 3 , label: 'Chantier Lycée Jean Moulin' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
-    { id: 4 , label: 'Rénovation Hôtel de Ville',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
-    { id: 5 , label: 'Extension Usine Renault Flins',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
-    { id: 6 , label: 'Construction EHPAD Les Lilas',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
-    { id: 7 , label: 'Réhabilitation Collège Victor Hugo' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
-    { id: 8 , label: 'Immeuble Le Belvédère Lyon' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
-    { id: 9 , label: 'Bâtiment Industriel Toulouse' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' },
-    { id: 10 , label: 'Résidence Étudiante Marseille' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Chantier' }
+    { id: 1 , label: '1052 Logements Vesoul', imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 2 , label: 'Résidence Les Jardins de Paris',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 3 , label: 'Chantier Lycée Jean Moulin' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 4 , label: 'Rénovation Hôtel de Ville',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 5 , label: 'Extension Usine Renault Flins',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 6 , label: 'Construction EHPAD Les Lilas',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 7 , label: 'Réhabilitation Collège Victor Hugo' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 8 , label: 'Immeuble Le Belvédère Lyon' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 9 , label: 'Bâtiment Industriel Toulouse' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 10 , label: 'Résidence Étudiante Marseille' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'}
 ];
 
 export const absences = [
-    { id: 1, label: 'RTT' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' },
-    { id: 2, label: 'Maladie',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' },
-    { id: 3, label: 'Congés payés',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' },
-    { id: 4, label: 'Sans solde',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' },
-    { id: 5, label: 'Autre',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Absence' }
+    { id: 1, label: 'RTT' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
+    { id: 2, label: 'Maladie',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
+    { id: 3, label: 'Congés payés',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
+    { id: 4, label: 'Sans solde',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
+    { id: 5, label: 'Autre',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' }
 ]
 
 export const autres = [
     { id: 1, label: 'Heures SUP',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
     { id: 2, label: 'Formation',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 3, label: 'Réunion' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Autre' },
-    { id: 4, label: 'Déplacement',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Autre' },
-    { id: 5, label: 'Maintenance' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png', type: 'Autre' }
+    { id: 3, label: 'Réunion' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 4, label: 'Déplacement',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
+    { id: 5, label: 'Maintenance' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'}
 ]
 
 function generateAppointments(employees: Employee[]): Appointment[] {
@@ -76,7 +76,10 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       endDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 12, 0),
       imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png',
       employeeId: emp.id,
-      type: titles[idx % titles.length].type as 'Chantier' | 'Absence' | 'Autre'
+      type: 
+      chantier.find(c => c.label === titles[idx % titles.length].label) ? 'Chantier' : 
+      absences.find(a => a.label === titles[idx % titles.length].label) ? 'Absence' : 
+      'Autre'
     };
   });
 }

@@ -113,3 +113,53 @@
     }
   }
 }
+
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --drawer-bg: #18181b;
+    --drawer-header-bg: #23232b;
+    --drawer-border: #333;
+    --modal-bg: #23232b;
+    --modal-header-bg: #18181b;
+    --modal-text: #f3f4f6;
+    --btn-bg: #333;
+    --btn-text: #fff;
+  }
+
+  body{
+    background-color: var(--drawer-bg);
+    color: var(--modal-text);
+  }
+
+  .drawer-content {
+    background: var(--drawer-bg) !important;
+    color: var(--modal-text);
+    border-color: var(--drawer-border);
+  }
+  .drawer-header {
+    background: var(--drawer-header-bg);
+    border-bottom: 1px solid var(--drawer-border);
+    color: var(--modal-text);
+  }
+  .drawer-body {
+    color: var(--modal-text);
+  }
+  .modal-content {
+    background: var(--modal-bg) !important;
+    color: var(--modal-text);
+
+    button{
+      color: var(--modal-text);
+      background: transparent;
+    }
+  }
+  .modal-header {
+    background: transparent;
+    color: var(--modal-text);
+  }
+  .btn-add {
+    background-color: var(--btn-bg);
+    color: var(--btn-text);
+  }
+}
