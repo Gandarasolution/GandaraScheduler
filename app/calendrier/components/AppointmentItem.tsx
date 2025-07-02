@@ -10,12 +10,9 @@ import { eachDayOfInterval } from 'date-fns';
 interface AppointmentItemProps {
   appointment: Appointment;
   onClick: () => void;
-  onResize: (id: number, newStart: Date, newEnd: Date) => void;
+  onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
   color?: string; // Couleur personnalisée
-  holidays?: { date: string }[]; // Liste des jours fériés
-  isHoliday: (date: Date, holidays: { date: string }[]) => boolean
-  createAppointment?: (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => void;
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment') => void; // Fonction pour gérer le clic droit
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number) => void; // Fonction pour gérer le clic droit
 }
 
 /**
@@ -26,10 +23,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   appointment, 
   onClick, 
   onResize, 
-  color,
-  holidays = [],
-  isHoliday,
-  createAppointment,
   handleContextMenu
 }) => {
 
@@ -77,54 +70,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   let offsetIntervals = Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / HALF_DAY_DURATION);
   let offsetPx = offsetIntervals * INTERVAL_WIDTH;
 
-  // Détermine si un jour est travaillé (ni week-end ni férié)
-  function isWorkedDay(date: Date) {
-    return date.getDay() !== 0 && date.getDay() !== 6 && !isHoliday(date, holidays);
-  }
-
-  // Trouve le prochain jour de repos (week-end ou férié)
-  const getNextRestDay = (date: Date) => {
-    let next = new Date(date);
-    while (isWorkedDay(next)) {
-      next = addDays(next, 1);
-    }
-    return next;
-  };
-
-  // Trouve le prochain jour travaillé à partir d'une date
-  function getNextWorkedDay(date: Date) {
-    let next = new Date(date);
-    while (!isWorkedDay(next)) {
-      next = addDays(next, 1);
-    }
-    return next;
-  }
-
-  // Découpe une plage en intervalles de jours travaillés consécutifs
-  function getWorkedDayIntervals(start: Date, end: Date) {
-    const days = eachDayOfInterval({ start, end });
-    const intervals: { start: Date, end: Date }[] = [];
-    let day = days[0];
-
-    while(day < end){
-      const intervalEnd = getNextRestDay(day);
-      if (intervalEnd > end) {
-        // Si l'intervalle dépasse la date de fin, on le limite
-        intervals.push({
-          start: new Date(day),
-          end: new Date(end)
-        });
-        break;
-      }
-      intervals.push({
-        start: new Date(day),
-        end: intervalEnd
-      });
-      day = getNextWorkedDay(intervalEnd);
-      if (day > end) break;      
-    }
-    return intervals;
-  }
+ 
   
   // Met à jour la date de début lors du resize
   const setDragStartSafe = (date: Date) => {
@@ -223,24 +169,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   // Lorsqu'on relâche la souris après un resize
   const handleMouseUp = () => {
-    const days = getWorkedDayIntervals(dragStartRef.current, dragEndRef.current);
     if (isResizingRight) {
-      // Met à jour le rendez-vous principal sur le premier intervalle
-      onResize(appointment.id, dragStartRef.current, days[0].end);
-      // Crée de nouveaux rendez-vous pour les autres intervalles travaillés
-      for (let index = 1; index < days.length; index++) {
-        const day = days[index];
-        createAppointment?.(appointment.title, day.start, day.end, Number(appointment.employeeId), appointment.imageUrl);
-      }
+      onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right');
     }
     if (isResizingLeft) {
-      // Met à jour le rendez-vous principal sur le dernier intervalle
-      onResize(appointment.id, days[days.length - 1].start, dragEndRef.current);      
-      // Crée de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
-      for (let index = days.length - 2; index >= 0; index--) {
-        const day = days[index];        
-        createAppointment?.(appointment.title, day.start, day.end, Number(appointment.employeeId), appointment.imageUrl);
-      }
+      onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'left');
     }
     setIsResizingLeft(false);
     setIsResizingRight(false);
@@ -275,7 +208,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           if (node) drag(node);
         }}
         onClick={onClick}
-        onContextMenu={(e) => handleContextMenu(e, 'appointment')}
+        onContextMenu={(e) => handleContextMenu(e, 'appointment', appointment.id)}
         className={`
           relative bg-green-100 border border-green-500 rounded p-1 text-sm
           flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis

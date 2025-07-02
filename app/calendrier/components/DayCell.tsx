@@ -3,9 +3,7 @@ import React, {memo}from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
 import IntervalCell from './IntervalCell';
 import { Appointment, HalfDayInterval } from '../types';
-import Holidays from 'date-holidays';
-const hd = new Holidays('FR'); // 'FR' pour la France
-const holidays = hd.getHolidays(new Date().getFullYear());
+
 
 /**
  * Props du composant DayCell
@@ -18,11 +16,12 @@ interface DayCellProps {
   intervals: HalfDayInterval[];
   isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
-  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
+  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  createAppointment?: (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => void;
+  handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
+  isHoliday?: (date: Date) => boolean; // Fonction pour vérifier si un jour est férié
 }
 
 /**
@@ -41,16 +40,12 @@ const DayCell: React.FC<DayCellProps> = ({
   onCellDoubleClick,
   onAppointmentClick,
   onExternalDragDrop,
-  createAppointment,
+  handleContextMenu,
+  isHoliday
 }) => {
-  // Détermine si le jour est férié (en France)
-  function isHoliday(day: Date, holidays: { date: string }[]) {
-    const dayStr = format(day, 'yyyy-MM-dd');
-    return holidays.some(h => h.date.startsWith(dayStr));
-  }
-
+  
   // Calcul du style de la cellule selon férié/week-end/jour normal
-  const isFerie = isHoliday(day, holidays);
+  const isFerie = isHoliday ? isHoliday(day) : false;
   const cellClasses = `flex flex-row border-gray-200 ${
     isFerie ? 'bg-red-100' : isWeekend ? 'bg-sky-50' : 'bg-white'
   }`;
@@ -89,8 +84,7 @@ const DayCell: React.FC<DayCellProps> = ({
             isWeekend={isWeekend}
             isHoliday={isHoliday}
             isFerie={isFerie}
-            holidays={holidays}
-            createAppointment={createAppointment}
+            handleContextMenu={handleContextMenu}
           />
         );
       })}

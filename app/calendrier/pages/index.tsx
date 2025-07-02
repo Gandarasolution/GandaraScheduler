@@ -1,7 +1,7 @@
 "use client";
 
 // Imports React, hooks, DnD, date-fns, types, composants, et données
-import React, { useState, useCallback, useRef, useEffect, JSX } from "react";
+import React, { useState, useCallback, useRef, useEffect, JSX, useMemo, startTransition } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -27,6 +27,60 @@ import {
   absences,
   autres,
 } from "../../datasource";
+import Holidays from 'date-holidays';
+const hd = new Holidays('FR'); // 'FR' pour la France
+const holidays = hd.getHolidays(new Date().getFullYear());
+
+// Fonctions utilitaires pour la gestion des jours travaillés
+const isHoliday = (date: Date) => {
+  const dateStr = date.toISOString().split('T')[0];
+  return holidays.some(holiday => holiday.date === dateStr);
+};
+
+const isWorkedDay = (date: Date) => {
+  return date.getDay() !== 0 && date.getDay() !== 6 && !isHoliday(date);
+};
+
+const getNextRestDay = (date: Date) => {
+  let next = new Date(date);
+  while (isWorkedDay(next)) {
+    next = addDays(next, 1);
+  }
+  return next;
+};
+
+const getNextWorkedDay = (date: Date) => {
+  let next = new Date(date);
+  while (!isWorkedDay(next)) {
+    next = addDays(next, 1);
+  }
+  return next;
+};
+
+const getWorkedDayIntervals = (start: Date, end: Date) => {
+  const days = eachDayOfInterval({ start, end });
+  const intervals: { start: Date, end: Date }[] = [];
+  let day = days[0];
+
+  while(day < end){
+    const intervalEnd = getNextRestDay(day);
+    if (intervalEnd > end) {
+      // Si l'intervalle dépasse la date de fin, on le limite
+      intervals.push({
+        start: new Date(day),
+        end: new Date(end)
+      });
+      break;
+    }
+    intervals.push({
+      start: new Date(day),
+      end: intervalEnd
+    });
+    day = getNextWorkedDay(intervalEnd);
+    if (day > end) break;      
+  }
+  return intervals;
+};
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -82,6 +136,126 @@ export default function HomePage() {
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);
   const lastScrollLeft = useRef(0);
   const lastScrollTime = useRef(Date.now());
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element }[] } | null>(null);
+  const clipboardAppointment= useRef<Appointment | null>(null);
+  const selectedAppointmentId = useRef<number | null>(null);
+  const selectedCell = useRef<{ employeeId: number; date: Date } | null>(null);
+  
+  const rightClickItemAppointment = useMemo(() => [
+    { 
+      label: "Modifier", 
+      logo: 
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-pencil-fill" viewBox="0 0 16 16">
+          <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+        </svg>
+    },
+    { 
+      label: "Supprimer", 
+      logo: 
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash3-fill" viewBox="0 0 16 16">
+          <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
+        </svg>,
+      action: () => {
+        if (selectedAppointmentId.current !== null) {          
+          handleDeleteAppointment(selectedAppointmentId.current); // Appel de la fonction de suppression avec l'ID du rendez-vous sélectionné
+          selectedAppointmentId.current = null; // Réinitialiser l'ID sélectionné après la suppression
+        }
+        
+      }
+    },
+    {
+      label: 'Copier',
+      logo:
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-copy" viewBox="0 0 16 16">
+          <path fillRule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/>
+        </svg>,
+      action: () => {
+        // Utilise appointmentContextMenu.current qui est automatiquement mis à jour
+        if (appointmentContextMenu.current) {
+          clipboardAppointment.current = { ...appointmentContextMenu.current }; // Créer une copie pour éviter les références
+        } else if (selectedAppointmentId.current !== null) {
+          // Fallback: recherche directe si appointmentContextMenu.current est null
+          const appointmentToCopy = filteredAppointments.find(appt => appt.id === selectedAppointmentId.current);
+          if (appointmentToCopy) {
+            clipboardAppointment.current = { ...appointmentToCopy };
+          }
+        }
+      }
+    },
+    {
+      label: 'Répéter',
+      logo:
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-repeat" viewBox="0 0 16 16">
+          <path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m3.81.086a.5.5 0 0 1 .67.225A5 5 0 0 1 11 13H5v1.466a.25.25 0 0 1-.41.192l-2.36-1.966a.25.25 0 0 1 0-.384l2.36-1.966a.25.25 0 0 1 .41.192V12h6a4 4 0 0 0 3.585-5.777.5.5 0 0 1 .225-.67Z"/>
+        </svg>
+    }
+  ], [filteredAppointments]);
+  
+  const rightClickItemCell = useMemo(() => [
+    {
+      label: 'Coller',
+      logo:
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-copy" viewBox="0 0 16 16">
+          <path fillRule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/>
+        </svg>,
+      action: () => {   
+        console.log(clipboardAppointment);
+
+        if (clipboardAppointment.current) {
+          const startDate = clipboardAppointment.current.startDate;
+          const endDate = clipboardAppointment.current.endDate;
+
+          // Différence entre les dates de début et de fin du rendez-vous copié
+          const diff = endDate.getTime() - startDate.getTime();
+          
+          // Nouvelle date de début basée sur la cellule sélectionnée
+          const newStartDate = new Date(selectedCell.current?.date as Date);
+          const newEndDate = new Date(newStartDate.getTime() + diff);
+          
+          // Découper en intervalles de jours travaillés (même logique que le resize)
+          pasteAppointment(newStartDate, newEndDate, selectedCell.current?.employeeId as number);
+        }
+      }
+
+    },
+    {
+      label: 'Ajouter',
+      logo:
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+          <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>
+        </svg>
+    }
+  ], []);
+
+
+  useEffect(() => {
+    console.log(clipboardAppointment);
+    
+  },[clipboardAppointment]);
+
+  // Mémorise la fonction de fermeture du menu contextuel
+    const closeContextMenu = useCallback(() => setContextMenu(null), []);
+  
+    // Gère le clic droit pour afficher le menu contextuel
+    const handleContextMenu = useCallback(
+      (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number, cell?: { employeeId: number; date: Date }) => {
+        e.preventDefault();
+        e.stopPropagation();        
+        if (origin === 'appointment' && appointmentId) {
+          selectedAppointmentId.current = appointmentId;
+          // Trouve et stocke le rendez-vous complet au moment du clic droit
+          const currentAppointment = filteredAppointments.find(appt => appt.id === appointmentId);
+          appointmentContextMenu.current = currentAppointment || null;
+        }
+        if (origin === 'cell' && cell) {
+          selectedCell.current = cell;
+        }
+  
+      startTransition(() => {
+        setContextMenu({ x: e.clientX, y: e.clientY, item: origin === 'cell' ? rightClickItemCell : rightClickItemAppointment });
+      });
+    }, [rightClickItemCell, rightClickItemAppointment, filteredAppointments]);
+   
 
   // Utilitaire pour savoir si on est au bord du scroll horizontal
   function isAtMinOrMaxScroll(container: HTMLDivElement) {
@@ -226,17 +400,62 @@ export default function HomePage() {
 
   // Déplacement d'un rendez-vous (drag & drop ou resize)
   const moveAppointment = useCallback(
-    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => {
-      setFilteredAppointments((prev) =>
-        prev.map((app) =>
-          app.id === id
-            ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId }
-            : app
-        )
-      );
+    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right') => {
+      const appointment = filteredAppointments.find((app) => app.id === id);
+      if (!appointment) return; // Rendez-vous non trouvé
+
+      const days = getWorkedDayIntervals(newStartDate, newEndDate);
+      if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
+      
+      if (resizeDirection === 'right') {
+        // Met à jour le rendez-vous principal sur le premier intervalle
+        onResize(appointment.id, days[0].start, days[0].end);
+        // Création de nouveaux rendez-vous pour les autres intervalles travaillés
+        for (let index = 1; index < days.length; index++) {
+          const day = days[index];
+          createAppointment?.(appointment.title, day.start, day.end, Number(appointment.employeeId), appointment.type as 'Chantier' | 'Absence' | 'Autre', appointment.imageUrl);
+        }
+      }
+      if (resizeDirection === 'left') {
+        // Met à jour le rendez-vous principal sur le dernier intervalle
+        onResize(appointment.id, days[days.length - 1].start, days[days.length - 1].end);
+        // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
+        for (let index = days.length - 2; index >= 0; index--) {
+          const day = days[index];
+          createAppointment?.(appointment.title, day.start, day.end, Number(appointment.employeeId), appointment.type as 'Chantier' | 'Absence' | 'Autre', appointment.imageUrl);
+        }
+      }
     },
     []
   );
+
+  const onResize = useCallback(
+    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number) =>
+
+      setFilteredAppointments((prev) => {
+        const updated = prev.map((app) =>
+          app.id === id
+            ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId }
+            : app
+        );
+        return updated;
+      }
+    ), []
+  );
+
+  const pasteAppointment = useCallback((startDate: Date, endDate: Date, employeeId: number) => {
+    if (!clipboardAppointment.current) return;
+
+    // Créer un nouveau rendez-vous avec les mêmes données que le rendez-vous copié
+    createAppointment(
+      clipboardAppointment.current.title,
+      startDate,
+      endDate,
+      employeeId,
+      clipboardAppointment.current.type as 'Chantier' | 'Absence' | 'Autre',
+      clipboardAppointment.current.imageUrl
+    );
+  }, []);
 
   // Création d'un rendez-vous depuis un drag externe
   const createAppointmentFromDrag = useCallback(
@@ -264,7 +483,7 @@ export default function HomePage() {
 
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => {
+    (title: string, startDate: Date, endDate: Date, employeeId: number, typeEvent: 'Chantier' | 'Absence' | 'Autre', imageUrl?: string) => {
       const newApp: Appointment = {
         id: Number(Date.now()),
         title,
@@ -273,6 +492,7 @@ export default function HomePage() {
         endDate,
         imageUrl,
         employeeId,
+        type: typeEvent,
       };
       setFilteredAppointments((prev) => [...prev, newApp]);
     }, []);
@@ -356,11 +576,20 @@ export default function HomePage() {
                 onCellDoubleClick={handleOpenNewModal}
                 onAppointmentClick={handleOpenEditModal}
                 onExternalDragDrop={createAppointmentFromDrag}
-                createAppointment={createAppointment}
+                handleContextMenu={handleContextMenu}
+                isHoliday={isHoliday}
               />
             </div>
           </div>
         </div>
+        {/* Menu contextuel */}
+        <RightClickComponent
+          open={!!contextMenu}
+          coordinates={contextMenu}
+          rightClickItem={contextMenu?.item || []}
+          clipBoardAppointment={clipboardAppointment.current}
+          onClose={closeContextMenu}
+        />
         {/* Modal pour le formulaire de rendez-vous */}
         <Modal 
           isOpen={isModalOpen} 

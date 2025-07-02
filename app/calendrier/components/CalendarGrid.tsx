@@ -1,5 +1,6 @@
 "use client";
-import React, {useState, useMemo, memo}from 'react';
+import React, {useState, useMemo, memo, useRef, JSX, useCallback}from 'react';
+import { flushSync } from 'react-dom';
 import {
   format,
   isSameDay,
@@ -9,6 +10,7 @@ import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
 import { fr } from 'date-fns/locale';
 import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT, sizeCell, TEAM_HEADER_HEIGHT} from '../pages/index'; // Constantes de style
+import RightClickComponent from './RightClickComponent';
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -16,11 +18,12 @@ interface CalendarGridProps {
   initialTeams: Groupe[];
   dayInTimeline: Date[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
-  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number) => void;
+  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  createAppointment: (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => void;
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
+  isHoliday: (date: Date) => boolean; // Fonction pour vérifier si un jour est férié
 }
 
 // Grille principale du calendrier, affiche les équipes, employés, jours et rendez-vous
@@ -34,8 +37,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onCellDoubleClick,
   onAppointmentClick,
   onExternalDragDrop,
-  createAppointment,
+  handleContextMenu,
+  isHoliday
 }) => {
+
  
   // État pour gérer les équipes ouvertes (affichées)
   const [openTeams, setOpenTeams] = useState<number[]>(initialTeams.map(team => team.id));
@@ -69,6 +74,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
       return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
   };
+
+  
 
   return (
     <div className="relative h-full w-full">
@@ -195,7 +202,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         onAppointmentClick={onAppointmentClick}
                         onExternalDragDrop={onExternalDragDrop}
                         isWeekend={isWeekend(day)}
-                        createAppointment={createAppointment}
+                        handleContextMenu={handleContextMenu}
+                        isHoliday={isHoliday}
                       />
                     );
                   })}
@@ -204,6 +212,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             )}
           </React.Fragment>
         ))}
+        
       </div>
     </div>
   );
