@@ -11,6 +11,7 @@ import {
   setMinutes,
   isSameDay,
   format,
+  addHours,
 } from "date-fns";
 import { Appointment, Employee, HalfDayInterval } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
@@ -44,7 +45,7 @@ const isWorkedDay = (date: Date) => {
 const getNextRestDay = (date: Date) => {
   let next = new Date(date);
   while (isWorkedDay(next)) {
-    next = addDays(next, 1);
+    next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
   }
   return next;
 };
@@ -52,24 +53,27 @@ const getNextRestDay = (date: Date) => {
 const getNextWorkedDay = (date: Date) => {
   let next = new Date(date);
   while (!isWorkedDay(next)) {
-    next = addDays(next, 1);
+    next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
   }
   return next;
 };
 
 const getWorkedDayIntervals = (start: Date, end: Date) => {
-  const days = eachDayOfInterval({ start, end });
   const intervals: { start: Date, end: Date }[] = [];
-  let day = days[0];
+  let day = getNextWorkedDay(start);
 
   while(day < end){
     const intervalEnd = getNextRestDay(day);
+    console.log('intervalEnd', intervalEnd, 'end', end);
+    
     if (intervalEnd > end) {
       // Si l'intervalle dépasse la date de fin, on le limite
       intervals.push({
         start: new Date(day),
         end: new Date(end)
       });
+      console.log('interval pushed:', { start: new Date(day), end: new Date(end) });
+      
       break;
     }
     intervals.push({
@@ -77,6 +81,8 @@ const getWorkedDayIntervals = (start: Date, end: Date) => {
       end: intervalEnd
     });
     day = getNextWorkedDay(intervalEnd);
+    console.log('2interval pushed:', { start: new Date(day), end: new Date(intervalEnd) });
+    // Si le jour suivant dépasse la date de fin, on arrête
     if (day > end) break;      
   }
   return intervals;
@@ -405,6 +411,8 @@ export default function HomePage() {
       if (!appointment) return; // Rendez-vous non trouvé
 
       const days = getWorkedDayIntervals(newStartDate, newEndDate);
+      console.log("Jours travaillés pour le redimensionnement :", days);
+      
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
       
       if (resizeDirection === 'right') {
@@ -445,6 +453,13 @@ export default function HomePage() {
 
   const pasteAppointment = useCallback((startDate: Date, endDate: Date, employeeId: number) => {
     if (!clipboardAppointment.current) return;
+
+    if (!isWorkedDay(startDate) || !isWorkedDay(endDate)) {
+      console.warn("Les dates sélectionnées ne sont pas des jours travaillés.");
+      return;
+    }
+
+    const days = getWorkedDayIntervals(startDate, endDate);
 
     // Créer un nouveau rendez-vous avec les mêmes données que le rendez-vous copié
     createAppointment(

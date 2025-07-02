@@ -187,7 +187,10 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         width: CELL_WIDTH/2,
         height: CELL_HEIGHT,
       }}
-      onContextMenu={(e) => handleContextMenu && handleContextMenu(e, 'cell', undefined, { employeeId, date })}
+      onContextMenu={(e) => {
+        handleContextMenu && !isWeekend ? handleContextMenu(e, 'cell', undefined, { employeeId, date }) 
+        : e.preventDefault();
+      }}
     >
       {/* Affichage des rendez-vous de l'intervalle */}
       {isCellActive && appointments.map((app) => (
