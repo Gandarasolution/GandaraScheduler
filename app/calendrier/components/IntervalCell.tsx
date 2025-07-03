@@ -36,7 +36,7 @@ interface IntervalCellProps {
   isHoliday?: (day: Date) => boolean; // Fonction pour vérifier si un jour est férié
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
-  onAppointmentClick: (appointment: Appointment) => void;
+  onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
 }
@@ -71,7 +71,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   isHoliday,
   onAppointmentMoved,
   onCellDoubleClick,
-  onAppointmentClick,
+  onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu
 }) => {
@@ -179,10 +179,15 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       }
       onClick={handleCellClick}
       onDoubleClick={() =>{  
-        if (isCellActive && !!employeeId) handleCellDoubleClick();
+        if (isCellActive && !isWeekend && !!employeeId) handleCellDoubleClick();
       }}
-      className={`relative flex-1 border-b ${isCellActive ? 'border-r' : ''} ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-gray-200  ${bgColor} ${canDrop ? 'cursor-pointer' : ''}
-                  flex flex-row items-start gap-1`}
+      className={`
+        relative flex-1 border-b ${isCellActive ? 'border-r' : ''} 
+        ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-gray-200  
+        ${bgColor} ${canDrop ? 'cursor-pointer' : ''}
+        flex flex-row items-start gap-1
+        `
+      }
       style={{
         width: CELL_WIDTH/2,
         height: CELL_HEIGHT,
@@ -191,13 +196,14 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         handleContextMenu && !isWeekend ? handleContextMenu(e, 'cell', undefined, { employeeId, date }) 
         : e.preventDefault();
       }}
+      suppressHydrationWarning={true} // Pour éviter les erreurs de rendu côté serveur
     >
       {/* Affichage des rendez-vous de l'intervalle */}
       {isCellActive && appointments.map((app) => (
         <AppointmentItem
           key={app.id}
           appointment={app}
-          onClick={() => onAppointmentClick(app)}
+          onDoubleClick={() => onAppointmentDoubleClick(app)}
           onResize={(id,newStartDate, newEndDate, resizeDirection) => {
             // Mets à jour l'event dans le state global
             onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);

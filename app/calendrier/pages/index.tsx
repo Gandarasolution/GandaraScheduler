@@ -417,20 +417,20 @@ export default function HomePage() {
       
       if (resizeDirection === 'right') {
         // Met à jour le rendez-vous principal sur le premier intervalle
-        onResize(appointment.id, days[0].start, days[0].end);
+        onResize(appointment.id, days[0].start, days[0].end, newEmployeeId);
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, Number(appointment.employeeId), appointment.type as 'Chantier' | 'Absence' | 'Autre', appointment.imageUrl);
+          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type as 'Chantier' | 'Absence' | 'Autre', appointment.imageUrl);
         }
       }
       if (resizeDirection === 'left') {
         // Met à jour le rendez-vous principal sur le dernier intervalle
-        onResize(appointment.id, days[days.length - 1].start, days[days.length - 1].end);
+        onResize(appointment.id, days[days.length - 1].start, days[days.length - 1].end, newEmployeeId);
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, Number(appointment.employeeId), appointment.type as 'Chantier' | 'Absence' | 'Autre', appointment.imageUrl);
+          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type as 'Chantier' | 'Absence' | 'Autre', appointment.imageUrl);
         }
       }
     },
@@ -589,7 +589,7 @@ export default function HomePage() {
                 HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
                 onAppointmentMoved={moveAppointment}
                 onCellDoubleClick={handleOpenNewModal}
-                onAppointmentClick={handleOpenEditModal}
+                onAppointmentDoubleClick={handleOpenEditModal}
                 onExternalDragDrop={createAppointmentFromDrag}
                 handleContextMenu={handleContextMenu}
                 isHoliday={isHoliday}

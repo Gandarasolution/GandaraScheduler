@@ -78,7 +78,7 @@ const DayCell: React.FC<DayCellProps> = ({
             appointments={intervalAppointments}
             onAppointmentMoved={onAppointmentMoved}
             onCellDoubleClick={() => onCellDoubleClick(intervalStart, employeeId, interval.name)}
-            onAppointmentClick={onAppointmentClick}
+            onAppointmentDoubleClick={onAppointmentClick}
             onExternalDragDrop={onExternalDragDrop}
             isCellActive={isCellActive}
             isWeekend={isWeekend}

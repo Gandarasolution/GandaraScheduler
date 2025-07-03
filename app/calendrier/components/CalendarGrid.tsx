@@ -20,7 +20,7 @@ interface CalendarGridProps {
   HALF_DAY_INTERVALS: HalfDayInterval[];
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
-  onAppointmentClick: (appointment: Appointment) => void;
+  onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
   isHoliday: (date: Date) => boolean; // Fonction pour vérifier si un jour est férié
@@ -35,7 +35,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   HALF_DAY_INTERVALS,
   onAppointmentMoved,
   onCellDoubleClick,
-  onAppointmentClick,
+  onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
   isHoliday
@@ -121,6 +121,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             )}
             <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span>
             <span className="block text-xs text-gray-500">{format(day, 'MMM', { locale: fr })}</span>
+            {day.getDate() === 1 && <span className="block text-xs text-gray-500">{format(day, 'EEEE', { locale: fr })}</span>}
             <span className="block text-xs text-gray-500">{format(day, 'yyyy', { locale: fr })}</span>
           </div>
         ))}
@@ -166,7 +167,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     intervals={HALF_DAY_INTERVALS}
                     onAppointmentMoved={onAppointmentMoved}
                     onCellDoubleClick={onCellDoubleClick}
-                    onAppointmentClick={onAppointmentClick}
+                    onAppointmentClick={onAppointmentDoubleClick}
                     onExternalDragDrop={onExternalDragDrop}
                     isWeekend={isWeekend(day)}
                   />
@@ -199,7 +200,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         intervals={HALF_DAY_INTERVALS}
                         onAppointmentMoved={onAppointmentMoved}
                         onCellDoubleClick={onCellDoubleClick}
-                        onAppointmentClick={onAppointmentClick}
+                        onAppointmentClick={onAppointmentDoubleClick}
                         onExternalDragDrop={onExternalDragDrop}
                         isWeekend={isWeekend(day)}
                         handleContextMenu={handleContextMenu}

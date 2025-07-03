@@ -9,7 +9,7 @@ import { eachDayOfInterval } from 'date-fns';
 // Props du composant AppointmentItem
 interface AppointmentItemProps {
   appointment: Appointment;
-  onClick: () => void;
+  onDoubleClick: () => void;
   onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
   color?: string; // Couleur personnalisée
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number) => void; // Fonction pour gérer le clic droit
@@ -21,7 +21,7 @@ interface AppointmentItemProps {
  */
 const AppointmentItem: React.FC<AppointmentItemProps> = ({ 
   appointment, 
-  onClick, 
+  onDoubleClick, 
   onResize, 
   handleContextMenu
 }) => {
@@ -207,7 +207,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         ref={(node) => {
           if (node) drag(node);
         }}
-        onClick={onClick}
+        onDoubleClick={onDoubleClick}
         onContextMenu={(e) => handleContextMenu(e, 'appointment', appointment.id)}
         className={`
           relative bg-green-100 border border-green-500 rounded p-1 text-sm
@@ -220,13 +220,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           width: `${calcultedWidth}px`,
           minWidth: `${INTERVAL_WIDTH}px`,
           pointerEvents: isDragging ? 'none' : 'auto',
-          left: `${offsetPx}px`, 
-          position: 'absolute',
-        }}
+          left: `${offsetPx}px`,         
+          }}
       >
         {/* Handle de redimensionnement à gauche */}
         <div
-          className="absolute left-0 top-0 h-full w-2 bg-green-400 cursor-ew-resize rounded-r opacity-0"
+          className={`absolute left-0 top-0 h-full w-2 cursor-ew-resize`}
           style={{ zIndex: 10 }}
           title="Redimensionner"
           onMouseDown={(e) => handleMouseDown(e, 'left')}
@@ -240,10 +239,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           />
         )}
         {/* Titre du rendez-vous */}
-        <span className="flex-grow text-gray-800">{appointment.title}</span>
+        <span className="flex-grow text-gray-800 overflow-hidden">{appointment.title}</span>
         {/* Handle de redimensionnement à droite */}
         <div
-          className="absolute right-0 top-0 h-full w-2 bg-green-400 cursor-ew-resize rounded-r opacity-0"
+          className={`absolute right-0 top-0 h-full w-2 cursor-ew-resize`}
           style={{ zIndex: 10 }}
           title="Redimensionner"
           onMouseDown={(e) => handleMouseDown(e, 'right')}
