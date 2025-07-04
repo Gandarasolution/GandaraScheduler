@@ -190,7 +190,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       document.removeEventListener('mouseup', handleMouseUp);
     };
     // eslint-disable-next-line
-  }, [isResizingLeft, isResizingRight]);
+  }, [isResizingLeft, isResizingRight, handleMouseMove]);
 
   // Met à jour les dates de drag si les props changent
   useEffect(() => {
@@ -210,9 +210,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         onDoubleClick={onDoubleClick}
         onContextMenu={(e) => handleContextMenu(e, 'appointment', appointment.id)}
         className={`
-          relative bg-green-100 border border-green-500 rounded p-1 text-sm
+          bg-blue-400
+          relative rounded p-1 text-sm
           flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis
-          cursor-grab transition-opacity duration-100 w-24 z-10 h-10 transition-[width, left]
+          cursor-grab transition-opacity z-10 h-10
+          border-l border-transparent border-r
           ${isDragging ? 'opacity-50' : 'opacity-100'}
         `}
         title={appointment.title}
@@ -220,13 +222,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           width: `${calcultedWidth}px`,
           minWidth: `${INTERVAL_WIDTH}px`,
           pointerEvents: isDragging ? 'none' : 'auto',
-          left: `${offsetPx}px`,         
+          left: `${offsetPx}px`,
+          willChange: 'width, left',
           }}
       >
         {/* Handle de redimensionnement à gauche */}
         <div
           className={`absolute left-0 top-0 h-full w-2 cursor-ew-resize`}
-          style={{ zIndex: 10 }}
           title="Redimensionner"
           onMouseDown={(e) => handleMouseDown(e, 'left')}
         />
@@ -243,7 +245,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         {/* Handle de redimensionnement à droite */}
         <div
           className={`absolute right-0 top-0 h-full w-2 cursor-ew-resize`}
-          style={{ zIndex: 10 }}
           title="Redimensionner"
           onMouseDown={(e) => handleMouseDown(e, 'right')}
         />

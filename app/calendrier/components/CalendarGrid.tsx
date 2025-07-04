@@ -1,6 +1,5 @@
 "use client";
 import React, {useState, useMemo, memo, useRef, JSX, useCallback}from 'react';
-import { flushSync } from 'react-dom';
 import {
   format,
   isSameDay,
@@ -10,7 +9,6 @@ import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
 import { fr } from 'date-fns/locale';
 import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT, sizeCell, TEAM_HEADER_HEIGHT} from '../pages/index'; // Constantes de style
-import RightClickComponent from './RightClickComponent';
 
 interface CalendarGridProps {
   employees: Employee[];

@@ -208,7 +208,6 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
             // Mets à jour l'event dans le state global
             onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
           }}
-          color={`bg-${colors[app.employeeId as number % colors.length]}`}
           handleContextMenu={(e, origin, appointmentId) => handleContextMenu && handleContextMenu(e, origin, appointmentId)}
         />
       ))}
