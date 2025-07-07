@@ -1,26 +1,29 @@
 "use client";
-import React, { useState, memo, useCallback, JSX, useRef} from 'react';
+import React, { useState, memo, useCallback} from 'react';
 import { useDrop } from 'react-dnd';
-import { format, addDays } from 'date-fns';
+import { format, addDays, set } from 'date-fns';
 import AppointmentItem from './AppointmentItem';
 import InfoBubble from './InfoBubble';
 import { Appointment } from '../types';
 import { CELL_WIDTH, CELL_HEIGHT } from '../pages/index'
-import RightClickComponent from './RightClickComponent';
+import { useSelectedCell } from '../context/SelectedCellContext';
+import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
 
 // Palette de couleurs pour les rendez-vous (par employé)
-const colors = [
-  'blue-500',
-  'emerald-500',
-  'amber-400',
-  'rose-500',
-  'purple-500',
-  'pink-400',
-  'gray-500',
-  'sky-500',
-  'orange-400',
-  'teal-500',
-];
+const colors = ([
+  "bg-blue-400 ring-blue-500",
+  "bg-emerald-400 ring-emerald-500",
+  "bg-amber-400 ring-amber-500",
+  "bg-rose-400 ring-rose-500",
+  "bg-purple-400 ring-purple-500",
+  "bg-pink-400 ring-pink-500",
+  "bg-gray-400 ring-gray-500",
+  "bg-sky-400 ring-sky-500",
+  "bg-orange-400 ring-orange-500",
+  "bg-teal-400 ring-teal-500",
+]);
+  
+
 
 // Props du composant IntervalCell
 interface IntervalCellProps {
@@ -38,7 +41,7 @@ interface IntervalCellProps {
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
+  handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
 }
 
 // Type pour le drag & drop
@@ -79,7 +82,9 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   const [showInfoBubble, setShowInfoBubble] = useState(false);
   const [bubbleContent, setBubbleContent] = useState('');
   const [bubblePosition, setBubblePosition] = useState({ x: 0, y: 0 });
-  
+  const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
+  const { selectedCell, setSelectedCell } = useSelectedCell();
+  const isSelected = selectedCell?.date.getTime() === intervalStart.getTime() && selectedCell?.employeeId === employeeId;
 
 
   
@@ -113,9 +118,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         targetInterval = 'morning'; // Par défaut, matin du prochain jour ouvré
       }
       
-      if (item.sourceType === 'external') {
-        console.log(item);
-        
+      if (item.sourceType === 'external') {        
         // Création d'un rendez-vous depuis une source externe
         onExternalDragDrop(
           item.title || 'Nouveau rendez-vous', 
@@ -150,6 +153,12 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   // Affiche une bulle d'info au clic sur la cellule
   const handleCellClick = (event: React.MouseEvent<HTMLDivElement>) => {
     event.stopPropagation();
+
+    if (!isCellActive || isWeekend || !employeeId) {
+      return; // Ne fait rien si la cellule n'est pas active ou est un week-end
+    }
+    setSelectedCell({ date: intervalStart, employeeId });
+    setSelectedAppointment(null); // Désélectionne le rendez-vous
 
     if (appointments.length > 0) {
       setBubbleContent(appointments.map((app) => app.title).join(', '));
@@ -186,14 +195,16 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-gray-200  
         ${bgColor} ${canDrop ? 'cursor-pointer' : ''}
         flex flex-row items-start gap-1
+        ${isSelected ? 'bg-blue-200' : ''}
         `
       }
       style={{
         width: CELL_WIDTH/2,
         height: CELL_HEIGHT,
+        willChange: 'background-color, border-color',
       }}
       onContextMenu={(e) => {
-        handleContextMenu && !isWeekend ? handleContextMenu(e, 'cell', undefined, { employeeId, date }) 
+        handleContextMenu && !isWeekend ? handleContextMenu(e, 'cell', undefined, { employeeId, date: intervalStart }) 
         : e.preventDefault();
       }}
       suppressHydrationWarning={true} // Pour éviter les erreurs de rendu côté serveur
@@ -209,6 +220,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
             onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
           }}
           handleContextMenu={(e, origin, appointmentId) => handleContextMenu && handleContextMenu(e, origin, appointmentId)}
+          color={colors[app.employeeId as number % colors.length]} // Utilise l'ID de l'employé pour la couleur
         />
       ))}
       {/* Affichage de la bulle d'info si besoin */}

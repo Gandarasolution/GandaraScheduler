@@ -20,7 +20,7 @@ interface CalendarGridProps {
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
   isHoliday: (date: Date) => boolean; // Fonction pour vérifier si un jour est férié
 }
 

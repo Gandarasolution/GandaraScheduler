@@ -2,9 +2,10 @@
 import React,{ useState, useRef, memo, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { Appointment } from '../types';
-import { addDays, isBefore } from 'date-fns';
+import { addDays} from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS} from '../pages/index'
-import { eachDayOfInterval } from 'date-fns';
+import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
+import { useSelectedCell } from '../context/SelectedCellContext';
 
 // Props du composant AppointmentItem
 interface AppointmentItemProps {
@@ -12,7 +13,7 @@ interface AppointmentItemProps {
   onDoubleClick: () => void;
   onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
   color?: string; // Couleur personnalisée
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number) => void; // Fonction pour gérer le clic droit
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null) => void; // Fonction pour gérer le clic droit
 }
 
 /**
@@ -20,12 +21,12 @@ interface AppointmentItemProps {
  * Gère le drag & drop, le redimensionnement, l'affichage et la création fractionnée sur jours ouvrés.
  */
 const AppointmentItem: React.FC<AppointmentItemProps> = ({ 
-  appointment, 
+  appointment,
+  color,
   onDoubleClick, 
   onResize, 
   handleContextMenu
 }) => {
-
   // Gestion du drag & drop avec react-dnd
   const [{ isDragging }, drag] = useDrag({
     type: 'appointment',
@@ -52,6 +53,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const dragStartRef = useRef<Date>(appointment.startDate);
   const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
+
+  const { selectedCell, setSelectedCell } = useSelectedCell();
+  const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
+  const isSelected = selectedAppointment?.id === appointment.id;
+
   
   // Constantes pour le calcul de la largeur
   const INTERVAL_WIDTH = CELL_WIDTH/2;
@@ -169,6 +175,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   // Lorsqu'on relâche la souris après un resize
   const handleMouseUp = () => {
+    console.log(isResizingLeft, isResizingRight, dragStartRef.current, dragEndRef.current);
+    
     if (isResizingRight) {
       onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right');
     }
@@ -207,15 +215,24 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         ref={(node) => {
           if (node) drag(node);
         }}
-        onDoubleClick={onDoubleClick}
-        onContextMenu={(e) => handleContextMenu(e, 'appointment', appointment.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedAppointment(appointment);
+          setSelectedCell(null)
+        }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onDoubleClick()
+        }}
+        onContextMenu={(e) => handleContextMenu(e, 'appointment', appointment)}
         className={`
-          bg-blue-400
+          ${color}
           relative rounded p-1 text-sm
           flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis
           cursor-grab transition-opacity z-10 h-10
           border-l border-transparent border-r
           ${isDragging ? 'opacity-50' : 'opacity-100'}
+          ${isSelected ? `ring-2` : ''}
         `}
         title={appointment.title}
         style={{

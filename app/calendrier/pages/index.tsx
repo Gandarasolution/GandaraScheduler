@@ -1,7 +1,7 @@
 "use client";
 
 // Imports React, hooks, DnD, date-fns, types, composants, et données
-import React, { useState, useCallback, useRef, useEffect, JSX, useMemo, startTransition } from "react";
+import React, { useState, useCallback, useRef, useEffect, JSX, useMemo, startTransition, Key } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -28,6 +28,9 @@ import {
   autres,
 } from "../../datasource";
 import Holidays from 'date-holidays';
+import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
+import { SelectedCellContext } from "../context/SelectedCellContext";
+import { se } from "date-fns/locale";
 const hd = new Holidays('FR'); // 'FR' pour la France
 const holidays = hd.getHolidays(new Date().getFullYear());
 
@@ -62,17 +65,13 @@ const getWorkedDayIntervals = (start: Date, end: Date) => {
   let day = getNextWorkedDay(start);
 
   while(day < end){
-    const intervalEnd = getNextRestDay(day);
-    console.log('intervalEnd', intervalEnd, 'end', end);
-    
+    const intervalEnd = getNextRestDay(day);    
     if (intervalEnd > end) {
       // Si l'intervalle dépasse la date de fin, on le limite
       intervals.push({
         start: new Date(day),
         end: new Date(end)
-      });
-      console.log('interval pushed:', { start: new Date(day), end: new Date(end) });
-      
+      });      
       break;
     }
     intervals.push({
@@ -80,7 +79,6 @@ const getWorkedDayIntervals = (start: Date, end: Date) => {
       end: intervalEnd
     });
     day = getNextWorkedDay(intervalEnd);
-    console.log('2interval pushed:', { start: new Date(day), end: new Date(intervalEnd) });
     // Si le jour suivant dépasse la date de fin, on arrête
     if (day > end) break;      
   }
@@ -125,7 +123,6 @@ export default function HomePage() {
     eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) })
   );
   const [addAppointmentStep, setAddAppointmentStep] = useState<"select" | "form" | "">("");
-  const appointmentContextMenu = useRef<Appointment | null>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
@@ -137,127 +134,61 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>(initialAppointments);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointmentForm, setSelectedAppointmentForm] = useState<Appointment | null>(null);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number ; intervalName: "morning" | "afternoon"} | null>(null);
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);
   const lastScrollLeft = useRef(0);
   const lastScrollTime = useRef(Date.now());
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element }[] } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element; action: () => void }[] } | null>(null);
   const clipboardAppointment= useRef<Appointment | null>(null);
-  const selectedAppointmentId = useRef<number | null>(null);
-  const selectedCell = useRef<{ employeeId: number; date: Date } | null>(null);
-  
-  const rightClickItemAppointment = useMemo(() => [
-    { 
-      label: "Modifier", 
-      logo: 
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-pencil-fill" viewBox="0 0 16 16">
-          <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
-        </svg>
-    },
-    { 
-      label: "Supprimer", 
-      logo: 
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash3-fill" viewBox="0 0 16 16">
-          <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
-        </svg>,
-      action: () => {
-        if (selectedAppointmentId.current !== null) {          
-          handleDeleteAppointment(selectedAppointmentId.current); // Appel de la fonction de suppression avec l'ID du rendez-vous sélectionné
-          selectedAppointmentId.current = null; // Réinitialiser l'ID sélectionné après la suppression
-        }
-        
-      }
-    },
-    {
-      label: 'Copier',
-      logo:
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-copy" viewBox="0 0 16 16">
-          <path fillRule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/>
-        </svg>,
-      action: () => {
-        // Utilise appointmentContextMenu.current qui est automatiquement mis à jour
-        if (appointmentContextMenu.current) {
-          clipboardAppointment.current = { ...appointmentContextMenu.current }; // Créer une copie pour éviter les références
-        } else if (selectedAppointmentId.current !== null) {
-          // Fallback: recherche directe si appointmentContextMenu.current est null
-          const appointmentToCopy = filteredAppointments.find(appt => appt.id === selectedAppointmentId.current);
-          if (appointmentToCopy) {
-            clipboardAppointment.current = { ...appointmentToCopy };
-          }
-        }
-      }
-    },
-    {
-      label: 'Répéter',
-      logo:
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-repeat" viewBox="0 0 16 16">
-          <path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m3.81.086a.5.5 0 0 1 .67.225A5 5 0 0 1 11 13H5v1.466a.25.25 0 0 1-.41.192l-2.36-1.966a.25.25 0 0 1 0-.384l2.36-1.966a.25.25 0 0 1 .41.192V12h6a4 4 0 0 0 3.585-5.777.5.5 0 0 1 .225-.67Z"/>
-        </svg>
+  const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: Date } | null>(null);
+
+  const copyAppointmentToClipboard = useCallback((app: Appointment) => {
+    if (app) {
+      clipboardAppointment.current = { ...app };
+    } else {
+      console.warn("Aucun rendez-vous sélectionné à copier.");
     }
-  ], [filteredAppointments]);
-  
-  const rightClickItemCell = useMemo(() => [
-    {
-      label: 'Coller',
-      logo:
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-copy" viewBox="0 0 16 16">
-          <path fillRule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/>
-        </svg>,
-      action: () => {   
-        if (clipboardAppointment.current) {
-          const startDate = clipboardAppointment.current.startDate;
-          const endDate = clipboardAppointment.current.endDate;
-
-          // Différence entre les dates de début et de fin du rendez-vous copié
-          const diff = endDate.getTime() - startDate.getTime();
-          
-          // Nouvelle date de début basée sur la cellule sélectionnée
-          const newStartDate = new Date(selectedCell.current?.date as Date);
-          const newEndDate = new Date(newStartDate.getTime() + diff);
-          
-          // Découper en intervalles de jours travaillés (même logique que le resize)
-          pasteAppointment(newStartDate, newEndDate, selectedCell.current?.employeeId as number);
-        }
-      }
-
-    },
-    {
-      label: 'Ajouter',
-      logo:
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-plus-circle-fill" viewBox="0 0 16 16">
-          <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>
-        </svg>
-    }
-  ], []);
-
-
-  useEffect(() => {
-    console.log(clipboardAppointment);
+    console.log("Rendez-vous copié dans le presse-papiers :", clipboardAppointment.current);
     
-  },[clipboardAppointment]);
+  }, [selectedAppointment]);
 
-  // Mémorise la fonction de fermeture du menu contextuel
-    const closeContextMenu = useCallback(() => setContextMenu(null), []);
-  
-    // Gère le clic droit pour afficher le menu contextuel
-    const handleContextMenu = useCallback(
-      (e: React.MouseEvent, origin: 'cell' | 'appointment', appointmentId?: number, cell?: { employeeId: number; date: Date }) => {
-        e.preventDefault();
-        e.stopPropagation();        
-        if (origin === 'appointment' && appointmentId) {
-          selectedAppointmentId.current = appointmentId;
-          // Trouve et stocke le rendez-vous complet au moment du clic droit
-          const currentAppointment = filteredAppointments.find(appt => appt.id === appointmentId);
-          appointmentContextMenu.current = currentAppointment || null;
-        }
-        if (origin === 'cell' && cell) {
-          selectedCell.current = cell;
-        }
-  
-      startTransition(() => {
-        setContextMenu({ x: e.clientX, y: e.clientY, item: origin === 'cell' ? rightClickItemCell : rightClickItemAppointment });
-      });
-    }, [rightClickItemCell, rightClickItemAppointment, filteredAppointments]);
+  const pasteAppointment = useCallback((cell: { employeeId: number; date: Date }) => {
+    if (!clipboardAppointment.current) return;
+
+    const startDate = clipboardAppointment.current.startDate;
+    const endDate = clipboardAppointment.current.endDate;
+
+    console.log(startDate, endDate);
+    
+    // Différence entre les dates de début et de fin du rendez-vous copié
+    const diff = endDate.getTime() - startDate.getTime();
+
+    // Nouvelle date de début basée sur la cellule sélectionnée
+    const newStartDate = new Date(cell.date.getTime());
+    const newEndDate = new Date(newStartDate.getTime() + diff);
+
+    console.log("Nouvelle date de début :", newStartDate);
+    console.log("Nouvelle date de fin :", newEndDate);
+
+    if (!isWorkedDay(newStartDate)) {
+      console.warn("Les dates sélectionnées ne sont pas des jours travaillés.");
+      return;
+    }
+
+    const days = getWorkedDayIntervals(newStartDate, newEndDate);
+
+    for (const day of days) {
+      createAppointment?.(
+        clipboardAppointment.current.title,
+        day.start,
+        day.end,
+        cell.employeeId,
+        clipboardAppointment.current.type as 'Chantier' | 'Absence' | 'Autre',
+        clipboardAppointment.current.imageUrl
+      );
+    }
+  }, []);
    
 
   // Utilitaire pour savoir si on est au bord du scroll horizontal
@@ -267,9 +198,6 @@ export default function HomePage() {
     const isAtMax = Math.abs(scrollLeft + clientWidth - scrollWidth) < 1;
     return { isAtMin, isAtMax };
   }
-
-
-
 
   // Gestion du scroll infini horizontal (ajout de jours à gauche/droite)
   const handleScroll = useCallback(
@@ -318,27 +246,6 @@ export default function HomePage() {
     []
   );
 
-  // Ajuste scrollLeft après ajout à gauche pour éviter le "saut"
-  useEffect(() => {
-    if (isLoadingMoreDays.current && mainScrollRef.current) {
-      const widthAdded = DAYS_TO_ADD * CELL_WIDTH;
-      mainScrollRef.current.scrollLeft += widthAdded;
-      isLoadingMoreDays.current = false;
-      setIsLoading(false);
-    }
-  }, [dayInTimeline]);
-
-  // Appelle handleScroll si on est déjà au bord après ajout
-  useEffect(() => {
-    if (mainScrollRef.current) {
-      const { isAtMin, isAtMax } = isAtMinOrMaxScroll(mainScrollRef.current);
-      if (isAtMin || isAtMax) {
-        handleScroll();
-      }
-    }
-    // eslint-disable-next-line
-  }, [dayInTimeline]);
-
   // Centrage sur aujourd'hui au chargement
   const goToDate = useCallback((date: Date) => {
     if (!mainScrollRef.current) return;
@@ -368,47 +275,47 @@ export default function HomePage() {
     }, 50);
   }, []);
 
-  useEffect(() => {
-    goToDate(new Date());
-  }, []); // Centrage initial
-
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback((appointment: Appointment) => {
     if (appointment.id) {
-      setFilteredAppointments((prev) => prev.map((app) => (app.id === appointment.id ? appointment : app)));
+      appointments.current = appointments.current.map((app) => (app.id === appointment.id ? appointment : app));
     } else {
-      setFilteredAppointments((prev) => [...prev, { ...appointment, id: Number(Date.now()) }]);
+      appointments.current = [...appointments.current, { ...appointment, id: Number(Date.now()) }];
     }
+    setFilteredAppointments(appointments.current); // Met à jour la liste filtrée
+    researchAppointments(); // Met à jour la liste filtrée
     setIsModalOpen(false);
     setSelectedAppointment(null);
     setNewAppointmentInfo(null);
   }, []);
 
-  const handleDeleteAppointment = useCallback((id: number) => {
-    setFilteredAppointments((prev) => prev.filter((app) => app.id !== id));
+  const handleDeleteAppointment = useCallback((id : number) => {
+    appointments.current = appointments.current.filter((app) => app.id !== id);
+    setFilteredAppointments(appointments.current); // Met à jour la liste filtrée
+    researchAppointments(); // Met à jour la liste filtrée
     setIsModalOpen(false);
     setSelectedAppointment(null);
   }, []);
 
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
-    setSelectedAppointment(appointment);
+    setSelectedAppointmentForm(appointment);
     setIsModalOpen(true);
   }, []);
 
   const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon") => {    
     setAddAppointmentStep("select");
-    setSelectedAppointment(null);
+    setSelectedAppointmentForm(null);
     setNewAppointmentInfo({ date, employeeId, intervalName });
   }, []);
 
   // Déplacement d'un rendez-vous (drag & drop ou resize)
   const moveAppointment = useCallback(
     (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right') => {
-      const appointment = filteredAppointments.find((app) => app.id === id);
+      const appointment = appointments.current.find((app) => app.id === id);
+    
       if (!appointment) return; // Rendez-vous non trouvé
 
       const days = getWorkedDayIntervals(newStartDate, newEndDate);
-      console.log("Jours travaillés pour le redimensionnement :", days);
       
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
       
@@ -435,60 +342,27 @@ export default function HomePage() {
   );
 
   const onResize = useCallback(
-    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number) =>
-
-      setFilteredAppointments((prev) => {
-        const updated = prev.map((app) =>
-          app.id === id
-            ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId }
-            : app
-        );
-        return updated;
-      }
-    ), []
+    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number) => {     
+      appointments.current = appointments.current.map((app) =>
+        app.id === id
+          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId }
+          : app
+      );
+      researchAppointments(); // Met à jour la liste filtrée
+    }, []
   );
 
-  const pasteAppointment = useCallback((startDate: Date, endDate: Date, employeeId: number) => {
-    if (!clipboardAppointment.current) return;
-
-    if (!isWorkedDay(startDate) || !isWorkedDay(endDate)) {
-      console.warn("Les dates sélectionnées ne sont pas des jours travaillés.");
-      return;
-    }
-
-    const days = getWorkedDayIntervals(startDate, endDate);
-
-    // Créer un nouveau rendez-vous avec les mêmes données que le rendez-vous copié
-    createAppointment(
-      clipboardAppointment.current.title,
-      startDate,
-      endDate,
-      employeeId,
-      clipboardAppointment.current.type as 'Chantier' | 'Absence' | 'Autre',
-      clipboardAppointment.current.imageUrl
-    );
-  }, []);
 
   // Création d'un rendez-vous depuis un drag externe
   const createAppointmentFromDrag = useCallback(
     (title: string, date: Date, intervalName: "morning" | "afternoon", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
-      const newApp: Appointment = {
-        id: Number(Date.now()),
-        title,
-        description: `Nouvel élément ${title}`,
-        startDate:
-          intervalName === "morning"
-            ? setHours(setMinutes(date, 0), HALF_DAY_INTERVALS[0].startHour)
-            : setHours(setMinutes(date, 0), HALF_DAY_INTERVALS[1].startHour),
-        endDate:
-          intervalName === "morning"
-            ? setHours(setMinutes(date, 0), HALF_DAY_INTERVALS[0].endHour)
-            : setHours(setMinutes(date, 0), HALF_DAY_INTERVALS[1].endHour),
-        imageUrl: imageUrl,
-        employeeId,
-        type: typeEvent,
-      };
-      setFilteredAppointments((prev) => [...prev, newApp]);
+      const startHour = HALF_DAY_INTERVALS.find(interval => interval.name === intervalName)?.startHour || 0;
+      const endHour = HALF_DAY_INTERVALS.find(interval => interval.name === intervalName)?.endHour || 24;
+
+      const startDate = setHours(setMinutes(new Date(date), 0), startHour);
+      const endDate = setHours(setMinutes(new Date(date), 0), endHour);
+
+      createAppointment(title, startDate, endDate, employeeId, typeEvent, imageUrl);
     },
     []
   );
@@ -506,26 +380,179 @@ export default function HomePage() {
         employeeId,
         type: typeEvent,
       };
-      setFilteredAppointments((prev) => [...prev, newApp]);
-    }, []);
+      appointments.current = [...appointments.current, newApp];
+      researchAppointments(); // Met à jour la liste filtrée
+  }, []);
 
-  // Recherche dans les rendez-vous
-  const searchAppointments = useCallback((query: string) => {    
-    if (!query) {
+
+  const researchAppointments = useCallback(() => {    
+     if (!searchInput) {
       setFilteredAppointments(appointments.current);
       return;
     }
-    const lowercasedQuery = query.toLowerCase();
+    const lowercasedQuery = searchInput.toLowerCase();
     setFilteredAppointments(
       appointments.current.filter((app) =>
         app.title.toLowerCase().includes(lowercasedQuery)
       )
     );
-  }, []);
+  }, [searchInput]);
+
+
+  // Mémorise la fonction de fermeture du menu contextuel
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  // Gère le clic droit pour afficher le menu contextuel
+  const handleContextMenu = useCallback(
+  (
+    e: React.MouseEvent,
+    origin: 'cell' | 'appointment',
+    appointment?: Appointment | null,
+    cell?: { employeeId: number; date: Date }
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (origin === 'appointment' && appointment) {      
+      setSelectedAppointment(appointment);
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        item: [
+            {
+            label: "Modifier",
+            logo:
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-pencil-fill" viewBox="0 0 16 16">
+                <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+              </svg>
+              ,
+            action: () => {
+              setSelectedAppointmentForm(appointment);
+              setIsModalOpen(true);
+            }
+          },
+          { 
+            label: "Supprimer", 
+            logo: 
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash3-fill" viewBox="0 0 16 16">
+                <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
+              </svg>,
+            action: () => {
+              handleDeleteAppointment(appointment.id); // Appel de la fonction de suppression avec l'ID du rendez-vous sélectionné
+              setSelectedAppointment(null); // Réinitialiser l'ID sélectionné après la suppression
+            }
+          },
+          {
+            label: 'Copier',
+            logo:
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-copy" viewBox="0 0 16 16">
+                <path fillRule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/>
+              </svg>,
+            action: () => {
+              copyAppointmentToClipboard(appointment);
+            }
+          },
+          {
+            label: 'Répéter',
+            logo:
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-repeat" viewBox="0 0 16 16">
+                <path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m3.81.086a.5.5 0 0 1 .67.225A5 5 0 0 1 11 13H5v1.466a.25.25 0 0 1-.41.192l-2.36-1.966a.25.25 0 0 1 0-.384l2.36-1.966a.25.25 0 0 1 .41.192V12h6a4 4 0 0 0 3.585-5.777.5.5 0 0 1 .225-.67Z"/>
+              </svg>,
+            action: () => {}
+          }
+        ]
+      });
+    }
+
+    if (origin === 'cell' && cell) {
+      setSelectedCell(cell);
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        item: [
+          {
+            label: 'Coller',
+            logo:
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-copy" viewBox="0 0 16 16">
+                <path fillRule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/>
+              </svg>,
+            action: () => {   
+              pasteAppointment(cell);
+            }
+          },
+          {
+            label: 'Ajouter',
+            logo:
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>
+              </svg>,
+            action: () => {
+              setSelectedAppointmentForm(null);
+              setIsModalOpen(true);
+            }
+          }
+        ]
+      });
+    }
+  }, [handleDeleteAppointment, copyAppointmentToClipboard, pasteAppointment]);
 
   useEffect(() => {
-    searchAppointments(searchInput);
+    goToDate(new Date());
+  }, []); // Centrage initial
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "c" && selectedAppointment) {
+        copyAppointmentToClipboard(selectedAppointment);
+      }
+      else if (e.ctrlKey && e.key === "v" && selectedCell) {
+        pasteAppointment(selectedCell);
+      }
+      
+      if (e.ctrlKey && e.key === "f") {
+        e.preventDefault();
+        setContextMenu(null); // Ferme le menu contextuel s'il est ouvert
+        setIsDrawerOpen(false); // Ferme le drawer s'il est ouvert
+        setIsModalOpen(false); // Ferme la modal s'il est ouvert
+        const searchInputElement = document.querySelector<HTMLInputElement>("#search");
+        if (searchInputElement) {
+          searchInputElement.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedAppointment, selectedCell, copyAppointmentToClipboard, pasteAppointment]);
+
+  // Recherche dans les rendez-vous
+  useEffect(() => {
+    researchAppointments();
   }, [searchInput]);
+
+  // Ajuste scrollLeft après ajout à gauche pour éviter le "saut"
+  useEffect(() => {
+    if (isLoadingMoreDays.current && mainScrollRef.current) {
+      const widthAdded = DAYS_TO_ADD * CELL_WIDTH;
+      mainScrollRef.current.scrollLeft += widthAdded;
+      isLoadingMoreDays.current = false;
+      setIsLoading(false);
+    }
+  }, [dayInTimeline]);
+
+  // Appelle handleScroll si on est déjà au bord après ajout
+  useEffect(() => {
+    if (mainScrollRef.current) {
+      const { isAtMin, isAtMax } = isAtMinOrMaxScroll(mainScrollRef.current);
+      if (isAtMin || isAtMax) {
+        handleScroll();
+      }
+    }
+    // eslint-disable-next-line
+  }, [dayInTimeline]);
+
+
 
   // Rendu principal de la page
   return (
@@ -578,19 +605,23 @@ export default function HomePage() {
             <div
               className={`flex-grow rounded-lg shadow-md ${isLoading ? "pointer-events-none opacity-60" : ""}`}
             >
-              <CalendarGrid
-                employees={employees.current}
-                appointments={filteredAppointments}
-                initialTeams={initialTeams}
-                dayInTimeline={dayInTimeline}
-                HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
-                onAppointmentMoved={moveAppointment}
-                onCellDoubleClick={handleOpenNewModal}
-                onAppointmentDoubleClick={handleOpenEditModal}
-                onExternalDragDrop={createAppointmentFromDrag}
-                handleContextMenu={handleContextMenu}
-                isHoliday={isHoliday}
-              />
+              <SelectedAppointmentContext.Provider value={{ selectedAppointment, setSelectedAppointment}}>
+                <SelectedCellContext.Provider value={{ selectedCell, setSelectedCell }}>
+                  <CalendarGrid
+                    employees={employees.current}
+                    appointments={filteredAppointments}
+                    initialTeams={initialTeams}
+                    dayInTimeline={dayInTimeline}
+                    HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+                    onAppointmentMoved={moveAppointment}
+                    onCellDoubleClick={handleOpenNewModal}
+                    onAppointmentDoubleClick={handleOpenEditModal}
+                    onExternalDragDrop={createAppointmentFromDrag}
+                    handleContextMenu={handleContextMenu}
+                    isHoliday={isHoliday}
+                  />
+                </SelectedCellContext.Provider>
+              </SelectedAppointmentContext.Provider>
             </div>
           </div>
         </div>
@@ -610,7 +641,7 @@ export default function HomePage() {
           title={selectedAppointment ? "Modifier le rendez-vous" : "Ajouter un rendez-vous"}
           >
           <AppointmentForm
-            appointment={selectedAppointment}
+            appointment={selectedAppointmentForm}
             initialDate={newAppointmentInfo?.date || null}
             initialEmployeeId={newAppointmentInfo?.employeeId || null}
             employees={employees.current}
@@ -626,7 +657,7 @@ export default function HomePage() {
           isOpen={addAppointmentStep === "select"}
           onSelect={(appointment) => {
             setAddAppointmentStep("form");
-            setSelectedAppointment(appointment);
+            setSelectedAppointmentForm(appointment);
             setIsModalOpen(true);
           }}
         />

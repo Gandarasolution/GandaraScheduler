@@ -53,11 +53,16 @@ const RightClickComponent = ({
 
   return (
     <div
-      className="rightClickComponent fixed flex flex-col bg-white border border-gray-300 rounded shadow-lg z-50 p-2"
+      className="
+      rightClickComponent 
+      fixed flex flex-col 
+      bg-white border border-gray-300 rounded shadow-lg z-50 p-2
+      "
       style={{ 
         top: coordinates.y, 
         left: coordinates.x,
       }}
+      onClick={(e) => e.stopPropagation()} // Empêche la fermeture du menu lors du clic à l'intérieur
     >
       {rightClickItem.map((item) => (
         <div 
