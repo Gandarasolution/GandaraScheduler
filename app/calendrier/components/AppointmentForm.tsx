@@ -1,8 +1,8 @@
 "use client";
 // components/AppointmentForm.tsx
-import React, { useState, useEffect } from 'react';
-import { Appointment, Employee } from '../types';
-import { format, parseISO, setHours, setMinutes, isSameDay } from 'date-fns';
+import React, { useState, useEffect, use, memo } from 'react';
+import { Appointment, Employee, HalfDayInterval } from '../types';
+import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes } from 'date-fns';
 import { chantier, absences, autres } from '../../datasource'
 
 /**
@@ -14,6 +14,7 @@ interface AppointmentFormProps {
   initialDate?: Date | null;
   initialEmployeeId?: number | null; // Nouvelle prop
   employees: Employee[]; // Liste de tous les employés
+  HALF_DAY_INTERVALS: HalfDayInterval[] // Liste des créneaux de demi-journée
   onSave: (appointment: Appointment) => void;
   onDelete: (id: number) => void;
   onClose: () => void;
@@ -28,6 +29,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   initialDate,
   initialEmployeeId,
   employees,
+  HALF_DAY_INTERVALS,
   onSave,
   onDelete,
   onClose,
@@ -45,23 +47,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''), // Par défaut au premier employé ou vide
         }
   );
-
-  // Met à jour le formulaire si l'appointment ou les props changent
-  useEffect(() => {
-    if (appointment) {
-      setFormData({ ...appointment, startDate: appointment.startDate, endDate: appointment.endDate });
-    } else if (initialDate || initialEmployeeId) {
-      const defaultStartTime = isSameDay(initialDate || new Date(), new Date()) ? new Date().getHours() : 9;
-      setFormData({
-        title: '',
-        description: '',
-        startDate: setHours(setMinutes(initialDate || new Date(), 0), defaultStartTime),
-        endDate: setHours(setMinutes(initialDate || new Date(), 0), defaultStartTime + 4),
-        imageUrl: '',
-        employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''),
-      });
-    }
-  }, [appointment, initialDate, initialEmployeeId, employees]);
 
   // Gère les changements de champ texte/select
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -90,22 +75,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
   };
 
-  // Gère le changement d'heure (time picker)
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    const [hours, minutes] = value.split(':').map(Number);
-    let newDate: Date;
-
-    if (name === 'startTime') {
-        newDate = setHours(setMinutes(formData.startDate, minutes), hours);
-        const diff = formData.endDate.getTime() - formData.startDate.getTime();
-        setFormData(prev => ({ ...prev, startDate: newDate, endDate: new Date(newDate.getTime() + diff) }));
-    } else if (name === 'endTime') {
-        newDate = setHours(setMinutes(formData.endDate, minutes), hours);
-        setFormData(prev => ({ ...prev, endDate: newDate }));
-    }
-  };
-
   // Soumission du formulaire
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();    
@@ -118,6 +87,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       onDelete(formData.id);
     }
   };
+
+  useEffect(() => {
+    console.log(formData);
+  }, [formData]);
 
   // Rendu du formulaire
   return (
@@ -211,16 +184,33 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           />
         </div>
         <div className="flex-1">
-          <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">Heure de début:</label>
-          <input
-            type="time"
-            id="startTime"
-            name="startTime"
-            value={format(formData.startDate, 'HH:mm')}
-            onChange={handleTimeChange}
-            required
+          <label htmlFor="intervalName" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
+          <select
+            id="intervalName"
+            name="intervalName"
+            value={
+              formData.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
+              && formData.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
+              ? 'morning' : 'afternoon'
+            }
+            onChange={e => {
+              const newHour = e.target.value === 'morning'
+                ? HALF_DAY_INTERVALS[0].startHour
+                : HALF_DAY_INTERVALS[1].startHour;
+
+              setFormData(prev => ({
+                ...prev,
+                startDate: setHours(
+                  startOfDay(prev.startDate), // S'assure que vous commencez au début du jour actuel
+                  newHour
+                ),
+              }));
+            }}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          />
+          >
+            <option value="morning">Matin</option>
+            <option value="afternoon">Après-midi</option>
+          </select>
         </div>
       </div>
 
@@ -238,16 +228,40 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           />
         </div>
         <div className="flex-1">
-          <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">Heure de fin:</label>
-          <input
-            type="time"
-            id="endTime"
-            name="endTime"
-            value={format(formData.endDate, 'HH:mm')}
-            onChange={handleTimeChange}
-            required
+          <label htmlFor="intervalName" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
+          <select
+            id="intervalName"
+            name="intervalName"
+            value={
+              formData.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour 
+              && formData.endDate.getHours() > HALF_DAY_INTERVALS[0].startHour 
+              ? 'morning' 
+              : 'afternoon'
+            }
+            onChange={e => {
+              const isAfternoon = e.target.value === 'afternoon';
+              const newHour = isAfternoon
+                ? HALF_DAY_INTERVALS[1].endHour - 1 // 23 si endHour vaut 24
+                : HALF_DAY_INTERVALS[0].endHour;    // 12 pour matin
+
+              const newEndDate = setHours(
+                setMinutes(
+                  setSeconds(startOfDay(formData.endDate), isAfternoon ? 59 : 0),
+                  isAfternoon ? 59 : 0
+                ),
+                newHour
+              );
+
+              setFormData(prev => ({
+                ...prev,
+                endDate: newEndDate,
+              }));
+            }}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          />
+          >
+            <option value="morning">Matin</option>
+            <option value="afternoon">Après-midi</option>
+          </select>
         </div>
       </div>
 
@@ -281,4 +295,4 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   );
 };
 
-export default AppointmentForm;
+export default memo(AppointmentForm);

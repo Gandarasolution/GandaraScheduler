@@ -279,10 +279,33 @@ export default function HomePage() {
 
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback((appointment: Appointment) => {
+    const days = getWorkedDayIntervals(appointment.startDate, appointment.endDate);
+    
+    
+    // Fonction utilitaire pour créer les rendez-vous supplémentaires
+    const createExtraAppointments = (fromIndex = 1) => {
+      days.slice(fromIndex).forEach(day => {
+        createAppointment(
+          appointment.title,
+          day.start,
+          day.end,
+          appointment.employeeId as number,
+          appointment.type as 'Chantier' | 'Absence' | 'Autre',
+          appointment.imageUrl
+        );
+      });
+    };
+    
     if (appointment.id) {
-      appointments.current = appointments.current.map((app) => (app.id === appointment.id ? appointment : app));
+      // Mise à jour du rendez-vous principal
+      appointments.current = appointments.current.map(app =>
+        app.id === appointment.id
+          ? { ...appointment, startDate: days[0].start, endDate: days[0].end }
+          : app
+      );
+      if (days.length > 1) createExtraAppointments();
     } else {
-      appointments.current = [...appointments.current, { ...appointment, id: Number(Date.now()) }];
+      createExtraAppointments(0);
     }
     researchAppointments(); // Met à jour la liste filtrée
     setIsModalOpen(false);
@@ -455,7 +478,7 @@ export default function HomePage() {
   const createAppointment = useCallback(
     (title: string, startDate: Date, endDate: Date, employeeId: number, typeEvent: 'Chantier' | 'Absence' | 'Autre', imageUrl?: string) => {
       const newApp: Appointment = {
-        id: Number(Date.now()),
+        id: Number(Date.now() + Math.random()), // Assure l'unicité de l'ID
         title,
         description: `Nouvel élément ${title}`,
         startDate,
@@ -840,6 +863,7 @@ export default function HomePage() {
               initialDate={newAppointmentInfo?.date || null}
               initialEmployeeId={newAppointmentInfo?.employeeId || null}
               employees={employees.current}
+              HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
               onSave={handleSaveAppointment}
               onDelete={handleDeleteAppointment}
               onClose={() => setIsModalOpen(false)}
@@ -967,7 +991,7 @@ const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
       title="Choisissez le type de rendez-vous"
     >
       <div className="mb-4 text-lg font-semibold text-center">
-        Quel type souhaitez-vous ajouter&nbsp;?
+        Quel type souhaitez-vous ajouter ?
       </div>
       <div className="flex flex-col gap-3">
         {eventTypes.map((eventType) => (
