@@ -11,6 +11,8 @@ import {
   setMinutes,
   format,
   addHours,
+  addWeeks,
+  addMonths,
 } from "date-fns";
 import { Appointment, Employee, HalfDayInterval } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
@@ -30,7 +32,6 @@ import {
 import Holidays from 'date-holidays';
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
-import { se } from "date-fns/locale";
 const hd = new Holidays('FR'); // 'FR' pour la France
 const holidays = hd.getHolidays(new Date().getFullYear());
 
@@ -137,6 +138,7 @@ export default function HomePage() {
   const [selectedAppointmentForm, setSelectedAppointmentForm] = useState<Appointment | null>(null);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number ; intervalName: "morning" | "afternoon"} | null>(null);
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);
+  const [repeatAppointmentData, setRepeatAppointmentData] = useState<{numberCount:number | null, repeatCount: number; repeatInterval: "day" | "week" | "month"; endDate: Date | null } | null>(null);
   const lastScrollLeft = useRef(0);
   const lastScrollTime = useRef(Date.now());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element; action: () => void }[] } | null>(null);
@@ -282,7 +284,6 @@ export default function HomePage() {
     } else {
       appointments.current = [...appointments.current, { ...appointment, id: Number(Date.now()) }];
     }
-    setFilteredAppointments(appointments.current); // Met à jour la liste filtrée
     researchAppointments(); // Met à jour la liste filtrée
     setIsModalOpen(false);
     setSelectedAppointment(null);
@@ -291,7 +292,6 @@ export default function HomePage() {
 
   const handleDeleteAppointment = useCallback((id : number) => {
     appointments.current = appointments.current.filter((app) => app.id !== id);
-    setFilteredAppointments(appointments.current); // Met à jour la liste filtrée
     researchAppointments(); // Met à jour la liste filtrée
     setIsModalOpen(false);
     setSelectedAppointment(null);
@@ -307,6 +307,90 @@ export default function HomePage() {
     setSelectedAppointmentForm(null);
     setNewAppointmentInfo({ date, employeeId, intervalName });
   }, []);
+
+  const handleRepeat = useCallback(() => {
+    if (!repeatAppointmentData) return;
+
+    const { repeatCount, endDate, repeatInterval, numberCount} = repeatAppointmentData;
+    
+    // Créer des rendez-vous répétés
+    createRepeatedAppointments(repeatInterval, repeatCount, endDate ?? undefined, numberCount ?? undefined);
+    setRepeatAppointmentData(null);
+  }, [repeatAppointmentData]);
+
+  // Création de rendez-vous répétés
+  const createRepeatedAppointments = (repeatInterval: "day" | "week" | "month", repeatCount: number, endDate?: Date, numberCount?: number) => {
+    const startDateOriginal = selectedAppointment?.startDate;
+    const endDateOriginal = selectedAppointment?.endDate;
+    if (!startDateOriginal || !endDateOriginal) {
+      console.warn("Start date or end date is undefined.");
+      return;
+    }
+    const diff = endDateOriginal.getTime() - startDateOriginal.getTime();
+
+    const newAppointments: Appointment[] = [];
+    let currentStartDate = repeatInterval === "day" ? addDays(endDateOriginal, numberCount || 0) 
+    : repeatInterval === "week" ? addWeeks(endDateOriginal, numberCount || 0) 
+    : addMonths(endDateOriginal, numberCount || 0);
+
+    if (repeatCount) {
+      for (let i = 0; i < repeatCount; i++) {
+        const newStartDate = new Date(currentStartDate.getTime());
+        const newEndDate = new Date(newStartDate.getTime() + diff);
+
+        const days = getWorkedDayIntervals(newStartDate, newEndDate); 
+
+        days.forEach(day => {
+          newAppointments.push({
+          id: Number(Date.now() + i), // Assure l'unicité de l'ID
+          title: selectedAppointment?.title || "Rendez-vous répété",
+          description: selectedAppointment?.description || "Description du rendez-vous répété",
+          startDate: day.start ,
+          endDate: day.end,
+          imageUrl: selectedAppointment?.imageUrl,
+          employeeId: selectedAppointment?.employeeId,
+          type: selectedAppointment?.type,
+        });
+      });
+
+      // Incrémente la date pour le prochain rendez-vous
+      currentStartDate = repeatInterval === "day" ? addDays(currentStartDate, numberCount || 1)
+        : repeatInterval === "week" ? addWeeks(currentStartDate, numberCount || 1) 
+        : addMonths(currentStartDate, numberCount || 1);
+      }
+    }
+    else if(endDate){
+      while (currentStartDate <= endDate) {
+        const newStartDate = new Date(currentStartDate.getTime());
+        const newEndDate = new Date(newStartDate.getTime() + diff);
+
+        const days = getWorkedDayIntervals(newStartDate, newEndDate); 
+
+        days.forEach(day => {
+          newAppointments.push({
+          id: Number(Date.now() + day.start.getTime()), // Assure l'unicité de l'ID
+          title: selectedAppointment?.title || "Rendez-vous répété",
+          description: selectedAppointment?.description || "Description du rendez-vous répété",
+          startDate: day.start ,
+          endDate: day.end,
+          imageUrl: selectedAppointment?.imageUrl,
+          employeeId: selectedAppointment?.employeeId,
+          type: selectedAppointment?.type,
+        });
+      });
+
+      // Incrémente la date pour le prochain rendez-vous
+      currentStartDate = repeatInterval === "day" ? addDays(currentStartDate, numberCount || 1)
+        : repeatInterval === "week" ? addWeeks(currentStartDate, numberCount || 1) 
+        : addMonths(currentStartDate, numberCount || 1);
+      }
+    }
+    // Ajoute les nouveaux rendez-vous à la liste
+    appointments.current = [...appointments.current, ...newAppointments];
+    researchAppointments(); // Met à jour la liste filtrée
+    
+
+  };
 
   // Déplacement d'un rendez-vous (drag & drop ou resize)
   const moveAppointment = useCallback(
@@ -458,7 +542,12 @@ export default function HomePage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-repeat" viewBox="0 0 16 16">
                 <path d="M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m3.81.086a.5.5 0 0 1 .67.225A5 5 0 0 1 11 13H5v1.466a.25.25 0 0 1-.41.192l-2.36-1.966a.25.25 0 0 1 0-.384l2.36-1.966a.25.25 0 0 1 .41.192V12h6a4 4 0 0 0 3.585-5.777.5.5 0 0 1 .225-.67Z"/>
               </svg>,
-            action: () => {}
+            action: () => setRepeatAppointmentData({
+              numberCount: 1,
+              repeatCount: 1,
+              repeatInterval: 'day',
+              endDate: null,
+            })
           }
         ]
       });
@@ -508,7 +597,7 @@ export default function HomePage() {
       else if (e.ctrlKey && e.key === "v" && selectedCell) {
         pasteAppointment(selectedCell);
       }
-      
+
       if (e.ctrlKey && e.key === "f") {
         e.preventDefault();
         setContextMenu(null); // Ferme le menu contextuel s'il est ouvert
@@ -633,22 +722,129 @@ export default function HomePage() {
           clipBoardAppointment={clipboardAppointment.current}
           onClose={closeContextMenu}
         />
-        {/* Modal pour le formulaire de rendez-vous */}
-        <Modal 
-          isOpen={isModalOpen} 
-          onClose={() => 
-          setIsModalOpen(false)}
-          title={selectedAppointment ? "Modifier le rendez-vous" : "Ajouter un rendez-vous"}
-          >
-          <AppointmentForm
-            appointment={selectedAppointmentForm}
-            initialDate={newAppointmentInfo?.date || null}
-            initialEmployeeId={newAppointmentInfo?.employeeId || null}
-            employees={employees.current}
-            onSave={handleSaveAppointment}
-            onDelete={handleDeleteAppointment}
-            onClose={() => setIsModalOpen(false)}
-          />
+        {/* Modal unique pour tous les usages (création, édition, répétition) */}
+        <Modal
+          isOpen={isModalOpen || !!repeatAppointmentData}
+          onClose={() => {
+            setIsModalOpen(false);
+            setRepeatAppointmentData(null);
+          }}
+          title={
+            !!repeatAppointmentData
+              ? "Répéter ce rendez-vous"
+              : selectedAppointment
+              ? "Modifier le rendez-vous"
+              : "Ajouter un rendez-vous"
+          }
+        >
+          {!!repeatAppointmentData ? (
+            <div 
+              className="flex flex-col gap-6 p-2"
+            >
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 font-medium">
+                  <span className="">{'Tous les'}</span>
+                  <input
+                    required
+                    type="number"
+                    min={1}
+                    defaultValue={1}
+                    className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-20"
+                    value={repeatAppointmentData.numberCount || 1}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (value > 0) {
+                        setRepeatAppointmentData((prev) =>
+                          prev
+                            ? { ...prev, numberCount: value }
+                            : { numberCount: value, repeatCount: 1, repeatInterval: "day", endDate: new Date() }
+                        );
+                      }
+                    }}
+                  />
+                </label>
+                <select
+                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2"
+                  value={repeatAppointmentData.repeatInterval}
+                  onChange={(e) => {
+                    const value = e.target.value as "day" | "week" | "month";
+                    setRepeatAppointmentData((prev) =>
+                      prev
+                        ? { ...prev, repeatInterval: value }
+                        : { numberCount: 1, repeatCount: 1, repeatInterval: value, endDate: new Date() }
+                    );
+                  }}
+                  required
+                >
+                  <option value="day">Jours</option>
+                  <option value="week">Semaines</option>
+                  <option value="month">Mois</option>
+                </select>
+              </div>
+              <div>
+                <span>{'Répéter jusqu\'au'} </span>
+                <input
+                  type="date"
+                  className={`${repeatAppointmentData.numberCount ? 'opacity-50' : 'opacity-100'} border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2`}
+                  value={repeatAppointmentData.endDate ? format(repeatAppointmentData.endDate, "yyyy-MM-dd") : ""}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setRepeatAppointmentData(prev => {
+                      const endDate = value ? new Date(value) : prev?.endDate || new Date();
+                      return prev
+                        ? { ...prev, endDate, numberCount: null }
+                        : { numberCount: null, repeatCount: 1, repeatInterval: "day", endDate };
+                    });
+                  }}
+                />
+                <span>{' ou nombre de répétitions'}</span>
+                <input
+                  type="number"
+                  min={1}
+                  defaultValue={1}
+                  className={`${repeatAppointmentData.endDate ? 'opacity-50' : 'opacity-100'} border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-20 ml-2`}
+                  value={repeatAppointmentData.repeatCount}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (value > 0) {
+                      setRepeatAppointmentData((prev) => {
+                        return prev
+                          ? { ...prev, repeatCount: value, endDate: null }
+                          : { numberCount: 1, repeatCount: value, repeatInterval: "day", endDate: null };
+                      });
+                    }
+                  }}
+                />
+              </div>
+              {/* Boutons d'action */}
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setRepeatAppointmentData(null)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRepeat}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  {'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <AppointmentForm
+              appointment={selectedAppointmentForm}
+              initialDate={newAppointmentInfo?.date || null}
+              initialEmployeeId={newAppointmentInfo?.employeeId || null}
+              employees={employees.current}
+              onSave={handleSaveAppointment}
+              onDelete={handleDeleteAppointment}
+              onClose={() => setIsModalOpen(false)}
+            />
+          )}
         </Modal>
         {/* Modal pour choisir le type de rendez-vous */}
         <ChoiceAppointmentType
