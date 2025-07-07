@@ -27,29 +27,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   onResize, 
   handleContextMenu
 }) => {
-  // Gestion du drag & drop avec react-dnd
-  const [{ isDragging }, drag] = useDrag({
-    type: 'appointment',
-    item: { 
-      id: appointment.id, 
-      type: 'appointment',
-      startDate: appointment.startDate,
-      endDate: appointment.endDate,
-    },
-    canDrag(monitor) {
-      // Empêche le drag si on est en train de redimensionner
-      return !isResizingLeft && !isResizingRight;
-    },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  // États pour le redimensionnement
+   // États pour le redimensionnement
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
   const [dragStart, setDragStart] = useState<Date>(appointment.startDate);
   const [dragEnd, setDragEnd] = useState<Date>(appointment.endDate);
+  const [dragOffset, setDragOffset] = useState<number>(0);
   const dragStartRef = useRef<Date>(appointment.startDate);
   const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
@@ -57,7 +40,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const { selectedCell, setSelectedCell } = useSelectedCell();
   const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
   const isSelected = selectedAppointment?.id === appointment.id;
-
   
   // Constantes pour le calcul de la largeur
   const INTERVAL_WIDTH = CELL_WIDTH/2;
@@ -72,11 +54,39 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const intervalCount = getIntervalCount(dragStart, dragEnd);
   const calcultedWidth = intervalCount * INTERVAL_WIDTH;
 
+  // Gestion du drag & drop avec react-dnd
+  const [{ isDragging }, drag] = useDrag({
+    type: 'appointment',
+    item: { 
+      id: appointment.id, 
+      type: 'appointment',
+      startDate: appointment.startDate,
+      endDate: appointment.endDate,
+      dragOffset,
+      width: calcultedWidth
+    },
+    canDrag(monitor) {
+      // Empêche le drag si on est en train de redimensionner
+      return !isResizingLeft && !isResizingRight;
+    },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
   // Décalage horizontal du bloc (en px)
   let offsetIntervals = Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / HALF_DAY_DURATION);
   let offsetPx = offsetIntervals * INTERVAL_WIDTH;
 
  
+  
+  const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Calcule la position du clic dans le bloc (en px)
+    const rect = e.currentTarget.getBoundingClientRect();
+    console.log(e.clientX - rect.left);
+    
+    setDragOffset(e.clientX - rect.left);
+  };
   
   // Met à jour la date de début lors du resize
   const setDragStartSafe = (date: Date) => {
@@ -174,9 +184,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   };
 
   // Lorsqu'on relâche la souris après un resize
-  const handleMouseUp = () => {
-    console.log(isResizingLeft, isResizingRight, dragStartRef.current, dragEndRef.current);
-    
+  const handleMouseUp = () => {    
     if (isResizingRight) {
       onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right');
     }
@@ -242,6 +250,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           left: `${offsetPx}px`,
           willChange: 'width, left',
           }}
+          onMouseDown={handleDragStart}
       >
         {/* Handle de redimensionnement à gauche */}
         <div

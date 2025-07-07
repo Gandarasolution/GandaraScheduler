@@ -54,6 +54,8 @@ interface DragItem {
   endDate: Date;
   imageUrl: string;
   typeEvent: 'Chantier' | 'Absence' | 'Autre';
+  dragOffset?: number; // Offset du drag pour le positionnement
+  width?: number; // Largeur du rendez-vous pour le calcul de positionnement
 }
 
 /**
@@ -118,6 +120,17 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         targetInterval = 'morning'; // Par défaut, matin du prochain jour ouvré
       }
       
+
+      // Si on a dragOffset et width, on centre l'event sur la cellule cible
+      if (item.dragOffset !== undefined && item.width) {
+        // Largeur d'une cellule (en px)
+        const intervalWidth = CELL_WIDTH / 2;
+        // Décalage en nombre de cellules (arrondi)
+        const cellOffset = Math.floor(-item.dragOffset / intervalWidth) + 1; // +1 pour centrer sur la cellule
+        // Décale la date cible
+        targetDate = addDays(targetDate, cellOffset * 0.5); // 0.5 si demi-journée
+      }
+
       if (item.sourceType === 'external') {        
         // Création d'un rendez-vous depuis une source externe
         onExternalDragDrop(
