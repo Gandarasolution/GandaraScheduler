@@ -138,7 +138,7 @@ export default function HomePage() {
   const [selectedAppointmentForm, setSelectedAppointmentForm] = useState<Appointment | null>(null);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number ; intervalName: "morning" | "afternoon"} | null>(null);
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);
-  const [repeatAppointmentData, setRepeatAppointmentData] = useState<{numberCount:number | null, repeatCount: number; repeatInterval: "day" | "week" | "month"; endDate: Date | null } | null>(null);
+  const [repeatAppointmentData, setRepeatAppointmentData] = useState<{numberCount:number, repeatCount: number | null; repeatInterval: "day" | "week" | "month"; endDate: Date | null } | null>(null);
   const [extendAppointmentData, setExtendAppointmentData] = useState<Date | null>(null);
   const lastScrollLeft = useRef(0);
   const lastScrollTime = useRef(Date.now());
@@ -338,7 +338,7 @@ export default function HomePage() {
     const { repeatCount, endDate, repeatInterval, numberCount} = repeatAppointmentData;
     
     // Créer des rendez-vous répétés
-    createRepeatedAppointments(repeatInterval, repeatCount, endDate ?? undefined, numberCount ?? undefined);
+    createRepeatedAppointments(repeatInterval, repeatCount ?? 0, endDate ?? undefined, numberCount);
     setRepeatAppointmentData(null);
   }, [repeatAppointmentData]);
 
@@ -368,10 +368,10 @@ export default function HomePage() {
     const diff = endDateOriginal.getTime() - startDateOriginal.getTime();
 
     const newAppointments: Appointment[] = [];
-    let currentStartDate = repeatInterval === "day" ? addDays(endDateOriginal, numberCount || 0) 
-    : repeatInterval === "week" ? addWeeks(endDateOriginal, numberCount || 0) 
-    : addMonths(endDateOriginal, numberCount || 0);
-
+    let currentStartDate = repeatInterval === "day" ? addDays(startDateOriginal, numberCount || 0) 
+    : repeatInterval === "week" ? addWeeks(startDateOriginal, numberCount || 0) 
+    : addMonths(startDateOriginal, numberCount || 0);    
+        
     if (repeatCount) {
       for (let i = 0; i < repeatCount; i++) {
         const newStartDate = new Date(currentStartDate.getTime());
@@ -398,13 +398,13 @@ export default function HomePage() {
         : addMonths(currentStartDate, numberCount || 1);
       }
     }
-    else if(endDate){
+    else if(endDate){      
       while (currentStartDate <= endDate) {
         const newStartDate = new Date(currentStartDate.getTime());
         const newEndDate = new Date(newStartDate.getTime() + diff);
 
         const days = getWorkedDayIntervals(newStartDate, newEndDate); 
-
+        
         days.forEach(day => {
           newAppointments.push({
           id: Number(Date.now() + day.start.getTime()), // Assure l'unicité de l'ID
@@ -427,8 +427,7 @@ export default function HomePage() {
     // Ajoute les nouveaux rendez-vous à la liste
     appointments.current = [...appointments.current, ...newAppointments];
     researchAppointments(); // Met à jour la liste filtrée
-    
-
+    setRepeatAppointmentData(null);
   };
 
   // Déplacement d'un rendez-vous (drag & drop ou resize)
@@ -809,7 +808,6 @@ export default function HomePage() {
                     required
                     type="number"
                     min={1}
-                    defaultValue={1}
                     className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-20"
                     value={repeatAppointmentData.numberCount || 1}
                     onChange={(e) => {
@@ -826,7 +824,7 @@ export default function HomePage() {
                 </label>
                 <select
                   className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2"
-                  value={repeatAppointmentData.repeatInterval}
+                  value={repeatAppointmentData.repeatInterval || "day"}
                   onChange={(e) => {
                     const value = e.target.value as "day" | "week" | "month";
                     setRepeatAppointmentData((prev) =>
@@ -846,25 +844,24 @@ export default function HomePage() {
                 <span>{'Répéter jusqu\'au'} </span>
                 <input
                   type="date"
-                  className={`${repeatAppointmentData.numberCount ? 'opacity-50' : 'opacity-100'} border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2`}
+                  className={`${repeatAppointmentData.repeatCount ? 'opacity-50' : 'opacity-100'} border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2`}
                   value={repeatAppointmentData.endDate ? format(repeatAppointmentData.endDate, "yyyy-MM-dd") : ""}
                   onChange={e => {
                     const value = e.target.value;
                     setRepeatAppointmentData(prev => {
                       const endDate = value ? new Date(value) : prev?.endDate || new Date();
                       return prev
-                        ? { ...prev, endDate, numberCount: null }
-                        : { numberCount: null, repeatCount: 1, repeatInterval: "day", endDate };
-                    });
+                        ? { ...prev, endDate, repeatCount: null }
+                        : { numberCount: 1, repeatCount: null, repeatInterval: "day", endDate };
+                    });                    
                   }}
                 />
                 <span>{' ou nombre de répétitions'}</span>
                 <input
                   type="number"
                   min={1}
-                  defaultValue={1}
                   className={`${repeatAppointmentData.endDate ? 'opacity-50' : 'opacity-100'} border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-20 ml-2`}
-                  value={repeatAppointmentData.repeatCount}
+                  value={repeatAppointmentData.repeatCount || 0}
                   onChange={(e) => {
                     const value = parseInt(e.target.value, 10);
                     if (value > 0) {
