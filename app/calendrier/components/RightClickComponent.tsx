@@ -64,9 +64,7 @@ const RightClickComponent = ({
       }}
       onClick={(e) => e.stopPropagation()} // Empêche la fermeture du menu lors du clic à l'intérieur
     >
-      {rightClickItem.map((item) => (
-        console.log(`Item: ${item.label}, Actif: ${item.actif}`), // Debugging log;
-        
+      {rightClickItem.map((item) => (        
         <div 
           key={item.label} 
           className={`

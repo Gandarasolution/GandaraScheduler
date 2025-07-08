@@ -8,7 +8,7 @@ import {
 import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
 import { fr } from 'date-fns/locale';
-import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT} from '../pages/index'; // Constantes de style
+import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT} from '../utils/constants'; // Constantes de style
 
 interface CalendarGridProps {
   employees: Employee[];

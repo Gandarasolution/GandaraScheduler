@@ -29,63 +29,10 @@ import {
   absences,
   autres,
 } from "../../datasource";
-import Holidays from 'date-holidays';
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
-import { start } from "repl";
-const hd = new Holidays('FR'); // 'FR' pour la France
-const holidays = hd.getHolidays(new Date().getFullYear());
-
-// Fonctions utilitaires pour la gestion des jours travaillés
-const isHoliday = (date: Date) => {
-  const dateStr = date.toISOString().split('T')[0];
-  return holidays.some(holiday => holiday.date === dateStr);
-};
-
-const isWorkedDay = (date: Date) => {
-  return date.getDay() !== 0 && date.getDay() !== 6 && !isHoliday(date);
-};
-
-const getNextRestDay = (date: Date) => {
-  let next = new Date(date);
-  while (isWorkedDay(next)) {
-    next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
-  }
-  return next;
-};
-
-const getNextWorkedDay = (date: Date) => {
-  let next = new Date(date);
-  while (!isWorkedDay(next)) {
-    next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
-  }
-  return next;
-};
-
-const getWorkedDayIntervals = (start: Date, end: Date) => {
-  const intervals: { start: Date, end: Date }[] = [];
-  let day = getNextWorkedDay(start);
-
-  while(day < end){
-    const intervalEnd = getNextRestDay(day);    
-    if (intervalEnd > end) {
-      // Si l'intervalle dépasse la date de fin, on le limite
-      intervals.push({
-        start: new Date(day),
-        end: new Date(end)
-      });      
-      break;
-    }
-    intervals.push({
-      start: new Date(day),
-      end: intervalEnd
-    });
-    day = getNextWorkedDay(intervalEnd);
-    // Si le jour suivant dépasse la date de fin, on arrête
-    if (day > end) break;      
-  }
-  return intervals;
-};
+import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
+import { getWorkedDayIntervals, isHoliday, isWorkedDay } from "../utils/dates";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -94,22 +41,6 @@ const eventTypes = [
   { label: "Autre", color: "secondary", dataSource: autres, placeholder: "Sélectionnez autre" },
 ];
 
-// Constantes pour la timeline et les cellules
-const DAYS_TO_ADD = 30;
-const THRESHOLD_MAX = 80;
-const THRESHOLD_MIN = 20;
-const WINDOW_SIZE = 100;
-export const EMPLOYEE_COLUMN_WIDTH = "150px";
-export const CELL_WIDTH = 60;
-export const CELL_HEIGHT = 50;
-
-export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
-  { name: "morning", startHour: 0, endHour: 12 },
-  { name: "afternoon", startHour: 12, endHour: 24 },
-];
-export const DAY_INTERVALS: HalfDayInterval[] = [
-  { name: "day", startHour: 0, endHour: 24 },
-];
 
 // Petite fonction utilitaire pour éviter les appels trop fréquents (scroll, etc.)
 function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
@@ -185,7 +116,11 @@ export default function HomePage() {
       return;
     }
 
-    const days = getWorkedDayIntervals(newStartDate, newEndDate);
+    const days = getWorkedDayIntervals(
+      newStartDate, 
+      newEndDate,
+      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+    );
 
     for (const day of days) {
       createAppointment?.(
@@ -286,7 +221,11 @@ export default function HomePage() {
 
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback((appointment: Appointment) => {
-    const days = getWorkedDayIntervals(appointment.startDate, appointment.endDate);
+    const days = getWorkedDayIntervals(
+      appointment.startDate, 
+      appointment.endDate,
+      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+    );
     
     
     // Fonction utilitaire pour créer les rendez-vous supplémentaires
@@ -360,11 +299,16 @@ export default function HomePage() {
     if (!appointmentToDivide) return;
 
     const { startDate, endDate, employeeId, type, imageUrl } = appointmentToDivide;
-    const newEndDate = new Date(startDate.getTime() + (endDate.getTime() - startDate.getTime())/2);
-    onResize(id, startDate, newEndDate, employeeId as number);
+    const totalDuration = endDate.getTime() - startDate.getTime();
+    const timeInterval = isFullDay ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
+    const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000)); // Nombre d'intervalles de travail dans la durée totale
+    
+    const EndDate = new Date(startDate.getTime() + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000)));
+
+    onResize(id, startDate, EndDate, employeeId as number);
     createAppointment(
       appointmentToDivide.title,
-      newEndDate,
+      EndDate,
       endDate,
       employeeId as number,
       type as 'Chantier' | 'Absence' | 'Autre',
@@ -419,7 +363,11 @@ export default function HomePage() {
         const newStartDate = new Date(currentStartDate.getTime());
         const newEndDate = new Date(newStartDate.getTime() + diff);
 
-        const days = getWorkedDayIntervals(newStartDate, newEndDate); 
+        const days = getWorkedDayIntervals(
+          newStartDate,
+          newEndDate,
+          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+        );
 
         days.forEach(day => {
           newAppointments.push({
@@ -445,8 +393,12 @@ export default function HomePage() {
         const newStartDate = new Date(currentStartDate.getTime());
         const newEndDate = new Date(newStartDate.getTime() + diff);
 
-        const days = getWorkedDayIntervals(newStartDate, newEndDate); 
-        
+        const days = getWorkedDayIntervals(
+          newStartDate, 
+          newEndDate,
+          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+        );
+
         days.forEach(day => {
           newAppointments.push({
           id: Number(Date.now() + day.start.getTime()), // Assure l'unicité de l'ID
@@ -479,7 +431,11 @@ export default function HomePage() {
     
       if (!appointment) return; // Rendez-vous non trouvé
 
-      const days = getWorkedDayIntervals(newStartDate, newEndDate);
+      const days = getWorkedDayIntervals(
+        newStartDate, 
+        newEndDate,
+        isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+    );
       
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
       

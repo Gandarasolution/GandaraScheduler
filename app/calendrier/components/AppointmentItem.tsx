@@ -3,7 +3,7 @@ import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useDrag } from 'react-dnd';
 import { Appointment } from '../types';
 import { addDays } from 'date-fns';
-import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT } from '../pages/index';
+import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT } from '../utils/constants';
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
 import { useSelectedCell } from '../context/SelectedCellContext';
 
