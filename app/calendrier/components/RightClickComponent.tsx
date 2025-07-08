@@ -5,7 +5,7 @@ import { Appointment } from "../types";
 interface RightClickComponentProps {
   open: boolean;
   coordinates: { x: number; y: number } | null;
-  rightClickItem: { label: string; logo: JSX.Element, action?: () => void }[];
+  rightClickItem: { label: string; logo: JSX.Element, action?: () => void; actif?: boolean }[];
   clipBoardAppointment: Appointment | null; // Optionnel pour gérer le presse-papiers
   onClose: () => void;
 }
@@ -65,9 +65,18 @@ const RightClickComponent = ({
       onClick={(e) => e.stopPropagation()} // Empêche la fermeture du menu lors du clic à l'intérieur
     >
       {rightClickItem.map((item) => (
+        console.log(`Item: ${item.label}, Actif: ${item.actif}`), // Debugging log;
+        
         <div 
           key={item.label} 
-          className={`flex items-center p-2 hover:bg-gray-100 rounded ${item.label === 'Coller' && !clipBoardAppointment ? 'opacity-50 cursor-not-allowed' : ' cursor-pointer'}`}
+          className={`
+            flex items-center p-2 hover:bg-gray-100 rounded 
+            ${(item.label === 'Coller' && !clipBoardAppointment) || item.actif
+              ? 'opacity-50 cursor-not-allowed' 
+              : ' cursor-pointer'
+            }
+            `
+          }
           onClick={() => {
             item.action && item.action();
             onClose();

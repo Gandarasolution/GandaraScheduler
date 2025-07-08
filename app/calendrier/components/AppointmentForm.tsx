@@ -83,7 +83,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
   // Suppression du rendez-vous
   const handleDelete = () => {
-    if (formData.id && confirm('Êtes-vous sûr de vouloir supprimer ce rendez-vous ?')) {
+    if (formData.id) {
       onDelete(formData.id);
     }
   };

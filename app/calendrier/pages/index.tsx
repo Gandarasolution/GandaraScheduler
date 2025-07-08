@@ -1,7 +1,7 @@
 "use client";
 
 // Imports React, hooks, DnD, date-fns, types, composants, et données
-import React, { useState, useCallback, useRef, useEffect, JSX, useMemo, startTransition, Key } from "react";
+import React, { useState, useCallback, useRef, useEffect, JSX} from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -32,6 +32,7 @@ import {
 import Holidays from 'date-holidays';
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
+import { start } from "repl";
 const hd = new Holidays('FR'); // 'FR' pour la France
 const holidays = hd.getHolidays(new Date().getFullYear());
 
@@ -144,10 +145,12 @@ export default function HomePage() {
   const [extendAppointmentData, setExtendAppointmentData] = useState<Date | null>(null);
   const lastScrollLeft = useRef(0);
   const lastScrollTime = useRef(Date.now());
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element; action: () => void }[] } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element; action: () => void; actif?: boolean }[]} | null>(null);
   const clipboardAppointment= useRef<Appointment | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: Date } | null>(null);
-  const [isFullDay, setIsFullDay] = useState(true);
+  const [isFullDay, setIsFullDay] = useState(false);
+  const [isAlertVisible, setIsAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState<"Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?">("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
 
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
     if (app) {
@@ -317,7 +320,17 @@ export default function HomePage() {
     setNewAppointmentInfo(null);
   }, []);
 
-  const handleDeleteAppointment = useCallback((id : number) => {
+  const handleDeleteAppointmentConfirm = useCallback(() => {
+    setAlertTitle("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
+    setIsAlertVisible(true)
+  }, []);
+
+  const handleDeleteAppointment = useCallback((id? : number) => {
+    if (!id) {
+      console.warn("Aucun ID de rendez-vous fourni pour la suppression.");
+      return;
+    }
+    setIsAlertVisible(false);
     appointments.current = appointments.current.filter((app) => app.id !== id);
     researchAppointments(); // Met à jour la liste filtrée
     setIsModalOpen(false);
@@ -333,6 +346,32 @@ export default function HomePage() {
     setAddAppointmentStep("select");
     setSelectedAppointmentForm(null);
     setNewAppointmentInfo({ date, employeeId, intervalName });
+  }, []);
+
+  const handleDivideAppointmentConfirm = useCallback(() => {
+    setAlertTitle("Êtes-vous sûr de vouloir diviser ce rendez-vous ?");
+    setIsAlertVisible(true);
+  }, []);
+
+  const handleDivideAppointment = useCallback((id?: number) => {
+    if (!id) return;
+
+    const appointmentToDivide = appointments.current.find(app => app.id === id);
+    if (!appointmentToDivide) return;
+
+    const { startDate, endDate, employeeId, type, imageUrl } = appointmentToDivide;
+    const newEndDate = new Date(startDate.getTime() + (endDate.getTime() - startDate.getTime())/2);
+    onResize(id, startDate, newEndDate, employeeId as number);
+    createAppointment(
+      appointmentToDivide.title,
+      newEndDate,
+      endDate,
+      employeeId as number,
+      type as 'Chantier' | 'Absence' | 'Autre',
+      imageUrl
+    );
+    setIsModalOpen(false);
+    setSelectedAppointment(null);
   }, []);
 
   const handleRepeat = useCallback(() => {
@@ -563,8 +602,7 @@ export default function HomePage() {
                 <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
               </svg>,
             action: () => {
-              handleDeleteAppointment(appointment.id); // Appel de la fonction de suppression avec l'ID du rendez-vous sélectionné
-              setSelectedAppointment(null); // Réinitialiser l'ID sélectionné après la suppression
+              handleDeleteAppointmentConfirm(); // Appel de la fonction de suppression avec l'ID du rendez-vous sélectionné
             }
           },
           {
@@ -609,6 +647,17 @@ export default function HomePage() {
             action: () => {
               setExtendAppointmentData(new Date());
             } 
+          },
+          {
+            label: 'Diviser',
+            logo: 
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-vr" viewBox="0 0 16 16">
+                <path d="M3 12V4a1 1 0 0 1 1-1h2.5V2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2.5v-1H4a1 1 0 0 1-1-1m6.5 1v1H12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H9.5v1H12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1zM8 16a.5.5 0 0 1-.5-.5V.5a.5.5 0 0 1 1 0v15a.5.5 0 0 1-.5.5"/>
+              </svg>,
+            action: () => {
+              handleDivideAppointmentConfirm(); // Appel de la fonction de division avec l'ID du rendez-vous sélectionné
+            },
+            actif: appointment.endDate.getTime() - appointment.startDate.getTime() <= 12 * 60 * 60 * 1000 // Si la durée est supérieure à 12 heure
           }
         ]
       });
@@ -1014,8 +1063,18 @@ export default function HomePage() {
             <div className="h-full bg-blue-600 animate-pulse" style={{ width: "30%" }} />
           </div>
         )}
-        
-        
+        {/* Alert pour les messages d'erreur */}
+        <AlertModal
+          isOpen={isAlertVisible}
+          title={alertTitle} // ou "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" ou autre selon le contexte
+          confirmLabel="Confirmer"
+          cancelLabel="Annuler"
+          onConfirm={() => 
+            alertTitle === "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" 
+            ? handleDeleteAppointment(selectedAppointment?.id) 
+            : handleDivideAppointment(selectedAppointment?.id)}
+          onClose={() => setIsAlertVisible(false)}
+        />
       </div>
     </DndProvider>
   );
@@ -1132,3 +1191,49 @@ const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
     </Modal>
   );
 };
+
+
+
+// Modal d'alerte réutilisable
+type AlertModalProps = {
+  isOpen: boolean;
+  title: string;
+  message?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  onConfirm: () => void;
+  onClose: () => void;
+};
+
+const AlertModal: React.FC<AlertModalProps> = ({
+  isOpen,
+  title,
+  message,
+  confirmLabel = "Confirmer",
+  cancelLabel = "Annuler",
+  onConfirm,
+  onClose,
+}) => (
+  <Modal isOpen={isOpen} onClose={onClose} title={title}>
+    <div className="w-full py-2 bg-white cursor-default pointer-events-auto dark:bg-gray-800 relative rounded-xl mx-auto max-w-sm">
+      {message && <div className="px-6 py-2 text-gray-700 dark:text-gray-200">{message}</div>}
+      <div className="grid gap-2 grid-cols-2 px-6 py-2">
+        <button
+          className="inline-flex items-center justify-center py-1 gap-1 font-medium rounded-lg border transition-colors outline-none focus:ring-offset-2 focus:ring-2 focus:ring-inset min-h-[2.25rem] px-4 text-sm text-gray-800 bg-white border-gray-300 hover:bg-gray-50 focus:ring-primary-600 focus:text-primary-600 focus:bg-primary-50 focus:border-primary-600 dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 dark:text-gray-200 dark:focus:text-primary-400 dark:focus:border-primary-400 dark:focus:bg-gray-800"
+          onClick={onClose}
+        >
+          {cancelLabel}
+        </button>
+        <button
+          className="inline-flex items-center justify-center py-1 gap-1 font-medium rounded-lg border transition-colors outline-none focus:ring-offset-2 focus:ring-2 focus:ring-inset min-h-[2.25rem] px-4 text-sm text-white shadow focus:ring-white border-transparent bg-red-600 hover:bg-red-500 focus:bg-red-700 focus:ring-offset-red-700"
+          onClick={() => {
+            onConfirm();
+            onClose();
+          }}
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    </div>
+  </Modal>
+);
