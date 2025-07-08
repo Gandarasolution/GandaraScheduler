@@ -72,12 +72,12 @@ const DayCell: React.FC<DayCellProps> = ({
             key={`${format(day, 'yyyy-MM-dd')}-${interval.name}-${employeeId}`}
             date={day}
             employeeId={employeeId}
-            intervalName={interval.name}
+            intervalName={interval.name as 'morning' | 'afternoon'}
             intervalStart={intervalStart}
             intervalEnd={intervalEnd}
             appointments={intervalAppointments}
             onAppointmentMoved={onAppointmentMoved}
-            onCellDoubleClick={() => onCellDoubleClick(intervalStart, employeeId, interval.name)}
+            onCellDoubleClick={() => onCellDoubleClick(intervalStart, employeeId, interval.name as 'morning' | 'afternoon')}
             onAppointmentDoubleClick={onAppointmentClick}
             onExternalDragDrop={onExternalDragDrop}
             isCellActive={isCellActive}

@@ -3,7 +3,7 @@ import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useDrag } from 'react-dnd';
 import { Appointment } from '../types';
 import { addDays } from 'date-fns';
-import { CELL_WIDTH, HALF_DAY_INTERVALS } from '../pages/index';
+import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT } from '../pages/index';
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
 import { useSelectedCell } from '../context/SelectedCellContext';
 
@@ -211,6 +211,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       title={appointment.title}
       style={{
         width: `${calculatedWidth}px`,
+        height: `${CELL_HEIGHT}px`,
         minWidth: `${INTERVAL_WIDTH}px`,
         pointerEvents: isDragging ? 'none' : 'auto',
         left: `${offsetPx}px`,

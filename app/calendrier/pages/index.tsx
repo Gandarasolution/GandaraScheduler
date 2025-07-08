@@ -100,12 +100,14 @@ const THRESHOLD_MIN = 20;
 const WINDOW_SIZE = 100;
 export const EMPLOYEE_COLUMN_WIDTH = "150px";
 export const CELL_WIDTH = 60;
-export const CELL_HEIGHT = 100;
-export const sizeCell = `${CELL_WIDTH}px ${CELL_HEIGHT}px`;
-export const TEAM_HEADER_HEIGHT = "50px";
+export const CELL_HEIGHT = 50;
+
 export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
   { name: "morning", startHour: 0, endHour: 12 },
   { name: "afternoon", startHour: 12, endHour: 24 },
+];
+export const DAY_INTERVALS: HalfDayInterval[] = [
+  { name: "day", startHour: 0, endHour: 24 },
 ];
 
 // Petite fonction utilitaire pour éviter les appels trop fréquents (scroll, etc.)
@@ -145,6 +147,7 @@ export default function HomePage() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element; action: () => void }[] } | null>(null);
   const clipboardAppointment= useRef<Appointment | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: Date } | null>(null);
+  const [isFullDay, setIsFullDay] = useState(true);
 
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
     if (app) {
@@ -717,6 +720,19 @@ export default function HomePage() {
             }}
           />
          
+         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 ml-4">
+            <label htmlFor="toggle-full-day" className="text-sm font-medium text-gray-700">
+              Vue journée complète
+            </label>
+            <input
+              id="toggle-full-day"
+              type="checkbox"
+              checked={isFullDay}
+              onChange={e => setIsFullDay(e.target.checked)}
+              className="accent-blue-600 w-5 h-5"
+            />
+          </div>
           {/* Champ de recherche */}
           <div className="w-80 max-w-full">
             <label htmlFor="search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">
@@ -738,6 +754,7 @@ export default function HomePage() {
               />
             </div>
           </div>
+         </div>
         </div>
         {/* Grille principale du calendrier */}
         <div className="flex-1 flex flex-col max-h-full max-w-full overflow-hidden">
@@ -758,7 +775,7 @@ export default function HomePage() {
                     appointments={filteredAppointments}
                     initialTeams={initialTeams}
                     dayInTimeline={dayInTimeline}
-                    HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+                    HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
                     onAppointmentMoved={moveAppointment}
                     onCellDoubleClick={handleOpenNewModal}
                     onAppointmentDoubleClick={handleOpenEditModal}

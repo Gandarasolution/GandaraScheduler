@@ -25,7 +25,7 @@ export interface Appointment {
 }
 
 export interface HalfDayInterval {
-  name: 'morning' | 'afternoon';
+  name: 'morning' | 'afternoon' | 'day'; // Nom de l'intervalle
   startHour: number;
   endHour: number;
 }

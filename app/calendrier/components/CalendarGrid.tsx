@@ -8,7 +8,7 @@ import {
 import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
 import { fr } from 'date-fns/locale';
-import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT, sizeCell, TEAM_HEADER_HEIGHT} from '../pages/index'; // Constantes de style
+import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT} from '../pages/index'; // Constantes de style
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -130,8 +130,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             {/* Ligne d'en-tête de l'équipe */}
             <React.Fragment key={team.id}>
               <div 
-                className={`${sizeCell} sticky left-0 z-20 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200 cursor-pointer`}
+                className={`sticky left-0 z-20 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200 cursor-pointer`}
                 onClick={() => toggleTeam(team.id)}
+                style={{ width: EMPLOYEE_COLUMN_WIDTH, height: CELL_HEIGHT }}
               >
                 {/* Chevron pour ouvrir/fermer l'équipe */}
                 <div className=" text-left p-2 font-bold">
@@ -177,9 +178,18 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
               team.employees.map((employee) =>(
                 <React.Fragment key={employee.id}>
                   {/* Colonne de l'employé (fixe à gauche) */}
-                  <div className={`${sizeCell} sticky left-0 z-20 p-2 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200`}>
+                  <div 
+                    className={`
+                      sticky left-0 z-20 p-2 border-r border-gray-200 bg-gray-50 
+                      flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200`
+                    }
+                    style={{ width: EMPLOYEE_COLUMN_WIDTH, height: CELL_HEIGHT }}>
                     {employee.avatarUrl && (
-                      <img src={employee.avatarUrl} alt={employee.name} className="w-10 h-10 rounded-full mb-1 mr-2" />
+                      <img 
+                        src={employee.avatarUrl} 
+                        alt={employee.name} 
+                        className="w-8 h-8 rounded-full mb-1 mr-2"
+                      />
                     )}
                     <span className="font-semibold text-sm text-gray-800 text-center">{employee.name}</span>
                   </div>
