@@ -5,7 +5,7 @@ import { format, addDays } from 'date-fns';
 import AppointmentItem from './AppointmentItem';
 import InfoBubble from './InfoBubble';
 import { Appointment } from '../types';
-import { CELL_WIDTH, CELL_HEIGHT, colors } from '../utils/constants';
+import { CELL_WIDTH, CELL_HEIGHT, colors, DAY_INTERVALS, HALF_DAY_INTERVALS } from '../utils/constants';
 import { getNextWorkedDay } from '../utils/dates';
 import { useSelectedCell } from '../context/SelectedCellContext';
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
@@ -97,14 +97,6 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   const { selectedCell, setSelectedCell } = useSelectedCell();
   const isSelected = selectedCell?.date.getTime() === intervalStart.getTime() && selectedCell?.employeeId === employeeId;
 
-
-  // if (date.getDate() === 24 && date.getMonth() === 5 && employeeId === 1) {
-  //   console.log(appointments);
-    
-    
-  // }
-
-
   // Gestion du drop (drag & drop)
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: ['appointment', 'external-item'],
@@ -114,29 +106,34 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         return;
       }
 
-      let targetDate = intervalStart;
+      let targetDate = intervalEnd;
       let targetInterval = intervalName;
-
-      // Si la cellule est un week-end ou férié, on place sur le prochain jour ouvré
-      if (isWeekend || isFerie) {
-        targetDate = getNextWorkedDay(date, [
-          { name: "morning", startHour: 0, endHour: 12 },
-          { name: "afternoon", startHour: 12, endHour: 24 },
-        ]);
-        targetInterval = 'morning'; // Par défaut, matin du prochain jour ouvré
-      }
-      
-
       // Si on a dragOffset et width, on centre l'event sur la cellule cible
       if (item.dragOffset !== undefined && item.width) {
         // Largeur d'une cellule (en px)
-        const intervalWidth = CELL_WIDTH / 2;
+        const intervalWidth = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
         // Décalage en nombre de cellules (arrondi)
-        const cellOffset = Math.floor(-item.dragOffset / intervalWidth) + 1; // +1 pour centrer sur la cellule
+        const cellOffset = Math.ceil(-item.dragOffset / intervalWidth); // +1 pour centrer sur la cellule
         // Décale la date cible
-        targetDate = addDays(targetDate, cellOffset * 0.5); // 0.5 si demi-journée
+        targetDate = getNextWorkedDay(
+          addDays(
+            targetDate, cellOffset * (isFullDay ? 1 : 0.5)
+          ), 
+          isFullDay 
+            ? DAY_INTERVALS 
+            : HALF_DAY_INTERVALS
+        );
+        console.log('targetDate:', targetDate);
+        
       }
 
+      
+      // Si la cellule est un week-end ou férié, on place sur le prochain jour ouvré
+      if (isWeekend || isFerie) {        
+        targetDate = getNextWorkedDay(date, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
+        targetInterval = 'morning'; // Par défaut, matin du prochain jour ouvré
+      }
+      
       if (item.sourceType === 'external') {        
         // Création d'un rendez-vous depuis une source externe
         onExternalDragDrop(
@@ -150,7 +147,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       } else {
         // Déplacement d'un rendez-vous existant
         const diff = item.endDate.getTime() - item.startDate.getTime(); // Durée du rendez-vous
-        const newDate = new Date(targetDate.getTime() + diff);
+        const newDate = new Date(targetDate.getTime() + diff);        
         onAppointmentMoved(item.id, targetDate, newDate, employeeId);
       }
     },

@@ -119,8 +119,8 @@ export default function HomePage() {
         
     if (repeatCount) {
       for (let i = 0; i < repeatCount; i++) {
-        const newStartDate = new Date(currentStartDate.getTime());
-        const newEndDate = new Date(newStartDate.getTime() + diff);
+        const newStartDate = getNextWorkedDay(new Date(currentStartDate.getTime()), isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
+        const newEndDate = new Date(newStartDate.getTime() + diff); 
 
         const days = getWorkedDayIntervals(
           newStartDate,
@@ -142,14 +142,19 @@ export default function HomePage() {
       });
 
       // Incrémente la date pour le prochain rendez-vous
-      currentStartDate = repeatInterval === "day" ? addDays(currentStartDate, numberCount || 1)
-        : repeatInterval === "week" ? addWeeks(currentStartDate, numberCount || 1) 
-        : addMonths(currentStartDate, numberCount || 1);
+      currentStartDate = repeatInterval === "day" ? addDays(newStartDate, numberCount || 1)
+        : repeatInterval === "week" ? addWeeks(newStartDate, numberCount || 1) 
+        : addMonths(newStartDate, numberCount || 1);
       }
     }
     else if(endDate){      
       while (currentStartDate <= endDate) {
-        const newStartDate = new Date(currentStartDate.getTime());
+        const newStartDate = getNextWorkedDay(
+          new Date(currentStartDate.getTime()), 
+          isFullDay 
+          ? DAY_INTERVALS 
+          : HALF_DAY_INTERVALS
+        );
         const newEndDate = new Date(newStartDate.getTime() + diff);
 
         const days = getWorkedDayIntervals(
@@ -172,9 +177,9 @@ export default function HomePage() {
       });
 
       // Incrémente la date pour le prochain rendez-vous
-      currentStartDate = repeatInterval === "day" ? addDays(currentStartDate, numberCount || 1)
-        : repeatInterval === "week" ? addWeeks(currentStartDate, numberCount || 1) 
-        : addMonths(currentStartDate, numberCount || 1);
+      currentStartDate = repeatInterval === "day" ? addDays(newStartDate, numberCount || 1)
+        : repeatInterval === "week" ? addWeeks(newStartDate, numberCount || 1)
+        : addMonths(newStartDate, numberCount || 1);
       }
     }
     // Ajoute les nouveaux rendez-vous à la liste
@@ -345,7 +350,7 @@ export default function HomePage() {
         newStartDate, 
         newEndDate,
         isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
-    );
+    );    
       
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
       

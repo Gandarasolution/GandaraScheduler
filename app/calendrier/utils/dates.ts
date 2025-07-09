@@ -15,7 +15,9 @@ const holidays = hd.getHolidays(new Date().getFullYear());
  * @returns true si férié, false sinon
  */
 export const isHoliday = (date: Date): boolean => {  
-  const dateStr = formatDate(date, "yyyy-MM-dd HH:mm:ss"); // Format YYYY-MM-DD HH:mm:ss
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const dateStr = formatDate(d, "yyyy-MM-dd HH:mm:ss"); // Format YYYY-MM-DD HH:mm:ss
   return holidays.some((holiday) => holiday.date === dateStr);
 };
 
@@ -38,7 +40,7 @@ export const getNextRestDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval[]
   let next = new Date(date);
   while (isWorkedDay(next)) {
     next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
-  }
+  }  
   return next;
 };
 
@@ -50,7 +52,7 @@ export const getNextRestDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval[]
  */
 export const getNextWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval[]): Date => {
   let next = new Date(date);
-  while (!isWorkedDay(next)) {
+  while (!isWorkedDay(next)) {            
     next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
   }
   return next;
