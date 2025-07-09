@@ -223,7 +223,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       suppressHydrationWarning={true} // Pour éviter les erreurs de rendu côté serveur
     >
       <div
-        className="flex-1 flex flex-col relative"
+        className="relative"
         style={{
           minHeight: CELL_HEIGHT,
           height: Math.max(CELL_HEIGHT, appointments.length * 36), // 36px par rendez-vous, ajuste selon ton design

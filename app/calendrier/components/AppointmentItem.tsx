@@ -208,9 +208,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onContextMenu={(e) => handleContextMenu(e, 'appointment', appointment)}
       className={`
         ${color}
-        relative rounded p-1 text-sm
+        absolute rounded p-1 text-sm
         flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-opacity z-10 h-10 mb-2
+        cursor-grab transition-opacity z-10 h-10
         border-l border-transparent
         ${isDragging ? 'opacity-50' : 'opacity-100'}
         ${isSelected ? `ring-2` : ''}

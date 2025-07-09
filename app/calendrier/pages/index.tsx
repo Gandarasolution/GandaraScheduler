@@ -32,6 +32,7 @@ import { SelectedAppointmentContext } from "../context/SelectedAppointmentContex
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isHoliday, isWorkedDay } from "../utils/dates";
+import { on } from "events";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -64,6 +65,8 @@ export default function HomePage() {
   const employees = useRef<Employee[]>(initialEmployees);
   const [isLoading, setIsLoading] = useState(false);
   const isAutoScrolling = useRef(false);
+  const isAddingLeft = useRef(false);
+  const isAddingRight = useRef(false);
   const appointments = useRef<Appointment[]>(initialAppointments);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>(initialAppointments);
@@ -82,268 +85,23 @@ export default function HomePage() {
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState<"Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?">("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
 
-  const copyAppointmentToClipboard = useCallback((app: Appointment) => {
-    if (app) {
-      clipboardAppointment.current = { ...app };
-    } else {
-      console.warn("Aucun rendez-vous sélectionné à copier.");
-    }
-    console.log("Rendez-vous copié dans le presse-papiers :", clipboardAppointment.current);
-    
-  }, [selectedAppointment]);
-
-  const pasteAppointment = useCallback((cell: { employeeId: number; date: Date }) => {
-    if (!clipboardAppointment.current) return;
-
-    const startDate = clipboardAppointment.current.startDate;
-    const endDate = clipboardAppointment.current.endDate;
-
-    console.log(startDate, endDate);
-    
-    // Différence entre les dates de début et de fin du rendez-vous copié
-    const diff = endDate.getTime() - startDate.getTime();
-
-    // Nouvelle date de début basée sur la cellule sélectionnée
-    const newStartDate = new Date(cell.date.getTime());
-    const newEndDate = new Date(newStartDate.getTime() + diff);
-
-    console.log("Nouvelle date de début :", newStartDate);
-    console.log("Nouvelle date de fin :", newEndDate);
-
-    if (!isWorkedDay(newStartDate)) {
-      console.warn("Les dates sélectionnées ne sont pas des jours travaillés.");
+  
+  const researchAppointments = useCallback(() => {
+        
+    if (!searchInput) {
+      setFilteredAppointments(appointments.current);
       return;
     }
-
-    const days = getWorkedDayIntervals(
-      newStartDate, 
-      newEndDate,
-      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+    const lowercasedQuery = searchInput.toLowerCase();
+    setFilteredAppointments(
+      appointments.current.filter((app) =>
+        app.title.toLowerCase().includes(lowercasedQuery)
+      )
     );
-
-    for (const day of days) {
-      createAppointment?.(
-        clipboardAppointment.current.title,
-        day.start,
-        day.end,
-        cell.employeeId,
-        clipboardAppointment.current.type as 'Chantier' | 'Absence' | 'Autre',
-        clipboardAppointment.current.imageUrl
-      );
-    }
-  }, []);
-   
-
-  // Utilitaire pour savoir si on est au bord du scroll horizontal
-  function isAtMinOrMaxScroll(container: HTMLDivElement) {
-    const { scrollLeft, scrollWidth, clientWidth } = container;
-    const isAtMin = scrollLeft === 0;
-    const isAtMax = Math.abs(scrollLeft + clientWidth - scrollWidth) < 1;
-    return { isAtMin, isAtMax };
-  }
-
-  // Gestion du scroll infini horizontal (ajout de jours à gauche/droite)
-  const handleScroll = useCallback(
-    debounce(() => {
-      if (isAutoScrolling.current || isLoadingMoreDays.current || !mainScrollRef.current) return;
-      const { scrollLeft, scrollWidth, clientWidth } = mainScrollRef.current;
-      const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
-
-      const now = Date.now();
-      const delta = scrollLeft - lastScrollLeft.current;
-      const dt = now - lastScrollTime.current;
-      const speed = dt > 0 ? delta / dt : 0;
-
-      lastScrollLeft.current = scrollLeft;
-      lastScrollTime.current = now;
-
-      // Ajout de jours à droite si on approche du bord droit
-      if (scrollPercentage >= THRESHOLD_MAX) {
-        isLoadingMoreDays.current = true;
-        if (Math.abs(speed) < 0.5) setIsLoading(true);
-
-        setDayInTimeline((prevDays) => {
-          const lastDay = prevDays[prevDays.length - 1];
-          const newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
-          return [...prevDays, ...newDays];
-        });
-
-        isLoadingMoreDays.current = false;
-        setIsLoading(false);
-      }
-      // Ajout de jours à gauche si on approche du bord gauche
-      else if (scrollPercentage <= THRESHOLD_MIN) {
-        isLoadingMoreDays.current = true;
-        if (Math.abs(speed) < 0.5) setIsLoading(true);
-
-        setDayInTimeline((prevDays) => {
-          const firstDay = prevDays[0];
-          const newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
-          const allDays = [...newDays, ...prevDays].slice(0, WINDOW_SIZE);
-          return allDays;
-        });
-
-        // On ajuste scrollLeft dans un useEffect après le rendu
-      }
-    }, 100), // Débouncing court pour plus de fluidité
-    []
-  );
-
-  // Centrage sur aujourd'hui au chargement
-  const goToDate = useCallback((date: Date) => {
-    if (!mainScrollRef.current) return;
-    setIsLoading(true);
-    setDayInTimeline(
-      eachDayOfInterval({
-        start: addDays(date, -WINDOW_SIZE / 2),
-        end: addDays(date, WINDOW_SIZE / 2),
-      })
-    );
-    setTimeout(() => {
-      const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
-      if (todayCell && mainScrollRef.current) {
-        isAutoScrolling.current = true;
-        const container = mainScrollRef.current;
-        const cellRect = todayCell.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        const scrollLeft =
-          container.scrollLeft +
-          (cellRect.left - containerRect.left) -
-          container.clientWidth / 2 +
-          todayCell.clientWidth / 2;
-        container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-        isAutoScrolling.current = false;
-      }
-      setIsLoading(false);
-    }, 50);
-  }, []);
-
-  // Gestion de la création et édition de rendez-vous
-  const handleSaveAppointment = useCallback((appointment: Appointment) => {
-    const days = getWorkedDayIntervals(
-      appointment.startDate, 
-      appointment.endDate,
-      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
-    );
-    
-    
-    // Fonction utilitaire pour créer les rendez-vous supplémentaires
-    const createExtraAppointments = (fromIndex = 1) => {
-      days.slice(fromIndex).forEach(day => {
-        createAppointment(
-          appointment.title,
-          day.start,
-          day.end,
-          appointment.employeeId as number,
-          appointment.type as 'Chantier' | 'Absence' | 'Autre',
-          appointment.imageUrl
-        );
-      });
-    };
-    
-    if (appointment.id) {
-      // Mise à jour du rendez-vous principal
-      appointments.current = appointments.current.map(app =>
-        app.id === appointment.id
-          ? { ...appointment, startDate: days[0].start, endDate: days[0].end }
-          : app
-      );
-      if (days.length > 1) createExtraAppointments();
-    } else {
-      createExtraAppointments(0);
-    }
-    researchAppointments(); // Met à jour la liste filtrée
-    setIsModalOpen(false);
-    setSelectedAppointment(null);
-    setNewAppointmentInfo(null);
-  }, []);
-
-  const handleDeleteAppointmentConfirm = useCallback(() => {
-    setAlertTitle("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
-    setIsAlertVisible(true)
-  }, []);
-
-  const handleDeleteAppointment = useCallback((id? : number) => {
-    if (!id) {
-      console.warn("Aucun ID de rendez-vous fourni pour la suppression.");
-      return;
-    }
-    setIsAlertVisible(false);
-    appointments.current = appointments.current.filter((app) => app.id !== id);
-    researchAppointments(); // Met à jour la liste filtrée
-    setIsModalOpen(false);
-    setSelectedAppointment(null);
-  }, []);
-
-  const handleOpenEditModal = useCallback((appointment: Appointment) => {
-    setSelectedAppointmentForm(appointment);
-    setIsModalOpen(true);
-  }, []);
-
-  const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon") => {    
-    setAddAppointmentStep("select");
-    setSelectedAppointmentForm(null);
-    setNewAppointmentInfo({ date, employeeId, intervalName });
-  }, []);
-
-  const handleDivideAppointmentConfirm = useCallback(() => {
-    setAlertTitle("Êtes-vous sûr de vouloir diviser ce rendez-vous ?");
-    setIsAlertVisible(true);
-  }, []);
-
-  const handleDivideAppointment = useCallback((id?: number) => {
-    if (!id) return;
-
-    const appointmentToDivide = appointments.current.find(app => app.id === id);
-    if (!appointmentToDivide) return;
-
-    const { startDate, endDate, employeeId, type, imageUrl } = appointmentToDivide;
-    const totalDuration = endDate.getTime() - startDate.getTime();
-    const timeInterval = isFullDay ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
-    const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000)); // Nombre d'intervalles de travail dans la durée totale
-    
-    const EndDate = new Date(startDate.getTime() + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000)));
-
-    onResize(id, startDate, EndDate, employeeId as number);
-    createAppointment(
-      appointmentToDivide.title,
-      EndDate,
-      endDate,
-      employeeId as number,
-      type as 'Chantier' | 'Absence' | 'Autre',
-      imageUrl
-    );
-    setIsModalOpen(false);
-    setSelectedAppointment(null);
-  }, []);
-
-  const handleRepeat = useCallback(() => {
-    if (!repeatAppointmentData) return;
-
-    const { repeatCount, endDate, repeatInterval, numberCount} = repeatAppointmentData;
-    
-    // Créer des rendez-vous répétés
-    createRepeatedAppointments(repeatInterval, repeatCount ?? 0, endDate ?? undefined, numberCount);
-    setRepeatAppointmentData(null);
-  }, [repeatAppointmentData]);
-
-  const handleExtend = useCallback(() =>{
-    if (!extendAppointmentData || !selectedAppointment) return;
-
-    moveAppointment(
-      selectedAppointment.id, 
-      selectedAppointment.startDate, 
-      extendAppointmentData, 
-      selectedAppointment.employeeId as number,
-      selectedAppointment.endDate.getTime() < extendAppointmentData.getTime() ? 'right' : 'left'
-    );
-
-    setExtendAppointmentData(null);
-
-  }, [extendAppointmentData, selectedAppointment]);
+  }, [searchInput]);
 
   // Création de rendez-vous répétés
-  const createRepeatedAppointments = (repeatInterval: "day" | "week" | "month", repeatCount: number, endDate?: Date, numberCount?: number) => {
+  const createRepeatedAppointments = useCallback((repeatInterval: "day" | "week" | "month", repeatCount: number, endDate?: Date, numberCount?: number) => {
     const startDateOriginal = selectedAppointment?.startDate;
     const endDateOriginal = selectedAppointment?.endDate;
     if (!startDateOriginal || !endDateOriginal) {
@@ -423,8 +181,159 @@ export default function HomePage() {
     appointments.current = [...appointments.current, ...newAppointments];
     researchAppointments(); // Met à jour la liste filtrée
     setRepeatAppointmentData(null);
-  };
+  }, [researchAppointments, selectedAppointment, isFullDay]);
 
+  const onResize = useCallback(
+    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number) => {     
+      appointments.current = appointments.current.map((app) =>
+        app.id === id
+          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId }
+          : app
+      );
+      researchAppointments(); // Met à jour la liste filtrée
+    }, [researchAppointments]
+  );
+  // Création d'un rendez-vous (utilisé lors du resize fractionné)
+  const createAppointment = useCallback(
+    (title: string, startDate: Date, endDate: Date, employeeId: number, typeEvent: 'Chantier' | 'Absence' | 'Autre', imageUrl?: string) => {
+      const newApp: Appointment = {
+        id: Number(Date.now() + Math.random()), // Assure l'unicité de l'ID
+        title,
+        description: `Nouvel élément ${title}`,
+        startDate,
+        endDate,
+        imageUrl,
+        employeeId,
+        type: typeEvent,
+      };
+      appointments.current = [...appointments.current, newApp];
+      researchAppointments(); // Met à jour la liste filtrée
+  }, [researchAppointments]);
+
+  const copyAppointmentToClipboard = useCallback((app: Appointment) => {
+    if (app) {
+      clipboardAppointment.current = { ...app };
+    } else {
+      console.warn("Aucun rendez-vous sélectionné à copier.");
+    }
+    console.log("Rendez-vous copié dans le presse-papiers :", clipboardAppointment.current);
+    
+  }, [selectedAppointment]);
+
+  const pasteAppointment = useCallback((cell: { employeeId: number; date: Date }) => {
+    if (!clipboardAppointment.current) return;
+
+    const startDate = clipboardAppointment.current.startDate;
+    const endDate = clipboardAppointment.current.endDate;
+    
+    // Différence entre les dates de début et de fin du rendez-vous copié
+    const diff = endDate.getTime() - startDate.getTime();
+
+    // Nouvelle date de début basée sur la cellule sélectionnée
+    const newStartDate = new Date(cell.date.getTime());
+    const newEndDate = new Date(newStartDate.getTime() + diff);
+
+    console.log("Nouvelle date de début :", newStartDate);
+    console.log("Nouvelle date de fin :", newEndDate);
+
+    if (!isWorkedDay(newStartDate)) {
+      console.warn("Les dates sélectionnées ne sont pas des jours travaillés.");
+      return;
+    }
+
+    const days = getWorkedDayIntervals(
+      newStartDate, 
+      newEndDate,
+      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+    );
+
+    for (const day of days) {
+      createAppointment?.(
+        clipboardAppointment.current.title,
+        day.start,
+        day.end,
+        cell.employeeId,
+        clipboardAppointment.current.type as 'Chantier' | 'Absence' | 'Autre',
+        clipboardAppointment.current.imageUrl
+      );
+    }
+  }, [createAppointment, isFullDay]);
+
+  // Gestion du scroll infini horizontal (ajout de jours à gauche/droite)
+  const handleScroll = useCallback(
+    debounce(() => {
+      if (isAutoScrolling.current || isLoadingMoreDays.current || !mainScrollRef.current) return;
+      const { scrollLeft, scrollWidth, clientWidth } = mainScrollRef.current;
+      const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
+
+      const now = Date.now();
+      const delta = scrollLeft - lastScrollLeft.current;
+      const dt = now - lastScrollTime.current;
+      const speed = dt > 0 ? delta / dt : 0;
+
+      lastScrollLeft.current = scrollLeft;
+      lastScrollTime.current = now;
+
+      // Ajout de jours à droite si on approche du bord droit
+      if (scrollPercentage >= THRESHOLD_MAX) {
+        isAddingRight.current = true;
+        isLoadingMoreDays.current = true;
+        if (Math.abs(speed) < 0.5) setIsLoading(true);
+
+        setDayInTimeline((prevDays) => {
+          const lastDay = prevDays[prevDays.length - 1];
+          const newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
+          return [...prevDays, ...newDays].slice(-WINDOW_SIZE);
+        });
+      }
+      // Ajout de jours à gauche si on approche du bord gauche
+      else if (scrollPercentage <= THRESHOLD_MIN) {
+        isAddingLeft.current = true;
+        isLoadingMoreDays.current = true;
+        if (Math.abs(speed) < 0.5) setIsLoading(true);
+
+        setDayInTimeline((prevDays) => {
+          const firstDay = prevDays[0];
+          const newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
+          return [...newDays, ...prevDays].slice(0, WINDOW_SIZE);
+        });
+        // On ajuste scrollLeft dans un useEffect après le rendu
+      }
+      setIsLoading(false);
+      isLoadingMoreDays.current = false;
+
+    }, 100), // Débouncing court pour plus de fluidité
+    []
+  );
+
+  // Centrage sur aujourd'hui au chargement
+  const goToDate = useCallback((date: Date) => {
+    if (!mainScrollRef.current) return;
+    setIsLoading(true);
+    setDayInTimeline(
+      eachDayOfInterval({
+        start: addDays(date, -WINDOW_SIZE / 2),
+        end: addDays(date, WINDOW_SIZE / 2),
+      })
+    );
+    setTimeout(() => {
+      const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
+      if (todayCell && mainScrollRef.current) {
+        isAutoScrolling.current = true;
+        const container = mainScrollRef.current;
+        const cellRect = todayCell.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const scrollLeft =
+          container.scrollLeft +
+          (cellRect.left - containerRect.left) -
+          container.clientWidth / 2 +
+          todayCell.clientWidth / 2;
+        container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+        isAutoScrolling.current = false;
+      }
+      setIsLoading(false);
+    }, 50);
+  }, []);
   // Déplacement d'un rendez-vous (drag & drop ou resize)
   const moveAppointment = useCallback(
     (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right') => {
@@ -459,20 +368,132 @@ export default function HomePage() {
         }
       }
     },
-    []
+    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS]
   );
 
-  const onResize = useCallback(
-    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number) => {     
-      appointments.current = appointments.current.map((app) =>
-        app.id === id
-          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId }
+  // Gestion de la création et édition de rendez-vous
+  const handleSaveAppointment = useCallback((appointment: Appointment) => {
+    const days = getWorkedDayIntervals(
+      appointment.startDate, 
+      appointment.endDate,
+      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+    );
+    
+    
+    // Fonction utilitaire pour créer les rendez-vous supplémentaires
+    const createExtraAppointments = (fromIndex = 1) => {
+      days.slice(fromIndex).forEach(day => {
+        createAppointment(
+          appointment.title,
+          day.start,
+          day.end,
+          appointment.employeeId as number,
+          appointment.type as 'Chantier' | 'Absence' | 'Autre',
+          appointment.imageUrl
+        );
+      });
+    };
+    
+    if (appointment.id) {
+      // Mise à jour du rendez-vous principal
+      appointments.current = appointments.current.map(app =>
+        app.id === appointment.id
+          ? { ...appointment, startDate: days[0].start, endDate: days[0].end }
           : app
       );
-      researchAppointments(); // Met à jour la liste filtrée
-    }, []
-  );
+      if (days.length > 1) createExtraAppointments();
+    } else {
+      createExtraAppointments(0);
+    }
+    researchAppointments(); // Met à jour la liste filtrée
+    setIsModalOpen(false);
+    setSelectedAppointment(null);
+    setNewAppointmentInfo(null);
+  }, [researchAppointments, createAppointment]);
 
+  const handleDeleteAppointmentConfirm = useCallback(() => {
+    setAlertTitle("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
+    setIsAlertVisible(true)
+  }, []);
+
+  const handleDeleteAppointment = useCallback((id? : number) => {
+    if (!id) {
+      console.warn("Aucun ID de rendez-vous fourni pour la suppression.");
+      return;
+    }
+    setIsAlertVisible(false);
+    appointments.current = appointments.current.filter((app) => app.id !== id);
+    researchAppointments(); // Met à jour la liste filtrée
+    setIsModalOpen(false);
+    setSelectedAppointment(null);
+  }, [researchAppointments]);
+
+  const handleOpenEditModal = useCallback((appointment: Appointment) => {
+    setSelectedAppointmentForm(appointment);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon") => {    
+    setAddAppointmentStep("select");
+    setSelectedAppointmentForm(null);
+    setNewAppointmentInfo({ date, employeeId, intervalName });
+  }, []);
+
+  const handleDivideAppointmentConfirm = useCallback(() => {
+    setAlertTitle("Êtes-vous sûr de vouloir diviser ce rendez-vous ?");
+    setIsAlertVisible(true);
+  }, []);
+
+  const handleDivideAppointment = useCallback((id?: number) => {
+    if (!id) return;
+
+    const appointmentToDivide = appointments.current.find(app => app.id === id);
+    if (!appointmentToDivide) return;
+
+    const { startDate, endDate, employeeId, type, imageUrl } = appointmentToDivide;
+    const totalDuration = endDate.getTime() - startDate.getTime();
+    const timeInterval = isFullDay ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
+    const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000)); // Nombre d'intervalles de travail dans la durée totale
+    
+    const EndDate = new Date(startDate.getTime() + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000)));
+
+    onResize(id, startDate, EndDate, employeeId as number);
+    createAppointment(
+      appointmentToDivide.title,
+      EndDate,
+      endDate,
+      employeeId as number,
+      type as 'Chantier' | 'Absence' | 'Autre',
+      imageUrl
+    );
+    setIsModalOpen(false);
+    setSelectedAppointment(null);
+  }, [onResize, createAppointment, isFullDay]);
+
+  const handleRepeat = useCallback(() => {
+    if (!repeatAppointmentData) return;
+
+    const { repeatCount, endDate, repeatInterval, numberCount} = repeatAppointmentData;
+    
+    // Créer des rendez-vous répétés
+    createRepeatedAppointments(repeatInterval, repeatCount ?? 0, endDate ?? undefined, numberCount);
+    setRepeatAppointmentData(null);
+  }, [repeatAppointmentData, createRepeatedAppointments]);
+
+  const handleExtend = useCallback(() =>{
+    if (!extendAppointmentData || !selectedAppointment) return;
+
+    moveAppointment(
+      selectedAppointment.id, 
+      selectedAppointment.startDate, 
+      extendAppointmentData, 
+      selectedAppointment.employeeId as number,
+      selectedAppointment.endDate.getTime() < extendAppointmentData.getTime() ? 'right' : 'left'
+    );
+
+    setExtendAppointmentData(null);
+
+  }, [extendAppointmentData, selectedAppointment, moveAppointment]);
 
   // Création d'un rendez-vous depuis un drag externe
   const createAppointmentFromDrag = useCallback(
@@ -485,40 +506,8 @@ export default function HomePage() {
 
       createAppointment(title, startDate, endDate, employeeId, typeEvent, imageUrl);
     },
-    []
+    [repeatAppointmentData, createAppointment]
   );
-
-  // Création d'un rendez-vous (utilisé lors du resize fractionné)
-  const createAppointment = useCallback(
-    (title: string, startDate: Date, endDate: Date, employeeId: number, typeEvent: 'Chantier' | 'Absence' | 'Autre', imageUrl?: string) => {
-      const newApp: Appointment = {
-        id: Number(Date.now() + Math.random()), // Assure l'unicité de l'ID
-        title,
-        description: `Nouvel élément ${title}`,
-        startDate,
-        endDate,
-        imageUrl,
-        employeeId,
-        type: typeEvent,
-      };
-      appointments.current = [...appointments.current, newApp];
-      researchAppointments(); // Met à jour la liste filtrée
-  }, []);
-
-
-  const researchAppointments = useCallback(() => {    
-     if (!searchInput) {
-      setFilteredAppointments(appointments.current);
-      return;
-    }
-    const lowercasedQuery = searchInput.toLowerCase();
-    setFilteredAppointments(
-      appointments.current.filter((app) =>
-        app.title.toLowerCase().includes(lowercasedQuery)
-      )
-    );
-  }, [searchInput]);
-
 
   // Mémorise la fonction de fermeture du menu contextuel
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
@@ -664,7 +653,6 @@ export default function HomePage() {
       else if (e.ctrlKey && e.key === "v" && selectedCell) {
         pasteAppointment(selectedCell);
       }
-
       if (e.ctrlKey && e.key === "f") {
         e.preventDefault();
         setContextMenu(null); // Ferme le menu contextuel s'il est ouvert
@@ -675,6 +663,17 @@ export default function HomePage() {
           searchInputElement.focus();
         }
       }
+
+      if (!mainScrollRef.current) return;
+      if (e.key === 'ArrowRight') {
+        mainScrollRef.current.scrollLeft += 100; // 100px au lieu de 40px par défaut
+        e.preventDefault();
+      }
+      if (e.key === 'ArrowLeft') {
+        mainScrollRef.current.scrollLeft -= 100;
+        e.preventDefault();
+      }
+
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
@@ -691,21 +690,19 @@ export default function HomePage() {
   useEffect(() => {
     if (isLoadingMoreDays.current && mainScrollRef.current) {
       const widthAdded = DAYS_TO_ADD * CELL_WIDTH;
-      mainScrollRef.current.scrollLeft += widthAdded;
-      isLoadingMoreDays.current = false;
-      setIsLoading(false);
-    }
-  }, [dayInTimeline]);
-
-  // Appelle handleScroll si on est déjà au bord après ajout
-  useEffect(() => {
-    if (mainScrollRef.current) {
-      const { isAtMin, isAtMax } = isAtMinOrMaxScroll(mainScrollRef.current);
-      if (isAtMin || isAtMax) {
-        handleScroll();
+      // Si tu ajoutes à gauche
+      if (isAddingLeft.current) {
+        mainScrollRef.current.scrollLeft += widthAdded;
+        isAddingLeft.current = false;
       }
+      // Si tu ajoutes à droite
+      if (isAddingRight.current) {
+        // Optionnel : scroll à la fin
+        mainScrollRef.current.scrollLeft -= widthAdded;
+        isAddingRight.current = false;
+      }
+      isLoadingMoreDays.current = false;
     }
-    // eslint-disable-next-line
   }, [dayInTimeline]);
 
 
