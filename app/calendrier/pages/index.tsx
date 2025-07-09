@@ -10,11 +10,10 @@ import {
   setHours,
   setMinutes,
   format,
-  addHours,
   addWeeks,
   addMonths,
 } from "date-fns";
-import { Appointment, Employee, HalfDayInterval } from "../types";
+import { Appointment, Employee } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
 import Modal from "../components/Modal";
 import AppointmentForm from "../components/AppointmentForm";
@@ -32,7 +31,7 @@ import {
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
-import { getWorkedDayIntervals, isHoliday, isWorkedDay } from "../utils/dates";
+import { getNextWorkedDay, getWorkedDayIntervals, isHoliday, isWorkedDay } from "../utils/dates";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -357,6 +356,8 @@ export default function HomePage() {
     let currentStartDate = repeatInterval === "day" ? addDays(startDateOriginal, numberCount || 0) 
     : repeatInterval === "week" ? addWeeks(startDateOriginal, numberCount || 0) 
     : addMonths(startDateOriginal, numberCount || 0);    
+
+    currentStartDate = getNextWorkedDay(currentStartDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
         
     if (repeatCount) {
       for (let i = 0; i < repeatCount; i++) {
@@ -781,12 +782,12 @@ export default function HomePage() {
                     initialTeams={initialTeams}
                     dayInTimeline={dayInTimeline}
                     HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
+                    isFullDay={isFullDay}
                     onAppointmentMoved={moveAppointment}
                     onCellDoubleClick={handleOpenNewModal}
                     onAppointmentDoubleClick={handleOpenEditModal}
                     onExternalDragDrop={createAppointmentFromDrag}
                     handleContextMenu={handleContextMenu}
-                    isHoliday={isHoliday}
                   />
                 </SelectedCellContext.Provider>
               </SelectedAppointmentContext.Provider>

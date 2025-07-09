@@ -3,7 +3,8 @@ import React, {memo}from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
 import IntervalCell from './IntervalCell';
 import { Appointment, HalfDayInterval } from '../types';
-
+import { isHoliday } from '../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
+import { CELL_HEIGHT } from '../utils/constants';
 
 /**
  * Props du composant DayCell
@@ -12,16 +13,17 @@ import { Appointment, HalfDayInterval } from '../types';
 interface DayCellProps {
   day: Date;
   employeeId: number;
-  appointments: Appointment[];
+  appointments: (Appointment & { top: number })[];
   intervals: HalfDayInterval[];
   isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
+  isFullDay?: boolean; // Indique si la cellule représente une journée complète
+  RowHeight?: number; // Hauteur de la ligne pour l'employé, si nécessaire
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
-  isHoliday?: (date: Date) => boolean; // Fonction pour vérifier si un jour est férié
 }
 
 /**
@@ -36,24 +38,28 @@ const DayCell: React.FC<DayCellProps> = ({
   intervals = [],
   isCellActive = true,
   isWeekend,
+  isFullDay,
+  RowHeight,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentClick,
   onExternalDragDrop,
   handleContextMenu,
-  isHoliday
 }) => {
   
   // Calcul du style de la cellule selon férié/week-end/jour normal
-  const isFerie = isHoliday ? isHoliday(day) : false;
-  const cellClasses = `flex flex-row border-gray-200 ${
-    isFerie ? 'bg-red-100' : isWeekend ? 'bg-sky-50' : 'bg-white'
-  }`;
-
+  const isFerie = isHoliday(day);
+  const cellClasses = `flex flex-row border-gray-200 
+    ${isWeekend ? 'bg-sky-50' : isFerie ? 'bg-red-100' : 'bg-white'}`;
+    
   return (
     <div 
       className={cellClasses + ' snap-center'}
       id={format(day, 'yyyy-MM-dd')}
+      style={{ 
+        height: RowHeight ? `${RowHeight}px` : 'auto', // Utilise RowHeight si fourni, sinon auto
+        minHeight: CELL_HEIGHT, // Hauteur minimale pour la cellule
+      }}
     >
       {/* Le numéro du jour est maintenant géré par l'en-tête global dans CalendarGrid */}
       {intervals.map((interval) => {
@@ -61,12 +67,11 @@ const DayCell: React.FC<DayCellProps> = ({
         const intervalStart = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.startHour), 0), 0), 0);
         const intervalEnd = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.endHour), 0), 0), 0);
 
-        // Filtre les rendez-vous qui commencent dans cet intervalle
+         // Filtre les rendez-vous qui CHEVAUCHENT cet intervalle (et pas seulement ceux qui commencent dedans)
         const intervalAppointments = appointments.filter((app) =>
           app.startDate >= intervalStart && app.startDate < intervalEnd
         );
 
-        // Affiche la cellule d'intervalle (matin/après-midi)
         return (
           <IntervalCell
             key={`${format(day, 'yyyy-MM-dd')}-${interval.name}-${employeeId}`}
@@ -76,13 +81,14 @@ const DayCell: React.FC<DayCellProps> = ({
             intervalStart={intervalStart}
             intervalEnd={intervalEnd}
             appointments={intervalAppointments}
+            isFullDay={isFullDay ?? false}
+            RowHeight={RowHeight}
             onAppointmentMoved={onAppointmentMoved}
             onCellDoubleClick={() => onCellDoubleClick(intervalStart, employeeId, interval.name as 'morning' | 'afternoon')}
             onAppointmentDoubleClick={onAppointmentClick}
             onExternalDragDrop={onExternalDragDrop}
             isCellActive={isCellActive}
             isWeekend={isWeekend}
-            isHoliday={isHoliday}
             isFerie={isFerie}
             handleContextMenu={handleContextMenu}
           />

@@ -3,15 +3,17 @@ import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useDrag } from 'react-dnd';
 import { Appointment } from '../types';
 import { addDays } from 'date-fns';
-import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT } from '../utils/constants';
+import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../utils/constants';
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
 import { useSelectedCell } from '../context/SelectedCellContext';
 
 interface AppointmentItemProps {
-  appointment: Appointment;
+  appointment: Appointment & { top: number };
+  isFullDay: boolean;
   onDoubleClick: () => void;
   onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
   color?: string;
+  
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null) => void;
 }
 
@@ -20,6 +22,7 @@ interface AppointmentItemProps {
 const AppointmentItem: React.FC<AppointmentItemProps> = ({
   appointment,
   color,
+  isFullDay,
   onDoubleClick,
   onResize,
   handleContextMenu,
@@ -37,12 +40,15 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
   const isSelected = selectedAppointment?.id === appointment.id;
 
-  const INTERVAL_WIDTH = CELL_WIDTH / 2;
-  const HALF_DAY_DURATION = 12 * 60 * 60 * 1000; // 12h en ms
+  const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
+  const INTERVAL_DURATION = isFullDay 
+    ? (DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 60 * 60 * 1000 
+    : (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * 60 * 60 * 1000;
+    
   // Calcule le nombre d'intervalles (matin/après-midi) entre deux dates
   const getIntervalCount = useCallback((start: Date, end: Date) => {
     const diff = end.getTime() - start.getTime();
-    return Math.max(1, Math.round(diff / HALF_DAY_DURATION));
+    return Math.max(1, Math.round(diff / INTERVAL_DURATION));
   }, []);
   const intervalCount = getIntervalCount(dragStart, dragEnd);
   const calculatedWidth = intervalCount * INTERVAL_WIDTH;
@@ -65,7 +71,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   });
 
   // Décalage horizontal du bloc (en px)
-  const offsetIntervals = Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / HALF_DAY_DURATION);
+  const offsetIntervals = Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / INTERVAL_DURATION);
   const offsetPx = offsetIntervals * INTERVAL_WIDTH;
 
   // Capture la position du clic dans le bloc (en px)
@@ -185,6 +191,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     setDragStartSafe(appointment.startDate);
     setDragEndSafe(appointment.endDate);
   }, [appointment.startDate, appointment.endDate, setDragStartSafe, setDragEndSafe]);
+  
 
   return (
     <div
@@ -203,8 +210,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         ${color}
         relative rounded p-1 text-sm
         flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-opacity z-10 h-10
-        border-l border-transparent border-r
+        cursor-grab transition-opacity z-10 h-10 mb-2
+        border-l border-transparent
         ${isDragging ? 'opacity-50' : 'opacity-100'}
         ${isSelected ? `ring-2` : ''}
       `}
@@ -216,6 +223,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         pointerEvents: isDragging ? 'none' : 'auto',
         left: `${offsetPx}px`,
         willChange: 'width, left',
+        top: `${(appointment.top * CELL_HEIGHT) + (2 * appointment.top)}px`, // Position verticale basée sur le top calculé
       }}
       onMouseDown={handleDragStart}
     >

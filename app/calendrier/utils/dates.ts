@@ -1,9 +1,10 @@
 // Fonctions utilitaires pour la gestion des jours travaillés, fériés, et intervalles
 // Centralisées pour la réutilisation dans tout le projet
 
-import { addHours } from "date-fns";
+import { addHours, formatDate } from "date-fns";
 import Holidays from "date-holidays";
 import { HalfDayInterval } from "../types";
+import { format } from "path";
 
 const hd = new Holidays("FR");
 const holidays = hd.getHolidays(new Date().getFullYear());
@@ -13,8 +14,8 @@ const holidays = hd.getHolidays(new Date().getFullYear());
  * @param date Date à tester
  * @returns true si férié, false sinon
  */
-export const isHoliday = (date: Date): boolean => {
-  const dateStr = date.toISOString().split("T")[0];
+export const isHoliday = (date: Date): boolean => {  
+  const dateStr = formatDate(date, "yyyy-MM-dd HH:mm:ss"); // Format YYYY-MM-DD HH:mm:ss
   return holidays.some((holiday) => holiday.date === dateStr);
 };
 

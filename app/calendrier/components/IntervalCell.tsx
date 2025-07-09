@@ -38,11 +38,12 @@ interface IntervalCellProps {
   intervalName: 'morning' | 'afternoon';
   intervalStart: Date;
   intervalEnd: Date;
-  appointments: Appointment[];
+  appointments: (Appointment & { top: number })[];
   isCellActive?: boolean;
   isWeekend: boolean;
   isFerie: boolean;
-  isHoliday?: (day: Date) => boolean;
+  isFullDay: boolean; // Indique si la cellule représente une journée complète
+  RowHeight?: number; // Hauteur de la ligne pour l'employé, si nécessaire
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -79,7 +80,8 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   isCellActive = true,
   isWeekend,
   isFerie,
-  isHoliday,
+  isFullDay,
+  RowHeight,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -96,6 +98,11 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   const isSelected = selectedCell?.date.getTime() === intervalStart.getTime() && selectedCell?.employeeId === employeeId;
 
 
+  // if (date.getDate() === 24 && date.getMonth() === 5 && employeeId === 1) {
+  //   console.log(appointments);
+    
+    
+  // }
 
 
   // Gestion du drop (drag & drop)
@@ -206,7 +213,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       }
       style={{
         width: CELL_WIDTH/2,
-        height: CELL_HEIGHT,
+        height: Math.max(CELL_HEIGHT, RowHeight ?? CELL_HEIGHT),
         willChange: 'background-color, border-color',
       }}
       onContextMenu={(e) => {
@@ -215,20 +222,28 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       }}
       suppressHydrationWarning={true} // Pour éviter les erreurs de rendu côté serveur
     >
-      {/* Affichage des rendez-vous de l'intervalle */}
-      {isCellActive && appointments.map((app) => (
-        <AppointmentItem
-          key={app.id}
-          appointment={app}
-          onDoubleClick={() => onAppointmentDoubleClick(app)}
-          onResize={(id,newStartDate, newEndDate, resizeDirection) => {
-            // Mets à jour l'event dans le state global
-            onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
-          }}
-          handleContextMenu={(e, origin, appointmentId) => handleContextMenu && handleContextMenu(e, origin, appointmentId)}
-          color={colors[app.employeeId as number % colors.length]} // Utilise l'ID de l'employé pour la couleur
-        />
-      ))}
+      <div
+        className="flex-1 flex flex-col relative"
+        style={{
+          minHeight: CELL_HEIGHT,
+          height: Math.max(CELL_HEIGHT, appointments.length * 36), // 36px par rendez-vous, ajuste selon ton design
+          transition: 'height 0.2s'
+        }}
+      >
+        {isCellActive && appointments.map((app, idx) => (
+          <AppointmentItem
+            key={app.id}
+            appointment={app}
+            isFullDay={isFullDay}
+            onDoubleClick={() => onAppointmentDoubleClick(app)}
+            onResize={(id, newStartDate, newEndDate, resizeDirection) => {
+              onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
+            }}
+            handleContextMenu={(e, origin, appointmentId) => handleContextMenu && handleContextMenu(e, origin, appointmentId)}
+            color={colors[app.employeeId as number % colors.length]}
+          />
+        ))}
+      </div>
       {/* Affichage de la bulle d'info si besoin */}
       {isCellActive && showInfoBubble && (
         <InfoBubble
