@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useDrag } from 'react-dnd';
-import { Appointment } from '../types';
+import { Appointment, HalfDayInterval } from '../types';
 import { addDays } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../utils/constants';
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
@@ -91,40 +91,38 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     setDragEnd(date);
   }, []);
 
-  // Ajoute ou retire des intervalles (matin/après-midi) à une date
-  const addInterval = useCallback((date: Date, n: number) => {
-    const morning = HALF_DAY_INTERVALS[0];
-    const afternoon = HALF_DAY_INTERVALS[1];
-    let h;
+  /**
+ * Avance ou recule la date de n intervalles (matin/après-midi/jour entier).
+ * @param date Date de départ
+ * @param n Nombre d'intervalles à avancer (positif) ou reculer (négatif)
+ * @param intervals Tableau d'intervalles (ex: HALF_DAY_INTERVALS ou DAY_INTERVALS)
+ * @returns Nouvelle date positionnée au début de l'intervalle cible
+ */
+  const addInterval = useCallback((date: Date, n: number, intervals: HalfDayInterval[]): Date => {
     let next = new Date(date);
+    // Trouve l'index de l'intervalle courant
+    let idx = intervals.findIndex(interval =>
+      next.getHours() >= interval.startHour && next.getHours() < interval.endHour
+    );
+    if (idx === -1) idx = 0; // fallback
+
     for (let i = 0; i < Math.abs(n); i++) {
-      h = next.getHours();
       if (n > 0) {
-        if (h === afternoon.endHour) {
+        idx++;
+        if (idx >= intervals.length) {
+          idx = 0;
           next = addDays(next, 1);
-          next.setHours(morning.endHour, 0, 0, 0);
-        } else if (h === morning.endHour) {
-          next.setHours(afternoon.endHour, 0, 0, 0);
-        } else if (h === morning.startHour) {
-          next.setHours(afternoon.startHour, 0, 0, 0);
-        } else if (h === afternoon.startHour) {
-          next = addDays(next, 1);
-          next.setHours(morning.startHour, 0, 0, 0);
         }
       } else {
-        if (h === morning.endHour) {
+        idx--;
+        if (idx < 0) {
+          idx = intervals.length - 1;
           next = addDays(next, -1);
-          next.setHours(afternoon.endHour, 0, 0, 0);
-        } else if (h === afternoon.endHour) {
-          next.setHours(morning.endHour, 0, 0, 0);
-        } else if (h === afternoon.startHour) {
-          next.setHours(morning.startHour, 0, 0, 0);
-        } else if (h === morning.startHour) {
-          next = addDays(next, -1);
-          next.setHours(afternoon.startHour, 0, 0, 0);
         }
       }
     }
+    // Positionne l'heure au début de l'intervalle cible
+    next.setHours(intervals[idx].startHour, 0, 0, 0);
     return next;
   }, []);
 
@@ -142,21 +140,23 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     e.preventDefault();
     if (!isResizingLeft && !isResizingRight) return;
-    const currentDx = e.clientX - initialX.current;
+    const currentDx = e.clientX - initialX.current + (INTERVAL_WIDTH / 2);
+    
     let intervalsMoved = Math.round(currentDx / INTERVAL_WIDTH);
     let newStartDate = dragStartRef.current;
     let newEndDate = dragEndRef.current;
+    const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
     if (isResizingLeft) {
-      newStartDate = addInterval(appointment.startDate, intervalsMoved);
+      newStartDate = addInterval(appointment.startDate, intervalsMoved, intervals);
       if (newStartDate >= dragEndRef.current) {
-        newStartDate = addInterval(dragEndRef.current, -1);
+        newStartDate = addInterval(dragEndRef.current, -1, intervals);
       }
       setDragStartSafe(newStartDate);
     }
     if (isResizingRight) {
-      newEndDate = addInterval(appointment.endDate, intervalsMoved);
+      newEndDate = addInterval(appointment.endDate, intervalsMoved, intervals);
       if (newEndDate <= dragStartRef.current) {
-        newEndDate = addInterval(dragStartRef.current, 1);
+        newEndDate = addInterval(dragStartRef.current, 1, intervals);
       }
       setDragEndSafe(newEndDate);
     }

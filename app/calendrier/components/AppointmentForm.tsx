@@ -15,6 +15,7 @@ interface AppointmentFormProps {
   initialEmployeeId?: number | null; // Nouvelle prop
   employees: Employee[]; // Liste de tous les employés
   HALF_DAY_INTERVALS: HalfDayInterval[] // Liste des créneaux de demi-journée
+  isFullDay: boolean; // Indique si le rendez-vous est sur une journée complète
   onSave: (appointment: Appointment) => void;
   onDelete: (id: number) => void;
   onClose: () => void;
@@ -30,6 +31,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   initialEmployeeId,
   employees,
   HALF_DAY_INTERVALS,
+  isFullDay,
   onSave,
   onDelete,
   onClose,
@@ -42,7 +44,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           title: '',
           description: '',
           startDate: initialDate || new Date(),
-          endDate: initialDate ? setHours(setMinutes(initialDate, 0), initialDate.getHours() + 4) : new Date(),
+          endDate: initialDate ? setHours(setMinutes(initialDate, 0), 0) : new Date(),
           imageUrl: '',
           employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''), // Par défaut au premier employé ou vide
         }
@@ -183,35 +185,37 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
-        <div className="flex-1">
-          <label htmlFor="intervalName" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
-          <select
-            id="intervalName"
-            name="intervalName"
-            value={
-              formData.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
-              && formData.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
-              ? 'morning' : 'afternoon'
-            }
-            onChange={e => {
-              const newHour = e.target.value === 'morning'
-                ? HALF_DAY_INTERVALS[0].startHour
-                : HALF_DAY_INTERVALS[1].startHour;
+        {!isFullDay && (
+          <div className="flex-1">
+            <label htmlFor="intervalName" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
+            <select
+              id="intervalName"
+              name="intervalName"
+              value={
+                formData.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
+                && formData.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
+                ? 'morning' : 'afternoon'
+              }
+              onChange={e => {
+                const newHour = e.target.value === 'morning'
+                  ? HALF_DAY_INTERVALS[0].startHour
+                  : HALF_DAY_INTERVALS[1].startHour;
 
-              setFormData(prev => ({
-                ...prev,
-                startDate: setHours(
-                  startOfDay(prev.startDate), // S'assure que vous commencez au début du jour actuel
-                  newHour
-                ),
-              }));
-            }}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="morning">Matin</option>
-            <option value="afternoon">Après-midi</option>
-          </select>
-        </div>
+                setFormData(prev => ({
+                  ...prev,
+                  startDate: setHours(
+                    startOfDay(prev.startDate), // S'assure que vous commencez au début du jour actuel
+                    newHour
+                  ),
+                }));
+              }}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="morning">Matin</option>
+              <option value="afternoon">Après-midi</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4">
@@ -227,42 +231,44 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
-        <div className="flex-1">
-          <label htmlFor="intervalName" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
-          <select
-            id="intervalName"
-            name="intervalName"
-            value={
-              formData.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour 
-              && formData.endDate.getHours() > HALF_DAY_INTERVALS[0].startHour 
-              ? 'morning' 
-              : 'afternoon'
-            }
-            onChange={e => {
-              const isAfternoon = e.target.value === 'afternoon';
-              const newHour = isAfternoon
-                ? HALF_DAY_INTERVALS[1].endHour - 1 // 23 si endHour vaut 24
-                : HALF_DAY_INTERVALS[0].endHour;    // 12 pour matin
+        {!isFullDay && (
+          <div className="flex-1">
+            <label htmlFor="intervalName" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
+            <select
+              id="intervalName"
+              name="intervalName"
+              value={
+                formData.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour 
+                && formData.endDate.getHours() > HALF_DAY_INTERVALS[0].startHour 
+                ? 'morning' 
+                : 'afternoon'
+              }
+              onChange={e => {
+                const isAfternoon = e.target.value === 'afternoon';
+                const newHour = isAfternoon
+                  ? HALF_DAY_INTERVALS[1].endHour - 1 // 23 si endHour vaut 24
+                  : HALF_DAY_INTERVALS[0].endHour;    // 12 pour matin
 
-              const newEndDate = setHours(
-                setMinutes(
-                  setSeconds(startOfDay(formData.endDate), isAfternoon ? 59 : 0),
-                  isAfternoon ? 59 : 0
-                ),
-                newHour
-              );
+                const newEndDate = setHours(
+                  setMinutes(
+                    setSeconds(startOfDay(formData.endDate), isAfternoon ? 59 : 0),
+                    isAfternoon ? 59 : 0
+                  ),
+                  newHour
+                );
 
-              setFormData(prev => ({
-                ...prev,
-                endDate: newEndDate,
-              }));
-            }}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="morning">Matin</option>
-            <option value="afternoon">Après-midi</option>
-          </select>
-        </div>
+                setFormData(prev => ({
+                  ...prev,
+                  endDate: newEndDate,
+                }));
+              }}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="morning">Matin</option>
+              <option value="afternoon">Après-midi</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Boutons d'action */}

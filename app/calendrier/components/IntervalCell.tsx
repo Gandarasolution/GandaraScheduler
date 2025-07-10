@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, memo, useCallback, useRef } from 'react';
 import { useDrop } from 'react-dnd';
-import { format, addDays } from 'date-fns';
+import { format, addDays, add, addHours } from 'date-fns';
 import AppointmentItem from './AppointmentItem';
 import InfoBubble from './InfoBubble';
 import { Appointment } from '../types';
@@ -45,7 +45,7 @@ interface IntervalCellProps {
   isFullDay: boolean; // Indique si la cellule représente une journée complète
   RowHeight?: number; // Hauteur de la ligne pour l'employé, si nécessaire
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
-  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon") => void;
+  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
@@ -106,7 +106,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         return;
       }
 
-      let targetDate = intervalEnd;
+      let targetDate = intervalStart;
       let targetInterval = intervalName;
       // Si on a dragOffset et width, on centre l'event sur la cellule cible
       if (item.dragOffset !== undefined && item.width) {
@@ -114,17 +114,16 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         const intervalWidth = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
         // Décalage en nombre de cellules (arrondi)
         const cellOffset = Math.ceil(-item.dragOffset / intervalWidth); // +1 pour centrer sur la cellule
-        // Décale la date cible
-        targetDate = getNextWorkedDay(
-          addDays(
-            targetDate, cellOffset * (isFullDay ? 1 : 0.5)
-          ), 
-          isFullDay 
-            ? DAY_INTERVALS 
-            : HALF_DAY_INTERVALS
-        );
-        console.log('targetDate:', targetDate);
         
+        targetDate = isFullDay 
+        ? addDays(intervalStart, cellOffset) 
+        : addHours(
+          intervalStart, 
+          cellOffset * HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour
+        );
+              
+        // Décale la date cible
+        targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
       }
 
       
@@ -175,7 +174,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
     if (appointments.length > 0) {
       setBubbleContent(appointments.map((app) => app.title).join(', '));
     } else {
-      setBubbleContent(`Créneau du ${format(date, 'dd/MM')} - ${intervalName === 'morning' ? 'Matin' : 'Après-midi'}`);
+      setBubbleContent(`Créneau du ${format(date, 'dd/MM')} ${!isFullDay ? (intervalName === 'morning' ? '- Matin' : '- Après-midi') : ''}`);
     }
     setShowInfoBubble(true);
     bubblePosition.current = { x: event.clientX, y: event.clientY };
@@ -184,7 +183,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
 
   // Double-clic pour créer un rendez-vous
   const handleCellDoubleClick = () => {    
-    onCellDoubleClick(date, employeeId, intervalName);
+    onCellDoubleClick(date, employeeId, isFullDay ? 'day' : intervalName);
   };
 
   
@@ -236,7 +235,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
             onResize={(id, newStartDate, newEndDate, resizeDirection) => {
               onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
             }}
-            handleContextMenu={(e, origin, appointmentId) => handleContextMenu && handleContextMenu(e, origin, appointmentId)}
+            handleContextMenu={(e, origin, appointment) => handleContextMenu && handleContextMenu(e, origin, appointment, { employeeId, date: intervalStart })}
             color={colors[app.employeeId as number % colors.length]}
           />
         ))}

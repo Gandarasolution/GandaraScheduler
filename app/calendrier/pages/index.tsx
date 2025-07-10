@@ -71,7 +71,7 @@ export default function HomePage() {
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>(initialAppointments);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedAppointmentForm, setSelectedAppointmentForm] = useState<Appointment | null>(null);
-  const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number ; intervalName: "morning" | "afternoon"} | null>(null);
+  const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number ; intervalName: "morning" | "afternoon" | "day"} | null>(null);
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);
   const [repeatAppointmentData, setRepeatAppointmentData] = useState<{numberCount:number, repeatCount: number | null; repeatInterval: "day" | "week" | "month"; endDate: Date | null } | null>(null);
   const [extendAppointmentData, setExtendAppointmentData] = useState<Date | null>(null);
@@ -219,9 +219,7 @@ export default function HomePage() {
       clipboardAppointment.current = { ...app };
     } else {
       console.warn("Aucun rendez-vous sélectionné à copier.");
-    }
-    console.log("Rendez-vous copié dans le presse-papiers :", clipboardAppointment.current);
-    
+    }    
   }, [selectedAppointment]);
 
   const pasteAppointment = useCallback((cell: { employeeId: number; date: Date }) => {
@@ -236,9 +234,6 @@ export default function HomePage() {
     // Nouvelle date de début basée sur la cellule sélectionnée
     const newStartDate = new Date(cell.date.getTime());
     const newEndDate = new Date(newStartDate.getTime() + diff);
-
-    console.log("Nouvelle date de début :", newStartDate);
-    console.log("Nouvelle date de fin :", newEndDate);
 
     if (!isWorkedDay(newStartDate)) {
       console.warn("Les dates sélectionnées ne sont pas des jours travaillés.");
@@ -377,6 +372,8 @@ export default function HomePage() {
 
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback((appointment: Appointment) => {
+    console.log("Saving appointment:", appointment);
+    
     const days = getWorkedDayIntervals(
       appointment.startDate, 
       appointment.endDate,
@@ -437,7 +434,7 @@ export default function HomePage() {
     setIsModalOpen(true);
   }, []);
 
-  const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon") => {    
+  const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => {
     setAddAppointmentStep("select");
     setSelectedAppointmentForm(null);
     setNewAppointmentInfo({ date, employeeId, intervalName });
@@ -527,7 +524,7 @@ export default function HomePage() {
     e.preventDefault();
     e.stopPropagation();
 
-    if (origin === 'appointment' && appointment) {      
+    if (origin === 'appointment' && appointment && cell) {      
       setSelectedAppointment(appointment);
       setContextMenu({
         x: e.clientX,
@@ -608,6 +605,27 @@ export default function HomePage() {
               handleDivideAppointmentConfirm(); // Appel de la fonction de division avec l'ID du rendez-vous sélectionné
             },
             actif: appointment.endDate.getTime() - appointment.startDate.getTime() <= 12 * 60 * 60 * 1000 // Si la durée est supérieure à 12 heure
+          },
+          {
+             label: 'Coller',
+            logo:
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-copy" viewBox="0 0 16 16">
+                <path fillRule="evenodd" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"/>
+              </svg>,
+            action: () => {   
+              pasteAppointment(cell);
+            }
+          },
+          {
+            label: 'Ajouter',
+            logo:
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>
+              </svg>,
+            action: () => {
+              setSelectedAppointmentForm(null);
+              setIsModalOpen(true);
+            }
           }
         ]
       });
@@ -969,6 +987,7 @@ export default function HomePage() {
               initialEmployeeId={newAppointmentInfo?.employeeId || null}
               employees={employees.current}
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+              isFullDay={isFullDay}
               onSave={handleSaveAppointment}
               onDelete={handleDeleteAppointment}
               onClose={() => setIsModalOpen(false)}
@@ -1057,7 +1076,7 @@ type ChoiceAppointmentTypeProps = {
   onSelect: (appointment: Appointment) => void;
   isOpen: boolean;
   setAddAppointmentStep?: (step: "select" | "form" | "") => void;
-  newAppointmentInfo: { date: Date; employeeId: number; intervalName: "morning" | "afternoon" } | null;
+  newAppointmentInfo: { date: Date; employeeId: number; intervalName: "morning" | "afternoon" | "day" } | null;
 };
 
 // Icônes pour chaque type d'événement
@@ -1128,14 +1147,14 @@ const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
                 description: "",
                 startDate: setHours(
                   setMinutes(date, 0),
-                  intervalName === "morning"
-                    ? HALF_DAY_INTERVALS[0].startHour
+                  intervalName === "morning" ? HALF_DAY_INTERVALS[0].startHour
+                    : intervalName === "day" ? DAY_INTERVALS[0].startHour
                     : HALF_DAY_INTERVALS[1].startHour
                 ),
                 endDate: setHours(
                   setMinutes(date, 0),
-                  intervalName === "morning"
-                    ? HALF_DAY_INTERVALS[0].endHour
+                  intervalName === "morning" ? HALF_DAY_INTERVALS[0].endHour
+                    : intervalName === "day" ? DAY_INTERVALS[0].endHour
                     : HALF_DAY_INTERVALS[1].endHour
                 ),
                 imageUrl: "",

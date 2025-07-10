@@ -70,7 +70,7 @@ const RightClickComponent = ({
           className={`
             flex items-center p-2 hover:bg-gray-100 rounded 
             ${(item.label === 'Coller' && !clipBoardAppointment) || item.actif
-              ? 'opacity-50 cursor-not-allowed' 
+              ? 'opacity-50 cursor-not-allowed pointer-events-none' 
               : ' cursor-pointer'
             }
             `
