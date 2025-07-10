@@ -147,10 +147,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         className="grid bg-white relative"
         style={{
           // Colonnes : 1 pour l'employé, puis X pour les jours
-          gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH} repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
+          gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH}px repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
           // Lignes : 1 pour l'en-tête, puis X pour chaque employé
           gridTemplateRows: `auto repeat(${employees.length}, minmax(${CELL_HEIGHT}px, auto))`,
-          width: `calc(${EMPLOYEE_COLUMN_WIDTH} + ${dayInTimeline.length} * ${CELL_WIDTH}px)`,
+          width: `calc(${EMPLOYEE_COLUMN_WIDTH}px + ${dayInTimeline.length} * ${CELL_WIDTH}px)`,
           minHeight: `calc(auto + ${employees.length} * ${CELL_HEIGHT}px)`,
         }}
       >
@@ -159,7 +159,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           <div
             style={{
               position: 'absolute',
-              left: `calc(${EMPLOYEE_COLUMN_WIDTH} + ${todayIndex + 0.5} * ${CELL_WIDTH}px)`,
+              left: `calc(${EMPLOYEE_COLUMN_WIDTH}px + ${todayIndex + 0.5} * ${CELL_WIDTH}px)`,
               top: 0,
               width: '2px',
               height: '100%',
@@ -170,7 +170,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           />
         )}
         {/* Coin supérieur gauche vide (fixe) */}
-        <div className={`sticky top-0 left-0 z-30 bg-gray-200 border-b border-r border-gray-300 w-[${EMPLOYEE_COLUMN_WIDTH}]`}></div>
+        <div className={`sticky top-0 left-0 z-30 bg-gray-200 border-b border-r border-gray-300 w-[${EMPLOYEE_COLUMN_WIDTH}px]`}></div>
 
         {/* En-tête des jours (ligne du haut) */}
         {dayInTimeline.map((day, index) => (

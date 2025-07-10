@@ -3,7 +3,7 @@
 
 import { HalfDayInterval } from "../types";
 
-export const EMPLOYEE_COLUMN_WIDTH = "150px";
+export const EMPLOYEE_COLUMN_WIDTH = 150;
 export const CELL_WIDTH = 60;
 export const CELL_HEIGHT = 50;
 

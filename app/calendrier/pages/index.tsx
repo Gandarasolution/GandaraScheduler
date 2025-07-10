@@ -32,7 +32,6 @@ import { SelectedAppointmentContext } from "../context/SelectedAppointmentContex
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isHoliday, isWorkedDay } from "../utils/dates";
-import { on } from "events";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -84,8 +83,8 @@ export default function HomePage() {
   const [isFullDay, setIsFullDay] = useState(false);
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState<"Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?">("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(dayInTimeline[Math.floor(WINDOW_SIZE / 2)]);
 
-  
   const researchAppointments = useCallback(() => {
         
     if (!searchInput) {
@@ -278,7 +277,6 @@ export default function HomePage() {
 
       lastScrollLeft.current = scrollLeft;
       lastScrollTime.current = now;
-
       // Ajout de jours à droite si on approche du bord droit
       if (scrollPercentage >= THRESHOLD_MAX) {
         isAddingRight.current = true;
@@ -336,6 +334,7 @@ export default function HomePage() {
         container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
         isAutoScrolling.current = false;
       }
+      setSelectedDate(date);
       setIsLoading(false);
     }, 50);
   }, []);
@@ -720,49 +719,52 @@ export default function HomePage() {
           <input
             type="date"
             className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-            value={format(dayInTimeline[Math.floor(WINDOW_SIZE / 2)], "yyyy-MM-dd")}
+            value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
             onChange={(e) => {
               const selectedDate = new Date(e.target.value);
               if (isNaN(selectedDate.getTime())) return;
               goToDate(selectedDate);
             }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedDate(null);
+            }}
           />
-         
-         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 ml-4">
-            <label htmlFor="toggle-full-day" className="text-sm font-medium text-gray-700">
-              Vue journée complète
-            </label>
-            <input
-              id="toggle-full-day"
-              type="checkbox"
-              checked={isFullDay}
-              onChange={e => setIsFullDay(e.target.checked)}
-              className="accent-blue-600 w-5 h-5"
-            />
-          </div>
-          {/* Champ de recherche */}
-          <div className="w-80 max-w-full">
-            <label htmlFor="search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">
-              Recherche
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                <svg className="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
-                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-                </svg>
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 ml-4">
+              <label htmlFor="toggle-full-day" className="text-sm font-medium text-gray-700">
+                Vue journée complète
+              </label>
               <input
-                type="search"
-                id="search"
-                className="block w-full p-3 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 focus:ring-blue-500 focus:border-blue-500 transition"
-                placeholder="Rechercher un rendez-vous"
-                value={searchInput || ""}
-                onChange={(e) => setSearchInput(e.target.value)}
+                id="toggle-full-day"
+                type="checkbox"
+                checked={isFullDay}
+                onChange={e => setIsFullDay(e.target.checked)}
+                className="accent-blue-600 w-5 h-5"
               />
             </div>
+            {/* Champ de recherche */}
+            <div className="w-80 max-w-full">
+              <label htmlFor="search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">
+                Recherche
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                  </svg>
+                </div>
+                <input
+                  type="search"
+                  id="search"
+                  className="block w-full p-3 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 focus:ring-blue-500 focus:border-blue-500 transition"
+                  placeholder="Rechercher un rendez-vous"
+                  value={searchInput || ""}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+              </div>
+            </div>
           </div>
-         </div>
         </div>
         {/* Grille principale du calendrier */}
         <div className="flex-1 flex flex-col max-h-full max-w-full overflow-hidden">
@@ -871,6 +873,7 @@ export default function HomePage() {
                   type="date"
                   className={`${repeatAppointmentData.repeatCount ? 'opacity-50' : 'opacity-100'} border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2`}
                   value={repeatAppointmentData.endDate ? format(repeatAppointmentData.endDate, "yyyy-MM-dd") : ""}
+                  min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
                   onChange={e => {
                     const value = e.target.value;
                     setRepeatAppointmentData(prev => {
@@ -886,15 +889,24 @@ export default function HomePage() {
                   type="number"
                   min={1}
                   className={`${repeatAppointmentData.endDate ? 'opacity-50' : 'opacity-100'} border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-20 ml-2`}
-                  value={repeatAppointmentData.repeatCount || 0}
+                  value={repeatAppointmentData.repeatCount === null ||
+                          repeatAppointmentData.repeatCount === undefined
+                            ? ""
+                            : repeatAppointmentData.repeatCount
+                  }
                   onChange={(e) => {
-                    const value = parseInt(e.target.value, 10);
-                    if (value > 0) {
-                      setRepeatAppointmentData((prev) => {
-                        return prev
-                          ? { ...prev, repeatCount: value, endDate: null }
-                          : { numberCount: 1, repeatCount: value, repeatInterval: "day", endDate: null };
-                      });
+                    const value = e.target.value;
+                    if (value === "") {
+                      setRepeatAppointmentData((prev) =>
+                        prev ? { ...prev, repeatCount: null } : { numberCount: 1, repeatCount: null, repeatInterval: "day", endDate: null }
+                      );
+                      return;
+                    }
+                    const parsed = parseInt(value, 10);
+                    if (!isNaN(parsed) && parsed > 0) {
+                      setRepeatAppointmentData((prev) =>
+                        prev ? { ...prev, repeatCount: parsed, endDate: null } : { numberCount: 1, repeatCount: parsed, repeatInterval: "day", endDate: null }
+                      );
                     }
                   }}
                 />
@@ -924,6 +936,7 @@ export default function HomePage() {
                   type="date"
                   className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full mb-4"
                   value={format(extendAppointmentData, "yyyy-MM-dd")}
+                  min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
                   onChange={(e) => {
                     const selectedDate = new Date(e.target.value);
                     if (isNaN(selectedDate.getTime())) return;
