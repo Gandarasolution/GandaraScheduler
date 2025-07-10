@@ -84,6 +84,7 @@ export default function HomePage() {
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState<"Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?">("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
   const [selectedDate, setSelectedDate] = useState<Date | null>(dayInTimeline[Math.floor(WINDOW_SIZE / 2)]);
+  const [modalInfo, setModaltInfo] = useState<string | null>(null);
 
   const researchAppointments = useCallback(() => {
         
@@ -184,6 +185,7 @@ export default function HomePage() {
     // Ajoute les nouveaux rendez-vous à la liste
     appointments.current = [...appointments.current, ...newAppointments];
     researchAppointments(); // Met à jour la liste filtrée
+    setModaltInfo(`${newAppointments.length} rendez-vous créé${newAppointments.length > 1 ? 's' : ''}`);
     setRepeatAppointmentData(null);
   }, [researchAppointments, selectedAppointment, isFullDay]);
 
@@ -727,6 +729,13 @@ export default function HomePage() {
     }
   }, [dayInTimeline]);
 
+  useEffect(() => {
+  if (modalInfo) {
+    const timeout = setTimeout(() => setModaltInfo(null), 4000);
+    return () => clearTimeout(timeout);
+  }
+}, [modalInfo]);
+
 
   // Rendu principal de la page
   return (
@@ -1066,6 +1075,17 @@ export default function HomePage() {
             : handleDivideAppointment(selectedAppointment?.id)}
           onClose={() => setIsAlertVisible(false)}
         />
+        {modalInfo && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-4 py-2 rounded shadow z-50">
+            {modalInfo}
+            <button
+              className="ml-4 text-green-900 font-bold"
+              onClick={() => setModaltInfo(null)}
+            >
+              ×
+            </button>
+          </div>
+        )}
       </div>
     </DndProvider>
   );
