@@ -85,7 +85,7 @@ export default function HomePage() {
   const [isFullDay, setIsFullDay] = useState(false);
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState<"Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?">("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
-  const [selectedDate, setSelectedDate] = useState<Date | null>(dayInTimeline[Math.floor(WINDOW_SIZE / 2)]);
+  const [selectedDate, setSelectedDate] = useState<Date>(dayInTimeline[Math.floor(WINDOW_SIZE / 2)]);
   const [modalInfo, setModaltInfo] = useState<string | null>(null);
 
   const researchAppointments = useCallback(() => {
@@ -825,20 +825,24 @@ export default function HomePage() {
       <div className="h-screen flex flex-col overflow-hidden">
         {/* Barre du haut : date, recherche */}
         <div className="sticky top-0 z-20 bg-white shadow px-4 py-2 flex items-center justify-between">
-          <input
-            type="date"
-            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-            value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
-            onChange={(e) => {
-              const selectedDate = new Date(e.target.value);
-              if (isNaN(selectedDate.getTime())) return;
-              goToDate(selectedDate);
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedDate(null);
-            }}
-          />
+          <div>
+            <input
+              type="date"
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+              onChange={(e) => {
+                const selectedDate = new Date(e.target.value);
+                if (isNaN(selectedDate.getTime())) return;
+                setSelectedDate(selectedDate);
+              }}
+            />
+            <button
+              className="ml-4 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              onClick={() => goToDate(selectedDate)}
+            >
+                Valider
+            </button>
+          </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 ml-4">
               <label htmlFor="toggle-full-day" className="text-sm font-medium text-gray-700">
