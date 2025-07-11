@@ -12,6 +12,7 @@ import {
   format,
   addWeeks,
   addMonths,
+  isSameDay,
 } from "date-fns";
 import { Appointment, Employee } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
@@ -32,6 +33,7 @@ import { SelectedAppointmentContext } from "../context/SelectedAppointmentContex
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isHoliday, isWorkedDay } from "../utils/dates";
+import { get } from "http";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -99,6 +101,54 @@ export default function HomePage() {
       )
     );
   }, [searchInput]);
+
+  const isConsecutive = useCallback((app1: Appointment, app2: Appointment): boolean => {
+    
+    const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+    const nextWorkedDay = getNextWorkedDay(
+      new Date(app1.endDate.getTime() + (intervals[0].endHour - intervals[0].startHour) * 60 * 60 * 1000),
+      intervals
+    );
+    // Consécutif si le startDate de app2 est le prochain jour travaillé après la fin de app1
+    return isSameDay(app2.startDate, nextWorkedDay);
+  }, [isFullDay]);
+
+  const getFullSequence = useCallback((appointmentId: number): Appointment[] => {
+    const sequence: Appointment[] = [appointments.current.find(app => app.id === appointmentId)!];
+
+    // Trouve les RDV avant
+    let prev = sequence[0];
+    while (true) {
+      const prevApp = appointments.current.find(app =>
+        app.employeeId === prev.employeeId &&
+        app.title === prev.title &&
+        isConsecutive(app, prev)
+      );
+      if (prevApp) {
+        sequence.unshift(prevApp);
+        prev = prevApp;
+      } else {
+        break;
+      }
+    }
+
+    // Trouve les RDV après
+    let next = sequence[0];
+    while (true) {
+      const nextApp = appointments.current.find(app =>
+        app.employeeId === next.employeeId &&
+        app.title === next.title &&
+        isConsecutive(next, app)
+      );
+      if (nextApp) {
+        sequence.push(nextApp);
+        next = nextApp;
+      } else {
+        break;
+      }
+    }
+    return sequence;
+  }, [isConsecutive]);
 
   // Création de rendez-vous répétés
   const createRepeatedAppointments = useCallback((repeatInterval: "day" | "week" | "month", repeatCount: number, endDate?: Date, numberCount?: number) => {
@@ -374,14 +424,13 @@ export default function HomePage() {
 
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback((appointment: Appointment) => {
-    console.log("Saving appointment:", appointment);
-    
+
     const days = getWorkedDayIntervals(
       appointment.startDate, 
       appointment.endDate,
       isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
     );
-    
+
     
     // Fonction utilitaire pour créer les rendez-vous supplémentaires
     const createExtraAppointments = (fromIndex = 1) => {
@@ -396,15 +445,38 @@ export default function HomePage() {
         );
       });
     };
-    
+
     if (appointment.id) {
-      // Mise à jour du rendez-vous principal
-      appointments.current = appointments.current.map(app =>
-        app.id === appointment.id
-          ? { ...appointment, startDate: days[0].start, endDate: days[0].end }
-          : app
-      );
-      if (days.length > 1) createExtraAppointments();
+      const seq = getFullSequence(appointment.id);
+      let index = 0;
+      console.log("Updating appointments in sequence:", seq);      
+      
+      while (index < seq.length) {
+        appointments.current = appointments.current.map(app => {
+          
+          if (app.id === seq[index].id) {
+            
+            return {
+              ...app,
+              title: appointment.title,
+              description: appointment.description,
+              startDate: days[index]?.start || app.startDate,
+              endDate: days[index]?.end || app.endDate,
+              employeeId: appointment.employeeId,
+              type: appointment.type,
+              imageUrl: appointment.imageUrl,
+            };
+          }
+          return app;
+        });
+        index++;
+      }
+      if (days.length > index) createExtraAppointments(index);
+      else {
+        // Si on a moins de jours que prévu, on supprime les RDV supplémentaires
+        appointments.current = appointments.current.filter(app => !seq.some(s => s.id === app.id && !days.some(d => d.start.getTime() === app.startDate.getTime())));
+      }
+      
     } else {
       createExtraAppointments(0);
     }
@@ -412,7 +484,8 @@ export default function HomePage() {
     setIsModalOpen(false);
     setSelectedAppointment(null);
     setNewAppointmentInfo(null);
-  }, [researchAppointments, createAppointment]);
+  }, [researchAppointments, createAppointment, getFullSequence, isFullDay]);
+
 
   const handleDeleteAppointmentConfirm = useCallback(() => {
     setAlertTitle("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
@@ -432,9 +505,19 @@ export default function HomePage() {
   }, [researchAppointments]);
 
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
+    const seq = getFullSequence(appointment.id);
+    console.log(seq);
+    
+    if (seq.length > 1) {
+      appointment = {
+        ...appointment,
+        startDate: seq[0].startDate,
+        endDate: seq[seq.length - 1].endDate,
+      };
+    }
     setSelectedAppointmentForm(appointment);
     setIsModalOpen(true);
-  }, []);
+  }, [getFullSequence]);
 
   const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => {
     setAddAppointmentStep("select");
@@ -540,8 +623,7 @@ export default function HomePage() {
               </svg>
               ,
             action: () => {
-              setSelectedAppointmentForm(appointment);
-              setIsModalOpen(true);
+              handleOpenEditModal(appointment);
             }
           },
           { 
@@ -663,7 +745,7 @@ export default function HomePage() {
         ]
       });
     }
-  }, [handleDeleteAppointment, copyAppointmentToClipboard, pasteAppointment]);
+  }, [handleDeleteAppointment, copyAppointmentToClipboard, pasteAppointment, handleOpenEditModal]);
 
   useEffect(() => {
     goToDate(new Date());

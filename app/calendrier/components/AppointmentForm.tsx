@@ -2,7 +2,7 @@
 // components/AppointmentForm.tsx
 import React, { useState, useEffect, use, memo } from 'react';
 import { Appointment, Employee, HalfDayInterval } from '../types';
-import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes } from 'date-fns';
+import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays } from 'date-fns';
 import { chantier, absences, autres } from '../../datasource'
 
 /**
@@ -89,10 +89,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       onDelete(formData.id);
     }
   };
-
-  useEffect(() => {
-    console.log(formData);
-  }, [formData]);
 
   // Rendu du formulaire
   return (
@@ -187,9 +183,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </div>
         {!isFullDay && (
           <div className="flex-1">
-            <label htmlFor="intervalName" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
+            <label htmlFor="intervalNameStart" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
             <select
-              id="intervalName"
+              id="intervalNameStart"
               name="intervalName"
               value={
                 formData.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
@@ -225,7 +221,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             type="date"
             id="endDate"
             name="endDate"
-            value={format(formData.endDate, 'yyyy-MM-dd')}
+            value={formData.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
+              ? format(formData.endDate, 'yyyy-MM-dd')
+              : format(new Date(addDays(formData.endDate, -1)), 'yyyy-MM-dd')}
             onChange={handleDateChange}
             required
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -233,15 +231,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </div>
         {!isFullDay && (
           <div className="flex-1">
-            <label htmlFor="intervalName" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
+            <label htmlFor="intervalNameEnd" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
             <select
-              id="intervalName"
+              id="intervalNameEnd"
               name="intervalName"
               value={
-                formData.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour 
-                && formData.endDate.getHours() > HALF_DAY_INTERVALS[0].startHour 
-                ? 'morning' 
-                : 'afternoon'
+                formData.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
+                  ? 'morning'
+                  : 'afternoon'
               }
               onChange={e => {
                 const isAfternoon = e.target.value === 'afternoon';
