@@ -96,30 +96,17 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       {/* Sélection du type (chantier, absence, autre) */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-          {appointment?.type}
+          Titre:
         </label>
-        <select
+        <input
+          type="text"
           id="title"
           name="title"
           value={formData.title}
           onChange={handleChange}
           required
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-        >
-          {appointment?.type === 'Chantier' ? chantier.map((c) => (
-            <option key={c.id} value={c.label}>
-              {c.label}
-            </option>
-          )) : appointment?.type === 'Absence' ? absences.map((a) => (
-            <option key={a.id} value={a.label}>
-              {a.label}
-            </option>
-          )) : appointment?.type === 'Autre' ? autres.map((o) => (
-            <option key={o.id} value={o.label}>
-              {o.label}
-            </option>
-          )) : null}
-        </select>
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue500 focus:border-blue-500"
+        />
       </div>
   
       {/* Description */}

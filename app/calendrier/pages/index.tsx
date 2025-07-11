@@ -33,7 +33,6 @@ import { SelectedAppointmentContext } from "../context/SelectedAppointmentContex
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isHoliday, isWorkedDay } from "../utils/dates";
-import { get } from "http";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -58,7 +57,6 @@ export default function HomePage() {
   const [dayInTimeline, setDayInTimeline] = useState(
     eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) })
   );
-  const [addAppointmentStep, setAddAppointmentStep] = useState<"select" | "form" | "">("");
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
@@ -187,7 +185,6 @@ export default function HomePage() {
           endDate: day.end,
           imageUrl: selectedAppointment?.imageUrl,
           employeeId: selectedAppointment?.employeeId,
-          type: selectedAppointment?.type,
         });
       });
 
@@ -222,7 +219,6 @@ export default function HomePage() {
           endDate: day.end,
           imageUrl: selectedAppointment?.imageUrl,
           employeeId: selectedAppointment?.employeeId,
-          type: selectedAppointment?.type,
         });
       });
 
@@ -251,7 +247,7 @@ export default function HomePage() {
   );
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (title: string, startDate: Date, endDate: Date, employeeId: number, typeEvent: 'Chantier' | 'Absence' | 'Autre', imageUrl?: string) => {
+    (title: string, startDate: Date, endDate: Date, employeeId: number, imageUrl?: string) => {
       const newApp: Appointment = {
         id: Number(Date.now() + Math.random()), // Assure l'unicité de l'ID
         title,
@@ -260,7 +256,6 @@ export default function HomePage() {
         endDate,
         imageUrl,
         employeeId,
-        type: typeEvent,
       };
       appointments.current = [...appointments.current, newApp];
       researchAppointments(); // Met à jour la liste filtrée
@@ -304,7 +299,6 @@ export default function HomePage() {
         day.start,
         day.end,
         cell.employeeId,
-        clipboardAppointment.current.type as 'Chantier' | 'Absence' | 'Autre',
         clipboardAppointment.current.imageUrl
       );
     }
@@ -406,7 +400,7 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type as 'Chantier' | 'Absence' | 'Autre', appointment.imageUrl);
+          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.imageUrl);
         }
       }
       if (resizeDirection === 'left') {
@@ -415,7 +409,7 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type as 'Chantier' | 'Absence' | 'Autre', appointment.imageUrl);
+          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.imageUrl);
         }
       }
     },
@@ -440,7 +434,6 @@ export default function HomePage() {
           day.start,
           day.end,
           appointment.employeeId as number,
-          appointment.type as 'Chantier' | 'Absence' | 'Autre',
           appointment.imageUrl
         );
       });
@@ -463,7 +456,6 @@ export default function HomePage() {
               startDate: days[index]?.start || app.startDate,
               endDate: days[index]?.end || app.endDate,
               employeeId: appointment.employeeId,
-              type: appointment.type,
               imageUrl: appointment.imageUrl,
             };
           }
@@ -520,8 +512,29 @@ export default function HomePage() {
   }, [getFullSequence]);
 
   const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => {
-    setAddAppointmentStep("select");
-    setSelectedAppointmentForm(null);
+    setSelectedAppointmentForm({
+      title: "",
+      description: "",
+      startDate: setHours(
+        setMinutes(date, 0),
+        intervalName === "morning" 
+          ? HALF_DAY_INTERVALS[0].startHour
+          : intervalName === "day" 
+            ? DAY_INTERVALS[0].startHour
+            : HALF_DAY_INTERVALS[1].startHour
+      ),
+      endDate: setHours(
+        setMinutes(date, 0),
+        intervalName === "morning" 
+          ? HALF_DAY_INTERVALS[0].endHour
+          : intervalName === "day" 
+            ? DAY_INTERVALS[0].endHour
+            : HALF_DAY_INTERVALS[1].endHour
+      ),
+      imageUrl: "",
+      employeeId,
+    } as Appointment);
+    setIsModalOpen(true);
     setNewAppointmentInfo({ date, employeeId, intervalName });
   }, []);
 
@@ -536,7 +549,7 @@ export default function HomePage() {
     const appointmentToDivide = appointments.current.find(app => app.id === id);
     if (!appointmentToDivide) return;
 
-    const { startDate, endDate, employeeId, type, imageUrl } = appointmentToDivide;
+    const { startDate, endDate, employeeId, imageUrl } = appointmentToDivide;
     const totalDuration = endDate.getTime() - startDate.getTime();
     const timeInterval = isFullDay ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
     const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000)); // Nombre d'intervalles de travail dans la durée totale
@@ -549,7 +562,6 @@ export default function HomePage() {
       EndDate,
       endDate,
       employeeId as number,
-      type as 'Chantier' | 'Absence' | 'Autre',
       imageUrl
     );
     setIsModalOpen(false);
@@ -590,7 +602,7 @@ export default function HomePage() {
       const startDate = setHours(setMinutes(new Date(date), 0), startHour);
       const endDate = setHours(setMinutes(new Date(date), 0), endHour);
 
-      createAppointment(title, startDate, endDate, employeeId, typeEvent, imageUrl);
+      createAppointment(title, startDate, endDate, employeeId, imageUrl);
     },
     [repeatAppointmentData, createAppointment]
   );
@@ -1089,17 +1101,6 @@ export default function HomePage() {
             />
           )}
         </Modal>
-        {/* Modal pour choisir le type de rendez-vous */}
-        <ChoiceAppointmentType
-          setAddAppointmentStep={setAddAppointmentStep}
-          newAppointmentInfo={newAppointmentInfo}
-          isOpen={addAppointmentStep === "select"}
-          onSelect={(appointment) => {
-            setAddAppointmentStep("form");
-            setSelectedAppointmentForm(appointment);
-            setIsModalOpen(true);
-          }}
-        />
         {/* Drawer latéral pour ajouter un rendez-vous par drag & drop */}
         <Drawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} isDragging={isDrawerOpen}>
           <div className={"flex flex-col items-center"}>
@@ -1176,119 +1177,6 @@ export default function HomePage() {
     </DndProvider>
   );
 }
-
-// Composant pour choisir le type de rendez-vous à créer
-type ChoiceAppointmentTypeProps = {
-  onSelect: (appointment: Appointment) => void;
-  isOpen: boolean;
-  setAddAppointmentStep?: (step: "select" | "form" | "") => void;
-  newAppointmentInfo: { date: Date; employeeId: number; intervalName: "morning" | "afternoon" | "day" } | null;
-};
-
-// Icônes pour chaque type d'événement
-const typeIcons: Record<string, JSX.Element> = {
-  Chantier: (
-    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2M16 11V7a4 4 0 10-8 0v4M12 17v-6" />
-    </svg>
-  ),
-  Absence: (
-    <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  Autre: (
-    <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v4l3 3" />
-    </svg>
-  ),
-};
-
-// Couleurs pour chaque type d'événement
-const colorMap: Record<string, string> = {
-  Chantier: "blue",
-  Absence: "yellow",
-  Autre: "purple",
-};
-
-// Composant pour choisir le type de rendez-vous à créer (modal)
-const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
-  onSelect,
-  isOpen,
-  setAddAppointmentStep,
-  newAppointmentInfo,
-}) => {
-  // Sécurité : valeurs par défaut si jamais newAppointmentInfo est null
-  const date = newAppointmentInfo?.date ?? new Date();
-  const intervalName = newAppointmentInfo?.intervalName ?? "morning";
-  const employeeId = newAppointmentInfo?.employeeId ?? 0;
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={() => setAddAppointmentStep?.("") || null}
-      title="Choisissez le type de rendez-vous"
-    >
-      <div className="mb-4 text-lg font-semibold text-center">
-        Quel type souhaitez-vous ajouter ?
-      </div>
-      <div className="flex flex-col gap-3">
-        {eventTypes.map((eventType) => (
-          <button
-            key={eventType.label}
-            type="button"
-            className={`
-              flex items-center gap-4 p-4 rounded-xl border border-gray-200
-              bg-white hover:bg-${colorMap[eventType.label]}-50
-              shadow-sm cursor-pointer
-              focus:outline-none focus:ring-2
-              group
-              hover:scale-105 origin-top-center transition-transform duration-300
-            `}
-            style={{ minHeight: 64 }}
-            onClick={() => {
-              onSelect({
-                title: eventType.dataSource[0].label,
-                description: "",
-                startDate: setHours(
-                  setMinutes(date, 0),
-                  intervalName === "morning" ? HALF_DAY_INTERVALS[0].startHour
-                    : intervalName === "day" ? DAY_INTERVALS[0].startHour
-                    : HALF_DAY_INTERVALS[1].startHour
-                ),
-                endDate: setHours(
-                  setMinutes(date, 0),
-                  intervalName === "morning" ? HALF_DAY_INTERVALS[0].endHour
-                    : intervalName === "day" ? DAY_INTERVALS[0].endHour
-                    : HALF_DAY_INTERVALS[1].endHour
-                ),
-                imageUrl: "",
-                employeeId,
-                type: eventType.label as "Chantier" | "Absence" | "Autre",
-              } as Appointment);
-            }}
-          >
-            <span className="flex items-center justify-center rounded-full transition-colors">
-              {typeIcons[eventType.label]}
-            </span>
-            <span className={`text-${colorMap[eventType.label]}-700 font-semibold text-lg`}>
-              {eventType.label}
-            </span>
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={() => setAddAppointmentStep?.("")}
-        className="mt-6 w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition"
-      >
-        Annuler
-      </button>
-    </Modal>
-  );
-};
-
 
 
 // Modal d'alerte réutilisable

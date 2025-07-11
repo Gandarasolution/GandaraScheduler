@@ -21,7 +21,6 @@ export interface Appointment {
   endDate: Date;
   imageUrl?: string;
   employeeId: number | string; // Lien vers l'employé
-  type?: 'Chantier' | 'Absence' | 'Autre'; // Type de rendez-vous
 }
 
 export interface HalfDayInterval {
