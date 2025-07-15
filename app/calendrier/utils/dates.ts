@@ -4,7 +4,6 @@
 import { addHours, formatDate } from "date-fns";
 import Holidays from "date-holidays";
 import { HalfDayInterval } from "../types";
-import { format } from "path";
 
 const hd = new Holidays("FR");
 const holidays = hd.getHolidays(new Date().getFullYear());
@@ -68,9 +67,16 @@ export const getNextWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval
 export const getWorkedDayIntervals = (
   start: Date,
   end: Date,
-  HALF_DAY_INTERVALS: HalfDayInterval[]
+  HALF_DAY_INTERVALS: HalfDayInterval[],
+  includeWeekend: boolean
 ): { start: Date; end: Date }[] => {
   const intervals: { start: Date; end: Date }[] = [];
+
+  if (includeWeekend) {
+    intervals.push({ start: new Date(start), end: new Date(end) });
+    return intervals; // Si on inclut les week-ends, on retourne l'interval complet
+  }
+
   let day = getNextWorkedDay(start, HALF_DAY_INTERVALS);
 
   while (day < end) {

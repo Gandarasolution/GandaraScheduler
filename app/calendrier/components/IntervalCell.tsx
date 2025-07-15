@@ -197,7 +197,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       }
       onClick={handleCellClick}
       onDoubleClick={() =>{  
-        if (isCellActive && !isWeekend && !!employeeId) handleCellDoubleClick();
+        if (isCellActive && !!employeeId) handleCellDoubleClick();
       }}
       className={`
         relative flex-1 border-b ${isCellActive ? 'border-r' : ''} 

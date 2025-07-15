@@ -175,7 +175,8 @@ export default function HomePage() {
         const days = getWorkedDayIntervals(
           newStartDate,
           newEndDate,
-          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+          false
         );
 
         days.forEach(day => {
@@ -209,7 +210,8 @@ export default function HomePage() {
         const days = getWorkedDayIntervals(
           newStartDate, 
           newEndDate,
-          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+          false
         );
 
         days.forEach(day => {
@@ -292,7 +294,8 @@ export default function HomePage() {
     const days = getWorkedDayIntervals(
       newStartDate, 
       newEndDate,
-      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+      false
     );
 
     for (const day of days) {
@@ -391,7 +394,8 @@ export default function HomePage() {
       const days = getWorkedDayIntervals(
         newStartDate, 
         newEndDate,
-        isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+        isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+        false
     );    
       
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
@@ -419,12 +423,14 @@ export default function HomePage() {
   );
 
   // Gestion de la création et édition de rendez-vous
-  const handleSaveAppointment = useCallback((appointment: Appointment) => {
+  const handleSaveAppointment = useCallback((appointment: Appointment, includeWeekend: boolean) => {
+
 
     const days = getWorkedDayIntervals(
       appointment.startDate, 
       appointment.endDate,
-      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
+      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+      includeWeekend
     );
 
     

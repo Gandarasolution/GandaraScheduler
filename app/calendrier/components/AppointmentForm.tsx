@@ -1,9 +1,9 @@
 "use client";
 // components/AppointmentForm.tsx
-import React, { useState, useEffect, use, memo } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import { Appointment, Employee, HalfDayInterval } from '../types';
-import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays } from 'date-fns';
-import { chantier, absences, autres } from '../../datasource'
+import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval } from 'date-fns';
+import { isWorkedDay } from '../utils/dates';
 
 /**
  * Props du composant AppointmentForm
@@ -16,7 +16,7 @@ interface AppointmentFormProps {
   employees: Employee[]; // Liste de tous les employés
   HALF_DAY_INTERVALS: HalfDayInterval[] // Liste des créneaux de demi-journée
   isFullDay: boolean; // Indique si le rendez-vous est sur une journée complète
-  onSave: (appointment: Appointment) => void;
+  onSave: (appointment: Appointment, includeWeekend: boolean) => void;
   onDelete: (id: number) => void;
   onClose: () => void;
 }
@@ -49,6 +49,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''), // Par défaut au premier employé ou vide
         }
   );
+  const [includeWeekend, setIncludeWeekend] = useState(false); // Nouveau champ pour inclure les week-ends
+  const isFullNotWorkingDay = useMemo(() => {
+    return eachDayOfInterval({ 
+      start: formData.startDate, 
+      end: formData.endDate 
+    }).every(date => !isWorkedDay(date));
+  }, [formData.startDate, formData.endDate]);
+
 
   // Gère les changements de champ texte/select
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -79,8 +87,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
   // Soumission du formulaire
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();    
-    onSave(formData as Appointment);
+    e.preventDefault();
+    onSave(formData as Appointment, includeWeekend);
   };
 
   // Suppression du rendez-vous
@@ -93,7 +101,24 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   // Rendu du formulaire
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {/* Sélection du type (chantier, absence, autre) */}
+      <div>
+        <input 
+          type="checkbox" 
+          id='includeWeekend'
+          className={`
+            h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 
+            ${isFullNotWorkingDay ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
+          checked={isFullNotWorkingDay ? true : includeWeekend} 
+          onChange={e => setIncludeWeekend(e.target.checked)} 
+        />
+        <label 
+          className="ml-2 text-sm text-gray-700"
+          htmlFor="includeWeekend"
+        >
+          Inclure week-end
+        </label>
+      </div>
+      {/* Titre du rendez-vous */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
           Titre:
@@ -276,7 +301,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         <button
           type="submit"
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          onClick={() =>onSave(formData as Appointment)}
+          onClick={() => onSave(formData as Appointment, includeWeekend)}
         >
           {appointment ? 'Enregistrer les modifications' : 'Créer le rendez-vous'}
         </button>
