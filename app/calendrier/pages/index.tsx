@@ -32,7 +32,8 @@ import {
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
-import { getNextWorkedDay, getWorkedDayIntervals, isHoliday, isWorkedDay } from "../utils/dates";
+import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay } from "../utils/dates";
+import { calendars } from "../../datasource";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -61,6 +62,7 @@ export default function HomePage() {
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<number>(calendars[0]?.id ?? 1);
   const employees = useRef<Employee[]>(initialEmployees);
   const [isLoading, setIsLoading] = useState(false);
   const isAutoScrolling = useRef(false);
@@ -828,7 +830,9 @@ export default function HomePage() {
     const timeout = setTimeout(() => setModaltInfo(null), 4000);
     return () => clearTimeout(timeout);
   }
-}, [modalInfo]);
+  }, [modalInfo]);
+    
+
 
 
   // Rendu principal de la page
@@ -854,6 +858,19 @@ export default function HomePage() {
             >
                 Valider
             </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedCalendarId}
+              onChange={e => setSelectedCalendarId(Number(e.target.value))}
+              className="border rounded px-2 py-1 mr-4"
+            >
+              {calendars.map(cal => (
+                <option key={cal.id} value={cal.id}>
+                  {cal.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 ml-4">
@@ -912,6 +929,7 @@ export default function HomePage() {
                     dayInTimeline={dayInTimeline}
                     HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
                     isFullDay={isFullDay}
+                    selectedCalendarId={selectedCalendarId}
                     onAppointmentMoved={moveAppointment}
                     onCellDoubleClick={handleOpenNewModal}
                     onAppointmentDoubleClick={handleOpenEditModal}
@@ -1096,7 +1114,10 @@ export default function HomePage() {
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
               isFullDay={isFullDay}
               onSave={handleSaveAppointment}
-              onDelete={handleDeleteAppointment}
+              onDelete={() => {
+                handleDeleteAppointmentConfirm();
+                setIsModalOpen(false);
+              }}
               onClose={() => setIsModalOpen(false)}
             />
           )}

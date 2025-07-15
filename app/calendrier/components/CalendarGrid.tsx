@@ -1,16 +1,15 @@
 "use client";
 import React, {useState, useMemo, memo, useCallback}from 'react';
 import {
-  addMinutes,
   format,
   isSameDay,
   isWeekend,
-  isWithinInterval
 } from 'date-fns';
 import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
 import { fr } from 'date-fns/locale';
 import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT} from '../utils/constants'; // Constantes de style
+import { calendars } from '@/app/datasource';
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -19,6 +18,7 @@ interface CalendarGridProps {
   dayInTimeline: Date[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean; // Indique si la cellule représente une journée complète
+  selectedCalendarId: number; // ID du calendrier sélectionné, si applicable
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -34,6 +34,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   dayInTimeline,
   HALF_DAY_INTERVALS,
   isFullDay,
+  selectedCalendarId,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -50,12 +51,27 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   );
 
   // Regroupe les employés par équipe
-  const employeesByTeam = useMemo(() => 
-    initialTeams.map(team => ({
+  const employeesByTeam = useMemo(() => {
+    const teams = initialTeams.map(team => ({
       ...team,
-      employees: employees.filter(emp => emp.groupId === team.id)
-    })
-  ), [employees, initialTeams]);
+      employees: employees.filter(emp => emp.groupId === team.id && emp.calendarId === selectedCalendarId)
+    }));
+
+    // Ajoute une "équipe" spéciale pour les employés sans team
+    const noTeamEmployees = employees.filter(emp =>
+      !emp.groupId || !initialTeams.some(team => team.id === emp.groupId)
+    );
+    if (noTeamEmployees.length > 0) {
+      teams.push({
+        id: -1,
+        name: "Sans équipe",
+        employees: noTeamEmployees,
+      });
+    }
+
+    return teams.filter(team => team.employees.length > 0);
+  }, [employees, initialTeams, selectedCalendarId]);
+  
   
   // Ouvre/ferme une équipe dans la vue
   const toggleTeam = (teamId: number) => {
@@ -65,6 +81,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         : [...open, teamId]
     );
   };
+
+  console.log(selectedCalendarId);
+  
 
   // Calcule le numéro de semaine pour un jour donné
   const getWeekNumber = (d: Date) => {

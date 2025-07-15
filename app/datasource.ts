@@ -2,25 +2,32 @@ import { Appointment, Employee, Groupe } from './calendrier/types/index';
 
 
 export const initialTeams: Groupe[] = [
-    { name: 'Team A', id: 1, color: '#df5286' },
-    { name: 'Team B', id: 2, color: '#7fa900' },
-    { name: 'Team C', id: 3, color: '#ea7a57' },
-    { name: 'Team D', id: 4, color: '#5978ee' }
+    { name: 'Team A', id: 1 },
+    { name: 'Team B', id: 2 },
+    { name: 'Team C', id: 3 },
+    { name: 'Team D', id: 4}
+];
+
+export const calendars = [
+  { id: 1, name: "BOUTIQUE"},
+  { id: 2, name: "CENTRELEC"},
+  { id: 3, name: "CONFORT HABITAT"},
+  { id: 4, name: "DIRECTION"}
 ];
 
 export const initialEmployees: Employee[] = [
-    { name: 'Nancy', id: 1, groupId: 1, contrat: 'CDI', avatarUrl: 'https://i.pravatar.cc/40?img=1' },
-    { name: 'Steven', id: 2, groupId: 1, contrat: 'CDD',avatarUrl: 'https://i.pravatar.cc/40?img=2' },
-    { name: 'Robert', id: 3, groupId: 2, contrat: 'Intérimaire', avatarUrl: 'https://i.pravatar.cc/40?img=3' },
-    { name: 'Smith', id: 4, groupId: 2,  contrat: 'CDD' },
-    { name: 'Michael', id: 5, groupId: 3, contrat: 'CDI' },
-    { name: 'Root', id: 6, groupId: 3, contrat: 'CDI' },
-    { name: 'Alice', id: 7, groupId: 1, contrat: 'Intérimaire'  },
-    { name: 'Lucas', id: 8, groupId: 2,  contrat: 'CDD' },
-    { name: 'Emma', id: 9, groupId: 4,  contrat: 'CDD' },
-    { name: 'Paul', id: 10, groupId: 4, contrat: 'Intérimaire' },
-    { name: 'Sophie', id: 11, groupId: 1, contrat: 'CDD'  },
-    { name: 'Julien', id: 12, groupId: 2, contrat: 'Intérimaire' }
+    { name: 'Nancy', id: 1, groupId: 1, contrat: 'CDI', avatarUrl: 'https://i.pravatar.cc/40?img=1', calendarId: 1 },
+    { name: 'Steven', id: 2, groupId: 1, contrat: 'CDD',avatarUrl: 'https://i.pravatar.cc/40?img=2', calendarId: 1 },
+    { name: 'Robert', id: 3, groupId: 2, contrat: 'Intérimaire', avatarUrl: 'https://i.pravatar.cc/40?img=3', calendarId: 2 },
+    { name: 'Smith', id: 4, groupId: 2,  contrat: 'CDD', calendarId: 2 },
+    { name: 'Michael', id: 5, groupId: 3, contrat: 'CDI', calendarId: 3 },
+    { name: 'Root', id: 6, groupId: 3, contrat: 'CDI', calendarId: 3 },
+    { name: 'Alice', id: 7, groupId: 1, contrat: 'Intérimaire', calendarId: 1 },
+    { name: 'Lucas', id: 8, groupId: 2,  contrat: 'CDD', calendarId: 2 },
+    { name: 'Emma', id: 9, groupId: 4,  contrat: 'CDD', calendarId: 4 },
+    { name: 'Paul', id: 10, groupId: 4, contrat: 'Intérimaire', calendarId: 4 },
+    { name: 'Sophie', id: 11, groupId: 1, contrat: 'CDD', calendarId: 1 },
+    { name: 'Julien', id: 12, groupId: 2, contrat: 'Intérimaire', calendarId: 2 }
 ];
 
 export const chantier = [
