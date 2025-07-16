@@ -9,7 +9,6 @@ import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
 import { fr } from 'date-fns/locale';
 import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT} from '../utils/constants'; // Constantes de style
-import { calendars } from '@/app/datasource';
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -20,6 +19,7 @@ interface CalendarGridProps {
   isFullDay: boolean; // Indique si la cellule représente une journée complète
   selectedCalendarId: number; // ID du calendrier sélectionné, si applicable
   nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
+  isMobile: boolean;
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -37,6 +37,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   isFullDay,
   selectedCalendarId,
   nonWorkingDates,
+  isMobile,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -157,172 +158,236 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   // Calcule les tops uniquement entre les rendez-vous de cet employé
   const appointmentsWithTop = assignAppointmentTops(appointments);
 
-
-  return (
-    <div className="relative h-full w-full">
-      {/* Grille principale */}
-      <div
-        className="grid bg-white relative calendar-grid"
-        style={{
-          // Colonnes : 1 pour l'employé, puis X pour les jours
-          gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH}px repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-          width: `calc(${EMPLOYEE_COLUMN_WIDTH}px + ${dayInTimeline.length} * ${CELL_WIDTH}px)`,
-          minHeight: `calc(auto + ${employees.length} * ${CELL_HEIGHT}px)`,
-        }}
-      >
-        {/* Ligne rouge verticale pour la date du jour */}
-        {todayIndex !== -1 && (
-          <div
-            style={{
-              position: 'absolute',
-              left: `calc(${EMPLOYEE_COLUMN_WIDTH}px + ${todayIndex + 0.5} * ${CELL_WIDTH}px)`,
-              top: 0,
-              width: '2px',
-              height: '100%',
-              background: 'red',
-              zIndex: 20,
-              pointerEvents: 'none',
-            }}
+  if (isMobile) {
+    const displayEmployee = employees[0];
+    return (
+      <div className="relative h-full w-full overflow-y-auto font-inter"> {/* Enable vertical scrolling */}
+      {/* Employee Header (fixed at top) */}
+      <div className="sticky top-0 z-30 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-center rounded-b-xl shadow-lg">
+        {displayEmployee.avatarUrl && (
+          <img
+            src={displayEmployee.avatarUrl}
+            alt={displayEmployee.name}
+            className="w-14 h-14 rounded-full mr-4 border-3 border-white shadow-md"
+            onError={(e) => { e.currentTarget.src = `https://placehold.co/56x56/cccccc/333333?text=${displayEmployee.name.charAt(0)}`; }}
           />
         )}
-        {/* Coin supérieur gauche vide (fixe) */}
-        <div className={`sticky top-0 left-0 z-30 bg-gray-200 border-b border-r border-gray-300 w-[${EMPLOYEE_COLUMN_WIDTH}px] employee-column`}></div>
+        <span className="font-extrabold text-2xl tracking-wide">{displayEmployee.name}</span>
+      </div>
 
-        {/* En-tête des jours (ligne du haut) */}
-        {dayInTimeline.map((day, index) => (
-          <div
-            key={`header-day-${format(day, 'yyyy-MM-dd')}`}
-            className={`
-              flex flex-col-reverse justify-end sticky top-0 z-20 bg-gray-200 
-              border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1 
-              ${isWeekend(day) ? 'bg-gray-100' : ''}
-              day-cell
-              `}
-          >
-            {/* Affiche le numéro de semaine en début de semaine */}
-            {day.getDay() === 1 && (
-              <div className='bg-blue-400' style={{fontWeight: 'bold'}}>{getWeekNumber(day)}</div>
-            )}
-            <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span>
-            <span className="block text-xs text-gray-500">{format(day, 'MMM', { locale: fr })}</span>
-            {day.getDate() === 1 && <span className="block text-xs text-gray-500">{format(day, 'EEEE', { locale: fr })}</span>}
-            <span className="block text-xs text-gray-500">{format(day, 'yyyy', { locale: fr })}</span>
-          </div>
-        ))}
+      {/* Main content area - vertical list of days */}
+      <div className="flex flex-col w-full">
+        {dayInTimeline.map((day, index) => {
+          const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
+            isSameDay(app.startDate, day) && app.employeeId === displayEmployee.id
+          );
 
-        {/* Pour chaque équipe */}
-        {employeesByTeam.map((team) => (
-          <React.Fragment key={team.id} >
-            {/* Ligne d'en-tête de l'équipe */}
-            <React.Fragment key={team.id}>
-              <div 
-                className={`sticky left-0 z-20 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200 cursor-pointer employee-column`}
-                onClick={() => toggleTeam(team.id)}
-                style={{ width: EMPLOYEE_COLUMN_WIDTH, height: CELL_HEIGHT }}
+          return (
+            <div key={`day-section-${format(day, 'yyyy-MM-dd')}`} className="border-b border-gray-200">
+              {/* Date Header for each day */}
+              <div
+                className={`
+                  flex flex-col items-center justify-center p-3 bg-gray-100 border-b border-gray-300
+                  ${isWeekend(day) ? 'bg-gray-50 text-gray-600' : 'text-gray-800'}
+                  ${isSameDay(day, new Date()) ? 'bg-blue-100 font-bold text-blue-700 shadow-sm' : ''}
+                `}
               >
-                {/* Chevron pour ouvrir/fermer l'équipe */}
-                <div className=" text-left p-2 font-bold">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="20" 
-                    height="20" 
-                    fill="currentColor" 
-                    className={
-                      `bi bi-chevron-right 
-                      ${openTeams.includes(team.id) ? 'rotate-90' : ''}
-                      transition-transform duration-200 ease-in-out
-                      `
-                    } 
-                    viewBox="0 0 16 16"
-                  >
-                    <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
-                  </svg>
-                </div>
-                <span className="font-semibold text-sm text-gray-800 text-center">{team.name}</span>
+                <span className="text-xl font-bold">{format(day, 'EEEE d MMMM', { locale: fr })}</span>
+                {day.getDay() === 1 && ( // Display week number only on Mondays
+                  <span className="text-sm text-gray-500 mt-1">Semaine {getWeekNumber(day)}</span>
+                )}
               </div>
-              {/* Cellules vides pour l'équipe (ligne grisée) */}
-              {dayInTimeline.map((day) => {
-                return (
-                  <DayCell
-                    key={`${format(day, 'yyyy-MM-dd')}-${0}`}
-                    day={day}
-                    employeeId={0}
-                    appointments={[]}
-                    isCellActive={false}
-                    intervals={HALF_DAY_INTERVALS}
-                    onAppointmentMoved={onAppointmentMoved}
-                    onCellDoubleClick={onCellDoubleClick}
-                    onAppointmentClick={onAppointmentDoubleClick}
-                    onExternalDragDrop={onExternalDragDrop}
-                    isWeekend={isWeekend(day)}
-                  />
-                );
-              })}
-            </React.Fragment>
-            {/* Pour chaque employé de l'équipe (si l'équipe est ouverte) */}
-            {openTeams.includes(team.id) && (
-              team.employees.map((employee) => {
-                const rowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
 
-                return (
-                  <React.Fragment key={employee.id}>
-                    {/* Colonne de l'employé (fixe à gauche) */}
-                    <div 
-                      className={`
-                        sticky left-0 z-20 p-2 border-r border-gray-200 bg-gray-50 
-                        flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200
-                        employee-column
-                      `
-                    }
-                    style={{ 
-                      width: EMPLOYEE_COLUMN_WIDTH, 
-                      height: Math.max(rowHeight, CELL_HEIGHT)
-                    }}>
-                    {employee.avatarUrl && (
-                      <img 
-                        src={employee.avatarUrl} 
-                        alt={employee.name} 
-                        className="w-8 h-8 rounded-full mb-1 mr-2"
-                      />
-                    )}
-                    <span className="font-semibold text-sm text-gray-800 text-center">{employee.name}</span>
-                  </div>
-                  {/* Cellules de jour pour cet employé */}
-                  {dayInTimeline.map((day) => {
-                    const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
-                      isSameDay(app.startDate, day) && app.employeeId === employee.id
-                    );
-
-    
-
-                    return (
-                      <DayCell
-                        key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
-                        day={day}
-                        employeeId={employee.id}
-                        appointments={dayEmployeeAppointments}
-                        intervals={HALF_DAY_INTERVALS}
-                        isFullDay={isFullDay}
-                        RowHeight={rowHeight}
-                        nonWorkingDates={nonWorkingDates}
-                        onAppointmentMoved={onAppointmentMoved}
-                        onCellDoubleClick={onCellDoubleClick}
-                        onAppointmentClick={onAppointmentDoubleClick}
-                        onExternalDragDrop={onExternalDragDrop}
-                        isWeekend={isWeekend(day)}
-                        handleContextMenu={handleContextMenu}
-                      />
-                    );
-                  })}
-                </React.Fragment>
-              )})
-            )}
-          </React.Fragment>
-        ))}
-        
+              {/* DayCell for the single employee */}
+              <DayCell
+                day={day}
+                employeeId={displayEmployee.id}
+                appointments={dayEmployeeAppointments}
+                intervals={HALF_DAY_INTERVALS}
+                isFullDay={isFullDay}
+                nonWorkingDates={nonWorkingDates}
+                onAppointmentMoved={onAppointmentMoved}
+                onCellDoubleClick={onCellDoubleClick}
+                onAppointmentClick={onAppointmentDoubleClick}
+                onExternalDragDrop={onExternalDragDrop}
+                isWeekend={isWeekend(day)}
+                handleContextMenu={handleContextMenu}
+                isCellActive={true} // Always active for the displayed employee
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
-  );
+    )
+  }
+  else{
+    return (
+      <div className="relative h-full w-full">
+        {/* Grille principale */}
+        <div
+          className="grid bg-white relative calendar-grid"
+          style={{
+            // Colonnes : 1 pour l'employé, puis X pour les jours
+            gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH}px repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
+            width: `calc(${EMPLOYEE_COLUMN_WIDTH}px + ${dayInTimeline.length} * ${CELL_WIDTH}px)`,
+            minHeight: `calc(auto + ${employees.length} * ${CELL_HEIGHT}px)`,
+          }}
+        >
+          {/* Ligne rouge verticale pour la date du jour */}
+          {todayIndex !== -1 && (
+            <div
+              style={{
+                position: 'absolute',
+                left: `calc(${EMPLOYEE_COLUMN_WIDTH}px + ${todayIndex + 0.5} * ${CELL_WIDTH}px)`,
+                top: 0,
+                width: '2px',
+                height: '100%',
+                background: 'red',
+                zIndex: 20,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+          {/* Coin supérieur gauche vide (fixe) */}
+          <div className={`sticky top-0 left-0 z-30 bg-gray-200 border-b border-r border-gray-300 w-[${EMPLOYEE_COLUMN_WIDTH}px] employee-column`}></div>
+
+          {/* En-tête des jours (ligne du haut) */}
+          {dayInTimeline.map((day, index) => (
+            <div
+              key={`header-day-${format(day, 'yyyy-MM-dd')}`}
+              className={`
+                flex flex-col-reverse justify-end sticky top-0 z-20 bg-gray-200 
+                border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1 
+                ${isWeekend(day) ? 'bg-gray-100' : ''}
+                day-cell
+                `}
+            >
+              {/* Affiche le numéro de semaine en début de semaine */}
+              {day.getDay() === 1 && (
+                <div className='bg-blue-400' style={{fontWeight: 'bold'}}>{getWeekNumber(day)}</div>
+              )}
+              <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span>
+              <span className="block text-xs text-gray-500">{format(day, 'MMM', { locale: fr })}</span>
+              {day.getDate() === 1 && <span className="block text-xs text-gray-500">{format(day, 'EEEE', { locale: fr })}</span>}
+              <span className="block text-xs text-gray-500">{format(day, 'yyyy', { locale: fr })}</span>
+            </div>
+          ))}
+
+          {/* Pour chaque équipe */}
+          {employeesByTeam.map((team) => (
+            <React.Fragment key={team.id} >
+              {/* Ligne d'en-tête de l'équipe */}
+              <React.Fragment key={team.id}>
+                <div 
+                  className={`sticky left-0 z-20 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200 cursor-pointer employee-column`}
+                  onClick={() => toggleTeam(team.id)}
+                  style={{ width: EMPLOYEE_COLUMN_WIDTH, height: CELL_HEIGHT }}
+                >
+                  {/* Chevron pour ouvrir/fermer l'équipe */}
+                  <div className=" text-left p-2 font-bold">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      width="20" 
+                      height="20" 
+                      fill="currentColor" 
+                      className={
+                        `bi bi-chevron-right 
+                        ${openTeams.includes(team.id) ? 'rotate-90' : ''}
+                        transition-transform duration-200 ease-in-out
+                        `
+                      } 
+                      viewBox="0 0 16 16"
+                    >
+                      <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
+                    </svg>
+                  </div>
+                  <span className="font-semibold text-sm text-gray-800 text-center">{team.name}</span>
+                </div>
+                {/* Cellules vides pour l'équipe (ligne grisée) */}
+                {dayInTimeline.map((day) => {
+                  return (
+                    <DayCell
+                      key={`${format(day, 'yyyy-MM-dd')}-${0}`}
+                      day={day}
+                      employeeId={0}
+                      appointments={[]}
+                      isCellActive={false}
+                      intervals={HALF_DAY_INTERVALS}
+                      onAppointmentMoved={onAppointmentMoved}
+                      onCellDoubleClick={onCellDoubleClick}
+                      onAppointmentClick={onAppointmentDoubleClick}
+                      onExternalDragDrop={onExternalDragDrop}
+                      isWeekend={isWeekend(day)}
+                    />
+                  );
+                })}
+              </React.Fragment>
+              {/* Pour chaque employé de l'équipe (si l'équipe est ouverte) */}
+              {openTeams.includes(team.id) && (
+                team.employees.map((employee) => {
+                  const rowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
+
+                  return (
+                    <React.Fragment key={employee.id}>
+                      {/* Colonne de l'employé (fixe à gauche) */}
+                      <div 
+                        className={`
+                          sticky left-0 z-20 p-2 border-r border-gray-200 bg-gray-50 
+                          flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200
+                          employee-column
+                        `
+                      }
+                      style={{ 
+                        width: EMPLOYEE_COLUMN_WIDTH, 
+                        height: Math.max(rowHeight, CELL_HEIGHT)
+                      }}>
+                      {employee.avatarUrl && (
+                        <img 
+                          src={employee.avatarUrl} 
+                          alt={employee.name} 
+                          className="w-8 h-8 rounded-full mb-1 mr-2"
+                        />
+                      )}
+                      <span className="font-semibold text-sm text-gray-800 text-center">{employee.name}</span>
+                    </div>
+                    {/* Cellules de jour pour cet employé */}
+                    {dayInTimeline.map((day) => {
+                      const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
+                        isSameDay(app.startDate, day) && app.employeeId === employee.id
+                      );
+
+      
+
+                      return (
+                        <DayCell
+                          key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
+                          day={day}
+                          employeeId={employee.id}
+                          appointments={dayEmployeeAppointments}
+                          intervals={HALF_DAY_INTERVALS}
+                          isFullDay={isFullDay}
+                          RowHeight={rowHeight}
+                          nonWorkingDates={nonWorkingDates}
+                          onAppointmentMoved={onAppointmentMoved}
+                          onCellDoubleClick={onCellDoubleClick}
+                          onAppointmentClick={onAppointmentDoubleClick}
+                          onExternalDragDrop={onExternalDragDrop}
+                          isWeekend={isWeekend(day)}
+                          handleContextMenu={handleContextMenu}
+                        />
+                      );
+                    })}
+                  </React.Fragment>
+                )})
+              )}
+            </React.Fragment>
+          ))}
+          
+        </div>
+      </div>
+    );
+  }
 };
 
 export default memo(CalendarGrid);

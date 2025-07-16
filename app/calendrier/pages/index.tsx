@@ -89,6 +89,12 @@ export default function HomePage() {
   const [selectedDate, setSelectedDate] = useState<Date>(dayInTimeline[Math.floor(WINDOW_SIZE / 2)]);
   const [modalInfo, setModaltInfo] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [selectedMobileEmployee, setSelectedMobileEmployee] = useState<number>(employees.current[0]?.id ?? 0);
+
+  const employeesToShow = isMobile
+    ? employees.current.filter(e => e.id === selectedMobileEmployee)
+    : employees.current;
 
 
   const settings = [
@@ -904,6 +910,12 @@ export default function HomePage() {
     );
   }, [includeWeekend]);
     
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
 
 
@@ -912,72 +924,74 @@ export default function HomePage() {
     <DndProvider backend={HTML5Backend}>
       <div className="h-screen flex flex-col overflow-hidden">
         {/* Barre du haut : date, recherche */}
-        <div className="sticky top-0 z-20 bg-white shadow px-4 py-2 flex items-center justify-between main-header">
-          <div>
-            <input
-              type="date"
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
-              onChange={(e) => {
-                const selectedDate = new Date(e.target.value);
-                if (isNaN(selectedDate.getTime())) return;
-                setSelectedDate(selectedDate);
-              }}
-            />
-            <button
-              className="ml-4 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              onClick={() => goToDate(selectedDate)}
-            >
-                Valider
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedCalendarId}
-              onChange={e => setSelectedCalendarId(Number(e.target.value))}
-              className="border rounded px-2 py-1 mr-4"
-            >
-              {calendars.map(cal => (
-                <option key={cal.id} value={cal.id}>
-                  {cal.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 ml-4">
+        {!isMobile && (
+          <div className="sticky top-0 z-20 bg-white shadow px-4 py-2 flex items-center justify-between main-header">
+            <div>
+              <input
+                type="date"
+                className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value);
+                  if (isNaN(selectedDate.getTime())) return;
+                  setSelectedDate(selectedDate);
+                }}
+              />
               <button
-                className="p-2 bg-gray-200 rounded hover:bg-gray-300 transition"
-                onClick={() => setIsSettingsOpen(true)}
+                className="ml-4 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                onClick={() => goToDate(selectedDate)}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-gear-fill" viewBox="0 0 16 16">
-                  <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
-                </svg>
+                  Valider
               </button>
             </div>
-            {/* Champ de recherche */}
-            <div className="w-80 max-w-full">
-              <label htmlFor="search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">
-                Recherche
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedCalendarId}
+                onChange={e => setSelectedCalendarId(Number(e.target.value))}
+                className="border rounded px-2 py-1 mr-4"
+              >
+                {calendars.map(cal => (
+                  <option key={cal.id} value={cal.id}>
+                    {cal.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 ml-4">
+                <button
+                  className="p-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+                  onClick={() => setIsSettingsOpen(true)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-gear-fill" viewBox="0 0 16 16">
+                    <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
                   </svg>
+                </button>
+              </div>
+              {/* Champ de recherche */}
+              <div className="w-80 max-w-full">
+                <label htmlFor="search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">
+                  Recherche
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="search"
+                    id="search"
+                    className="block w-full p-3 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 focus:ring-blue-500 focus:border-blue-500 transition"
+                    placeholder="Rechercher un rendez-vous"
+                    value={searchInput || ""}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                  />
                 </div>
-                <input
-                  type="search"
-                  id="search"
-                  className="block w-full p-3 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 focus:ring-blue-500 focus:border-blue-500 transition"
-                  placeholder="Rechercher un rendez-vous"
-                  value={searchInput || ""}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
               </div>
             </div>
           </div>
-        </div>
+        )}
         {/* Grille principale du calendrier */}
         <div className="flex-1 flex flex-col max-h-full max-w-full overflow-hidden">
           <div
@@ -1000,6 +1014,7 @@ export default function HomePage() {
                     HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
                     isFullDay={isFullDay}
                     selectedCalendarId={selectedCalendarId}
+                    isMobile={isMobile}
                     nonWorkingDates={nonWorkingDates}
                     onAppointmentMoved={moveAppointment}
                     onCellDoubleClick={handleOpenNewModal}
@@ -1232,16 +1247,18 @@ export default function HomePage() {
           </div>
         </Drawer>
         {/* Bouton pour ouvrir le drawer */}
-        <button
-          onClick={() => setIsDrawerOpen(true)}
-          className="btn-add"
-          style={{
-            opacity: isDrawerOpen ? 0 : 1,
-            pointerEvents: isDrawerOpen ? "none" : "auto",
-          }}
-        >
-          +
-        </button>
+        {!isMobile && (
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="btn-add"
+            style={{
+              opacity: isDrawerOpen ? 0 : 1,
+              pointerEvents: isDrawerOpen ? "none" : "auto",
+            }}
+          >
+            +
+          </button>
+        )}
         {/* Barre de chargement */}
         {isLoading && (
           <div className="absolute top-0 left-0 w-full h-1 bg-blue-200 z-50">

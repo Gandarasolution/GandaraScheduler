@@ -273,3 +273,13 @@
   }
 
 }
+
+
+@media (max-width: 640px) {
+  .calendar-grid {
+    display: block !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow-x: hidden;
+  }
+}
