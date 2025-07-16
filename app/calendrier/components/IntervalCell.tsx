@@ -165,8 +165,6 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   let bgColor = '';
   if (isActive) {
     bgColor = 'bg-green-100';
-  } else if (employeeId === 0) {
-    bgColor = 'bg-gray-200'; // Cellule inactive sans employé
   }
 
   // Affiche une bulle d'info au clic sur la cellule
@@ -209,6 +207,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         ${bgColor} ${canDrop ? 'cursor-pointer' : ''}
         flex flex-row items-start gap-1
         ${isSelected ? 'bg-blue-200' : ''}
+        interval-cell
         `
       }
       style={{
@@ -217,7 +216,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         willChange: 'background-color, border-color',
       }}
       onContextMenu={(e) => {
-        handleContextMenu && !isWeekend ? handleContextMenu(e, 'cell', undefined, { employeeId, date: intervalStart }) 
+        handleContextMenu && !isWeekend && !isFerie ? handleContextMenu(e, 'cell', undefined, { employeeId, date: intervalStart }) 
         : e.preventDefault();
       }}
       suppressHydrationWarning={true} // Pour éviter les erreurs de rendu côté serveur
@@ -230,7 +229,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
           transition: 'height 0.2s'
         }}
       >
-        {isCellActive && appointments.map((app, idx) => (
+        {isCellActive && appointments.map((app) => (
           <AppointmentItem
             key={app.id}
             appointment={app}

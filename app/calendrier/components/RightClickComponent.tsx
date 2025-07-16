@@ -73,6 +73,7 @@ const RightClickComponent = ({
               ? 'opacity-50 cursor-not-allowed pointer-events-none' 
               : ' cursor-pointer'
             }
+            item
             `
           }
           onClick={() => {

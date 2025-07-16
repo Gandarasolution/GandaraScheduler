@@ -54,15 +54,16 @@ const DayCell: React.FC<DayCellProps> = ({
   const isNonWorkingDay = useMemo(() => 
     nonWorkingDates?.some(date => isSameDay(date, day)) ?? false, [nonWorkingDates, day]
   );
-  const cellClasses = useMemo(() => 
-    `flex flex-row border-gray-200 
-    ${isWeekend ? 'bg-sky-50' : isFerie ? 'bg-red-100' : isNonWorkingDay ? 'bg-green-100' : 'bg-white'}`
-    , [isWeekend, isFerie, isNonWorkingDay]
-  );
-
+  
   return (
     <div 
-      className={cellClasses + ' snap-center'}
+      className={`
+        snap-center day-cell flex flex-row border-gray-200
+        ${!isCellActive ? 'bg-gray-200': ''}
+        ${isWeekend ? 'WEEKEND' : ''}
+        ${isFerie ? 'FERIE' : ''}
+        ${isNonWorkingDay ? 'NON-WORKING' : ''}
+        `}
       id={format(day, 'yyyy-MM-dd')}
       style={{ 
         height: RowHeight ? `${RowHeight}px` : 'auto', // Utilise RowHeight si fourni, sinon auto

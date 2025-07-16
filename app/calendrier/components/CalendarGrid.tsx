@@ -162,12 +162,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     <div className="relative h-full w-full">
       {/* Grille principale */}
       <div
-        className="grid bg-white relative"
+        className="grid bg-white relative calendar-grid"
         style={{
           // Colonnes : 1 pour l'employé, puis X pour les jours
           gridTemplateColumns: `${EMPLOYEE_COLUMN_WIDTH}px repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-          // Lignes : 1 pour l'en-tête, puis X pour chaque employé
-          gridTemplateRows: `auto repeat(${employees.length}, minmax(${CELL_HEIGHT}px, auto))`,
           width: `calc(${EMPLOYEE_COLUMN_WIDTH}px + ${dayInTimeline.length} * ${CELL_WIDTH}px)`,
           minHeight: `calc(auto + ${employees.length} * ${CELL_HEIGHT}px)`,
         }}
@@ -188,13 +186,18 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           />
         )}
         {/* Coin supérieur gauche vide (fixe) */}
-        <div className={`sticky top-0 left-0 z-30 bg-gray-200 border-b border-r border-gray-300 w-[${EMPLOYEE_COLUMN_WIDTH}px]`}></div>
+        <div className={`sticky top-0 left-0 z-30 bg-gray-200 border-b border-r border-gray-300 w-[${EMPLOYEE_COLUMN_WIDTH}px] employee-column`}></div>
 
         {/* En-tête des jours (ligne du haut) */}
         {dayInTimeline.map((day, index) => (
           <div
             key={`header-day-${format(day, 'yyyy-MM-dd')}`}
-            className={`flex flex-col-reverse justify-end sticky top-0 z-20 bg-gray-200 border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1 ${isWeekend(day) ? 'bg-gray-100' : ''}`}
+            className={`
+              flex flex-col-reverse justify-end sticky top-0 z-20 bg-gray-200 
+              border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1 
+              ${isWeekend(day) ? 'bg-gray-100' : ''}
+              day-cell
+              `}
           >
             {/* Affiche le numéro de semaine en début de semaine */}
             {day.getDay() === 1 && (
@@ -213,7 +216,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             {/* Ligne d'en-tête de l'équipe */}
             <React.Fragment key={team.id}>
               <div 
-                className={`sticky left-0 z-20 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200 cursor-pointer`}
+                className={`sticky left-0 z-20 border-r border-gray-200 bg-gray-50 flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200 cursor-pointer employee-column`}
                 onClick={() => toggleTeam(team.id)}
                 style={{ width: EMPLOYEE_COLUMN_WIDTH, height: CELL_HEIGHT }}
               >
@@ -267,7 +270,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     <div 
                       className={`
                         sticky left-0 z-20 p-2 border-r border-gray-200 bg-gray-50 
-                      flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200`
+                        flex flex-row items-center justify-center flex-shrink-0 border-b border-gray-200
+                        employee-column
+                      `
                     }
                     style={{ 
                       width: EMPLOYEE_COLUMN_WIDTH, 

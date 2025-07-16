@@ -99,7 +99,15 @@ export default function HomePage() {
           id: "showWeekends",
           label: "Afficher les week-ends", 
           type: "checkbox", value: includeWeekend, 
-          onChange: (value : boolean) => setIncludeWeekend(value) },
+          onChange: (value : boolean) => setIncludeWeekend(value) 
+        },
+        {
+          id: 'isFullDay',
+          label: "Afficher les journées complète",
+          type: "checkbox",
+          value: isFullDay,
+          onChange: (value: boolean) => setIsFullDay(value)
+        }
       ]
     },
     {
@@ -904,7 +912,7 @@ export default function HomePage() {
     <DndProvider backend={HTML5Backend}>
       <div className="h-screen flex flex-col overflow-hidden">
         {/* Barre du haut : date, recherche */}
-        <div className="sticky top-0 z-20 bg-white shadow px-4 py-2 flex items-center justify-between">
+        <div className="sticky top-0 z-20 bg-white shadow px-4 py-2 flex items-center justify-between main-header">
           <div>
             <input
               type="date"
@@ -1362,7 +1370,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             className="border rounded px-2 py-1 w-40"
                           />
                           <button
-                            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition add"
                             onClick={() => {
                               if (
                                 setting.newNonWorkingDate &&
@@ -1424,7 +1432,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 ))}
               </div>
             )}
-            {idx < settings.length - 1 && <hr className="border-t border-gray-200 mx-2" />}
           </div>
         ))}
         <button
