@@ -16,6 +16,7 @@ interface AppointmentFormProps {
   employees: Employee[]; // Liste de tous les employés
   HALF_DAY_INTERVALS: HalfDayInterval[] // Liste des créneaux de demi-journée
   isFullDay: boolean; // Indique si le rendez-vous est sur une journée complète
+  nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
   onSave: (appointment: Appointment, includeWeekend: boolean) => void;
   onDelete: (id: number) => void;
   onClose: () => void;
@@ -32,6 +33,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   employees,
   HALF_DAY_INTERVALS,
   isFullDay,
+  nonWorkingDates,
   onSave,
   onDelete,
   onClose,
@@ -54,7 +56,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     return eachDayOfInterval({ 
       start: formData.startDate, 
       end: formData.endDate 
-    }).every(date => !isWorkedDay(date));
+    }).every(date => !isWorkedDay(date, nonWorkingDates));
   }, [formData.startDate, formData.endDate]);
 
 

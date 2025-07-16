@@ -44,6 +44,8 @@ interface IntervalCellProps {
   isFerie: boolean;
   isFullDay: boolean; // Indique si la cellule représente une journée complète
   RowHeight?: number; // Hauteur de la ligne pour l'employé, si nécessaire
+  nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
+  isNonWorkingDay: boolean; // Indique si la cellule représente un jour non travaillé
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -82,6 +84,8 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   isFerie,
   isFullDay,
   RowHeight,
+  nonWorkingDates,
+  isNonWorkingDay,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -123,13 +127,13 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         );
               
         // Décale la date cible
-        targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
+        targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);
       }
 
       
       // Si la cellule est un week-end ou férié, on place sur le prochain jour ouvré
-      if (isWeekend || isFerie) {        
-        targetDate = getNextWorkedDay(date, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
+      if (isWeekend || isFerie || isNonWorkingDay ) {        
+        targetDate = getNextWorkedDay(date, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);
         targetInterval = 'morning'; // Par défaut, matin du prochain jour ouvré
       }
       

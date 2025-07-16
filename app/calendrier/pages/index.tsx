@@ -32,7 +32,7 @@ import {
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
-import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay } from "../utils/dates";
+import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend } from "../utils/dates";
 import { calendars } from "../../datasource";
 
 // Définition des types d'événements pour le drawer
@@ -55,9 +55,10 @@ function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
 // Composant principal de la page calendrier
 export default function HomePage() {
   // Etats principaux
-  const [dayInTimeline, setDayInTimeline] = useState(
-    eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) })
-  );
+  const [includeWeekend, setIncludeWeekend] = useState(true);
+  const [nonWorkingDates, setNonWorkingDates] = useState<Date[]>([]);
+  const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
+  const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
@@ -87,6 +88,36 @@ export default function HomePage() {
   const [alertTitle, setAlertTitle] = useState<"Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?">("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
   const [selectedDate, setSelectedDate] = useState<Date>(dayInTimeline[Math.floor(WINDOW_SIZE / 2)]);
   const [modalInfo, setModaltInfo] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+
+  const settings = [
+    {
+      category: "Affichage",
+      items: [
+        { 
+          id: "showWeekends",
+          label: "Afficher les week-ends", 
+          type: "checkbox", value: includeWeekend, 
+          onChange: (value : boolean) => setIncludeWeekend(value) },
+      ]
+    },
+    {
+      category: "Calendrier",
+      items: [
+        {
+          id: "nonWorkedDay", 
+          label: "Dates non travaillées :", 
+          type: "custom-non-working-dates", // type personnalisé
+          nonWorkingDates,
+          setNonWorkingDates,
+          newNonWorkingDate,
+          setNewNonWorkingDate,  
+        }
+      ]
+    }
+  ];
+
 
   const researchAppointments = useCallback(() => {
         
@@ -107,7 +138,8 @@ export default function HomePage() {
     const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
     const nextWorkedDay = getNextWorkedDay(
       new Date(app1.endDate.getTime() + (intervals[0].endHour - intervals[0].startHour) * 60 * 60 * 1000),
-      intervals
+      intervals,
+      nonWorkingDates
     );
     // Consécutif si le startDate de app2 est le prochain jour travaillé après la fin de app1
     return isSameDay(app2.startDate, nextWorkedDay);
@@ -165,18 +197,27 @@ export default function HomePage() {
     : repeatInterval === "week" ? addWeeks(startDateOriginal, numberCount || 0) 
     : addMonths(startDateOriginal, numberCount || 0);    
 
-    currentStartDate = getNextWorkedDay(currentStartDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
-        
+    currentStartDate = getNextWorkedDay(
+      currentStartDate, 
+      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+      nonWorkingDates
+    );
+
     if (repeatCount) {
       for (let i = 0; i < repeatCount; i++) {
-        const newStartDate = getNextWorkedDay(new Date(currentStartDate.getTime()), isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
-        const newEndDate = new Date(newStartDate.getTime() + diff); 
+        const newStartDate = getNextWorkedDay(
+          new Date(currentStartDate.getTime()),
+          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+          nonWorkingDates
+        );
+        const newEndDate = new Date(newStartDate.getTime() + diff);
 
         const days = getWorkedDayIntervals(
           newStartDate,
           newEndDate,
           isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-          false
+          false,
+          nonWorkingDates
         );
 
         days.forEach(day => {
@@ -201,9 +242,10 @@ export default function HomePage() {
       while (currentStartDate <= endDate) {
         const newStartDate = getNextWorkedDay(
           new Date(currentStartDate.getTime()), 
-          isFullDay 
-          ? DAY_INTERVALS 
-          : HALF_DAY_INTERVALS
+          isFullDay
+          ? DAY_INTERVALS
+          : HALF_DAY_INTERVALS,
+          nonWorkingDates
         );
         const newEndDate = new Date(newStartDate.getTime() + diff);
 
@@ -211,7 +253,8 @@ export default function HomePage() {
           newStartDate, 
           newEndDate,
           isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-          false
+          false,
+          nonWorkingDates
         );
 
         days.forEach(day => {
@@ -237,7 +280,7 @@ export default function HomePage() {
     researchAppointments(); // Met à jour la liste filtrée
     setModaltInfo(`${newAppointments.length} rendez-vous créé${newAppointments.length > 1 ? 's' : ''}`);
     setRepeatAppointmentData(null);
-  }, [researchAppointments, selectedAppointment, isFullDay]);
+  }, [researchAppointments, selectedAppointment, isFullDay, nonWorkingDates]);
 
   const onResize = useCallback(
     (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number) => {     
@@ -286,7 +329,7 @@ export default function HomePage() {
     const newStartDate = new Date(cell.date.getTime());
     const newEndDate = new Date(newStartDate.getTime() + diff);
 
-    if (!isWorkedDay(newStartDate)) {
+    if (!isWorkedDay(newStartDate, nonWorkingDates)) {
       console.warn("Les dates sélectionnées ne sont pas des jours travaillés.");
       return;
     }
@@ -295,7 +338,8 @@ export default function HomePage() {
       newStartDate, 
       newEndDate,
       isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-      false
+      false,
+      nonWorkingDates
     );
 
     for (const day of days) {
@@ -307,7 +351,7 @@ export default function HomePage() {
         clipboardAppointment.current.imageUrl
       );
     }
-  }, [createAppointment, isFullDay]);
+  }, [createAppointment, isFullDay, nonWorkingDates]);
 
   // Gestion du scroll infini horizontal (ajout de jours à gauche/droite)
   const handleScroll = useCallback(
@@ -331,7 +375,8 @@ export default function HomePage() {
 
         setDayInTimeline((prevDays) => {
           const lastDay = prevDays[prevDays.length - 1];
-          const newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
+          let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
+          newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
           return [...prevDays, ...newDays].slice(-WINDOW_SIZE);
         });
       }
@@ -343,7 +388,8 @@ export default function HomePage() {
 
         setDayInTimeline((prevDays) => {
           const firstDay = prevDays[0];
-          const newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
+          let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
+          newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
           return [...newDays, ...prevDays].slice(0, WINDOW_SIZE);
         });
         // On ajuste scrollLeft dans un useEffect après le rendu
@@ -352,7 +398,7 @@ export default function HomePage() {
       isLoadingMoreDays.current = false;
 
     }, 100), // Débouncing court pour plus de fluidité
-    []
+    [includeWeekend, nonWorkingDates]
   );
 
   // Centrage sur aujourd'hui au chargement
@@ -384,6 +430,8 @@ export default function HomePage() {
       setIsLoading(false);
     }, 50);
   }, []);
+
+
   // Déplacement d'un rendez-vous (drag & drop ou resize)
   const moveAppointment = useCallback(
     (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right') => {
@@ -395,9 +443,10 @@ export default function HomePage() {
         newStartDate, 
         newEndDate,
         isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-        false
-    );    
-      
+        !includeWeekend,
+        nonWorkingDates
+    );
+
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
       
       if (resizeDirection === 'right') {
@@ -419,7 +468,7 @@ export default function HomePage() {
         }
       }
     },
-    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS]
+    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates]
   );
 
   // Gestion de la création et édition de rendez-vous
@@ -430,7 +479,8 @@ export default function HomePage() {
       appointment.startDate, 
       appointment.endDate,
       isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-      includeWeekend
+      includeWeekend,
+      nonWorkingDates
     );
 
     
@@ -484,7 +534,7 @@ export default function HomePage() {
     setIsModalOpen(false);
     setSelectedAppointment(null);
     setNewAppointmentInfo(null);
-  }, [researchAppointments, createAppointment, getFullSequence, isFullDay]);
+  }, [researchAppointments, createAppointment, getFullSequence, isFullDay, nonWorkingDates]);
 
 
   const handleDeleteAppointmentConfirm = useCallback(() => {
@@ -837,6 +887,14 @@ export default function HomePage() {
     return () => clearTimeout(timeout);
   }
   }, [modalInfo]);
+
+  useEffect(() => {
+    setDayInTimeline(
+      includeWeekend
+        ? eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) })
+        : eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) }).filter(date => !isWeekend(date))
+    );
+  }, [includeWeekend]);
     
 
 
@@ -880,16 +938,14 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 ml-4">
-              <label htmlFor="toggle-full-day" className="text-sm font-medium text-gray-700">
-                Vue journée complète
-              </label>
-              <input
-                id="toggle-full-day"
-                type="checkbox"
-                checked={isFullDay}
-                onChange={e => setIsFullDay(e.target.checked)}
-                className="accent-blue-600 w-5 h-5"
-              />
+              <button
+                className="p-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+                onClick={() => setIsSettingsOpen(true)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-gear-fill" viewBox="0 0 16 16">
+                  <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+                </svg>
+              </button>
             </div>
             {/* Champ de recherche */}
             <div className="w-80 max-w-full">
@@ -936,6 +992,7 @@ export default function HomePage() {
                     HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
                     isFullDay={isFullDay}
                     selectedCalendarId={selectedCalendarId}
+                    nonWorkingDates={nonWorkingDates}
                     onAppointmentMoved={moveAppointment}
                     onCellDoubleClick={handleOpenNewModal}
                     onAppointmentDoubleClick={handleOpenEditModal}
@@ -1119,6 +1176,7 @@ export default function HomePage() {
               employees={employees.current}
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
               isFullDay={isFullDay}
+              nonWorkingDates={nonWorkingDates}
               onSave={handleSaveAppointment}
               onDelete={() => {
                 handleDeleteAppointmentConfirm();
@@ -1128,6 +1186,11 @@ export default function HomePage() {
             />
           )}
         </Modal>
+        <SettingsModal 
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings} 
+          isSettingsOpen={isSettingsOpen}        
+        />
         {/* Drawer latéral pour ajouter un rendez-vous par drag & drop */}
         <Drawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} isDragging={isDrawerOpen}>
           <div className={"flex flex-col items-center"}>
@@ -1249,3 +1312,128 @@ const AlertModal: React.FC<AlertModalProps> = ({
     </div>
   </Modal>
 );
+
+
+type SettingsModalProps = {  
+  onClose: () => void;
+  settings: any;
+  isSettingsOpen: boolean;
+};
+
+const SettingsModal: React.FC<SettingsModalProps> = ({
+  onClose,
+  isSettingsOpen,
+  settings
+}) => {
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
+
+  return (
+    <Modal
+      isOpen={isSettingsOpen}
+      onClose={onClose}
+      title="Paramètres"
+    >
+      <div className="flex flex-col gap-4">
+        <h3 className="font-semibold text-lg mb-2">Paramètres du calendrier</h3>
+        {settings.map((cat: any, idx: number) => (
+          <div key={cat.category} className="border rounded mb-2 bg-gray-50">
+            <button
+              type="button"
+              className="w-full text-left px-4 py-2 font-semibold bg-gray-100 hover:bg-gray-200 rounded-t focus:outline-none"
+              onClick={() => setOpenCategory(openCategory === cat.category ? null : cat.category)}
+            >
+              {cat.category}
+            </button>
+            {openCategory === cat.category && (
+              <div className="px-4 py-3">
+                {cat.items.map((setting: any) => (
+                  <div key={setting.id} className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
+                    <label htmlFor={setting.id} className="text-sm font-medium text-gray-700 mb-1 sm:mb-0 sm:mr-4 min-w-[160px]">
+                      {setting.label}
+                    </label>
+                    {setting.type === "custom-non-working-dates" ? (
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="date"
+                            id={setting.id}
+                            value={setting.newNonWorkingDate}
+                            onChange={e => setting.setNewNonWorkingDate(e.target.value)}
+                            className="border rounded px-2 py-1 w-40"
+                          />
+                          <button
+                            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                            onClick={() => {
+                              if (
+                                setting.newNonWorkingDate &&
+                                !setting.nonWorkingDates.some(
+                                  (d: Date) =>
+                                    format(d, "yyyy-MM-dd") === setting.newNonWorkingDate
+                                )
+                              ) {
+                                setting.setNonWorkingDates((prev: Date[]) => [
+                                  ...prev,
+                                  new Date(setting.newNonWorkingDate),
+                                ]);
+                                setting.setNewNonWorkingDate("");
+                              }
+                            }}
+                          >
+                            Ajouter
+                          </button>
+                        </div>
+                        <ul className="list-disc pl-5 mt-2 max-h-32 overflow-y-auto">
+                          {setting.nonWorkingDates.length === 0 && (
+                            <li className="text-gray-400 italic">Aucune date ajoutée</li>
+                          )}
+                          {setting.nonWorkingDates.map((date: Date, idx: number) => (
+                            <li key={format(date, "yyyy-MM-dd") + idx} className="flex items-center gap-2">
+                              <span>{format(date, "dd/MM/yyyy")}</span>
+                              <button
+                                className="text-red-600 hover:text-red-800 text-xs px-2 py-1 rounded"
+                                onClick={() =>
+                                  setting.setNonWorkingDates((prev: Date[]) =>
+                                    prev.filter(
+                                      (d: Date) =>
+                                        format(d, "yyyy-MM-dd") !== format(date, "yyyy-MM-dd")
+                                    )
+                                  )
+                                }
+                              >
+                                Supprimer
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <input
+                        id={setting.id}
+                        type={setting.type}
+                        className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-40"
+                        value={setting.value}
+                        checked={setting.value}
+                        onChange={e =>
+                          setting.onChange(
+                            setting.type === "checkbox" ? e.target.checked : e.target.value
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {idx < settings.length - 1 && <hr className="border-t border-gray-200 mx-2" />}
+          </div>
+        ))}
+        <button
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 self-end"
+          onClick={onClose}
+        >
+          Fermer
+        </button>
+      </div>
+    </Modal>
+  );
+};

@@ -19,6 +19,7 @@ interface CalendarGridProps {
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean; // Indique si la cellule représente une journée complète
   selectedCalendarId: number; // ID du calendrier sélectionné, si applicable
+  nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -35,6 +36,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   HALF_DAY_INTERVALS,
   isFullDay,
   selectedCalendarId,
+  nonWorkingDates,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -80,10 +82,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         ? open.filter(id => id !== teamId)
         : [...open, teamId]
     );
-  };
-
-  console.log(selectedCalendarId);
-  
+  };  
 
   // Calcule le numéro de semaine pour un jour donné
   const getWeekNumber = (d: Date) => {
@@ -300,6 +299,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         intervals={HALF_DAY_INTERVALS}
                         isFullDay={isFullDay}
                         RowHeight={rowHeight}
+                        nonWorkingDates={nonWorkingDates}
                         onAppointmentMoved={onAppointmentMoved}
                         onCellDoubleClick={onCellDoubleClick}
                         onAppointmentClick={onAppointmentDoubleClick}

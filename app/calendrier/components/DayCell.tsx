@@ -1,6 +1,6 @@
 "use client";
-import React, {memo}from 'react';
-import { format, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
+import React, {memo, useMemo}from 'react';
+import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
 import IntervalCell from './IntervalCell';
 import { Appointment, HalfDayInterval } from '../types';
 import { isHoliday } from '../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
@@ -19,6 +19,7 @@ interface DayCellProps {
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
   isFullDay?: boolean; // Indique si la cellule représente une journée complète
   RowHeight?: number; // Hauteur de la ligne pour l'employé, si nécessaire
+  nonWorkingDates?: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentClick: (appointment: Appointment) => void;
@@ -40,6 +41,7 @@ const DayCell: React.FC<DayCellProps> = ({
   isWeekend,
   isFullDay,
   RowHeight,
+  nonWorkingDates,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentClick,
@@ -48,10 +50,16 @@ const DayCell: React.FC<DayCellProps> = ({
 }) => {
   
   // Calcul du style de la cellule selon férié/week-end/jour normal
-  const isFerie = isHoliday(day);
-  const cellClasses = `flex flex-row border-gray-200 
-    ${isWeekend ? 'bg-sky-50' : isFerie ? 'bg-red-100' : 'bg-white'}`;
-    
+  const isFerie = useMemo(() => isHoliday(day), [day]);
+  const isNonWorkingDay = useMemo(() => 
+    nonWorkingDates?.some(date => isSameDay(date, day)) ?? false, [nonWorkingDates, day]
+  );
+  const cellClasses = useMemo(() => 
+    `flex flex-row border-gray-200 
+    ${isWeekend ? 'bg-sky-50' : isFerie ? 'bg-red-100' : isNonWorkingDay ? 'bg-green-100' : 'bg-white'}`
+    , [isWeekend, isFerie, isNonWorkingDay]
+  );
+
   return (
     <div 
       className={cellClasses + ' snap-center'}
@@ -83,6 +91,8 @@ const DayCell: React.FC<DayCellProps> = ({
             appointments={intervalAppointments}
             isFullDay={isFullDay ?? false}
             RowHeight={RowHeight}
+            nonWorkingDates={nonWorkingDates || []}
+            isNonWorkingDay={isNonWorkingDay}
             onAppointmentMoved={onAppointmentMoved}
             onCellDoubleClick={() => onCellDoubleClick(intervalStart, employeeId, interval.name as 'morning' | 'afternoon')}
             onAppointmentDoubleClick={onAppointmentClick}
