@@ -5,7 +5,13 @@ import { format, addDays, add, addHours } from 'date-fns';
 import AppointmentItem from './AppointmentItem';
 import InfoBubble from './InfoBubble';
 import { Appointment } from '../types';
-import { CELL_WIDTH, CELL_HEIGHT, colors, DAY_INTERVALS, HALF_DAY_INTERVALS } from '../utils/constants';
+import {
+  CELL_WIDTH, 
+  CELL_HEIGHT, 
+  colors, 
+  DAY_INTERVALS, 
+  HALF_DAY_INTERVALS,
+} from '../utils/constants';
 import { getNextWorkedDay } from '../utils/dates';
 import { useSelectedCell } from '../context/SelectedCellContext';
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
@@ -46,6 +52,7 @@ interface IntervalCellProps {
   RowHeight?: number; // Hauteur de la ligne pour l'employé, si nécessaire
   nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
   isNonWorkingDay: boolean; // Indique si la cellule représente un jour non travaillé
+  isMobile: boolean; // Indique si l'affichage est en mode mobile
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -69,9 +76,72 @@ interface DragItem {
 
 /**
  * Composant IntervalCell
- * Représente une demi-journée (matin/après-midi) pour un employé à une date donnée.
- * Gère le drag & drop, l'affichage des rendez-vous, les interactions et le style selon le contexte.
+ * 
+ * Affiche une cellule d'intervalle horaire dans un calendrier, gère les rendez-vous, le drag & drop,
+ * la sélection, l'affichage d'une bulle d'information, et les interactions utilisateur (clic, double-clic, menu contextuel).
+ * 
+ * @param {Object} props - Propriétés du composant
+ * @param {Date} props.date - Date de la cellule
+ * @param {number} [props.employeeId=0] - Identifiant de l'employé associé à la cellule
+ * @param {string} props.intervalName - Nom de l'intervalle (ex : 'morning', 'afternoon')
+ * @param {Date} props.intervalStart - Date/heure de début de l'intervalle
+ * @param {Date} props.intervalEnd - Date/heure de fin de l'intervalle
+ * @param {Appointment[]} [props.appointments=[]] - Liste des rendez-vous dans la cellule
+ * @param {boolean} [props.isCellActive=true] - Indique si la cellule est active (modifiable)
+ * @param {boolean} props.isWeekend - Indique si la cellule correspond à un week-end
+ * @param {boolean} props.isFerie - Indique si la cellule correspond à un jour férié
+ * @param {boolean} props.isFullDay - Indique si la cellule couvre toute la journée
+ * @param {number} props.RowHeight - Hauteur de la ligne (en pixels)
+ * @param {Date[]} props.nonWorkingDates - Liste des dates non travaillées
+ * @param {boolean} props.isNonWorkingDay - Indique si la cellule est un jour non travaillé
+ * @param {boolean} props.isMobile - Indique si l'affichage est mobile
+ * @param {Function} props.onAppointmentMoved - Callback lors du déplacement d'un rendez-vous
+ * @param {Function} props.onCellDoubleClick - Callback lors du double-clic sur la cellule
+ * @param {Function} props.onAppointmentDoubleClick - Callback lors du double-clic sur un rendez-vous
+ * @param {Function} props.onExternalDragDrop - Callback lors du drop d'un élément externe
+ * @param {Function} props.handleContextMenu - Callback pour le menu contextuel
+ * 
+ * @returns {JSX.Element} Cellule d'intervalle horaire avec gestion des rendez-vous et interactions utilisateur
+ * 
+ * @example
+ * <IntervalCell
+ *   date={new Date()}
+ *   employeeId={1}
+ *   intervalName="morning"
+ *   intervalStart={new Date()}
+ *   intervalEnd={new Date()}
+ *   appointments={[]}
+ *   isCellActive={true}
+ *   isWeekend={false}
+ *   isFerie={false}
+ *   isFullDay={false}
+ *   RowHeight={40}
+ *   nonWorkingDates={[]}
+ *   isNonWorkingDay={false}
+ *   isMobile={false}
+ *   onAppointmentMoved={...}
+ *   onCellDoubleClick={...}
+ *   onAppointmentDoubleClick={...}
+ *   onExternalDragDrop={...}
+ *   handleContextMenu={...}
+ * />
+ * 
+ * @remarks
+ * - Utilise react-dnd pour le drag & drop.
+ * - Affiche une bulle d'information temporaire au clic.
+ * - Permet la création de rendez-vous par double-clic.
+ * - Gère les jours non travaillés, week-ends et jours fériés.
+ * 
+ * @ligne
+ * // Gestion de l'état local pour la bulle d'info et sa position
+ * // Utilisation de useDrop pour gérer le drag & drop sur la cellule
+ * // Calcul du style de fond selon l'état de drop et d'activité
+ * // Gestion du clic sur la cellule pour afficher la bulle d'info
+ * // Gestion du double-clic pour créer un rendez-vous
+ * // Rendu JSX de la cellule, des rendez-vous et de la bulle d'info
  */
+
+
 const IntervalCell: React.FC<IntervalCellProps> = ({
   date,
   employeeId = 0,
@@ -86,6 +156,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   RowHeight,
   nonWorkingDates,
   isNonWorkingDay,
+  isMobile,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -211,7 +282,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         `
       }
       style={{
-        width: CELL_WIDTH/2,
+        width: !isMobile ? CELL_WIDTH / 2 : undefined,
         height: Math.max(CELL_HEIGHT, RowHeight ?? CELL_HEIGHT),
         willChange: 'background-color, border-color',
       }}
@@ -221,14 +292,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       }}
       suppressHydrationWarning={true} // Pour éviter les erreurs de rendu côté serveur
     >
-      <div
-        className="relative"
-        style={{
-          minHeight: CELL_HEIGHT,
-          height: Math.max(CELL_HEIGHT, appointments.length * 36), // 36px par rendez-vous, ajuste selon ton design
-          transition: 'height 0.2s'
-        }}
-      >
+      
         {isCellActive && appointments.map((app) => (
           <AppointmentItem
             key={app.id}
@@ -240,9 +304,9 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
             }}
             handleContextMenu={(e, origin, appointment) => handleContextMenu && handleContextMenu(e, origin, appointment, { employeeId, date: intervalStart })}
             color={colors[app.employeeId as number % colors.length]}
+            isMobile={isMobile}
           />
         ))}
-      </div>
       {/* Affichage de la bulle d'info si besoin */}
       {isCellActive && showInfoBubble && (
         <InfoBubble

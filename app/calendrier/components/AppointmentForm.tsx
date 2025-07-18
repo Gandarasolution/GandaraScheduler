@@ -22,10 +22,39 @@ interface AppointmentFormProps {
   onClose: () => void;
 }
 
+
 /**
- * Formulaire de création/édition de rendez-vous.
- * Gère les champs, la validation, la sélection du type, l'affectation à un employé, etc.
+ * Formulaire de création ou d'édition d'un rendez-vous.
+ *
+ * @component
+ * @param {AppointmentFormProps} props - Propriétés du formulaire de rendez-vous.
+ * @param {Appointment | undefined} props.appointment - Rendez-vous à éditer (si existant).
+ * @param {Date | undefined} props.initialDate - Date initiale pour le rendez-vous.
+ * @param {number | undefined} props.initialEmployeeId - ID de l'employé assigné par défaut.
+ * @param {Employee[]} props.employees - Liste des employés disponibles.
+ * @param {Array<{ startHour: number, endHour: number }>} props.HALF_DAY_INTERVALS - Intervalles pour matin/après-midi.
+ * @param {boolean} props.isFullDay - Indique si le rendez-vous couvre toute la journée.
+ * @param {Date[]} props.nonWorkingDates - Liste des dates non travaillées.
+ * @param {(appointment: Appointment, includeWeekend: boolean) => void} props.onSave - Callback lors de la sauvegarde.
+ * @param {(id: number) => void} props.onDelete - Callback lors de la suppression.
+ * @param {() => void} props.onClose - Callback lors de la fermeture du formulaire.
+ *
+ * @returns {JSX.Element} Formulaire de rendez-vous.
+ *
+ * @example
+ * <AppointmentForm
+ *   appointment={appointment}
+ *   initialDate={new Date()}
+ *   employees={employees}
+ *   HALF_DAY_INTERVALS={[{ startHour: 8, endHour: 12 }, { startHour: 13, endHour: 17 }]}
+ *   isFullDay={false}
+ *   nonWorkingDates={[]}
+ *   onSave={handleSave}
+ *   onDelete={handleDelete}
+ *   onClose={handleClose}
+ * />
  */
+
 const AppointmentForm: React.FC<AppointmentFormProps> = ({
   appointment,
   initialDate,
@@ -60,7 +89,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   }, [formData.startDate, formData.endDate]);
 
 
-  // Gère les changements de champ texte/select
+  /**
+   * Gère les changements des champs texte, textarea et select du formulaire.
+   * Met à jour l'état local `formData` en fonction du champ modifié.
+   *
+   * @param {React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>} e - Événement de changement.
+   */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'employeeId') {
@@ -70,7 +104,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Gère le changement de date (date picker)
+  /**
+   * Gère le changement de date via les inputs de type "date".
+   * Met à jour la date de début ou de fin dans l'état local `formData`.
+   *
+   * @param {React.ChangeEvent<HTMLInputElement>} e - Événement de changement de date.
+   */
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const datePart = parseISO(value);
@@ -87,18 +126,27 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
   };
 
-  // Soumission du formulaire
+  /**
+   * Soumet le formulaire de rendez-vous.
+   * Appelle la fonction `onSave` avec les données du formulaire et l'état `includeWeekend`.
+   *
+   * @param {React.FormEvent} e - Événement de soumission du formulaire.
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(formData as Appointment, includeWeekend);
   };
 
-  // Suppression du rendez-vous
+  /**
+   * Gère la suppression du rendez-vous courant.
+   * Appelle la fonction `onDelete` avec l'identifiant du rendez-vous.
+   */
   const handleDelete = () => {
     if (formData.id) {
       onDelete(formData.id);
     }
   };
+
 
   // Rendu du formulaire
   return (

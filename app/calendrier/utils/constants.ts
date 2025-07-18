@@ -7,6 +7,7 @@ export const EMPLOYEE_COLUMN_WIDTH = 150;
 export const CELL_WIDTH = 60;
 export const CELL_HEIGHT = 50;
 
+
 export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
   { name: "morning", startHour: 0, endHour: 12},
   { name: "afternoon", startHour: 12, endHour: 24 },

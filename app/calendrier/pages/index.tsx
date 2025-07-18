@@ -1,3 +1,27 @@
+/**
+ * Page Calendrier (Scheduler)
+ * -----------------------------------
+ * Cette page affiche l'agenda des employés sous forme de calendrier interactif.
+ * - Vue desktop : calendrier horizontal multi-employés, multi-équipes, scroll horizontal.
+ * - Vue mobile : calendrier vertical , un seul employé affiché, scroll infini.
+ * - Drag & drop des rendez-vous (react-dnd).
+ * - Gestion des sélections, contextes, et affichage dynamique selon la taille d'écran.
+ *
+ * Props principales :
+ * - employees : liste des employés à afficher
+ * - appointments : liste des rendez-vous
+ * - dayInTimeline : tableau des jours affichés
+ * - isMobile : détection mobile pour adapter l'affichage
+ *
+ * Composants principaux utilisés :
+ * - CalendarGrid : grille principale du calendrier
+ * - AppointmentItem : affichage d'un rendez-vous
+ * - DayCell / IntervalCell : cellules de la grille
+ *
+ * Auteur : GandaraSolution
+ * Dernière modification : 2025-07-18
+ */
+
 "use client";
 
 // Imports React, hooks, DnD, date-fns, types, composants, et données
@@ -52,9 +76,34 @@ function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
   };
 }
 
-// Composant principal de la page calendrier
+
+/**
+ * Page principale du calendrier (HomePage).
+ *
+ * Cette fonction composant React gère l'affichage et la logique de l'agenda/timeline des rendez-vous pour les employés.
+ * Elle inclut la gestion des états principaux, la logique de création, modification, suppression, répétition et division des rendez-vous,
+ * ainsi que l'affichage de la grille du calendrier, la gestion du scroll infini, des jours travaillés/non travaillés, 
+ * du menu contextuel, des modales (création/édition/répétition), du drawer latéral pour le drag & drop, 
+ * et des paramètres d'affichage.
+ *
+ * Principales fonctionnalités :
+ * - Affichage d'une grille calendrier avec gestion des employés et des rendez-vous.
+ * - Recherche, filtrage et sélection de rendez-vous.
+ * - Création, édition, suppression, répétition, division et prolongation de rendez-vous.
+ * - Gestion des jours non travaillés et des week-ends.
+ * - Drag & drop pour ajouter des rendez-vous depuis un tiroir latéral.
+ * - Menu contextuel (clic droit) pour actions rapides sur les cellules ou rendez-vous.
+ * - Responsive : adaptation à l'affichage mobile.
+ * - Paramètres d'affichage personnalisables (modal de réglages).
+ * - Scroll horizontal infini avec ajout dynamique de jours.
+ * - Gestion du presse-papier pour copier/coller des rendez-vous.
+ * - Modales d'alerte et d'information utilisateur.
+ *
+ * @component
+ * @returns {JSX.Element} L'interface complète de la page calendrier avec toutes ses fonctionnalités.
+ */
 export default function HomePage() {
-  // Etats principaux
+  // --- ETATS PRINCIPAUX ---
   const [includeWeekend, setIncludeWeekend] = useState(true);
   const [nonWorkingDates, setNonWorkingDates] = useState<Date[]>([]);
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
@@ -92,11 +141,8 @@ export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState<number>(employees.current[0]?.id ?? 0);
 
-  const employeesToShow = isMobile
-    ? employees.current.filter(e => e.id === selectedMobileEmployee)
-    : employees.current;
 
-
+  // --- PARAMÈTRES D'AFFICHAGE ET DE FILTRAGE ---
   const settings = [
     {
       category: "Affichage",
@@ -131,7 +177,6 @@ export default function HomePage() {
       ]
     }
   ];
-
 
   const researchAppointments = useCallback(() => {
         
@@ -997,7 +1042,7 @@ export default function HomePage() {
           <div
             className="flex flex-grow overflow-auto snap-x snap-mandatory scrollbar-hide"
             ref={mainScrollRef}
-            onScroll={handleScroll}
+            //onScroll={handleScroll}
             tabIndex={0}
             style={{ outline: "none" }}
           >

@@ -7,7 +7,7 @@ import {
 } from 'date-fns';
 import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
-import { fr } from 'date-fns/locale';
+import { da, fr } from 'date-fns/locale';
 import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT} from '../utils/constants'; // Constantes de style
 
 interface CalendarGridProps {
@@ -27,7 +27,33 @@ interface CalendarGridProps {
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
 }
 
-// Grille principale du calendrier, affiche les équipes, employés, jours et rendez-vous
+/**
+ * Composant React CalendarGrid
+ * 
+ * Affiche une grille de calendrier pour visualiser les rendez-vous des employés, regroupés par équipe,
+ * sur une période donnée (timeline de jours). Gère l'affichage mobile et desktop, l'empilement des rendez-vous
+ * qui se chevauchent, l'ouverture/fermeture des équipes, et l'interaction utilisateur (drag & drop, double-clic, etc.).
+ * 
+ * @component
+ * @param {CalendarGridProps} props - Propriétés du composant
+ * @param {Employee[]} props.employees - Liste des employés à afficher
+ * @param {Appointment[]} props.appointments - Liste des rendez-vous à afficher
+ * @param {Team[]} props.initialTeams - Liste initiale des équipes
+ * @param {Date[]} props.dayInTimeline - Liste des jours affichés dans la timeline
+ * @param {number[]} props.HALF_DAY_INTERVALS - Intervalles de demi-journée pour la grille
+ * @param {boolean} props.isFullDay - Indique si la vue est en journée complète
+ * @param {number} props.selectedCalendarId - Identifiant du calendrier sélectionné
+ * @param {Date[]} props.nonWorkingDates - Liste des jours non travaillés
+ * @param {boolean} props.isMobile - Indique si l'affichage est mobile
+ * @param {Function} props.onAppointmentMoved - Callback lors du déplacement d'un rendez-vous
+ * @param {Function} props.onCellDoubleClick - Callback lors du double-clic sur une cellule
+ * @param {Function} props.onAppointmentDoubleClick - Callback lors du double-clic sur un rendez-vous
+ * @param {Function} props.onExternalDragDrop - Callback lors d'un drag & drop externe
+ * @param {Function} props.handleContextMenu - Callback lors de l'ouverture du menu contextuel
+ * 
+ * @returns {JSX.Element} Grille de calendrier interactive
+ */
+
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   employees,
   appointments,
@@ -53,7 +79,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
   );
 
-  // Regroupe les employés par équipe
+  /**
+   * Regroupe les employés par équipe en fonction de leur `groupId` et du calendrier sélectionné.
+   *
+   * - Pour chaque équipe dans `initialTeams`, ajoute une propriété `employees` contenant
+   *   les employés dont le `groupId` correspond à l'identifiant de l'équipe et dont le
+   *   `calendarId` correspond à l'identifiant du calendrier sélectionné.
+   * - Ajoute une équipe spéciale "Sans équipe" pour les employés qui n'ont pas de `groupId`
+   *   ou dont le `groupId` ne correspond à aucune équipe existante.
+   * - Retourne uniquement les équipes qui ont au moins un employé.
+   *
+   * @param employees La liste complète des employés.
+   * @param initialTeams La liste initiale des équipes.
+   * @param selectedCalendarId L'identifiant du calendrier sélectionné.
+   * @returns Un tableau d'équipes, chacune contenant ses employés associés.
+   */
   const employeesByTeam = useMemo(() => {
     const teams = initialTeams.map(team => ({
       ...team,
@@ -94,6 +134,26 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
   };
 
+  /**
+   * Calcule le nombre maximal de rendez-vous qui se chevauchent dans une liste donnée.
+   *
+   * @param overlapping - Tableau de rendez-vous (`Appointment[]`) à analyser pour les chevauchements.
+   * 
+   * Fonctionnement :
+   * - Pour chaque rendez-vous de la liste, compte combien d'autres rendez-vous se chevauchent avec lui.
+   * - Initialise `maxOverlap` à 0 pour suivre le nombre maximal de chevauchements trouvés.
+   * - Parcourt chaque rendez-vous (`i`) :
+   *   - Initialise `overlapCount` à 1 (le rendez-vous lui-même compte).
+   *   - Parcourt les rendez-vous suivants (`j`) :
+   *     - Vérifie si le rendez-vous `j` chevauche le rendez-vous `i` :
+   *       - `overlapping[j].startDate < overlapping[i].endDate` : le début de `j` est avant la fin de `i`
+   *       - `overlapping[j].endDate > overlapping[i].startDate` : la fin de `j` est après le début de `i`
+   *     - Si oui, incrémente `overlapCount`.
+   *   - Met à jour `maxOverlap` si `overlapCount` est supérieur à la valeur actuelle.
+   * - Retourne le nombre maximal de chevauchements trouvé (au moins 1).
+   *
+   * @returns Le nombre maximal de rendez-vous qui se chevauchent dans la liste (au minimum 1).
+   */
   const getMaxOverlaps = useCallback(
     (overlapping: Appointment[]) => {
     // Filtre les rendez-vous de l'employé qui touchent l'intervalle
@@ -114,54 +174,168 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return Math.max(maxOverlap, 1);
   }, []);
   
-  // Calcule la hauteur nécessaire pour chaque cellule employé/jour
-  const employeeHeights = useMemo(() => 
-    employees.map(employee => {
-      const employeeAppointments = appointments.filter(app => app.employeeId === employee.id);
-      const overlapping = getMaxOverlaps(employeeAppointments);
-      return { employeeId: employee.id, height: (overlapping * CELL_HEIGHT) + (2 * overlapping) }; // +2 pour les marges
-    }
-  ), [employees, dayInTimeline, appointments, HALF_DAY_INTERVALS]);
 
-  const assignAppointmentTops = useCallback((appointments: Appointment[]) => {
-    // Résultat avec la propriété top
-    const result: (Appointment & { top: number })[] = [];
+ // Calcule la hauteur nécessaire pour chaque cellule employé/jour
+  const employeeHeights = useMemo(() => {
+    // useMemo mémorise le résultat pour éviter des recalculs inutiles si les dépendances ne changent pas
+    if (isMobile) {
+      // Si on est sur mobile, on veut calculer la hauteur pour chaque employé et chaque jour
+      // On initialise un tableau pour stocker les hauteurs calculées
+      const heights: { employeeId: number; dayKey: number; height: number }[] = [];
+
+      employees.forEach(employee => {
+        // Pour chaque employé
+
+        dayInTimeline.forEach(day => {
+          // Pour chaque jour de la période affichée
+
+          const dayStart = new Date(day);
+          dayStart.setHours(0, 0, 0, 0);
+          // On définit le début de la journée (00:00:00.000)
+
+          const dayEnd = new Date(day);
+          dayEnd.setHours(23, 59, 59, 999);
+          // On définit la fin de la journée (23:59:59.999)
+
+          const employeeAppointments = appointments.filter(
+            app =>
+              app.employeeId === employee.id &&
+              app.startDate < dayEnd &&
+              app.endDate > dayStart
+          );
+          // On filtre les rendez-vous de l'employé qui chevauchent ce jour
+
+          const overlapping = getMaxOverlaps(employeeAppointments);
+          // On calcule le nombre maximum de rendez-vous qui se chevauchent ce jour-là
+
+          heights.push({
+            employeeId: employee.id,
+            dayKey: dayStart.getTime(),
+            height:
+              overlapping === 0
+                ? CELL_HEIGHT
+                : overlapping * CELL_HEIGHT + 2 * overlapping + 10,
+          });
+          // On ajoute un objet avec l'id de l'employé, la clé du jour, et la hauteur calculée
+          // Si aucun chevauchement : hauteur par défaut, sinon on ajuste selon le nombre de chevauchements
+        });
+      });
+
+      return heights;
+      // On retourne le tableau des hauteurs pour chaque employé et chaque jour
+
+    } else {
+      // Sinon (desktop), on calcule une hauteur globale par employé sur toute la période
+
+      return employees.map(employee => {
+        // Pour chaque employé
+
+        const employeeAppointments = appointments.filter(app => app.employeeId === employee.id);
+        // On récupère tous ses rendez-vous
+
+        const overlapping = getMaxOverlaps(employeeAppointments);
+        // On calcule le nombre maximum de rendez-vous qui se chevauchent sur toute la période
+
+        if (overlapping === 0) return { employeeId: employee.id, height: CELL_HEIGHT };
+        // Si aucun chevauchement, hauteur par défaut
+
+        return { employeeId: employee.id, height: (overlapping * CELL_HEIGHT) + (2 * overlapping) + 10, dayKey: undefined };
+        // Sinon, on ajuste la hauteur selon le nombre de chevauchements
+      });
+    }
+  }, [employees, appointments, getMaxOverlaps, dayInTimeline, isMobile]);
+  // Les dépendances : recalcul si l'une d'elles change
+
+  
+  /**
+   * Attribue à chaque rendez-vous (`Appointment`) un indice de "pile" (`top`) pour l'affichage dans une grille de calendrier,
+   * en tenant compte des chevauchements entre rendez-vous pour chaque employé.
+   *
+   * @param appointments - Liste des rendez-vous à traiter.
+   * @param isMobile - Indique si l'affichage est en mode mobile (pile par jour) ou desktop (pile globale).
+   * @param dayInTimeline - Tableau des dates représentant chaque jour affiché dans la timeline.
+   * @returns Un tableau de rendez-vous enrichis avec la propriété `top` (indice de pile) et, en mode mobile, `_dayKey` (identifiant du jour).
+   *
+   * @remarks
+   * - En mode mobile, les rendez-vous sont empilés par jour et par employé : pour chaque jour, on calcule les chevauchements et on attribue un indice de pile.
+   * - En mode desktop, l'empilement est calculé globalement sur toute la période pour chaque employé.
+   * - La propriété `top` permet de positionner verticalement les rendez-vous qui se chevauchent dans la grille.
+   * - La propriété `_dayKey` (uniquement en mobile) permet d'identifier le jour associé à la pile.
+   *
+   * @example
+   * // Utilisation pour afficher les rendez-vous dans une grille :
+   * const appointmentsWithTop = assignAppointmentTops(appointments, isMobile, , days);
+   */
+  const assignAppointmentTops = useCallback((appointments: Appointment[], isMobile: boolean, dayInTimeline: Date[]) => {
+    const result: (Appointment & { top: number, _dayKey?: number })[] = [];
 
     employees.forEach(emp => {
-      // Trie les rendez-vous par date de début croissante
-      const sorted = [...appointments]
-        .filter(app => app.employeeId === emp.id)
-        .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-      // Tableau des piles (slots)
-      const slots: Appointment[][] = [];
-      
+      if (isMobile) {
+        // Pour chaque jour, on empile les RDV qui se chevauchent ce jour-là
+        dayInTimeline.forEach(day => {
+          const dayStart = new Date(day);
+          dayStart.setHours(0, 0, 0, 0);
+          const dayEnd = new Date(day);
+          dayEnd.setHours(23, 59, 59, 999);
 
-      sorted.forEach(app => {
-        let slotIndex = 0;
-        // Cherche le premier slot libre (pas de chevauchement)
-        while (
-          slots[slotIndex] &&
-          slots[slotIndex].some(other =>
-            !(app.endDate <= other.startDate || app.startDate >= other.endDate)
-          )
-        ) {
-          slotIndex++;
-        }
-        if (!slots[slotIndex]) slots[slotIndex] = [];
-        slots[slotIndex].push(app);
-        result.push({ ...app, top: slotIndex });
-      });
-    });    
+          // RDV de l'employé qui touchent ce jour
+          const dayAppointments = appointments
+            .filter(app =>
+              app.employeeId === emp.id &&
+              app.startDate < dayEnd && app.endDate > dayStart
+            )
+            .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+          // Empilement par chevauchement sur la journée
+          const slots: Appointment[][] = [];
+          dayAppointments.forEach(app => {
+            let slotIndex = 0;
+            while (
+              slots[slotIndex] &&
+              slots[slotIndex].some(other =>
+                !(app.endDate <= other.startDate || app.startDate >= other.endDate)
+              )
+            ) {
+              slotIndex++;
+            }
+            if (!slots[slotIndex]) slots[slotIndex] = [];
+            slots[slotIndex].push(app);
+            // On ajoute la propriété top spécifique à ce jour
+            result.push({ ...app, top: slotIndex, _dayKey: dayStart.getTime() });
+          });
+        });
+      } else {
+        // Desktop : logique d'empilement globale sur toute la période
+        const sorted = [...appointments]
+          .filter(app => app.employeeId === emp.id)
+          .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+        const slots: Appointment[][] = [];
+        sorted.forEach(app => {
+          let slotIndex = 0;
+          while (
+            slots[slotIndex] &&
+            slots[slotIndex].some(other =>
+              !(app.endDate <= other.startDate || app.startDate >= other.endDate)
+            )
+          ) {
+            slotIndex++;
+          }
+          if (!slots[slotIndex]) slots[slotIndex] = [];
+          slots[slotIndex].push(app);
+          result.push({ ...app, top: slotIndex});
+        });
+      }
+    });
     return result;
-  },[]);
+  }, [employees]);
 
   // Calcule les tops uniquement entre les rendez-vous de cet employé
-  const appointmentsWithTop = assignAppointmentTops(appointments);
-
+  const appointmentsWithTop = assignAppointmentTops(appointments, isMobile, dayInTimeline);
+  
   if (isMobile) {
     const displayEmployee = employees[0];
     return (
-      <div className="relative h-full w-full overflow-y-auto font-inter"> {/* Enable vertical scrolling */}
+      <div className="relative h-full w-full font-inter"> {/* Enable vertical scrolling */}
       {/* Employee Header (fixed at top) */}
       <div className="sticky top-0 z-30 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-center rounded-b-xl shadow-lg">
         {displayEmployee.avatarUrl && (
@@ -178,10 +352,18 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       {/* Main content area - vertical list of days */}
       <div className="flex flex-col w-full">
         {dayInTimeline.map((day, index) => {
+          const dayStart = new Date(day);
+          dayStart.setHours(0, 0, 0, 0);
+          const dayEnd = new Date(day);
+          dayEnd.setHours(23, 59, 59, 999);
           const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
-            isSameDay(app.startDate, day) && app.employeeId === displayEmployee.id
+            app.employeeId === displayEmployee.id &&
+            app._dayKey === dayStart.getTime()
           );
 
+          const rowHeight = isMobile
+            ? employeeHeights.find(e => e.employeeId === displayEmployee.id && e.dayKey === dayStart.getTime())?.height ?? CELL_HEIGHT
+            : employeeHeights.find(e => e.employeeId === displayEmployee.id)?.height ?? CELL_HEIGHT;
           return (
             <div key={`day-section-${format(day, 'yyyy-MM-dd')}`} className="border-b border-gray-200">
               {/* Date Header for each day */}
@@ -206,6 +388,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 intervals={HALF_DAY_INTERVALS}
                 isFullDay={isFullDay}
                 nonWorkingDates={nonWorkingDates}
+                isMobile={isMobile}
+                RowHeight={dayEmployeeAppointments.length > 0 ? rowHeight : CELL_HEIGHT}
                 onAppointmentMoved={onAppointmentMoved}
                 onCellDoubleClick={onCellDoubleClick}
                 onAppointmentClick={onAppointmentDoubleClick}
@@ -314,6 +498,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       appointments={[]}
                       isCellActive={false}
                       intervals={HALF_DAY_INTERVALS}
+                      isMobile={isMobile}
                       onAppointmentMoved={onAppointmentMoved}
                       onCellDoubleClick={onCellDoubleClick}
                       onAppointmentClick={onAppointmentDoubleClick}
@@ -368,6 +553,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                           intervals={HALF_DAY_INTERVALS}
                           isFullDay={isFullDay}
                           RowHeight={rowHeight}
+                          isMobile={isMobile}
                           nonWorkingDates={nonWorkingDates}
                           onAppointmentMoved={onAppointmentMoved}
                           onCellDoubleClick={onCellDoubleClick}
