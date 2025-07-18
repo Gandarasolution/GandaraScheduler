@@ -101,6 +101,80 @@ const DayCell: React.FC<DayCellProps> = ({
     nonWorkingDates?.some(date => isSameDay(date, day)) ?? false, [nonWorkingDates, day]
   );
   
+  // Affichage mobile compact et lecture seule
+  if (isMobile) {
+    // On affiche tous les rendez-vous du jour sous forme de pastilles colorées
+    const maxVisible = 3; // Nombre max de pastilles affichées
+    const visibleAppointments = appointments.slice(0, maxVisible);
+    const hiddenCount = appointments.length - maxVisible;
+    // État local pour afficher la bulle d'info
+    const [tooltip, setTooltip] = React.useState<{anchor: HTMLElement | null, app: Appointment | null} | null>(null);
+    
+    return (
+      <div
+        className={`snap-center day-cell flex flex-col items-start border-gray-200 px-2 py-1 bg-white ${
+          isWeekend ? 'bg-gray-50 text-gray-400' : ''
+        } ${isFerie ? 'bg-yellow-100 text-yellow-700' : ''} ${isNonWorkingDay ? 'bg-red-100 text-red-700' : ''}`}
+        key={`${format(day, 'yyyy-MM-dd')}-${employeeId}`}
+        id={format(day, 'yyyy-MM-dd')}
+        style={{ minHeight: CELL_HEIGHT, borderRadius: 8, margin: 2, position: 'relative' }}
+      >
+        {/* En-tête du jour */}
+        <div className="flex items-center gap-2 mb-1">
+          <span className="font-bold text-base">{format(day, 'd')}</span>
+          <span className="text-xs text-gray-500">{format(day, 'EEE')}</span>
+        </div>
+        {/* Pastilles rendez-vous */}
+        <div className="flex flex-row flex-wrap gap-1">
+          {visibleAppointments.map((app, idx) => (
+            <span
+              key={app.id}
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm bg-gray-200 text-gray-700`}
+              title={app.title}
+              style={{cursor: 'pointer'}}
+              onClick={e => {
+                e.stopPropagation();
+                setTooltip({anchor: e.currentTarget, app});
+              }}
+            >
+              {app.title.length > 12 ? app.title.slice(0, 12) + '…' : app.title}
+            </span>
+          ))}
+          {hiddenCount > 0 && (
+            <span className="rounded-full bg-gray-300 text-gray-700 px-2 py-0.5 text-xs font-semibold">+{hiddenCount}</span>
+          )}
+        </div>
+        {/* Info-bulle personnalisée */}
+        {tooltip && tooltip.app && (
+          <div
+            style={{
+              position: 'absolute',
+              top: tooltip.anchor?.offsetTop ? tooltip.anchor.offsetTop + 28 : 40,
+              left: tooltip.anchor?.offsetLeft ?? 0,
+              zIndex: 100,
+              minWidth: 180,
+              background: 'white',
+              border: '1px solid #ddd',
+              borderRadius: 8,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+              padding: 12,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="font-bold text-sm mb-1">{tooltip.app.title}</div>
+            {tooltip.app.description && <div className="text-xs mb-1">{tooltip.app.description}</div>}
+            <div className="text-xs text-gray-500">{tooltip.app.startDate ? format(tooltip.app.startDate, 'HH:mm') : ''} - {tooltip.app.endDate ? format(tooltip.app.endDate, 'HH:mm') : ''}</div>
+            <button
+              className="mt-2 text-xs text-blue-600 underline"
+              onClick={() => setTooltip(null)}
+            >Fermer</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop : rendu classique
   return (
     <div 
       className={`
@@ -118,27 +192,17 @@ const DayCell: React.FC<DayCellProps> = ({
       key={`${format(day, 'yyyy-MM-dd')}-${employeeId}`}
       id={format(day, 'yyyy-MM-dd')}
       style={{ 
-        height: 'auto', // Utilise RowHeight si fourni, sinon auto
-        minHeight: CELL_HEIGHT, // Hauteur minimale pour la cellule
+        height: 'auto',
+        minHeight: CELL_HEIGHT,
       }}
     >
       {/* Le numéro du jour est maintenant géré par l'en-tête global dans CalendarGrid */}
       {intervals.map((interval) => {
-        // Calcule le début et la fin de l'intervalle (matin/après-midi)
         const intervalStart = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.startHour), 0), 0), 0);
         const intervalEnd = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.endHour), 0), 0), 0);
-
-        
-         // Filtre les rendez-vous qui CHEVAUCHENT cet intervalle (et pas seulement ceux qui commencent dedans)
-        const intervalAppointments = !isMobile ? appointments.filter((app) =>
+        const intervalAppointments = appointments.filter((app) =>
           app.startDate >= intervalStart && app.startDate < intervalEnd
-        ) : appointments.filter((app) =>
-          ((isFullDay ? 
-            intervalStart.getHours() === DAY_INTERVALS[0].startHour
-            : intervalStart.getHours() === HALF_DAY_INTERVALS[0].startHour
-          ) && app.startDate <= intervalStart && app.endDate >= intervalEnd)
-        );        
-
+        );
         return (
           <IntervalCell
             key={`${format(day, 'yyyy-MM-dd')}-${interval.name}-${employeeId}`}
