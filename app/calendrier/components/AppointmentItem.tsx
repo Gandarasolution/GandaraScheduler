@@ -299,47 +299,56 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onContextMenu={(e) => handleContextMenu(e, 'appointment', appointment)}
       className={`
         ${color}
-        absolute rounded p-1 text-sm
-        flex flex-shrink-0 items-center gap-1 overflow-x-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-opacity z-10 h-10
-        border-l border-transparent
-        ${isDragging ? 'opacity-50 ' : 'opacity-100'}
-        ${isSelected ? `ring-2` : ''}
+        absolute rounded-xl p-2 text-sm shadow-md
+        flex flex-shrink-0 items-center gap-2 overflow-x-hidden whitespace-nowrap text-ellipsis
+        cursor-grab transition-all z-20 h-11
+        border-blue-400
+        ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
+        ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
+        hover:shadow-xl hover:bg-blue-50
       `}
       title={appointment.title}
       style={{
         width: calculatedWidth,
-        height: `${CELL_HEIGHT}px`,
+        height: `${CELL_HEIGHT + 4}px`,
         minWidth: `${INTERVAL_WIDTH}px`,
         pointerEvents: isDragging ? 'none' : 'auto',
         left: `${offsetPx}px`,
         willChange: 'width, left',
-        top: `${(appointment.top * CELL_HEIGHT) + (2 * appointment.top)}px`, // Position verticale basée sur le top calculé
+        top: `${(appointment.top * CELL_HEIGHT) + (2 * appointment.top)}px`,
       }}
       onMouseDown={handleDragStart}
     >
       {/* Handle de redimensionnement à gauche */}
       <div
-        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize"
+        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize z-30"
         title="Redimensionner"
         onMouseDown={(e) => handleMouseDown(e, 'left')}
+        style={{borderRadius: '4px 0 0 4px'}}
       />
       {/* Image éventuelle */}
       {appointment.imageUrl && (
         <img
           src={appointment.imageUrl}
           alt="Icône"
-          className="w-5 h-5 rounded-full object-cover"
+          className="w-7 h-7 rounded-full object-cover shadow-sm"
         />
       )}
+      {/* Badge heure */}
+      <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-bold mr-1">
+        {appointment.startDate ? `${appointment.startDate.getHours().toString().padStart(2, '0')}:${appointment.startDate.getMinutes().toString().padStart(2, '0')}` : ''}
+      </span>
       {/* Titre du rendez-vous */}
-      <span className="flex-grow text-gray-800 overflow-hidden">{appointment.title}</span>
+      <span className="flex-grow text-gray-800 font-semibold overflow-hidden">
+        {appointment.title.length > 18 ? appointment.title.slice(0, 18) + '…' : appointment.title}
+      </span>
       {/* Handle de redimensionnement à droite */}
       <div
-        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize"
+        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize z-30"
         title="Redimensionner"
         onMouseDown={(e) => handleMouseDown(e, 'right')}
+        style={{borderRadius: '0 4px 4px 0'}}
       />
     </div>
   );

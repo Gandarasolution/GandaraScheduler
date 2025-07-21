@@ -80,7 +80,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''), // Par défaut au premier employé ou vide
         }
   );
-  const [includeWeekend, setIncludeWeekend] = useState(false); // Nouveau champ pour inclure les week-ends
   const isFullNotWorkingDay = useMemo(() => {
     return eachDayOfInterval({ 
       start: formData.startDate, 
@@ -88,6 +87,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }).every(date => !isWorkedDay(date, nonWorkingDates));
   }, [formData.startDate, formData.endDate]);
 
+  const [includeNotWorkingDay, setIncludeNotWorkingDay] = useState(isFullNotWorkingDay ? true : false); // Nouveau champ pour inclure les week-ends
+  const [titleNotValid, setTitleNotValid] = useState(false);
 
   /**
    * Gère les changements des champs texte, textarea et select du formulaire.
@@ -100,6 +101,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     if (name === 'employeeId') {
       setFormData((prev) => ({ ...prev, employeeId: Number(value) }));
       return;
+    }
+    if (name === 'title' && value.trim() === '') {
+      setTitleNotValid(true);
+      return;     
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -134,7 +139,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData as Appointment, includeWeekend);
+    if (formData.title.trim() === '') {
+      setTitleNotValid(true);
+      return;
+    }
+    onSave(formData as Appointment, includeNotWorkingDay);
   };
 
   /**
@@ -158,8 +167,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           className={`
             h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 
             ${isFullNotWorkingDay ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
-          checked={isFullNotWorkingDay ? true : includeWeekend} 
-          onChange={e => setIncludeWeekend(e.target.checked)} 
+          checked={includeNotWorkingDay} 
+          onChange={e => setIncludeNotWorkingDay(e.target.checked)} 
         />
         <label 
           className="ml-2 text-sm text-gray-700"
@@ -180,8 +189,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           value={formData.title}
           onChange={handleChange}
           required
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue500 focus:border-blue-500"
+          className={`
+            w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 
+            ${titleNotValid && 'border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50' }
+          `}
         />
+
       </div>
   
       {/* Description */}
@@ -351,7 +364,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         <button
           type="submit"
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors btn-save"
-          onClick={() => onSave(formData as Appointment, includeWeekend)}
         >
           {appointment ? 'Enregistrer les modifications' : 'Créer le rendez-vous'}
         </button>

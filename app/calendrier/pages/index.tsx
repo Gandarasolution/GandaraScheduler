@@ -533,6 +533,8 @@ export default function HomePage() {
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback((appointment: Appointment, includeWeekend: boolean) => {
 
+    console.log(includeWeekend);
+    
 
     const days = getWorkedDayIntervals(
       appointment.startDate, 
@@ -541,6 +543,9 @@ export default function HomePage() {
       includeWeekend,
       nonWorkingDates
     );
+
+    console.log("Jours travaillés :", days);
+    
 
     
     // Fonction utilitaire pour créer les rendez-vous supplémentaires
@@ -1042,7 +1047,7 @@ export default function HomePage() {
           <div
             className="flex flex-grow overflow-auto snap-x snap-mandatory scrollbar-hide"
             ref={mainScrollRef}
-            //onScroll={handleScroll}
+            onScroll={handleScroll}
             tabIndex={0}
             style={{ outline: "none" }}
           >

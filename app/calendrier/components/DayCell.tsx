@@ -1,10 +1,11 @@
 "use client";
-import React, {memo, useMemo}from 'react';
+import React, {memo, useMemo, useState}from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
 import IntervalCell from './IntervalCell';
 import { Appointment, HalfDayInterval, } from '../types';
 import { isHoliday } from '../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
 import { CELL_HEIGHT, HALF_DAY_INTERVALS, DAY_INTERVALS } from '../utils/constants';
+import { fr } from 'date-fns/locale';
 
 /**
  * Props du composant DayCell
@@ -107,29 +108,46 @@ const DayCell: React.FC<DayCellProps> = ({
     const maxVisible = 3; // Nombre max de pastilles affichées
     const visibleAppointments = appointments.slice(0, maxVisible);
     const hiddenCount = appointments.length - maxVisible;
+    const isToday = isSameDay(day, new Date());
     // État local pour afficher la bulle d'info
-    const [tooltip, setTooltip] = React.useState<{anchor: HTMLElement | null, app: Appointment | null} | null>(null);
+    const [tooltip, setTooltip] = useState<{anchor: HTMLElement | null, app: Appointment | null} | null>(null);
     
     return (
       <div
-        className={`snap-center day-cell flex flex-col items-start border-gray-200 px-2 py-1 bg-white ${
-          isWeekend ? 'bg-gray-50 text-gray-400' : ''
-        } ${isFerie ? 'bg-yellow-100 text-yellow-700' : ''} ${isNonWorkingDay ? 'bg-red-100 text-red-700' : ''}`}
+        className={`snap-center day-cell flex flex-col items-start border-gray-200 px-2 py-1 bg-white 
+          ${isWeekend ? 'bg-gray-50 text-gray-400' : ''} 
+          ${isFerie ? 'bg-yellow-100 text-yellow-700' : ''} 
+          ${isNonWorkingDay ? 'bg-red-100 text-red-700' : ''}
+          ${isToday ? 'ring-2 ring-blue-400 shadow-md' : ''}
+        `}
         key={`${format(day, 'yyyy-MM-dd')}-${employeeId}`}
         id={format(day, 'yyyy-MM-dd')}
-        style={{ minHeight: CELL_HEIGHT, borderRadius: 8, margin: 2, position: 'relative' }}
+        style={{ 
+          minHeight: CELL_HEIGHT, 
+          borderRadius: 12, 
+          margin: 4, 
+          position: 'relative' ,
+          transition: 'box-shadow 0.2s, background 0.2s',
+        }}
       >
         {/* En-tête du jour */}
         <div className="flex items-center gap-2 mb-1">
           <span className="font-bold text-base">{format(day, 'd')}</span>
-          <span className="text-xs text-gray-500">{format(day, 'EEE')}</span>
+          <span className="text-xs text-gray-500">{format(day, 'EEE', { locale: fr })}</span>
+          {isToday && <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">Aujourd’hui</span>}
         </div>
         {/* Pastilles rendez-vous */}
         <div className="flex flex-row flex-wrap gap-1">
           {visibleAppointments.map((app, idx) => (
             <span
               key={app.id}
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm bg-gray-200 text-gray-700`}
+              className={`
+                rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm
+                transition-all duration-150
+                bg-gray-200 text-gray-700
+                hover:bg-blue-200 hover:text-blue-900 active:scale-95
+                flex items-center gap-1
+              `}
               title={app.title}
               style={{cursor: 'pointer'}}
               onClick={e => {
@@ -152,22 +170,34 @@ const DayCell: React.FC<DayCellProps> = ({
               top: tooltip.anchor?.offsetTop ? tooltip.anchor.offsetTop + 28 : 40,
               left: tooltip.anchor?.offsetLeft ?? 0,
               zIndex: 100,
-              minWidth: 180,
+              minWidth: 200,
               background: 'white',
               border: '1px solid #ddd',
-              borderRadius: 8,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-              padding: 12,
+              borderRadius: 12,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+              padding: 14,
+              animation: 'fadeIn 0.2s',
             }}
             onClick={e => e.stopPropagation()}
           >
             <div className="font-bold text-sm mb-1">{tooltip.app.title}</div>
             {tooltip.app.description && <div className="text-xs mb-1">{tooltip.app.description}</div>}
-            <div className="text-xs text-gray-500">{tooltip.app.startDate ? format(tooltip.app.startDate, 'HH:mm') : ''} - {tooltip.app.endDate ? format(tooltip.app.endDate, 'HH:mm') : ''}</div>
+            <div className="text-xs text-gray-500">
+              {
+                tooltip.app.startDate.getHours() === HALF_DAY_INTERVALS[0].startHour && tooltip.app.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
+                  ? 'Matin'
+                  : tooltip.app.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour && tooltip.app.endDate.getHours() === HALF_DAY_INTERVALS[1].endHour
+                    ? 'Après-midi'
+                    : 'Journée complète'
+              }
+            </div>
             <button
               className="mt-2 text-xs text-blue-600 underline"
               onClick={() => setTooltip(null)}
-            >Fermer</button>
+            >
+              Fermer
+            </button>
+
           </div>
         )}
       </div>
