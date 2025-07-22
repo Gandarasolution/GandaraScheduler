@@ -2,7 +2,7 @@
 import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
 import { Appointment, HalfDayInterval } from '../types';
-import { addDays } from 'date-fns';
+import { addDays, eachDayOfInterval, isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../utils/constants';
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
 import { useSelectedCell } from '../context/SelectedCellContext';
@@ -11,6 +11,7 @@ interface AppointmentItemProps {
   appointment: Appointment & { top: number };
   isFullDay: boolean;
   isMobile: boolean;
+  includeWeekend?: boolean;
   onDoubleClick: () => void;
   onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
   color?: string;
@@ -38,6 +39,7 @@ interface AppointmentItemProps {
  * @param {string} props.color - Couleur de fond du rendez-vous.
  * @param {boolean} props.isFullDay - Indique si le rendez-vous occupe la journée entière.
  * @param {boolean} props.isMobile - Indique si l'affichage est en mode mobile.
+ * @param {boolean} props.includeWeekend - Indique si les week-ends sont visibles.
  * @param {() => void} props.onDoubleClick - Callback lors d'un double-clic sur le rendez-vous.
  * @param {(id: string, newStart: Date, newEnd: Date, direction: 'left' | 'right') => void} props.onResize - Callback lors du redimensionnement.
  * @param {(e: React.MouseEvent, type: 'appointment', appointment: Appointment) => void} props.handleContextMenu - Callback pour le menu contextuel.
@@ -54,6 +56,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   color,
   isFullDay,
   isMobile,
+  includeWeekend,
   onDoubleClick,
   onResize,
   handleContextMenu,
@@ -81,14 +84,54 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     : (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * 60 * 60 * 1000;
     
   // Calcule le nombre d'intervalles (matin/après-midi) entre deux dates
+  // Calcule le nombre d'intervalles (matin/après-midi) entre deux dates, en sautant les week-ends si besoin
   const getIntervalCount = useCallback((start: Date, end: Date) => {
-    const diff = end.getTime() - start.getTime();
-    return Math.max(1, Math.round(diff / INTERVAL_DURATION));
-  }, []);
+    const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+    let count = 0;
+    let current = new Date(start);
+    const forward = end >= start;
+    const compare = (a: Date, b: Date) => forward ? a < b : a > b;
+
+    while (compare(current, end)) {
+      if (includeWeekend || (!isWeekend(current))) {
+        count++;
+      }
+      // Avance/recul d'un intervalle
+      let idx = intervals.findIndex(interval =>
+        current.getHours() >= interval.startHour && current.getHours() < interval.endHour
+      );
+      if (idx === -1) idx = 0;
+      if (forward) {
+        idx++;
+        if (idx >= intervals.length) {
+          idx = 0;
+          current = addDays(current, 1);
+          current.setHours(intervals[idx].startHour, 0, 0, 0);
+        } else {
+          current.setHours(intervals[idx].startHour, 0, 0, 0);
+        }
+      } else {
+        idx--;
+        if (idx < 0) {
+          idx = intervals.length - 1;
+          current = addDays(current, -1);
+          current.setHours(intervals[idx].startHour, 0, 0, 0);
+        } else {
+          current.setHours(intervals[idx].startHour, 0, 0, 0);
+        }
+      }
+    }
+    return Math.max(1, count);
+  }, [includeWeekend, isFullDay]);
+
   const intervalCount = getIntervalCount(dragStart, dragEnd);
+  
+  
 
   // Largeur calculée du rendez-vous (responsive mobile/desktop)
-  const calculatedWidth = isMobile ? (intervalCount >= 2 && !isFullDay ? '200%' : '100%') : `${intervalCount * INTERVAL_WIDTH}px`;
+  const calculatedWidth = isMobile 
+    ? (intervalCount >= 2 && !isFullDay ? '200%' : '100%') 
+    : `${intervalCount * INTERVAL_WIDTH}px`;
 
   // Drag & drop avec react-dnd
   const [{ isDragging }, drag] = useDrag({
@@ -138,33 +181,35 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
    * @param intervals Tableau d'intervalles (ex: HALF_DAY_INTERVALS ou DAY_INTERVALS)
    * @returns Nouvelle date positionnée au début de l'intervalle cible
    */
+  // Ajoute ou retire n intervalles en sautant les week-ends si besoin
   const addInterval = useCallback((date: Date, n: number, intervals: HalfDayInterval[]): Date => {
     let next = new Date(date);
-    // Trouve l'index de l'intervalle courant
     let idx = intervals.findIndex(interval =>
       next.getHours() >= interval.startHour && next.getHours() < interval.endHour
     );
-    if (idx === -1) idx = 0; // fallback
-
-    for (let i = 0; i < Math.abs(n); i++) {
-      if (n > 0) {
-        idx++;
-        if (idx >= intervals.length) {
-          idx = 0;
-          next = addDays(next, 1);
-        }
-      } else {
-        idx--;
-        if (idx < 0) {
-          idx = intervals.length - 1;
-          next = addDays(next, -1);
+    if (idx === -1) idx = 0;
+    let step = n >= 0 ? 1 : -1;
+    let remaining = Math.abs(n);
+    while (remaining > 0) {
+      idx += step;
+      if (idx >= intervals.length) {
+        idx = 0;
+        next = addDays(next, 1);
+      } else if (idx < 0) {
+        idx = intervals.length - 1;
+        next = addDays(next, -1);
+      }
+      // Si on ne veut pas inclure les week-ends, saute samedi/dimanche
+      if (!includeWeekend) {
+        while (next.getDay() === 0 || next.getDay() === 6) {
+          next = addDays(next, step);
         }
       }
+      remaining--;
     }
-    // Positionne l'heure au début de l'intervalle cible
     next.setHours(intervals[idx].startHour, 0, 0, 0);
     return next;
-  }, []);
+  }, [includeWeekend]);
 
   // Débute le redimensionnement (gauche ou droite)
   /**
@@ -199,41 +244,26 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
    * @param e - L'événement souris déclenché lors du mouvement.
    */
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    e.preventDefault(); // Empêche le comportement par défaut du navigateur
-    if (!isResizingLeft && !isResizingRight) return; // Ne fait rien si aucun redimensionnement n'est actif
+    e.preventDefault();
+    if (!isResizingLeft && !isResizingRight) return;
 
-    // Calcule le déplacement horizontal de la souris depuis le début du redimensionnement
     const currentDx = e.clientX - initialX.current + (INTERVAL_WIDTH / 2);
-
-    // Calcule le nombre d'intervalles (cellules) parcourus
     let intervalsMoved = Math.round(currentDx / INTERVAL_WIDTH);
-
-    // Dates temporaires pour le calcul
-    let newStartDate = dragStartRef.current;
-    let newEndDate = dragEndRef.current;
-
-    // Choisit le bon tableau d'intervalles selon le type de rendez-vous
     const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
 
-    // Si on redimensionne à gauche
     if (isResizingLeft) {
-      // Calcule la nouvelle date de début
-      newStartDate = addInterval(appointment.startDate, intervalsMoved, intervals);
-      // Empêche la date de début de dépasser la date de fin
+      let newStartDate = addInterval(appointment.startDate, intervalsMoved, intervals);
       if (newStartDate >= dragEndRef.current) {
         newStartDate = addInterval(dragEndRef.current, -1, intervals);
       }
-      setDragStartSafe(newStartDate); // Met à jour la date de début
+      setDragStartSafe(newStartDate);
     }
-    // Si on redimensionne à droite
     if (isResizingRight) {
-      // Calcule la nouvelle date de fin
-      newEndDate = addInterval(appointment.endDate, intervalsMoved, intervals);
-      // Empêche la date de fin de précéder la date de début
+      let newEndDate = addInterval(appointment.endDate, intervalsMoved, intervals);
       if (newEndDate <= dragStartRef.current) {
         newEndDate = addInterval(dragStartRef.current, 1, intervals);
       }
-      setDragEndSafe(newEndDate); // Met à jour la date de fin
+      setDragEndSafe(newEndDate);
     }
   }, [isResizingLeft, isResizingRight, appointment.startDate, appointment.endDate, addInterval, setDragStartSafe, setDragEndSafe]);
 
@@ -250,12 +280,29 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
    * @returns {void}
    */
   const handleMouseUp = useCallback(() => {
+    let newEndDate = dragEndRef.current;
+    if (!includeWeekend && (appointment.endDate > dragEndRef.current || appointment.startDate < dragStartRef.current)) {
+      const days = eachDayOfInterval({
+        start: dragStartRef.current,
+        end: addDays(dragEndRef.current, 1), // Inclut le dernier jour
+      });
+      // Nombre de jours qui sont un week-end (samedi ou dimanche)
+      const weekendCount = days.filter(day => day.getDay() === 0 || day.getDay() === 6).length;
+      const intervalsPerDay = isFullDay ? DAY_INTERVALS.length : HALF_DAY_INTERVALS.length;
+      const workedIntervals = (days.length) * intervalsPerDay;
+      newEndDate = addInterval(dragStartRef.current, workedIntervals, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
+      
+      console.log('workedIntervals', workedIntervals,'newEndDate', newEndDate);
+      
+    }
+   
     if (isResizingRight) {
-      onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right');
+      onResize(appointment.id, dragStartRef.current, newEndDate, 'right');
     }
     if (isResizingLeft) {
-      onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'left');
+      onResize(appointment.id, dragStartRef.current, newEndDate, 'left');
     }
+    
     setIsResizingLeft(false);
     setIsResizingRight(false);
   }, [isResizingLeft, isResizingRight, onResize, appointment.id]);
@@ -301,7 +348,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         ${color}
         absolute rounded-xl p-2 text-sm shadow-md
         flex flex-shrink-0 items-center gap-2 overflow-x-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-all z-20 h-11
+        cursor-grab transition-all z-10 h-11
         border-blue-400
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}

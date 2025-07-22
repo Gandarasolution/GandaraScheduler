@@ -37,6 +37,7 @@ import {
   addWeeks,
   addMonths,
   isSameDay,
+  addMinutes,
 } from "date-fns";
 import { Appointment, Employee } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
@@ -56,7 +57,7 @@ import {
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
-import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend } from "../utils/dates";
+import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend, getBeforeWorkedDay } from "../utils/dates";
 import { calendars } from "../../datasource";
 
 // Définition des types d'événements pour le drawer
@@ -139,7 +140,6 @@ export default function HomePage() {
   const [modalInfo, setModaltInfo] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [selectedMobileEmployee, setSelectedMobileEmployee] = useState<number>(employees.current[0]?.id ?? 0);
 
 
   // --- PARAMÈTRES D'AFFICHAGE ET DE FILTRAGE ---
@@ -510,7 +510,7 @@ export default function HomePage() {
       
       if (resizeDirection === 'right') {
         // Met à jour le rendez-vous principal sur le premier intervalle
-        onResize(appointment.id, days[0].start, days[0].end, newEmployeeId);
+        onResize(appointment.id, newStartDate, days[0].end, newEmployeeId);
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
@@ -519,7 +519,7 @@ export default function HomePage() {
       }
       if (resizeDirection === 'left') {
         // Met à jour le rendez-vous principal sur le dernier intervalle
-        onResize(appointment.id, days[days.length - 1].start, days[days.length - 1].end, newEmployeeId);
+        onResize(appointment.id, days[days.length - 1].start, newEndDate, newEmployeeId);
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
@@ -531,11 +531,7 @@ export default function HomePage() {
   );
 
   // Gestion de la création et édition de rendez-vous
-  const handleSaveAppointment = useCallback((appointment: Appointment, includeWeekend: boolean) => {
-
-    console.log(includeWeekend);
-    
-
+  const handleSaveAppointment = useCallback((appointment: Appointment, includeWeekend: boolean) => {    
     const days = getWorkedDayIntervals(
       appointment.startDate, 
       appointment.endDate,
@@ -958,6 +954,17 @@ export default function HomePage() {
         ? eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) })
         : eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) }).filter(date => !isWeekend(date))
     );
+
+    appointments.current.forEach(app => {
+      moveAppointment(
+        app.id,
+        app.startDate,
+        app.endDate,
+        app.employeeId as number,
+        'right'
+      );
+    });
+
   }, [includeWeekend]);
     
   useEffect(() => {
@@ -1065,6 +1072,7 @@ export default function HomePage() {
                     isFullDay={isFullDay}
                     selectedCalendarId={selectedCalendarId}
                     isMobile={isMobile}
+                    includeWeekend={includeWeekend}
                     nonWorkingDates={nonWorkingDates}
                     onAppointmentMoved={moveAppointment}
                     onCellDoubleClick={handleOpenNewModal}

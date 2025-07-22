@@ -20,6 +20,7 @@ interface CalendarGridProps {
   selectedCalendarId: number; // ID du calendrier sélectionné, si applicable
   nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
   isMobile: boolean;
+  includeWeekend: boolean; // Indique si les week-ends doivent être inclus dans la vue mobile
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -45,6 +46,7 @@ interface CalendarGridProps {
  * @param {number} props.selectedCalendarId - Identifiant du calendrier sélectionné
  * @param {Date[]} props.nonWorkingDates - Liste des jours non travaillés
  * @param {boolean} props.isMobile - Indique si l'affichage est mobile
+ * @param {boolean} props.includeWeekend - Indique si les week-ends sont visibles
  * @param {Function} props.onAppointmentMoved - Callback lors du déplacement d'un rendez-vous
  * @param {Function} props.onCellDoubleClick - Callback lors du double-clic sur une cellule
  * @param {Function} props.onAppointmentDoubleClick - Callback lors du double-clic sur un rendez-vous
@@ -64,6 +66,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   selectedCalendarId,
   nonWorkingDates,
   isMobile,
+  includeWeekend,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -555,6 +558,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                           RowHeight={rowHeight}
                           isMobile={isMobile}
                           nonWorkingDates={nonWorkingDates}
+                          includeWeekend={includeWeekend}
                           onAppointmentMoved={onAppointmentMoved}
                           onCellDoubleClick={onCellDoubleClick}
                           onAppointmentClick={onAppointmentDoubleClick}

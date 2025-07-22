@@ -71,6 +71,20 @@ export const getNextWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval
 };
 
 /**
+ * Retourne le jour travaillé précédent à partir d'une date
+ * @param date Date de départ
+ * @param HALF_DAY_INTERVALS Intervalles demi-journée
+ * @returns Date du jour travaillé précédent
+ */
+export const getBeforeWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: Date[]): Date => {
+  let previous = new Date(date);
+  while (!isWorkedDay(previous, nonWorkingDates)) {
+    previous = addHours(previous, -(HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour));
+  }
+  return previous;
+};
+
+/**
  * Découpe un intervalle en sous-intervalles de jours travaillés
  * @param start Date de début
  * @param end Date de fin
@@ -86,28 +100,26 @@ export const getWorkedDayIntervals = (
 ): { start: Date; end: Date }[] => {
   const intervals: { start: Date; end: Date }[] = [];
 
-  if (includeWeekend) {
-    intervals.push({ start: new Date(start), end: new Date(end) });
-    return intervals; // Si on inclut les week-ends, on retourne l'interval complet
-  }
-
-  let day = getNextWorkedDay(start, HALF_DAY_INTERVALS, nonWorkingDates);
-
-  while (day < end) {
-    const intervalEnd = getNextRestDay(day, HALF_DAY_INTERVALS, nonWorkingDates);
-    if (intervalEnd > end) {
-      intervals.push({
-        start: new Date(day),
-        end: new Date(end),
-      });
-      break;
+  // Nouvelle logique : on découpe toujours sur les jours non travaillés (fériés, absences), même si includeWeekend
+  let current = new Date(start);
+  while (current < end) {
+    let next = new Date(current);
+    // Avance jusqu'au prochain jour non travaillé (hors week-end si includeWeekend, sinon week-end inclus)
+    while (next < end) {
+      // Si c'est un jour non travaillé (hors week-end si includeWeekend)
+      const isNonWorked = !isWorkedDay(next, nonWorkingDates);
+      if (isNonWorked && (includeWeekend ? !isWeekend(next) : true)) {
+        break;
+      }
+      next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
     }
-    intervals.push({
-      start: new Date(day),
-      end: intervalEnd,
-    });
-    day = getNextWorkedDay(intervalEnd, HALF_DAY_INTERVALS, nonWorkingDates);
-    if (day > end) break;
+    // Ajoute l'intervalle courant
+    intervals.push({ start: new Date(current), end: new Date(Math.min(next.getTime(), end.getTime())) });
+    // Passe au prochain jour travaillé après le non travaillé
+    current = new Date(next);
+    while (current < end && (!isWorkedDay(current, nonWorkingDates) && (includeWeekend ? !isWeekend(current) : true))) {
+      current = addHours(current, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
+    }
   }
   return intervals;
 };
