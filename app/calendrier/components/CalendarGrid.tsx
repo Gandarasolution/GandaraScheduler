@@ -100,7 +100,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const employeesByTeam = useMemo(() => {
     const teams = initialTeams.map(team => ({
       ...team,
-      employees: employees.filter(emp => emp.groupId === team.id && emp.calendarId === selectedCalendarId)
+      employees: employees.filter(emp => emp.groupId === team.id && emp.calendarId.includes(selectedCalendarId))
     }));
 
     // Ajoute une "équipe" spéciale pour les employés sans team

@@ -9,7 +9,7 @@ export interface Employee {
   avatarUrl?: string;
   groupId?: number; // Ajout de l'ID de l'équipe
   contrat: 'CDI' | 'CDD' | 'Intérimaire'; // Type de contrat
-  calendarId: number;
+  calendarId: number[]; // Liste des IDs de calendriers associés
 }
 
 export interface Appointment {
