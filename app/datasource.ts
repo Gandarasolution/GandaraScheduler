@@ -78,6 +78,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
     return {
       id: idx + 1,
       title: titles[idx % titles.length].label,
+      libelle: titles[idx % titles.length].label,
       description: `Rendez-vous pour ${emp.name}`,
       startDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 0, 0),
       endDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 12, 0),

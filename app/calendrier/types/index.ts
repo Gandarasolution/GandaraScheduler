@@ -15,11 +15,13 @@ export interface Employee {
 export interface Appointment {
   id: number;
   title: string;
+  libelle: string; // Libellé de l'événement affiché à l'écran
   description: string;
   startDate: Date;
   endDate: Date;
   imageUrl?: string;
   employeeId: number | string; // Lien vers l'employé
+  type: "Chantier" | "Absence" | "Autre"; // Type de rendez-vous
 }
 
 export interface HalfDayInterval {
