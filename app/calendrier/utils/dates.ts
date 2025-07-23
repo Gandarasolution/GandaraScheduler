@@ -86,8 +86,6 @@ export const getBeforeWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterv
 };
 
 
-
-
 /**
  * Découpe un intervalle en sous-intervalles de jours travaillés
  * @param start Date de début

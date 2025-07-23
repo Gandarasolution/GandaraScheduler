@@ -59,6 +59,7 @@ import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend, getBeforeWorkedDay } from "../utils/dates";
 import { calendars } from "../../datasource";
+import { get } from "http";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -229,7 +230,7 @@ export default function HomePage() {
     
 
     // Trouve les RDV après
-    let next = sequence[0];
+    let next = sequence[sequence.length - 1];
     while (true) {
       const nextApp = appointments.current.find(app =>
         app.employeeId === next.employeeId &&
@@ -512,8 +513,15 @@ export default function HomePage() {
     (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right') => {
       const appointment = appointments.current.find((app) => app.id === id);
     
-      if (!appointment) return; // Rendez-vous non trouvé
-
+      if (!appointment) return; // Rendez-vous non trouvé 
+      
+      const seq = getFullSequence(appointment.id);
+      
+      let timeOffset = 0;
+      if (newEndDate.getTime() - newStartDate.getTime() === appointment.endDate.getTime() - appointment.startDate.getTime()) {
+        timeOffset = newEndDate.getTime() - appointment.endDate.getTime(); 
+      }
+      
       const days = getWorkedDayIntervals(
         newStartDate, 
         newEndDate,
@@ -542,6 +550,35 @@ export default function HomePage() {
           createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.libelle, appointment.imageUrl);
         }
       }
+      
+      seq.forEach((app) => {
+        
+        if (app.id !== appointment.id) {
+          let endDate = addMinutes(new Date(app.endDate.getTime() + timeOffset), -1);
+          endDate = endDate.getDay() === 6 
+          ? getBeforeWorkedDay(
+              endDate,
+              isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+              nonWorkingDates
+            ) 
+          : getNextWorkedDay(
+              endDate,
+              isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+              nonWorkingDates
+            );
+
+
+          onResize(
+            app.id,
+            getNextWorkedDay(
+              new Date(app.startDate.getTime() + timeOffset),
+              isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+              nonWorkingDates),
+            endDate,
+            newEmployeeId
+          );
+        }
+      });
     },
     [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates]
   );
@@ -556,9 +593,7 @@ export default function HomePage() {
       includeWeekend,
       nonWorkingDates,
       includeNotWorkingDay
-    );
-    console.log("Days to create:", days);
-    
+    );    
     
     
     // Fonction utilitaire pour créer les rendez-vous supplémentaires
