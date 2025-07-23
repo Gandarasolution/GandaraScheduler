@@ -3,7 +3,7 @@
 import React, { useState, memo, useMemo } from 'react';
 import { Appointment, Employee, HalfDayInterval } from '../types';
 import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
-import { isWeekend } from '../utils/dates';
+import { isHoliday, isWeekend } from '../utils/dates';
 import { absences, autres, chantier } from '@/app/datasource';
 
 /**
@@ -19,7 +19,7 @@ interface AppointmentFormProps {
   HALF_DAY_INTERVALS: HalfDayInterval[] // Liste des créneaux de demi-journée
   isFullDay: boolean; // Indique si le rendez-vous est sur une journée complète
   nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
-  onSave: (appointment: Appointment, includeWeekend: boolean) => void;
+  onSave: (appointment: Appointment, includeWeekend: boolean, includeNotWorkingDay: boolean) => void;
   onDelete: (id: number) => void;
   onClose: () => void;
 }
@@ -38,7 +38,7 @@ interface AppointmentFormProps {
  * @param {Array<{ startHour: number, endHour: number }>} props.HALF_DAY_INTERVALS - Intervalles pour matin/après-midi.
  * @param {boolean} props.isFullDay - Indique si le rendez-vous couvre toute la journée.
  * @param {Date[]} props.nonWorkingDates - Liste des dates non travaillées.
- * @param {(appointment: Appointment, includeWeekend: boolean) => void} props.onSave - Callback lors de la sauvegarde.
+ * @param {(appointment: Appointment, includeWeekend: boolean, includeNotWorkingDay: boolean) => void} props.onSave - Callback lors de la sauvegarde.
  * @param {(id: number) => void} props.onDelete - Callback lors de la suppression.
  * @param {() => void} props.onClose - Callback lors de la fermeture du formulaire.
  *
@@ -93,17 +93,46 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }).every(date => isWeekend(date));
   }, [formData.startDate, formData.endDate]);
 
+  const isFullNotWorkingDay = useMemo(() => {
+    return eachDayOfInterval({ 
+      start: formData.startDate, 
+      end: formData.endDate 
+    }).every(date => 
+      nonWorkingDates.some(nd => nd.getTime() === date.getTime()) || isHoliday(date)
+    );
+  }, [formData.startDate, formData.endDate, nonWorkingDates]);
+  
+
   const isAppointmentSplitByWeekend = useMemo(() => {
     const app = appointments.find(a => a.id === formData.id);
     if (!app) return false;
-    const days = eachDayOfInterval({ start: app.startDate, end: app.endDate });
-    return days.some((date, idx) =>
-      isWeekend(date) && idx !== 0 && idx !== days.length - 1
+    const days = eachDayOfInterval({ start: app.startDate, end: addDays(app.endDate, 1) });
+    return days.some((date) =>
+      isWeekend(date) // Vérifie si le jour est un week-end
     );
   }, [appointments, formData.id,]);
 
+  const isAppointmentSplitByNotWorkingDay = useMemo(() => {
+    const app = appointments.find(a => a.id === formData.id);
+    if (!app) return false;
+    const days = eachDayOfInterval({ start: app.startDate, end: app.endDate });
+    return days.some((date) =>
+      (nonWorkingDates.some(nd => 
+        nd.getDay() === date.getDay()
+        && nd.getMonth() === date.getMonth()
+        && nd.getFullYear() === date.getFullYear()
+      ) || isHoliday(date))
+    );
+  }, [appointments, formData.id, nonWorkingDates]);
 
-  const [includeNotWorkingDay, setIncludeNotWorkingDay] = useState(isFullWeekEnd || isAppointmentSplitByWeekend ? true : false); // Nouveau champ pour inclure les week-ends
+
+  
+  const [includeNotWorkingDay, setIncludeNotWorkingDay] = useState(
+    isFullNotWorkingDay || isAppointmentSplitByNotWorkingDay ? true : false
+  ); // Nouveau champ pour inclure les jours non travaillés
+  const [includeWeekend, setIncludeWeekend] = useState(
+    isFullWeekEnd || isAppointmentSplitByWeekend ? true : false
+  ); // Nouveau champ pour inclure les week-ends
   const [titleNotValid, setTitleNotValid] = useState(false);
 
   /**
@@ -120,7 +149,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
     if (name === 'libelle' && value.trim() === '') {
       setTitleNotValid(true);
-      return;     
+    }
+    else{
+      setTitleNotValid(false);
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -139,9 +170,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     if (name === 'startDate') {
       
         newDate = setHours(setMinutes(datePart, (formData.startDate || new Date()).getMinutes()), (formData.startDate || new Date()).getHours());
-        const diffHours = (formData.endDate.getTime() - formData.startDate.getTime()) / (1000 * 60 * 60);
-        const newEndDate = setHours(setMinutes(datePart, (formData.endDate || new Date()).getMinutes()), (formData.endDate || new Date()).getHours());
-        setFormData(prev => ({ ...prev, startDate: newDate, endDate: newEndDate }));
+        setFormData(prev => ({ ...prev, startDate: newDate }));
     } else if (name === 'endDate') {
         newDate = setHours(setMinutes(datePart, (formData.endDate || new Date()).getMinutes()), (formData.endDate || new Date()).getHours());
         setFormData(prev => ({ ...prev, endDate: newDate }));
@@ -160,7 +189,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       setTitleNotValid(true);
       return;
     }
-    onSave(formData as Appointment, includeNotWorkingDay);
+    onSave(formData as Appointment, includeWeekend, includeNotWorkingDay);
   };
 
   /**
@@ -178,22 +207,41 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   // Rendu du formulaire
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div>
-        <input 
-          type="checkbox" 
-          id='includeWeekend'
-          className={`
-            h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 
-            ${isFullWeekEnd ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
-          checked={includeNotWorkingDay} 
-          onChange={e => !isFullWeekEnd && setIncludeNotWorkingDay(e.target.checked)} 
-        />
-        <label 
-          className="ml-2 text-sm text-gray-700"
-          htmlFor="includeWeekend"
-        >
-          Inclure week-end
-        </label>
+      <div className="flex items-center gap-2">
+        <div className="flex items-center">
+          <input 
+            type="checkbox" 
+            id='includeWeekend'
+            className={`
+              h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 
+              ${isFullWeekEnd ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
+            checked={includeWeekend} 
+            onChange={e => !isFullWeekEnd && setIncludeWeekend(e.target.checked)} 
+          />
+          <label 
+            className="ml-2 text-sm text-gray-700"
+            htmlFor="includeWeekend"
+          >
+            Inclure week-end
+          </label>
+        </div>
+        <div className='flex items-center'>
+          <input 
+            type="checkbox" 
+            id='includeWeekend'
+            className={`
+              h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 
+              ${isFullNotWorkingDay ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
+            checked={includeNotWorkingDay} 
+            onChange={e => !isFullNotWorkingDay && setIncludeNotWorkingDay(e.target.checked)} 
+          />
+          <label 
+            className="ml-2 text-sm text-gray-700"
+            htmlFor="includeWeekend"
+          >
+            Inclure les jours non travaillés/fériés
+          </label>
+        </div>
       </div>
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
@@ -230,7 +278,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           onChange={handleChange}
           required
           className={`
-            w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 
+            w-full p-2 border border-gray-300 rounded-md 
+            ${!titleNotValid && 'focus:ring-blue-500 focus:border-blue-500'}
             ${titleNotValid && 'border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50' }
           `}
         />

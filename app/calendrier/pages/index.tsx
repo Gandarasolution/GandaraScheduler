@@ -59,7 +59,6 @@ import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend, getBeforeWorkedDay } from "../utils/dates";
 import { calendars } from "../../datasource";
-import { log } from "node:console";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -220,7 +219,6 @@ export default function HomePage() {
         isConsecutive(app, prev) &&
         !sequence.some(seqApp => seqApp.id === app.id) // <-- Empêche la boucle infinie
       );
-      console.log('prevApp', prevApp);
       if (prevApp) {
         sequence.unshift(prevApp);
         prev = prevApp;
@@ -239,7 +237,6 @@ export default function HomePage() {
         isConsecutive(next, app) &&
         !sequence.some(seqApp => seqApp.id === app.id) // <-- Empêche la boucle infinie
       );
-      console.log('nextApp', nextApp);
       
       if (nextApp) {
         sequence.push(nextApp);
@@ -248,7 +245,6 @@ export default function HomePage() {
         break;
       }
     }
-    console.log('seq apres ');
     
     return sequence;
   }, [isConsecutive]);
@@ -551,14 +547,19 @@ export default function HomePage() {
   );
 
   // Gestion de la création et édition de rendez-vous
-  const handleSaveAppointment = useCallback((appointment: Appointment, includeWeekend: boolean) => {    
+  const handleSaveAppointment = useCallback((appointment: Appointment, includeWeekend: boolean, includeNotWorkingDay: boolean) => {    
+    
     const days = getWorkedDayIntervals(
       appointment.startDate, 
       appointment.endDate,
       isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
       includeWeekend,
-      nonWorkingDates
-    );    
+      nonWorkingDates,
+      includeNotWorkingDay
+    );
+    console.log("Days to create:", days);
+    
+    
     
     // Fonction utilitaire pour créer les rendez-vous supplémentaires
     const createExtraAppointments = (fromIndex = 1) => {
