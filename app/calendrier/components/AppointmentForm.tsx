@@ -179,6 +179,23 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
+        <input 
+          type="checkbox" 
+          id='includeWeekend'
+          className={`
+            h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 
+            ${isFullWeekEnd ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
+          checked={includeNotWorkingDay} 
+          onChange={e => !isFullWeekEnd && setIncludeNotWorkingDay(e.target.checked)} 
+        />
+        <label 
+          className="ml-2 text-sm text-gray-700"
+          htmlFor="includeWeekend"
+        >
+          Inclure week-end
+        </label>
+      </div>
+      <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
           {appointment?.type}
         </label>

@@ -59,6 +59,7 @@ import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend, getBeforeWorkedDay } from "../utils/dates";
 import { calendars } from "../../datasource";
+import { log } from "node:console";
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -203,10 +204,12 @@ export default function HomePage() {
     );
     // Consécutif si le startDate de app2 est le prochain jour travaillé après la fin de app1
     return isSameDay(app2.startDate, nextWorkedDay);
-  }, [isFullDay]);
+  }, [isFullDay, nonWorkingDates]);
 
   const getFullSequence = useCallback((appointmentId: number): Appointment[] => {
-    const sequence: Appointment[] = [appointments.current.find(app => app.id === appointmentId)!];
+    const found = appointments.current.find(app => app.id === appointmentId);
+    if (!found) return [];
+    const sequence: Appointment[] = [found];
 
     // Trouve les RDV avant
     let prev = sequence[0];
@@ -214,8 +217,10 @@ export default function HomePage() {
       const prevApp = appointments.current.find(app =>
         app.employeeId === prev.employeeId &&
         app.title === prev.title &&
-        isConsecutive(app, prev)
+        isConsecutive(app, prev) &&
+        !sequence.some(seqApp => seqApp.id === app.id) // <-- Empêche la boucle infinie
       );
+      console.log('prevApp', prevApp);
       if (prevApp) {
         sequence.unshift(prevApp);
         prev = prevApp;
@@ -223,6 +228,7 @@ export default function HomePage() {
         break;
       }
     }
+    
 
     // Trouve les RDV après
     let next = sequence[0];
@@ -230,8 +236,11 @@ export default function HomePage() {
       const nextApp = appointments.current.find(app =>
         app.employeeId === next.employeeId &&
         app.title === next.title &&
-        isConsecutive(next, app)
+        isConsecutive(next, app) &&
+        !sequence.some(seqApp => seqApp.id === app.id) // <-- Empêche la boucle infinie
       );
+      console.log('nextApp', nextApp);
+      
       if (nextApp) {
         sequence.push(nextApp);
         next = nextApp;
@@ -239,6 +248,8 @@ export default function HomePage() {
         break;
       }
     }
+    console.log('seq apres ');
+    
     return sequence;
   }, [isConsecutive]);
 
