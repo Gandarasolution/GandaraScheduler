@@ -82,8 +82,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           startDate: initialDate || new Date(),
           endDate: initialDate ? setHours(setMinutes(initialDate, 0), 0) : new Date(),
           imageUrl: '',
-          employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''), // Par défaut au premier employé ou vide
-          type: "Chantier", // Type par défaut
+          employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''),
+          type: "Chantier",
         }
   );
   const isFullWeekEnd = useMemo(() => {
@@ -147,10 +147,19 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       setFormData((prev) => ({ ...prev, employeeId: Number(value) }));
       return;
     }
+    if (name === 'type') {
+      // Pré-remplit le libellé si vide
+      let defaultLibelle = '';
+      const typedValue = value as 'Chantier' | 'Absence' | 'Autre';
+      if (typedValue === 'Chantier' && chantier.length > 0) defaultLibelle = chantier[0].label;
+      if (typedValue === 'Absence' && absences.length > 0) defaultLibelle = absences[0].label;
+      if (typedValue === 'Autre' && autres.length > 0) defaultLibelle = autres[0].label;
+      setFormData((prev) => ({ ...prev, type: typedValue, libelle: prev.libelle || defaultLibelle }));
+      return;
+    }
     if (name === 'libelle' && value.trim() === '') {
       setTitleNotValid(true);
-    }
-    else{
+    } else {
       setTitleNotValid(false);
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -206,122 +215,104 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
   // Rendu du formulaire
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6 p-2 sm:p-4 bg-gray-50 rounded-xl shadow-inner">
+      <h3 className="text-lg font-bold text-blue-700 mb-2">{appointment ? 'Modifier le rendez-vous' : 'Créer un rendez-vous'}</h3>
+      {/* Options avancées */}
+      <div className="flex flex-col md:flex-row gap-4 bg-white rounded-lg p-4 border border-gray-200">
+        <div className="flex items-center gap-4">
           <input 
             type="checkbox" 
             id='includeWeekend'
-            className={`
-              h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 
-              ${isFullWeekEnd ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
+            className={`h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isFullWeekEnd ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
             checked={includeWeekend} 
             onChange={e => !isFullWeekEnd && setIncludeWeekend(e.target.checked)} 
           />
-          <label 
-            className="ml-2 text-sm text-gray-700"
-            htmlFor="includeWeekend"
-          >
-            Inclure week-end
-          </label>
+          <label className="text-sm text-gray-700" htmlFor="includeWeekend">Inclure week-end</label>
         </div>
-        <div className='flex items-center'>
+        <div className="flex items-center gap-4">
           <input 
             type="checkbox" 
-            id='includeWeekend'
-            className={`
-              h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 
-              ${isFullNotWorkingDay ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
+            id='includeNotWorkingDay'
+            className={`h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isFullNotWorkingDay ? 'bg-gray-200 cursor-not-allowed opacity-50' : ''}`}
             checked={includeNotWorkingDay} 
             onChange={e => !isFullNotWorkingDay && setIncludeNotWorkingDay(e.target.checked)} 
           />
-          <label 
-            className="ml-2 text-sm text-gray-700"
-            htmlFor="includeWeekend"
-          >
-            Inclure les jours non travaillés/fériés
-          </label>
+          <label className="text-sm text-gray-700" htmlFor="includeNotWorkingDay">Inclure les jours non travaillés/fériés</label>
         </div>
       </div>
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-          {appointment?.type}
-        </label>
-        <select 
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-        >
-        {appointment?.type === 'Chantier' ? chantier.map((c) => (
-          <option key={c.id} value={c.label}>
-            {c.label}
-          </option>
-        )) : appointment?.type === 'Absence' ? absences.map((a) => (
-          <option key={a.id} value={a.label}>
-            {a.label}
-          </option>
-        )) : appointment?.type === 'Autre' ? autres.map((o) => (
-          <option key={o.id} value={o.label}>
-            {o.label}
-          </option>
-        )) : null}
-      </select>
+      
+      {/* Section type et libellé */}
+      <div className="flex flex-col md:flex-row gap-4 bg-white rounded-lg p-4 border border-gray-200">
+        <div className="flex-1">
+          <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Type d'événement <span className="text-red-500">*</span></label>
+          <select
+            id="type"
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+            required
+          >
+            <option value="Chantier">Chantier</option>
+            <option value="Absence">Absence</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+        <div className="flex-1">
+          <label htmlFor="libelle" className="block text-sm font-medium text-gray-700 mb-1">Libellé <span className="text-red-500">*</span></label>
+          <select
+            id="libelle"
+            name="libelle"
+            value={formData.libelle}
+            onChange={handleChange}
+            className={`w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50 ${titleNotValid ? 'border-red-500 bg-red-50' : ''}`}
+            required
+          >
+            {(formData.type === 'Chantier' ? chantier : formData.type === 'Absence' ? absences : autres).map((item) => (
+              <option key={item.id} value={item.label}>{item.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
-      {/* Titre du rendez-vous */}
-      <div>
-        <label htmlFor="libelle" className="block text-sm font-medium text-gray-700 mb-1">
-          Libellé:
-        </label>
-        <input
-          type="text"
-          id="libelle"
-          name="libelle"
-          value={formData.libelle ?? ''}
-          onChange={handleChange}
-          required
-          className={`
-            w-full p-2 border border-gray-300 rounded-md 
-            ${!titleNotValid && 'focus:ring-blue-500 focus:border-blue-500'}
-            ${titleNotValid && 'border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50' }
-          `}
-        />
 
-      </div>
-  
       {/* Description */}
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description:</label>
+      <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
         <textarea
           id="description"
           name="description"
           value={formData.description}
           onChange={handleChange}
-          rows={3}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          rows={2}
+          placeholder="Détail du rendez-vous..."
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
         ></textarea>
       </div>
 
       {/* Image (optionnelle) */}
-      <div>
-        <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1">URL Image (optionnel):</label>
+      <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-1">URL de l'image (optionnel)</label>
         <input
           type="text"
           id="imageUrl"
           name="imageUrl"
           value={formData.imageUrl || ''}
           onChange={handleChange}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          placeholder="https://..."
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
         />
       </div>
 
       {/* Affectation à un employé */}
-      <div>
-        <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 mb-1">Assigné à:</label>
+      <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 mb-1">Assigné à <span className="text-red-500">*</span></label>
         <select
           id="employeeId"
           name="employeeId"
           value={formData.employeeId}
           onChange={handleChange}
           required
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
         >
           {employees.map((emp) => (
             <option key={emp.id} value={emp.id}>
@@ -331,139 +322,141 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </select>
       </div>
 
-      {/* Dates et heures de début/fin */}
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">Date de début:</label>
-          <input
-            type="date"
-            id="startDate"
-            name="startDate"
-            max={format(formData.endDate, 'yyyy-MM-dd')}
-            value={format(formData.startDate, 'yyyy-MM-dd')}
-            onChange={handleDateChange}
-            required
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        {!isFullDay && (
-          <div className="flex-1">
-            <label htmlFor="intervalNameStart" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
-            <select
-              id="intervalNameStart"
-              name="intervalName"
-              value={
-                formData.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
-                && formData.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
-                ? 'morning' : 'afternoon'
-              }
-              onChange={e => {
-                const newHour = e.target.value === 'morning'
-                  ? HALF_DAY_INTERVALS[0].startHour
-                  : HALF_DAY_INTERVALS[1].startHour;
 
-                setFormData(prev => ({
-                  ...prev,
-                  startDate: setHours(
-                    startOfDay(prev.startDate), // S'assure que vous commencez au début du jour actuel
-                    newHour
-                  ),
-                }));
-              }}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="morning">Matin</option>
-              <option value="afternoon"
-                disabled={
-                  format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
-                  formData.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
-                }
-              >Après-midi</option>
-            </select>
+      {/* Dates et créneaux */}
+      <div className="flex flex-col md:flex-row gap-4 bg-white rounded-lg p-4 border border-gray-200">
+        <div className="flex-1 flex flex-col gap-4">
+          <div>
+            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">Date de début <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              id="startDate"
+              name="startDate"
+              max={format(formData.endDate, 'yyyy-MM-dd')}
+              value={format(formData.startDate, 'yyyy-MM-dd')}
+              onChange={handleDateChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+            />
           </div>
-        )}
-      </div>
-
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">Date de fin:</label>
-          <input
-            type="date"
-            id="endDate"
-            name="endDate"
-            min={format(formData.startDate, 'yyyy-MM-dd')}
-            value={format(formData.endDate, 'yyyy-MM-dd')}
-            onChange={handleDateChange}
-            required
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        {!isFullDay && (
-          <div className="flex-1">
-            <label htmlFor="intervalNameEnd" className="block text-sm font-medium text-gray-700 mb-1">Créneau :</label>
-            <select
-              id="intervalNameEnd"
-              name="intervalName"
-              value={
-                formData.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
-                  ? 'morning'
-                  : 'afternoon'
-              }
-              onChange={e => {
-                const isAfternoon = e.target.value === 'afternoon';
-                setFormData(prev => {
-                  // Toujours prendre la date de fin affichée dans le champ date
-                  const endDateDay = new Date(format(prev.endDate, 'yyyy-MM-dd') + 'T00:00:00');
-                  let newEndDate;
-                  if (isAfternoon) {
-                    newEndDate = setHours(setMinutes(setSeconds(endDateDay, 59), 59), HALF_DAY_INTERVALS[1].endHour - 1);
-                  } else {
-                    newEndDate = setHours(setMinutes(setSeconds(endDateDay, 0), 0), HALF_DAY_INTERVALS[0].endHour);
-                  }
-                  return {
+        
+          {!isFullDay && (
+            <div className="flex-1">
+              <label htmlFor="intervalNameStart" className="block text-sm font-medium text-gray-700 mb-1">Créneau</label>
+              <select
+                id="intervalNameStart"
+                name="intervalName"
+                value={
+                  formData.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
+                  && formData.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
+                  ? 'morning' : 'afternoon'
+                }
+                onChange={e => {
+                  const newHour = e.target.value === 'morning'
+                    ? HALF_DAY_INTERVALS[0].startHour
+                    : HALF_DAY_INTERVALS[1].startHour;
+                  setFormData(prev => ({
                     ...prev,
-                    endDate: newEndDate,
-                  };
-                });
-              }}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option 
-                value="morning"
-                disabled={
-                  format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
-                  formData.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
-                }
-              >Matin</option>
-              <option value="afternoon">Après-midi</option>
-            </select>
+                    startDate: setHours(startOfDay(prev.startDate), newHour),
+                  }));
+                }}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+              >
+                <option value="morning">Matin</option>
+                <option value="afternoon"
+                  disabled={
+                    format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
+                    formData.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
+                  }
+                >Après-midi</option>
+              </select>
+            </div>
+          )}
+        </div>
+        <div className="flex-1 flex flex-col gap-4">
+          <div>
+            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">Date de fin <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              id="endDate"
+              name="endDate"
+              min={format(formData.startDate, 'yyyy-MM-dd')}
+              value={format(formData.endDate, 'yyyy-MM-dd')}
+              onChange={handleDateChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+            />
           </div>
-        )}
+        
+          {!isFullDay && (
+            <div className="flex-1">
+              <label htmlFor="intervalNameEnd" className="block text-sm font-medium text-gray-700 mb-1">Créneau</label>
+              <select
+                id="intervalNameEnd"
+                name="intervalName"
+                value={
+                  formData.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
+                    ? 'morning'
+                    : 'afternoon'
+                }
+                onChange={e => {
+                  const isAfternoon = e.target.value === 'afternoon';
+                  setFormData(prev => {
+                    const endDateDay = new Date(format(prev.endDate, 'yyyy-MM-dd') + 'T00:00:00');
+                    let newEndDate;
+                    if (isAfternoon) {
+                      newEndDate = setHours(setMinutes(setSeconds(endDateDay, 59), 59), HALF_DAY_INTERVALS[1].endHour - 1);
+                    } else {
+                      newEndDate = setHours(setMinutes(setSeconds(endDateDay, 0), 0), HALF_DAY_INTERVALS[0].endHour);
+                    }
+                    return {
+                      ...prev,
+                      endDate: newEndDate,
+                    };
+                  });
+                }}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+              >
+                <option 
+                  value="morning"
+                  disabled={
+                    format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
+                    formData.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
+                  }
+                >Matin</option>
+                <option value="afternoon">Après-midi</option>
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Boutons d'action */}
-      <div className="flex justify-end gap-3 mt-4">
+      <div className="flex justify-end gap-3 mt-6">
         {appointment?.id && (
           <button
             type="button"
             onClick={handleDelete}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors btn-delete"
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2 btn-delete"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" className="inline-block" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5.5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6zm3 .5a.5.5 0 0 1 .5-.5.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6zm-7-1A1.5 1.5 0 0 1 5.5 4h5A1.5 1.5 0 0 1 12 5.5V6h1a.5.5 0 0 1 0 1h-1v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7H3a.5.5 0 0 1 0-1h1v-.5zM5.5 5a.5.5 0 0 0-.5.5V6h6v-.5a.5.5 0 0 0-.5-.5h-5z"/></svg>
             Supprimer
           </button>
         )}
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors btn-cancel"
+          className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center gap-2 btn-cancel"
         >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" className="inline-block" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/></svg>
           Annuler
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors btn-save"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2 btn-save"
         >
-          {appointment ? 'Enregistrer les modifications' : 'Créer le rendez-vous'}
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" className="inline-block" viewBox="0 0 16 16"><path d="M16 2a2 2 0 0 0-2-2H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2zM2 1a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2zm2 2a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H4.5A.5.5 0 0 1 4 4V3zm0 2h8v8H4V5z"/></svg>
+          {appointment ? 'Enregistrer' : 'Créer'}
         </button>
       </div>
     </form>

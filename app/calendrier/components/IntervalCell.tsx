@@ -254,8 +254,12 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       setBubbleContent(`Créneau du ${format(date, 'dd/MM')} ${!isFullDay ? (intervalName === 'morning' ? '- Matin' : '- Après-midi') : ''}`);
     }
     setShowInfoBubble(true);
-    bubblePosition.current = { x: event.clientX, y: event.clientY };
-    setTimeout(() => setShowInfoBubble(false), 3000);
+    const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
+    bubblePosition.current = {
+      x: rect.left,
+      y: rect.top
+    };    
+    //setTimeout(() => setShowInfoBubble(false), 3000);
   };
 
   // Double-clic pour créer un rendez-vous

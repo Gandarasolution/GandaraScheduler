@@ -5,8 +5,11 @@ import { addHours, formatDate, isSameDay } from "date-fns";
 import Holidays from "date-holidays";
 import { HalfDayInterval } from "../types";
 
+
 const hd = new Holidays("FR");
 const holidays = hd.getHolidays(new Date().getFullYear());
+// Pré-calcul d'un Set pour accélérer la détection des jours fériés
+const holidaySet = new Set(holidays.map(h => h.date));
 
 /**
  * Vérifie si une date est un jour férié (France)
@@ -17,7 +20,7 @@ export const isHoliday = (date: Date): boolean => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   const dateStr = formatDate(d, "yyyy-MM-dd HH:mm:ss"); // Format YYYY-MM-DD HH:mm:ss
-  return holidays.some((holiday) => holiday.date === dateStr);
+  return holidaySet.has(dateStr);
 };
 
 /**
@@ -65,8 +68,12 @@ export const getNextRestDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval[]
  */
 export const getNextWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: Date[]): Date => {
   let next = new Date(date);
+  let safety = 0;
+  const maxIterations = 1000;
   while (!isWorkedDay(next, nonWorkingDates)) {
     next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
+    safety++;
+    if (safety > maxIterations) throw new Error("Boucle infinie détectée dans getNextWorkedDay");
   }
   return next;
 };
@@ -79,8 +86,12 @@ export const getNextWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval
  */
 export const getBeforeWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: Date[]): Date => {
   let previous = new Date(date);
+  let safety = 0;
+  const maxIterations = 1000;
   while (!isWorkedDay(previous, nonWorkingDates)) {
     previous = addHours(previous, -(HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour));
+    safety++;
+    if (safety > maxIterations) throw new Error("Boucle infinie détectée dans getBeforeWorkedDay");
   }
   return previous;
 };
@@ -110,10 +121,14 @@ export const getWorkedDayIntervals = (
     return isWorkedDay(date, nonWorkingDates);
   };
 
+  let safety = 0;
+  const maxIterations = 10000;
   while (day < end) {
     // Cherche le prochain jour à inclure
     while (day < end && !isIncluded(day)) {
       day = addHours(day, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
+      safety++;
+      if (safety > maxIterations) throw new Error("Boucle infinie détectée dans getWorkedDayIntervals (recherche début)");
     }
     if (day >= end) break;
 
@@ -126,6 +141,8 @@ export const getWorkedDayIntervals = (
       isIncluded(day)
     ) {
       day = addHours(day, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
+      safety++;
+      if (safety > maxIterations) throw new Error("Boucle infinie détectée dans getWorkedDayIntervals (recherche fin)");
     }
 
     intervals.push({

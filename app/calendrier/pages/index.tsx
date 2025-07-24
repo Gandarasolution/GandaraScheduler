@@ -1016,86 +1016,90 @@ export default function HomePage() {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="h-screen flex flex-col overflow-hidden">
-        {/* Barre du haut : date, recherche */}
+        {/* Barre du haut modernisée */}
         {!isMobile && (
-          <div className="sticky top-0 z-20 bg-white shadow px-4 py-2 flex items-center justify-between main-header">
-            <div>
-              <input
-                type="date"
-                className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
-                onChange={(e) => {
-                  const selectedDate = new Date(e.target.value);
-                  if (isNaN(selectedDate.getTime())) return;
-                  setSelectedDate(selectedDate);
-                }}
-              />
-              <button
-                className="ml-4 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                onClick={() => goToDate(selectedDate)}
-              >
-                  Valider
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedCalendarId}
-                onChange={e => setSelectedCalendarId(Number(e.target.value))}
-                className="border rounded px-2 py-1 mr-4"
-              >
-                {calendars.map(cal => (
-                  <option key={cal.id} value={cal.id}>
-                    {cal.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 ml-4">
-                <button
-                  className="p-2 bg-gray-200 rounded hover:bg-gray-300 transition"
-                  onClick={() => setIsSettingsOpen(true)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-gear-fill" viewBox="0 0 16 16">
-                    <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
-                  </svg>
-                </button>
+          <div className="sticky top-0 z-30 bg-white shadow-lg px-8 py-4 flex items-center justify-between main-header rounded-b-2xl border-b border-gray-200">
+            <div className="flex items-center gap-6">
+              <span className="text-2xl font-bold text-blue-700 tracking-tight mr-6">Mon Agenda</span>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="date-select" className="text-xs font-medium text-gray-600">Aller à la date</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="date-select"
+                    type="date"
+                    className="border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-gray-100 text-base"
+                    value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+                    onChange={(e) => {
+                      const selectedDate = new Date(e.target.value);
+                      if (isNaN(selectedDate.getTime())) return;
+                      setSelectedDate(selectedDate);
+                    }}
+                  />
+                  <button
+                    className="ml-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-semibold shadow"
+                    onClick={() => goToDate(selectedDate)}
+                  >
+                    Valider
+                  </button>
+                </div>
               </div>
-              {/* Champ de recherche */}
-              <div className="w-80 max-w-full">
-                <label htmlFor="search" className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">
-                  Recherche
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <svg className="w-4 h-4 text-gray-500" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+              <div className="flex flex-col gap-1 ml-6">
+                <label htmlFor="calendar-select" className="text-xs font-medium text-gray-600">Calendrier</label>
+                <select
+                  id="calendar-select"
+                  value={selectedCalendarId}
+                  onChange={e => setSelectedCalendarId(Number(e.target.value))}
+                  className="border border-gray-300 rounded-xl px-3 py-2 bg-gray-100 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                >
+                  {calendars.map(cal => (
+                    <option key={cal.id} value={cal.id}>
+                      {cal.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col gap-1">
+                <div className="relative w-72 max-w-full">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" aria-hidden="true" fill="none" viewBox="0 0 20 20">
                       <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
                     </svg>
                   </div>
                   <input
                     type="search"
                     id="search"
-                    className="block w-full p-3 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-100 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="Rechercher un rendez-vous"
+                    className="block w-full p-3 pl-10 text-base text-gray-900 border border-gray-300 rounded-xl bg-gray-100 focus:ring-blue-400 focus:border-blue-400 transition"
+                    placeholder="Rechercher un rendez-vous, un employé..."
                     value={searchInput || ""}
                     onChange={(e) => setSearchInput(e.target.value)}
                   />
                 </div>
               </div>
+              <button
+                className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition shadow border border-gray-200 ml-2"
+                onClick={() => setIsSettingsOpen(true)}
+                title="Paramètres"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-gear-fill text-blue-700" viewBox="0 0 16 16">
+                  <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+                </svg>
+              </button>
             </div>
           </div>
         )}
-        {/* Grille principale du calendrier */}
+        {/* Grille principale du calendrier modernisée */}
         <div className="flex-1 flex flex-col max-h-full max-w-full overflow-hidden">
           <div
-            className="flex flex-grow overflow-auto snap-x snap-mandatory scrollbar-hide"
+            className={`flex flex-grow overflow-auto snap-x snap-mandatory scrollbar-hide rounded-2xl shadow-lg border-gray-200 ${!isMobile ? 'mt-4' : ''}`}
             ref={mainScrollRef}
             onScroll={handleScroll}
             tabIndex={0}
             style={{ outline: "none" }}
           >
             <div
-              className={`flex-grow rounded-lg shadow-md ${isLoading ? "pointer-events-none opacity-60" : ""}`}
+              className={`flex-grow rounded-lg ${isLoading ? "pointer-events-none opacity-60" : ""}`}
             >
               <SelectedAppointmentContext.Provider value={{ selectedAppointment, setSelectedAppointment}}>
                 <SelectedCellContext.Provider value={{ selectedCell, setSelectedCell }}>
@@ -1121,7 +1125,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        {/* Menu contextuel */}
+        {/* Menu contextuel modernisé */}
         <RightClickComponent
           open={!!contextMenu}
           coordinates={contextMenu}
@@ -1129,7 +1133,7 @@ export default function HomePage() {
           clipBoardAppointment={clipboardAppointment.current}
           onClose={closeContextMenu}
         />
-        {/* Modal unique pour tous les usages (création, édition, répétition) */}
+        {/* Modal unique pour tous les usages (création, édition, répétition) modernisée */}
         <Modal
           isOpen={isModalOpen || !!repeatAppointmentData || !!extendAppointmentData}
           onClose={() => {
@@ -1307,7 +1311,7 @@ export default function HomePage() {
         <SettingsModal 
           onClose={() => setIsSettingsOpen(false)}
           settings={settings} 
-          isSettingsOpen={isSettingsOpen}        
+          isSettingsOpen={isSettingsOpen}
         />
         {/* Modal pour choisir le type de rendez-vous */}
         <ChoiceAppointmentType
@@ -1320,14 +1324,14 @@ export default function HomePage() {
             setIsModalOpen(true);
           }}
         />
-        {/* Drawer latéral pour ajouter un rendez-vous par drag & drop */}
+        {/* Drawer latéral modernisé pour ajouter un rendez-vous par drag & drop */}
         <Drawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} isDragging={isDrawerOpen}>
-          <div className={"flex flex-col items-center"}>
-            <div className="mb-3 text-muted" style={{ fontSize: 13 }}>
+          <div className={"flex flex-col items-center w-64"}>
+            <div className="mb-4 text-gray-600 text-sm font-medium text-center">
               Faites glisser un bloc sur la timeline pour l’ajouter.
             </div>
             <select
-              className="p-2 w-full border-solid border mb-3 rounded-5 rounded-xs"
+              className="p-2 w-full border border-gray-300 mb-4 rounded-xl bg-gray-100"
               onChange={(e) => {
                 const selected = eventTypes.find((ev) => ev.label === e.target.value);
                 setDrawerOptionsSelected(selected ?? eventTypes[0]);
@@ -1339,7 +1343,7 @@ export default function HomePage() {
                 </option>
               ))}
             </select>
-            <div className="d-flex gap-3 flex-column">
+            <div className="flex flex-col gap-3 w-full">
               {drawerOptionsSelected?.dataSource?.map((ev) => (
                 <DraggableSource 
                   id={ev.label} 
@@ -1352,29 +1356,30 @@ export default function HomePage() {
             </div>
           </div>
         </Drawer>
-        {/* Bouton pour ouvrir le drawer */}
+        {/* Bouton flottant modernisé pour ouvrir le drawer */}
         {!isMobile && (
           <button
             onClick={() => setIsDrawerOpen(true)}
-            className="btn-add"
+            className="fixed bottom-8 right-8 bg-blue-600 text-white text-4xl rounded-full shadow-2xl w-16 h-16 flex items-center justify-center hover:bg-blue-700 transition z-40 border-4 border-white"
             style={{
               opacity: isDrawerOpen ? 0 : 1,
               pointerEvents: isDrawerOpen ? "none" : "auto",
             }}
+            title="Ajouter un rendez-vous"
           >
             +
           </button>
         )}
-        {/* Barre de chargement */}
+        {/* Barre de chargement modernisée */}
         {isLoading && (
-          <div className="absolute top-0 left-0 w-full h-1 bg-blue-200 z-50">
-            <div className="h-full bg-blue-600 animate-pulse" style={{ width: "30%" }} />
+          <div className="fixed top-0 left-0 w-full h-1 bg-blue-100 z-50">
+            <div className="h-full bg-blue-600 animate-pulse rounded-r-full" style={{ width: "30%" }} />
           </div>
         )}
-        {/* Alert pour les messages d'erreur */}
+        {/* Alert pour les messages d'erreur modernisée */}
         <AlertModal
           isOpen={isAlertVisible}
-          title={alertTitle} // ou "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" ou autre selon le contexte
+          title={alertTitle}
           confirmLabel="Confirmer"
           cancelLabel="Annuler"
           onConfirm={() => 
@@ -1384,11 +1389,12 @@ export default function HomePage() {
           onClose={() => setIsAlertVisible(false)}
         />
         {modalInfo && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-4 py-2 rounded shadow z-50">
-            {modalInfo}
+          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-4 border border-green-300">
+            <span className="font-semibold text-lg">{modalInfo}</span>
             <button
-              className="ml-4 text-green-900 font-bold"
+              className="ml-2 text-green-900 font-bold text-2xl hover:text-green-700 transition"
               onClick={() => setModaltInfo(null)}
+              title="Fermer"
             >
               ×
             </button>
