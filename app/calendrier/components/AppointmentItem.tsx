@@ -388,7 +388,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       </span>
       {/* Titre du rendez-vous */}
       <span className="flex-grow text-gray-800 font-semibold overflow-hidden">
-        {appointment.libelle.length > 18 ? appointment.libelle.slice(0, 18) + '…' : appointment.libelle}
+        {appointment.libelle ? (
+          appointment.libelle.length > 18 ? appointment.libelle.slice(0, 18) + '…' : appointment.libelle
+        ) : (
+          appointment.title.length > 18 ? appointment.title.slice(0, 18) + '…' : appointment.title
+        )}
       </span>
       {/* Handle de redimensionnement à droite */}
       <div

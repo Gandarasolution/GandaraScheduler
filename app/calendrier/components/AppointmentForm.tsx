@@ -240,30 +240,27 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           <label className="text-sm text-gray-700" htmlFor="includeNotWorkingDay">Inclure les jours non travaillés/fériés</label>
         </div>
       </div>
-      
+
       {/* Section type et libellé */}
       <div className="flex flex-col md:flex-row gap-4 bg-white rounded-lg p-4 border border-gray-200">
         <div className="flex-1">
-          <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Type d'événement <span className="text-red-500">*</span></label>
-          <select
-            id="type"
-            name="type"
-            value={formData.type}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
-            required
-          >
-            <option value="Chantier">Chantier</option>
-            <option value="Absence">Absence</option>
-            <option value="Autre">Autre</option>
-          </select>
-        </div>
-        <div className="flex-1">
           <label htmlFor="libelle" className="block text-sm font-medium text-gray-700 mb-1">Libellé <span className="text-red-500">*</span></label>
-          <select
+          <input
+            type="text"
             id="libelle"
             name="libelle"
-            value={formData.libelle}
+            value={formData.libelle ?? ""}
+            onChange={handleChange}
+            placeholder="Libellé du rendez-vous"
+            className={`w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50 ${titleNotValid ? 'border-red-500 bg-red-50' : ''}`}
+          />
+        </div>
+        <div className="flex-1">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Titre <span className="text-red-500">*</span></label>
+          <select
+            id="title"
+            name="title"
+            value={formData.title}
             onChange={handleChange}
             className={`w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50 ${titleNotValid ? 'border-red-500 bg-red-50' : ''}`}
             required

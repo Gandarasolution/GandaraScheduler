@@ -15,7 +15,7 @@ export interface Employee {
 export interface Appointment {
   id: number;
   title: string;
-  libelle: string; // Libellé de l'événement affiché à l'écran
+  libelle?: string; // Libellé de l'événement affiché à l'écran
   description: string;
   startDate: Date;
   endDate: Date;

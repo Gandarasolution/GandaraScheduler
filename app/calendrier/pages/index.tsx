@@ -366,7 +366,7 @@ export default function HomePage() {
   );
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", libelle: string, imageUrl?: string) => {
+    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", libelle?: string, imageUrl?: string) => {
       const newApp: Appointment = {
         id: Number(Date.now() + Math.random()), // Assure l'unicité de l'ID
         title,
