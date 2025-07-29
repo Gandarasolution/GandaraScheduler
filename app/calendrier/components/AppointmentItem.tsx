@@ -12,6 +12,7 @@ interface AppointmentItemProps {
   isFullDay: boolean;
   isMobile: boolean;
   includeWeekend?: boolean;
+  employee: { id: number; name: string };
   onDoubleClick: () => void;
   onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
   color?: string;
@@ -39,6 +40,7 @@ interface AppointmentItemProps {
  * @param {string} props.color - Couleur de fond du rendez-vous.
  * @param {boolean} props.isFullDay - Indique si le rendez-vous occupe la journée entière.
  * @param {boolean} props.isMobile - Indique si l'affichage est en mode mobile.
+ * @param {Object} props.employee - Informations sur l'employé associé au rendez-vous.
  * @param {boolean} props.includeWeekend - Indique si les week-ends sont visibles.
  * @param {() => void} props.onDoubleClick - Callback lors d'un double-clic sur le rendez-vous.
  * @param {(id: string, newStart: Date, newEnd: Date, direction: 'left' | 'right') => void} props.onResize - Callback lors du redimensionnement.
@@ -56,6 +58,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   color,
   isFullDay,
   isMobile,
+  employee,
   includeWeekend,
   onDoubleClick,
   onResize,
@@ -347,7 +350,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       className={`
         ${color}
         absolute rounded-xl p-2 text-sm shadow-md
-        flex flex-shrink-0 items-center gap-2 overflow-x-hidden whitespace-nowrap text-ellipsis
+        flex flex-shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-ellipsis
         cursor-grab transition-all z-10 h-11
         border-blue-400
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
@@ -374,26 +377,26 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         onMouseDown={(e) => handleMouseDown(e, 'left')}
         style={{borderRadius: '4px 0 0 4px'}}
       />
+
       {/* Image éventuelle */}
-      {appointment.imageUrl && (
+      {appointment.image && (
         <img
-          src={appointment.imageUrl}
+          src={appointment.image}
           alt="Icône"
-          className="w-7 h-7 rounded-full object-cover shadow-sm"
+          className="w-8 h-8 object-cover"
         />
       )}
-      {/* Badge heure */}
-      <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-bold mr-1">
-        {appointment.startDate ? `${appointment.startDate.getHours().toString().padStart(2, '0')}:${appointment.startDate.getMinutes().toString().padStart(2, '0')}` : ''}
-      </span>
-      {/* Titre du rendez-vous */}
-      <span className="flex-grow text-gray-800 font-semibold overflow-hidden">
-        {appointment.libelle ? (
-          appointment.libelle.length > 18 ? appointment.libelle.slice(0, 18) + '…' : appointment.libelle
-        ) : (
-          appointment.title.length > 18 ? appointment.title.slice(0, 18) + '…' : appointment.title
-        )}
-      </span>
+      <div className='flex flex-col min-w-0'>
+        {/* Titre du rendez-vous */}
+        <span className="flex-grow text-gray-800 font-semibold truncate max-w-full">
+          {appointment.libelle ? appointment.libelle : appointment.title}
+        </span>
+        <span className="text-xs text-gray-500 truncate max-w-full">
+          {employee.name}
+        </span>
+      </div>
+    
+
       {/* Handle de redimensionnement à droite */}
       <div
         className="absolute right-0 top-0 h-full w-2 cursor-ew-resize z-30"

@@ -13,7 +13,7 @@ import { fr } from 'date-fns/locale';
  */
 interface DayCellProps {
   day: Date;
-  employeeId: number;
+  employee: { id: number; name: string };
   appointments: (Appointment & { top: number })[];
   intervals: HalfDayInterval[];
   isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
@@ -35,7 +35,7 @@ interface DayCellProps {
  *
  * @param {DayCellProps} props - Les propriétés du composant.
  * @param {Date} props.day - La date du jour affiché dans la cellule.
- * @param {string} props.employeeId - L'identifiant de l'employé associé à la cellule.
+ * @param {{ id: string; name: string }} props.employee - L'employé associé à la cellule.
  * @param {Appointment[]} [props.appointments=[]] - Liste des rendez-vous à afficher dans la cellule.
  * @param {Interval[]} [props.intervals=[]] - Liste des intervalles (matin, après-midi, etc.) pour le jour.
  * @param {boolean} [props.isCellActive=true] - Indique si la cellule est active (cliquable/éditable).
@@ -64,7 +64,7 @@ interface DayCellProps {
  * ```tsx
  * <DayCell
  *   day={new Date()}
- *   employeeId="123"
+ *   employee={{ id: "123", name: "John Doe" }}
  *   appointments={appointments}
  *   intervals={intervals}
  *   isWeekend={false}
@@ -83,7 +83,7 @@ interface DayCellProps {
  */
 const DayCell: React.FC<DayCellProps> = ({
   day,
-  employeeId,
+  employee,
   appointments = [],
   intervals = [],
   isCellActive = true,
@@ -124,7 +124,7 @@ const DayCell: React.FC<DayCellProps> = ({
           ${isNonWorkingDay ? 'bg-red-100 text-red-700' : ''}
           ${isToday ? 'ring-2 ring-blue-400 shadow-md' : ''}
         `}
-        key={`${format(day, 'yyyy-MM-dd')}-${employeeId}`}
+        key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
         id={format(day, 'yyyy-MM-dd')}
         style={{ 
           minHeight: CELL_HEIGHT, 
@@ -214,16 +214,13 @@ const DayCell: React.FC<DayCellProps> = ({
       className={`
         snap-center day-cell flex flex-row border-gray-200
         ${
-        isCellActive
-          ? [
-              isWeekend ? 'WEEKEND' : '',
-              isFerie ? 'FERIE' : '',
-              isNonWorkingDay ? 'NON-WORKING' : '',
-            ].join(' ')
-          : 'bg-gray-200'
+          isWeekend ? 'WEEKEND' :
+          isFerie ? 'FERIE' :
+          isNonWorkingDay ? 'NON-WORKING' : ''
+            
         }
       `}
-      key={`${format(day, 'yyyy-MM-dd')}-${employeeId}`}
+      key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
       id={format(day, 'yyyy-MM-dd')}
       style={{ 
         height: 'auto',
@@ -239,9 +236,9 @@ const DayCell: React.FC<DayCellProps> = ({
         );
         return (
           <IntervalCell
-            key={`${format(day, 'yyyy-MM-dd')}-${interval.name}-${employeeId}`}
+            key={`${format(day, 'yyyy-MM-dd')}-${interval.name}-${employee.id}`}
             date={day}
-            employeeId={employeeId}
+            employee={employee}
             intervalName={interval.name as 'morning' | 'afternoon'}
             intervalStart={intervalStart}
             intervalEnd={intervalEnd}
@@ -253,7 +250,7 @@ const DayCell: React.FC<DayCellProps> = ({
             isNonWorkingDay={isNonWorkingDay}
             includeWeekend={includeWeekend}
             onAppointmentMoved={onAppointmentMoved}
-            onCellDoubleClick={() => onCellDoubleClick(intervalStart, employeeId, interval.name as 'morning' | 'afternoon')}
+            onCellDoubleClick={() => onCellDoubleClick(intervalStart, employee.id, interval.name as 'morning' | 'afternoon')}
             onAppointmentDoubleClick={onAppointmentClick}
             onExternalDragDrop={onExternalDragDrop}
             isCellActive={isCellActive}

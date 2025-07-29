@@ -58,8 +58,11 @@ import { SelectedAppointmentContext } from "../context/SelectedAppointmentContex
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend, getBeforeWorkedDay } from "../utils/dates";
-import { calendars } from "../../datasource";
-import { get } from "http";
+
+
+import LogoUrl from "../image/LOGO_couleur_police_noire.svg";
+import LogoFiltre from "../image/Icones/Filtre.svg";
+
 
 // Définition des types d'événements pour le drawer
 const eventTypes = [
@@ -115,7 +118,7 @@ export default function HomePage() {
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<number>(calendars[0]?.id ?? 1);
+  //const [selectedCalendarId, setSelectedCalendarId] = useState<number>(calendars[0]?.id ?? 1);
   const employees = useRef<Employee[]>(initialEmployees);
   const [isLoading, setIsLoading] = useState(false);
   const isAutoScrolling = useRef(false);
@@ -139,7 +142,7 @@ export default function HomePage() {
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState<"Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?">("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
   const [selectedDate, setSelectedDate] = useState<Date>(dayInTimeline[Math.floor(WINDOW_SIZE / 2)]);
-  const [modalInfo, setModaltInfo] = useState<string | null>(null);
+  const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -179,6 +182,28 @@ export default function HomePage() {
       ]
     }
   ];
+
+  function CalendarWithHtml({ children }: { children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="p-2 bg-blue-50 text-blue-700 font-bold text-center rounded-t">
+        Sélectionnez une date
+      </div>
+      {children}
+      <div className="p-2 text-center">
+        <button
+          className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-semibold shadow"
+          onClick={() => {
+            // Action personnalisée, par exemple :
+            if (selectedDate) goToDate(selectedDate);
+          }}
+        >
+          Valider la date
+        </button>
+      </div>
+    </div>
+  );
+}
 
   const researchAppointments = useCallback(() => {
         
@@ -296,7 +321,7 @@ export default function HomePage() {
           description: selectedAppointment?.description || "Description du rendez-vous répété",
           startDate: day.start ,
           endDate: day.end,
-          imageUrl: selectedAppointment?.imageUrl,
+          image: selectedAppointment?.image,
           employeeId: selectedAppointment?.employeeId,
           type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
         });
@@ -335,7 +360,7 @@ export default function HomePage() {
           description: selectedAppointment?.description || "Description du rendez-vous répété",
           startDate: day.start ,
           endDate: day.end,
-          imageUrl: selectedAppointment?.imageUrl,
+          image: selectedAppointment?.image,
           employeeId: selectedAppointment?.employeeId,
           type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
         });
@@ -350,7 +375,7 @@ export default function HomePage() {
     // Ajoute les nouveaux rendez-vous à la liste
     appointments.current = [...appointments.current, ...newAppointments];
     researchAppointments(); // Met à jour la liste filtrée
-    setModaltInfo(`${newAppointments.length} rendez-vous créé${newAppointments.length > 1 ? 's' : ''}`);
+    setModalInfo({ message: `${newAppointments.length} rendez-vous créé${newAppointments.length > 1 ? 's' : ''}`, color: 'green' });
     setRepeatAppointmentData(null);
   }, [researchAppointments, selectedAppointment, isFullDay, nonWorkingDates]);
 
@@ -374,7 +399,7 @@ export default function HomePage() {
         description: `Nouvel élément ${title}`,
         startDate,
         endDate,
-        imageUrl,
+        image: imageUrl,
         employeeId,
         type,
       };
@@ -424,7 +449,7 @@ export default function HomePage() {
         cell.employeeId,
         clipboardAppointment.current.type || "Chantier",
         clipboardAppointment.current.libelle || "Rendez-vous copié",
-        clipboardAppointment.current.imageUrl
+        clipboardAppointment.current.image
       );
     }
   }, [createAppointment, isFullDay, nonWorkingDates]);
@@ -538,7 +563,7 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.libelle, appointment.imageUrl);
+          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.libelle, appointment.image);
         }
       }
       if (resizeDirection === 'left') {
@@ -547,7 +572,7 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.libelle, appointment.imageUrl);
+          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.libelle, appointment.image);
         }
       }
       
@@ -606,7 +631,7 @@ export default function HomePage() {
           appointment.employeeId as number,
           appointment.type,
           appointment.libelle,
-          appointment.imageUrl
+          appointment.image
         );
       });
     };
@@ -628,7 +653,7 @@ export default function HomePage() {
               startDate: days[index]?.start || app.startDate,
               endDate: days[index]?.end || app.endDate,
               employeeId: appointment.employeeId,
-              imageUrl: appointment.imageUrl,
+              image: appointment.image,
             };
           }
           return app;
@@ -700,7 +725,7 @@ export default function HomePage() {
     const appointmentToDivide = appointments.current.find(app => app.id === id);
     if (!appointmentToDivide) return;
 
-    const { startDate, endDate, employeeId, imageUrl } = appointmentToDivide;
+    const { startDate, endDate, employeeId, image: imageUrl } = appointmentToDivide;
     const totalDuration = endDate.getTime() - startDate.getTime();
     const timeInterval = isFullDay ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
     const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000)); // Nombre d'intervalles de travail dans la durée totale
@@ -935,6 +960,14 @@ export default function HomePage() {
           searchInputElement.focus();
         }
       }
+      if (e.key === 'suppr' || e.key === 'Delete') {
+        if (selectedAppointment) {
+          handleDeleteAppointment(selectedAppointment.id);
+        }
+        else{
+          setModalInfo({ message: "Aucun rendez-vous sélectionné pour la suppression.", color: "red" });
+        }
+      }
 
       if (!mainScrollRef.current) return;
       if (e.key === 'ArrowRight') {
@@ -978,10 +1011,10 @@ export default function HomePage() {
   }, [dayInTimeline]);
 
   useEffect(() => {
-  if (modalInfo) {
-    const timeout = setTimeout(() => setModaltInfo(null), 4000);
-    return () => clearTimeout(timeout);
-  }
+    if (modalInfo) {
+      const timeout = setTimeout(() => setModalInfo(null), 4000);
+      return () => clearTimeout(timeout);
+    }
   }, [modalInfo]);
 
   useEffect(() => {
@@ -1015,91 +1048,186 @@ export default function HomePage() {
   // Rendu principal de la page
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="h-screen flex flex-col overflow-hidden">
+      <div 
+        className="h-screen flex flex-col overflow-hidden"
+        style={{
+          backgroundColor: '#f3f7f8'
+        }}
+      >
         {/* Barre du haut modernisée */}
-        {!isMobile && (
-          <div className="sticky top-0 z-30 bg-white shadow-lg px-8 py-4 flex items-center justify-between main-header rounded-b-2xl border-b border-gray-200">
-            <div className="flex items-center gap-6">
-              <span className="text-2xl font-bold text-blue-700 tracking-tight mr-6">Mon Agenda</span>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="date-select" className="text-xs font-medium text-gray-600">Aller à la date</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="date-select"
-                    type="date"
-                    className="border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-gray-100 text-base"
-                    value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
-                    onChange={(e) => {
-                      const selectedDate = new Date(e.target.value);
-                      if (isNaN(selectedDate.getTime())) return;
-                      setSelectedDate(selectedDate);
-                    }}
-                  />
+        
+         {!isMobile && (
+          <div className="flex flex-row items-center">
+            <div className="mr-7 h-full p-2">
+              <img src={LogoUrl.src} alt="Logo" className="h-20 w-auto mb-2" />
+            </div>
+            <div className="flex-1 flex flex-col items-center p-4">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex flex-col gap-1">
+                  <div className="relative w-72 max-w-full">
+                    <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
+                      <svg className="w-5 h-5 text-gray-400" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                      </svg>
+                    </div>
+                    <input
+                      type="search"
+                      id="search"
+                      className="block w-full p-3 pl-8 text-base text-gray-900  rounded-xl transition focus:outline-0 poppins text-[14px]"
+                      placeholder="Rechercher"
+                      value={searchInput || ""}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
                   <button
-                    className="ml-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-semibold shadow"
-                    onClick={() => goToDate(selectedDate)}
+                    className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition "
+                    onClick={() => setIsSettingsOpen(true)}
+                    title="Paramètres"
                   >
-                    Valider
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-gear-fill text-gray-500" viewBox="0 0 16 16">
+                      <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+                    </svg>
+                  </button>
+                  <button
+                    className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition"
+                    onClick={() => setIsSettingsOpen(true)}
+                    title="multi"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-grid-3x3-gap-fill text-gray-500" viewBox="0 0 16 16">
+                      <path d="M1 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zM1 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zM1 12a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/>
+                    </svg>
+                  </button>
+                  <button
+                    className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition relative"
+                    onClick={() => setIsSettingsOpen(true)}
+                    title="Notifications"
+                  >
+                    <div className="relative">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-bell-fill text-gray-500" viewBox="0 0 16 16">
+                        <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"/>
+                      </svg>
+                      <span className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
+                    </div>
+                  </button>
+                  <div
+                    className="p-5 rounded-full  transition bg-red-600 relative"
+                  >
+                    <span className="absolute bottom-0 -right-1 block h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between w-full mt-6">
+                <div>
+                  <p className="text-5xl poppins">
+                    Planning
+                  </p>
+                </div>
+                <div className="flex flex-row items-center gap-4">
+                  <div className="flex flex-row items-center gap-2">
+                    <input
+                      id="date-select"
+                      type="date"
+                      className="border w-38 border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-gray-100 text-base"
+                      value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+                      onChange={(e) => {
+                        const selectedDate = new Date(e.target.value);
+                        if (isNaN(selectedDate.getTime())) return;
+                        setSelectedDate(selectedDate);
+                      }}
+                    />
+                    
+                    <button
+                      className="ml-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-semibold shadow"
+                      onClick={() => goToDate(selectedDate)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-check-lg" viewBox="0 0 16 16">
+                        <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="border border-gray-300 rounded-2xl flex items-center multi-op">
+                    <button
+                      className="transition btn-header cursor-pointer border-r border-gray-300 px-3 py-2 group hover:text-[#00947f]"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        fill="currentColor"
+                        className="bi bi-calendar-event text-gray-500 transition duration-200 text-inherit"
+                        viewBox="0 0 16 16"
+                      >
+                        <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z"/>
+                        <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/>
+                      </svg>
+                    </button>
+                    <button 
+                      className="transition cursor-pointer btn-header border-r border-gray-300 px-3 py-2 group hover:text-[#00947f]"
+                    >
+                      <svg 
+                        viewBox="0 0 16 16"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        className="w-5 h-5 text-inherit text-gray-500 transition duration-200"
+                      >
+                        <g>
+                          <path 
+                            d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"
+                            fill="currentColor"
+                          />
+                        </g>
+                      </svg>
+                    </button>
+                    <button 
+                      className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer"
+                    >
+                      <svg 
+                        viewBox="0 0 16 16"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        className="w-5 h-5 text-inherit text-gray-500 transition duration-200"
+                      >
+                        <g>
+                          <path 
+                            d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"
+                            fill="currentColor"
+                          />
+                        </g>
+                      </svg>
+                    </button>
+                  </div>
+                  <button
+                    className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto"
+                    style={{ backgroundColor: '#00947f' }}
+                    type="button"
+                    onClick={() => setIsDrawerOpen(true)}
+                  >
+                    + Ajouter un évènement
                   </button>
                 </div>
               </div>
-              <div className="flex flex-col gap-1 ml-6">
-                <label htmlFor="calendar-select" className="text-xs font-medium text-gray-600">Calendrier</label>
-                <select
-                  id="calendar-select"
-                  value={selectedCalendarId}
-                  onChange={e => setSelectedCalendarId(Number(e.target.value))}
-                  className="border border-gray-300 rounded-xl px-3 py-2 bg-gray-100 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                >
-                  {calendars.map(cal => (
-                    <option key={cal.id} value={cal.id}>
-                      {cal.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
-            <div className="flex items-center gap-6">
-              <div className="flex flex-col gap-1">
-                <div className="relative w-72 max-w-full">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" aria-hidden="true" fill="none" viewBox="0 0 20 20">
-                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-                    </svg>
-                  </div>
-                  <input
-                    type="search"
-                    id="search"
-                    className="block w-full p-3 pl-10 text-base text-gray-900 border border-gray-300 rounded-xl bg-gray-100 focus:ring-blue-400 focus:border-blue-400 transition"
-                    placeholder="Rechercher un rendez-vous, un employé..."
-                    value={searchInput || ""}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                  />
-                </div>
-              </div>
-              <button
-                className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition shadow border border-gray-200 ml-2"
-                onClick={() => setIsSettingsOpen(true)}
-                title="Paramètres"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" className="bi bi-gear-fill text-blue-700" viewBox="0 0 16 16">
-                  <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
-                </svg>
-              </button>
-            </div>
+           
           </div>
         )}
         {/* Grille principale du calendrier modernisée */}
-        <div className="flex-1 flex flex-col max-h-full max-w-full overflow-hidden">
+        <div className="flex-1 flex flex-col max-h-full max-w-full overflow-y-scroll
+        ">
           <div
-            className={`flex flex-grow overflow-auto snap-x snap-mandatory scrollbar-hide rounded-2xl shadow-lg border-gray-200 ${!isMobile ? 'mt-4' : ''}`}
+            className={`flex flex-grow scrollbar-hide rounded-2xl border-gray-200 ${!isMobile ? 'mt-4' : ''}`}
             ref={mainScrollRef}
             onScroll={handleScroll}
             tabIndex={0}
-            style={{ outline: "none" }}
+            style={{ outline: "none", minWidth: 0, minHeight: 0 }}
           >
             <div
-              className={`flex-grow rounded-lg ${isLoading ? "pointer-events-none opacity-60" : ""}`}
+              className={`
+                flex-grow rounded-lg ${isLoading ? "pointer-events-none opacity-60" : ""}
+              `}
             >
               <SelectedAppointmentContext.Provider value={{ selectedAppointment, setSelectedAppointment}}>
                 <SelectedCellContext.Provider value={{ selectedCell, setSelectedCell }}>
@@ -1110,7 +1238,7 @@ export default function HomePage() {
                     dayInTimeline={dayInTimeline}
                     HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
                     isFullDay={isFullDay}
-                    selectedCalendarId={selectedCalendarId}
+                    //selectedCalendarId={selectedCalendarId}
                     isMobile={isMobile}
                     includeWeekend={includeWeekend}
                     nonWorkingDates={nonWorkingDates}
@@ -1349,27 +1477,13 @@ export default function HomePage() {
                   id={ev.label} 
                   title={ev.label} 
                   key={ev.label} 
-                  imageUrl={ev.imageUrl} 
+                  imageUrl={ev.image} 
                   type={drawerOptionsSelected.label as "Chantier" | "Absence" | "Autre"}
                 />
               ))}
             </div>
           </div>
         </Drawer>
-        {/* Bouton flottant modernisé pour ouvrir le drawer */}
-        {!isMobile && (
-          <button
-            onClick={() => setIsDrawerOpen(true)}
-            className="fixed bottom-8 right-8 bg-blue-600 text-white text-4xl rounded-full shadow-2xl w-16 h-16 flex items-center justify-center hover:bg-blue-700 transition z-40 border-4 border-white"
-            style={{
-              opacity: isDrawerOpen ? 0 : 1,
-              pointerEvents: isDrawerOpen ? "none" : "auto",
-            }}
-            title="Ajouter un rendez-vous"
-          >
-            +
-          </button>
-        )}
         {/* Barre de chargement modernisée */}
         {isLoading && (
           <div className="fixed top-0 left-0 w-full h-1 bg-blue-100 z-50">
@@ -1389,11 +1503,11 @@ export default function HomePage() {
           onClose={() => setIsAlertVisible(false)}
         />
         {modalInfo && (
-          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-4 border border-green-300">
-            <span className="font-semibold text-lg">{modalInfo}</span>
+          <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 bg-${modalInfo.color}-100 px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-4 border border-${modalInfo.color}-300`}>
+            <span className={`font-semibold text-lg text-${modalInfo.color}-800`}>{modalInfo.message}</span>
             <button
               className="ml-2 text-green-900 font-bold text-2xl hover:text-green-700 transition"
-              onClick={() => setModaltInfo(null)}
+              onClick={() => setModalInfo(null)}
               title="Fermer"
             >
               ×
@@ -1665,7 +1779,7 @@ const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
                       ? DAY_INTERVALS[0].endHour
                       : HALF_DAY_INTERVALS[1].endHour
                 ),
-                imageUrl: "",
+                image: "",
                 employeeId,
                 type: eventType.label as "Chantier" | "Absence" | "Autre",
               } as Appointment);

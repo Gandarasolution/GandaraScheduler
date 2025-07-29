@@ -40,7 +40,7 @@ import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
 // Props du composant IntervalCell
 interface IntervalCellProps {
   date: Date;
-  employeeId: number;
+  employee: { id: number; name: string };
   intervalName: 'morning' | 'afternoon';
   intervalStart: Date;
   intervalEnd: Date;
@@ -83,7 +83,7 @@ interface DragItem {
  * 
  * @param {Object} props - Propriétés du composant
  * @param {Date} props.date - Date de la cellule
- * @param {number} [props.employeeId=0] - Identifiant de l'employé associé à la cellule
+ * @param {{ id: number; name: string }} [props.employee={ id: 0, name: '' }] - Employé associé à la cellule
  * @param {string} props.intervalName - Nom de l'intervalle (ex : 'morning', 'afternoon')
  * @param {Date} props.intervalStart - Date/heure de début de l'intervalle
  * @param {Date} props.intervalEnd - Date/heure de fin de l'intervalle
@@ -108,7 +108,7 @@ interface DragItem {
  * @example
  * <IntervalCell
  *   date={new Date()}
- *   employeeId={1}
+ *   employee={{ id: 1, name: 'John Doe' }}
  *   intervalName="morning"
  *   intervalStart={new Date()}
  *   intervalEnd={new Date()}
@@ -147,7 +147,7 @@ interface DragItem {
 
 const IntervalCell: React.FC<IntervalCellProps> = ({
   date,
-  employeeId = 0,
+  employee = { id: 0, name: '' },
   intervalName,
   intervalStart,
   intervalEnd,
@@ -174,7 +174,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   const bubblePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
   const { selectedCell, setSelectedCell } = useSelectedCell();
-  const isSelected = selectedCell?.date.getTime() === intervalStart.getTime() && selectedCell?.employeeId === employeeId;
+  const isSelected = selectedCell?.date.getTime() === intervalStart.getTime() && selectedCell?.employeeId === employee.id;
 
   // Gestion du drop (drag & drop)
   const [{ isOver, canDrop }, drop] = useDrop({
@@ -218,7 +218,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
           item.title || 'Nouveau rendez-vous', 
           targetDate, 
           targetInterval, 
-          employeeId,
+          employee.id,
           item.imageUrl,
           item.typeEvent
         );
@@ -226,7 +226,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         // Déplacement d'un rendez-vous existant
         const diff = item.endDate.getTime() - item.startDate.getTime(); // Durée du rendez-vous
         const newDate = new Date(targetDate.getTime() + diff);        
-        onAppointmentMoved(item.id, targetDate, newDate, employeeId);
+        onAppointmentMoved(item.id, targetDate, newDate, employee.id);
       }
     },
     collect: (monitor) => ({
@@ -242,11 +242,12 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
     bgColor = 'bg-green-100';
   }
 
+  
   // Affiche une bulle d'info au clic sur la cellule
   const handleCellClick = (event: React.MouseEvent<HTMLDivElement>) => {
     event.stopPropagation();
-    if (!isCellActive || isWeekend || !employeeId) return;
-    setSelectedCell({ date: intervalStart, employeeId });
+    if (!isCellActive || isWeekend || !employee.id) return;
+    setSelectedCell({ date: intervalStart, employeeId: employee.id });
     setSelectedAppointment(null);
     if (appointments.length > 0) {
       setBubbleContent(appointments.map((app) => app.title).join(', '));
@@ -259,12 +260,12 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       x: rect.left,
       y: rect.top
     };    
-    //setTimeout(() => setShowInfoBubble(false), 3000);
+    setTimeout(() => setShowInfoBubble(false), 3000);
   };
 
   // Double-clic pour créer un rendez-vous
   const handleCellDoubleClick = () => {    
-    onCellDoubleClick(date, employeeId, isFullDay ? 'day' : intervalName);
+    onCellDoubleClick(date, employee.id, isFullDay ? 'day' : intervalName);
   };
 
   
@@ -278,10 +279,10 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       }
       onClick={handleCellClick}
       onDoubleClick={() =>{  
-        if (isCellActive && !!employeeId) handleCellDoubleClick();
+        if (isCellActive && !!employee.id) handleCellDoubleClick();
       }}
       className={`
-        relative flex-1 border-b ${isCellActive ? 'border-r' : ''} 
+        relative flex-1 border-r
         ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-gray-200  
         ${bgColor} ${canDrop ? 'cursor-pointer' : ''}
         flex flex-row items-start gap-1
@@ -295,15 +296,15 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         willChange: 'background-color, border-color',
       }}
       onContextMenu={(e) => {
-        handleContextMenu && !isWeekend && !isFerie ? handleContextMenu(e, 'cell', undefined, { employeeId, date: intervalStart }) 
+        handleContextMenu && !isWeekend && !isFerie ? handleContextMenu(e, 'cell', undefined, { employeeId: employee.id, date: intervalStart }) 
         : e.preventDefault();
       }}
       suppressHydrationWarning={true} // Pour éviter les erreurs de rendu côté serveur
     >
-      
         {isCellActive && appointments.map((app) => (
           <AppointmentItem
             key={app.id}
+            employee={employee}
             appointment={app}
             isFullDay={isFullDay}
             includeWeekend={includeWeekend}
@@ -311,7 +312,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
             onResize={(id, newStartDate, newEndDate, resizeDirection) => {
               onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
             }}
-            handleContextMenu={(e, origin, appointment) => handleContextMenu && handleContextMenu(e, origin, appointment, { employeeId, date: intervalStart })}
+            handleContextMenu={(e, origin, appointment) => handleContextMenu && handleContextMenu(e, origin, appointment, { employeeId: employee.id, date: intervalStart })}
             color={colors[app.employeeId as number % colors.length]}
             isMobile={isMobile}
           />

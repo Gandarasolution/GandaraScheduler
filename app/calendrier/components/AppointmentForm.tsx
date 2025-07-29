@@ -81,7 +81,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           libelle: '',
           startDate: initialDate || new Date(),
           endDate: initialDate ? setHours(setMinutes(initialDate, 0), 0) : new Date(),
-          imageUrl: '',
+          image: '',
           employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''),
           type: "Chantier",
         }
@@ -293,7 +293,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           type="text"
           id="imageUrl"
           name="imageUrl"
-          value={formData.imageUrl || ''}
+          value={formData.image || ''}
           onChange={handleChange}
           placeholder="https://..."
           className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"

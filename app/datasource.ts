@@ -1,5 +1,7 @@
 import { Appointment, Employee, Groupe } from './calendrier/types/index';
-
+import iconeChantier from './calendrier/image/Icones/Evenement_Chantier.svg'
+import iconeAbsenceValide from './calendrier/image/Icones/Evenement_Congés_Valide.svg'
+import iconeAbsenceNonValide from './calendrier/image/Icones/Evenement_Congés_Non_Valide.svg'
 
 export const initialTeams: Groupe[] = [
     { name: 'Team A', id: 1 },
@@ -8,55 +10,49 @@ export const initialTeams: Groupe[] = [
     { name: 'Team D', id: 4}
 ];
 
-export const calendars = [
-  { id: 1, name: "BOUTIQUE"},
-  { id: 2, name: "CENTRELEC"},
-  { id: 3, name: "CONFORT HABITAT"},
-  { id: 4, name: "DIRECTION"}
-];
 
 export const initialEmployees: Employee[] = [
-    { name: 'Nancy', id: 1, groupId: 1, contrat: 'CDI', avatarUrl: 'https://i.pravatar.cc/40?img=1', calendarId: [1, 3] },
-    { name: 'Steven', id: 2, groupId: 1, contrat: 'CDD',avatarUrl: 'https://i.pravatar.cc/40?img=2', calendarId: [1, 2] },
-    { name: 'Robert', id: 3, groupId: 2, contrat: 'Intérimaire', avatarUrl: 'https://i.pravatar.cc/40?img=3', calendarId: [2] },
-    { name: 'Smith', id: 4, groupId: 2,  contrat: 'CDD', calendarId: [2] },
-    { name: 'Michael', id: 5, groupId: 3, contrat: 'CDI', calendarId: [3] },
-    { name: 'Root', id: 6, groupId: 3, contrat: 'CDI', calendarId: [3] },
-    { name: 'Alice', id: 7, groupId: 1, contrat: 'Intérimaire', calendarId: [1] },
-    { name: 'Lucas', id: 8, groupId: 2,  contrat: 'CDD', calendarId: [2, 4] },
-    { name: 'Emma', id: 9, groupId: 4,  contrat: 'CDD', calendarId: [4] },
-    { name: 'Paul', id: 10, groupId: 4, contrat: 'Intérimaire', calendarId: [4, 3] },
-    { name: 'Sophie', id: 11, groupId: 1, contrat: 'CDD', calendarId: [1, 4] },
-    { name: 'Julien', id: 12, groupId: 2, contrat: 'Intérimaire', calendarId: [2, 8] }
+    { name: 'Nancy', id: 1, groupId: 1, contrat: 'CDI', avatar: 'https://i.pravatar.cc/40?img=1'},
+    { name: 'Steven', id: 2, groupId: 1, contrat: 'CDD',avatar: 'https://i.pravatar.cc/40?img=2'},
+    { name: 'Robert', id: 3, groupId: 2, contrat: 'Intérimaire', avatar: 'https://i.pravatar.cc/40?img=3'},
+    { name: 'Smith', id: 4, groupId: 2,  contrat: 'CDD'},
+    { name: 'Michael', id: 5, groupId: 3, contrat: 'CDI'},
+    { name: 'Root', id: 6, groupId: 3, contrat: 'CDI'},
+    { name: 'Alice', id: 7, groupId: 1, contrat: 'Intérimaire'},
+    { name: 'Lucas', id: 8, groupId: 2,  contrat: 'CDD'},
+    { name: 'Emma', id: 9, groupId: 4,  contrat: 'CDD'},
+    { name: 'Paul', id: 10, groupId: 4, contrat: 'Intérimaire'},
+    { name: 'Sophie', id: 11, groupId: 1, contrat: 'CDD'},
+    { name: 'Julien', id: 12, groupId: 2, contrat: 'Intérimaire'}
 ];
 
 export const chantier = [
-    { id: 1 , label: '1052 Logements Vesoul', imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 2 , label: 'Résidence Les Jardins de Paris',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 3 , label: 'Chantier Lycée Jean Moulin' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 4 , label: 'Rénovation Hôtel de Ville',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 5 , label: 'Extension Usine Renault Flins',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 6 , label: 'Construction EHPAD Les Lilas',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 7 , label: 'Réhabilitation Collège Victor Hugo' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 8 , label: 'Immeuble Le Belvédère Lyon' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 9 , label: 'Bâtiment Industriel Toulouse' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 10 , label: 'Résidence Étudiante Marseille' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'}
+    { id: 1 , label: '1052 Logements Vesoul', image: iconeChantier.src },
+    { id: 2 , label: 'Résidence Les Jardins de Paris', image: iconeChantier.src},
+    { id: 3 , label: 'Chantier Lycée Jean Moulin' , image: iconeChantier.src},
+    { id: 4 , label: 'Rénovation Hôtel de Ville', image: iconeChantier.src},
+    { id: 5 , label: 'Extension Usine Renault Flins', image: iconeChantier.src},
+    { id: 6 , label: 'Construction EHPAD Les Lilas', image: iconeChantier.src},
+    { id: 7 , label: 'Réhabilitation Collège Victor Hugo' , image: iconeChantier.src},
+    { id: 8 , label: 'Immeuble Le Belvédère Lyon' , image: iconeChantier.src},
+    { id: 9 , label: 'Bâtiment Industriel Toulouse' , image: iconeChantier.src},
+    { id: 10 , label: 'Résidence Étudiante Marseille' , image: iconeChantier.src}
 ];
 
 export const absences = [
-    { id: 1, label: 'RTT' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 2, label: 'Maladie',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 3, label: 'Congés payés',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 4, label: 'Sans solde',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 5, label: 'Autre',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' }
+    { id: 1, label: 'RTT' , image: iconeAbsenceValide.src },
+    { id: 2, label: 'Maladie', image: iconeAbsenceValide.src },
+    { id: 3, label: 'Congés payés', image: iconeAbsenceValide.src },
+    { id: 4, label: 'Sans solde', image: iconeAbsenceNonValide.src },
+    { id: 5, label: 'Autre', image: iconeAbsenceNonValide.src }
 ]
 
 export const autres = [
-    { id: 1, label: 'Heures SUP',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 2, label: 'Formation',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png' },
-    { id: 3, label: 'Réunion' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 4, label: 'Déplacement',imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'},
-    { id: 5, label: 'Maintenance' ,imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png'}
+    { id: 1, label: 'Heures SUP',image: iconeChantier.src },
+    { id: 2, label: 'Formation',image: iconeChantier.src },
+    { id: 3, label: 'Réunion' ,image: iconeChantier.src},
+    { id: 4, label: 'Déplacement',image: iconeChantier.src},
+    { id: 5, label: 'Maintenance' ,image: iconeChantier.src}
 ]
 
 function generateAppointments(employees: Employee[]): Appointment[] {
@@ -82,7 +78,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       description: `Rendez-vous pour ${emp.name}`,
       startDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 0, 0),
       endDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 12, 0),
-      imageUrl: 'https://cdn-icons-png.flaticon.com/512/46/46818.png',
+      image: titles[idx % titles.length].image,
       employeeId: emp.id,
       type: 
       chantier.find(c => c.label === titles[idx % titles.length].label) ? 'Chantier' : 

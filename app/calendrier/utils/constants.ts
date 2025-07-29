@@ -4,8 +4,9 @@
 import { HalfDayInterval } from "../types";
 
 export const EMPLOYEE_COLUMN_WIDTH = 150;
-export const CELL_WIDTH = 60;
-export const CELL_HEIGHT = 50;
+export const CELL_WIDTH = 80;
+export const CELL_HEIGHT = 40;
+export const MARGIN_BETWEEN_TEAMS = 20;
 
 
 export const HALF_DAY_INTERVALS: HalfDayInterval[] = [

@@ -6,10 +6,9 @@ export interface Groupe {
 export interface Employee {
   id: number; // ID unique de l'employé
   name: string;
-  avatarUrl?: string;
+  avatar?: string;
   groupId?: number; // Ajout de l'ID de l'équipe
   contrat: 'CDI' | 'CDD' | 'Intérimaire'; // Type de contrat
-  calendarId: number[]; // Liste des IDs de calendriers associés
 }
 
 export interface Appointment {
@@ -19,7 +18,7 @@ export interface Appointment {
   description: string;
   startDate: Date;
   endDate: Date;
-  imageUrl?: string;
+  image?: string;
   employeeId: number | string; // Lien vers l'employé
   type: "Chantier" | "Absence" | "Autre"; // Type de rendez-vous
 }
