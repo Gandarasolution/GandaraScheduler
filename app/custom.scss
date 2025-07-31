@@ -11,9 +11,21 @@
   font-family: 'Poppins', sans-serif;
 }
 
+.custom-select-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #555; /* couleur de la flèche */
+}
+
 
 .WEEKEND {
-  background-color: #f0f4f8; /* bleu clair */
+  background-color: #f6f6f6;
 }
 .FERIE {
   background-color: #fce4e4; /* rose clair */
@@ -94,7 +106,8 @@
   background-color: rgba(0, 0, 0, 0.5);
 }
 
-.modal{
+.modal,
+.calendar-grid{
   .scrollbar-hide {
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE 10+ */

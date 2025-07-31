@@ -1,5 +1,5 @@
 "use client";
-import React, {useState, useMemo, memo, useCallback}from 'react';
+import React, {useState, useMemo, memo, useCallback, useRef}from 'react';
 import {
   format,
   isSameDay,
@@ -24,6 +24,8 @@ interface CalendarGridProps {
   nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
   isMobile: boolean;
   includeWeekend: boolean; // Indique si les week-ends doivent être inclus dans la vue mobile
+  mainScrollRef: React.RefObject<HTMLDivElement | null>; // Référence pour le scroll principal
+  handleScroll: () => void; // Fonction de gestion du scroll
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -48,7 +50,9 @@ interface CalendarGridProps {
  * @param {Date[]} props.nonWorkingDates - Liste des jours non travaillés
  * @param {boolean} props.isMobile - Indique si l'affichage est mobile
  * @param {boolean} props.includeWeekend - Indique si les week-ends sont visibles
+ * @param {React.RefObject<HTMLDivElement>} props.mainScrollRef - Référence pour le scroll principal
  * @param {Function} props.onAppointmentMoved - Callback lors du déplacement d'un rendez-vous
+ * @param {Function} props.handleScroll - Fonction de gestion du scroll
  * @param {Function} props.onCellDoubleClick - Callback lors du double-clic sur une cellule
  * @param {Function} props.onAppointmentDoubleClick - Callback lors du double-clic sur un rendez-vous
  * @param {Function} props.onExternalDragDrop - Callback lors d'un drag & drop externe
@@ -67,6 +71,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   nonWorkingDates,
   isMobile,
   includeWeekend,
+  mainScrollRef,
+  handleScroll,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -77,6 +83,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   
   // État pour gérer les équipes ouvertes (affichées)
   const [openTeams, setOpenTeams] = useState<number[]>(initialTeams.map(team => team.id));
+
+  const columnEmployeeRef = useRef<HTMLDivElement>(null);
+  const isSyncingScroll = useRef(false);
+
+
   // Trouve l'index du jour courant dans la timeline
   const todayIndex = dayInTimeline.findIndex(day => 
     format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
@@ -396,6 +407,24 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     });
     return months;
   }, [dayInTimeline]);
+
+  
+  const handleScrollY = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (!mainScrollRef.current || !columnEmployeeRef.current) return;
+
+    if (isSyncingScroll.current) {
+      isSyncingScroll.current = false;
+      return;
+    }
+
+    if (mainScrollRef.current === e.currentTarget) {
+      isSyncingScroll.current = true;
+      columnEmployeeRef.current.scrollTop = mainScrollRef.current.scrollTop;
+    } else if (columnEmployeeRef.current === e.currentTarget) {
+      isSyncingScroll.current = true;
+      mainScrollRef.current.scrollTop = columnEmployeeRef.current.scrollTop;
+    }
+  }, []);
   
   if (isMobile) {
     const displayEmployee = employees[0];
@@ -471,21 +500,47 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     )
   }
   else return (
-      <div className="relative flex">
+      <div className="relative flex h-full flex-row calendar-grid">
         {/* Colonne employés sticky à gauche */}
         <div
-          className="min-w-60 max-w-80 pl-2 flex flex-col sticky left-0 top-0 z-50 pr-10"
+          className="min-w-80 max-w-80 pl-2 flex flex-col sticky left-0 z-50 pr-10 overflow-y-scroll scrollbar-hide"
           style={{
             backgroundColor: '#f3f7f8',
+            scrollbarGutter: 'stable',
           }}
+          onScroll={handleScrollY}
+          ref={columnEmployeeRef}
         >
-          <div className="h-[96px] sticky top-0 z-10 flex items-end justify-center pb-2"></div>
+          <div 
+            className="h-[96px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
+            style={{
+              backgroundColor: '#f3f7f8',
+            }}
+          >
+            <div className="custom-select-wrapper relative inline-block w-full">
+              <select
+                className='
+                  border border-gray-300 rounded-2xl p-2 w-full h-[48px] text-gray-700 
+                  poppins text-[14px] font-medium bg-white'
+                style={{
+                  appearance: 'none',
+                }}
+              >
+                <option value="">Planning Social</option>
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           {employeesByTeam.map((team) => {
             const open = openTeams.includes(team.id);
             return (
               <div
                 key={team.id}
-                className="rounded-2xl bg-white shadow border border-gray-100"
+                className="rounded-2xl bg-white border border-gray-100"
                 style={{ marginBottom: MARGIN_BETWEEN_TEAMS }}
               >
                 <button
@@ -493,7 +548,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   onClick={() => toggleTeam(team.id)}
                   type="button"
                 >
-                  <span className="poppins text[14px] font-medium">{team.name}</span>
+                  <span className="poppins font-bold">{team.name}</span>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -511,18 +566,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     return (
                       <div
                         key={employee.id}
-                        className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer transition hover:bg-green-50"
+                        className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer transition hover:bg-[#e7f4f2]"
                         style={{ height: employeeRowHeight, alignItems: 'center' }}
                       >
-                        {employee.avatar && (
-                          <img
-                            src={employee.avatar}
-                            alt={employee.name}
-                            className="w-8 h-8 rounded-full border-2 border-white shadow"
-                            onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`; }}
-                          />
-                        )}
-                        <span className="poppins text-[14px] font-inherit group-hover:font-semibold">{employee.name}</span>
+                        <img
+                          src={employee.avatar ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
+                          alt={employee.name}
+                          className="w-8 h-8 rounded-full border-2 border-white shadow"
+                          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`; }}
+                        />
+                        <span className="poppins text-[16px] font-inherit group-hover:font-semibold">{employee.name}</span>
                       </div>
                     );
                   })}
@@ -532,158 +585,181 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           })}
         </div>
         {/* Timeline principale : scroll horizontal indépendant, barre toujours visible */}
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col pr-7 rounded-2xl poppins">
           {/* Conteneur scrollable horizontal, hauteur fixe pour garder la barre visible */}
-          <div className="relative w-full">
-            {/* Sticky month header */}
-            <div
-              className="grid sticky top-0 z-20 bg-white border-b border-gray-300"
+          <div className='p-4 border rounded-4xl bg-white w-full h-full border-[#dfdedeff]'>
+            <div 
+              className="
+              relative w-full overflow-x-scroll overflow-y-auto 
+              rounded-3xl scrollbar-hide border h-full border-[#dfdedeff]"
               style={{
-                gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-                minHeight: '40px',
+                scrollbarGutter: 'stable',
               }}
-            >
-              {monthsInTimeline.map((month) => {
-                const o = month.name.split(' ');
-                const monthName = o[0].charAt(0).toUpperCase() + o[0].slice(1);
-                const year = o[1];
-                return (
-                  <div
-                    key={month.key}
-                    className="
-                      col-span-full flex items-center justify-center py-2 text-[14px] poppins
-                     bg-gray-50 border-r border-gray-200"
-                    style={{ gridColumn: `span ${month.span}` }}
-                  >
-                    <span className='font-extrabold'>{monthName}</span>
-                    <span className='text-gray-500 ml-1'>{' '}</span>
-                    <span className='font-medium'>{year}</span>
-                  </div>
-                );
-              })}
-            </div>
-            {/* Sticky day header below month header */}
-            <div
-              className="grid sticky top-[40px] z-20 bg-white border-b border-gray-300"
-              style={{
-                gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-                minHeight: '56px',
+              onScroll={(e) => {
+                handleScroll();
+                handleScrollY(e);              
               }}
+              ref={mainScrollRef}
             >
-              {dayInTimeline.map((day, index) => (
-                <div
-                  key={`header-day-${format(day, 'yyyy-MM-dd')}`}
-                  className={`
-                    flex flex-col justify-end border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1
-                    ${isWeekend(day) ? 'bg-gray-100' : ''}
-                    relative
-                    day-cell
-                  `}
-                  style={{ width: CELL_WIDTH + 'px', height: 'auto' }}
-                >
-                  {/* Affiche le numéro de semaine en début de semaine */}
-                  {day.getDay() === 1 && (
-                    <span
-                      className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        background: '#4892cc',
-                      }}
+              {/* Sticky month header */}
+              <div
+                className="grid sticky top-0 z-20 bg-white border-gray-300"
+                style={{
+                  gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
+                  minHeight: '40px',
+                }}
+              >
+                {monthsInTimeline.map((month) => {
+                  const o = month.name.split(' ');
+                  const monthName = o[0].charAt(0).toUpperCase() + o[0].slice(1);
+                  const year = o[1];
+                  return (
+                    <div
+                      key={month.key}
+                      className="
+                        col-span-full flex items-center justify-start py-2 text-[14px] poppins
+                        bg-gray-50 border-r border-gray-200 bg-white border-b
+                      "
+                      style={{ gridColumn: `span ${month.span}` }}
                     >
-                      {getWeekNumber(day)}
+                      <div
+                        className="sticky left-0 z-30 pl-4"
+                        style={{ minWidth: 120 }} // ajuste la largeur si besoin
+                      >
+                        <span className='font-extrabold'>{monthName}</span>
+                        <span className='text-gray-500 ml-1'>{' '}</span>
+                        <span className='font-medium'>{year}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Sticky day header below month header */}
+              <div
+                className="grid sticky top-[40px] z-20 bg-white border-gray-300"
+                style={{
+                  gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
+                  minHeight: '56px',
+                }}
+              >
+                {dayInTimeline.map((day, index) => (
+                  <div
+                    key={`header-day-${format(day, 'yyyy-MM-dd')}`}
+                    className={`
+                      flex flex-col justify-end border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1
+                      ${isWeekend(day) ? 'bg-gray-100' : 'bg-white'}
+                      relative
+                      day-cell
+                    `}
+                    style={{ width: CELL_WIDTH + 'px', height: 'auto' }}
+                  >
+                    {/* Affiche le numéro de semaine en début de semaine */}
+                    {day.getDay() === 1 && (
+                      <span
+                        className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          background: '#4892cc',
+                        }}
+                      >
+                        {getWeekNumber(day)}
+                      </span>
+                    )}
+                    <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span>
+                    <span className="block text-xs text-gray-500">{
+                      format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() 
+                      + 
+                      format(day, 'EEE', { locale: fr }).slice(1).replace('.', '')}
                     </span>
-                  )}
-                  <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span>
-                  <span className="block text-xs text-gray-500 uppercase">{format(day, 'EEE', { locale: fr })}</span>
-                </div>
-              ))}
-            </div>
-            {/* Main grid rows (not sticky) */}
-            <div
-              className="grid bg-white relative calendar-grid rounded-2xl"
-              style={{
-                gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-                width: `${dayInTimeline.length * CELL_WIDTH}px`,
-              }}
-            >
-              {/* Ligne rouge verticale pour la date du jour */}
-              {todayIndex !== -1 && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: `${todayIndex * CELL_WIDTH + CELL_WIDTH / 2}px`,
-                    top: 0,
-                    width: '3px',
-                    height: '100%',
-                    background: 'linear-gradient(180deg, #ef4444 0%, #f87171 100%)',
-                    zIndex: 10,
-                    borderRadius: '2px',
-                    pointerEvents: 'none',
-                    boxShadow: '0 0 8px 2px #ef4444aa',
-                  }}
-                />
-              )}
-              {/* Rows for each team: inactive row, then employee rows */}
-              {employeesByTeam.map((team, idx) => (
-                <React.Fragment key={team.id}>
-                  {/* Inactive row for the team */}
-                  {dayInTimeline.map((day) => (
-                    <DayCell
-                      key={`inactive-${team.id}-${format(day, 'yyyy-MM-dd')}`}
-                      day={day}
-                      employee={{ id: 0, name: 'Inactive' }}
-                      appointments={[]}
-                      intervals={HALF_DAY_INTERVALS}
-                      isFullDay={isFullDay}
-                      RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 8}
-                      isMobile={isMobile}
-                      nonWorkingDates={nonWorkingDates}
-                      includeWeekend={includeWeekend}
-                      onAppointmentMoved={onAppointmentMoved}
-                      onCellDoubleClick={onCellDoubleClick}
-                      onAppointmentClick={onAppointmentDoubleClick}
-                      onExternalDragDrop={onExternalDragDrop}
-                      isWeekend={isWeekend(day)}
-                      handleContextMenu={handleContextMenu}
-                      isCellActive={false}
-                    />
-                  ))}
-                  {/* Employee rows for the team */}
-                  {openTeams.includes(team.id) && team.employees.map((employee) => {
-                    const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
-                    return (
-                      <React.Fragment key={employee.id}>
-                        {dayInTimeline.map((day) => {
-                          const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
-                            isSameDay(app.startDate, day) && app.employeeId === employee.id
-                          );
-                          return (
-                            <DayCell
-                              key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
-                              day={day}
-                              employee={{ id: employee.id, name: employee.name }}
-                              appointments={dayEmployeeAppointments}
-                              intervals={HALF_DAY_INTERVALS}
-                              isFullDay={isFullDay}
-                              RowHeight={employeeRowHeight}
-                              isMobile={isMobile}
-                              nonWorkingDates={nonWorkingDates}
-                              includeWeekend={includeWeekend}
-                              onAppointmentMoved={onAppointmentMoved}
-                              onCellDoubleClick={onCellDoubleClick}
-                              onAppointmentClick={onAppointmentDoubleClick}
-                              onExternalDragDrop={onExternalDragDrop}
-                              isWeekend={isWeekend(day)}
-                              handleContextMenu={handleContextMenu}
-                            />
-                          );
-                        })}
-                      </React.Fragment>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
+                  </div>
+                ))}
+              </div>
+              {/* Main grid rows (not sticky) */}
+              <div
+                className="grid bg-white relative calendar-grid"
+                style={{
+                  gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
+                  width: `${dayInTimeline.length * CELL_WIDTH}px`,
+                }}
+              >
+                {/* Ligne rouge verticale pour la date du jour */}
+                {todayIndex !== -1 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: `${todayIndex * CELL_WIDTH + CELL_WIDTH / 2}px`,
+                      top: 0,
+                      width: '3px',
+                      height: '100%',
+                      background: 'linear-gradient(180deg, #ef4444 0%, #f87171 100%)',
+                      zIndex: 10,
+                      borderRadius: '2px',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                )}
+                {/* Rows for each team: inactive row, then employee rows */}
+                {employeesByTeam.map((team, idx) => (
+                  <React.Fragment key={team.id}>
+                    {/* Inactive row for the team */}
+                    {dayInTimeline.map((day) => (
+                      <DayCell
+                        key={`inactive-${team.id}-${format(day, 'yyyy-MM-dd')}`}
+                        day={day}
+                        employee={{ id: 0, name: 'Inactive' }}
+                        appointments={[]}
+                        intervals={HALF_DAY_INTERVALS}
+                        isFullDay={isFullDay}
+                        RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 8}
+                        isMobile={isMobile}
+                        nonWorkingDates={nonWorkingDates}
+                        includeWeekend={includeWeekend}
+                        onAppointmentMoved={onAppointmentMoved}
+                        onCellDoubleClick={onCellDoubleClick}
+                        onAppointmentClick={onAppointmentDoubleClick}
+                        onExternalDragDrop={onExternalDragDrop}
+                        isWeekend={isWeekend(day)}
+                        handleContextMenu={handleContextMenu}
+                        isCellActive={false}
+                      />
+                    ))}
+                    {/* Employee rows for the team */}
+                    {openTeams.includes(team.id) && team.employees.map((employee) => {
+                      const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
+                      return (
+                        <React.Fragment key={employee.id}>
+                          {dayInTimeline.map((day) => {
+                            const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
+                              isSameDay(app.startDate, day) && app.employeeId === employee.id
+                            );
+                            return (
+                              <DayCell
+                                key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
+                                day={day}
+                                employee={{ id: employee.id, name: employee.name }}
+                                appointments={dayEmployeeAppointments}
+                                intervals={HALF_DAY_INTERVALS}
+                                isFullDay={isFullDay}
+                                RowHeight={employeeRowHeight}
+                                isMobile={isMobile}
+                                nonWorkingDates={nonWorkingDates}
+                                includeWeekend={includeWeekend}
+                                onAppointmentMoved={onAppointmentMoved}
+                                onCellDoubleClick={onCellDoubleClick}
+                                onAppointmentClick={onAppointmentDoubleClick}
+                                onExternalDragDrop={onExternalDragDrop}
+                                isWeekend={isWeekend(day)}
+                                handleContextMenu={handleContextMenu}
+                              />
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </div>
             </div>
           </div>
         </div>

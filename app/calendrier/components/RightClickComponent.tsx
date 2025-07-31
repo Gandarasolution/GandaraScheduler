@@ -52,40 +52,43 @@ const RightClickComponent = ({
   }
 
   return (
-    <div
-      className="
-      rightClickComponent 
-      fixed flex flex-col 
-      bg-white border border-gray-300 rounded shadow-lg z-50 p-2
-      "
-      style={{ 
-        top: coordinates.y, 
-        left: coordinates.x,
-      }}
-      onClick={(e) => e.stopPropagation()} // Empêche la fermeture du menu lors du clic à l'intérieur
-    >
-      {rightClickItem.map((item) => (        
-        <div 
-          key={item.label} 
-          className={`
-            flex items-center p-2 hover:bg-gray-100 rounded 
-            ${(item.label === 'Coller' && !clipBoardAppointment) || item.actif
-              ? 'opacity-50 cursor-not-allowed pointer-events-none' 
-              : ' cursor-pointer'
+    <>
+      <div
+        className="
+        rightClickComponent 
+        fixed flex flex-col 
+        bg-white border border-gray-300 rounded-xl shadow-lg z-60 p-2
+        "
+        style={{ 
+          top: coordinates.y, 
+          left: coordinates.x,
+        }}
+        onClick={(e) => e.stopPropagation()} // Empêche la fermeture du menu lors du clic à l'intérieur
+      >
+        {rightClickItem.map((item) => (        
+          <div 
+            key={item.label} 
+            className={`
+              flex items-center p-2 rounded-xl 
+              ${(item.label === 'Coller' && !clipBoardAppointment) || item.actif
+                ? 'opacity-50 cursor-not-allowed pointer-events-none' 
+                : ' cursor-pointer'
+              }
+              item hover:bg-[#e7f4f2]
+              `
             }
-            item
-            `
-          }
-          onClick={() => {
-            item.action && item.action();
-            onClose();
-          }}
-        >
-          {item.logo}
-          <span className="ml-2">{item.label}</span>
-        </div>
-      ))}
-    </div>
+            onClick={() => {
+              item.action && item.action();
+              onClose();
+            }}
+          >
+            {item.logo}
+            <span className="ml-2 poppins">{item.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="fixed z-50 inset-0 transition-opacity animate-fadeIn overlay" onClick={onClose} />
+    </>
   );
 };
 
