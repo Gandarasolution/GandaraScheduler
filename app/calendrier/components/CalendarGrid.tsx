@@ -1,17 +1,16 @@
 "use client";
-import React, {useState, useMemo, memo, useCallback, useRef}from 'react';
+import React, {useState, useMemo, memo, useCallback, useRef, useEffect}from 'react';
 import {
   format,
   isSameDay,
   isWeekend,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
+  isToday,
 } from 'date-fns';
 import DayCell from './DayCell'; // Cellule individuelle du calendrier
-import { Appointment, Employee, HalfDayInterval, Groupe } from '../types';
+import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, DimensionItem } from '../types';
 import { fr } from 'date-fns/locale';
-import {EMPLOYEE_COLUMN_WIDTH, CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../utils/constants'; // Constantes de style
+import {CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../utils/constants'; // Constantes de style
+import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../utils/filters';
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -26,6 +25,9 @@ interface CalendarGridProps {
   includeWeekend: boolean; // Indique si les week-ends doivent être inclus dans la vue mobile
   mainScrollRef: React.RefObject<HTMLDivElement | null>; // Référence pour le scroll principal
   handleScroll: () => void; // Fonction de gestion du scroll
+  calendarConfig: CalendarConfig; // Configuration du calendrier avec filtres et dimension
+  onCalendarConfigChange: (config: CalendarConfig) => void; // Callback pour changer de configuration
+  availableConfigs: CalendarConfig[]; // Configurations disponibles
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -73,6 +75,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   includeWeekend,
   mainScrollRef,
   handleScroll,
+  calendarConfig,
+  onCalendarConfigChange,
+  availableConfigs,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -81,11 +86,31 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 }) => {
 
   
-  // État pour gérer les équipes ouvertes (affichées)
-  const [openTeams, setOpenTeams] = useState<number[]>(initialTeams.map(team => team.id));
+  // État pour gérer les éléments de dimension ouverts (affichés)
+  const [openItems, setOpenItems] = useState<(string | number)[]>([]);
 
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
   const isSyncingScroll = useRef(false);
+
+  // Calculer les éléments de dimension basés sur la configuration
+  const dimensionItems = useMemo(() => {
+    return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
+  }, [calendarConfig.dimension, employees, initialTeams]);
+
+  // Appliquer les filtres aux employés selon la configuration
+  const filteredEmployees = useMemo(() => {
+    return applyFiltersToEmployees(employees, calendarConfig.filters);
+  }, [employees, calendarConfig.filters]);
+
+  // Regrouper les employés filtrés selon la dimension
+  const employeesByDimension = useMemo(() => {
+    return groupEmployeesByDimension(filteredEmployees, calendarConfig.dimension, initialTeams);
+  }, [filteredEmployees, calendarConfig.dimension, initialTeams]);
+
+  // Initialiser les éléments ouverts quand les dimensionItems changent
+  useEffect(() => {
+    setOpenItems(dimensionItems.map(item => item.id));
+  }, [dimensionItems]);
 
 
   // Trouve l'index du jour courant dans la timeline
@@ -130,12 +155,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   }, [employees, initialTeams]);
   
   
-  // Ouvre/ferme une équipe dans la vue
-  const toggleTeam = (teamId: number) => {
-    setOpenTeams(open =>
-      open.includes(teamId)
-        ? open.filter(id => id !== teamId)
-        : [...open, teamId]
+  // Ouvre/ferme un élément de dimension dans la vue
+  const toggleItem = (itemId: string | number) => {
+    setOpenItems(open =>
+      open.includes(itemId)
+        ? open.filter(id => id !== itemId)
+        : [...open, itemId]
     );
   };   
 
@@ -196,7 +221,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       // On initialise un tableau pour stocker les hauteurs calculées
       const heights: { employeeId: number; dayKey: number; height: number }[] = [];
 
-      employees.forEach(employee => {
+      filteredEmployees.forEach(employee => {
         // Pour chaque employé
 
         dayInTimeline.forEach(day => {
@@ -240,7 +265,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     } else {
       // Sinon (desktop), on calcule une hauteur globale par employé sur toute la période
 
-      return employees.map(employee => {
+      return filteredEmployees.map(employee => {
         // For each employee, get all their appointments
         const employeeAppointments = appointments.filter(app => app.employeeId === employee.id);
         
@@ -289,7 +314,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
       });
     }
-  }, [employees, appointments, dayInTimeline, isMobile]);
+  }, [filteredEmployees, appointments, dayInTimeline, isMobile]);
   // Les dépendances : recalcul si l'une d'elles change
 
   
@@ -315,7 +340,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const assignAppointmentTops = useCallback((appointments: Appointment[], isMobile: boolean, dayInTimeline: Date[]) => {
     const result: (Appointment & { top: number, _dayKey?: number })[] = [];
 
-    employees.forEach(emp => {
+    filteredEmployees.forEach(emp => {
       if (isMobile) {
         // Pour chaque jour, on empile les RDV qui se chevauchent ce jour-là
         dayInTimeline.forEach(day => {
@@ -373,10 +398,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       }
     });
     return result;
-  }, [employees, appointments, dayInTimeline]);
+  }, [filteredEmployees, appointments, dayInTimeline, isMobile]);
 
   // Calcule les tops uniquement entre les rendez-vous de cet employé
-  const appointmentsWithTop = assignAppointmentTops(appointments, isMobile, dayInTimeline);
+  const appointmentsWithTop = useMemo(() => {
+    return assignAppointmentTops(appointments, isMobile, dayInTimeline);
+  }, [assignAppointmentTops, appointments, isMobile, dayInTimeline]);
 
   // Calcule les mois et leur portée en jours
   const monthsInTimeline = useMemo(() => {
@@ -512,7 +539,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           ref={columnEmployeeRef}
         >
           <div 
-            className="h-[96px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
+            className="h-[112px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
             style={{
               backgroundColor: '#f3f7f8',
             }}
@@ -525,43 +552,80 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 style={{
                   appearance: 'none',
                 }}
+                value={calendarConfig.id}
+                onChange={(e) => {
+                  const selectedConfig = availableConfigs.find(config => config.id === parseInt(e.target.value));                  
+                  if (selectedConfig) {
+                    onCalendarConfigChange(selectedConfig);
+                  }
+                }}
               >
-                <option value="">Planning Social</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name}
+                {availableConfigs.map((config) => (
+                  <option key={config.id} value={config.id}>
+                    {config.name}
                   </option>
                 ))}
               </select>
             </div>
           </div>
-          {employeesByTeam.map((team) => {
-            const open = openTeams.includes(team.id);
+          {dimensionItems.map((item) => {
+            const isOpen = openItems.includes(item.id);
+            const itemEmployees = employeesByDimension[item.id] || [];
+            
+            if (itemEmployees.length === 0) return null;
+            
             return (
               <div
-                key={team.id}
+                key={item.id}
                 className="rounded-2xl bg-white border border-gray-100"
                 style={{ marginBottom: MARGIN_BETWEEN_TEAMS }}
               >
                 <button
                   className="flex justify-between items-center w-full px-4 py-2 rounded-t-2xl  focus:outline-none"
-                  onClick={() => toggleTeam(team.id)}
+                  onClick={() => toggleItem(item.id)}
                   type="button"
                 >
-                  <span className="poppins font-bold">{team.name}</span>
+                  <div className="flex items-center gap-4">
+                    <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="20" height="20" viewBox="0 0 510 510" enableBackground="new 0 0 510 510"  xmlSpace="preserve">
+                      <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                        <g>
+                          <g id="play-install">
+                            <path d="M459,114.75H357v-51l-51-51H204l-51,51v51H51c-28.05,0-51,22.95-51,51v280.5c0,28.05,22.95,51,51,51h408&#10;&#9;&#9;&#9;c28.05,0,51-22.95,51-51v-280.5C510,137.7,487.05,114.75,459,114.75z M204,63.75h102v51H204V63.75z M216.75,408l-89.25-89.25&#10;&#9;&#9;&#9;l35.7-35.7l53.55,53.55L349.35,204l35.7,35.7L216.75,408z" fill="#00957f" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                          </g>
+                        </g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                        <g></g>
+                      </g>
+                    </svg>
+                    <span className="poppins font-bold">{item.name}</span>
+                  </div>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
                     height="20"
                     fill="currentColor"
-                    className={`bi bi-chevron-down ${open ? 'rotate-180' : ''} transition-transform duration-200 ease-in-out`}
+                    className={`bi bi-chevron-down ${isOpen ? 'rotate-180' : ''} transition-transform duration-200 ease-in-out`}
                     viewBox="0 0 16 16"
                   >
                     <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
                   </svg>
                 </button>
-                <div className={`flex flex-col px-4 pb-2 transition-all duration-200 ${open ? 'opacity-100' : 'max-h-0 opacity-0'}`}>
-                  {open && team.employees.map((employee) => {
+                <div className={`flex flex-col px-4 pb-2 transition-all duration-200 ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}>
+                  {isOpen && itemEmployees.map((employee) => {
                     const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
                     return (
                       <div
@@ -575,7 +639,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                           className="w-8 h-8 rounded-full border-2 border-white shadow"
                           onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`; }}
                         />
-                        <span className="poppins text-[16px] font-inherit group-hover:font-semibold">{employee.name}</span>
+                        <div className="flex flex-col">
+                          <span className="poppins text-[16px] font-inherit group-hover:font-semibold">{employee.name}</span>
+                          {calendarConfig.dimension !== 'employee' && (
+                            <span className="poppins text-[12px] text-gray-500">{employee.contrat}</span>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -647,11 +716,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     key={`header-day-${format(day, 'yyyy-MM-dd')}`}
                     className={`
                       flex flex-col justify-end border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1
-                      ${isWeekend(day) ? 'bg-gray-100' : 'bg-white'}
+                      ${(isToday(day) && 'bg-[#ffcdde]') || (isWeekend(day) ? 'bg-[#f6f6f6]' : 'bg-white')}
                       relative
                       day-cell
                     `}
-                    style={{ width: CELL_WIDTH + 'px', height: 'auto' }}
+                    style={{ 
+                      width: CELL_WIDTH + 'px', 
+                      height: 'auto',
+                    }}
                   >
                     {/* Affiche le numéro de semaine en début de semaine */}
                     {day.getDay() === 1 && (
@@ -660,7 +732,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         style={{
                           width: '24px',
                           height: '24px',
-                          background: '#4892cc',
+                          background: '#23adde',
                         }}
                       >
                         {getWeekNumber(day)}
@@ -692,73 +764,80 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       top: 0,
                       width: '3px',
                       height: '100%',
-                      background: 'linear-gradient(180deg, #ef4444 0%, #f87171 100%)',
+                      background: '#ffcdde',
                       zIndex: 10,
                       borderRadius: '2px',
                       pointerEvents: 'none',
                     }}
                   />
                 )}
-                {/* Rows for each team: inactive row, then employee rows */}
-                {employeesByTeam.map((team, idx) => (
-                  <React.Fragment key={team.id}>
-                    {/* Inactive row for the team */}
-                    {dayInTimeline.map((day) => (
-                      <DayCell
-                        key={`inactive-${team.id}-${format(day, 'yyyy-MM-dd')}`}
-                        day={day}
-                        employee={{ id: 0, name: 'Inactive' }}
-                        appointments={[]}
-                        intervals={HALF_DAY_INTERVALS}
-                        isFullDay={isFullDay}
-                        RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 8}
-                        isMobile={isMobile}
-                        nonWorkingDates={nonWorkingDates}
-                        includeWeekend={includeWeekend}
-                        onAppointmentMoved={onAppointmentMoved}
-                        onCellDoubleClick={onCellDoubleClick}
-                        onAppointmentClick={onAppointmentDoubleClick}
-                        onExternalDragDrop={onExternalDragDrop}
-                        isWeekend={isWeekend(day)}
-                        handleContextMenu={handleContextMenu}
-                        isCellActive={false}
-                      />
-                    ))}
-                    {/* Employee rows for the team */}
-                    {openTeams.includes(team.id) && team.employees.map((employee) => {
-                      const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
-                      return (
-                        <React.Fragment key={employee.id}>
-                          {dayInTimeline.map((day) => {
-                            const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
-                              isSameDay(app.startDate, day) && app.employeeId === employee.id
-                            );
-                            return (
-                              <DayCell
-                                key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
-                                day={day}
-                                employee={{ id: employee.id, name: employee.name }}
-                                appointments={dayEmployeeAppointments}
-                                intervals={HALF_DAY_INTERVALS}
-                                isFullDay={isFullDay}
-                                RowHeight={employeeRowHeight}
-                                isMobile={isMobile}
-                                nonWorkingDates={nonWorkingDates}
-                                includeWeekend={includeWeekend}
-                                onAppointmentMoved={onAppointmentMoved}
-                                onCellDoubleClick={onCellDoubleClick}
-                                onAppointmentClick={onAppointmentDoubleClick}
-                                onExternalDragDrop={onExternalDragDrop}
-                                isWeekend={isWeekend(day)}
-                                handleContextMenu={handleContextMenu}
-                              />
-                            );
-                          })}
-                        </React.Fragment>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
+                {/* Rows for each dimension item: inactive row, then employee rows */}
+                {dimensionItems.map((item, idx) => {
+                  const isOpen = openItems.includes(item.id);
+                  const itemEmployees = employeesByDimension[item.id] || [];
+                  
+                  if (itemEmployees.length === 0) return null;
+                  
+                  return (
+                    <React.Fragment key={item.id}>
+                      {/* Inactive row for the dimension item */}
+                      {dayInTimeline.map((day) => (
+                        <DayCell
+                          key={`inactive-${item.id}-${format(day, 'yyyy-MM-dd')}`}
+                          day={day}
+                          employee={{ id: 0, name: 'Inactive' }}
+                          appointments={[]}
+                          intervals={HALF_DAY_INTERVALS}
+                          isFullDay={isFullDay}
+                          RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 8}
+                          isMobile={isMobile}
+                          nonWorkingDates={nonWorkingDates}
+                          includeWeekend={includeWeekend}
+                          onAppointmentMoved={onAppointmentMoved}
+                          onCellDoubleClick={onCellDoubleClick}
+                          onAppointmentClick={onAppointmentDoubleClick}
+                          onExternalDragDrop={onExternalDragDrop}
+                          isWeekend={isWeekend(day)}
+                          handleContextMenu={handleContextMenu}
+                          isCellActive={false}
+                        />
+                      ))}
+                      {/* Employee rows for the dimension item */}
+                      {isOpen && itemEmployees.map((employee) => {
+                        const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
+                        return (
+                          <React.Fragment key={employee.id}>
+                            {dayInTimeline.map((day) => {
+                              const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
+                                isSameDay(app.startDate, day) && app.employeeId === employee.id
+                              );
+                              return (
+                                <DayCell
+                                  key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
+                                  day={day}
+                                  employee={{ id: employee.id, name: employee.name }}
+                                  appointments={dayEmployeeAppointments}
+                                  intervals={HALF_DAY_INTERVALS}
+                                  isFullDay={isFullDay}
+                                  RowHeight={employeeRowHeight}
+                                  isMobile={isMobile}
+                                  nonWorkingDates={nonWorkingDates}
+                                  includeWeekend={includeWeekend}
+                                  onAppointmentMoved={onAppointmentMoved}
+                                  onCellDoubleClick={onCellDoubleClick}
+                                  onAppointmentClick={onAppointmentDoubleClick}
+                                  onExternalDragDrop={onExternalDragDrop}
+                                  isWeekend={isWeekend(day)}
+                                  handleContextMenu={handleContextMenu}
+                                />
+                              );
+                            })}
+                          </React.Fragment>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })}
               </div>
             </div>
           </div>

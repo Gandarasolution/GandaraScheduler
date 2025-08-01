@@ -12,18 +12,18 @@ export const initialTeams: Groupe[] = [
 
 
 export const initialEmployees: Employee[] = [
-    { name: 'Nancy', id: 1, groupId: 1, contrat: 'CDI', avatar: 'https://i.pravatar.cc/40?img=1'},
-    { name: 'Steven', id: 2, groupId: 1, contrat: 'CDD',avatar: 'https://i.pravatar.cc/40?img=2'},
-    { name: 'Robert', id: 3, groupId: 2, contrat: 'Intérimaire', avatar: 'https://i.pravatar.cc/40?img=3'},
-    { name: 'Smith', id: 4, groupId: 2,  contrat: 'CDD'},
-    { name: 'Michael', id: 5, groupId: 3, contrat: 'CDI'},
-    { name: 'Root', id: 6, groupId: 3, contrat: 'CDI'},
-    { name: 'Alice', id: 7, groupId: 1, contrat: 'Intérimaire'},
-    { name: 'Lucas', id: 8, groupId: 2,  contrat: 'CDD'},
-    { name: 'Emma', id: 9, groupId: 4,  contrat: 'CDD'},
-    { name: 'Paul', id: 10, groupId: 4, contrat: 'Intérimaire'},
-    { name: 'Sophie', id: 11, groupId: 1, contrat: 'CDD'},
-    { name: 'Julien', id: 12, groupId: 2, contrat: 'Intérimaire'}
+    { name: 'Nancy', id: 1, groupId: 1, contrat: 'CDI', avatar: 'https://i.pravatar.cc/40?img=1', pole: 'Technique'},
+    { name: 'Steven', id: 2, groupId: 1, contrat: 'CDD',avatar: 'https://i.pravatar.cc/40?img=2', pole: 'Technique'},
+    { name: 'Robert', id: 3, groupId: 2, contrat: 'Intérimaire', avatar: 'https://i.pravatar.cc/40?img=3', pole: 'Commercial'},
+    { name: 'Smith', id: 4, groupId: 2,  contrat: 'CDD', pole: 'Commercial'},
+    { name: 'Michael', id: 5, groupId: 3, contrat: 'CDI', pole: 'Administrative'},
+    { name: 'Root', id: 6, groupId: 3, contrat: 'CDI', pole: 'Administrative'},
+    { name: 'Alice', id: 7, groupId: 1, contrat: 'Intérimaire', pole: 'Technique'},
+    { name: 'Lucas', id: 8, groupId: 2,  contrat: 'CDD', pole: 'Commercial'},
+    { name: 'Emma', id: 9, groupId: 4,  contrat: 'CDD', pole: 'RH'},
+    { name: 'Paul', id: 10, groupId: 4, contrat: 'Intérimaire', pole: 'RH'},
+    { name: 'Sophie', id: 11, groupId: 1, contrat: 'CDD', pole: 'Technique'},
+    { name: 'Julien', id: 12, groupId: 2, contrat: 'Intérimaire', pole: 'Commercial'}
 ];
 
 export const chantier = [

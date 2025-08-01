@@ -25,7 +25,7 @@
 "use client";
 
 // Imports React, hooks, DnD, date-fns, types, composants, et données
-import React, { useState, useCallback, useRef, useEffect, JSX} from "react";
+import React, { useState, useCallback, useRef, useEffect, JSX, useMemo} from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -58,6 +58,8 @@ import { SelectedAppointmentContext } from "../context/SelectedAppointmentContex
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend, getBeforeWorkedDay } from "../utils/dates";
+import { CalendarConfig } from "../types";
+import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
 
 
 import LogoUrl from "../image/LOGO_couleur_police_noire.svg";
@@ -145,6 +147,114 @@ export default function HomePage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // --- GESTION DES CONFIGURATIONS DE CALENDRIER ET FILTRES ---
+  // Fonction pour obtenir les configurations disponibles selon les pôles des employés
+  const getAvailableConfigs = useCallback((): CalendarConfig[] => {
+    const poles = Array.from(new Set(employees.current.map(emp => emp.pole)));
+    const configs: CalendarConfig[] = [];
+
+    // Configuration par défaut : Vue par employés (toujours disponible)
+    configs.push({
+      id: 1,
+      name: 'Vue par employés',
+      dimension: 'employee',
+      filters: []
+    });
+
+    // Configuration par pôles (toujours disponible si plusieurs pôles)
+    if (poles.length > 1) {
+      configs.push({
+        id: 2,
+        name: 'Vue par pôles',
+        dimension: 'pole',
+        filters: []
+      });
+    }
+
+    // Configurations spécifiques selon les pôles présents
+    if (poles.includes('Technique')) {
+      configs.push({
+        id: 3,
+        name: 'Vue Technique - Par équipes',
+        dimension: 'group',
+        filters: [
+          {
+            id: 'pole-technique',
+            field: 'pole',
+            type: 'equals',
+            value: 'Technique',
+            label: 'Pôle Technique'
+          }
+        ]
+      });
+    }
+
+    if (poles.includes('Commercial')) {
+      configs.push({
+        id: 4,
+        name: 'Vue Commercial - Par contrats',
+        dimension: 'contract',
+        filters: [
+          {
+            id: 'pole-commercial',
+            field: 'pole',
+            type: 'equals',
+            value: 'Commercial',
+            label: 'Pôle Commercial'
+          }
+        ]
+      });
+    }
+
+    if (poles.includes('Administrative')) {
+      configs.push({
+        id: 5,
+        name: 'Vue Administrative - Par types',
+        dimension: 'type',
+        filters: [
+          {
+            id: 'pole-administrative',
+            field: 'pole',
+            type: 'equals',
+            value: 'Administrative',
+            label: 'Pôle Administrative'
+          }
+        ]
+      });
+    }
+
+    if (poles.includes('RH')) {
+      configs.push({
+        id: 6,
+        name: 'Vue RH - Par contrats',
+        dimension: 'contract',
+        filters: [
+          {
+            id: 'pole-rh',
+            field: 'pole',
+            type: 'equals',
+            value: 'RH',
+            label: 'Pôle RH'
+          }
+        ]
+      });
+    }
+
+    return configs;
+  }, []);
+
+  const availableConfigs = getAvailableConfigs();
+  const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig>(availableConfigs[0]);
+
+  // Appliquer les filtres aux employés et rendez-vous selon la configuration
+  const filteredEmployeesForCalendar = useMemo(() => {
+    return applyFiltersToEmployees(employees.current, currentCalendarConfig.filters);
+  }, [currentCalendarConfig.filters]);
+
+  const filteredAppointmentsForCalendar = useMemo(() => {
+    return applyFiltersToAppointments(filteredAppointments, currentCalendarConfig.filters, employees.current);
+  }, [filteredAppointments, currentCalendarConfig.filters]);
+
 
   // --- PARAMÈTRES D'AFFICHAGE ET DE FILTRAGE ---
   const settings = [
@@ -181,28 +291,6 @@ export default function HomePage() {
       ]
     }
   ];
-
-  function CalendarWithHtml({ children }: { children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="p-2 bg-blue-50 text-blue-700 font-bold text-center rounded-t">
-        Sélectionnez une date
-      </div>
-      {children}
-      <div className="p-2 text-center">
-        <button
-          className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-semibold shadow"
-          onClick={() => {
-            // Action personnalisée, par exemple :
-            if (selectedDate) goToDate(selectedDate);
-          }}
-        >
-          Valider la date
-        </button>
-      </div>
-    </div>
-  );
-}
 
   const researchAppointments = useCallback(() => {
         
@@ -455,11 +543,12 @@ export default function HomePage() {
 
 
 
-  // Gestion du scroll infini horizontal (ajout de jours à gauche/droite)
-  const handleScroll = useCallback(() => {
-    debounce(() => {
-      console.log("Détection du scroll2");
-      
+  // Création de la fonction debouncée de manière stable
+  const debouncedScrollHandler = useRef<(() => void) | null>(null);
+
+  // Initialiser la fonction debouncée
+  if (!debouncedScrollHandler.current) {
+    debouncedScrollHandler.current = debounce(() => {      
       if (isAutoScrolling.current || isLoadingMoreDays.current || !mainScrollRef.current) return;
       const { scrollLeft, scrollWidth, clientWidth } = mainScrollRef.current;
       const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
@@ -500,9 +589,13 @@ export default function HomePage() {
       }
       setIsLoading(false);
       isLoadingMoreDays.current = false;
+    }, 100);
+  }
 
-    }, 100)
-  }, [includeWeekend, nonWorkingDates]);
+  // Gestion du scroll infini horizontal (ajout de jours à gauche/droite)
+  const handleScroll = useCallback(() => {
+    debouncedScrollHandler.current?.();
+  }, []);
 
   // Centrage sur aujourd'hui au chargement
   const goToDate = useCallback((date: Date) => {
@@ -1200,24 +1293,37 @@ export default function HomePage() {
                       className="transition cursor-pointer btn-header border-r border-gray-300 px-3 py-2"
                       onClick={() => setIsFullDay(!isFullDay)}
                     >
-                      <svg 
-                        viewBox="0 0 16 16"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        className="w-5 h-5 transition duration-200"
-                      >
-                        <g>
-                          <path 
-                            d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"
-                            fill="#84818a" 
-                            fillOpacity="1" 
-                            data-original-color="#000000ff" 
-                            stroke="none" 
-                            strokeOpacity="1"
-                          />
-                        </g>
-                      </svg>
+                      {!isFullDay ? (
+                        <svg 
+                          id="Layer_1" 
+                          enableBackground="new 0 0 32 32" 
+                          viewBox="0 0 32 32" 
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20" 
+                          height="20" 
+                          version="1.1" 
+                          xmlnsXlink="http://www.w3.org/1999/xlink" 
+                        >
+                          <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                            <path d="m27 3v26c0 .5527344-.4472656 1-1 1h-8c-.5527344 0-1-.4472656-1-1v-26c0-.5527344.4472656-1 1-1h8c.5527344 0 1 .4472656 1 1zm-13-1h-8c-.5527344 0-1 .4472656-1 1v26c0 .5527344.4472656 1 1 1h8c.5527344 0 1-.4472656 1-1v-26c0-.5527344-.4472656-1-1-1z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                          </g>
+                        </svg>
+                      ) : (
+                        <svg 
+                          id="Layer_1" 
+                          height="20" 
+                          viewBox="0 0 512 512" 
+                          width="20" 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          data-name="Layer 1" 
+                          version="1.1" 
+                          xmlnsXlink="http://www.w3.org/1999/xlink"
+                        >
+                          <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                            <rect height="480" rx="10.695" width="108.343" x="201.828" y="16" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                          </g>
+                        </svg>
+                      )}
                     </button>
                     <button 
                       className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
@@ -1273,8 +1379,8 @@ export default function HomePage() {
               <SelectedAppointmentContext.Provider value={{ selectedAppointment, setSelectedAppointment}}>
                 <SelectedCellContext.Provider value={{ selectedCell, setSelectedCell }}>
                   <CalendarGrid
-                    employees={employees.current}
-                    appointments={filteredAppointments}
+                    employees={filteredEmployeesForCalendar}
+                    appointments={filteredAppointmentsForCalendar}
                     initialTeams={initialTeams}
                     dayInTimeline={dayInTimeline}
                     HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
@@ -1290,6 +1396,9 @@ export default function HomePage() {
                     onAppointmentDoubleClick={handleOpenEditModal}
                     onExternalDragDrop={createAppointmentFromDrag}
                     handleContextMenu={handleContextMenu}
+                    calendarConfig={currentCalendarConfig}
+                    onCalendarConfigChange={setCurrentCalendarConfig}
+                    availableConfigs={availableConfigs}
                   />
                 </SelectedCellContext.Provider>
               </SelectedAppointmentContext.Provider>
