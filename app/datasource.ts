@@ -4,26 +4,26 @@ import iconeAbsenceValide from './calendrier/image/Icones/Evenement_Congés_Vali
 import iconeAbsenceNonValide from './calendrier/image/Icones/Evenement_Congés_Non_Valide.svg'
 
 export const initialTeams: Groupe[] = [
-    { name: 'Team A', id: 1 },
-    { name: 'Team B', id: 2 },
-    { name: 'Team C', id: 3 },
-    { name: 'Team D', id: 4}
+    { name: 'Equipe Grégory', id: 1 },
+    { name: 'Equipe Alexandre', id: 2 },
+    { name: 'Equipe Lucas', id: 3 },
+    { name: 'Equipe Romain', id: 4}
 ];
 
 
 export const initialEmployees: Employee[] = [
-    { name: 'Nancy', id: 1, groupId: 1, contrat: 'CDI', avatar: 'https://i.pravatar.cc/40?img=1', pole: 'Technique'},
-    { name: 'Steven', id: 2, groupId: 1, contrat: 'CDD',avatar: 'https://i.pravatar.cc/40?img=2', pole: 'Technique'},
-    { name: 'Robert', id: 3, groupId: 2, contrat: 'Intérimaire', avatar: 'https://i.pravatar.cc/40?img=3', pole: 'Commercial'},
-    { name: 'Smith', id: 4, groupId: 2,  contrat: 'CDD', pole: 'Commercial'},
-    { name: 'Michael', id: 5, groupId: 3, contrat: 'CDI', pole: 'Administrative'},
-    { name: 'Root', id: 6, groupId: 3, contrat: 'CDI', pole: 'Administrative'},
-    { name: 'Alice', id: 7, groupId: 1, contrat: 'Intérimaire', pole: 'Technique'},
-    { name: 'Lucas', id: 8, groupId: 2,  contrat: 'CDD', pole: 'Commercial'},
-    { name: 'Emma', id: 9, groupId: 4,  contrat: 'CDD', pole: 'RH'},
-    { name: 'Paul', id: 10, groupId: 4, contrat: 'Intérimaire', pole: 'RH'},
-    { name: 'Sophie', id: 11, groupId: 1, contrat: 'CDD', pole: 'Technique'},
-    { name: 'Julien', id: 12, groupId: 2, contrat: 'Intérimaire', pole: 'Commercial'}
+    { name: 'Grégory ANDRE', id: 1, groupId: 1, type: 'employee', avatar: 'https://i.pravatar.cc/40?img=1', pole: 'Technique'},
+    { name: 'Alexandre BARRET', id: 2, groupId: 1, type: 'employee', avatar: 'https://i.pravatar.cc/40?img=2', pole: 'Technique'},
+    { name: 'Lucas BOURKIN', id: 3, groupId: 2, type: 'interim', avatar: 'https://i.pravatar.cc/40?img=3', pole: 'Commercial'},
+    { name: 'Romain ZERR', id: 4, groupId: 2,  type: 'employee', pole: 'Commercial'},
+    { name: 'Fabrice DACHAUD', id: 5, groupId: 3, type: 'employee', pole: 'Administrative'},
+    { name: 'Sébastien GERMAIN', id: 6, groupId: 3, type: 'employee', pole: 'Administrative'},
+    { name: 'Eric MALIVERNAY', id: 7, groupId: 1, type: 'interim', pole: 'Technique'},
+    { name: 'Lucas', id: 8, groupId: 2,  type: 'employee', pole: 'Commercial'},
+    { name: 'Emma', id: 9, groupId: 4,  type: 'employee', pole: 'RH'},
+    { name: 'Paul', id: 10, groupId: 4, type: 'interim', pole: 'RH'},
+    { name: 'Sophie', id: 11, groupId: 1, type: 'employee', pole: 'Technique'},
+    { name: 'Julien', id: 12, groupId: 2, type: 'interim', pole: 'Commercial'}
 ];
 
 export const chantier = [

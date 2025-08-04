@@ -633,17 +633,19 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer transition hover:bg-[#e7f4f2]"
                         style={{ height: employeeRowHeight, alignItems: 'center' }}
                       >
-                        <img
-                          src={employee.avatar ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
-                          alt={employee.name}
-                          className="w-8 h-8 rounded-full border-2 border-white shadow"
-                          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`; }}
-                        />
+                        <div className="relative">
+                          <img
+                            src={employee.avatar ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
+                            alt={employee.name}
+                            className={`w-8 h-8 rounded-full border-1 shadow ${employee.type === 'interim' ? 'border-[#e6b11a]' : 'border-[#4baea4]'}`}
+                            onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`; }}
+                          />
+                          {employee.type === 'interim' && (
+                            <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-[#e6b11a] border-2 border-white"></span>
+                          )}
+                        </div>
                         <div className="flex flex-col">
                           <span className="poppins text-[16px] font-inherit group-hover:font-semibold">{employee.name}</span>
-                          {calendarConfig.dimension !== 'employee' && (
-                            <span className="poppins text-[12px] text-gray-500">{employee.contrat}</span>
-                          )}
                         </div>
                       </div>
                     );

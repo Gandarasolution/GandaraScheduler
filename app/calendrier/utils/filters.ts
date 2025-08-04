@@ -138,8 +138,8 @@ export function groupEmployeesByDimension(
     
     case 'contract':
       employees.forEach(emp => {
-        if (!result[emp.contrat]) result[emp.contrat] = [];
-        result[emp.contrat].push(emp);
+        if (!result[emp.type]) result[emp.type] = [];
+        result[emp.type].push(emp);
       });
       break;
     
@@ -147,14 +147,6 @@ export function groupEmployeesByDimension(
       employees.forEach(emp => {
         if (!result[emp.pole]) result[emp.pole] = [];
         result[emp.pole].push(emp);
-      });
-      break;
-    
-    case 'type':
-      // Pour l'instant, on groupe par contrat car nous n'avons pas de type d'employé distinct
-      employees.forEach(emp => {
-        if (!result[emp.contrat]) result[emp.contrat] = [];
-        result[emp.contrat].push(emp);
       });
       break;
     

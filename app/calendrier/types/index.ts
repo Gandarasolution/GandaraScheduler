@@ -8,7 +8,7 @@ export interface Employee {
   name: string;
   avatar?: string;
   groupId?: number; // Ajout de l'ID de l'équipe
-  contrat: 'CDI' | 'CDD' | 'Intérimaire'; // Type de contrat
+  type: 'employee' | 'interim'; // Type de contrat
   pole: string; // Pôle auquel appartient l'employé
 }
 
