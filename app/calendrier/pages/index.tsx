@@ -537,26 +537,39 @@ export default function HomePage() {
   // Solution ultra-performante avec throttle optimisé et early exit
   const isProcessingInfiniteScroll = useRef(false);
   const lastScrollCheck = useRef(0);
+  const isArrowKeyPressed = useRef(false);
+  const arrowKeyDirection = useRef<'left' | 'right' | null>(null);
+  const continuousScrollInterval = useRef<NodeJS.Timeout | null>(null);
+  const isInfiniteScrollEnabled = useRef(false); // Désactivé par défaut jusqu'à la fin du scroll initial
 
   // Throttle ultra-performant avec requestAnimationFrame
   const throttledScrollHandler = useRef<(() => void) | null>(null);
+  const lastScrollTop = useRef(0);
 
   if (!throttledScrollHandler.current) {
     let rafId: number | null = null;
     throttledScrollHandler.current = () => {
-      if (rafId || isProcessingInfiniteScroll.current) return;
+      if (rafId || isProcessingInfiniteScroll.current || !isInfiniteScrollEnabled.current) return;
       
       rafId = requestAnimationFrame(() => {
         rafId = null;
         
-        if (isAutoScrolling.current || !mainScrollRef.current) return;
+        if (isAutoScrolling.current || !mainScrollRef.current || !isInfiniteScrollEnabled.current) return;
+
+        const { scrollLeft, scrollWidth, clientWidth, scrollTop } = mainScrollRef.current;
+        
+        // Détection du scroll vertical - si c'est un scroll vertical, on ignore l'infinite scroll
+        const isVerticalScroll = Math.abs(scrollTop - lastScrollTop.current) > Math.abs(scrollLeft - (lastScrollCheck.current || scrollLeft));
+        lastScrollTop.current = scrollTop;
+        
+        if (isVerticalScroll) {
+          return; // Ne pas déclencher l'infinite scroll pour un scroll vertical
+        }
 
         const now = Date.now();
-        // Throttle supplémentaire : maximum une fois toutes les 100ms
-        if (now - lastScrollCheck.current < 100) return;
+        // Throttle supplémentaire : maximum une fois toutes les 100ms (sauf si touche fléchée pressée)
+        if (!isArrowKeyPressed.current && now - lastScrollCheck.current < 100) return;
         lastScrollCheck.current = now;
-
-        const { scrollLeft, scrollWidth, clientWidth } = mainScrollRef.current;
         
         // Early exit si pas assez de contenu pour scroller
         if (scrollWidth <= clientWidth) return;
@@ -564,10 +577,14 @@ export default function HomePage() {
         const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
 
         // Seuils optimisés pour éviter les déclenchements multiples
-        if (scrollPercentage >= 90) {
+        // Seuils plus bas quand une touche fléchée est pressée pour un scroll continu
+        const rightThreshold = isArrowKeyPressed.current && arrowKeyDirection.current === 'right' ? 85 : 90;
+        const leftThreshold = isArrowKeyPressed.current && arrowKeyDirection.current === 'left' ? 15 : 10;
+        
+        if (scrollPercentage >= rightThreshold) {
           isProcessingInfiniteScroll.current = true;
           addDaysToRight();
-        } else if (scrollPercentage <= 10) {
+        } else if (scrollPercentage <= leftThreshold) {
           isProcessingInfiniteScroll.current = true;
           addDaysToLeft();
         }
@@ -582,10 +599,11 @@ export default function HomePage() {
       let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
       newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
       
-      // Reset du flag avec délai pour éviter les déclenchements multiples
+      // Reset du flag avec délai plus court si touche fléchée pressée
+      const delay = isArrowKeyPressed.current ? 50 : 200;
       setTimeout(() => {
         isProcessingInfiniteScroll.current = false;
-      }, 200);
+      }, delay);
       
       return [...prevDays, ...newDays].slice(-WINDOW_SIZE);
     });
@@ -608,9 +626,11 @@ export default function HomePage() {
           mainScrollRef.current.scrollLeft = previousScrollLeft + scrollAdjustment;
         }
         
+        // Reset du flag avec délai plus court si touche fléchée pressée
+        const delay = isArrowKeyPressed.current ? 50 : 200;
         setTimeout(() => {
           isProcessingInfiniteScroll.current = false;
-        }, 200);
+        }, delay);
       });
       
       return [...newDays, ...prevDays].slice(0, WINDOW_SIZE);
@@ -621,6 +641,23 @@ export default function HomePage() {
   const handleScroll = useCallback(() => {
     // Appel différé pour éviter de bloquer le thread principal
     throttledScrollHandler.current?.();
+    
+    // Détecter si on scroll contre les bords pour maintenir l'infinite scroll actif
+    // Seulement si l'infinite scroll est activé
+    if (mainScrollRef.current && isInfiniteScrollEnabled.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = mainScrollRef.current;
+      const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
+      
+      // Si on est proche des bords et qu'on continue de scroller, maintenir l'infinite scroll actif
+      if (scrollPercentage >= 95 || scrollPercentage <= 5) {
+        // Réduire temporairement le délai de processing pour permettre des ajouts plus fréquents
+        setTimeout(() => {
+          if (isProcessingInfiniteScroll.current) {
+            isProcessingInfiniteScroll.current = false;
+          }
+        }, 100);
+      }
+    }
   }, []);
 
   // Centrage sur aujourd'hui au chargement
@@ -645,8 +682,14 @@ export default function HomePage() {
           (cellRect.left - containerRect.left) -
           container.clientWidth / 2 +
           todayCell.clientWidth / 2;
+        
         container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-        isAutoScrolling.current = false;
+        
+        // Activer l'infinite scroll une fois le scroll automatique terminé
+        setTimeout(() => {
+          isAutoScrolling.current = false;
+          isInfiniteScrollEnabled.current = true; // Activer la détection du scroll infini
+        }, 1000); // Délai pour s'assurer que le smooth scroll est terminé
       }
       setSelectedDate(date);
       setIsLoading(false);
@@ -1107,19 +1150,79 @@ export default function HomePage() {
       }
 
       if (!mainScrollRef.current) return;
+      
+      // Gestion des flèches avec scroll continu - seulement si l'infinite scroll est activé
       if (e.key === 'ArrowRight') {
-        mainScrollRef.current.scrollLeft += 100; // 100px au lieu de 40px par défaut
         e.preventDefault();
+        
+        // Scroll basique même si l'infinite scroll n'est pas encore activé
+        mainScrollRef.current.scrollLeft += 100;
+        
+        // Scroll continu seulement si l'infinite scroll est activé
+        if (isInfiniteScrollEnabled.current && !isArrowKeyPressed.current) {
+          isArrowKeyPressed.current = true;
+          arrowKeyDirection.current = 'right';
+          
+          throttledScrollHandler.current?.(); // Vérifier immédiatement si on doit ajouter des jours
+          
+          // Démarrer le scroll continu
+          continuousScrollInterval.current = setInterval(() => {
+            if (mainScrollRef.current && isArrowKeyPressed.current && arrowKeyDirection.current === 'right') {
+              mainScrollRef.current.scrollLeft += 100;
+              throttledScrollHandler.current?.(); // Vérifier à chaque scroll si on doit ajouter des jours
+            }
+          }, 150); // Scroll toutes les 150ms
+        }
       }
+      
       if (e.key === 'ArrowLeft') {
-        mainScrollRef.current.scrollLeft -= 100;
         e.preventDefault();
+        
+        // Scroll basique même si l'infinite scroll n'est pas encore activé
+        mainScrollRef.current.scrollLeft -= 100;
+        
+        // Scroll continu seulement si l'infinite scroll est activé
+        if (isInfiniteScrollEnabled.current && !isArrowKeyPressed.current) {
+          isArrowKeyPressed.current = true;
+          arrowKeyDirection.current = 'left';
+          
+          throttledScrollHandler.current?.(); // Vérifier immédiatement si on doit ajouter des jours
+          
+          // Démarrer le scroll continu
+          continuousScrollInterval.current = setInterval(() => {
+            if (mainScrollRef.current && isArrowKeyPressed.current && arrowKeyDirection.current === 'left') {
+              mainScrollRef.current.scrollLeft -= 100;
+              throttledScrollHandler.current?.(); // Vérifier à chaque scroll si on doit ajouter des jours
+            }
+          }, 150); // Scroll toutes les 150ms
+        }
       }
-
     };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Arrêter le scroll continu quand on relâche les flèches
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        isArrowKeyPressed.current = false;
+        arrowKeyDirection.current = null;
+        
+        if (continuousScrollInterval.current) {
+          clearInterval(continuousScrollInterval.current);
+          continuousScrollInterval.current = null;
+        }
+      }
+    };
+
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      
+      // Nettoyer l'intervalle au démontage
+      if (continuousScrollInterval.current) {
+        clearInterval(continuousScrollInterval.current);
+      }
     };
   }, [selectedAppointment, selectedCell, copyAppointmentToClipboard, pasteAppointment]);
 
