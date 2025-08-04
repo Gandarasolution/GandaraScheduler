@@ -73,16 +73,6 @@ const eventTypes = [
 ];
 
 
-// Petite fonction utilitaire pour éviter les appels trop fréquents (scroll, etc.)
-function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), delay);
-  };
-}
-
-
 /**
  * Page principale du calendrier (HomePage).
  *
@@ -1098,7 +1088,7 @@ export default function HomePage() {
       }
       if (e.key === 'suppr' || e.key === 'Delete') {
         if (selectedAppointment) {
-          handleDeleteAppointment(selectedAppointment.id);
+          handleDeleteAppointmentConfirm();
         }
         else{
           setModalInfo({ message: "Aucun rendez-vous sélectionné pour la suppression.", color: "red" });
