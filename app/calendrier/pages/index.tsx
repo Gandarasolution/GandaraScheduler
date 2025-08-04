@@ -543,58 +543,93 @@ export default function HomePage() {
 
 
 
-  // Création de la fonction debouncée de manière stable
-  const debouncedScrollHandler = useRef<(() => void) | null>(null);
+  // Solution ultra-performante avec throttle optimisé et early exit
+  const isProcessingInfiniteScroll = useRef(false);
+  const lastScrollCheck = useRef(0);
 
-  // Initialiser la fonction debouncée
-  if (!debouncedScrollHandler.current) {
-    debouncedScrollHandler.current = debounce(() => {      
-      if (isAutoScrolling.current || isLoadingMoreDays.current || !mainScrollRef.current) return;
-      const { scrollLeft, scrollWidth, clientWidth } = mainScrollRef.current;
-      const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
+  // Throttle ultra-performant avec requestAnimationFrame
+  const throttledScrollHandler = useRef<(() => void) | null>(null);
 
-      const now = Date.now();
-      const delta = scrollLeft - lastScrollLeft.current;
-      const dt = now - lastScrollTime.current;
-      const speed = dt > 0 ? delta / dt : 0;
+  if (!throttledScrollHandler.current) {
+    let rafId: number | null = null;
+    throttledScrollHandler.current = () => {
+      if (rafId || isProcessingInfiniteScroll.current) return;
+      
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        
+        if (isAutoScrolling.current || !mainScrollRef.current) return;
 
-      lastScrollLeft.current = scrollLeft;
-      lastScrollTime.current = now;
-      // Ajout de jours à droite si on approche du bord droit
-      if (scrollPercentage >= THRESHOLD_MAX) {
-        isAddingRight.current = true;
-        isLoadingMoreDays.current = true;
-        if (Math.abs(speed) < 0.5) setIsLoading(true);
+        const now = Date.now();
+        // Throttle supplémentaire : maximum une fois toutes les 100ms
+        if (now - lastScrollCheck.current < 100) return;
+        lastScrollCheck.current = now;
 
-        setDayInTimeline((prevDays) => {
-          const lastDay = prevDays[prevDays.length - 1];
-          let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
-          newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
-          return [...prevDays, ...newDays].slice(-WINDOW_SIZE);
-        });
-      }
-      // Ajout de jours à gauche si on approche du bord gauche
-      else if (scrollPercentage <= THRESHOLD_MIN) {
-        isAddingLeft.current = true;
-        isLoadingMoreDays.current = true;
-        if (Math.abs(speed) < 0.5) setIsLoading(true);
+        const { scrollLeft, scrollWidth, clientWidth } = mainScrollRef.current;
+        
+        // Early exit si pas assez de contenu pour scroller
+        if (scrollWidth <= clientWidth) return;
+        
+        const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
 
-        setDayInTimeline((prevDays) => {
-          const firstDay = prevDays[0];
-          let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
-          newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
-          return [...newDays, ...prevDays].slice(0, WINDOW_SIZE);
-        });
-        // On ajuste scrollLeft dans un useEffect après le rendu
-      }
-      setIsLoading(false);
-      isLoadingMoreDays.current = false;
-    }, 100);
+        // Seuils optimisés pour éviter les déclenchements multiples
+        if (scrollPercentage >= 90) {
+          isProcessingInfiniteScroll.current = true;
+          addDaysToRight();
+        } else if (scrollPercentage <= 10) {
+          isProcessingInfiniteScroll.current = true;
+          addDaysToLeft();
+        }
+      });
+    };
   }
 
-  // Gestion du scroll infini horizontal (ajout de jours à gauche/droite)
+  // Fonctions optimisées pour ajouter des jours
+  const addDaysToRight = useCallback(() => {
+    setDayInTimeline((prevDays) => {
+      const lastDay = prevDays[prevDays.length - 1];
+      let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
+      newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
+      
+      // Reset du flag avec délai pour éviter les déclenchements multiples
+      setTimeout(() => {
+        isProcessingInfiniteScroll.current = false;
+      }, 200);
+      
+      return [...prevDays, ...newDays].slice(-WINDOW_SIZE);
+    });
+  }, [includeWeekend]);
+
+  const addDaysToLeft = useCallback(() => {
+    if (!mainScrollRef.current) return;
+    
+    const previousScrollLeft = mainScrollRef.current.scrollLeft;
+    
+    setDayInTimeline((prevDays) => {
+      const firstDay = prevDays[0];
+      let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
+      newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
+      
+      // Ajuster le scroll de manière synchrone après le state update
+      requestAnimationFrame(() => {
+        if (mainScrollRef.current) {
+          const scrollAdjustment = newDays.length * CELL_WIDTH;
+          mainScrollRef.current.scrollLeft = previousScrollLeft + scrollAdjustment;
+        }
+        
+        setTimeout(() => {
+          isProcessingInfiniteScroll.current = false;
+        }, 200);
+      });
+      
+      return [...newDays, ...prevDays].slice(0, WINDOW_SIZE);
+    });
+  }, [includeWeekend]);
+
+  // Gestion du scroll ultra-optimisée
   const handleScroll = useCallback(() => {
-    debouncedScrollHandler.current?.();
+    // Appel différé pour éviter de bloquer le thread principal
+    throttledScrollHandler.current?.();
   }, []);
 
   // Centrage sur aujourd'hui au chargement
