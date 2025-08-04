@@ -15,7 +15,6 @@ interface AppointmentItemProps {
   employee: { id: number; name: string };
   onDoubleClick: () => void;
   onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
-  color?: string;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null) => void;
 }
 
@@ -37,7 +36,6 @@ interface AppointmentItemProps {
  * Props :
  * @param {AppointmentItemProps} props - Propriétés du composant.
  * @param {Appointment} props.appointment - Données du rendez-vous à afficher.
- * @param {string} props.color - Couleur de fond du rendez-vous.
  * @param {boolean} props.isFullDay - Indique si le rendez-vous occupe la journée entière.
  * @param {boolean} props.isMobile - Indique si l'affichage est en mode mobile.
  * @param {Object} props.employee - Informations sur l'employé associé au rendez-vous.
@@ -55,7 +53,6 @@ interface AppointmentItemProps {
  */
 const AppointmentItem: React.FC<AppointmentItemProps> = ({
   appointment,
-  color,
   isFullDay,
   isMobile,
   employee,
@@ -70,9 +67,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const [dragStart, setDragStart] = useState<Date>(appointment.startDate);
   const [dragEnd, setDragEnd] = useState<Date>(appointment.endDate);
   const [dragOffset, setDragOffset] = useState<number>(0);
+  const [isHovered, setIsHovered] = useState(false);
   const dragStartRef = useRef<Date>(appointment.startDate);
   const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
+  
 
   // Contextes pour la sélection
   const { selectedCell, setSelectedCell } = useSelectedCell();
@@ -290,13 +289,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         end: addDays(dragEndRef.current, 1), // Inclut le dernier jour
       });
       // Nombre de jours qui sont un week-end (samedi ou dimanche)
-      const weekendCount = days.filter(day => day.getDay() === 0 || day.getDay() === 6).length;
       const intervalsPerDay = isFullDay ? DAY_INTERVALS.length : HALF_DAY_INTERVALS.length;
       const workedIntervals = (days.length) * intervalsPerDay;
-      newEndDate = addInterval(dragStartRef.current, workedIntervals, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);
-      
-      console.log('workedIntervals', workedIntervals,'newEndDate', newEndDate);
-      
+      newEndDate = addInterval(dragStartRef.current, workedIntervals, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);      
     }
    
     if (isResizingRight) {
@@ -329,6 +324,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     setDragEndSafe(appointment.endDate);
   }, [appointment.startDate, appointment.endDate, setDragStartSafe, setDragEndSafe]);
   
+  const appointmentColor = appointment.color || '#1E40AF';
+
   return (
     <div
       key={appointment.id}
@@ -347,16 +344,16 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         }
       }}
       onContextMenu={(e) => handleContextMenu(e, 'appointment', appointment)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={`
-        ${color}
-        absolute rounded-xl p-2 text-sm shadow-md
+        appointment-item absolute rounded-xl text-sm shadow-md
         flex flex-shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-all z-10 h-11
-        border-blue-400
+        cursor-grab transition-all z-10 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
-        hover:shadow-xl hover:bg-blue-50
+        hover:shadow-xl hover:bg-white
       `}
       title={appointment.title}
       style={{
@@ -367,6 +364,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         left: `${offsetPx}px`,
         willChange: 'width, left',
         top: `${(appointment.top * CELL_HEIGHT) + (2 * appointment.top)}px`,
+        backgroundColor: isHovered ? 'white' : appointmentColor,
+        border: `2px solid ${appointmentColor}`,
+        transition: 'all 0.2s ease-in-out',
       }}
       onMouseDown={handleDragStart}
     >
@@ -388,10 +388,20 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
       <div className='flex flex-col min-w-0'>
         {/* Titre du rendez-vous */}
-        <span className="flex-grow text-gray-800 font-semibold truncate max-w-full">
+        <span 
+          className="appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200"
+          style={{ 
+            color: isHovered ? appointmentColor : 'white'
+          }}
+        >
           {appointment.libelle ? appointment.libelle : appointment.title}
         </span>
-        <span className="text-xs text-gray-500 truncate max-w-full">
+        <span 
+          className="appointment-subtext text-xs truncate max-w-full transition-colors duration-200"
+          style={{ 
+            color: isHovered ? `${appointmentColor}cc` : 'rgba(255, 255, 255, 0.9)'
+          }}
+        >
           {employee.name}
         </span>
       </div>

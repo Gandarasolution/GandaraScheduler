@@ -11,6 +11,7 @@ import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Dimensi
 import { fr } from 'date-fns/locale';
 import {CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../utils/constants'; // Constantes de style
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../utils/filters';
+import CustomSelectWithImage, { SelectOptionWithImage } from './CustomSelectWithImage';
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -107,6 +108,37 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return groupEmployeesByDimension(filteredEmployees, calendarConfig.dimension, initialTeams);
   }, [filteredEmployees, calendarConfig.dimension, initialTeams]);
 
+  // Convertir availableConfigs en format SelectOptionWithImage
+  const selectOptions: SelectOptionWithImage[] = useMemo(() => {
+    return availableConfigs.map(config => ({
+      id: config.id,
+      name: config.name,
+      value: config.id,
+      // Ajouter une icône basée sur le type de configuration
+      icon: (
+        <div className="w-5 h-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+          </svg>
+        </div>
+      )
+    }));
+  }, [availableConfigs]);
+
+  // Flèche personnalisée pour le select
+  const CustomArrow = ({isOpen}: {isOpen: boolean}) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      fill="currentColor"
+      className={`bi bi-chevron-down ${isOpen ? 'rotate-180' : ''} transition-transform duration-200 ease-in-out text-[#84818a]`}
+      viewBox="0 0 16 16"
+    >
+      <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+    </svg>
+  );
+
   // Initialiser les éléments ouverts quand les dimensionItems changent
   useEffect(() => {
     setOpenItems(dimensionItems.map(item => item.id));
@@ -118,43 +150,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
   );
 
-  /**
-   * Regroupe les employés par équipe en fonction de leur `groupId` et du calendrier sélectionné.
-   *
-   * - Pour chaque équipe dans `initialTeams`, ajoute une propriété `employees` contenant
-   * les employés dont le `groupId` correspond à l'identifiant de l'équipe et dont le
-   * `calendarId` correspond à l'identifiant du calendrier sélectionné.
-   * - Ajoute une équipe spéciale "Sans équipe" pour les employés qui n'ont pas de `groupId`
-   * ou dont le `groupId` ne correspond à aucune équipe existante.
-   * - Retourne uniquement les équipes qui ont au moins un employé.
-   *
-   * @param employees La liste complète des employés.
-   * @param initialTeams La liste initiale des équipes.
-   * @param selectedCalendarId L'identifiant du calendrier sélectionné.
-   * @returns Un tableau d'équipes, chacune contenant ses employés associés.
-   */
-  const employeesByTeam = useMemo(() => {
-    const teams = initialTeams.map(team => ({
-      ...team,
-      employees: employees.filter(emp => emp.groupId === team.id)
-    }));
-
-    // Ajoute une "équipe" spéciale pour les employés sans team
-    const noTeamEmployees = employees.filter(emp =>
-      !emp.groupId || !initialTeams.some(team => team.id === emp.groupId)
-    );
-    if (noTeamEmployees.length > 0) {
-      teams.push({
-        id: -1,
-        name: "Sans équipe",
-        employees: noTeamEmployees,
-      });
-    }
-
-    return teams.filter(team => team.employees.length > 0);
-  }, [employees, initialTeams]);
-  
-  
   // Ouvre/ferme un élément de dimension dans la vue
   const toggleItem = (itemId: string | number) => {
     setOpenItems(open =>
@@ -253,7 +248,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
               overlapping === 0
                 ? CELL_HEIGHT
                 : overlapping * CELL_HEIGHT + 2 * overlapping + 10,
-          });
+          });          
           // On ajoute un objet avec l'id de l'employé, la clé du jour, et la hauteur calculée
           // Si aucun chevauchement : hauteur par défaut, sinon on ajuste selon le nombre de chevauchements
         });
@@ -308,7 +303,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
         // If no appointments, default to CELL_HEIGHT. Otherwise, calculate based on max overlaps.
         const calculatedHeight = maxOverallOverlap === 0
-            ? CELL_HEIGHT
+            ? CELL_HEIGHT + 12 // Si ligne vide, hauteur par défaut + un peu d'espace
             : (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + 10; // 2*overlap for spacing, 10 for padding
 
         return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
@@ -539,33 +534,25 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           ref={columnEmployeeRef}
         >
           <div 
-            className="h-[112px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
+            className="h-[94px] sticky top-0 z-10 flex items-center  justify-center flex-shrink-0"
             style={{
               backgroundColor: '#f3f7f8',
             }}
           >
             <div className="custom-select-wrapper relative inline-block w-full">
-              <select
-                className='
-                  border border-gray-300 rounded-2xl p-2 w-full h-[48px] text-gray-700 
-                  poppins text-[14px] font-medium bg-white'
-                style={{
-                  appearance: 'none',
-                }}
+              <CustomSelectWithImage
+                options={selectOptions}
                 value={calendarConfig.id}
-                onChange={(e) => {
-                  const selectedConfig = availableConfigs.find(config => config.id === parseInt(e.target.value));                  
+                onChange={(value) => {
+                  const selectedConfig = availableConfigs.find(config => config.id === value);                  
                   if (selectedConfig) {
                     onCalendarConfigChange(selectedConfig);
                   }
                 }}
-              >
-                {availableConfigs.map((config) => (
-                  <option key={config.id} value={config.id}>
-                    {config.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Sélectionner un calendrier"
+                customArrow={<CustomArrow isOpen={false} />}
+                showImages={true}
+              />
             </div>
           </div>
           {dimensionItems.map((item) => {
@@ -577,7 +564,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             return (
               <div
                 key={item.id}
-                className="rounded-2xl bg-white border border-gray-100"
+                className="rounded-4xl bg-white border border-gray-100"
                 style={{ marginBottom: MARGIN_BETWEEN_TEAMS }}
               >
                 <button
@@ -586,7 +573,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   type="button"
                 >
                   <div className="flex items-center gap-4">
-                    <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="20" height="20" viewBox="0 0 510 510" enableBackground="new 0 0 510 510"  xmlSpace="preserve">
+                    <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="18" height="18" viewBox="0 0 510 510" enableBackground="new 0 0 510 510"  xmlSpace="preserve">
                       <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
                         <g>
                           <g id="play-install">
@@ -613,16 +600,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     </svg>
                     <span className="poppins font-bold">{item.name}</span>
                   </div>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    fill="currentColor"
-                    className={`bi bi-chevron-down ${isOpen ? 'rotate-180' : ''} transition-transform duration-200 ease-in-out`}
-                    viewBox="0 0 16 16"
-                  >
-                    <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
-                  </svg>
+                  <CustomArrow isOpen={isOpen} />
                 </button>
                 <div className={`flex flex-col px-4 pb-2 transition-all duration-200 ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}>
                   {isOpen && itemEmployees.map((employee) => {
@@ -662,7 +640,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             <div 
               className="
               relative w-full overflow-x-scroll overflow-y-auto 
-              rounded-3xl scrollbar-hide border h-full border-[#dfdedeff]"
+              rounded-3xl border h-full border-[#dfdedeff]"
               style={{
                 scrollbarGutter: 'stable',
               }}
@@ -710,21 +688,20 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 className="grid sticky top-[40px] z-20 bg-white border-gray-300"
                 style={{
                   gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-                  minHeight: '56px',
                 }}
               >
                 {dayInTimeline.map((day, index) => (
                   <div
                     key={`header-day-${format(day, 'yyyy-MM-dd')}`}
                     className={`
-                      flex flex-col justify-end border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1
+                      flex flex-col justify-end border-b border-r border-gray-300 text-center text-sm font-semibold text-[#84818a] p-1 
                       ${(isToday(day) && 'bg-[#ffcdde]') || (isWeekend(day) ? 'bg-[#f6f6f6]' : 'bg-white')}
                       relative
                       day-cell
                     `}
                     style={{ 
                       width: CELL_WIDTH + 'px', 
-                      height: 'auto',
+                      height: CELL_HEIGHT  + 'px',
                     }}
                   >
                     {/* Affiche le numéro de semaine en début de semaine */}
@@ -740,8 +717,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         {getWeekNumber(day)}
                       </span>
                     )}
-                    <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span>
-                    <span className="block text-xs text-gray-500">{
+                    <span className="text-inherit text-[14px]">{format(day, 'd', { locale: fr })}</span>
+                    <span className="text-inherit text-[10px]">{
                       format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() 
                       + 
                       format(day, 'EEE', { locale: fr }).slice(1).replace('.', '')}

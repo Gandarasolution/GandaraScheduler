@@ -55,6 +55,20 @@ export const autres = [
     { id: 5, label: 'Maintenance' ,image: iconeChantier.src}
 ]
 
+
+export const colors: { color: string, name: string }[] = [
+  { color: "#3953aaff", name: "Bleu" },
+  { color: "#059669", name: "Vert" },
+  { color: "#ffab2a", name: "Orange" },
+  { color: "#C026D3", name: "Violet" },
+  { color: "#6B21A8", name: "Indigo" },
+  { color: "#EC4899", name: "Rose" },
+  { color: "#f75151", name: "Rouge" },
+  { color: "#0EA5E9", name: "Cyan" },
+  { color: "#F97316", name: "Orange foncé" },
+  { color: "#34D399", name: "Lime" },
+];
+
 function generateAppointments(employees: Employee[]): Appointment[] {
   const baseDate = new Date(2025, 5, 24); // 24 juin 2025
   const titles = [
@@ -83,7 +97,8 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       type: 
       chantier.find(c => c.label === titles[idx % titles.length].label) ? 'Chantier' : 
       absences.find(a => a.label === titles[idx % titles.length].label) ? 'Absence' : 
-      'Autre'
+      'Autre',
+      color: colors[idx % colors.length].color // Assigner une couleur unique à chaque rendez-vous
     };
   });
 }

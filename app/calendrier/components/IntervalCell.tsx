@@ -1,7 +1,7 @@
 "use client";
-import React, { useState, memo, useCallback, useRef } from 'react';
+import React, { useState, memo, useRef } from 'react';
 import { useDrop } from 'react-dnd';
-import { format, addDays, add, addHours } from 'date-fns';
+import { format, addDays, addHours } from 'date-fns';
 import AppointmentItem from './AppointmentItem';
 import InfoBubble from './InfoBubble';
 import { Appointment } from '../types';
@@ -313,7 +313,6 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
               onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
             }}
             handleContextMenu={(e, origin, appointment) => handleContextMenu && handleContextMenu(e, origin, appointment, { employeeId: employee.id, date: intervalStart })}
-            color={colors[app.employeeId as number % colors.length]}
             isMobile={isMobile}
           />
         ))}

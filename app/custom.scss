@@ -11,17 +11,7 @@
   font-family: 'Poppins', sans-serif;
 }
 
-.custom-select-wrapper::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 15px;
-  transform: translateY(-50%);
-  pointer-events: none;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 6px solid #555; /* couleur de la flèche */
-}
+
 
 
 .WEEKEND {

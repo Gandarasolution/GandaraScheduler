@@ -4,7 +4,7 @@
 import { HalfDayInterval } from "../types";
 
 export const EMPLOYEE_COLUMN_WIDTH = 150;
-export const CELL_WIDTH = 80;
+export const CELL_WIDTH = 45;
 export const CELL_HEIGHT = 40;
 export const MARGIN_BETWEEN_TEAMS = 20;
 
@@ -18,16 +18,16 @@ export const DAY_INTERVALS: HalfDayInterval[] = [
 ];
 
 export const colors: string[] = [
-  "bg-blue-400 ring-blue-500",
-  "bg-emerald-400 ring-emerald-500",
-  "bg-amber-400 ring-amber-500",
-  "bg-rose-400 ring-rose-500",
-  "bg-purple-400 ring-purple-500",
-  "bg-pink-400 ring-pink-500",
-  "bg-gray-400 ring-gray-500",
-  "bg-sky-400 ring-sky-500",
-  "bg-orange-400 ring-orange-500",
-  "bg-teal-400 ring-teal-500",
+  "bg-blue-400",
+  "bg-emerald-400 ",
+  "bg-amber-400 ",
+  "bg-rose-400 ",
+  "bg-purple-400",
+  "bg-pink-400 ",
+  "bg-gray-400",
+  "bg-sky-400 ",
+  "bg-orange-400 ",
+  "bg-teal-400",
 ];
 
 export const DAYS_TO_ADD = 30;

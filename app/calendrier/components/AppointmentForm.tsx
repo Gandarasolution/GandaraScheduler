@@ -5,6 +5,7 @@ import { Appointment, Employee, HalfDayInterval } from '../types';
 import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
 import { isHoliday, isWeekend } from '../utils/dates';
 import { absences, autres, chantier } from '@/app/datasource';
+import CustomSelectWithImage, { SelectOptionWithImage } from './CustomSelectWithImage';
 
 /**
  * Props du composant AppointmentForm
@@ -19,6 +20,7 @@ interface AppointmentFormProps {
   HALF_DAY_INTERVALS: HalfDayInterval[] // Liste des créneaux de demi-journée
   isFullDay: boolean; // Indique si le rendez-vous est sur une journée complète
   nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
+  colors: {color: string, name: string}[]; // Liste des couleurs disponibles pour les rendez-vous
   onSave: (appointment: Appointment, includeWeekend: boolean, includeNotWorkingDay: boolean) => void;
   onDelete: (id: number) => void;
   onClose: () => void;
@@ -37,6 +39,7 @@ interface AppointmentFormProps {
  * @param {Employee[]} props.employees - Liste des employés disponibles.
  * @param {Array<{ startHour: number, endHour: number }>} props.HALF_DAY_INTERVALS - Intervalles pour matin/après-midi.
  * @param {boolean} props.isFullDay - Indique si le rendez-vous couvre toute la journée.
+ * @param {string[]} props.colors - Liste des couleurs disponibles pour les rendez-vous.
  * @param {Date[]} props.nonWorkingDates - Liste des dates non travaillées.
  * @param {(appointment: Appointment, includeWeekend: boolean, includeNotWorkingDay: boolean) => void} props.onSave - Callback lors de la sauvegarde.
  * @param {(id: number) => void} props.onDelete - Callback lors de la suppression.
@@ -67,6 +70,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   HALF_DAY_INTERVALS,
   isFullDay,
   nonWorkingDates,
+  colors,
   onSave,
   onDelete,
   onClose,
@@ -84,6 +88,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           image: '',
           employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''),
           type: "Chantier",
+          color: "#1E40AF", // Couleur par défaut
         }
   );
   const isFullWeekEnd = useMemo(() => {
@@ -134,6 +139,19 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     isFullWeekEnd || isAppointmentSplitByWeekend ? true : false
   ); // Nouveau champ pour inclure les week-ends
   const [titleNotValid, setTitleNotValid] = useState(false);
+
+  // Convertir les couleurs en options pour le select
+  const colorOptions: SelectOptionWithImage[] = colors.map((color, index) => ({
+    id: index,
+    name: color.name,
+    value: color.color,
+    icon: (
+      <div
+        className="w-5 h-5 rounded-full border-2 border-gray-300 shadow-sm"
+        style={{ backgroundColor: color.color }}
+      />
+    )
+  }));
 
   /**
    * Gère les changements des champs texte, textarea et select du formulaire.
@@ -317,6 +335,40 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Sélection de couleur */}
+      <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <label 
+          className="block text-sm font-medium text-gray-700 mb-2" 
+          htmlFor="color"
+        >
+          Couleur du rendez-vous 
+          <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={formData.color}
+          name="color"
+          id="color"
+          onChange={handleChange}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+        >
+          {colorOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+        <div className="mt-2 flex items-center gap-2">
+          <div
+            className="w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
+            style={{ backgroundColor: formData.color }}
+          />
+          <span className="text-sm text-gray-700">{formData.color}</span>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Cette couleur sera utilisée pour afficher le rendez-vous dans le calendrier
+        </p>
       </div>
 
 

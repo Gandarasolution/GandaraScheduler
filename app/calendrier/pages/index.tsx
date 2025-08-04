@@ -53,10 +53,11 @@ import {
   chantier,
   absences,
   autres,
+  colors
 } from "../../datasource";
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
-import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, THRESHOLD_MAX, THRESHOLD_MIN, WINDOW_SIZE } from "../utils/constants";
+import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, WINDOW_SIZE } from "../utils/constants";
 import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend, getBeforeWorkedDay } from "../utils/dates";
 import { CalendarConfig } from "../types";
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
@@ -109,7 +110,6 @@ export default function HomePage() {
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  //const [selectedCalendarId, setSelectedCalendarId] = useState<number>(calendars[0]?.id ?? 1);
   const employees = useRef<Employee[]>(initialEmployees);
   const [isLoading, setIsLoading] = useState(false);
   const isAutoScrolling = useRef(false);
@@ -124,8 +124,6 @@ export default function HomePage() {
   const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);
   const [repeatAppointmentData, setRepeatAppointmentData] = useState<{numberCount:number, repeatCount: number | null; repeatInterval: "day" | "week" | "month"; endDate: Date | null } | null>(null);
   const [extendAppointmentData, setExtendAppointmentData] = useState<Date | null>(null);
-  const lastScrollLeft = useRef(0);
-  const lastScrollTime = useRef(Date.now());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element; action: () => void; actif?: boolean }[]} | null>(null);
   const clipboardAppointment= useRef<Appointment | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: Date } | null>(null);
@@ -234,7 +232,7 @@ export default function HomePage() {
   }, []);
 
   const availableConfigs = getAvailableConfigs();
-  const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig>(availableConfigs[0]);
+  const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig>(availableConfigs[1]);
 
   // Appliquer les filtres aux employés et rendez-vous selon la configuration
   const filteredEmployeesForCalendar = useMemo(() => {
@@ -401,6 +399,7 @@ export default function HomePage() {
           image: selectedAppointment?.image,
           employeeId: selectedAppointment?.employeeId,
           type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
+          color: selectedAppointment?.color || "#1E40AF", // Couleur de fond du rendez-vous
         });
       });
 
@@ -440,6 +439,7 @@ export default function HomePage() {
           image: selectedAppointment?.image,
           employeeId: selectedAppointment?.employeeId,
           type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
+          color: selectedAppointment?.color || "#1E40AF", // Couleur de fond du rendez-vous
         });
       });
 
@@ -468,7 +468,7 @@ export default function HomePage() {
   );
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", libelle?: string, imageUrl?: string) => {
+    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: string, libelle?: string, imageUrl?: string) => {
       const newApp: Appointment = {
         id: Number(Date.now() + Math.random()), // Assure l'unicité de l'ID
         title,
@@ -479,6 +479,7 @@ export default function HomePage() {
         image: imageUrl,
         employeeId,
         type,
+        color, // Couleur de fond du rendez-vous
       };
       appointments.current = [...appointments.current, newApp];
       researchAppointments(); // Met à jour la liste filtrée
@@ -683,7 +684,7 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.libelle, appointment.image);
+          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.libelle, appointment.image);
         }
       }
       if (resizeDirection === 'left') {
@@ -692,7 +693,7 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.libelle, appointment.image);
+          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.libelle, appointment.image);
         }
       }
       
@@ -729,7 +730,8 @@ export default function HomePage() {
   );
 
   // Gestion de la création et édition de rendez-vous
-  const handleSaveAppointment = useCallback((appointment: Appointment, includeWeekend: boolean, includeNotWorkingDay: boolean) => {    
+  const handleSaveAppointment = useCallback(
+    (appointment: Appointment, includeWeekend: boolean, includeNotWorkingDay: boolean) => {    
     
     const days = getWorkedDayIntervals(
       appointment.startDate, 
@@ -750,6 +752,7 @@ export default function HomePage() {
           day.end,
           appointment.employeeId as number,
           appointment.type,
+          appointment.color,
           appointment.libelle,
           appointment.image
         );
@@ -774,7 +777,8 @@ export default function HomePage() {
               endDate: days[index]?.end || app.endDate,
               employeeId: appointment.employeeId,
               image: appointment.image,
-            };
+              color: appointment.color,
+            };   
           }
           return app;
         });
@@ -783,7 +787,13 @@ export default function HomePage() {
       if (days.length > index) createExtraAppointments(index);
       else {
         // Si on a moins de jours que prévu, on supprime les RDV supplémentaires
-        appointments.current = appointments.current.filter(app => !seq.some(s => s.id === app.id && !days.some(d => d.start.getTime() === app.startDate.getTime())));
+        appointments.current = appointments.current.filter(
+          app => !seq.some(
+            s => s.id === app.id && !days.some(
+              d => d.start.getTime() === app.startDate.getTime()
+            )
+          )
+        );
       }
       
     } else {
@@ -859,6 +869,7 @@ export default function HomePage() {
       endDate,
       employeeId as number,
       appointmentToDivide.type,
+      appointmentToDivide.color,
       appointmentToDivide.libelle,
       imageUrl,
      
@@ -1603,6 +1614,7 @@ export default function HomePage() {
               employees={employees.current}
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
               isFullDay={isFullDay}
+              colors={colors}
               nonWorkingDates={nonWorkingDates}
               onSave={handleSaveAppointment}
               onDelete={() => {
