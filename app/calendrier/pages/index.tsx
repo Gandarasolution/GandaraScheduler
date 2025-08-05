@@ -1721,104 +1721,146 @@ export default function HomePage() {
         >
           {!!repeatAppointmentData ? (
             <div 
-              className="flex flex-col gap-6 p-2"
+              className="flex flex-col gap-6 poppins"
             >
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 font-medium">
-                  <span className="">{'Tous les'}</span>
-                  <input
-                    required
-                    type="number"
-                    min={1}
-                    className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-20"
-                    value={repeatAppointmentData.numberCount || 1}
+              <div className="flex flex-col gap-4">
+                <span className="text-base underline">{'Rythme de répétition'}</span>
+                <div className="flex items-center gap-12">
+                  <label className="flex items-center gap-2 font-medium">
+                    <span className="">{'Tous les'}</span>
+                    <input
+                      required
+                      type="number"
+                      min={1}
+                      className="border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[50px]  text-center"
+                      value={repeatAppointmentData.numberCount || 1}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value > 0) {
+                          setRepeatAppointmentData((prev) =>
+                            prev
+                              ? { ...prev, numberCount: value }
+                              : { numberCount: value, repeatCount: 1, repeatInterval: "day", endDate: new Date() }
+                          );
+                        }
+                      }}
+                    />
+                  </label>
+                  <select
+                    className="border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2 custom-select"
+                    value={repeatAppointmentData.repeatInterval || "day"}
                     onChange={(e) => {
-                      const value = parseInt(e.target.value, 10);
-                      if (value > 0) {
-                        setRepeatAppointmentData((prev) =>
-                          prev
-                            ? { ...prev, numberCount: value }
-                            : { numberCount: value, repeatCount: 1, repeatInterval: "day", endDate: new Date() }
-                        );
+                      const value = e.target.value as "day" | "week" | "month";
+                      setRepeatAppointmentData((prev) =>
+                        prev
+                          ? { ...prev, repeatInterval: value }
+                          : { numberCount: 1, repeatCount: 1, repeatInterval: value, endDate: new Date() }
+                      );
+                    }}
+                    required
+                  >
+                    <option value="day">Jours</option>
+                    <option value="week">Semaines</option>
+                    <option value="month">Mois</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex flex-col gap-4">
+                <span className="text-base underline">{'Méthode'}</span>
+
+                <div className="flex flex-row items-center gap-6">
+                  
+                  {/* Option 1: Répéter un nombre de fois */}
+                  <div className="flex items-center gap-21">
+                    <div className="">
+                      <input
+                        type="radio"
+                        name="repeatMethod"
+                        value="count"
+                        checked={repeatAppointmentData.repeatCount !== null && repeatAppointmentData.endDate === null}
+                        onChange={() => {
+                          setRepeatAppointmentData((prev) =>
+                            prev ? { ...prev, repeatCount: 1, endDate: null } : { numberCount: 1, repeatCount: 1, repeatInterval: "day", endDate: null }
+                          );
+                        }}
+                      />
+                      <span className="ml-1">Nombre</span>
+                    </div>
+                    <input
+                      type="number"
+                      min={1}
+                      disabled={repeatAppointmentData.endDate !== null}
+                      className={`${repeatAppointmentData.endDate !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[50px] ml-2`}
+                      value={repeatAppointmentData.repeatCount === null ||
+                              repeatAppointmentData.repeatCount === undefined
+                                ? ""
+                                : repeatAppointmentData.repeatCount
                       }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "") {
+                          setRepeatAppointmentData((prev) =>
+                            prev ? { ...prev, repeatCount: null } : { numberCount: 1, repeatCount: null, repeatInterval: "day", endDate: null }
+                          );
+                          return;
+                        }
+                        const parsed = parseInt(value, 10);
+                        if (!isNaN(parsed) && parsed > 0) {
+                          setRepeatAppointmentData((prev) =>
+                            prev ? { ...prev, repeatCount: parsed, endDate: null } : { numberCount: 1, repeatCount: parsed, repeatInterval: "day", endDate: null }
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                {/* Option 2: Répéter jusqu'à une date */}
+                <div className="flex items-center gap-12">
+                  <div>
+                    <input
+                      type="radio"
+                      name="repeatMethod"
+                      value="endDate"
+                      checked={repeatAppointmentData.endDate !== null && repeatAppointmentData.repeatCount === null}
+                      onChange={() => {                        
+                        setRepeatAppointmentData((prev) =>
+                          prev ? { ...prev, repeatCount: null, endDate: new Date() } : { numberCount: 1, repeatCount: null, repeatInterval: "day", endDate: new Date() }
+                        );
+                      }}
+                    />
+                    <span className="ml-1">{'Fin répétition'}</span>
+                  </div>
+                  <input
+                    type="date"
+                    disabled={repeatAppointmentData.repeatCount !== null}
+                    className={`${repeatAppointmentData.repeatCount !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} border border-gray-300 rounded-xl w-[120px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2 text-xs`}
+                    value={repeatAppointmentData.endDate ? format(repeatAppointmentData.endDate, "yyyy-MM-dd") : ""}
+                    min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
+                    onChange={e => {
+                      const value = e.target.value;
+                      setRepeatAppointmentData(prev => {
+                        const endDate = value ? new Date(value) : null;
+                        return prev
+                          ? { ...prev, endDate, repeatCount: null }
+                          : { numberCount: 1, repeatCount: null, repeatInterval: "day", endDate };
+                      });                    
                     }}
                   />
-                </label>
-                <select
-                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2"
-                  value={repeatAppointmentData.repeatInterval || "day"}
-                  onChange={(e) => {
-                    const value = e.target.value as "day" | "week" | "month";
-                    setRepeatAppointmentData((prev) =>
-                      prev
-                        ? { ...prev, repeatInterval: value }
-                        : { numberCount: 1, repeatCount: 1, repeatInterval: value, endDate: new Date() }
-                    );
-                  }}
-                  required
-                >
-                  <option value="day">Jours</option>
-                  <option value="week">Semaines</option>
-                  <option value="month">Mois</option>
-                </select>
-              </div>
-              <div>
-                <span>{'Répéter jusqu\'au'} </span>
-                <input
-                  type="date"
-                  className={`${repeatAppointmentData.repeatCount ? 'opacity-50' : 'opacity-100'} border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2`}
-                  value={repeatAppointmentData.endDate ? format(repeatAppointmentData.endDate, "yyyy-MM-dd") : ""}
-                  min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
-                  onChange={e => {
-                    const value = e.target.value;
-                    setRepeatAppointmentData(prev => {
-                      const endDate = value ? new Date(value) : prev?.endDate || new Date();
-                      return prev
-                        ? { ...prev, endDate, repeatCount: null }
-                        : { numberCount: 1, repeatCount: null, repeatInterval: "day", endDate };
-                    });                    
-                  }}
-                />
-                <span>{' ou nombre de répétitions'}</span>
-                <input
-                  type="number"
-                  min={1}
-                  className={`${repeatAppointmentData.endDate ? 'opacity-50' : 'opacity-100'} border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-20 ml-2`}
-                  value={repeatAppointmentData.repeatCount === null ||
-                          repeatAppointmentData.repeatCount === undefined
-                            ? ""
-                            : repeatAppointmentData.repeatCount
-                  }
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "") {
-                      setRepeatAppointmentData((prev) =>
-                        prev ? { ...prev, repeatCount: null } : { numberCount: 1, repeatCount: null, repeatInterval: "day", endDate: null }
-                      );
-                      return;
-                    }
-                    const parsed = parseInt(value, 10);
-                    if (!isNaN(parsed) && parsed > 0) {
-                      setRepeatAppointmentData((prev) =>
-                        prev ? { ...prev, repeatCount: parsed, endDate: null } : { numberCount: 1, repeatCount: parsed, repeatInterval: "day", endDate: null }
-                      );
-                    }
-                  }}
-                />
+                </div>
               </div>
               {/* Boutons d'action */}
-              <div className="flex justify-end gap-3 mt-4">
+              <div className="flex justify-between mt-2">
                 <button
                   type="button"
                   onClick={() => setRepeatAppointmentData(null)}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl hover:bg-gray-600 transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleRepeat}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl hover:bg-blue-700 transition-colors"
                 >
                   {'Enregistrer'}
                 </button>
