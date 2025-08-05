@@ -39,12 +39,11 @@ import {
   isSameDay,
   addMinutes,
 } from "date-fns";
-import { Appointment, Employee, HistoryAction } from "../types";
+import { Appointment, Employee, HistoryAction, EventTemplate } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
 import Modal from "../components/Modal";
 import AppointmentForm from "../components/AppointmentForm";
 import DraggableSource from "../components/DraggableSource";
-import Drawer from "../components/Drawer";
 import RightClickComponent from "../components/RightClickComponent";
 import {
   initialTeams,
@@ -134,6 +133,8 @@ export default function HomePage() {
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
+  const [eventSearchInput, setEventSearchInput] = useState<string>('');
   const history = useRef<HistoryAction[]>([]);
   const maxHistorySize = 50; // Limiter la taille de l'historique
   const isInitializing = useRef(true); // Flag pour éviter d'enregistrer les actions lors de l'initialisation
@@ -1090,9 +1091,28 @@ export default function HomePage() {
       const endDate = setHours(setMinutes(new Date(date), 0), endHour);
 
       createAppointment(title, startDate, endDate, employeeId, typeEvent, imageUrl);
+      
+      // Fermer l'overlay après création
+      setIsSearchOverlayOpen(false);
+      setEventSearchInput('');
     },
-    [repeatAppointmentData, createAppointment]
+    [createAppointment]
   );
+
+  // Filtrer les événements en fonction de la recherche
+  const filteredEvents = useMemo(() => {
+    if (!eventSearchInput.trim()) return [];
+
+    const allEvents = [
+      ...chantier.map(item => ({ ...item, type: 'Chantier' as const })),
+      ...absences.map(item => ({ ...item, type: 'Absence' as const })),
+      ...autres.map(item => ({ ...item, type: 'Autre' as const }))
+    ];
+
+    return allEvents.filter(event =>
+      event.label.toLowerCase().includes(eventSearchInput.toLowerCase())
+    );
+  }, [eventSearchInput]);
 
   // Mémorise la fonction de fermeture du menu contextuel
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
@@ -1430,8 +1450,6 @@ export default function HomePage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-
-
   // Rendu principal de la page
   return (
     <DndProvider backend={HTML5Backend}>
@@ -1638,7 +1656,7 @@ export default function HomePage() {
                     className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto"
                     style={{ backgroundColor: '#00947f' }}
                     type="button"
-                    onClick={() => setIsDrawerOpen(true)}
+                    onClick={() => setIsSearchOverlayOpen(true)}
                   >
                     + Ajouter un évènement
                   </button>
@@ -1853,14 +1871,14 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setRepeatAppointmentData(null)}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl hover:bg-gray-600 transition-colors"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleRepeat}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors"
                 >
                   {'Enregistrer'}
                 </button>
@@ -1936,38 +1954,9 @@ export default function HomePage() {
             setIsModalOpen(true);
           }}
         />
-        {/* Drawer latéral modernisé pour ajouter un rendez-vous par drag & drop */}
-        <Drawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} isDragging={isDrawerOpen}>
-          <div className={"flex flex-col items-center w-64"}>
-            <div className="mb-4 text-gray-600 text-sm font-medium text-center">
-              Faites glisser un bloc sur la timeline pour l’ajouter.
-            </div>
-            <select
-              className="p-2 w-full border border-gray-300 mb-4 rounded-xl bg-gray-100"
-              onChange={(e) => {
-                const selected = eventTypes.find((ev) => ev.label === e.target.value);
-                setDrawerOptionsSelected(selected ?? eventTypes[0]);
-              }}
-            >
-              {eventTypes.map((ev) => (
-                <option key={ev.label} value={ev.label}>
-                  {ev.label + "s"}
-                </option>
-              ))}
-            </select>
-            <div className="flex flex-col gap-3 w-full">
-              {drawerOptionsSelected?.dataSource?.map((ev) => (
-                <DraggableSource 
-                  id={ev.label} 
-                  title={ev.label} 
-                  key={ev.label} 
-                  imageUrl={ev.image} 
-                  type={drawerOptionsSelected.label as "Chantier" | "Absence" | "Autre"}
-                />
-              ))}
-            </div>
-          </div>
-        </Drawer>
+        
+        {/* Overlay de recherche d'événements */}
+        
         {/* Barre de chargement modernisée */}
         {isLoading && (
           <div className="fixed top-0 left-0 w-full h-1 bg-blue-100 z-50">
@@ -1998,7 +1987,13 @@ export default function HomePage() {
             </button>
           </div>
         )}
-        
+        <SearchOverlay
+          isOpen={isSearchOverlayOpen}
+          onClose={() => setIsSearchOverlayOpen(false)}
+          eventSearchInput={eventSearchInput}
+          setEventSearchInput={setEventSearchInput}
+          filteredEvents={filteredEvents}
+        />
         {/* Indicateur permanent pour Ctrl+Z */}
         {history.current.length > 0 && (
           <div className="fixed bottom-6 right-6 bg-blue-100 px-4 py-2 rounded-lg shadow-lg z-40 flex items-center gap-2 border border-blue-300">
@@ -2304,3 +2299,107 @@ const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
     </Modal>
   );
 };
+
+
+type SearchOverlayProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  eventSearchInput: string;
+  setEventSearchInput: (input: string) => void;
+  filteredEvents: (EventTemplate & { type: "Chantier" | "Absence" | "Autre" })[];
+};
+
+const SearchOverlay: React.FC<SearchOverlayProps> = ({
+  isOpen,
+  onClose,
+  eventSearchInput,
+  setEventSearchInput,
+  filteredEvents,
+}) => {
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+        setEventSearchInput('');
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose, setEventSearchInput, isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 overlay z-50 flex items-center justify-center pt-20"
+      onClick={() => {
+        onClose();
+        setEventSearchInput('');
+      }}
+    >
+      <div 
+        className="bg-opacity-0 rounded-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Barre de recherche */}
+        <div className="">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Rechercher un événement..."
+              className="block bg-white w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+              value={eventSearchInput}
+              onChange={(e) => setEventSearchInput(e.target.value)}
+              autoFocus
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3"></div>
+        {/* Liste des événements filtrés */}
+        <div className="flex-1 overflow-y-auto px-3 py-2 bg-white rounded-2xl">
+          {eventSearchInput.trim() === '' ? (
+            <div className="text-center text-gray-500 py-8">
+              <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <p className="text-lg font-medium mb-2">Rechercher un événement</p>
+              <p className="text-sm">Tapez pour rechercher parmi les chantiers, absences et autres événements</p>
+            </div>
+          ) : filteredEvents.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.562M15 6.5a7.5 7.5 0 11-6 0 7.5 7.5 0 016 0z" />
+              </svg>
+              <p className="text-lg font-medium mb-2">Aucun résultat</p>
+              <p className="text-sm">Aucun événement ne correspond à votre recherche</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {filteredEvents.map((event, index) => (
+                <DraggableSource
+                  key={`${event.label}-${event.id}-${index}`}
+                  id={event.id}
+                  title={event.label}
+                  imageUrl={event.image ?? ""}
+                  type={event.type}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

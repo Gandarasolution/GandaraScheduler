@@ -49,6 +49,25 @@ export interface Filter {
   label: string; // Libellé affiché à l'utilisateur
 }
 
+// Interfaces pour les différents types d'événements
+export interface Chantier {
+  id: number;
+  label: string;
+  image: string;
+}
+
+export interface Absence {
+  id: number;
+  label: string;
+  image: string;
+}
+
+export interface Autre {
+  id: number;
+  label: string;
+  image: string;
+}
+
 export type DimensionType = 'employee' | 'group' | 'contract' | 'type' | 'pole';
 
 export interface CalendarConfig {
@@ -75,4 +94,11 @@ export interface HistoryAction {
   appointment?: Appointment;
   previousAppointment?: Appointment; // Pour les updates et moves
   appointments?: Appointment[]; // Pour une sauvegarde complète
+} 
+
+
+export interface EventTemplate {
+  id: number;
+  label: string;
+  image: string;
 }

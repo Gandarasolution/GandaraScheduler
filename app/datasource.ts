@@ -1,4 +1,4 @@
-import { Appointment, Employee, Groupe } from './calendrier/types/index';
+import { Appointment, Employee, Groupe, EventTemplate } from './calendrier/types/index';
 import iconeChantier from './calendrier/image/Icones/Evenement_Chantier.svg'
 import iconeAbsenceValide from './calendrier/image/Icones/Evenement_Congés_Valide.svg'
 import iconeAbsenceNonValide from './calendrier/image/Icones/Evenement_Congés_Non_Valide.svg'
@@ -26,7 +26,7 @@ export const initialEmployees: Employee[] = [
     { name: 'Julien', id: 12, groupId: 2, type: 'interim', pole: 'Commercial'}
 ];
 
-export const chantier = [
+export const chantier: EventTemplate[] = [
     { id: 1 , label: '1052 Logements Vesoul', image: iconeChantier.src },
     { id: 2 , label: 'Résidence Les Jardins de Paris', image: iconeChantier.src},
     { id: 3 , label: 'Chantier Lycée Jean Moulin' , image: iconeChantier.src},
@@ -39,7 +39,7 @@ export const chantier = [
     { id: 10 , label: 'Résidence Étudiante Marseille' , image: iconeChantier.src}
 ];
 
-export const absences = [
+export const absences: EventTemplate[] = [
     { id: 1, label: 'RTT' , image: iconeAbsenceValide.src },
     { id: 2, label: 'Maladie', image: iconeAbsenceValide.src },
     { id: 3, label: 'Congés payés', image: iconeAbsenceValide.src },
@@ -47,7 +47,7 @@ export const absences = [
     { id: 5, label: 'Autre', image: iconeAbsenceNonValide.src }
 ]
 
-export const autres = [
+export const autres: EventTemplate[] = [
     { id: 1, label: 'Heures SUP',image: iconeChantier.src },
     { id: 2, label: 'Formation',image: iconeChantier.src },
     { id: 3, label: 'Réunion' ,image: iconeChantier.src},
