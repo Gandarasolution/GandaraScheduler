@@ -248,7 +248,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
               overlapping === 0
                 ? CELL_HEIGHT
                 : overlapping * CELL_HEIGHT + 2 * overlapping + 10,
-          });          
+          });
           // On ajoute un objet avec l'id de l'employé, la clé du jour, et la hauteur calculée
           // Si aucun chevauchement : hauteur par défaut, sinon on ajuste selon le nombre de chevauchements
         });
@@ -303,7 +303,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
         // If no appointments, default to CELL_HEIGHT. Otherwise, calculate based on max overlaps.
         const calculatedHeight = maxOverallOverlap === 0
-            ? CELL_HEIGHT + 12 // Si ligne vide, hauteur par défaut + un peu d'espace
+            ? CELL_HEIGHT
             : (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + 10; // 2*overlap for spacing, 10 for padding
 
         return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
@@ -451,18 +451,18 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   if (isMobile) {
     const displayEmployee = employees[0];
     return (
-      <div className="relative h-full w-full font-inter"> {/* Enable vertical scrolling */}
+      <div className="relative h-full w-full poppins"> {/* Enable vertical scrolling */}
         {/* Employee Header (fixed at top) */}
-        <div className="sticky top-0 z-30 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-center rounded-b-xl shadow-lg">
+        <div className="mobile-employee-header sticky top-0 z-30 flex items-center justify-center">
           {displayEmployee.avatar && (
             <img
               src={displayEmployee.avatar}
               alt={displayEmployee.name}
-              className="w-14 h-14 rounded-full mr-4 border-3 border-white shadow-md"
+              className="employee-avatar w-14 h-14 rounded-full mr-4"
               onError={(e) => { e.currentTarget.src = `https://placehold.co/56x56/cccccc/333333?text=${displayEmployee.name.charAt(0)}`; }}
             />
           )}
-          <span className="font-extrabold text-2xl tracking-wide">{displayEmployee.name}</span>
+          <span className="employee-name">{displayEmployee.name}</span>
         </div>
 
         {/* Main content area - vertical list of days */}
@@ -485,35 +485,37 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 {/* Date Header for each day */}
                 <div
                   className={`
-                    flex flex-col items-center justify-center p-3 bg-gray-100 border-b border-gray-300
-                    ${isWeekend(day) ? 'bg-gray-50 text-gray-600' : 'text-gray-800'}
-                    ${isSameDay(day, new Date()) ? 'bg-blue-100 font-bold text-blue-700 shadow-sm' : ''}
+                    mobile-day-header flex flex-col items-center justify-center
+                    ${isWeekend(day) ? 'weekend' : ''}
+                    ${isSameDay(day, new Date()) ? 'today' : ''}
                   `}
                 >
-                  <span className="text-xl font-bold">{format(day, 'EEEE d MMMM', { locale: fr })}</span>
+                  <span className="day-title">{format(day, 'EEEE d MMMM', { locale: fr })}</span>
                   {day.getDay() === 1 && ( // Display week number only on Mondays
-                    <span className="text-sm text-gray-500 mt-1">Semaine {getWeekNumber(day)}</span>
+                    <div className="week-number">{getWeekNumber(day)}</div>
                   )}
                 </div>
 
                 {/* DayCell for the single employee */}
-                <DayCell
-                  day={day}
-                  employee={displayEmployee}
-                  appointments={dayEmployeeAppointments}
-                  intervals={HALF_DAY_INTERVALS}
-                  isFullDay={isFullDay}
-                  nonWorkingDates={nonWorkingDates}
-                  isMobile={isMobile}
-                  RowHeight={dayEmployeeAppointments.length > 0 ? rowHeight : CELL_HEIGHT}
-                  onAppointmentMoved={onAppointmentMoved}
-                  onCellDoubleClick={onCellDoubleClick}
-                  onAppointmentClick={onAppointmentDoubleClick}
-                  onExternalDragDrop={onExternalDragDrop}
-                  isWeekend={isWeekend(day)}
-                  handleContextMenu={handleContextMenu}
-                  isCellActive={true} // Always active for the displayed employee
-                />
+                <div className={`mobile-day-cell ${isWeekend(day) ? 'weekend' : ''}`}>
+                  <DayCell
+                    day={day}
+                    employee={displayEmployee}
+                    appointments={dayEmployeeAppointments}
+                    intervals={HALF_DAY_INTERVALS}
+                    isFullDay={isFullDay}
+                    nonWorkingDates={nonWorkingDates}
+                    isMobile={isMobile}
+                    RowHeight={dayEmployeeAppointments.length > 0 ? rowHeight : CELL_HEIGHT}
+                    onAppointmentMoved={onAppointmentMoved}
+                    onCellDoubleClick={onCellDoubleClick}
+                    onAppointmentClick={onAppointmentDoubleClick}
+                    onExternalDragDrop={onExternalDragDrop}
+                    isWeekend={isWeekend(day)}
+                    handleContextMenu={handleContextMenu}
+                    isCellActive={true} // Always active for the displayed employee
+                  />
+                </div>
               </div>
             );
           })}
@@ -534,7 +536,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           ref={columnEmployeeRef}
         >
           <div 
-            className="h-[94px] sticky top-0 z-10 flex items-center  justify-center flex-shrink-0"
+            className="h-[112px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
             style={{
               backgroundColor: '#f3f7f8',
             }}
@@ -688,20 +690,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 className="grid sticky top-[40px] z-20 bg-white border-gray-300"
                 style={{
                   gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
+                  minHeight: '56px',
                 }}
               >
                 {dayInTimeline.map((day, index) => (
                   <div
                     key={`header-day-${format(day, 'yyyy-MM-dd')}`}
                     className={`
-                      flex flex-col justify-end border-b border-r border-gray-300 text-center text-sm font-semibold text-[#84818a] p-1 
+                      flex flex-col justify-end border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1
                       ${(isToday(day) && 'bg-[#ffcdde]') || (isWeekend(day) ? 'bg-[#f6f6f6]' : 'bg-white')}
                       relative
                       day-cell
                     `}
                     style={{ 
                       width: CELL_WIDTH + 'px', 
-                      height: CELL_HEIGHT  + 'px',
+                      height: 'auto',
                     }}
                   >
                     {/* Affiche le numéro de semaine en début de semaine */}
@@ -717,8 +720,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         {getWeekNumber(day)}
                       </span>
                     )}
-                    <span className="text-inherit text-[14px]">{format(day, 'd', { locale: fr })}</span>
-                    <span className="text-inherit text-[10px]">{
+                    <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span>
+                    <span className="block text-xs text-gray-500">{
                       format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() 
                       + 
                       format(day, 'EEE', { locale: fr }).slice(1).replace('.', '')}

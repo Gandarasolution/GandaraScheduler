@@ -594,16 +594,38 @@ export default function HomePage() {
 
   // Fonctions optimisées pour ajouter des jours
   const addDaysToRight = useCallback(() => {
+    if (!mainScrollRef.current) return;
+    
+    const previousScrollLeft = mainScrollRef.current.scrollLeft;
+    const previousScrollWidth = mainScrollRef.current.scrollWidth;
+    
     setDayInTimeline((prevDays) => {
       const lastDay = prevDays[prevDays.length - 1];
       let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
       newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
       
-      // Reset du flag avec délai plus court si touche fléchée pressée
-      const delay = isArrowKeyPressed.current ? 50 : 200;
-      setTimeout(() => {
-        isProcessingInfiniteScroll.current = false;
-      }, delay);
+      // Ajuster le scroll de manière synchrone après le state update pour maintenir la vue stable
+      requestAnimationFrame(() => {
+        if (mainScrollRef.current) {
+          const newScrollWidth = mainScrollRef.current.scrollWidth;
+          const scrollAdjustment = newScrollWidth - previousScrollWidth;
+          
+          // Maintenir la position relative de la vue quand on tranche la fenêtre
+          const resultArray = [...prevDays, ...newDays].slice(-WINDOW_SIZE);
+          const removedFromLeft = prevDays.length + newDays.length - WINDOW_SIZE;
+          
+          if (removedFromLeft > 0) {
+            // Compenser la suppression des jours à gauche
+            mainScrollRef.current.scrollLeft = previousScrollLeft - (removedFromLeft * CELL_WIDTH);
+          }
+        }
+        
+        // Reset du flag avec délai plus court si touche fléchée pressée
+        const delay = isArrowKeyPressed.current ? 50 : 200;
+        setTimeout(() => {
+          isProcessingInfiniteScroll.current = false;
+        }, delay);
+      });
       
       return [...prevDays, ...newDays].slice(-WINDOW_SIZE);
     });
