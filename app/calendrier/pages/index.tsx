@@ -39,7 +39,7 @@ import {
   isSameDay,
   addMinutes,
 } from "date-fns";
-import { Appointment, Employee } from "../types";
+import { Appointment, Employee, HistoryAction } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
 import Modal from "../components/Modal";
 import AppointmentForm from "../components/AppointmentForm";
@@ -134,6 +134,21 @@ export default function HomePage() {
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const history = useRef<HistoryAction[]>([]);
+  const maxHistorySize = 50; // Limiter la taille de l'historique
+  const isInitializing = useRef(true); // Flag pour éviter d'enregistrer les actions lors de l'initialisation
+  // Solution ultra-performante avec throttle optimisé et early exit
+  const isProcessingInfiniteScroll = useRef(false);
+  const lastScrollCheck = useRef(0);
+  const isArrowKeyPressed = useRef(false);
+  const arrowKeyDirection = useRef<'left' | 'right' | null>(null);
+  const continuousScrollInterval = useRef<NodeJS.Timeout | null>(null);
+  const isInfiniteScrollEnabled = useRef(false); // Désactivé par défaut jusqu'à la fin du scroll initial
+
+  // Throttle ultra-performant avec requestAnimationFrame
+  const throttledScrollHandler = useRef<(() => void) | null>(null);
+  const lastScrollTop = useRef(0);
+
 
   // --- GESTION DES CONFIGURATIONS DE CALENDRIER ET FILTRES ---
   // Fonction pour obtenir les configurations disponibles selon les pôles des employés
@@ -466,6 +481,82 @@ export default function HomePage() {
       researchAppointments(); // Met à jour la liste filtrée
     }, [researchAppointments]
   );
+
+  // --- FONCTIONS D'HISTORIQUE POUR CTRL+Z ---
+  const addToHistory = useCallback((action: HistoryAction) => {
+    history.current.push(action);
+    // Limiter la taille de l'historique
+    if (history.current.length > maxHistorySize) {
+      history.current.shift();
+    }
+  }, []);
+
+  const saveAppointmentState = useCallback((appointment: Appointment | null, type: 'create' | 'update' | 'delete' | 'move', previousAppointment?: Appointment) => {
+    if (!appointment || isInitializing.current) return; // Ne pas enregistrer pendant l'initialisation
+    
+    addToHistory({
+      type,
+      timestamp: Date.now(),
+      appointment: { ...appointment },
+      previousAppointment: previousAppointment ? { ...previousAppointment } : undefined,
+      appointments: appointments.current.map(app => ({ ...app })) // Sauvegarde complète pour sécurité
+    });
+  }, [addToHistory]);
+
+  const undoLastAction = useCallback(() => {
+    console.log(history.current);
+    
+    if (history.current.length === 0) {
+      setModalInfo({ message: "Aucune action à annuler", color: "#e74c3c" });
+      setTimeout(() => setModalInfo(null), 2000);
+      return;
+    }
+
+    const lastAction = history.current.pop();
+    if (!lastAction) return;
+
+    switch (lastAction.type) {
+      case 'create':
+        // Annuler une création = supprimer le rendez-vous
+        if (lastAction.appointment) {
+          appointments.current = appointments.current.filter(app => app.id !== lastAction.appointment!.id);
+          setModalInfo({ message: "Création annulée", color: "#27ae60" });
+        }
+        break;
+
+      case 'delete':
+        // Annuler une suppression = restaurer le rendez-vous
+        if (lastAction.appointment) {
+          appointments.current.push({ ...lastAction.appointment });
+          setModalInfo({ message: "Suppression annulée", color: "#27ae60" });
+        }
+        break;
+
+      case 'update':
+        // Annuler une modification = restaurer l'ancien état
+        if (lastAction.previousAppointment) {
+          appointments.current = appointments.current.map(app =>
+            app.id === lastAction.previousAppointment!.id ? { ...lastAction.previousAppointment! } : app
+          );
+          setModalInfo({ message: "Modification annulée", color: "#27ae60" });
+        }
+        break;
+
+      case 'move':
+        // Annuler un déplacement = restaurer la position précédente
+        if (lastAction.previousAppointment) {
+          appointments.current = appointments.current.map(app =>
+            app.id === lastAction.previousAppointment!.id ? { ...lastAction.previousAppointment! } : app
+          );
+          setModalInfo({ message: "Déplacement annulé", color: "#27ae60" });
+        }
+        break;
+    }
+
+    researchAppointments(); // Mettre à jour l'affichage
+    setTimeout(() => setModalInfo(null), 2000);
+  }, [researchAppointments]);
+
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
     (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: string, libelle?: string, imageUrl?: string) => {
@@ -482,8 +573,12 @@ export default function HomePage() {
         color, // Couleur de fond du rendez-vous
       };
       appointments.current = [...appointments.current, newApp];
+      
+      // Enregistrer la création dans l'historique
+      saveAppointmentState(newApp, 'create');
+      
       researchAppointments(); // Met à jour la liste filtrée
-  }, [researchAppointments]);
+  }, [researchAppointments, saveAppointmentState]);
 
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
     if (app) {
@@ -534,18 +629,7 @@ export default function HomePage() {
 
 
 
-  // Solution ultra-performante avec throttle optimisé et early exit
-  const isProcessingInfiniteScroll = useRef(false);
-  const lastScrollCheck = useRef(0);
-  const isArrowKeyPressed = useRef(false);
-  const arrowKeyDirection = useRef<'left' | 'right' | null>(null);
-  const continuousScrollInterval = useRef<NodeJS.Timeout | null>(null);
-  const isInfiniteScrollEnabled = useRef(false); // Désactivé par défaut jusqu'à la fin du scroll initial
-
-  // Throttle ultra-performant avec requestAnimationFrame
-  const throttledScrollHandler = useRef<(() => void) | null>(null);
-  const lastScrollTop = useRef(0);
-
+  
   if (!throttledScrollHandler.current) {
     let rafId: number | null = null;
     throttledScrollHandler.current = () => {
@@ -606,12 +690,8 @@ export default function HomePage() {
       
       // Ajuster le scroll de manière synchrone après le state update pour maintenir la vue stable
       requestAnimationFrame(() => {
-        if (mainScrollRef.current) {
-          const newScrollWidth = mainScrollRef.current.scrollWidth;
-          const scrollAdjustment = newScrollWidth - previousScrollWidth;
-          
+        if (mainScrollRef.current) {          
           // Maintenir la position relative de la vue quand on tranche la fenêtre
-          const resultArray = [...prevDays, ...newDays].slice(-WINDOW_SIZE);
           const removedFromLeft = prevDays.length + newDays.length - WINDOW_SIZE;
           
           if (removedFromLeft > 0) {
@@ -726,6 +806,9 @@ export default function HomePage() {
     
       if (!appointment) return; // Rendez-vous non trouvé 
       
+      // Enregistrer l'état précédent pour l'historique
+      const previousAppointment = { ...appointment };
+      
       const seq = getFullSequence(appointment.id);
       
       let timeOffset = 0;
@@ -790,8 +873,14 @@ export default function HomePage() {
           );
         }
       });
+      
+      // Enregistrer le déplacement dans l'historique après les modifications
+      const updatedAppointment = appointments.current.find((app) => app.id === id);
+      if (updatedAppointment) {
+        saveAppointmentState(updatedAppointment, 'move', previousAppointment);
+      }
     },
-    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates]
+    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, getFullSequence, saveAppointmentState]
   );
 
   // Gestion de la création et édition de rendez-vous
@@ -807,6 +896,11 @@ export default function HomePage() {
       includeNotWorkingDay
     );    
     
+    // Enregistrer l'état précédent pour l'historique
+    let previousAppointment: Appointment | undefined;
+    if (appointment.id) {
+      previousAppointment = appointments.current.find(app => app.id === appointment.id);
+    }
     
     // Fonction utilitaire pour créer les rendez-vous supplémentaires
     const createExtraAppointments = (fromIndex = 1) => {
@@ -864,11 +958,22 @@ export default function HomePage() {
     } else {
       createExtraAppointments(0);
     }
+    
+    // Enregistrer dans l'historique
+    if (appointment.id && previousAppointment) {
+      // C'est une mise à jour
+      const updatedAppointment = appointments.current.find(app => app.id === appointment.id);
+      if (updatedAppointment) {
+        saveAppointmentState(updatedAppointment, 'update', previousAppointment);
+      }
+    }
+    // Note: Les créations sont déjà enregistrées dans createAppointment
+    
     researchAppointments(); // Met à jour la liste filtrée
     setIsModalOpen(false);
     setSelectedAppointment(null);
     setNewAppointmentInfo(null);
-  }, [researchAppointments, createAppointment, getFullSequence, isFullDay, nonWorkingDates]);
+  }, [researchAppointments, createAppointment, getFullSequence, isFullDay, nonWorkingDates, saveAppointmentState]);
 
 
   const handleDeleteAppointmentConfirm = useCallback(() => {
@@ -881,12 +986,19 @@ export default function HomePage() {
       console.warn("Aucun ID de rendez-vous fourni pour la suppression.");
       return;
     }
+    
+    // Trouver le rendez-vous à supprimer pour l'historique
+    const appointmentToDelete = appointments.current.find(app => app.id === id);
+    if (appointmentToDelete) {
+      saveAppointmentState(appointmentToDelete, 'delete');
+    }
+    
     setIsAlertVisible(false);
     appointments.current = appointments.current.filter((app) => app.id !== id);
     researchAppointments(); // Met à jour la liste filtrée
     setIsModalOpen(false);
     setSelectedAppointment(null);
-  }, [researchAppointments]);
+  }, [researchAppointments, saveAppointmentState]);
 
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
     const seq = getFullSequence(appointment.id);
@@ -1144,6 +1256,15 @@ export default function HomePage() {
     goToDate(new Date());
   }, []); // Centrage initial
 
+  // Marquer la fin de l'initialisation après le premier rendu
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      isInitializing.current = false;
+    }, 100); // Court délai pour s'assurer que l'initialisation est terminée
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === "c" && selectedAppointment) {
@@ -1151,6 +1272,10 @@ export default function HomePage() {
       }
       else if (e.ctrlKey && e.key === "v" && selectedCell) {
         pasteAppointment(selectedCell);
+      }
+      else if (e.ctrlKey && e.key === "z") {
+        e.preventDefault();
+        undoLastAction();
       }
       if (e.ctrlKey && e.key === "f") {
         e.preventDefault();
@@ -1246,7 +1371,7 @@ export default function HomePage() {
         clearInterval(continuousScrollInterval.current);
       }
     };
-  }, [selectedAppointment, selectedCell, copyAppointmentToClipboard, pasteAppointment]);
+  }, [selectedAppointment, selectedCell, copyAppointmentToClipboard, pasteAppointment, undoLastAction]);
 
   // Recherche dans les rendez-vous
   useEffect(() => {
@@ -1591,6 +1716,8 @@ export default function HomePage() {
               ? "Modifier le rendez-vous"
               : "Ajouter un rendez-vous"
           }
+          whithoutCloseButton={true}
+          roundedSize="2xl"
         >
           {!!repeatAppointmentData ? (
             <div 
@@ -1699,10 +1826,11 @@ export default function HomePage() {
             </div>
           ) : extendAppointmentData ? (
             <div>
-              <div>
+              <div className="flex flex-row items-center mb-4">
+                <span className="text-base poppins mr-[78px]">Jusqu'au</span>
                 <input
                   type="date"
-                  className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full mb-4"
+                  className="text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[120px]"
                   value={format(extendAppointmentData, "yyyy-MM-dd")}
                   min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
                   onChange={(e) => {
@@ -1712,20 +1840,20 @@ export default function HomePage() {
                   }}
                 />
               </div>
-              <div className="flex justify-end gap-3 mt-4">
+              <div className="flex gap-3 mt-4">
                 <button
                   type="button"
                   onClick={() => setExtendAppointmentData(null)}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors w-[110px] mr-[89px]"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleExtend}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl  transition-colors w-[110px]"
                 >
-                  {'Enregistrer'}
+                  {'Valider'}
                 </button>
               </div>
             </div>
@@ -1826,6 +1954,22 @@ export default function HomePage() {
             >
               ×
             </button>
+          </div>
+        )}
+        
+        {/* Indicateur permanent pour Ctrl+Z */}
+        {history.current.length > 0 && (
+          <div className="fixed bottom-6 right-6 bg-blue-100 px-4 py-2 rounded-lg shadow-lg z-40 flex items-center gap-2 border border-blue-300">
+            <div className="flex items-center gap-1">
+              <kbd className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-200 border border-blue-300 rounded">
+                Ctrl
+              </kbd>
+              <span className="text-blue-800">+</span>
+              <kbd className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-200 border border-blue-300 rounded">
+                Z
+              </kbd>
+            </div>
+            <span className="text-sm text-blue-700">Annuler ({history.current.length})</span>
           </div>
         )}
       </div>

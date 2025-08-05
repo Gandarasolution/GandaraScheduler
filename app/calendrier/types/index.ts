@@ -67,3 +67,12 @@ export interface DimensionItem {
   groupId?: number;
   data?: any; // Données additionnelles spécifiques à la dimension
 }
+
+// --- HISTORIQUE POUR CTRL+Z ---
+export interface HistoryAction {
+  type: 'create' | 'update' | 'delete' | 'move';
+  timestamp: number;
+  appointment?: Appointment;
+  previousAppointment?: Appointment; // Pour les updates et moves
+  appointments?: Appointment[]; // Pour une sauvegarde complète
+}
