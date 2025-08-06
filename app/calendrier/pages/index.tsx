@@ -552,6 +552,53 @@ export default function HomePage() {
           setModalInfo({ message: "Déplacement annulé", color: "#27ae60" });
         }
         break;
+
+      case 'resize_split':
+        // Annuler un redimensionnement avec split
+        if (lastAction.previousAppointment && lastAction.createdAppointments) {
+          // Restaurer l'état original du RDV principal
+          appointments.current = appointments.current.map(app =>
+            app.id === lastAction.previousAppointment!.id ? { ...lastAction.previousAppointment! } : app
+          );
+          
+          // Supprimer tous les RDV créés lors du split
+          const createdIds = lastAction.createdAppointments.map(app => app.id);
+          appointments.current = appointments.current.filter(app => !createdIds.includes(app.id));
+          
+          setModalInfo({ message: "Redimensionnement annulé", color: "#27ae60" });
+        }
+        break;
+
+      case 'move_sequence':
+        // Annuler un déplacement de séquence (avec ou sans split)
+        console.log("Annulation d'une séquence:", lastAction);
+        if (lastAction.sequenceAppointments) {
+          console.log("Restauration de", lastAction.sequenceAppointments.length, "RDV de la séquence");
+          
+          // Créer un nouveau tableau pour forcer la mise à jour de React
+          const updatedAppointments = [...appointments.current];
+          
+          // Restaurer tous les RDV de la séquence à leur état précédent
+          lastAction.sequenceAppointments.forEach(prevApp => {
+            const currentAppIndex = updatedAppointments.findIndex(app => app.id === prevApp.id);
+            console.log(`Restauration RDV ${prevApp.id}:`, currentAppIndex !== -1 ? "trouvé" : "non trouvé");
+            if (currentAppIndex !== -1) {
+              updatedAppointments[currentAppIndex] = { ...prevApp };
+            }
+          });
+          
+          // Si des RDV ont été créés lors du split, les supprimer
+          if (lastAction.createdAppointments) {
+            console.log("Suppression de", lastAction.createdAppointments.length, "RDV créés");
+            const createdIds = lastAction.createdAppointments.map(app => app.id);
+            appointments.current = updatedAppointments.filter(app => !createdIds.includes(app.id));
+          } else {
+            appointments.current = updatedAppointments;
+          }
+          
+          setModalInfo({ message: "Déplacement de séquence annulé", color: "#27ae60" });
+        }
+        break;
     }
 
     researchAppointments(); // Mettre à jour l'affichage
@@ -560,7 +607,7 @@ export default function HomePage() {
 
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: string, libelle?: string, imageUrl?: string) => {
+    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: string, libelle?: string, imageUrl?: string, saveToHistory: boolean = true) => {
       const newApp: Appointment = {
         id: Number(Date.now() + Math.random()), // Assure l'unicité de l'ID
         title,
@@ -575,10 +622,13 @@ export default function HomePage() {
       };
       appointments.current = [...appointments.current, newApp];
       
-      // Enregistrer la création dans l'historique
-      saveAppointmentState(newApp, 'create');
+      // Enregistrer la création dans l'historique seulement si demandé
+      if (saveToHistory) {
+        saveAppointmentState(newApp, 'create');
+      }
       
       researchAppointments(); // Met à jour la liste filtrée
+      return newApp; // Retourner le nouveau RDV créé
   }, [researchAppointments, saveAppointmentState]);
 
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
@@ -812,6 +862,9 @@ export default function HomePage() {
       
       const seq = getFullSequence(appointment.id);
       
+      // Enregistrer l'état de toute la séquence avant les modifications
+      const previousSequenceAppointments = seq.map(app => ({ ...app }));
+      
       let timeOffset = 0;
       if (newEndDate.getTime() - newStartDate.getTime() === appointment.endDate.getTime() - appointment.startDate.getTime()) {
         timeOffset = newEndDate.getTime() - appointment.endDate.getTime(); 
@@ -827,13 +880,19 @@ export default function HomePage() {
 
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
       
+      // Collecter les nouveaux RDV créés lors du split
+      const createdAppointments: Appointment[] = [];
+      
       if (resizeDirection === 'right') {
         // Met à jour le rendez-vous principal sur le premier intervalle
         onResize(appointment.id, newStartDate, days[0].end, newEmployeeId);
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.libelle, appointment.image);
+          const newApp = createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.libelle, appointment.image, false);
+          if (newApp) {
+            createdAppointments.push(newApp);
+          }
         }
       }
       if (resizeDirection === 'left') {
@@ -842,7 +901,10 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
-          createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.libelle, appointment.image);
+          const newApp = createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.libelle, appointment.image, false);
+          if (newApp) {
+            createdAppointments.push(newApp);
+          }
         }
       }
       
@@ -875,13 +937,56 @@ export default function HomePage() {
         }
       });
       
-      // Enregistrer le déplacement dans l'historique après les modifications
+      // Enregistrer l'action dans l'historique
       const updatedAppointment = appointments.current.find((app) => app.id === id);
       if (updatedAppointment) {
-        saveAppointmentState(updatedAppointment, 'move', previousAppointment);
+        console.log("Enregistrement dans l'historique:");
+        console.log("- Séquence length:", seq.length);
+        console.log("- RDV créés:", createdAppointments.length);
+        
+        if (createdAppointments.length > 0) {
+          // Si des RDV ont été créés (resize split) ET que d'autres RDV ont été déplacés
+          if (seq.length > 1) {
+            console.log("-> Action: move_sequence avec split");
+            addToHistory({
+              type: 'move_sequence',
+              timestamp: Date.now(),
+              appointment: updatedAppointment,
+              previousAppointment: previousAppointment,
+              createdAppointments: createdAppointments,
+              sequenceAppointments: previousSequenceAppointments
+            });
+          } else {
+            // Seulement un resize split sans séquence
+            console.log("-> Action: resize_split");
+            addToHistory({
+              type: 'resize_split',
+              timestamp: Date.now(),
+              appointment: updatedAppointment,
+              previousAppointment: previousAppointment,
+              createdAppointments: createdAppointments
+            });
+          }
+        } else {
+          // Déplacement simple ou avec séquence mais sans split
+          if (seq.length > 1) {
+            console.log("-> Action: move_sequence sans split");
+            addToHistory({
+              type: 'move_sequence',
+              timestamp: Date.now(),
+              appointment: updatedAppointment,
+              previousAppointment: previousAppointment,
+              sequenceAppointments: previousSequenceAppointments
+            });
+          } else {
+            // Simple déplacement d'un seul RDV
+            console.log("-> Action: move simple");
+            saveAppointmentState(updatedAppointment, 'move', previousAppointment);
+          }
+        }
       }
     },
-    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, getFullSequence, saveAppointmentState]
+    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, getFullSequence, saveAppointmentState, addToHistory]
   );
 
   // Gestion de la création et édition de rendez-vous

@@ -89,11 +89,13 @@ export interface DimensionItem {
 
 // --- HISTORIQUE POUR CTRL+Z ---
 export interface HistoryAction {
-  type: 'create' | 'update' | 'delete' | 'move';
+  type: 'create' | 'update' | 'delete' | 'move' | 'resize_split' | 'move_sequence';
   timestamp: number;
   appointment?: Appointment;
   previousAppointment?: Appointment; // Pour les updates et moves
   appointments?: Appointment[]; // Pour une sauvegarde complète
+  createdAppointments?: Appointment[]; // Pour les RDV créés lors d'un resize split
+  sequenceAppointments?: Appointment[]; // Pour les RDV de la séquence avant le déplacement
 } 
 
 
