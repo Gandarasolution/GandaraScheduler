@@ -26,7 +26,7 @@
 
 // Imports React, hooks, DnD, date-fns, types, composants, et données
 import React, { useState, useCallback, useRef, useEffect, JSX, useMemo} from "react";
-import { DndProvider } from "react-dnd";
+import { DndProvider, useDragDropManager } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   addDays,
@@ -1083,14 +1083,23 @@ export default function HomePage() {
 
   // Création d'un rendez-vous depuis un drag externe
   const createAppointmentFromDrag = useCallback(
-    (title: string, date: Date, intervalName: "morning" | "afternoon", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
-      const startHour = HALF_DAY_INTERVALS.find(interval => interval.name === intervalName)?.startHour || 0;
-      const endHour = HALF_DAY_INTERVALS.find(interval => interval.name === intervalName)?.endHour || 24;
+    (title: string, date: Date, intervalName: "morning" | "afternoon" | "day", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
+      const startHour = intervalName === "day" ? DAY_INTERVALS[0].startHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[1].startHour;
+      const endHour = intervalName === "day" ? DAY_INTERVALS[0].endHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].endHour : HALF_DAY_INTERVALS[1].endHour;
 
       const startDate = setHours(setMinutes(new Date(date), 0), startHour);
       const endDate = setHours(setMinutes(new Date(date), 0), endHour);
 
-      createAppointment(title, startDate, endDate, employeeId, typeEvent, imageUrl);
+      createAppointment(
+        title, 
+        startDate, 
+        endDate, 
+        employeeId, 
+        typeEvent,
+        colors[0].color, // Couleur par défaut
+        title, // Utiliser le titre comme libellé 
+        imageUrl
+      );
       
       // Fermer l'overlay après création
       setIsSearchOverlayOpen(false);
@@ -2316,12 +2325,24 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
   setEventSearchInput,
   filteredEvents,
 }) => {
-
+  const dragDropManager = useDragDropManager();
   const [isDragging, setIsDragging] = useState(false);
+
+  // Utiliser React DnD pour détecter l'état de drag
+  useEffect(() => {
+    const monitor = dragDropManager.getMonitor();
+    
+    const unsubscribe = monitor.subscribeToStateChange(() => {
+      const isDragInProgress = monitor.isDragging();
+      setIsDragging(isDragInProgress);
+    });
+
+    return unsubscribe;
+  }, [dragDropManager]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === "Escape" && isOpen && !isDragging) {
         onClose();
         setEventSearchInput('');
       }
@@ -2331,21 +2352,30 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [onClose, setEventSearchInput, isOpen]);
+  }, [onClose, setEventSearchInput, isOpen, isDragging]);
 
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 overlay z-50 flex items-center justify-center pt-20"
-      onClick={() => {
-        onClose();
-        setEventSearchInput('');
-      }}
-    >
+    <>
       <div 
-        className="bg-opacity-0 rounded-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col"
+        className={`fixed inset-0 overlay z-50  ${
+          isDragging ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+        onClick={() => {
+          if (!isDragging) {
+            onClose();
+            setEventSearchInput('');
+          }
+        }}
+      />
+      <div 
+        className={`fixed z-60 bg-opacity-0 rounded-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col ${isDragging ? 'opacity-0' : 'opacity-100'} transition-all duration-300 ease-in-out`}
         onClick={(e) => e.stopPropagation()}
+        style={{ 
+          top: '35%', 
+          left: !isDragging ? '32%' : '100%' 
+        }}
       >
         {/* Barre de recherche */}
         <div className="">
@@ -2366,7 +2396,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3"></div>
+        <div className=" p-3"></div>
         {/* Liste des événements filtrés */}
         <div className="flex-1 overflow-y-auto px-3 py-2 bg-white rounded-2xl">
           {eventSearchInput.trim() === '' ? (
@@ -2392,7 +2422,6 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
                   key={`${event.label}-${event.id}-${index}`}
                   id={event.id}
                   title={event.label}
-                  imageUrl={event.image ?? ""}
                   type={event.type}
                 />
               ))}
@@ -2400,6 +2429,6 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

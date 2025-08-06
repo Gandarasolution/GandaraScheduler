@@ -13,7 +13,7 @@ import AutreIcones from '../image/Icones/Autres.png';
 interface DraggableSourceProps {
   id: number; // ID unique de la source
   title: string;
-  imageUrl: string; // URL de l'image associée à la source, optionnelle
+  imageUrl?: string; // URL de l'image associée à la source, optionnelle
   type: 'Chantier' | 'Absence' | 'Autre'; // Type de l'élément, pour catégoriser les sources
 }
 
@@ -21,7 +21,7 @@ interface DraggableSourceProps {
  * Composant DraggableSource
  * Utilisé pour rendre un élément draggable depuis une source externe.
  */
-const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title, imageUrl, type }) => {
+const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title, imageUrl = null, type }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'external-item',
     item: { id, title, sourceType: 'external', imageUrl, typeEvent: type },

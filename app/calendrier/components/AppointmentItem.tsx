@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
+import React, { useState, useRef, memo, useEffect, useCallback, use } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
 import { Appointment, HalfDayInterval } from '../types';
 import { addDays, eachDayOfInterval, isWeekend } from 'date-fns';
@@ -353,7 +353,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
-        hover:shadow-xl hover:bg-white
+        hover:shadow-xl
       `}
       title={appointment.title}
       style={{
@@ -379,12 +379,15 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       />
 
       {/* Image éventuelle */}
-      {appointment.image && (
+      {appointment.image ? (
         <img
           src={appointment.image}
           alt="Icône"
           className="w-8 h-8 object-cover"
         />
+      ): (
+        <div className="w-8 h-8 flex items-center justify-center rounded-full">
+        </div>
       )}
       <div className='flex flex-col min-w-0'>
         {/* Titre du rendez-vous */}
@@ -399,7 +402,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         <span 
           className="appointment-subtext text-xs truncate max-w-full transition-colors duration-200"
           style={{ 
-            color: isHovered ? `${appointmentColor}cc` : 'rgba(255, 255, 255, 0.9)'
+            color: isHovered ? `${appointmentColor}` : 'rgba(255, 255, 255, 0.9)'
           }}
         >
           {employee.name}
