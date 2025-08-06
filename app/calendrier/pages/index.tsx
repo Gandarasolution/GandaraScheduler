@@ -24,6 +24,21 @@
 
 "use client";
 
+// Composant NoSSR pour éviter les problèmes d'hydratation
+function NoSSR({ children }: { children: React.ReactNode }) {
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
 // Imports React, hooks, DnD, date-fns, types, composants, et données
 import React, { useState, useCallback, useRef, useEffect, JSX, useMemo} from "react";
 import { DndProvider, useDragDropManager } from "react-dnd";
@@ -108,7 +123,6 @@ export default function HomePage() {
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const employees = useRef<Employee[]>(initialEmployees);
   const [isLoading, setIsLoading] = useState(false);
   const isAutoScrolling = useRef(false);
@@ -120,16 +134,15 @@ export default function HomePage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedAppointmentForm, setSelectedAppointmentForm] = useState<Appointment | null>(null);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number ; intervalName: "morning" | "afternoon" | "day"} | null>(null);
-  const [drawerOptionsSelected, setDrawerOptionsSelected] = useState(eventTypes[0]);
   const [repeatAppointmentData, setRepeatAppointmentData] = useState<{numberCount:number, repeatCount: number | null; repeatInterval: "day" | "week" | "month"; endDate: Date | null } | null>(null);
   const [extendAppointmentData, setExtendAppointmentData] = useState<Date | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element; action: () => void; actif?: boolean }[]} | null>(null);
   const clipboardAppointment= useRef<Appointment | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: Date } | null>(null);
-  const [isFullDay, setIsFullDay] = useState(false);
+  const [isFullDay, setIsFullDay] = useState(false); // Toujours false par défaut
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState<"Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?">("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
-  const [selectedDate, setSelectedDate] = useState<Date>(dayInTimeline[Math.floor(WINDOW_SIZE / 2)]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -149,6 +162,16 @@ export default function HomePage() {
   // Throttle ultra-performant avec requestAnimationFrame
   const throttledScrollHandler = useRef<(() => void) | null>(null);
   const lastScrollTop = useRef(0);
+
+  const toggleSetIsFullDay = useCallback((value: boolean) => {
+    setIsFullDay(value);
+    // Sauvegarder dans localStorage de façon asynchrone après le rendu
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('isFullDay', JSON.stringify(value));
+      }
+    }, 0);
+  }, []);
 
 
   // --- GESTION DES CONFIGURATIONS DE CALENDRIER ET FILTRES ---
@@ -406,7 +429,7 @@ export default function HomePage() {
 
         days.forEach(day => {
           newAppointments.push({
-          id: Number(Date.now() + i), // Assure l'unicité de l'ID
+          id: ++idCounter.current, // ID déterministe sans Date.now()
           title: selectedAppointment?.title || "Rendez-vous répété",
           libelle: selectedAppointment?.libelle || "Rendez-vous répété",
           description: selectedAppointment?.description || "Description du rendez-vous répété",
@@ -446,7 +469,7 @@ export default function HomePage() {
 
         days.forEach(day => {
           newAppointments.push({
-          id: Number(Date.now() + day.start.getTime()), // Assure l'unicité de l'ID
+          id: ++idCounter.current, // ID déterministe sans Date.now()
           title: selectedAppointment?.title || "Rendez-vous répété",
           libelle: selectedAppointment?.libelle || "Rendez-vous répété",
           description: selectedAppointment?.description || "Description du rendez-vous répété",
@@ -497,7 +520,7 @@ export default function HomePage() {
     
     addToHistory({
       type,
-      timestamp: Date.now(),
+      timestamp: ++timestampCounter.current, // Timestamp stable et croissant
       appointment: { ...appointment },
       previousAppointment: previousAppointment ? { ...previousAppointment } : undefined,
       appointments: appointments.current.map(app => ({ ...app })) // Sauvegarde complète pour sécurité
@@ -605,11 +628,18 @@ export default function HomePage() {
     setTimeout(() => setModalInfo(null), 2000);
   }, [researchAppointments]);
 
+  // Compteur pour générer des IDs uniques de façon déterministe
+  const idCounter = useRef(10000); // Commencer à 10000 pour éviter les conflits avec les IDs existants
+  const timestampCounter = useRef(1000); // Compteur pour les timestamps stables
+
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
     (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: string, libelle?: string, imageUrl?: string, saveToHistory: boolean = true) => {
+      // Générer un ID déterministe sans Date.now() ou Math.random()
+      const id = ++idCounter.current;
+      
       const newApp: Appointment = {
-        id: Number(Date.now() + Math.random()), // Assure l'unicité de l'ID
+        id: id,
         title,
         libelle, // Ajout du libellé pour l'affichage
         description: `Nouvel élément ${title}`,
@@ -950,7 +980,7 @@ export default function HomePage() {
             console.log("-> Action: move_sequence avec split");
             addToHistory({
               type: 'move_sequence',
-              timestamp: Date.now(),
+              timestamp: ++timestampCounter.current,
               appointment: updatedAppointment,
               previousAppointment: previousAppointment,
               createdAppointments: createdAppointments,
@@ -961,7 +991,7 @@ export default function HomePage() {
             console.log("-> Action: resize_split");
             addToHistory({
               type: 'resize_split',
-              timestamp: Date.now(),
+              timestamp: ++timestampCounter.current,
               appointment: updatedAppointment,
               previousAppointment: previousAppointment,
               createdAppointments: createdAppointments
@@ -973,7 +1003,7 @@ export default function HomePage() {
             console.log("-> Action: move_sequence sans split");
             addToHistory({
               type: 'move_sequence',
-              timestamp: Date.now(),
+              timestamp: ++timestampCounter.current,
               appointment: updatedAppointment,
               previousAppointment: previousAppointment,
               sequenceAppointments: previousSequenceAppointments
@@ -1387,7 +1417,12 @@ export default function HomePage() {
   }, [handleDeleteAppointment, copyAppointmentToClipboard, pasteAppointment, handleOpenEditModal]);
 
   useEffect(() => {
-    goToDate(new Date());
+    // Délai pour s'assurer que le DOM est complètement rendu après NoSSR
+    const timer = setTimeout(() => {
+      goToDate(new Date());
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []); // Centrage initial
 
   // Marquer la fin de l'initialisation après le premier rendu
@@ -1397,6 +1432,16 @@ export default function HomePage() {
     }, 100); // Court délai pour s'assurer que l'initialisation est terminée
     
     return () => clearTimeout(timer);
+  }, []);
+
+  // Charger la valeur depuis localStorage après le montage (évite les problèmes d'hydratation)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const storedValue = localStorage.getItem('isFullDay');
+      if (storedValue !== null) {
+        setIsFullDay(storedValue === 'true');
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -1414,7 +1459,7 @@ export default function HomePage() {
       if (e.ctrlKey && e.key === "f") {
         e.preventDefault();
         setContextMenu(null); // Ferme le menu contextuel s'il est ouvert
-        setIsDrawerOpen(false); // Ferme le drawer s'il est ouvert
+        setIsSearchOverlayOpen(false);
         setIsModalOpen(false); // Ferme la modal s'il est ouvert
         const searchInputElement = document.querySelector<HTMLInputElement>("#search");
         if (searchInputElement) {
@@ -1566,14 +1611,15 @@ export default function HomePage() {
 
   // Rendu principal de la page
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div 
-        className="h-screen flex flex-col overflow-hidden"
-        style={{
-          backgroundColor: '#f3f7f8'
-        }}
-      >
-        {/* Barre du haut modernisée */}
+    <NoSSR>
+      <DndProvider backend={HTML5Backend}>
+        <div 
+          className="h-screen flex flex-col overflow-hidden"
+          style={{
+            backgroundColor: '#f3f7f8'
+          }}
+        >
+          {/* Barre du haut modernisée */}
         
          {!isMobile && (
           <div className="flex flex-row items-center pr-5">
@@ -1709,7 +1755,7 @@ export default function HomePage() {
                     </button>
                     <button 
                       className="transition cursor-pointer btn-header border-r border-gray-300 px-3 py-2"
-                      onClick={() => setIsFullDay(!isFullDay)}
+                      onClick={() => toggleSetIsFullDay(!isFullDay)}
                     >
                       {!isFullDay ? (
                         <svg 
@@ -2108,23 +2154,9 @@ export default function HomePage() {
           setEventSearchInput={setEventSearchInput}
           filteredEvents={filteredEvents}
         />
-        {/* Indicateur permanent pour Ctrl+Z */}
-        {history.current.length > 0 && (
-          <div className="fixed bottom-6 right-6 bg-blue-100 px-4 py-2 rounded-lg shadow-lg z-40 flex items-center gap-2 border border-blue-300">
-            <div className="flex items-center gap-1">
-              <kbd className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-200 border border-blue-300 rounded">
-                Ctrl
-              </kbd>
-              <span className="text-blue-800">+</span>
-              <kbd className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-200 border border-blue-300 rounded">
-                Z
-              </kbd>
-            </div>
-            <span className="text-sm text-blue-700">Annuler ({history.current.length})</span>
-          </div>
-        )}
       </div>
     </DndProvider>
+    </NoSSR>
   );
 }
 
