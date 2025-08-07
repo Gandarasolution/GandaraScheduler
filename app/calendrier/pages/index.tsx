@@ -72,7 +72,7 @@ import {
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, WINDOW_SIZE } from "../utils/constants";
-import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend, getBeforeWorkedDay } from "../utils/dates";
+import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend } from "../utils/dates";
 import { CalendarConfig } from "../types";
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
 
@@ -325,62 +325,6 @@ export default function HomePage() {
     );
   }, [searchInput]);
 
-  const isConsecutive = useCallback((app1: Appointment, app2: Appointment): boolean => {
-    
-    const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-    const nextWorkedDay = getNextWorkedDay(
-      new Date(app1.endDate.getTime() + (intervals[0].endHour - intervals[0].startHour) * 60 * 60 * 1000),
-      intervals,
-      nonWorkingDates
-    );
-    // Consécutif si le startDate de app2 est le prochain jour travaillé après la fin de app1
-    return isSameDay(app2.startDate, nextWorkedDay);
-  }, [isFullDay, nonWorkingDates]);
-
-  const getFullSequence = useCallback((appointmentId: number): Appointment[] => {
-    const found = appointments.current.find(app => app.id === appointmentId);
-    if (!found) return [];
-    const sequence: Appointment[] = [found];
-
-    // Trouve les RDV avant
-    let prev = sequence[0];
-    while (true) {
-      const prevApp = appointments.current.find(app =>
-        app.employeeId === prev.employeeId &&
-        app.title === prev.title &&
-        isConsecutive(app, prev) &&
-        !sequence.some(seqApp => seqApp.id === app.id) // <-- Empêche la boucle infinie
-      );
-      if (prevApp) {
-        sequence.unshift(prevApp);
-        prev = prevApp;
-      } else {
-        break;
-      }
-    }
-    
-
-    // Trouve les RDV après
-    let next = sequence[sequence.length - 1];
-    while (true) {
-      const nextApp = appointments.current.find(app =>
-        app.employeeId === next.employeeId &&
-        app.title === next.title &&
-        isConsecutive(next, app) &&
-        !sequence.some(seqApp => seqApp.id === app.id) // <-- Empêche la boucle infinie
-      );
-      
-      if (nextApp) {
-        sequence.push(nextApp);
-        next = nextApp;
-      } else {
-        break;
-      }
-    }
-    
-    return sequence;
-  }, [isConsecutive]);
-
   // Création de rendez-vous répétés
   const createRepeatedAppointments = useCallback((repeatInterval: "day" | "week" | "month", repeatCount: number, endDate?: Date, numberCount?: number) => {
     const startDateOriginal = selectedAppointment?.startDate;
@@ -585,37 +529,6 @@ export default function HomePage() {
           appointments.current = appointments.current.filter(app => !createdIds.includes(app.id));
           
           setModalInfo({ message: "Redimensionnement annulé", color: "#27ae60" });
-        }
-        break;
-
-      case 'move_sequence':
-        // Annuler un déplacement de séquence (avec ou sans split)
-        console.log("Annulation d'une séquence:", lastAction);
-        if (lastAction.sequenceAppointments) {
-          console.log("Restauration de", lastAction.sequenceAppointments.length, "RDV de la séquence");
-          
-          // Créer un nouveau tableau pour forcer la mise à jour de React
-          const updatedAppointments = [...appointments.current];
-          
-          // Restaurer tous les RDV de la séquence à leur état précédent
-          lastAction.sequenceAppointments.forEach(prevApp => {
-            const currentAppIndex = updatedAppointments.findIndex(app => app.id === prevApp.id);
-            console.log(`Restauration RDV ${prevApp.id}:`, currentAppIndex !== -1 ? "trouvé" : "non trouvé");
-            if (currentAppIndex !== -1) {
-              updatedAppointments[currentAppIndex] = { ...prevApp };
-            }
-          });
-          
-          // Si des RDV ont été créés lors du split, les supprimer
-          if (lastAction.createdAppointments) {
-            console.log("Suppression de", lastAction.createdAppointments.length, "RDV créés");
-            const createdIds = lastAction.createdAppointments.map(app => app.id);
-            appointments.current = updatedAppointments.filter(app => !createdIds.includes(app.id));
-          } else {
-            appointments.current = updatedAppointments;
-          }
-          
-          setModalInfo({ message: "Déplacement de séquence annulé", color: "#27ae60" });
         }
         break;
     }
@@ -893,23 +806,13 @@ export default function HomePage() {
       // Enregistrer l'état précédent pour l'historique
       const previousAppointment = { ...appointment };
       
-      const seq = getFullSequence(appointment.id);
-      
-      // Enregistrer l'état de toute la séquence avant les modifications
-      const previousSequenceAppointments = seq.map(app => ({ ...app }));
-      
-      let timeOffset = 0;
-      if (newEndDate.getTime() - newStartDate.getTime() === appointment.endDate.getTime() - appointment.startDate.getTime()) {
-        timeOffset = newEndDate.getTime() - appointment.endDate.getTime(); 
-      }
-      
       const days = getWorkedDayIntervals(
         newStartDate, 
         newEndDate,
         isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
         !includeWeekend,
         nonWorkingDates
-    );    
+      );    
     
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
       
@@ -969,85 +872,25 @@ export default function HomePage() {
         }
       }
       
-      seq.forEach((app) => {
-        
-        if (app.id !== appointment.id) {
-          let endDate = addMinutes(new Date(app.endDate.getTime() + timeOffset), -1);
-          endDate = endDate.getDay() === 6 
-          ? getBeforeWorkedDay(
-              endDate,
-              isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-              nonWorkingDates
-            ) 
-          : getNextWorkedDay(
-              endDate,
-              isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-              nonWorkingDates
-            );
-
-
-          onResize(
-            app.id,
-            getNextWorkedDay(
-              new Date(app.startDate.getTime() + timeOffset),
-              isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-              nonWorkingDates),
-            endDate,
-            newEmployeeId
-          );
-        }
-      });
-      
       // Enregistrer l'action dans l'historique
       const updatedAppointment = appointments.current.find((app) => app.id === id);
       if (updatedAppointment) {
-        console.log("Enregistrement dans l'historique:");
-        console.log("- Séquence length:", seq.length);
-        console.log("- RDV créés:", createdAppointments.length);
-        
         if (createdAppointments.length > 0) {
-          // Si des RDV ont été créés (resize split) ET que d'autres RDV ont été déplacés
-          if (seq.length > 1) {
-            console.log("-> Action: move_sequence avec split");
-            addToHistory({
-              type: 'move_sequence',
-              timestamp: ++timestampCounter.current,
-              appointment: updatedAppointment,
-              previousAppointment: previousAppointment,
-              createdAppointments: createdAppointments,
-              sequenceAppointments: previousSequenceAppointments
-            });
-          } else {
-            // Seulement un resize split sans séquence
-            console.log("-> Action: resize_split");
-            addToHistory({
-              type: 'resize_split',
-              timestamp: ++timestampCounter.current,
-              appointment: updatedAppointment,
-              previousAppointment: previousAppointment,
-              createdAppointments: createdAppointments
-            });
-          }
+          // Resize avec split
+          addToHistory({
+            type: 'resize_split',
+            timestamp: ++timestampCounter.current,
+            appointment: updatedAppointment,
+            previousAppointment: previousAppointment,
+            createdAppointments: createdAppointments
+          });
         } else {
-          // Déplacement simple ou avec séquence mais sans split
-          if (seq.length > 1) {
-            console.log("-> Action: move_sequence sans split");
-            addToHistory({
-              type: 'move_sequence',
-              timestamp: ++timestampCounter.current,
-              appointment: updatedAppointment,
-              previousAppointment: previousAppointment,
-              sequenceAppointments: previousSequenceAppointments
-            });
-          } else {
-            // Simple déplacement d'un seul RDV
-            console.log("-> Action: move simple");
-            saveAppointmentState(updatedAppointment, 'move', previousAppointment);
-          }
+          // Simple déplacement d'un seul RDV
+          saveAppointmentState(updatedAppointment, 'move', previousAppointment);
         }
       }
     },
-    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, getFullSequence, saveAppointmentState, addToHistory]
+    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, saveAppointmentState, addToHistory]
   );
 
   // Gestion de la création et édition de rendez-vous
@@ -1092,18 +935,16 @@ export default function HomePage() {
     };
 
     if (appointment.id) {
-      const seq = getFullSequence(appointment.id);
-      let index = 0;      
-      while (index < seq.length) {
+      // Mise à jour du rendez-vous existant - ne traiter que le RDV en cours
+      if (days.length > 0) {
+        // Mettre à jour le rendez-vous principal avec le premier jour
         appointments.current = appointments.current.map(app => {
-          
-          if (app.id === seq[index].id) {
-            
+          if (app.id === appointment.id) {
             return {
               ...app,
               description: appointment.description || app.description,
-              startDate: days[index]?.start || app.startDate,
-              endDate: days[index]?.end || app.endDate,
+              startDate: days[0].start,
+              endDate: days[0].end,
               employeeId: appointment.employeeId,
               image: appointment.image,
               color: appointment.color,
@@ -1113,21 +954,14 @@ export default function HomePage() {
           }
           return app;
         });
-        index++;
+        
+        // Créer des RDV supplémentaires pour les autres jours si nécessaire
+        if (days.length > 1) {
+          createExtraAppointments(1);
+        }
       }
-      if (days.length > index) createExtraAppointments(index);
-      else {
-        // Si on a moins de jours que prévu, on supprime les RDV supplémentaires
-        appointments.current = appointments.current.filter(
-          app => !seq.some(
-            s => s.id === app.id && !days.some(
-              d => d.start.getTime() === app.startDate.getTime()
-            )
-          )
-        );
-      }
-      
     } else {
+      // Création d'un nouveau rendez-vous
       createExtraAppointments(0);
     }
     
@@ -1145,7 +979,7 @@ export default function HomePage() {
     setIsModalOpen(false);
     setSelectedAppointment(null);
     setNewAppointmentInfo(null);
-  }, [researchAppointments, createAppointment, getFullSequence, isFullDay, nonWorkingDates, saveAppointmentState]);
+  }, [researchAppointments, createAppointment, isFullDay, nonWorkingDates, saveAppointmentState]);
 
 
   const handleDeleteAppointmentConfirm = useCallback(() => {
@@ -1173,19 +1007,9 @@ export default function HomePage() {
   }, [researchAppointments, saveAppointmentState]);
 
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
-    const seq = getFullSequence(appointment.id);
-    console.log(seq);
-    
-    if (seq.length > 1) {
-      appointment = {
-        ...appointment,
-        startDate: seq[0].startDate,
-        endDate: seq[seq.length - 1].endDate,
-      };
-    }
     setSelectedAppointmentForm(appointment);
     setIsModalOpen(true);
-  }, [getFullSequence]);
+  }, []);
 
   const handleDivideAppointmentConfirm = useCallback(() => {
     setAlertTitle("Êtes-vous sûr de vouloir diviser ce rendez-vous ?");
