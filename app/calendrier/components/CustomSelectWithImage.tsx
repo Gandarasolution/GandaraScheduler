@@ -7,6 +7,7 @@ export interface SelectOptionWithImage {
   value?: string | number;
   image?: string;
   icon?: React.ReactNode;
+  [key: string]: any; // Permet d'avoir d'autres propriétés dynamiques
 }
 
 interface CustomSelectWithImageProps {
@@ -19,7 +20,9 @@ interface CustomSelectWithImageProps {
   error?: boolean;
   helperText?: string;
   customArrow?: React.ReactNode;
-  showImages?: boolean;
+  showImages?: boolean; // Afficher les images dans la liste au lieu du texte
+  displayKey?: string; // Nouvelle prop pour choisir la clé d'affichage
+  imageSize?: 'small' | 'medium' | 'large'; // Taille des images
 }
 
 /**
@@ -36,20 +39,53 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   error = false,
   helperText,
   customArrow,
-  showImages = true,
+  showImages = false, // Par défaut, affiche du texte
+  displayKey = "name", // Par défaut, utilise "name"
+  imageSize = "medium", // Taille par défaut
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find(option => 
-    String(option.value || option.id) === String(value)
-  );
+  // Fonction pour obtenir le texte à afficher pour une option
+  const getDisplayText = (option: SelectOptionWithImage): string => {
+    return option[displayKey] || option.name || String(option.id);
+  };
 
+  const selectedOption = options.find(option => 
+    String(option.value) === String(value) || String(option.image) === String(value)
+  );
+  
   // Tailles d'images
   const imageSizes = {
     small: 'w-4 h-4',
     medium: 'w-6 h-6',
     large: 'w-8 h-8'
+  };
+  
+
+  // Fonction pour rendre une image ou une icône
+  const renderImage = (option: SelectOptionWithImage, sizeClass?: string) => {
+    const size = sizeClass || imageSizes[imageSize];
+    
+    if (option.icon) {
+      return <div className={`${size} flex items-center justify-center`}>{option.icon}</div>;
+    }
+    
+    if (option.image) {
+      return (
+        <img 
+          src={option.image} 
+          alt={getDisplayText(option)}
+          className={`${size} object-cover flex-shrink-0`}
+          onError={(e) => {
+            // Fallback en cas d'erreur de chargement d'image
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      );
+    }
+    
+    return null;
   };
 
   // Fermer le dropdown quand on clique ailleurs
@@ -91,7 +127,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   };
 
   const baseClasses = `
-    relative border rounded-2xl py-2 px-4 w-full h-[48px] text-gray-700 
+    relative border rounded-2xl text-gray-700 
     poppins text-[14px] font-medium bg-white cursor-pointer
     transition-colors duration-200 ease-in-out
     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
@@ -104,8 +140,8 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   const DefaultArrow = () => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
+      width="12"
+      height="12"
       fill="currentColor"
       className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${
         disabled ? 'text-gray-400' : 'text-gray-600'
@@ -120,7 +156,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   );
 
   return (
-    <div className="custom-select-wrapper relative inline-block w-full" ref={selectRef}>
+    <div className="custom-select-wrapper relative inline-block" ref={selectRef}>
       {/* Bouton principal du select */}
       <div
         className={baseClasses}
@@ -137,43 +173,21 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
         aria-haspopup="listbox"
       >
         <div className="flex items-center justify-between h-full">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
                 {/* Image ou icône de l'option sélectionnée */}
-                {showImages && selectedOption && (selectedOption.image || selectedOption.icon) && (
-                    <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="20" height="20" viewBox="0 0 510 510" enableBackground="new 0 0 510 510"  xmlSpace="preserve">
-                        <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                        <g>
-                            <g id="play-install">
-                            <path d="M459,114.75H357v-51l-51-51H204l-51,51v51H51c-28.05,0-51,22.95-51,51v280.5c0,28.05,22.95,51,51,51h408&#10;&#9;&#9;&#9;c28.05,0,51-22.95,51-51v-280.5C510,137.7,487.05,114.75,459,114.75z M204,63.75h102v51H204V63.75z M216.75,408l-89.25-89.25&#10;&#9;&#9;&#9;l35.7-35.7l53.55,53.55L349.35,204l35.7,35.7L216.75,408z" fill="#00957f" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
-                            </g>
-                        </g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        <g></g>
-                        </g>
-                    </svg>
+                {selectedOption && showImages ? (
+                    <div className="flex items-center gap-2">
+                        {renderImage(selectedOption, "w-8 h-8")}
+                    </div>
+                ) : selectedOption ? (
+                    <span className="truncate">{getDisplayText(selectedOption)}</span>
+                ) : (
+                    <span className="truncate text-gray-400">{placeholder}</span>
                 )}
-                {/* Texte de l'option sélectionnée */}
-                <span className="truncate">
-                {selectedOption ? selectedOption.name : placeholder}
-                </span>
             </div>
           
             {/* Flèche dropdown */}
-            <div className="flex-shrink-0 ml-2">
+            <div className={`flex-shrink-0 ${showImages ? 'ml-4' : 'ml-2'}`}>
                 {customArrow || <DefaultArrow />}
             </div>
         </div>
@@ -181,7 +195,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
 
       {/* Dropdown des options */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-2xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide">
+        <div className={`absolute z-50 ${showImages ? 'w-auto' : 'w-full'} mt-1 bg-white border border-gray-300 rounded-2xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide`}>
           <ul role="listbox" className="py-1">
             {options.map((option) => (
               <li
@@ -193,9 +207,19 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
                 onClick={() => handleOptionClick(option)}
                 role="option"
                 aria-selected={String(option.value || option.id) === String(value)}
+                title={showImages ? getDisplayText(option) : undefined} // Tooltip quand on affiche seulement l'image
               >    
+                {/* Image dans la liste si activée */}
+                {showImages && (option.image || option.icon) && (
+                  <div className="flex-shrink-0">
+                    {renderImage(option, "w-6 h-6")}
+                  </div>
+                )}
+                
                 {/* Texte de l'option */}
-                <span className="flex-1 truncate">{option.name}</span>
+                {!showImages && (
+                  <span className="flex-1 truncate">{getDisplayText(option)}</span>
+                )}
                 
                 {/* Indicateur de sélection */}
                 {String(option.value || option.id) === String(value) && (

@@ -3,6 +3,33 @@ import iconeChantier from './calendrier/image/Icones/Evenement_Chantier.svg'
 import iconeAbsenceValide from './calendrier/image/Icones/Evenement_Congés_Valide.svg'
 import iconeAbsenceNonValide from './calendrier/image/Icones/Evenement_Congés_Non_Valide.svg'
 
+// Import des icônes de la bibliothèque d'événements
+import brushPaint from './calendrier/image/Icones/Evenement_Bibliotheque/brush paint.svg'
+import caliper from './calendrier/image/Icones/Evenement_Bibliotheque/caliper.svg'
+import faucet from './calendrier/image/Icones/Evenement_Bibliotheque/faucet.svg'
+import googleEyeProtector from './calendrier/image/Icones/Evenement_Bibliotheque/google eye protector.svg'
+import mechanic from './calendrier/image/Icones/Evenement_Bibliotheque/Mechanic.svg'
+import paint from './calendrier/image/Icones/Evenement_Bibliotheque/Paint.svg'
+import parquet from './calendrier/image/Icones/Evenement_Bibliotheque/parquet.svg'
+import pliers from './calendrier/image/Icones/Evenement_Bibliotheque/Pliers.svg'
+import plumbing from './calendrier/image/Icones/Evenement_Bibliotheque/Plumbing.svg'
+import roboticArm from './calendrier/image/Icones/Evenement_Bibliotheque/Robotic arm.svg'
+import rollPaint from './calendrier/image/Icones/Evenement_Bibliotheque/roll paint.svg'
+import saw from './calendrier/image/Icones/Evenement_Bibliotheque/Saw.svg'
+import screw from './calendrier/image/Icones/Evenement_Bibliotheque/Screw.svg'
+import shovel from './calendrier/image/Icones/Evenement_Bibliotheque/Shovel.svg'
+import steamroller from './calendrier/image/Icones/Evenement_Bibliotheque/Steamroller.svg'
+import toolbox from './calendrier/image/Icones/Evenement_Bibliotheque/Toolbox.svg'
+import trowel from './calendrier/image/Icones/Evenement_Bibliotheque/Trowel.svg'
+import truck from './calendrier/image/Icones/Evenement_Bibliotheque/Truck.svg'
+import underConstructionSign from './calendrier/image/Icones/Evenement_Bibliotheque/Under construction sign.svg'
+import vestProtect from './calendrier/image/Icones/Evenement_Bibliotheque/Vest protect.svg'
+import wallBrick from './calendrier/image/Icones/Evenement_Bibliotheque/Wall brick.svg'
+import wheelbarrow from './calendrier/image/Icones/Evenement_Bibliotheque/Wheelbarrow.svg'
+import woodenLogging from './calendrier/image/Icones/Evenement_Bibliotheque/Wooden logging.svg'
+import wrenchPipe from './calendrier/image/Icones/Evenement_Bibliotheque/wrench pipe.svg'
+import wrench from './calendrier/image/Icones/Evenement_Bibliotheque/wrench.svg'
+
 export const initialTeams: Groupe[] = [
     { name: 'Equipe Grégory', id: 1 },
     { name: 'Equipe Alexandre', id: 2 },
@@ -70,7 +97,7 @@ export const colors: { color: string, name: string }[] = [
 ];
 
 function generateAppointments(employees: Employee[]): Appointment[] {
-  const baseDate = new Date(2025, 5, 24); // 24 juin 2025
+  const baseDate = new Date(2025, 7, 6); // 6 août 2025 (aujourd'hui)
   const titles = [
     chantier[0],
     absences[0],
@@ -83,22 +110,33 @@ function generateAppointments(employees: Employee[]): Appointment[] {
     autres[4]
   ];
 
+  // Durées possibles en jours
+  const durations = [2, 3, 4];
+
   return employees.map((emp, idx) => {
-    const dayOffset = idx % 7; // Un rendez-vous par jour sur une semaine
+    const dayOffset = idx % 14; // Étalement sur 2 semaines pour éviter trop de superposition
+    const duration = durations[idx % durations.length]; // Alternance des durées 2, 3, 4 jours
+
+    const startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 0, 0); // Commence à 0h
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + duration); // Ajouter la durée en jours
+    endDate.setHours(0, 0); // Termine à 0h le dernier jour
+
     return {
       id: idx + 1,
       title: titles[idx % titles.length].label,
       libelle: titles[idx % titles.length].label,
-      description: `Rendez-vous pour ${emp.name}`,
-      startDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 0, 0),
-      endDate: new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + dayOffset, 12, 0),
+      description: `Rendez-vous de ${duration} jours pour ${emp.name}`,
+      startDate: startDate,
+      endDate: endDate,
       image: titles[idx % titles.length].image,
       employeeId: emp.id,
       type: 
       chantier.find(c => c.label === titles[idx % titles.length].label) ? 'Chantier' : 
       absences.find(a => a.label === titles[idx % titles.length].label) ? 'Absence' : 
       'Autre',
-      color: colors[idx % colors.length].color // Assigner une couleur unique à chaque rendez-vous
+      color: colors[idx % colors.length].color, // Assigner une couleur unique à chaque rendez-vous
+      textColor: '#FFFFFF' // Couleur du texte (blanc)
     };
   });
 }
@@ -116,4 +154,36 @@ export const drawerOptions = [
     { content: 'Chantier'},
     { content: 'Absences'},
     { content: 'Autres'}
+]
+
+
+export const images = [
+  { id: 1, name: 'Pinceau peinture', image: brushPaint.src, category: 'Peinture' },
+  { id: 2, name: 'Compas', image: caliper.src, category: 'Mesure' },
+  { id: 3, name: 'Robinet', image: faucet.src, category: 'Plomberie' },
+  { id: 4, name: 'Lunettes de protection', image: googleEyeProtector.src, category: 'Sécurité' },
+  { id: 5, name: 'Mécanicien', image: mechanic.src, category: 'Métier' },
+  { id: 6, name: 'Peinture', image: paint.src, category: 'Peinture' },
+  { id: 7, name: 'Parquet', image: parquet.src, category: 'Revêtement' },
+  { id: 8, name: 'Pinces', image: pliers.src, category: 'Outils' },
+  { id: 9, name: 'Plomberie', image: plumbing.src, category: 'Plomberie' },
+  { id: 10, name: 'Bras robotique', image: roboticArm.src, category: 'Technologie' },
+  { id: 11, name: 'Rouleau peinture', image: rollPaint.src, category: 'Peinture' },
+  { id: 12, name: 'Scie', image: saw.src, category: 'Outils' },
+  { id: 13, name: 'Vis', image: screw.src, category: 'Fixation' },
+  { id: 14, name: 'Pelle', image: shovel.src, category: 'Terrassement' },
+  { id: 15, name: 'Rouleau compresseur', image: steamroller.src, category: 'Engins' },
+  { id: 16, name: 'Boîte à outils', image: toolbox.src, category: 'Outils' },
+  { id: 17, name: 'Truelle', image: trowel.src, category: 'Maçonnerie' },
+  { id: 18, name: 'Camion', image: truck.src, category: 'Transport' },
+  { id: 19, name: 'Panneau chantier', image: underConstructionSign.src, category: 'Signalisation' },
+  { id: 20, name: 'Gilet de sécurité', image: vestProtect.src, category: 'Sécurité' },
+  { id: 21, name: 'Mur en briques', image: wallBrick.src, category: 'Maçonnerie' },
+  { id: 22, name: 'Brouette', image: wheelbarrow.src, category: 'Transport' },
+  { id: 23, name: 'Bois/Sciage', image: woodenLogging.src, category: 'Bois' },
+  { id: 24, name: 'Clé à pipe', image: wrenchPipe.src, category: 'Plomberie' },
+  { id: 25, name: 'Clé', image: wrench.src, category: 'Outils' },
+  { id: 26, name: 'Icone Chantier', image: iconeChantier.src, category: 'Chantier' },
+  { id: 27, name: 'Icone Absence', image: iconeAbsenceValide.src, category: 'Absence' },
+  { id: 28, name: 'Icone Absence Non Validée', image: iconeAbsenceNonValide.src, category: 'Autre' }
 ]

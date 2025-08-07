@@ -78,14 +78,7 @@ import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/fi
 
 
 import LogoUrl from "../image/LOGO_couleur_police_noire.svg";
-
-
-// Définition des types d'événements pour le drawer
-const eventTypes = [
-  { label: "Chantier", color: "primary", dataSource: chantier, placeholder: "Sélectionnez un chantier" },
-  { label: "Absence", color: "warning", dataSource: absences, placeholder: "Sélectionnez une absence" },
-  { label: "Autre", color: "secondary", dataSource: autres, placeholder: "Sélectionnez autre" },
-];
+import { log } from "console";
 
 
 /**
@@ -115,7 +108,6 @@ const eventTypes = [
  */
 export default function HomePage() {
   // --- ETATS PRINCIPAUX ---
-  const [addAppointmentStep, setAddAppointmentStep] = useState<"select" | "form" | "">("");
   const [includeWeekend, setIncludeWeekend] = useState(true);
   const [nonWorkingDates, setNonWorkingDates] = useState<Date[]>([]);
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
@@ -439,6 +431,7 @@ export default function HomePage() {
           employeeId: selectedAppointment?.employeeId,
           type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
           color: selectedAppointment?.color || "#1E40AF", // Couleur de fond du rendez-vous
+          textColor: selectedAppointment?.textColor || "#FFFFFF", // Couleur du texte par défaut
         });
       });
 
@@ -479,6 +472,7 @@ export default function HomePage() {
           employeeId: selectedAppointment?.employeeId,
           type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
           color: selectedAppointment?.color || "#1E40AF", // Couleur de fond du rendez-vous
+          textColor: selectedAppointment?.textColor || "#FFFFFF", // Couleur du texte par défaut
         });
       });
 
@@ -634,7 +628,7 @@ export default function HomePage() {
 
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: string, libelle?: string, imageUrl?: string, saveToHistory: boolean = true) => {
+    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: string, textColor: string, libelle?: string, imageUrl?: string, saveToHistory: boolean = true) => {
       // Générer un ID déterministe sans Date.now() ou Math.random()
       const id = ++idCounter.current;
       
@@ -649,6 +643,7 @@ export default function HomePage() {
         employeeId,
         type,
         color, // Couleur de fond du rendez-vous
+        textColor, // Couleur du texte du rendez-vous
       };
       appointments.current = [...appointments.current, newApp];
       
@@ -702,6 +697,8 @@ export default function HomePage() {
         day.end,
         cell.employeeId,
         clipboardAppointment.current.type || "Chantier",
+        clipboardAppointment.current.color || "#1E40AF",
+        clipboardAppointment.current.textColor || "#FFFFFF",
         clipboardAppointment.current.libelle || "Rendez-vous copié",
         clipboardAppointment.current.image
       );
@@ -908,6 +905,9 @@ export default function HomePage() {
         nonWorkingDates
     );
 
+    console.log("Jours travaillés pour le redimensionnement:", days);
+    
+    
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
       
       // Collecter les nouveaux RDV créés lors du split
@@ -919,7 +919,7 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
-          const newApp = createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.libelle, appointment.image, false);
+          const newApp = createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.textColor, appointment.libelle, appointment.image, false);
           if (newApp) {
             createdAppointments.push(newApp);
           }
@@ -931,7 +931,7 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
-          const newApp = createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.libelle, appointment.image, false);
+          const newApp = createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.textColor, appointment.libelle, appointment.image, false);
           if (newApp) {
             createdAppointments.push(newApp);
           }
@@ -1031,6 +1031,9 @@ export default function HomePage() {
       nonWorkingDates,
       includeNotWorkingDay
     );    
+
+    console.log(days);
+    
     
     // Enregistrer l'état précédent pour l'historique
     let previousAppointment: Appointment | undefined;
@@ -1048,6 +1051,7 @@ export default function HomePage() {
           appointment.employeeId as number,
           appointment.type,
           appointment.color,
+          appointment.textColor,
           appointment.libelle,
           appointment.image
         );
@@ -1066,13 +1070,12 @@ export default function HomePage() {
             
             return {
               ...app,
-              title: appointment.title,
-              description: appointment.description,
               startDate: days[index]?.start || app.startDate,
               endDate: days[index]?.end || app.endDate,
               employeeId: appointment.employeeId,
               image: appointment.image,
               color: appointment.color,
+              textColor: appointment.textColor,
             };   
           }
           return app;
@@ -1151,12 +1154,6 @@ export default function HomePage() {
     setIsModalOpen(true);
   }, [getFullSequence]);
 
-  const handleOpenNewModal = useCallback((date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => {
-    setAddAppointmentStep("select");
-    setSelectedAppointmentForm(null);
-    setNewAppointmentInfo({ date, employeeId, intervalName });
-  }, []);
-
   const handleDivideAppointmentConfirm = useCallback(() => {
     setAlertTitle("Êtes-vous sûr de vouloir diviser ce rendez-vous ?");
     setIsAlertVisible(true);
@@ -1183,6 +1180,7 @@ export default function HomePage() {
       employeeId as number,
       appointmentToDivide.type,
       appointmentToDivide.color,
+      appointmentToDivide.textColor,
       appointmentToDivide.libelle,
       imageUrl,
      
@@ -1856,7 +1854,7 @@ export default function HomePage() {
                     mainScrollRef={mainScrollRef}
                     handleScroll={handleScroll}
                     onAppointmentMoved={moveAppointment}
-                    onCellDoubleClick={handleOpenNewModal}
+                    onCellDoubleClick={() => setIsSearchOverlayOpen(true)}
                     onAppointmentDoubleClick={handleOpenEditModal}
                     onExternalDragDrop={createAppointmentFromDrag}
                     handleContextMenu={handleContextMenu}
@@ -1899,7 +1897,7 @@ export default function HomePage() {
         >
           {!!repeatAppointmentData ? (
             <div 
-              className="flex flex-col gap-6 poppins"
+              className="flex flex-col gap-6 poppins w-[340px]"
             >
               <div className="flex flex-col gap-4">
                 <span className="text-base underline">{'Rythme de répétition'}</span>
@@ -1949,7 +1947,7 @@ export default function HomePage() {
                 <div className="flex flex-row items-center gap-6">
                   
                   {/* Option 1: Répéter un nombre de fois */}
-                  <div className="flex items-center gap-21">
+                  <div className="flex items-center gap-22">
                     <div className="">
                       <input
                         type="radio"
@@ -2011,7 +2009,7 @@ export default function HomePage() {
                   <input
                     type="date"
                     disabled={repeatAppointmentData.repeatCount !== null}
-                    className={`${repeatAppointmentData.repeatCount !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} border border-gray-300 rounded-xl w-[120px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2 text-xs`}
+                    className={`${repeatAppointmentData.repeatCount !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} ml-2 border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-base w-[145px]`}
                     value={repeatAppointmentData.endDate ? format(repeatAppointmentData.endDate, "yyyy-MM-dd") : ""}
                     min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
                     onChange={e => {
@@ -2046,11 +2044,11 @@ export default function HomePage() {
             </div>
           ) : extendAppointmentData ? (
             <div>
-              <div className="flex flex-row items-center mb-4">
-                <span className="text-base poppins mr-[78px]">Jusqu'au</span>
+              <div className="flex flex-row items-center mb-4 poppins">
+                <span className="text-base poppins mr-[65px]">Jusqu'au</span>
                 <input
                   type="date"
-                  className="text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[120px]"
+                  className="text-base border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[145px]"
                   value={format(extendAppointmentData, "yyyy-MM-dd")}
                   min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
                   onChange={(e) => {
@@ -2090,10 +2088,6 @@ export default function HomePage() {
               colors={colors}
               nonWorkingDates={nonWorkingDates}
               onSave={handleSaveAppointment}
-              onDelete={() => {
-                handleDeleteAppointmentConfirm();
-                setIsModalOpen(false);
-              }}
               onClose={() => setIsModalOpen(false)}
             />
           )}
@@ -2103,18 +2097,6 @@ export default function HomePage() {
           settings={settings} 
           isSettingsOpen={isSettingsOpen}
         />
-        {/* Modal pour choisir le type de rendez-vous */}
-        <ChoiceAppointmentType
-          setAddAppointmentStep={setAddAppointmentStep}
-          newAppointmentInfo={newAppointmentInfo}
-          isOpen={addAppointmentStep === "select"}
-          onSelect={(appointment) => {
-            setAddAppointmentStep("form");
-            setSelectedAppointmentForm(appointment);
-            setIsModalOpen(true);
-          }}
-        />
-        
         {/* Overlay de recherche d'événements */}
         
         {/* Barre de chargement modernisée */}
@@ -2325,123 +2307,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           Fermer
         </button>
       </div>
-    </Modal>
-  );
-};
-
-
-// Composant pour choisir le type de rendez-vous à créer
-type ChoiceAppointmentTypeProps = {
-  onSelect: (appointment: Appointment) => void;
-  isOpen: boolean;
-  setAddAppointmentStep?: (step: "select" | "form" | "") => void;
-  newAppointmentInfo: { date: Date; employeeId: number; intervalName: "morning" | "afternoon" | "day" } | null;
-};
-
-// Icônes pour chaque type d'événement
-const typeIcons: Record<string, JSX.Element> = {
-  Chantier: (
-    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2M16 11V7a4 4 0 10-8 0v4M12 17v-6" />
-    </svg>
-  ),
-  Absence: (
-    <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  Autre: (
-    <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v4l3 3" />
-    </svg>
-  ),
-};
-
-// Couleurs pour chaque type d'événement
-const colorMap: Record<string, string> = {
-  Chantier: "blue",
-  Absence: "yellow",
-  Autre: "purple",
-};
-
-// Composant pour choisir le type de rendez-vous à créer (modal)
-const ChoiceAppointmentType: React.FC<ChoiceAppointmentTypeProps> = ({
-  onSelect,
-  isOpen,
-  setAddAppointmentStep,
-  newAppointmentInfo,
-}) => {
-  // Sécurité : valeurs par défaut si jamais newAppointmentInfo est null
-  const date = newAppointmentInfo?.date ?? new Date();
-  const intervalName = newAppointmentInfo?.intervalName ?? "morning";
-  const employeeId = newAppointmentInfo?.employeeId ?? 0;
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={() => setAddAppointmentStep?.("") || null}
-      title="Choisissez le type de rendez-vous"
-    >
-      <div className="mb-4 text-lg font-semibold text-center">
-        Quel type souhaitez-vous ajouter ?
-      </div>
-      <div className="flex flex-col gap-3">
-        {eventTypes.map((eventType) => (
-          <button
-            key={eventType.label}
-            type="button"
-            className={`
-              flex items-center gap-4 p-4 rounded-xl border border-gray-200
-              bg-white hover:bg-${colorMap[eventType.label]}-50
-              shadow-sm cursor-pointer
-              focus:outline-none focus:ring-2
-              group
-              hover:scale-105 origin-top-center transition-transform duration-300
-            `}
-            style={{ minHeight: 64 }}
-            onClick={() => {
-              onSelect({
-                title: eventType.dataSource[0].label,
-                description: "",
-                startDate: setHours(
-                  setMinutes(date, 0),
-                  intervalName === "morning" 
-                    ? HALF_DAY_INTERVALS[0].startHour
-                    : intervalName === "day" 
-                      ? DAY_INTERVALS[0].startHour
-                      : HALF_DAY_INTERVALS[1].startHour
-                ),
-                endDate: setHours(
-                  setMinutes(date, 0),
-                  intervalName === "morning" 
-                    ? HALF_DAY_INTERVALS[0].endHour
-                    : intervalName === "day" 
-                      ? DAY_INTERVALS[0].endHour
-                      : HALF_DAY_INTERVALS[1].endHour
-                ),
-                image: "",
-                employeeId,
-                type: eventType.label as "Chantier" | "Absence" | "Autre",
-              } as Appointment);
-            }}
-          >
-            <span className="flex items-center justify-center rounded-full transition-colors">
-              {typeIcons[eventType.label]}
-            </span>
-            <span className={`text-${colorMap[eventType.label]}-700 font-semibold text-lg`}>
-              {eventType.label}
-            </span>
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={() => setAddAppointmentStep?.("")}
-        className="mt-6 w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition"
-      >
-        Annuler
-      </button>
     </Modal>
   );
 };

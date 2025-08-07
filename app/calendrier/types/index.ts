@@ -23,6 +23,7 @@ export interface Appointment {
   employeeId: number | string; // Lien vers l'employé
   type: "Chantier" | "Absence" | "Autre"; // Type de rendez-vous,
   color: string; // Couleur de l'événement
+  textColor: string; // Couleur du texte
 }
 
 export interface HalfDayInterval {

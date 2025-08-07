@@ -394,7 +394,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         <span 
           className="appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200"
           style={{ 
-            color: isHovered ? appointmentColor : 'white'
+            color: isHovered ? appointmentColor : `${appointment.textColor || '#FFFFFF'}`
           }}
         >
           {appointment.libelle ? appointment.libelle : appointment.title}
@@ -402,7 +402,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         <span 
           className="appointment-subtext text-xs truncate max-w-full transition-colors duration-200"
           style={{ 
-            color: isHovered ? `${appointmentColor}` : 'rgba(255, 255, 255, 0.9)'
+            color: isHovered ? `${appointmentColor}` : `${appointment.textColor || '#FFFFFF'}`
           }}
         >
           {employee.name}

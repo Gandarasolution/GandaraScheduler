@@ -554,6 +554,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 placeholder="Sélectionner un calendrier"
                 customArrow={<CustomArrow isOpen={false} />}
                 showImages={true}
+                className='py-3 px-4'
               />
             </div>
           </div>
