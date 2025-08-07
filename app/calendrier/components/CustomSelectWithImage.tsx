@@ -39,7 +39,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   error = false,
   helperText,
   customArrow,
-  showImages = false, // Par défaut, affiche du texte
+  showImages = false, // Par défaut, affiche du texte dans la liste
   displayKey = "name", // Par défaut, utilise "name"
   imageSize = "medium", // Taille par défaut
 }) => {
@@ -156,7 +156,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   );
 
   return (
-    <div className="custom-select-wrapper relative inline-block" ref={selectRef}>
+    <div className={`custom-select-wrapper relative inline-block  ${!showImages ? 'w-full' : ''}`} ref={selectRef}>
       {/* Bouton principal du select */}
       <div
         className={baseClasses}
@@ -174,14 +174,41 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
       >
         <div className="flex items-center justify-between h-full">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-                {/* Image ou icône de l'option sélectionnée */}
+                {/* Image ou icône de l'option sélectionnée dans le bouton */}
                 {selectedOption && showImages ? (
                     <div className="flex items-center gap-2">
                         {renderImage(selectedOption, "w-8 h-8")}
                     </div>
                 ) : selectedOption ? (
-                    <span className="truncate">{getDisplayText(selectedOption)}</span>
-                ) : (
+                    <div className="flex items-center gap-2">
+                      <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="18" height="18" viewBox="0 0 510 510" enableBackground="new 0 0 510 510"  xmlSpace="preserve">
+                        <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                          <g>
+                            <g id="play-install">
+                              <path d="M459,114.75H357v-51l-51-51H204l-51,51v51H51c-28.05,0-51,22.95-51,51v280.5c0,28.05,22.95,51,51,51h408&#10;&#9;&#9;&#9;c28.05,0,51-22.95,51-51v-280.5C510,137.7,487.05,114.75,459,114.75z M204,63.75h102v51H204V63.75z M216.75,408l-89.25-89.25&#10;&#9;&#9;&#9;l35.7-35.7l53.55,53.55L349.35,204l35.7,35.7L216.75,408z" fill="#00957f" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                            </g>
+                          </g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                          <g></g>
+                        </g>
+                      </svg>
+                      <span className="truncate font-bold">{getDisplayText(selectedOption)}</span>
+                    </div>
+                ) :(
                     <span className="truncate text-gray-400">{placeholder}</span>
                 )}
             </div>
