@@ -13,6 +13,7 @@ interface AppointmentItemProps {
   isMobile: boolean;
   includeWeekend?: boolean;
   employee: { id: number; name: string };
+  source?: 'calendar' | 'other'; // Source du RDV, e.g., 'calendar' or 'other'
   onDoubleClick: () => void;
   onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null) => void;
@@ -41,6 +42,7 @@ interface AppointmentItemProps {
  * @param {Object} props.employee - Informations sur l'employé associé au rendez-vous.
  * @param {boolean} props.includeWeekend - Indique si les week-ends sont visibles.
  * @param {() => void} props.onDoubleClick - Callback lors d'un double-clic sur le rendez-vous.
+ * @param {string} props.source - Source du rendez-vous, e.g., 'calendar' or 'other'.
  * @param {(id: string, newStart: Date, newEnd: Date, direction: 'left' | 'right') => void} props.onResize - Callback lors du redimensionnement.
  * @param {(e: React.MouseEvent, type: 'appointment', appointment: Appointment) => void} props.handleContextMenu - Callback pour le menu contextuel.
  * 
@@ -57,6 +59,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   isMobile,
   employee,
   includeWeekend,
+  source = 'calendar',
   onDoubleClick,
   onResize,
   handleContextMenu,
@@ -325,6 +328,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   }, [appointment.startDate, appointment.endDate, setDragStartSafe, setDragEndSafe]);
   
   const appointmentColor = appointment.color || '#1E40AF';
+  const appointmentBorderColor = appointment.borderColor || '#1E40AF';
+  const appointmentTextColor = appointment.textColor || '#FFFFFF';
 
   return (
     <div
@@ -347,12 +352,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
-        appointment-item absolute rounded-xl text-sm shadow-md
+        appointment-item rounded-xl text-sm shadow-md
         flex flex-shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-ellipsis
         cursor-grab transition-all z-10 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
+        ${source === 'calendar' ? 'absolute' : 'block'}
         hover:shadow-xl
       `}
       title={appointment.title}
@@ -365,7 +371,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         willChange: 'width, left',
         top: `${(appointment.top * CELL_HEIGHT) + (2 * appointment.top)}px`,
         backgroundColor: isHovered ? 'white' : appointmentColor,
-        border: `2px solid ${appointmentColor}`,
+        border: `2px solid ${appointmentBorderColor}`,
         transition: 'all 0.2s ease-in-out',
       }}
       onMouseDown={handleDragStart}
@@ -394,7 +400,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         <span 
           className="appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200"
           style={{ 
-            color: isHovered ? appointmentColor : `${appointment.textColor || '#FFFFFF'}`
+            color: isHovered ? appointmentColor : `${appointmentTextColor || '#FFFFFF'}`
           }}
         >
           {appointment.libelle ? appointment.libelle : appointment.title}
@@ -402,7 +408,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         <span 
           className="appointment-subtext text-xs truncate max-w-full transition-colors duration-200"
           style={{ 
-            color: isHovered ? `${appointmentColor}` : `${appointment.textColor || '#FFFFFF'}`
+            color: isHovered ? `${appointmentColor}` : `${appointmentTextColor || '#FFFFFF'}`
           }}
         >
           {employee.name}

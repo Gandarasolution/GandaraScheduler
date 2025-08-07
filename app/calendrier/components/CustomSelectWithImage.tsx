@@ -122,7 +122,12 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   };
 
   const handleOptionClick = (option: SelectOptionWithImage) => {
-    onChange(option.value || option.id, option);
+    onChange(
+      showImages
+        ? (option.image ?? option.id)
+        : (option.value ?? option.id),
+      option
+    );
     setIsOpen(false);
   };
 

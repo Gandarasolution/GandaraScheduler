@@ -431,6 +431,7 @@ export default function HomePage() {
           employeeId: selectedAppointment?.employeeId,
           type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
           color: selectedAppointment?.color || "#1E40AF", // Couleur de fond du rendez-vous
+          borderColor: selectedAppointment?.borderColor || "#1E40AF", // Couleur de bordure du rendez-vous
           textColor: selectedAppointment?.textColor || "#FFFFFF", // Couleur du texte par défaut
         });
       });
@@ -472,6 +473,7 @@ export default function HomePage() {
           employeeId: selectedAppointment?.employeeId,
           type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
           color: selectedAppointment?.color || "#1E40AF", // Couleur de fond du rendez-vous
+          borderColor: selectedAppointment?.borderColor || "#1E40AF", // Couleur de bordure du rendez-vous
           textColor: selectedAppointment?.textColor || "#FFFFFF", // Couleur du texte par défaut
         });
       });
@@ -628,7 +630,7 @@ export default function HomePage() {
 
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: string, textColor: string, libelle?: string, imageUrl?: string, saveToHistory: boolean = true) => {
+    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: { color: string, borderColor: string, textColor:string }, libelle?: string, imageUrl?: string, saveToHistory: boolean = true) => {
       // Générer un ID déterministe sans Date.now() ou Math.random()
       const id = ++idCounter.current;
       
@@ -642,8 +644,9 @@ export default function HomePage() {
         image: imageUrl,
         employeeId,
         type,
-        color, // Couleur de fond du rendez-vous
-        textColor, // Couleur du texte du rendez-vous
+        color: color.color, // Couleur de fond du rendez-vous
+        textColor: color.textColor, // Couleur du texte du rendez-vous
+        borderColor: color.borderColor, // Couleur de bordure du rendez-vous
       };
       appointments.current = [...appointments.current, newApp];
       
@@ -697,8 +700,11 @@ export default function HomePage() {
         day.end,
         cell.employeeId,
         clipboardAppointment.current.type || "Chantier",
-        clipboardAppointment.current.color || "#1E40AF",
-        clipboardAppointment.current.textColor || "#FFFFFF",
+        {
+          color: clipboardAppointment.current.color || "#1E40AF",
+          borderColor: clipboardAppointment.current.borderColor || "#1E40AF",
+          textColor: clipboardAppointment.current.textColor || "#FFFFFF"
+        },
         clipboardAppointment.current.libelle || "Rendez-vous copié",
         clipboardAppointment.current.image
       );
@@ -903,10 +909,7 @@ export default function HomePage() {
         isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
         !includeWeekend,
         nonWorkingDates
-    );
-
-    console.log("Jours travaillés pour le redimensionnement:", days);
-    
+    );    
     
       if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
       
@@ -919,7 +922,21 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
-          const newApp = createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.textColor, appointment.libelle, appointment.image, false);
+          const newApp = createAppointment?.(
+            appointment.title, 
+            day.start, 
+            day.end, 
+            newEmployeeId, 
+            appointment.type, 
+            {
+              color: appointment.color, 
+              borderColor: appointment.borderColor, 
+              textColor: appointment.textColor
+            },
+            appointment.libelle, 
+            appointment.image, 
+            false
+          );
           if (newApp) {
             createdAppointments.push(newApp);
           }
@@ -931,7 +948,21 @@ export default function HomePage() {
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
-          const newApp = createAppointment?.(appointment.title, day.start, day.end, newEmployeeId, appointment.type, appointment.color, appointment.textColor, appointment.libelle, appointment.image, false);
+          const newApp = createAppointment?.(
+            appointment.title, 
+            day.start, 
+            day.end, 
+            newEmployeeId, 
+            appointment.type, 
+            {
+              color: appointment.color, 
+              borderColor: appointment.borderColor, 
+              textColor: appointment.textColor
+            },
+            appointment.libelle, 
+            appointment.image, 
+            false
+          );
           if (newApp) {
             createdAppointments.push(newApp);
           }
@@ -1021,15 +1052,14 @@ export default function HomePage() {
 
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback(
-    (appointment: Appointment, includeWeekend: boolean, includeNotWorkingDay: boolean) => {    
-    
+    (appointment: Appointment, includeAllNonWorkingDays: boolean) => {
+
     const days = getWorkedDayIntervals(
       appointment.startDate, 
       appointment.endDate,
       isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-      includeWeekend,
-      nonWorkingDates,
-      includeNotWorkingDay
+      includeAllNonWorkingDays,
+      nonWorkingDates
     );    
 
     console.log(days);
@@ -1050,8 +1080,11 @@ export default function HomePage() {
           day.end,
           appointment.employeeId as number,
           appointment.type,
-          appointment.color,
-          appointment.textColor,
+          {
+            color: appointment.color,
+            borderColor: appointment.borderColor,
+            textColor: appointment.textColor
+          },
           appointment.libelle,
           appointment.image
         );
@@ -1060,9 +1093,7 @@ export default function HomePage() {
 
     if (appointment.id) {
       const seq = getFullSequence(appointment.id);
-      let index = 0;
-      console.log("Updating appointments in sequence:", seq);      
-      
+      let index = 0;      
       while (index < seq.length) {
         appointments.current = appointments.current.map(app => {
           
@@ -1070,11 +1101,13 @@ export default function HomePage() {
             
             return {
               ...app,
+              description: appointment.description || app.description,
               startDate: days[index]?.start || app.startDate,
               endDate: days[index]?.end || app.endDate,
               employeeId: appointment.employeeId,
               image: appointment.image,
               color: appointment.color,
+              borderColor: appointment.borderColor,
               textColor: appointment.textColor,
             };   
           }
@@ -1179,8 +1212,11 @@ export default function HomePage() {
       endDate,
       employeeId as number,
       appointmentToDivide.type,
-      appointmentToDivide.color,
-      appointmentToDivide.textColor,
+      {
+        color: appointmentToDivide.color,
+        borderColor: appointmentToDivide.borderColor,
+        textColor: appointmentToDivide.textColor
+      },
       appointmentToDivide.libelle,
       imageUrl,
      
@@ -1229,7 +1265,11 @@ export default function HomePage() {
         endDate, 
         employeeId, 
         typeEvent,
-        colors[0].color, // Couleur par défaut
+        {
+          color: colors[0].color, // Couleur par défaut
+          borderColor: colors[0].color, // Couleur de bordure par défaut
+          textColor: '#FFFFFF' // Couleur de texte par défaut
+        },
         title, // Utiliser le titre comme libellé 
         imageUrl
       );

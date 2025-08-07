@@ -136,7 +136,9 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       absences.find(a => a.label === titles[idx % titles.length].label) ? 'Absence' : 
       'Autre',
       color: colors[idx % colors.length].color, // Assigner une couleur unique à chaque rendez-vous
+      borderColor: colors[idx % colors.length].color, // Couleur de bordure identique à la couleur de fond
       textColor: '#FFFFFF' // Couleur du texte (blanc)
+
     };
   });
 }

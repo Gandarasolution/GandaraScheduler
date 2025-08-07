@@ -22,7 +22,8 @@ export interface Appointment {
   image?: string;
   employeeId: number | string; // Lien vers l'employé
   type: "Chantier" | "Absence" | "Autre"; // Type de rendez-vous,
-  color: string; // Couleur de l'événement
+  color: string; // Couleur de fond de l'événement
+  borderColor: string; // Couleur de bordure de l'événement
   textColor: string; // Couleur du texte
 }
 
