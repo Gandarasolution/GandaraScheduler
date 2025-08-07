@@ -446,7 +446,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           </div>
 
           {/* Zone de texte pour annotations */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-6">
             <label className="text-sm font-medium text-gray-700">Annotations</label>
             <textarea
               value={formData.description || ''}

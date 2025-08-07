@@ -51,8 +51,6 @@ import {
   format,
   addWeeks,
   addMonths,
-  isSameDay,
-  addMinutes,
 } from "date-fns";
 import { Appointment, Employee, HistoryAction, EventTemplate } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
@@ -78,7 +76,6 @@ import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/fi
 
 
 import LogoUrl from "../image/LOGO_couleur_police_noire.svg";
-import { log } from "console";
 
 
 /**
@@ -140,6 +137,7 @@ export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [eventSearchInput, setEventSearchInput] = useState<string>('');
+  const [isExpanded, setIsExpanded] = useState(true);
   const history = useRef<HistoryAction[]>([]);
   const maxHistorySize = 50; // Limiter la taille de l'historique
   const isInitializing = useRef(true); // Flag pour éviter d'enregistrer les actions lors de l'initialisation
@@ -161,6 +159,24 @@ export default function HomePage() {
     setTimeout(() => {
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem('isFullDay', JSON.stringify(value));
+      }
+    }, 0);
+  }, []);
+  const toggleSetIsExpanded = useCallback((value: boolean) => {
+    setIsExpanded(value);
+    // Sauvegarder dans localStorage de façon asynchrone après le rendu
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('isExpanded', JSON.stringify(value));
+      }
+    }, 0);
+  }, []);
+  const toggleSetIncludeWeekend = useCallback((value: boolean) => {
+    setIncludeWeekend(value);
+    // Sauvegarder dans localStorage de façon asynchrone après le rendu
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('includeWeekend', JSON.stringify(value));
       }
     }, 0);
   }, []);
@@ -1299,9 +1315,17 @@ export default function HomePage() {
   // Charger la valeur depuis localStorage après le montage (évite les problèmes d'hydratation)
   useEffect(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
-      const storedValue = localStorage.getItem('isFullDay');
+      let storedValue = localStorage.getItem('isFullDay');
       if (storedValue !== null) {
         setIsFullDay(storedValue === 'true');
+      }
+      storedValue = localStorage.getItem('isExpanded');
+      if (storedValue !== null) {
+        setIsExpanded(storedValue === 'true');
+      }
+      storedValue = localStorage.getItem('includeWeekend');
+      if (storedValue !== null) {
+        setIncludeWeekend(storedValue === 'true');
       }
     }
   }, []);
@@ -1485,11 +1509,11 @@ export default function HomePage() {
         
          {!isMobile && (
           <div className="flex flex-row items-center pr-5">
-            <div className="mr-7 h-full p-2">
+            <div className={` p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}>
               <img src={LogoUrl.src} alt="Logo" className="h-20 w-auto mb-2" />
             </div>
-            <div className="flex-1 flex flex-col items-center p-4">
-              <div className="flex items-center justify-between w-full">
+            <div className={`flex-1 flex flex-col items-center ${!isExpanded ? 'px-4 pt-4' : 'py-4 pr-4'}`}>
+              <div className="flex items-center justify-between w-full h-[50px]">
                 <div className="flex flex-col gap-1">
                   <div className="relative w-72 max-w-full">
                     <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
@@ -1508,6 +1532,24 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  {/* Flèche d'expansion */}
+                  <button
+                    type="button"
+                    onClick={() => toggleSetIsExpanded(!isExpanded)}
+                    className="w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10"
+                    title={isExpanded ? "Réduire" : "Options avancées"}
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      width="25" 
+                      height="25" 
+                      fill="currentColor" 
+                      className={`transition-transform duration-300 bi bi-chevron-up text-[#84818a] ${!isExpanded ? 'rotate-180' : ''}`} 
+                      viewBox="0 0 16 16"
+                    >
+                      <path fillRule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
+                    </svg>
+                  </button>
                   <button
                     className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition "
                     onClick={() => setIsSettingsOpen(true)}
@@ -1577,7 +1619,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between w-full mt-6">
+              <div className={`flex items-center justify-between w-full ${!isExpanded ? 'hidden' : 'mt-6 h-[50px]'}`}>
                 <div>
                   <p className="text-5xl poppins">
                     Planning
@@ -1601,7 +1643,7 @@ export default function HomePage() {
                   <div className="border border-gray-300 rounded-2xl flex items-center multi-op">
                     <button
                       className="transition btn-header cursor-pointer border-r border-gray-300 px-3 py-2"
-                      onClick={() => setIncludeWeekend(!includeWeekend)}
+                      onClick={() => toggleSetIncludeWeekend(!includeWeekend)}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
