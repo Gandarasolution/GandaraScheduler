@@ -1,22 +1,61 @@
+/**
+ * @fileoverview Composant Modal réutilisable
+ * 
+ * Composant modal générique avec design harmonisé pour l'application.
+ * Fournit une interface modale standard avec gestion des interactions clavier,
+ * overlay cliquable et style cohérent avec le thème Gandara Scheduler.
+ * 
+ * Fonctionnalités :
+ * - Fermeture par touche Escape
+ * - Fermeture par clic sur l'overlay
+ * - Bouton de fermeture optionnel
+ * - Titre personnalisable
+ * - Coins arrondis configurables
+ * - Design responsive
+ * 
+ * @component Modal
+ * @author Gandara Solutions
+ * @version 1.0.0
+ */
+
 import { useEffect } from "react";
 
 /**
- * Props du composant Modal
- * Affiche une fenêtre modale avec un titre, un bouton de fermeture et du contenu.
- * Se ferme avec la touche Escape ou le bouton.
+ * Interface définissant les propriétés du composant Modal
+ * @interface ModalProps
  */
 interface ModalProps {
+    /** Contrôle la visibilité de la modal */
     isOpen: boolean;
+    /** Callback appelé lors de la fermeture */
     onClose: () => void;
+    /** Contenu à afficher dans la modal */
     children: React.ReactNode;
+    /** Titre optionnel affiché en en-tête */
     title?: string;
-    whithoutCloseButton?: boolean; // Optionnel, si true, le bouton de fermeture n'est pas affiché
-    roundedSize?: string; // Taille des coins arrondis, par défaut "2xl"
+    /** Masque le bouton de fermeture si true */
+    whithoutCloseButton?: boolean;
+    /** Taille des coins arrondis (défaut: "2xl") */
+    roundedSize?: string;
 }
 
 /**
- * Composant Modal
- * Affiche une boîte de dialogue modale centrée à l'écran.
+ * Composant Modal - Fenêtre de dialogue modale centrée
+ * 
+ * Utilise le thème couleur #009580 pour la cohérence visuelle.
+ * Gère automatiquement la fermeture par Escape et les interactions utilisateur.
+ * 
+ * @param {ModalProps} props - Propriétés du composant
+ * @returns {JSX.Element|null} Modal ou null si fermée
+ * 
+ * @example
+ * <Modal 
+ *   isOpen={showModal} 
+ *   onClose={() => setShowModal(false)}
+ *   title="Nouveau rendez-vous"
+ * >
+ *   <AppointmentForm onSave={handleSave} />
+ * </Modal>
  */
 const Modal: React.FC<ModalProps> = ({ 
     isOpen, 
@@ -26,6 +65,13 @@ const Modal: React.FC<ModalProps> = ({
     whithoutCloseButton = false, 
     roundedSize = "2xl" 
 }) => {
+    
+    // ===== GESTION DES ÉVÉNEMENTS CLAVIER =====
+    
+    /**
+     * Hook pour gérer la fermeture par touche Escape
+     * Ajoute et nettoie automatiquement l'event listener
+     */
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {

@@ -1,3 +1,24 @@
+/**
+ * @fileoverview Composant CalendarGrid - Grille principale du calendrier
+ * 
+ * Ce composant constitue le cœur de l'interface calendrier. Il gère l'affichage
+ * de la grille temporelle avec les employés en lignes et les jours en colonnes.
+ * 
+ * Fonctionnalités principales :
+ * - Affichage en grille avec timeline horizontale
+ * - Groupement des employés par équipes ou pôles
+ * - Système de filtrage avancé
+ * - Drag & Drop des rendez-vous
+ * - Scroll synchronisé horizontal/vertical
+ * - Mode responsive mobile/desktop
+ * - Gestion des week-ends et jours fériés
+ * - Menu contextuel et interactions
+ * 
+ * @component CalendarGrid
+ * @author Gandara Solutions
+ * @version 1.0.0
+ */
+
 "use client";
 import React, {useState, useMemo, memo, useCallback, useRef, useEffect}from 'react';
 import {
@@ -13,21 +34,37 @@ import {CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../utils/constants'
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../utils/filters';
 import CustomSelectWithImage, { SelectOptionWithImage } from './CustomSelectWithImage';
 
+/**
+ * Interface définissant les propriétés du composant CalendarGrid
+ * @interface CalendarGridProps
+ */
 interface CalendarGridProps {
+  /** Liste complète des employés */
   employees: Employee[];
+  /** Liste de tous les rendez-vous */
   appointments: Appointment[];
+  /** Groupes/équipes disponibles */
   initialTeams: Groupe[];
+  /** Dates à afficher dans la timeline */
   dayInTimeline: Date[];
+  /** Configuration des créneaux horaires */
   HALF_DAY_INTERVALS: HalfDayInterval[];
-  isFullDay: boolean; // Indique si la cellule représente une journée complète
-  //selectedCalendarId: number; // ID du calendrier sélectionné, si applicable
-  nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
+  /** Mode d'affichage journée complète */
+  isFullDay: boolean;
+  /** Dates non-travaillées (week-ends, fériés) */
+  nonWorkingDates: Date[];
+  /** Interface mobile activée */
   isMobile: boolean;
-  includeWeekend: boolean; // Indique si les week-ends doivent être inclus dans la vue mobile
-  mainScrollRef: React.RefObject<HTMLDivElement | null>; // Référence pour le scroll principal
-  handleScroll: () => void; // Fonction de gestion du scroll
-  calendarConfig: CalendarConfig; // Configuration du calendrier avec filtres et dimension
-  onCalendarConfigChange: (config: CalendarConfig) => void; // Callback pour changer de configuration
+  /** Inclure les week-ends dans l'affichage mobile */
+  includeWeekend: boolean;
+  /** Référence pour le scroll principal */
+  mainScrollRef: React.RefObject<HTMLDivElement | null>;
+  /** Gestionnaire d'événement scroll */
+  handleScroll: () => void;
+  /** Configuration actuelle du calendrier */
+  calendarConfig: CalendarConfig;
+  /** Callback de modification de configuration */
+  onCalendarConfigChange: (config: CalendarConfig) => void;
   availableConfigs: CalendarConfig[]; // Configurations disponibles
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;

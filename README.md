@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gandara Scheduler
 
-## Getting Started
+## 📋 Description
 
-First, run the development server:
+Une application de gestion d'agenda timeline développée avec Next.js et React. Cette application permet de planifier et visualiser les rendez-vous, chantiers, absences et autres événements pour les employés d'une entreprise sous forme de timeline interactive.
+
+## ✨ Fonctionnalités
+
+### 🎨 Gestion des rendez-vous
+- **Création de rendez-vous** avec formulaire avancé
+- **Système de couleurs** personnalisables (fond, bordure, texte)
+- **Types de rendez-vous** : Chantiers, Absences, Autres
+- **Durées flexibles** adaptées au type d'événement
+
+### 👥 Gestion des équipes
+- **Différents pôles**
+- **Types de contrats** : CDI et Intérim
+- **Avatars** et informations détaillées
+
+### 📅 Interface timeline
+- **Vue calendrier** avec grille par jours
+- **Drag & Drop** pour déplacer les rendez-vous
+- **Filtrage** par équipe, type, employé
+- **Navigation** intuitive dans le temps
+- **Responsive design** adaptatif
+
+### 🎛️ Paramètres avancés
+- **Panel d'options** extensible
+- **Jours non-travaillés** configurables
+- **Couleurs personnalisées** avec palette
+- **Icônes** catégorisées (28 icônes disponibles)
+
+### 📊 Données d'échantillon
+- **20 projets de chantiers** variés
+- **12 types d'absences** différents
+- **15 autres événements** (réunions, formations, etc.)
+
+## 🚀 Installation
+
+### Prérequis
+- Node.js 18+ 
+- npm, yarn, pnpm ou bun
+
+### Démarrage rapide
 
 ```bash
+# Cloner le projet
+git clone [url-du-repo]
+cd mon-agenda-timeline
+
+# Installer les dépendances
+npm install
+
+# Lancer le serveur de développement
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrir [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Technologies utilisées
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework** : Next.js 15 (App Router)
+- **Language** : TypeScript
+- **Styling** : CSS modules + SCSS
+- **State Management** : React Context
+- **Icons** : Images personnalisées
+- **Fonts** : Geist (optimisé Vercel)
 
-## Learn More
+## 📁 Structure du projet
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/
+├── calendrier/           # Module principal du calendrier
+│   ├── components/       # Composants UI
+│   │   ├── AppointmentForm.tsx    # Formulaire de création/édition
+│   │   ├── AppointmentItem.tsx    # Affichage d'un RDV
+│   │   ├── CalendarGrid.tsx       # Grille du calendrier
+│   │   ├── DayCell.tsx            # Cellule d'un jour
+│   │   ├── Modal.tsx              # Modal générique
+│   │   └── ...
+│   ├── context/          # Contexts React
+│   ├── pages/           # Pages du calendrier
+│   ├── types/           # Types TypeScript
+│   └── utils/           # Utilitaires et constantes
+├── datasource.ts        # Données d'échantillon
+├── globals.css          # Styles globaux
+└── layout.tsx          # Layout principal
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🎨 Personnalisation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Couleurs
+10 couleurs prédéfinies disponibles avec noms français :
+- Bleu, Vert, Orange, Violet, Indigo, Rose, Rouge, Cyan, etc.
 
-## Deploy on Vercel
+### Types d'événements
+- **Chantiers** : Projets de construction (3-12 jours)
+- **Absences** : Congés, maladie, formation (1-5 jours)  
+- **Autres** : Réunions, déplacements, maintenance (1-3 jours)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Équipes et employés
+Configuration flexible des équipes et employés dans `datasource.ts`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔧 Développement
+
+### Scripts disponibles
+```bash
+npm run dev          # Serveur de développement
+npm run build        # Build de production
+npm run start        # Serveur de production
+npm run lint         # Linting TypeScript/ESLint
+```
+
+### Ajout de nouvelles fonctionnalités
+1. Créer les composants dans `app/calendrier/components/`
+2. Définir les types dans `app/calendrier/types/`
+3. Ajouter les données dans `datasource.ts` si nécessaire
+
+
+
+**Développé avec ❤️ pour la gestion d'équipes et de projets**

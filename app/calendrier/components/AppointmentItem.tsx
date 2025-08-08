@@ -1,3 +1,23 @@
+/**
+ * @fileoverview Composant AppointmentItem - Affichage et interaction avec un rendez-vous
+ * 
+ * Ce composant représente un rendez-vous individuel dans la grille calendrier.
+ * Il gère l'affichage visuel, les interactions utilisateur et les fonctionnalités avancées :
+ * 
+ * Fonctionnalités principales :
+ * - Affichage avec couleurs personnalisées et icônes
+ * - Drag & Drop pour déplacer les rendez-vous
+ * - Redimensionnement par les bords (resize)
+ * - Menu contextuel et double-clic
+ * - Support mobile et desktop
+ * - Gestion des week-ends et jours non-travaillés
+ * - Aperçu lors du déplacement
+ * 
+ * @component AppointmentItem
+ * @author Gandara Solutions
+ * @version 1.0.0
+ */
+
 "use client";
 import React, { useState, useRef, memo, useEffect, useCallback, use } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
@@ -7,51 +27,48 @@ import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../u
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
 import { useSelectedCell } from '../context/SelectedCellContext';
 
+/**
+ * Interface définissant les propriétés du composant AppointmentItem
+ * @interface AppointmentItemProps
+ */
 interface AppointmentItemProps {
+  /** Rendez-vous à afficher avec position verticale */
   appointment: Appointment & { top: number };
+  /** Indique si l'affichage est en mode journée complète */
   isFullDay: boolean;
+  /** Indique si l'interface est en mode mobile */
   isMobile: boolean;
+  /** Inclure les week-ends dans le calcul de durée (optionnel) */
   includeWeekend?: boolean;
+  /** Informations de l'employé assigné */
   employee: { id: number; name: string };
-  source?: 'calendar' | 'other'; // Source du RDV, e.g., 'calendar' or 'other'
+  /** Source d'appel du composant */
+  source?: 'calendar' | 'other';
+  /** Callback appelé lors du double-clic */
   onDoubleClick: () => void;
+  /** Callback appelé lors du redimensionnement */
   onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
+  /** Callback appelé lors du clic droit (menu contextuel) */
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null) => void;
 }
 
 /**
- * Composant React représentant un rendez-vous (Appointment) dans une vue calendrier.
+ * Composant principal pour afficher et interagir avec un rendez-vous
  * 
- * Ce composant gère l'affichage, le redimensionnement (resize) et le déplacement (drag & drop)
- * d'un rendez-vous sur une grille horaire, en prenant en compte les différents types d'intervalles
- * (journée entière, demi-journée), la responsivité mobile/desktop, et la sélection/context menu.
- * 
- * Fonctionnalités principales :
- * - Affichage du rendez-vous avec couleur, titre, et image optionnelle.
- * - Redimensionnement du rendez-vous à gauche ou à droite via des poignées (handles).
- * - Déplacement du rendez-vous via drag & drop (intégration react-dnd).
- * - Sélection du rendez-vous et gestion du contexte (clic, double-clic, menu contextuel).
- * - Calcul dynamique de la largeur et de la position selon la durée et le type d'intervalle.
- * - Prise en charge du mode mobile (largeur adaptée).
- * 
- * Props :
- * @param {AppointmentItemProps} props - Propriétés du composant.
- * @param {Appointment} props.appointment - Données du rendez-vous à afficher.
- * @param {boolean} props.isFullDay - Indique si le rendez-vous occupe la journée entière.
- * @param {boolean} props.isMobile - Indique si l'affichage est en mode mobile.
- * @param {Object} props.employee - Informations sur l'employé associé au rendez-vous.
- * @param {boolean} props.includeWeekend - Indique si les week-ends sont visibles.
- * @param {() => void} props.onDoubleClick - Callback lors d'un double-clic sur le rendez-vous.
- * @param {string} props.source - Source du rendez-vous, e.g., 'calendar' or 'other'.
- * @param {(id: string, newStart: Date, newEnd: Date, direction: 'left' | 'right') => void} props.onResize - Callback lors du redimensionnement.
- * @param {(e: React.MouseEvent, type: 'appointment', appointment: Appointment) => void} props.handleContextMenu - Callback pour le menu contextuel.
+ * Fonctionnalités avancées :
+ * - Redimensionnement du rendez-vous à gauche ou à droite via des poignées (handles)
+ * - Déplacement du rendez-vous via drag & drop (intégration react-dnd)
+ * - Sélection du rendez-vous et gestion du contexte (clic, double-clic, menu contextuel)
+ * - Calcul dynamique de la largeur et de la position selon la durée et le type d'intervalle
+ * - Prise en charge du mode mobile (largeur adaptée)
  * 
  * Hooks/Context utilisés :
- * - useSelectedCell : Gestion de la sélection de cellule dans la grille.
- * - useSelectedAppointment : Gestion de la sélection du rendez-vous courant.
- * - useDrag, useDragLayer (react-dnd) : Gestion du drag & drop.
+ * - useSelectedCell : Gestion de la sélection de cellule dans la grille
+ * - useSelectedAppointment : Gestion de la sélection du rendez-vous courant
+ * - useDrag, useDragLayer (react-dnd) : Gestion du drag & drop
  * 
- * @returns {JSX.Element} Élément JSX représentant le rendez-vous interactif.
+ * @param {AppointmentItemProps} props - Propriétés du composant
+ * @returns {JSX.Element} Élément JSX représentant le rendez-vous interactif
  */
 const AppointmentItem: React.FC<AppointmentItemProps> = ({
   appointment,
@@ -88,7 +105,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     ? (DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 60 * 60 * 1000 
     : (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * 60 * 60 * 1000;
     
-  // Calcule le nombre d'intervalles (matin/après-midi) entre deux dates
   // Calcule le nombre d'intervalles (matin/après-midi) entre deux dates, en sautant les week-ends si besoin
   const getIntervalCount = useCallback((start: Date, end: Date) => {
     const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
@@ -233,7 +249,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     else setIsResizingRight(true);
   }, [appointment.startDate, appointment.endDate]);
 
-  // Gère le déplacement de la souris lors du redimensionnement
   /**
    * Gère les mouvements de la souris lors du redimensionnement d'un rendez-vous.
    * 
@@ -273,7 +288,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   }, [isResizingLeft, isResizingRight, appointment.startDate, appointment.endDate, addInterval, setDragStartSafe, setDragEndSafe]);
 
 
-  // Lorsqu'on relâche la souris après un resize
   /**
    * Gère l'événement de relâchement de la souris lors du redimensionnement d'un rendez-vous.
    *

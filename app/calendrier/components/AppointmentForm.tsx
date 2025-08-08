@@ -1,3 +1,18 @@
+/**
+ * @fileoverview Composant de formulaire pour créer et éditer des rendez-vous
+ * 
+ * Ce composant permet de créer et modifier des rendez-vous avec des options avancées :
+ * - Sélection du type (Chantier, Absence, Autre)
+ * - Personnalisation des couleurs (fond, bordure, texte)
+ * - Configuration des jours non-travaillés
+ * - Aperçu en temps réel
+ * - Panel d'options extensible
+ * 
+ * @component AppointmentForm
+ * @author Gandara Solutions
+ * @version 1.0.0
+ */
+
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo } from 'react';
@@ -9,56 +24,64 @@ import CustomSelectWithImage, { SelectOptionWithImage } from './CustomSelectWith
 import AppointmentItem from './AppointmentItem';
 
 /**
- * Props du composant AppointmentForm
- * Formulaire pour créer ou éditer un rendez-vous (chantier, absence, autre).
+ * Interface définissant les propriétés du composant AppointmentForm
+ * @interface AppointmentFormProps
  */
 interface AppointmentFormProps {
-  appointments: Appointment[]; // Liste des rendez-vous existants
+  /** Liste complète des rendez-vous existants */
+  appointments: Appointment[];
+  /** Rendez-vous à éditer (null pour création) */
   appointment: Appointment | null;
+  /** Date initiale présélectionnée (optionnel) */
   initialDate?: Date | null;
-  initialEmployeeId?: number | null; // Nouvelle prop
-  employees: Employee[]; // Liste de tous les employés
-  HALF_DAY_INTERVALS: HalfDayInterval[] // Liste des créneaux de demi-journée
-  isFullDay: boolean; // Indique si le rendez-vous est sur une journée complète
-  nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
-  colors: {color: string, name: string}[]; // Liste des couleurs disponibles pour les rendez-vous
+  /** ID de l'employé présélectionné (optionnel) */
+  initialEmployeeId?: number | null;
+  /** Liste de tous les employés disponibles */
+  employees: Employee[];
+  /** Configuration des créneaux horaires (matin/après-midi/journée) */
+  HALF_DAY_INTERVALS: HalfDayInterval[];
+  /** Indique si le rendez-vous occupe une journée complète */
+  isFullDay: boolean;
+  /** Liste des dates non-travaillées (week-ends, fériés) */
+  nonWorkingDates: Date[];
+  /** Palette de couleurs disponibles avec noms */
+  colors: {color: string, name: string}[];
+  /** Callback appelé lors de la sauvegarde */
   onSave: (appointment: Appointment, includeAllNonWorkingDays: boolean) => void;
+  /** Callback appelé lors de la fermeture du formulaire */
   onClose: () => void;
 }
 
 
 /**
- * Formulaire de création ou d'édition d'un rendez-vous.
- *
+ * Composant formulaire pour créer et éditer des rendez-vous
+ * 
+ * Fonctionnalités principales :
+ * - Création/édition de rendez-vous avec validation
+ * - Système de couleurs personnalisables (fond, bordure, texte)
+ * - Panel d'options extensible pour configuration avancée
+ * - Aperçu en temps réel des modifications
+ * - Gestion des jours non-travaillés avec checkbox unifié
+ * - Sélection de types avec icônes (Chantier, Absence, Autre)
+ * 
  * @component
- * @param {Appointment[]} appointments - Liste des rendez-vous existants.
- * @param {AppointmentFormProps} props - Propriétés du formulaire de rendez-vous.
- * @param {Appointment | undefined} props.appointment - Rendez-vous à éditer (si existant).
- * @param {Date | undefined} props.initialDate - Date initiale pour le rendez-vous.
- * @param {number | undefined} props.initialEmployeeId - ID de l'employé assigné par défaut.
- * @param {Employee[]} props.employees - Liste des employés disponibles.
- * @param {Array<{ startHour: number, endHour: number }>} props.HALF_DAY_INTERVALS - Intervalles pour matin/après-midi.
- * @param {boolean} props.isFullDay - Indique si le rendez-vous couvre toute la journée.
- * @param {string[]} props.colors - Liste des couleurs disponibles pour les rendez-vous.
- * @param {Date[]} props.nonWorkingDates - Liste des dates non travaillées.
- * @param {(appointment: Appointment, includeWeekend: boolean, includeNotWorkingDay: boolean) => void} props.onSave - Callback lors de la sauvegarde.
- * @param {() => void} props.onClose - Callback lors de la fermeture du formulaire.
- *
- * @returns {JSX.Element} Formulaire de rendez-vous.
- *
+ * @param {AppointmentFormProps} props - Propriétés du composant
+ * @returns {JSX.Element} Interface de formulaire avec aperçu
+ * 
  * @example
  * <AppointmentForm
  *   appointment={appointment}
- *   initialDate={new Date()}
+ *   initialDate={selectedDate}
+ *   initialEmployeeId={employeeId}
  *   employees={employees}
- *   HALF_DAY_INTERVALS={[{ startHour: 8, endHour: 12 }, { startHour: 13, endHour: 17 }]}
- *   isFullDay={false}
- *   nonWorkingDates={[]}
+ *   HALF_DAY_INTERVALS={intervals}
+ *   isFullDay={true}
+ *   nonWorkingDates={weekends}
+ *   colors={colorPalette}
  *   onSave={handleSave}
  *   onClose={handleClose}
  * />
  */
-
 const AppointmentForm: React.FC<AppointmentFormProps> = ({
   appointments,
   appointment,
@@ -72,7 +95,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   onSave,
   onClose,
 }) => {
-  // État local pour les champs du formulaire
+  
+  // ===== ÉTATS LOCAUX =====
+  
+  /**
+   * État principal du formulaire contenant toutes les données du rendez-vous
+   * Initialisé avec les données existantes ou des valeurs par défaut
+   */
   const [formData, setFormData] = useState<Omit<Appointment, 'id'> & { id?: number }>(
     appointment
       ? { ...appointment, startDate: appointment.startDate, endDate:  addMinutes(appointment.endDate, -1) }
@@ -85,12 +114,16 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           image: '',
           employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''),
           type: "Chantier",
-          color: "#1E40AF", // Couleur par défaut
-          borderColor: "#1E40AF", // Couleur de bordure par défaut
-          textColor: "#FFFFFF", // Couleur du texte par défaut
+          color: "#1E40AF", // Couleur par défaut (bleu)
+          borderColor: "#1E40AF", // Bordure assortie
+          textColor: "#FFFFFF", // Texte blanc pour contraste
         }
   );
 
+  /**
+   * Vérifie si le rendez-vous actuel chevauche des jours non-travaillés
+   * Utilisé pour déterminer l'état initial de la checkbox
+   */
   const isAppointmentSplitByNotWorkingDay = useMemo(() => {
     const app = appointments.find(a => a.id === formData.id);
     if (!app) return false;
@@ -100,18 +133,19 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         nd.getDay() === date.getDay()
         && nd.getMonth() === date.getMonth()
         && nd.getFullYear() === date.getFullYear()
-      ) || isHoliday(date) || isWeekend(date)) // Vérifie si le jour est un jour non travaillé, férié ou week-end
+      ) || isHoliday(date) || isWeekend(date)) // Vérifie jours non travaillés, fériés ou week-ends
     );
   }, [appointments, formData.id, nonWorkingDates]);
 
-
+  /**
+   * État pour contrôler l'expansion du panel d'options avancées
+   */
   const [isExpanded, setIsExpanded] = useState(false);
 
-
-  console.log(isAppointmentSplitByNotWorkingDay);
-
-
-  // État unifié pour tous les jours non travaillés (week-ends, fériés, jours non travaillés)
+  /**
+   * État unifié pour la gestion de tous les jours non travaillés
+   * (week-ends, fériés, jours configurés comme non travaillés)
+   */
   const [includeAllNonWorkingDays, setIncludeAllNonWorkingDays] = useState(
     isAppointmentSplitByNotWorkingDay
   );

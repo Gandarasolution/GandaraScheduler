@@ -1,30 +1,44 @@
 /**
- * Page Calendrier (Scheduler)
- * -----------------------------------
- * Cette page affiche l'agenda des employés sous forme de calendrier interactif.
- * - Vue desktop : calendrier horizontal multi-employés, multi-équipes, scroll horizontal.
- * - Vue mobile : calendrier vertical , un seul employé affiché, scroll infini.
- * - Drag & drop des rendez-vous (react-dnd).
- * - Gestion des sélections, contextes, et affichage dynamique selon la taille d'écran.
- *
- * Props principales :
- * - employees : liste des employés à afficher
- * - appointments : liste des rendez-vous
- * - dayInTimeline : tableau des jours affichés
- * - isMobile : détection mobile pour adapter l'affichage
- *
- * Composants principaux utilisés :
- * - CalendarGrid : grille principale du calendrier
- * - AppointmentItem : affichage d'un rendez-vous
- * - DayCell / IntervalCell : cellules de la grille
- *
- * Auteur : GandaraSolution
- * Dernière modification : 2025-07-18
+ * @fileoverview Page principale du calendrier Gandara Scheduler
+ * 
+ * Cette page constitue le point d'entrée principal de l'application calendrier.
+ * Elle orchestre tous les composants et gère l'état global de l'application.
+ * 
+ * Fonctionnalités principales :
+ * - Interface responsive desktop/mobile
+ * - Gestion complète des rendez-vous (CRUD)
+ * - Système de drag & drop avec react-dnd
+ * - Navigation temporelle avancée
+ * - Filtrage et groupement des employés
+ * - Historique des modifications (undo/redo)
+ * - Menu contextuel et interactions avancées
+ * - Génération automatique de données d'échantillon
+ * 
+ * Architecture :
+ * - Vue desktop : grille horizontale multi-employés avec scroll
+ * - Vue mobile : calendrier vertical optimisé tactile
+ * - État centralisé avec React Context
+ * - Logique métier séparée dans utils/
+ * 
+ * Composants principaux :
+ * - CalendarGrid : grille principale avec timeline
+ * - AppointmentForm : formulaire de création/édition
+ * - AppointmentItem : affichage et interaction des RDV
+ * - Modal : système de fenêtres modales
+ * - Contexts : gestion d'état partagé
+ * 
+ * @page CalendarPage
+ * @author Gandara Solutions
+ * @version 1.0.0
+ * @since 2025-08-08
  */
 
 "use client";
 
-// Composant NoSSR pour éviter les problèmes d'hydratation
+/**
+ * Composant NoSSR pour éviter les problèmes d'hydratation
+ * Nécessaire pour les composants avec état côté client uniquement
+ */
 function NoSSR({ children }: { children: React.ReactNode }) {
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -293,24 +307,6 @@ export default function HomePage() {
 
   // --- PARAMÈTRES D'AFFICHAGE ET DE FILTRAGE ---
   const settings = [
-    {
-      category: "Affichage",
-      items: [
-        { 
-          id: "showWeekends",
-          label: "Afficher les week-ends", 
-          type: "checkbox", value: includeWeekend, 
-          onChange: (value : boolean) => setIncludeWeekend(value) 
-        },
-        {
-          id: 'isFullDay',
-          label: "Afficher les journées complète",
-          type: "checkbox",
-          value: isFullDay,
-          onChange: (value: boolean) => setIsFullDay(value)
-        }
-      ]
-    },
     {
       category: "Calendrier",
       items: [
@@ -2113,36 +2109,43 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       onClose={onClose}
       title="Paramètres"
     >
-      <div className="flex flex-col gap-4">
-        <h3 className="font-semibold text-lg mb-2">Paramètres du calendrier</h3>
+      <div className="flex flex-col gap-6">
         {settings.map((cat: any, idx: number) => (
-          <div key={cat.category} className="border rounded mb-2 bg-gray-50">
+          <div key={cat.category} className={`border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm  ${openCategory?.length !== null ? 'w-auto' : 'w-[400px]'}`}>
             <button
               type="button"
-              className="w-full text-left px-4 py-2 font-semibold bg-gray-100 hover:bg-gray-200 rounded-t focus:outline-none"
+              className="w-full text-left px-6 py-4 font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none focus:bg-gray-100 flex items-center justify-between"
               onClick={() => setOpenCategory(openCategory === cat.category ? null : cat.category)}
             >
-              {cat.category}
+              <span className="text-base">{cat.category}</span>
+              <svg 
+                className={`w-5 h-5 text-gray-500 transform transition-transform ${openCategory === cat.category ? 'rotate-180' : ''}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
             {openCategory === cat.category && (
-              <div className="px-4 py-3">
+              <div className="px-6 py-4 border-t border-gray-100">
                 {cat.items.map((setting: any) => (
-                  <div key={setting.id} className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
-                    <label htmlFor={setting.id} className="text-sm font-medium text-gray-700 mb-1 sm:mb-0 sm:mr-4 min-w-[160px]">
+                  <div key={setting.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-50 last:border-b-0">
+                    <label htmlFor={setting.id} className="text-sm font-medium text-gray-700 mb-2 sm:mb-0 sm:mr-4 min-w-[180px]">
                       {setting.label}
                     </label>
                     {setting.type === "custom-non-working-dates" ? (
-                      <div className="flex flex-col gap-2 w-full">
+                      <div className="flex flex-col gap-3 w-full max-w-md">
                         <div className="flex gap-2 items-center">
                           <input
                             type="date"
                             id={setting.id}
                             value={setting.newNonWorkingDate}
                             onChange={e => setting.setNewNonWorkingDate(e.target.value)}
-                            className="border rounded px-2 py-1 w-40"
+                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition flex-1"
                           />
                           <button
-                            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition add"
+                            className="px-4 py-2 bg-[#009580] text-white rounded-lg hover:bg-[#007a6b] transition-colors font-medium"
                             onClick={() => {
                               if (
                                 setting.newNonWorkingDate &&
@@ -2162,43 +2165,55 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             Ajouter
                           </button>
                         </div>
-                        <ul className="list-disc pl-5 mt-2 max-h-32 overflow-y-auto">
-                          {setting.nonWorkingDates.length === 0 && (
-                            <li className="text-gray-400 italic">Aucune date ajoutée</li>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          {setting.nonWorkingDates.length === 0 ? (
+                            <p className="text-gray-500 italic text-sm">Aucune date ajoutée</p>
+                          ) : (
+                            <ul className="space-y-2 max-h-32 overflow-y-auto">
+                              {setting.nonWorkingDates.map((date: Date, idx: number) => (
+                                <li key={format(date, "yyyy-MM-dd") + idx} className="flex items-center justify-between bg-white rounded px-3 py-2 shadow-sm">
+                                  <span className="text-sm font-medium text-gray-700">{format(date, "dd/MM/yyyy")}</span>
+                                  <button
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded text-xs font-medium transition-colors"
+                                    onClick={() =>
+                                      setting.setNonWorkingDates((prev: Date[]) =>
+                                        prev.filter(
+                                          (d: Date) =>
+                                            format(d, "yyyy-MM-dd") !== format(date, "yyyy-MM-dd")
+                                        )
+                                      )
+                                    }
+                                  >
+                                    Supprimer
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
                           )}
-                          {setting.nonWorkingDates.map((date: Date, idx: number) => (
-                            <li key={format(date, "yyyy-MM-dd") + idx} className="flex items-center gap-2">
-                              <span>{format(date, "dd/MM/yyyy")}</span>
-                              <button
-                                className="text-red-600 hover:text-red-800 text-xs px-2 py-1 rounded"
-                                onClick={() =>
-                                  setting.setNonWorkingDates((prev: Date[]) =>
-                                    prev.filter(
-                                      (d: Date) =>
-                                        format(d, "yyyy-MM-dd") !== format(date, "yyyy-MM-dd")
-                                    )
-                                  )
-                                }
-                              >
-                                Supprimer
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
+                        </div>
                       </div>
                     ) : (
-                      <input
-                        id={setting.id}
-                        type={setting.type}
-                        className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-40"
-                        value={setting.value}
-                        checked={setting.value}
-                        onChange={e =>
-                          setting.onChange(
-                            setting.type === "checkbox" ? e.target.checked : e.target.value
-                          )
-                        }
-                      />
+                      <div className="flex items-center">
+                        {setting.type === "checkbox" ? (
+                          <div className="flex items-center">
+                            <input
+                              id={setting.id}
+                              type="checkbox"
+                              className="w-4 h-4 text-[#009580] border-gray-300 rounded focus:ring-[#009580] focus:ring-2"
+                              checked={setting.value}
+                              onChange={e => setting.onChange(e.target.checked)}
+                            />
+                          </div>
+                        ) : (
+                          <input
+                            id={setting.id}
+                            type={setting.type}
+                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition w-40"
+                            value={setting.value}
+                            onChange={e => setting.onChange(e.target.value)}
+                          />
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -2206,12 +2221,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
         ))}
-        <button
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 self-end"
-          onClick={onClose}
-        >
-          Fermer
-        </button>
+        <div className="flex justify-end pt-4">
+          <button
+            className="px-6 py-2 bg-[#009580] text-white rounded-xl hover:bg-[#007a6b] transition-colors font-medium"
+            onClick={onClose}
+          >
+            Fermer
+          </button>
+        </div>
       </div>
     </Modal>
   );

@@ -1,22 +1,60 @@
-// Palette de couleurs, tailles de cellules, et autres constantes globales
-// Centralisé pour la réutilisation et la maintenance
+/**
+ * @fileoverview Constantes globales de l'application Gandara Scheduler
+ * 
+ * Ce fichier centralise toutes les constantes utilisées dans l'application
+ * pour faciliter la maintenance et assurer la cohérence visuelle.
+ * 
+ * Contenu :
+ * - Dimensions de la grille calendrier
+ * - Intervalles horaires configurables
+ * - Palettes de couleurs
+ * - Marges et espacements
+ * 
+ * @author Gandara Solutions
+ * @version 1.0.0
+ */
 
 import { HalfDayInterval } from "../types";
 
+// ===== DIMENSIONS DE LA GRILLE =====
+
+/** Largeur de la colonne des noms d'employés (en pixels) */
 export const EMPLOYEE_COLUMN_WIDTH = 150;
+
+/** Largeur d'une cellule de jour dans la grille (en pixels) */
 export const CELL_WIDTH = 45;
+
+/** Hauteur d'une cellule dans la grille (en pixels) */
 export const CELL_HEIGHT = 40;
+
+/** Marge entre les groupes d'employés (en pixels) */
 export const MARGIN_BETWEEN_TEAMS = 20;
 
+// ===== INTERVALLES HORAIRES =====
 
+/**
+ * Configuration des intervalles demi-journée
+ * Permet l'affichage matin/après-midi dans les cellules
+ */
 export const HALF_DAY_INTERVALS: HalfDayInterval[] = [
   { name: "morning", startHour: 0, endHour: 12},
   { name: "afternoon", startHour: 12, endHour: 24 },
 ];
+
+/**
+ * Configuration pour l'affichage journée complète
+ * Mode par défaut pour la vue calendrier
+ */
 export const DAY_INTERVALS: HalfDayInterval[] = [
   { name: "day", startHour: 0, endHour: 24 },
 ];
 
+// ===== PALETTE DE COULEURS TAILWIND =====
+
+/**
+ * Classes CSS Tailwind pour les couleurs de fond des rendez-vous
+ * Utilisées pour la variation visuelle dans l'interface
+ */
 export const colors: string[] = [
   "bg-blue-400",
   "bg-emerald-400 ",
