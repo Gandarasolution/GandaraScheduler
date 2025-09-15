@@ -155,6 +155,7 @@ export default function HomePage() {
   const history = useRef<HistoryAction[]>([]);
   const maxHistorySize = 50; // Limiter la taille de l'historique
   const isInitializing = useRef(true); // Flag pour éviter d'enregistrer les actions lors de l'initialisation
+  const hasInitializedWeekend = useRef(false); // Flag pour éviter l'enregistrement lors du premier changement includeWeekend
   // Solution ultra-performante avec throttle optimisé et early exit
   const isProcessingInfiniteScroll = useRef(false);
   const lastScrollCheck = useRef(0);
@@ -327,14 +328,15 @@ export default function HomePage() {
         
     if (!searchInput) {
       setFilteredAppointments(appointments.current);
+      console.log("Mise à jour filteredAppointments (pas de recherche):", appointments.current.length, "rendez-vous");
       return;
     }
     const lowercasedQuery = searchInput.toLowerCase();
-    setFilteredAppointments(
-      appointments.current.filter((app) =>
-        app.title.toLowerCase().includes(lowercasedQuery)
-      )
+    const filtered = appointments.current.filter((app) =>
+      app.title.toLowerCase().includes(lowercasedQuery)
     );
+    setFilteredAppointments(filtered);
+    console.log("Mise à jour filteredAppointments (recherche active):", filtered.length, "rendez-vous trouvés sur", appointments.current.length);
   }, [searchInput]);
 
   // Création de rendez-vous répétés
@@ -447,17 +449,6 @@ export default function HomePage() {
     setRepeatAppointmentData(null);
   }, [researchAppointments, selectedAppointment, isFullDay, nonWorkingDates]);
 
-  const onResize = useCallback(
-    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number) => {     
-      appointments.current = appointments.current.map((app) =>
-        app.id === id
-          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId }
-          : app
-      );
-      researchAppointments(); // Met à jour la liste filtrée
-    }, [researchAppointments]
-  );
-
   // --- FONCTIONS D'HISTORIQUE POUR CTRL+Z ---
   const addToHistory = useCallback((action: HistoryAction) => {
     history.current.push(action);
@@ -465,22 +456,51 @@ export default function HomePage() {
     if (history.current.length > maxHistorySize) {
       history.current.shift();
     }
+
+    console.log(history.current);
+    
   }, []);
 
-  const saveAppointmentState = useCallback((appointment: Appointment | null, type: 'create' | 'update' | 'delete' | 'move', previousAppointment?: Appointment) => {
+  const saveAppointmentState = useCallback((
+    appointment: Appointment | null, 
+    type: 'create' | 'update' | 'delete' | 'move' | 'resize_split', 
+    previousAppointment?: Appointment,
+    createdAppointments?: Appointment[]
+  ) => {
     if (!appointment || isInitializing.current) return; // Ne pas enregistrer pendant l'initialisation
-    
+        
     addToHistory({
       type,
       timestamp: ++timestampCounter.current, // Timestamp stable et croissant
       appointment: { ...appointment },
       previousAppointment: previousAppointment ? { ...previousAppointment } : undefined,
+      createdAppointments: createdAppointments ? createdAppointments.map(app => ({ ...app })) : undefined,
       appointments: appointments.current.map(app => ({ ...app })) // Sauvegarde complète pour sécurité
     });
   }, [addToHistory]);
 
+  const onResize = useCallback(
+    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number, saveToHistory: boolean = true) => {     
+      const appointmentToResize = appointments.current.find(app => app.id === id);
+      
+      if (appointmentToResize && saveToHistory) {
+        // Sauvegarder l'état précédent pour l'historique
+        saveAppointmentState(appointmentToResize, 'update', { ...appointmentToResize });
+      }
+
+      appointments.current = appointments.current.map((app) =>
+        app.id === id
+          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId }
+          : app
+      );
+      researchAppointments(); // Met à jour la liste filtrée
+    }, [researchAppointments, saveAppointmentState]
+  );
+
   const undoLastAction = useCallback(() => {
-    console.log(history.current);
+
+    console.log("Historique actuel :", history.current);
+    
     
     if (history.current.length === 0) {
       setModalInfo({ message: "Aucune action à annuler", color: "#e74c3c" });
@@ -503,7 +523,7 @@ export default function HomePage() {
       case 'delete':
         // Annuler une suppression = restaurer le rendez-vous
         if (lastAction.appointment) {
-          appointments.current.push({ ...lastAction.appointment });
+          appointments.current = [...appointments.current, { ...lastAction.appointment }];
           setModalInfo({ message: "Suppression annulée", color: "#27ae60" });
         }
         break;
@@ -540,12 +560,16 @@ export default function HomePage() {
           const createdIds = lastAction.createdAppointments.map(app => app.id);
           appointments.current = appointments.current.filter(app => !createdIds.includes(app.id));
           
-          setModalInfo({ message: "Redimensionnement annulé", color: "#27ae60" });
+          setModalInfo({ message: "Division annulée", color: "#27ae60" });
         }
         break;
     }
 
-    researchAppointments(); // Mettre à jour l'affichage
+    // Forcer la mise à jour de l'affichage
+    setTimeout(() => {
+      researchAppointments(); // Mettre à jour l'affichage
+    }, 0);
+    
     setTimeout(() => setModalInfo(null), 2000);
   }, [researchAppointments]);
 
@@ -810,13 +834,13 @@ export default function HomePage() {
 
   // Déplacement d'un rendez-vous (drag & drop ou resize)
   const moveAppointment = useCallback(
-    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right') => {
+    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true) => {
       const appointment = appointments.current.find((app) => app.id === id);
     
       if (!appointment) return; // Rendez-vous non trouvé 
       
-      // Enregistrer l'état précédent pour l'historique
-      const previousAppointment = { ...appointment };
+      // Enregistrer l'état précédent pour l'historique seulement si demandé
+      const previousAppointment = saveToHistory ? { ...appointment } : null;
       
       const days = getWorkedDayIntervals(
         newStartDate, 
@@ -833,7 +857,7 @@ export default function HomePage() {
       
       if (resizeDirection === 'right') {
         // Met à jour le rendez-vous principal sur le premier intervalle
-        onResize(appointment.id, newStartDate, days[0].end, newEmployeeId);
+        onResize(appointment.id, newStartDate, days[0].end, newEmployeeId, false);
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
@@ -859,7 +883,7 @@ export default function HomePage() {
       }
       if (resizeDirection === 'left') {
         // Met à jour le rendez-vous principal sur le dernier intervalle
-        onResize(appointment.id, days[days.length - 1].start, newEndDate, newEmployeeId);
+        onResize(appointment.id, days[days.length - 1].start, newEndDate, newEmployeeId, false);
         // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
@@ -884,25 +908,19 @@ export default function HomePage() {
         }
       }
       
-      // Enregistrer l'action dans l'historique
+      // Enregistrer l'action dans l'historique seulement si demandé
       const updatedAppointment = appointments.current.find((app) => app.id === id);
-      if (updatedAppointment) {
+      if (updatedAppointment && saveToHistory && previousAppointment) {
         if (createdAppointments.length > 0) {
           // Resize avec split
-          addToHistory({
-            type: 'resize_split',
-            timestamp: ++timestampCounter.current,
-            appointment: updatedAppointment,
-            previousAppointment: previousAppointment,
-            createdAppointments: createdAppointments
-          });
+          saveAppointmentState(updatedAppointment, 'resize_split', previousAppointment, createdAppointments);
         } else {
           // Simple déplacement d'un seul RDV
           saveAppointmentState(updatedAppointment, 'move', previousAppointment);
         }
       }
     },
-    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, saveAppointmentState, addToHistory]
+    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, saveAppointmentState]
   );
 
   // Gestion de la création et édition de rendez-vous
@@ -1034,6 +1052,9 @@ export default function HomePage() {
     const appointmentToDivide = appointments.current.find(app => app.id === id);
     if (!appointmentToDivide) return;
 
+    // Sauvegarder l'état original pour l'historique
+    const originalAppointment = { ...appointmentToDivide };
+
     const { startDate, endDate, employeeId, image: imageUrl } = appointmentToDivide;
     const totalDuration = endDate.getTime() - startDate.getTime();
     const timeInterval = isFullDay ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
@@ -1041,25 +1062,39 @@ export default function HomePage() {
     
     const EndDate = new Date(startDate.getTime() + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000)));
 
-    onResize(id, startDate, EndDate, employeeId as number);
-    createAppointment(
-      appointmentToDivide.title,
-      EndDate,
-      endDate,
-      employeeId as number,
-      appointmentToDivide.type,
-      {
-        color: appointmentToDivide.color,
-        borderColor: appointmentToDivide.borderColor,
-        textColor: appointmentToDivide.textColor
-      },
-      appointmentToDivide.libelle,
-      imageUrl,
-     
-    );
+    // Redimensionner le RDV original (sans sauvegarder dans l'historique ici)
+    onResize(id, startDate, EndDate, employeeId as number, false);
+    
+    // Créer le nouveau RDV (sans sauvegarder dans l'historique ici)
+    const newAppointmentId = Date.now() + Math.floor(Math.random() * 1000);
+    const newAppointment: Appointment = {
+      id: newAppointmentId,
+      title: appointmentToDivide.title,
+      description: appointmentToDivide.description,
+      startDate: EndDate,
+      endDate: endDate,
+      employeeId: employeeId as number,
+      type: appointmentToDivide.type,
+      color: appointmentToDivide.color,
+      borderColor: appointmentToDivide.borderColor,
+      textColor: appointmentToDivide.textColor,
+      libelle: appointmentToDivide.libelle,
+      image: imageUrl
+    };
+
+    // Ajouter le nouveau RDV sans passer par createAppointment pour éviter l'historique
+    appointments.current.push(newAppointment);
+
+    // Maintenant sauvegarder toute l'opération comme une action resize_split
+    const modifiedOriginal = appointments.current.find(app => app.id === id);
+    if (modifiedOriginal) {
+      saveAppointmentState(originalAppointment, 'resize_split', originalAppointment, [newAppointment]);
+    }
+
+    researchAppointments();
     setIsModalOpen(false);
     setSelectedAppointment(null);
-  }, [onResize, createAppointment, isFullDay]);
+  }, [onResize, isFullDay, saveAppointmentState, researchAppointments]);
 
   const handleRepeat = useCallback(() => {
     if (!repeatAppointmentData) return;
@@ -1338,6 +1373,7 @@ export default function HomePage() {
       }
       else if (e.ctrlKey && e.key === "z") {
         e.preventDefault();
+
         undoLastAction();
       }
       if (e.ctrlKey && e.key === "f") {
@@ -1474,15 +1510,32 @@ export default function HomePage() {
         : eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) }).filter(date => !isWeekend(date))
     );
 
-    appointments.current.forEach(app => {
-      moveAppointment(
-        app.id,
-        app.startDate,
-        app.endDate,
-        app.employeeId as number,
-        'right'
-      );
-    });
+    // Réorganiser les rendez-vous seulement après la première initialisation
+    if (hasInitializedWeekend.current) {
+      appointments.current.forEach(app => {
+        moveAppointment(
+          app.id,
+          app.startDate,
+          app.endDate,
+          app.employeeId as number,
+          'right',
+          true // Sauvegarder dans l'historique lors des changements utilisateur
+        );
+      });
+    } else {
+      // Première initialisation : juste réorganiser sans historique
+      appointments.current.forEach(app => {
+        moveAppointment(
+          app.id,
+          app.startDate,
+          app.endDate,
+          app.employeeId as number,
+          'right',
+          false // Ne pas sauvegarder dans l'historique lors de l'initialisation
+        );
+      });
+      hasInitializedWeekend.current = true;
+    }
 
   }, [includeWeekend]);
     
