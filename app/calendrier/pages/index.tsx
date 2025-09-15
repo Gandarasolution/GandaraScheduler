@@ -1230,7 +1230,9 @@ export default function HomePage() {
             action: () => {
               handleDivideAppointmentConfirm(); // Appel de la fonction de division avec l'ID du rendez-vous sélectionné
             },
-            actif: appointment.endDate.getTime() - appointment.startDate.getTime() <= 12 * 60 * 60 * 1000 // Si la durée est supérieure à 12 heure
+            actif: isFullDay
+              ? appointment.endDate.getTime() - appointment.startDate.getTime() <= (DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 60 * 60 * 1000  
+              : appointment.endDate.getTime() - appointment.startDate.getTime() <= (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * 60 * 60 * 1000
           },
           {
              label: 'Coller',
