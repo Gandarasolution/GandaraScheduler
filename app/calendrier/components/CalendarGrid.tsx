@@ -179,9 +179,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       let cell = target.closest('.calendar-cell') as HTMLElement;
       
       if (cell && cell.classList.contains('calendar-cell')) {
-        // Nettoyer les anciennes classes hover-column
+        // Nettoyer les anciennes classes hover
         const existingHoverCells = document.querySelectorAll('.hover-column');
+        const existingHoverEmployees = document.querySelectorAll('.hover-employee');
         existingHoverCells.forEach(cell => cell.classList.remove('hover-column'));
+        existingHoverEmployees.forEach(emp => emp.classList.remove('hover-employee'));
         
         // Pour les rendez-vous multi-jours, calculer la colonne basée sur la position X de la souris
         const table = e.currentTarget as HTMLTableElement;
@@ -200,6 +202,19 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
               }
             });
           }
+          
+          // Trouver la ligne parent et l'employé correspondant
+          const row = cell.closest('.calendar-row[data-employee-id]') as HTMLElement;
+          if (row) {
+            const employeeId = row.getAttribute('data-employee-id');
+            if (employeeId) {
+              // Surligner l'employé dans la colonne de gauche
+              const employeeElement = document.querySelector(`.employee-row-item[data-employee-id="${employeeId}"]`) as HTMLElement;
+              if (employeeElement) {
+                employeeElement.classList.add('hover-employee');
+              }
+            }
+          }
         }
       }
     }, [dayInTimeline]);
@@ -209,9 +224,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       const cell = target.closest('.calendar-cell') as HTMLElement;
       
       if (cell && cell.classList.contains('calendar-cell')) {
-        // Retirer toutes les classes hover-column
+        // Retirer toutes les classes hover
         const cells = document.querySelectorAll('.hover-column');
+        const employees = document.querySelectorAll('.hover-employee');
         cells.forEach(cell => cell.classList.remove('hover-column'));
+        employees.forEach(emp => emp.classList.remove('hover-employee'));
       }
     }, []);
 
@@ -682,8 +699,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     return (
                       <div
                         key={employee.id}
-                        className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer transition hover:bg-[#e7f4f2]"
+                        className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer transition hover:bg-[#e7f4f2] employee-row-item"
                         style={{ height: employeeRowHeight, alignItems: 'center' }}
+                        data-employee-id={employee.id}
                       >
                         <div className="relative">
                           <img
@@ -883,7 +901,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
                         
                         rows.push(
-                          <tr key={`employee-row-${employee.id}`} className="calendar-row employee-row">
+                          <tr key={`employee-row-${employee.id}`} className="calendar-row employee-row" data-employee-id={employee.id}>
                             {dayInTimeline.map((day, dayIdx) => {
                               const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
                                 isSameDay(app.startDate, day) && app.employeeId === employee.id

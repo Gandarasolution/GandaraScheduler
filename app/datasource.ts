@@ -214,181 +214,113 @@ export const colors: { color: string, name: string }[] = [
 // ===== GÉNÉRATEUR DE RENDEZ-VOUS =====
 
 /**
- * Génère automatiquement des rendez-vous réalistes pour tous les employés
- * 
- * Algorithme intelligent :
- * - 2 à 5 rendez-vous par employé
- * - Durées adaptées selon le type (Chantier: 3-12j, Absence: 1-5j, Autre: 1-3j)
- * - Évite les créations le week-end
- * - Gère les chevauchements avec les jours non-travaillés
- * - Projets collaboratifs pour certaines équipes
- * - Distribution géographique sur 60 jours
- * - Couleurs et icônes appropriées
- * 
+ * Générateur de rendez-vous sans superposition
+ * Garantit qu'aucun rendez-vous ne se chevauche pour chaque employé
  * @param employees - Liste des employés à planifier
  * @returns Tableau de rendez-vous générés
  */
 function generateAppointments(employees: Employee[]): Appointment[] {
-  const baseDate = new Date(2025, 7, 6); // 6 août 2025 (date de référence)
   const appointments: Appointment[] = [];
   let appointmentId = 1;
+  const baseDate = new Date();
+  
 
-  /**
-   * Génère une date aléatoire uniquement en semaine (lundi-vendredi)
-   * Évite automatiquement les week-ends pour respecter les horaires de travail
-   * 
-   * @param start - Date de début de la plage
-   * @param days - Nombre de jours maximum dans la plage
-   * @returns Date en semaine
-   */
-  const getRandomWeekDate = (start: Date, days: number) => {
-    let attempts = 0;
-    let date;
-    
+  // Fonction utilitaire pour obtenir une date de semaine aléatoire
+  const getRandomWeekDate = (baseDate: Date, maxDays: number): Date => {
+    let randomDate: Date;
     do {
-      const randomDays = Math.floor(Math.random() * days);
-      date = new Date(start);
-      date.setDate(start.getDate() + randomDays);
-      attempts++;
-    } while ((date.getDay() === 0 || date.getDay() === 6) && attempts < 50); // Éviter samedi (6) et dimanche (0)
-    
-    // Si après 50 tentatives on n'a pas trouvé de jour en semaine, forcer un lundi
-    if (date.getDay() === 0 || date.getDay() === 6) {
-      const daysToAdd = date.getDay() === 0 ? 1 : 2; // Si dimanche +1, si samedi +2
-      date.setDate(date.getDate() + daysToAdd);
-    }
-    
-    return date;
+      const randomDays = Math.floor(Math.random() * maxDays);
+      randomDate = new Date(baseDate);
+      randomDate.setDate(baseDate.getDate() + randomDays);
+    } while (randomDate.getDay() === 0 || randomDate.getDay() === 6); // Éviter week-ends
+    return randomDate;
   };
 
-  // Fonction pour ajuster la fin d'un RDV pour éviter le week-end
-  const adjustEndDateToAvoidWeekend = (startDate: Date, duration: number) => {
-    const endDate = new Date(startDate);
-    let daysAdded = 0;
-    let currentDate = new Date(startDate);
-    
-    while (daysAdded < duration) {
-      currentDate.setDate(currentDate.getDate() + 1);
-      
-      // Ne compter que les jours de semaine
-      if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
-        daysAdded++;
-      }
-    }
-    
-    endDate.setTime(currentDate.getTime());
-    return endDate;
+  // Fonction pour vérifier si deux périodes se chevauchent
+  const isOverlapping = (start1: Date, end1: Date, start2: Date, end2: Date): boolean => {
+    return !(end1 < start2 || start1 > end2);
   };
 
-  // Générer plusieurs rendez-vous par employé
-  employees.forEach((emp) => {
-    const numAppointments = Math.floor(Math.random() * 4) + 2; // 2 à 5 rendez-vous par employé
+  // Générer des rendez-vous pour chaque employé
+  employees.forEach((employee) => {
+    const employeeAppointments: { start: Date; end: Date }[] = [];
     
-    for (let i = 0; i < numAppointments; i++) {
-      // Choisir aléatoirement le type de rendez-vous
-      const rand = Math.random();
-      let eventTemplate;
-      let type: "Chantier" | "Absence" | "Autre";
+    // Chaque employé aura 2 à 4 rendez-vous
+    const numberOfAppointments = Math.floor(Math.random() * 3) + 2;
+    
+    for (let i = 0; i < numberOfAppointments; i++) {
+      let attempts = 0;
+      let isValid = false;
+      let startDate: Date = new Date();
+      let endDate: Date = new Date();
+      let eventTemplate: any = chantier[0]; // Valeur par défaut
+      let type: "Chantier" | "Absence" | "Autre" = 'Chantier';
+      let duration: number = 1;
       
-      if (rand < 0.6) { // 60% chantiers
-        eventTemplate = chantier[Math.floor(Math.random() * chantier.length)];
-        type = 'Chantier';
-      } else if (rand < 0.8) { // 20% absences
-        eventTemplate = absences[Math.floor(Math.random() * absences.length)];
-        type = 'Absence';
-      } else { // 20% autres
-        eventTemplate = autres[Math.floor(Math.random() * autres.length)];
-        type = 'Autre';
-      }
-
-      // Durée aléatoire selon le type
-      let duration;
-      if (type === 'Chantier') {
-        duration = Math.floor(Math.random() * 10) + 3; // 3 à 12 jours pour chantiers
-      } else if (type === 'Absence') {
-        duration = Math.floor(Math.random() * 5) + 1; // 1 à 5 jours pour absences
-      } else {
-        duration = Math.floor(Math.random() * 3) + 1; // 1 à 3 jours pour autres
-      }
-
-      // Date de début aléatoire dans les 60 prochains jours (uniquement en semaine)
-      let startDate = getRandomWeekDate(baseDate, 60);
-      startDate.setHours(0, 0, 0, 0);
-      
-      // Pour les RDV courts (1-3 jours), s'assurer qu'ils ne dépassent pas le vendredi
-      if (duration <= 3) {
-        const dayOfWeek = startDate.getDay(); // 1=Lundi, 5=Vendredi
-        const maxDurationForDay = Math.min(duration, 6 - dayOfWeek); // Ne pas dépasser vendredi
+      // Essayer de trouver un créneau libre jusqu'à 100 tentatives
+      while (!isValid && attempts < 100) {
+        attempts++;
         
-        if (maxDurationForDay < duration) {
-          // Si le RDV ne peut pas tenir dans la semaine, le déplacer au lundi suivant
-          const daysToMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek);
-          startDate.setDate(startDate.getDate() + daysToMonday);
+        // Choisir le type d'événement
+        const rand = Math.random();
+        if (rand < 0.6) { // 60% chantiers
+          eventTemplate = chantier[Math.floor(Math.random() * chantier.length)];
+          type = 'Chantier';
+          duration = Math.floor(Math.random() * 3) + 3; // 3 à 5 jours
+        } else if (rand < 0.8) { // 20% absences
+          eventTemplate = absences[Math.floor(Math.random() * absences.length)];
+          type = 'Absence';
+          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
+        } else { // 20% autres
+          eventTemplate = autres[Math.floor(Math.random() * autres.length)];
+          type = 'Autre';
+          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
         }
+        
+        // Générer date de début aléatoire (dans les 60 prochains jours)
+        startDate = getRandomWeekDate(baseDate, 60);
+        startDate.setHours(0, 0, 0, 0);
+        
+        // Calculer date de fin
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + duration - 1);
+        endDate.setHours(23, 59, 59, 999);
+        
+        // Ajuster si ça tombe sur un week-end
+        while (endDate.getDay() === 0 || endDate.getDay() === 6) {
+          endDate.setDate(endDate.getDate() - 1);
+        }
+        
+        // Vérifier qu'il n'y a pas de chevauchement avec les rendez-vous existants de cet employé
+        isValid = !employeeAppointments.some(existing => 
+          isOverlapping(startDate, endDate, existing.start, existing.end)
+        );
       }
       
-      // Calculer la date de fin en évitant les week-ends
-      const endDate = adjustEndDateToAvoidWeekend(startDate, duration);
-      endDate.setHours(0, 0, 0, 0);
-
-      // Couleur aléatoire
-      const color = colors[Math.floor(Math.random() * colors.length)];
-
-      appointments.push({
-        id: appointmentId++,
-        title: eventTemplate.label,
-        libelle: eventTemplate.label,
-        description: `${type} de ${duration} jour${duration > 1 ? 's' : ''} pour ${emp.name}`,
-        startDate: startDate,
-        endDate: endDate,
-        image: eventTemplate.image,
-        employeeId: emp.id,
-        type: type,
-        color: color.color,
-        borderColor: color.color,
-        textColor: '#FFFFFF'
-      });
-    }
-  });
-
-  // Ajouter quelques rendez-vous de groupe (même chantier pour plusieurs employés)
-  const groupProjects = [
-    { template: chantier[0], employeeIds: [1, 2, 3, 4] },
-    { template: chantier[5], employeeIds: [5, 6, 7, 8] },
-    { template: chantier[10], employeeIds: [9, 10, 11, 12] },
-    { template: chantier[15], employeeIds: [13, 14, 15, 16] },
-    { template: chantier[18], employeeIds: [17, 18, 19, 20] }
-  ];
-
-  groupProjects.forEach((project) => {
-    const startDate = getRandomWeekDate(baseDate, 30);
-    startDate.setHours(0, 0, 0, 0);
-    const duration = Math.floor(Math.random() * 8) + 5; // 5 à 12 jours
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    
-    project.employeeIds.forEach((empId) => {
-      if (empId <= employees.length) { // Vérifier que l'employé existe
-        const endDate = adjustEndDateToAvoidWeekend(startDate, duration);
-        endDate.setHours(0, 0, 0, 0);
-
+      // Si on a trouvé un créneau valide, créer le rendez-vous
+      if (isValid) {
+        employeeAppointments.push({ start: new Date(startDate), end: new Date(endDate) });
+        
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
         appointments.push({
           id: appointmentId++,
-          title: project.template.label,
-          libelle: project.template.label,
-          description: `Projet en équipe - ${duration} jours`,
-          startDate: new Date(startDate),
+          title: eventTemplate.label,
+          libelle: eventTemplate.label,
+          description: `${type} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`,
+          startDate: startDate,
           endDate: endDate,
-          image: project.template.image,
-          employeeId: empId,
-          type: 'Chantier',
+          image: eventTemplate.image,
+          employeeId: employee.id,
+          type: type,
           color: color.color,
           borderColor: color.color,
           textColor: '#FFFFFF'
         });
       }
-    });
+    }
   });
-
+  
   return appointments;
 }
 

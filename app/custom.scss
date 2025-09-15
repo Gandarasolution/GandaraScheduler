@@ -58,6 +58,15 @@
   }
 }
 
+// Styles pour le survol des employés dans la colonne de gauche
+.employee-row-item {
+  transition: background-color 0.05s ease;
+  
+  &.hover-employee {
+    background-color: #e7f4f2 !important;
+  }
+}
+
 
 .drawer-container {
   position: fixed;
