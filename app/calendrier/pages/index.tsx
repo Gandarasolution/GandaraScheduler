@@ -1965,8 +1965,7 @@ export default function HomePage() {
                   </div>
                   <input
                     type="date"
-                    disabled={repeatAppointmentData.repeatCount !== null}
-                    className={`${repeatAppointmentData.repeatCount !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} ml-2 border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-base w-[145px]`}
+                    className={`${repeatAppointmentData.repeatCount !== null ? 'opacity-50 cursor-not-allowed text-sm' : 'opacity-100 text-base'} ml-2 border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[145px]`}
                     value={repeatAppointmentData.endDate ? format(repeatAppointmentData.endDate, "yyyy-MM-dd") : ""}
                     min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
                     onChange={e => {
