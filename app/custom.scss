@@ -33,6 +33,31 @@
   background-color: #f9f9f9; /* gris très clair */
 }
 
+// Styles pour le survol du calendrier - table hover system
+.calendar-table {
+  border-spacing: 0;
+  
+  .calendar-cell {
+    transition: background-color 0.05s ease;
+    position: relative;
+  }
+  
+  // Survol des lignes - CSS natif pour performance maximale
+  .calendar-row:hover .calendar-cell {
+    background-color: #e7f4f2 !important;
+  }
+  
+  // Survol des colonnes - JavaScript géré
+  .calendar-cell.hover-column {
+    background-color: #e7f4f2 !important;
+  }
+  
+  // Intersection - cellule exacte survolée (priorité la plus haute)
+  .calendar-cell:hover {
+    background-color: #e7f4f2 !important;
+  }
+}
+
 
 .drawer-container {
   position: fixed;

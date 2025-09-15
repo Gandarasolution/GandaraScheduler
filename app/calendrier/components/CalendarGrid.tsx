@@ -126,7 +126,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   
   // État pour gérer les éléments de dimension ouverts (affichés)
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
-
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
   const isSyncingScroll = useRef(false);
 
@@ -173,6 +172,50 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     setOpenItems(dimensionItems.map(item => item.id));
   }, [dimensionItems]);
 
+  const handleMouseOver = useCallback((e: React.MouseEvent<HTMLTableElement>) => {
+      const target = e.target as HTMLElement;
+      
+      // Trouver la cellule parente, même si on survole un rendez-vous
+      let cell = target.closest('.calendar-cell') as HTMLElement;
+      
+      if (cell && cell.classList.contains('calendar-cell')) {
+        // Nettoyer les anciennes classes hover-column
+        const existingHoverCells = document.querySelectorAll('.hover-column');
+        existingHoverCells.forEach(cell => cell.classList.remove('hover-column'));
+        
+        // Pour les rendez-vous multi-jours, calculer la colonne basée sur la position X de la souris
+        const table = e.currentTarget as HTMLTableElement;
+        if (table) {
+          const tableRect = table.getBoundingClientRect();
+          const mouseX = e.clientX - tableRect.left;
+          const colIndex = Math.floor(mouseX / CELL_WIDTH);
+          
+          // Vérifier que l'index de colonne est valide
+          if (colIndex >= 0 && colIndex < dayInTimeline.length) {
+            const rows = table.querySelectorAll('.calendar-row');
+            rows.forEach(row => {
+              const cellInCol = row.children[colIndex] as HTMLElement;
+              if (cellInCol) {
+                cellInCol.classList.add('hover-column');
+              }
+            });
+          }
+        }
+      }
+    }, [dayInTimeline]);
+
+    const handleMouseOut = useCallback((e: React.MouseEvent<HTMLTableElement>) => {
+      const target = e.target as HTMLElement;
+      const cell = target.closest('.calendar-cell') as HTMLElement;
+      
+      if (cell && cell.classList.contains('calendar-cell')) {
+        // Retirer toutes les classes hover-column
+        const cells = document.querySelectorAll('.hover-column');
+        cells.forEach(cell => cell.classList.remove('hover-column'));
+      }
+    }, []);
+
+  
 
   // Trouve l'index du jour courant dans la timeline
   const todayIndex = dayInTimeline.findIndex(day => 
@@ -556,7 +599,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       <div className="relative flex h-full flex-row calendar-grid">
         {/* Colonne employés sticky à gauche */}
         <div
-          className="min-w-80 max-w-80 pl-2 flex flex-col sticky left-0 z-50 pr-10 overflow-y-scroll scrollbar-hide"
+          className="min-w-80 max-w-80 pl-2 flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
           style={{
             backgroundColor: '#f3f7f8',
             scrollbarGutter: 'stable',
@@ -758,14 +801,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   </div>
                 ))}
               </div>
-              {/* Main grid rows (not sticky) */}
-              <div
-                className="grid bg-white relative calendar-grid"
-                style={{
-                  gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-                  width: `${dayInTimeline.length * CELL_WIDTH}px`,
-                }}
-              >
+              {/* Conteneur relatif pour la table et la ligne du jour */}
+              <div className="relative">
                 {/* Ligne rouge verticale pour la date du jour */}
                 {todayIndex !== -1 && (
                   <div
@@ -782,73 +819,114 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     }}
                   />
                 )}
-                {/* Rows for each dimension item: inactive row, then employee rows */}
-                {dimensionItems.map((item, idx) => {
-                  const isOpen = openItems.includes(item.id);
-                  const itemEmployees = employeesByDimension[item.id] || [];
-                  
-                  if (itemEmployees.length === 0) return null;
-                  
-                  return (
-                    <React.Fragment key={item.id}>
-                      {/* Inactive row for the dimension item */}
-                      {dayInTimeline.map((day) => (
-                        <DayCell
-                          key={`inactive-${item.id}-${format(day, 'yyyy-MM-dd')}`}
-                          day={day}
-                          employee={{ id: 0, name: 'Inactive' }}
-                          appointments={[]}
-                          intervals={HALF_DAY_INTERVALS}
-                          isFullDay={isFullDay}
-                          RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 8}
-                          isMobile={isMobile}
-                          nonWorkingDates={nonWorkingDates}
-                          includeWeekend={includeWeekend}
-                          onAppointmentMoved={onAppointmentMoved}
-                          onCellDoubleClick={onCellDoubleClick}
-                          onAppointmentClick={onAppointmentDoubleClick}
-                          onExternalDragDrop={onExternalDragDrop}
-                          isWeekend={isWeekend(day)}
-                          handleContextMenu={handleContextMenu}
-                          isCellActive={false}
-                        />
-                      ))}
-                      {/* Employee rows for the dimension item */}
-                      {isOpen && itemEmployees.map((employee) => {
+                
+                {/* Main calendar table - Structure optimisée */}
+                <table 
+                  className="calendar-table bg-white relative"
+                  style={{
+                    width: `${dayInTimeline.length * CELL_WIDTH}px`,
+                    tableLayout: 'fixed',
+                    borderCollapse: 'collapse'
+                  }}
+                  onMouseOver={handleMouseOver}
+                  onMouseOut={handleMouseOut}
+                >
+                
+                <tbody>
+                  {/* Générer les lignes du tableau pour chaque dimension */}
+                  {dimensionItems.map((item, idx) => {
+                    const isOpen = openItems.includes(item.id);
+                    const itemEmployees = employeesByDimension[item.id] || [];
+                    
+                    if (itemEmployees.length === 0) return null;
+                    
+                    const rows = [];
+                    
+                    // Ligne inactive pour la dimension
+                    rows.push(
+                      <tr key={`inactive-row-${item.id}`} className="calendar-row inactive-row">
+                        {dayInTimeline.map((day, dayIdx) => (
+                          <td 
+                            key={`inactive-${item.id}-${format(day, 'yyyy-MM-dd')}`}
+                            className="calendar-cell p-0"
+                            style={{ 
+                              width: `${CELL_WIDTH}px`,
+                              height: `${idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 8}px`
+                            }}
+                          >
+                            <DayCell
+                              day={day}
+                              employee={{ id: 0, name: 'Inactive' }}
+                              appointments={[]}
+                              intervals={HALF_DAY_INTERVALS}
+                              isFullDay={isFullDay}
+                              RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 8}
+                              isMobile={isMobile}
+                              nonWorkingDates={nonWorkingDates}
+                              includeWeekend={includeWeekend}
+                              onAppointmentMoved={onAppointmentMoved}
+                              onCellDoubleClick={onCellDoubleClick}
+                              onAppointmentClick={onAppointmentDoubleClick}
+                              onExternalDragDrop={onExternalDragDrop}
+                              isWeekend={isWeekend(day)}
+                              handleContextMenu={handleContextMenu}
+                              isCellActive={false}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                    
+                    // Lignes des employés si la dimension est ouverte
+                    if (isOpen) {
+                      itemEmployees.forEach((employee, empIdx) => {
                         const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
-                        return (
-                          <React.Fragment key={employee.id}>
-                            {dayInTimeline.map((day) => {
+                        
+                        rows.push(
+                          <tr key={`employee-row-${employee.id}`} className="calendar-row employee-row">
+                            {dayInTimeline.map((day, dayIdx) => {
                               const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
                                 isSameDay(app.startDate, day) && app.employeeId === employee.id
                               );
+                              
                               return (
-                                <DayCell
+                                <td 
                                   key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
-                                  day={day}
-                                  employee={{ id: employee.id, name: employee.name }}
-                                  appointments={dayEmployeeAppointments}
-                                  intervals={HALF_DAY_INTERVALS}
-                                  isFullDay={isFullDay}
-                                  RowHeight={employeeRowHeight}
-                                  isMobile={isMobile}
-                                  nonWorkingDates={nonWorkingDates}
-                                  includeWeekend={includeWeekend}
-                                  onAppointmentMoved={onAppointmentMoved}
-                                  onCellDoubleClick={onCellDoubleClick}
-                                  onAppointmentClick={onAppointmentDoubleClick}
-                                  onExternalDragDrop={onExternalDragDrop}
-                                  isWeekend={isWeekend(day)}
-                                  handleContextMenu={handleContextMenu}
-                                />
+                                  className="calendar-cell p-0"
+                                  style={{ 
+                                    width: `${CELL_WIDTH}px`,
+                                    height: `${employeeRowHeight}px`
+                                  }}
+                                >
+                                  <DayCell
+                                    day={day}
+                                    employee={{ id: employee.id, name: employee.name }}
+                                    appointments={dayEmployeeAppointments}
+                                    intervals={HALF_DAY_INTERVALS}
+                                    isFullDay={isFullDay}
+                                    RowHeight={employeeRowHeight}
+                                    isMobile={isMobile}
+                                    nonWorkingDates={nonWorkingDates}
+                                    includeWeekend={includeWeekend}
+                                    onAppointmentMoved={onAppointmentMoved}
+                                    onCellDoubleClick={onCellDoubleClick}
+                                    onAppointmentClick={onAppointmentDoubleClick}
+                                    onExternalDragDrop={onExternalDragDrop}
+                                    isWeekend={isWeekend(day)}
+                                    handleContextMenu={handleContextMenu}
+                                  />
+                                </td>
                               );
                             })}
-                          </React.Fragment>
+                          </tr>
                         );
-                      })}
-                    </React.Fragment>
-                  );
-                })}
+                      });
+                    }
+                    
+                    return rows;
+                  })}
+                </tbody>
+                </table>
               </div>
             </div>
           </div>

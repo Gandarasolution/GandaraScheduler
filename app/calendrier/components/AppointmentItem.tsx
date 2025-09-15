@@ -43,7 +43,7 @@ interface AppointmentItemProps {
   /** Informations de l'employé assigné */
   employee: { id: number; name: string };
   /** Source d'appel du composant */
-  source?: 'calendar' | 'other';
+  source?: 'calendar' | 'demo';
   /** Callback appelé lors du double-clic */
   onDoubleClick: () => void;
   /** Callback appelé lors du redimensionnement */
@@ -377,7 +377,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       `}
       title={appointment.title}
       style={{
-        width: calculatedWidth,
+        width: source === 'demo' ? '157px' : calculatedWidth,
         height: `${CELL_HEIGHT + 4}px`,
         minWidth: `${INTERVAL_WIDTH}px`,
         pointerEvents: isDragging ? 'none' : 'auto',
@@ -391,12 +391,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onMouseDown={handleDragStart}
     >
       {/* Handle de redimensionnement à gauche */}
-      <div
-        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize z-30"
-        title="Redimensionner"
-        onMouseDown={(e) => handleMouseDown(e, 'left')}
-        style={{borderRadius: '4px 0 0 4px'}}
-      />
+      {source === 'calendar' && (
+        <div
+          className="absolute left-0 top-0 h-full w-2 cursor-ew-resize z-30"
+          title="Redimensionner"
+          onMouseDown={(e) => handleMouseDown(e, 'left')}
+          style={{borderRadius: '4px 0 0 4px'}}
+        />
+      )}
 
       {/* Image éventuelle */}
       {appointment.image ? (
@@ -431,12 +433,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     
 
       {/* Handle de redimensionnement à droite */}
-      <div
-        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize z-30"
-        title="Redimensionner"
-        onMouseDown={(e) => handleMouseDown(e, 'right')}
-        style={{borderRadius: '0 4px 4px 0'}}
-      />
+      {source === 'calendar' && (
+        <div
+          className="absolute right-0 top-0 h-full w-2 cursor-ew-resize z-30"
+          title="Redimensionner"
+          onMouseDown={(e) => handleMouseDown(e, 'right')}
+          style={{borderRadius: '0 4px 4px 0'}}
+        />
+      )}
     </div>
   );
 };

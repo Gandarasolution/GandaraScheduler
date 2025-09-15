@@ -214,7 +214,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   return (
     <div className={`flex ${isExpanded ? 'flex-row' : 'flex-col'} gap-4 rounded-xl poppins transition-all duration-300`}>
       {/* Section principale du formulaire */}
-      <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-[340px] ${isExpanded ? 'border-r border-gray-200 pr-4' : ''}`}>
+      <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-[340px]`}>
         {/* Flèche d'expansion */}
         <button
           type="button"
@@ -233,7 +233,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
           </svg>
         </button>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mr-2">
           <div className='flex item-start w-[68px]'>Icône</div>
           <CustomSelectWithImage
             options={images}
@@ -306,7 +306,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 endDate: new Date(addDays(new Date(), 3)),
               }}
               isFullDay={isFullDay}
-              source='other'
+              source='demo'
               isMobile={false}
               includeWeekend={false}
               employee={{ id: formData.employeeId as number, name: employees.find(e => e.id === formData.employeeId)?.name || 'Employé' }}
@@ -459,7 +459,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
       {/* Section extensible - Options avancées */}
       {isExpanded && (
-        <div className="w-[530px] p-4 rounded-xl flex flex-col gap-4 animate-in slide-in-from-right duration-300">
+        <div className="w-[530px] p-4 rounded-xl flex flex-col gap-4 animate-in slide-in-from-right duration-300 border-l border-gray-200 ">
           
           {/* Cases à cocher */}
           <div className="mb-[50px]">
