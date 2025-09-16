@@ -38,34 +38,49 @@ export interface Employee {
 }
 
 /**
+ * Interface représentant un type d'événement/modèle de rendez-vous
+ * Cette interface contient les attributs communs partagés par tous les RDV du même type
+ * @interface EventType
+ */
+export interface EventType {
+  /** Identifiant unique du type d'événement */
+  id: number;
+  /** Nom du type d'événement */
+  name: string;
+  /** Libellé affiché dans les formulaires et listes */
+  label: string;
+  /** Catégorie du type d'événement */
+  category: "Chantier" | "Absence" | "Autre";
+  /** URL de l'icône associée au type d'événement */
+  image: string;
+  /** Couleur de fond pour tous les RDV de ce type (format hex) */
+  color: string;
+  /** Couleur de bordure pour tous les RDV de ce type (format hex) */
+  borderColor: string;
+  /** Couleur du texte pour tous les RDV de ce type (format hex) */
+  textColor: string;
+  /** Description par défaut pour ce type d'événement (optionnel) */
+  defaultDescription?: string;
+}
+
+/**
  * Interface représentant un rendez-vous/événement dans le calendrier
+ * Simplifié pour ne contenir que les attributs spécifiques à chaque instance
  * @interface Appointment
  */
 export interface Appointment {
   /** Identifiant unique du rendez-vous */
   id: number;
-  /** Titre principal du rendez-vous */
-  title: string;
-  /** Libellé alternatif affiché à l'écran (optionnel) */
-  libelle?: string;
-  /** Description détaillée du rendez-vous */
+  /** Description spécifique du rendez-vous */
   description: string;
   /** Date et heure de début du rendez-vous */
   startDate: Date;
   /** Date et heure de fin du rendez-vous */
   endDate: Date;
-  /** URL de l'icône associée au rendez-vous (optionnel) */
-  image?: string;
   /** ID de l'employé assigné au rendez-vous */
   employeeId: number | string;
-  /** Type de rendez-vous */
-  type: "Chantier" | "Absence" | "Autre";
-  /** Couleur de fond de l'événement (format hex) */
-  color: string;
-  /** Couleur de bordure de l'événement (format hex) */
-  borderColor: string;
-  /** Couleur du texte de l'événement (format hex) */
-  textColor: string;
+  /** ID du type d'événement auquel ce RDV est lié */
+  eventTypeId: number;
 }
 
 /**

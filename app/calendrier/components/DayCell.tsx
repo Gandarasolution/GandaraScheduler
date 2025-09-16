@@ -2,7 +2,7 @@
 import React, {memo, useMemo, useState}from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
 import IntervalCell from './IntervalCell';
-import { Appointment, HalfDayInterval, } from '../types';
+import { Appointment, EventType, HalfDayInterval, } from '../types';
 import { isHoliday } from '../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
 import { CELL_HEIGHT, HALF_DAY_INTERVALS, DAY_INTERVALS } from '../utils/constants';
 import { fr } from 'date-fns/locale';
@@ -16,6 +16,7 @@ interface DayCellProps {
   employee: { id: number; name: string };
   appointments: (Appointment & { top: number })[];
   intervals: HalfDayInterval[];
+  eventTypes: EventType[];
   isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
   isFullDay?: boolean; // Indique si la cellule représente une journée complète
@@ -87,6 +88,7 @@ const DayCell: React.FC<DayCellProps> = ({
   appointments = [],
   intervals = [],
   isCellActive = true,
+  eventTypes,
   isWeekend,
   isFullDay,
   RowHeight,
@@ -114,7 +116,7 @@ const DayCell: React.FC<DayCellProps> = ({
     const hiddenCount = appointments.length - maxVisible;
     const isToday = isSameDay(day, new Date());
     // État local pour afficher la bulle d'info
-    const [tooltip, setTooltip] = useState<{anchor: HTMLElement | null, app: Appointment | null} | null>(null);
+    const [tooltip, setTooltip] = useState<{anchor: HTMLElement | null, app: Appointment | null, et: EventType | null} | null>(null);
     
     return (
       <div
@@ -152,14 +154,21 @@ const DayCell: React.FC<DayCellProps> = ({
                 hover:bg-blue-200 hover:text-blue-900 active:scale-95
                 flex items-center gap-1
               `}
-              title={app.title}
+              title={eventTypes.find(et => et.id === app.eventTypeId)?.label}
               style={{cursor: 'pointer'}}
               onClick={e => {
                 e.stopPropagation();
-                setTooltip({anchor: e.currentTarget, app});
+                setTooltip({anchor: e.currentTarget, app, et: eventTypes.find(et => et.id === app.eventTypeId) || null});
               }}
             >
-              {app.title.length > 12 ? app.title.slice(0, 12) + '…' : app.title}
+              {
+                (() => {
+                  const et = eventTypes.find(et => et.id === app.eventTypeId);
+                  return et?.label
+                    ? (et.label.length > 12 ? et.label.slice(0, 12) + '…' : et.label)
+                    : '';
+                })()
+              }
             </span>
           ))}
           {hiddenCount > 0 && (
@@ -184,7 +193,7 @@ const DayCell: React.FC<DayCellProps> = ({
             }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="font-bold text-sm mb-1">{tooltip.app.title}</div>
+            <div className="font-bold text-sm mb-1">{tooltip?.et?.label}</div>
             {tooltip.app.description && <div className="text-xs mb-1">{tooltip.app.description}</div>}
             <div className="text-xs text-gray-500">
               {
@@ -243,6 +252,7 @@ const DayCell: React.FC<DayCellProps> = ({
             intervalStart={intervalStart}
             intervalEnd={intervalEnd}
             appointments={intervalAppointments}
+            eventTypes={eventTypes}
             isFullDay={isFullDay ?? false}
             RowHeight={RowHeight}
             isMobile={isMobile}

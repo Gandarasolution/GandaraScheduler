@@ -16,11 +16,11 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo } from 'react';
-import { Appointment, Employee, HalfDayInterval } from '../types';
+import { Appointment, Employee, EventType, HalfDayInterval } from '../types';
 import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
 import { isHoliday, isWeekend } from '../utils/dates';
-import { absences, autres, chantier, images } from '@/app/datasource';
-import CustomSelectWithImage, { SelectOptionWithImage } from './CustomSelectWithImage';
+import { images } from '@/app/datasource';
+import CustomSelectWithImage from './CustomSelectWithImage';
 import AppointmentItem from './AppointmentItem';
 
 /**
@@ -31,9 +31,9 @@ interface AppointmentFormProps {
   /** Liste complète des rendez-vous existants */
   appointments: Appointment[];
   /** Rendez-vous à éditer (null pour création) */
-  appointment: Appointment | null;
-  /** Date initiale présélectionnée (optionnel) */
-  initialDate?: Date | null;
+  appointment: Appointment;
+  /** Liste de tous les types d'événements disponibles */
+  eventTypes: EventType[];
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
@@ -45,9 +45,8 @@ interface AppointmentFormProps {
   /** Liste des dates non-travaillées (week-ends, fériés) */
   nonWorkingDates: Date[];
   /** Palette de couleurs disponibles avec noms */
-  colors: {color: string, name: string}[];
   /** Callback appelé lors de la sauvegarde */
-  onSave: (appointment: Appointment, includeAllNonWorkingDays: boolean) => void;
+  onSave: (appointment: Appointment, eventType: EventType, includeAllNonWorkingDays: boolean) => void;
   /** Callback appelé lors de la fermeture du formulaire */
   onClose: () => void;
 }
@@ -85,13 +84,11 @@ interface AppointmentFormProps {
 const AppointmentForm: React.FC<AppointmentFormProps> = ({
   appointments,
   appointment,
-  initialDate,
-  initialEmployeeId,
+  eventTypes,
   employees,
   HALF_DAY_INTERVALS,
   isFullDay,
   nonWorkingDates,
-  colors,
   onSave,
   onClose,
 }) => {
@@ -102,30 +99,17 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    * État principal du formulaire contenant toutes les données du rendez-vous
    * Initialisé avec les données existantes ou des valeurs par défaut
    */
-  const [formData, setFormData] = useState<Omit<Appointment, 'id'> & { id?: number }>(
-    appointment
-      ? { ...appointment, startDate: appointment.startDate, endDate:  addMinutes(appointment.endDate, -1) }
-      : {
-          title: '',
-          description: '',
-          libelle: '',
-          startDate: initialDate || new Date(),
-          endDate: initialDate ? setHours(setMinutes(initialDate, 0), 0) : new Date(),
-          image: '',
-          employeeId: initialEmployeeId || (employees.length > 0 ? employees[0].id : ''),
-          type: "Chantier",
-          color: "#1E40AF", // Couleur par défaut (bleu)
-          borderColor: "#1E40AF", // Bordure assortie
-          textColor: "#FFFFFF", // Texte blanc pour contraste
-        }
+  const [formDataAppointment, setFormDataAppointment] = useState<Omit<Appointment, 'id'> & { id?: number }>(
+      { ...appointment, startDate: appointment.startDate, endDate:  addMinutes(appointment.endDate, -1) }
   );
+  const [formDataEventType, setFormDataEventType] = useState<EventType>(eventTypes.find(et => et.id === appointment.eventTypeId) || eventTypes[0]);
 
   /**
    * Vérifie si le rendez-vous actuel chevauche des jours non-travaillés
    * Utilisé pour déterminer l'état initial de la checkbox
    */
   const isAppointmentSplitByNotWorkingDay = useMemo(() => {
-    const app = appointments.find(a => a.id === formData.id);
+    const app = appointments.find(a => a.id === formDataAppointment.id);
     if (!app) return false;
     const days = eachDayOfInterval({ start: app.startDate, end: app.endDate });
     return days.some((date) =>
@@ -135,7 +119,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         && nd.getFullYear() === date.getFullYear()
       ) || isHoliday(date) || isWeekend(date)) // Vérifie jours non travaillés, fériés ou week-ends
     );
-  }, [appointments, formData.id, nonWorkingDates]);
+  }, [appointments, formDataAppointment.id, nonWorkingDates]);
 
   /**
    * État pour contrôler l'expansion du panel d'options avancées
@@ -159,20 +143,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'employeeId') {
-      setFormData((prev) => ({ ...prev, employeeId: Number(value) }));
+      setFormDataAppointment((prev) => ({ ...prev, employeeId: Number(value) }));
       return;
     }
-    if (name === 'type') {
-      // Pré-remplit le libellé si vide
-      let defaultLibelle = '';
-      const typedValue = value as 'Chantier' | 'Absence' | 'Autre';
-      if (typedValue === 'Chantier' && chantier.length > 0) defaultLibelle = chantier[0].label;
-      if (typedValue === 'Absence' && absences.length > 0) defaultLibelle = absences[0].label;
-      if (typedValue === 'Autre' && autres.length > 0) defaultLibelle = autres[0].label;
-      setFormData((prev) => ({ ...prev, type: typedValue, libelle: prev.libelle || defaultLibelle }));
-      return;
-    }
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormDataAppointment((prev) => ({ ...prev, [name]: value }));
   };
 
   /**
@@ -188,11 +162,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
     if (name === 'startDate') {
       
-        newDate = setHours(setMinutes(datePart, (formData.startDate || new Date()).getMinutes()), (formData.startDate || new Date()).getHours());
-        setFormData(prev => ({ ...prev, startDate: newDate }));
+        newDate = setHours(setMinutes(datePart, (formDataAppointment.startDate || new Date()).getMinutes()), (formDataAppointment.startDate || new Date()).getHours());
+        setFormDataAppointment(prev => ({ ...prev, startDate: newDate }));
     } else if (name === 'endDate') {
-        newDate = setHours(setMinutes(datePart, (formData.endDate || new Date()).getMinutes()), (formData.endDate || new Date()).getHours());
-        setFormData(prev => ({ ...prev, endDate: newDate }));
+        newDate = setHours(setMinutes(datePart, (formDataAppointment.endDate || new Date()).getMinutes()), (formDataAppointment.endDate || new Date()).getHours());
+        setFormDataAppointment(prev => ({ ...prev, endDate: newDate }));
     }
   };
 
@@ -204,7 +178,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData as Appointment, includeAllNonWorkingDays);
+    onSave(formDataAppointment as Appointment, formDataEventType, includeAllNonWorkingDays);
   };
 
   
@@ -238,8 +212,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
             <CustomSelectWithImage
               options={images}
-              value={formData.image || ''}
-              onChange={(value) => {setFormData(prev => ({ ...prev, image: value as string }))}}
+              value={formDataEventType.image || ''}
+              onChange={(value) => {setFormDataEventType(prev => ({ ...prev, image: value as string }))}}
               placeholder="Sélectionnez une icône"
               className="w-full sm:w-[65px] py-2 px-2"
               showImages={true}
@@ -251,14 +225,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               <div className="relative group">
                 <input
                   type="color"
-                  value={formData.color || '#1E40AF'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                  value={formDataEventType.color || '#1E40AF'}
+                  onChange={(e) => setFormDataEventType(prev => ({ ...prev, color: e.target.value }))}
                   className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
                   title="Couleur de fond"
                 />
                 <div 
                   className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                  style={{ backgroundColor: formData.color || '#1E40AF' }}
+                  style={{ backgroundColor: formDataEventType.color || '#1E40AF' }}
                   title="Couleur de fond"
                 />
               </div>
@@ -266,14 +240,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               <div className="relative group">
                 <input
                   type="color"
-                  value={formData.borderColor || '#1E40AF'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, borderColor: e.target.value }))}
+                  value={formDataEventType.borderColor || '#1E40AF'}
+                  onChange={(e) => setFormDataEventType(prev => ({ ...prev, borderColor: e.target.value }))}
                   className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
                   title="Couleur de bordure"
                 />
                 <div 
                   className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                  style={{ backgroundColor: formData.borderColor || '#1E40AF' }}
+                  style={{ backgroundColor: formDataEventType.borderColor || '#1E40AF' }}
                   title="Couleur de bordure"
                 />
               </div>
@@ -282,14 +256,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               <div className="relative group">
                 <input
                   type="color"
-                  value={formData.textColor || '#FFFFFF'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, textColor: e.target.value }))}
+                  value={formDataEventType.textColor || '#FFFFFF'}
+                  onChange={(e) => setFormDataEventType(prev => ({ ...prev, textColor: e.target.value }))}
                   className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
                   title="Couleur de texte"
                 />
                 <div 
                   className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                  style={{ backgroundColor: formData.textColor || '#FFFFFF' }}
+                  style={{ backgroundColor: formDataEventType.textColor || '#FFFFFF' }}
                   title="Couleur de texte"
                 />
               </div>
@@ -301,19 +275,19 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         <div className="relative flex items-center w-full h-full">
           <AppointmentItem
             appointment={{
-              ...formData,
-              id: formData.id || 0,
+              ...formDataAppointment,
+              id: formDataAppointment.id || 0,
               top: 0,
-              title: formData.title || 'Nouveau rendez-vous',
-              libelle: formData.libelle || 'Libellé par défaut',
               startDate: new Date(),
+              eventTypeId: formDataEventType.id,
               endDate: new Date(addDays(new Date(), 3)),
             }}
+            eventType={formDataEventType}
             isFullDay={isFullDay}
             source='demo'
             isMobile={false}
             includeWeekend={false}
-            employee={{ id: formData.employeeId as number, name: employees.find(e => e.id === formData.employeeId)?.name || 'Employé' }}
+            employee={{ id: formDataAppointment.employeeId as number, name: employees.find(e => e.id === formDataAppointment.employeeId)?.name || 'Employé' }}
             onDoubleClick={() => {}}
             onResize={() => {}}
             handleContextMenu={() => {}}
@@ -331,8 +305,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 type="date"
                 id="startDate"
                 name="startDate"
-                max={format(formData.endDate, 'yyyy-MM-dd')}
-                value={format(formData.startDate, 'yyyy-MM-dd')}
+                max={format(formDataAppointment.endDate, 'yyyy-MM-dd')}
+                value={format(formDataAppointment.startDate, 'yyyy-MM-dd')}
                 onChange={handleDateChange}
                 required
                 className="w-full sm:w-[145px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
@@ -344,15 +318,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     id="intervalNameStart"
                     name="intervalName"
                     value={
-                      formData.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
-                      && formData.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
+                      formDataAppointment.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
+                      && formDataAppointment.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
                       ? 'morning' : 'afternoon'
                     }
                     onChange={e => {
                       const newHour = e.target.value === 'morning'
                         ? HALF_DAY_INTERVALS[0].startHour
                         : HALF_DAY_INTERVALS[1].startHour;
-                      setFormData(prev => ({
+                      setFormDataAppointment(prev => ({
                         ...prev,
                         startDate: setHours(startOfDay(prev.startDate), newHour),
                       }));
@@ -362,8 +336,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     <option value="morning">Matin</option>
                     <option value="afternoon"
                       disabled={
-                        format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
-                        formData.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
+                        format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
+                        formDataAppointment.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
                       }
                     >Après-midi</option>
                   </select>
@@ -378,8 +352,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 type="date"
                 id="endDate"
                 name="endDate"
-                min={format(formData.startDate, 'yyyy-MM-dd')}
-                value={format(formData.endDate, 'yyyy-MM-dd')}
+                min={format(formDataAppointment.startDate, 'yyyy-MM-dd')}
+                value={format(formDataAppointment.endDate, 'yyyy-MM-dd')}
                 onChange={handleDateChange}
                 required
                 className="w-full sm:w-[145px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
@@ -391,13 +365,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     id="intervalNameEnd"
                     name="intervalName"
                     value={
-                      formData.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
+                      formDataAppointment.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
                         ? 'morning'
                         : 'afternoon'
                     }
                     onChange={e => {
                       const isAfternoon = e.target.value === 'afternoon';
-                      setFormData(prev => {
+                      setFormDataAppointment(prev => {
                         const endDateDay = new Date(format(prev.endDate, 'yyyy-MM-dd') + 'T00:00:00');
                         let newEndDate;
                         if (isAfternoon) {
@@ -416,8 +390,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     <option 
                       value="morning"
                       disabled={
-                        format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
-                        formData.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
+                        format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
+                        formDataAppointment.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
                       }
                     >Matin</option>
                     <option value="afternoon">Après-midi</option>
@@ -434,7 +408,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           <select
             id="employeeId"
             name="employeeId"
-            value={formData.employeeId || ''}
+            value={formDataAppointment.employeeId || ''}
             onChange={handleChange}
             className="w-full sm:w-[305px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
           >
@@ -466,7 +440,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
       {/* Section extensible - Options avancées */}
       {isExpanded && (
-        <div className="w-full lg:w-[530px] p-4 rounded-xl flex flex-col gap-16 animate-in slide-in-from-right duration-300 lg:border-l border-gray-200 mt-4 lg:mt-0">
+        <div className="w-full lg:w-[530px] p-4 rounded-xl flex flex-col gap-1 animate-in slide-in-from-right duration-300 lg:border-l border-gray-200 mt-4 lg:mt-0">
           
           {/* Cases à cocher */}
           <div className="mb-[50px]">
@@ -490,8 +464,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           <div className="flex flex-col gap-6">
             <label className="text-sm font-medium text-gray-700">Annotations</label>
             <textarea
-              value={formData.description || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              value={formDataAppointment.description || ''}
+              onChange={(e) => setFormDataAppointment(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Ajoutez des annotations..."
               className="w-full h-24 p-3 border border-gray-300 rounded-xl resize-none focus:ring-[#009580] focus:border-[#009580] text-sm"
             />

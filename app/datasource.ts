@@ -24,7 +24,7 @@
  * @version 1.0.0
  */
 
-import { Appointment, Employee, Groupe, EventTemplate } from './calendrier/types/index';
+import { Appointment, Employee, Groupe, EventTemplate, EventType } from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -59,6 +59,26 @@ import wheelbarrow from './calendrier/image/Icones/Evenement_Bibliotheque/Wheelb
 import woodenLogging from './calendrier/image/Icones/Evenement_Bibliotheque/Wooden logging.svg'
 import wrenchPipe from './calendrier/image/Icones/Evenement_Bibliotheque/wrench pipe.svg'
 import wrench from './calendrier/image/Icones/Evenement_Bibliotheque/wrench.svg'
+
+// ===== PALETTE DE COULEURS =====
+
+/**
+ * Palette de 10 couleurs avec noms français pour les rendez-vous
+ * Couleurs optimisées pour le contraste et l'accessibilité
+ */
+export const colors: { color: string, name: string }[] = [
+  { color: "#3953aaff", name: "Bleu" },
+  { color: "#059669", name: "Vert" },
+  { color: "#ffab2a", name: "Orange" },
+  { color: "#C026D3", name: "Violet" },
+  { color: "#6B21A8", name: "Indigo" },
+  { color: "#EC4899", name: "Rose" },
+  { color: "#f75151", name: "Rouge" },
+  { color: "#0EA5E9", name: "Cyan" },
+  { color: "#F97316", name: "Orange foncé" },
+  { color: "#34D399", name: "Lime" },
+];
+
 
 // ===== CONFIGURATION DES ÉQUIPES =====
 
@@ -192,24 +212,50 @@ export const autres: EventTemplate[] = [
     { id: 15, label: 'Réception travaux',image: iconeChantier.src}
 ];
 
-// ===== PALETTE DE COULEURS =====
 
-/**
- * Palette de 10 couleurs avec noms français pour les rendez-vous
- * Couleurs optimisées pour le contraste et l'accessibilité
- */
-export const colors: { color: string, name: string }[] = [
-  { color: "#3953aaff", name: "Bleu" },
-  { color: "#059669", name: "Vert" },
-  { color: "#ffab2a", name: "Orange" },
-  { color: "#C026D3", name: "Violet" },
-  { color: "#6B21A8", name: "Indigo" },
-  { color: "#EC4899", name: "Rose" },
-  { color: "#f75151", name: "Rouge" },
-  { color: "#0EA5E9", name: "Cyan" },
-  { color: "#F97316", name: "Orange foncé" },
-  { color: "#34D399", name: "Lime" },
-];
+ // --- CRÉATION DES EVENTTYPES À PARTIR DES TEMPLATES ---
+  // Convertir les templates en EventTypes avec les nouvelles propriétés
+  const chantiersEventTypes: EventType[] = chantier.map((item, index) => ({
+    id: index + 1,
+    name: item.label,
+    label: item.label,
+    category: "Chantier",
+    image: item.image,
+    color: colors[index % colors.length]?.color || "#007BFF",
+    borderColor: colors[index % colors.length]?.color || "#007BFF",
+    textColor: "#FFFFFF",
+    defaultDescription: `Projet ${item.label}`
+  }));
+
+  const absencesEventTypes: EventType[] = absences.map((item, index) => ({
+    id: index + 21,
+    name: item.label,
+    label: item.label,
+    category: "Absence",
+    image: item.image,
+    color: colors[(index + chantier.length) % colors.length]?.color || "#DC2626",
+    borderColor: colors[(index + chantier.length) % colors.length]?.color || "#DC2626",
+    textColor: "#FFFFFF",
+    defaultDescription: `Absence: ${item.label}`
+  }));
+
+  const autresEventTypes: EventType[] = autres.map((item, index) => ({
+    id: index + 34,
+    name: item.label,
+    label: item.label,
+    category: "Autre",
+    image: item.image,
+    color: colors[(index + chantier.length + absences.length) % colors.length]?.color || "#059669",
+    borderColor: colors[(index + chantier.length + absences.length) % colors.length]?.color || "#059669",
+    textColor: "#FFFFFF",
+    defaultDescription: `Événement: ${item.label}`
+  }));
+
+  const allEventTypes: EventType[] = [...chantiersEventTypes, ...absencesEventTypes, ...autresEventTypes];
+
+// Export des EventTypes
+export { chantiersEventTypes, absencesEventTypes, autresEventTypes, allEventTypes };
+
 
 // ===== GÉNÉRATEUR DE RENDEZ-VOUS =====
 
@@ -253,8 +299,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       let isValid = false;
       let startDate: Date = new Date();
       let endDate: Date = new Date();
-      let eventTemplate: any = chantier[0]; // Valeur par défaut
-      let type: "Chantier" | "Absence" | "Autre" = 'Chantier';
+      let eventType: EventType = chantiersEventTypes[0]; // Valeur par défaut
       let duration: number = 1;
       
       // Essayer de trouver un créneau libre jusqu'à 100 tentatives
@@ -264,16 +309,13 @@ function generateAppointments(employees: Employee[]): Appointment[] {
         // Choisir le type d'événement
         const rand = Math.random();
         if (rand < 0.6) { // 60% chantiers
-          eventTemplate = chantier[Math.floor(Math.random() * chantier.length)];
-          type = 'Chantier';
+          eventType = chantiersEventTypes[Math.floor(Math.random() * chantiersEventTypes.length)];
           duration = Math.floor(Math.random() * 3) + 3; // 3 à 5 jours
         } else if (rand < 0.8) { // 20% absences
-          eventTemplate = absences[Math.floor(Math.random() * absences.length)];
-          type = 'Absence';
+          eventType = absencesEventTypes[Math.floor(Math.random() * absencesEventTypes.length)];
           duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
         } else { // 20% autres
-          eventTemplate = autres[Math.floor(Math.random() * autres.length)];
-          type = 'Autre';
+          eventType = autresEventTypes[Math.floor(Math.random() * autresEventTypes.length)];
           duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
         }
         
@@ -301,21 +343,13 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       if (isValid) {
         employeeAppointments.push({ start: new Date(startDate), end: new Date(endDate) });
         
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        
         appointments.push({
           id: appointmentId++,
-          title: eventTemplate.label,
-          libelle: eventTemplate.label,
-          description: `${type} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`,
+          description: eventType.defaultDescription || `${eventType.category} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`,
           startDate: startDate,
           endDate: endDate,
-          image: eventTemplate.image,
           employeeId: employee.id,
-          type: type,
-          color: color.color,
-          borderColor: color.color,
-          textColor: '#FFFFFF'
+          eventTypeId: eventType.id
         });
       }
     }

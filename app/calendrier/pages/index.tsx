@@ -66,7 +66,7 @@ import {
   addWeeks,
   addMonths,
 } from "date-fns";
-import { Appointment, Employee, HistoryAction, EventTemplate } from "../types";
+import { Appointment, Employee, HistoryAction, EventTemplate, EventType } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
 import Modal from "../components/Modal";
 import AppointmentForm from "../components/AppointmentForm";
@@ -79,7 +79,11 @@ import {
   chantier,
   absences,
   autres,
-  colors
+  colors,
+  allEventTypes,
+  chantiersEventTypes,
+  absencesEventTypes,
+  autresEventTypes,
 } from "../../datasource";
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
@@ -163,6 +167,43 @@ export default function HomePage() {
   const arrowKeyDirection = useRef<'left' | 'right' | null>(null);
   const continuousScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const isInfiniteScrollEnabled = useRef(false); // Désactivé par défaut jusqu'à la fin du scroll initial
+
+  const eventTypes = useRef<EventType[]>(allEventTypes);
+  
+ 
+
+  // --- FONCTIONS UTILITAIRES POUR EVENTTYPES ---
+  
+  /**
+   * Résoudre l'EventType d'un appointment à partir de son eventTypeId
+   * @param appointment - Le rendez-vous dont on veut récupérer le type
+   * @returns EventType correspondant ou premier type par défaut
+   */
+  const resolveEventType = useCallback((appointment: Appointment): EventType => {
+    return allEventTypes.find(et => et.id === appointment.eventTypeId) || allEventTypes[0];
+  }, []);
+
+  /**
+   * Met à jour tous les rendez-vous du même type EventType
+   * @param eventTypeId - ID du type d'événement à modifier
+   * @param updates - Modifications à appliquer
+   */
+  const handleEventTypeUpdate = useCallback((eventTypeId: number, updates: Partial<EventType>) => {
+    // Trouver le type d'événement et le mettre à jour globalement
+    const eventTypeIndex = allEventTypes.findIndex(et => et.id === eventTypeId);
+    if (eventTypeIndex !== -1) {
+      allEventTypes[eventTypeIndex] = { ...allEventTypes[eventTypeIndex], ...updates };
+      
+      // Déclencher une mise à jour de l'affichage
+      researchAppointments();
+      
+      // Afficher un message de confirmation
+      setModalInfo({ 
+        message: `Tous les rendez-vous de ce type ont été mis à jour`, 
+        color: 'blue' 
+      });
+    }
+  }, []);
 
   // Throttle ultra-performant avec requestAnimationFrame
   const throttledScrollHandler = useRef<(() => void) | null>(null);
@@ -332,11 +373,21 @@ export default function HomePage() {
       return;
     }
     const lowercasedQuery = searchInput.toLowerCase();
-    const filtered = appointments.current.filter((app) =>
-      app.title.toLowerCase().includes(lowercasedQuery)
+
+
+
+    setFilteredAppointments(
+      appointments.current
+        .map(app => {
+          const eventType = eventTypes.current.find(et => et.id === app.eventTypeId);
+          if (eventType && eventType.label.toLowerCase().includes(lowercasedQuery)) {
+            return app;
+          }
+          return undefined;
+        })
+        .filter((app): app is Appointment => app !== undefined)
     );
-    setFilteredAppointments(filtered);
-    console.log("Mise à jour filteredAppointments (recherche active):", filtered.length, "rendez-vous trouvés sur", appointments.current.length);
+    //console.log("Mise à jour filteredAppointments (recherche active):", filtered.length, "rendez-vous trouvés sur", appointments.current.length);
   }, [searchInput]);
 
   // Création de rendez-vous répétés
@@ -380,17 +431,11 @@ export default function HomePage() {
         days.forEach(day => {
           newAppointments.push({
           id: ++idCounter.current, // ID déterministe sans Date.now()
-          title: selectedAppointment?.title || "Rendez-vous répété",
-          libelle: selectedAppointment?.libelle || "Rendez-vous répété",
           description: selectedAppointment?.description || "Description du rendez-vous répété",
           startDate: day.start ,
           endDate: day.end,
-          image: selectedAppointment?.image,
-          employeeId: selectedAppointment?.employeeId,
-          type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
-          color: selectedAppointment?.color || "#1E40AF", // Couleur de fond du rendez-vous
-          borderColor: selectedAppointment?.borderColor || "#1E40AF", // Couleur de bordure du rendez-vous
-          textColor: selectedAppointment?.textColor || "#FFFFFF", // Couleur du texte par défaut
+          employeeId: selectedAppointment?.employeeId || 1,
+          eventTypeId: selectedAppointment?.eventTypeId || 1, // Premier type par défaut
         });
       });
 
@@ -422,17 +467,11 @@ export default function HomePage() {
         days.forEach(day => {
           newAppointments.push({
           id: ++idCounter.current, // ID déterministe sans Date.now()
-          title: selectedAppointment?.title || "Rendez-vous répété",
-          libelle: selectedAppointment?.libelle || "Rendez-vous répété",
           description: selectedAppointment?.description || "Description du rendez-vous répété",
           startDate: day.start ,
           endDate: day.end,
-          image: selectedAppointment?.image,
-          employeeId: selectedAppointment?.employeeId,
-          type: selectedAppointment?.type || "Chantier", // Type de rendez-vous
-          color: selectedAppointment?.color || "#1E40AF", // Couleur de fond du rendez-vous
-          borderColor: selectedAppointment?.borderColor || "#1E40AF", // Couleur de bordure du rendez-vous
-          textColor: selectedAppointment?.textColor || "#FFFFFF", // Couleur du texte par défaut
+          employeeId: selectedAppointment?.employeeId || 1,
+          eventTypeId: selectedAppointment?.eventTypeId || 1, // Premier type par défaut
         });
       });
 
@@ -576,23 +615,17 @@ export default function HomePage() {
 
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (title: string, startDate: Date, endDate: Date, employeeId: number, type: "Chantier" | "Absence" | "Autre", color: { color: string, borderColor: string, textColor:string }, libelle?: string, imageUrl?: string, saveToHistory: boolean = true) => {
+    (startDate: Date, endDate: Date, employeeId: number, eventTypeId: number, saveToHistory: boolean = true) => {
       // Générer un ID déterministe sans Date.now() ou Math.random()
       const id = ++idCounter.current;
       
       const newApp: Appointment = {
         id: id,
-        title,
-        libelle, // Ajout du libellé pour l'affichage
-        description: `Nouvel élément ${title}`,
+        description: `Nouvel rendez-vous`,
         startDate,
         endDate,
-        image: imageUrl,
         employeeId,
-        type,
-        color: color.color, // Couleur de fond du rendez-vous
-        textColor: color.textColor, // Couleur du texte du rendez-vous
-        borderColor: color.borderColor, // Couleur de bordure du rendez-vous
+        eventTypeId,
       };
       appointments.current = [...appointments.current, newApp];
       
@@ -641,18 +674,10 @@ export default function HomePage() {
 
     for (const day of days) {
       createAppointment?.(
-        clipboardAppointment.current.title,
         day.start,
         day.end,
         cell.employeeId,
-        clipboardAppointment.current.type || "Chantier",
-        {
-          color: clipboardAppointment.current.color || "#1E40AF",
-          borderColor: clipboardAppointment.current.borderColor || "#1E40AF",
-          textColor: clipboardAppointment.current.textColor || "#FFFFFF"
-        },
-        clipboardAppointment.current.libelle || "Rendez-vous copié",
-        clipboardAppointment.current.image
+        clipboardAppointment.current.eventTypeId || 1
       );
     }
   }, [createAppointment, isFullDay, nonWorkingDates]);
@@ -859,18 +884,10 @@ export default function HomePage() {
         for (let index = 1; index < days.length; index++) {
           const day = days[index];
           const newApp = createAppointment?.(
-            appointment.title, 
             day.start, 
             day.end, 
             newEmployeeId, 
-            appointment.type, 
-            {
-              color: appointment.color, 
-              borderColor: appointment.borderColor, 
-              textColor: appointment.textColor
-            },
-            appointment.libelle, 
-            appointment.image, 
+            appointment.eventTypeId,
             false
           );
           if (newApp) {
@@ -885,18 +902,10 @@ export default function HomePage() {
         for (let index = days.length - 2; index >= 0; index--) {
           const day = days[index];
           const newApp = createAppointment?.(
-            appointment.title, 
             day.start, 
             day.end, 
             newEmployeeId, 
-            appointment.type, 
-            {
-              color: appointment.color, 
-              borderColor: appointment.borderColor, 
-              textColor: appointment.textColor
-            },
-            appointment.libelle, 
-            appointment.image, 
+            appointment.eventTypeId,
             false
           );
           if (newApp) {
@@ -922,7 +931,15 @@ export default function HomePage() {
 
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback(
-    (appointment: Appointment, includeAllNonWorkingDays: boolean) => {
+    (appointment: Appointment, eventType: EventType, includeAllNonWorkingDays: boolean) => {
+
+    // Mettre à jour le EventType correspondant dans le cache local `eventTypes` (et global `allEventTypes`)
+    const existingIndex = eventTypes.current.findIndex(et => et.id === eventType.id);
+    if (existingIndex !== -1) {
+      // Fusionner les changements fournis par le formulaire (ne perdre aucune propriété non fournie)
+      eventTypes.current[existingIndex] = { ...eventTypes.current[existingIndex], ...eventType };
+    }
+
 
     const days = getWorkedDayIntervals(
       appointment.startDate, 
@@ -930,10 +947,7 @@ export default function HomePage() {
       isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
       includeAllNonWorkingDays,
       nonWorkingDates
-    );    
-
-    console.log(days);
-    
+    );        
     
     // Enregistrer l'état précédent pour l'historique
     let previousAppointment: Appointment | undefined;
@@ -945,18 +959,10 @@ export default function HomePage() {
     const createExtraAppointments = (fromIndex = 1) => {
       days.slice(fromIndex).forEach(day => {
         createAppointment(
-          appointment.title,
           day.start,
           day.end,
           appointment.employeeId as number,
-          appointment.type,
-          {
-            color: appointment.color,
-            borderColor: appointment.borderColor,
-            textColor: appointment.textColor
-          },
-          appointment.libelle,
-          appointment.image
+          appointment.eventTypeId
         );
       });
     };
@@ -973,10 +979,7 @@ export default function HomePage() {
               startDate: days[0].start,
               endDate: days[0].end,
               employeeId: appointment.employeeId,
-              image: appointment.image,
-              color: appointment.color,
-              borderColor: appointment.borderColor,
-              textColor: appointment.textColor,
+              eventTypeId: appointment.eventTypeId,
             };   
           }
           return app;
@@ -1052,7 +1055,7 @@ export default function HomePage() {
     // Sauvegarder l'état original pour l'historique
     const originalAppointment = { ...appointmentToDivide };
 
-    const { startDate, endDate, employeeId, image: imageUrl } = appointmentToDivide;
+    const { startDate, endDate, employeeId } = appointmentToDivide;
     const totalDuration = endDate.getTime() - startDate.getTime();
     const timeInterval = isFullDay ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
     const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000)); // Nombre d'intervalles de travail dans la durée totale
@@ -1066,17 +1069,11 @@ export default function HomePage() {
     const newAppointmentId = Date.now() + Math.floor(Math.random() * 1000);
     const newAppointment: Appointment = {
       id: newAppointmentId,
-      title: appointmentToDivide.title,
       description: appointmentToDivide.description,
       startDate: EndDate,
       endDate: endDate,
       employeeId: employeeId as number,
-      type: appointmentToDivide.type,
-      color: appointmentToDivide.color,
-      borderColor: appointmentToDivide.borderColor,
-      textColor: appointmentToDivide.textColor,
-      libelle: appointmentToDivide.libelle,
-      image: imageUrl
+      eventTypeId: appointmentToDivide.eventTypeId,
     };
 
     // Ajouter le nouveau RDV sans passer par createAppointment pour éviter l'historique
@@ -1127,19 +1124,24 @@ export default function HomePage() {
       const startDate = setHours(setMinutes(new Date(date), 0), startHour);
       const endDate = setHours(setMinutes(new Date(date), 0), endHour);
 
+      // Trouver le bon eventTypeId basé sur le typeEvent et le title
+      let eventTypeId = 1; // Par défaut
+      if (typeEvent === 'Chantier') {
+        const eventType = chantiersEventTypes.find(et => et.name === title);
+        eventTypeId = eventType ? eventType.id : chantiersEventTypes[0].id;
+      } else if (typeEvent === 'Absence') {
+        const eventType = absencesEventTypes.find(et => et.name === title);
+        eventTypeId = eventType ? eventType.id : absencesEventTypes[0].id;
+      } else {
+        const eventType = autresEventTypes.find(et => et.name === title);
+        eventTypeId = eventType ? eventType.id : autresEventTypes[0].id;
+      }
+
       createAppointment(
-        title, 
         startDate, 
         endDate, 
         employeeId, 
-        typeEvent,
-        {
-          color: colors[0].color, // Couleur par défaut
-          borderColor: colors[0].color, // Couleur de bordure par défaut
-          textColor: '#FFFFFF' // Couleur de texte par défaut
-        },
-        title, // Utiliser le titre comme libellé 
-        imageUrl
+        eventTypeId
       );
       
       // Fermer l'overlay après création
@@ -1799,6 +1801,7 @@ export default function HomePage() {
                     dayInTimeline={dayInTimeline}
                     HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
                     isFullDay={isFullDay}
+                    eventTypes={eventTypes.current}
                     //selectedCalendarId={selectedCalendarId}
                     isMobile={isMobile}
                     includeWeekend={includeWeekend}
@@ -2030,13 +2033,12 @@ export default function HomePage() {
            : (
             <AppointmentForm
               appointments={appointments.current}
-              appointment={selectedAppointmentForm}
-              initialDate={newAppointmentInfo?.date || null}
+              appointment={selectedAppointmentForm as Appointment}
+              eventTypes={eventTypes.current}
               initialEmployeeId={newAppointmentInfo?.employeeId || null}
               employees={employees.current}
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
               isFullDay={isFullDay}
-              colors={colors}
               nonWorkingDates={nonWorkingDates}
               onSave={handleSaveAppointment}
               onClose={() => setIsModalOpen(false)}

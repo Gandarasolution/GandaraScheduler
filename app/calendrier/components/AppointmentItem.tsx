@@ -21,7 +21,7 @@
 "use client";
 import React, { useState, useRef, memo, useEffect, useCallback, use } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
-import { Appointment, HalfDayInterval } from '../types';
+import { Appointment, EventType, HalfDayInterval } from '../types';
 import { addDays, eachDayOfInterval, isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../utils/constants';
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
@@ -40,6 +40,8 @@ interface AppointmentItemProps {
   isMobile: boolean;
   /** Inclure les week-ends dans le calcul de durée (optionnel) */
   includeWeekend?: boolean;
+  /** Type d'événement associé au rendez-vous */
+  eventType: EventType;
   /** Informations de l'employé assigné */
   employee: { id: number; name: string };
   /** Source d'appel du composant */
@@ -74,6 +76,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   appointment,
   isFullDay,
   isMobile,
+  eventType,
   employee,
   includeWeekend,
   source = 'calendar',
@@ -341,9 +344,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     setDragEndSafe(appointment.endDate);
   }, [appointment.startDate, appointment.endDate, setDragStartSafe, setDragEndSafe]);
   
-  const appointmentColor = appointment.color || '#1E40AF';
-  const appointmentBorderColor = appointment.borderColor || '#1E40AF';
-  const appointmentTextColor = appointment.textColor || '#FFFFFF';
+  const appointmentColor = eventType.color || '#1E40AF';
+  const appointmentBorderColor = eventType.borderColor || '#1E40AF';
+  const appointmentTextColor = eventType.textColor || '#FFFFFF';
 
   return (
     <div
@@ -375,7 +378,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         ${source === 'calendar' ? 'absolute' : 'block'}
         hover:shadow-xl
       `}
-      title={appointment.title}
+      title={eventType.label}
       style={{
         width: source === 'demo' ? '100%' : calculatedWidth,
         height: `${CELL_HEIGHT + 4}px`,
@@ -401,9 +404,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
 
       {/* Image éventuelle */}
-      {appointment.image ? (
+      {eventType.image ? (
         <img
-          src={appointment.image}
+          src={eventType.image}
           alt="Icône"
           className="w-8 h-8 object-cover"
         />
@@ -419,7 +422,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             color: isHovered ? appointmentColor : `${appointmentTextColor || '#FFFFFF'}`
           }}
         >
-          {appointment.libelle ? appointment.libelle : appointment.title}
+          {eventType.label.length > 20 ? eventType.label.slice(0, 20) + '…' : eventType.label}
         </span>
         <span 
           className="appointment-subtext text-xs truncate max-w-full transition-colors duration-200"

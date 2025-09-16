@@ -4,13 +4,13 @@ import { useDrop } from 'react-dnd';
 import { format, addDays, addHours } from 'date-fns';
 import AppointmentItem from './AppointmentItem';
 import InfoBubble from './InfoBubble';
-import { Appointment } from '../types';
+import { Appointment, EventType } from '../types';
 import {
   CELL_WIDTH, 
   CELL_HEIGHT, 
-  colors, 
   DAY_INTERVALS, 
   HALF_DAY_INTERVALS,
+  
 } from '../utils/constants';
 import { getNextWorkedDay } from '../utils/dates';
 import { useSelectedCell } from '../context/SelectedCellContext';
@@ -45,6 +45,7 @@ interface IntervalCellProps {
   intervalStart: Date;
   intervalEnd: Date;
   appointments: (Appointment & { top: number })[];
+  eventTypes: EventType[];
   isCellActive?: boolean;
   isWeekend: boolean;
   isFerie: boolean;
@@ -157,6 +158,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   isFerie,
   isFullDay,
   RowHeight,
+  eventTypes,
   nonWorkingDates,
   isNonWorkingDay,
   isMobile,
@@ -250,7 +252,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
     setSelectedCell({ date: intervalStart, employeeId: employee.id });
     setSelectedAppointment(null);
     if (appointments.length > 0) {
-      setBubbleContent(appointments.map((app) => app.title).join(', '));
+      setBubbleContent(eventTypes.map((type) => type.label).join(', '));
     } else {
       setBubbleContent(`Créneau du ${format(date, 'dd/MM')} ${!isFullDay ? (intervalName === 'morning' ? '- Matin' : '- Après-midi') : ''}`);
     }
@@ -308,6 +310,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
             appointment={app}
             isFullDay={isFullDay}
             includeWeekend={includeWeekend}
+            eventType={eventTypes.find(et => et.id === app.eventTypeId) as EventType}
             onDoubleClick={() => onAppointmentDoubleClick(app)}
             onResize={(id, newStartDate, newEndDate, resizeDirection) => {
               onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
