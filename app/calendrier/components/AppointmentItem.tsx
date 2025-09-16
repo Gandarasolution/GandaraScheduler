@@ -377,7 +377,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       `}
       title={appointment.title}
       style={{
-        width: source === 'demo' ? '157px' : calculatedWidth,
+        width: source === 'demo' ? '100%' : calculatedWidth,
         height: `${CELL_HEIGHT + 4}px`,
         minWidth: `${INTERVAL_WIDTH}px`,
         pointerEvents: isDragging ? 'none' : 'auto',

@@ -67,6 +67,39 @@
   }
 }
 
+// Styles pour le formulaire de rendez-vous responsive
+.appointment-form-container {
+  // Sur mobile, assurer que les éléments s'empilent correctement
+  @media (max-width: 640px) {
+    .flex-row {
+      flex-direction: column !important;
+    }
+    
+    .sm\:flex-row {
+      flex-direction: column !important;
+    }
+  }
+  
+  // Ajustements pour les sélecteurs de couleur sur mobile
+  .color-selector-group {
+    @media (max-width: 640px) {
+      flex-direction: row !important;
+      justify-content: center;
+      gap: 1rem;
+    }
+  }
+  
+  // Améliorer l'affichage du panel extensible
+  .expanded-panel {
+    @media (max-width: 1024px) {
+      border-left: none !important;
+      border-top: 1px solid #e5e7eb;
+      margin-top: 1rem;
+      padding-top: 1rem;
+    }
+  }
+}
+
 
 .drawer-container {
   position: fixed;

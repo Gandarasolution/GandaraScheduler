@@ -212,9 +212,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
   // Rendu du formulaire
   return (
-    <div className={`flex ${isExpanded ? 'flex-row' : 'flex-col'} gap-4 rounded-xl poppins transition-all duration-300`}>
+    <div className={`flex ${isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} gap-4 rounded-xl poppins transition-all duration-300`}>
       {/* Section principale du formulaire */}
-      <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-[340px]`}>
+      <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-full max-w-[380px] min-w-[320px]`}>
         {/* Flèche d'expansion */}
         <button
           type="button"
@@ -233,203 +233,210 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
           </svg>
         </button>
-        <div className="flex items-center gap-4 mr-2">
-          <div className='flex item-start w-[68px]'>Icône</div>
-          <CustomSelectWithImage
-            options={images}
-            value={formData.image || ''}
-            onChange={(value) => {setFormData(prev => ({ ...prev, image: value as string }))}}
-            placeholder="Sélectionnez une icône"
-            className="w-[65px] py-2 px-2"
-            showImages={true}
-          />
-        
-          {/* Sélecteurs de couleur */}
-          <div className="flex flex-col items-center gap-2">
-            {/* Couleur de fond */}
-            <div className="relative group">
-              <input
-                type="color"
-                value={formData.color || '#1E40AF'}
-                onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
-                title="Couleur de fond"
-              />
-              <div 
-                className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                style={{ backgroundColor: formData.color || '#1E40AF' }}
-                title="Couleur de fond"
-              />
-            </div>
-            {/* Couleur de bordure */}
-            <div className="relative group">
-              <input
-                type="color"
-                value={formData.borderColor || '#1E40AF'}
-                onChange={(e) => setFormData(prev => ({ ...prev, borderColor: e.target.value }))}
-                className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
-                title="Couleur de bordure"
-              />
-              <div 
-                className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                style={{ backgroundColor: formData.borderColor || '#1E40AF' }}
-                title="Couleur de bordure"
-              />
-            </div>
-          
-            {/* Couleur de texte */}
-            <div className="relative group">
-              <input
-                type="color"
-                value={formData.textColor || '#FFFFFF'}
-                onChange={(e) => setFormData(prev => ({ ...prev, textColor: e.target.value }))}
-                className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
-                title="Couleur de texte"
-              />
-              <div 
-                className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                style={{ backgroundColor: formData.textColor || '#FFFFFF' }}
-                title="Couleur de texte"
-              />
-            </div>
-          </div>
-          {/* Aperçu du rendez-vous */}
-          <div className="relative flex items-center w-full h-full ml-2">
-            <AppointmentItem
-              appointment={{
-                ...formData,
-                id: formData.id || 0,
-                top: 0,
-                title: formData.title || 'Nouveau rendez-vous',
-                libelle: formData.libelle || 'Libellé par défaut',
-                startDate: new Date(),
-                endDate: new Date(addDays(new Date(), 3)),
-              }}
-              isFullDay={isFullDay}
-              source='demo'
-              isMobile={false}
-              includeWeekend={false}
-              employee={{ id: formData.employeeId as number, name: employees.find(e => e.id === formData.employeeId)?.name || 'Employé' }}
-              onDoubleClick={() => {}}
-              onResize={() => {}}
-              handleContextMenu={() => {}}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mr-2">
+          <div className='flex item-start w-full sm:w-[68px]'>Icône</div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
+            <CustomSelectWithImage
+              options={images}
+              value={formData.image || ''}
+              onChange={(value) => {setFormData(prev => ({ ...prev, image: value as string }))}}
+              placeholder="Sélectionnez une icône"
+              className="w-full sm:w-[65px] py-2 px-2"
+              showImages={true}
             />
+          
+            {/* Sélecteurs de couleur */}
+            <div className="flex flex-row sm:flex-col items-center gap-2">
+              {/* Couleur de fond */}
+              <div className="relative group">
+                <input
+                  type="color"
+                  value={formData.color || '#1E40AF'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                  className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
+                  title="Couleur de fond"
+                />
+                <div 
+                  className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                  style={{ backgroundColor: formData.color || '#1E40AF' }}
+                  title="Couleur de fond"
+                />
+              </div>
+              {/* Couleur de bordure */}
+              <div className="relative group">
+                <input
+                  type="color"
+                  value={formData.borderColor || '#1E40AF'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, borderColor: e.target.value }))}
+                  className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
+                  title="Couleur de bordure"
+                />
+                <div 
+                  className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                  style={{ backgroundColor: formData.borderColor || '#1E40AF' }}
+                  title="Couleur de bordure"
+                />
+              </div>
+            
+              {/* Couleur de texte */}
+              <div className="relative group">
+                <input
+                  type="color"
+                  value={formData.textColor || '#FFFFFF'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, textColor: e.target.value }))}
+                  className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
+                  title="Couleur de texte"
+                />
+                <div 
+                  className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                  style={{ backgroundColor: formData.textColor || '#FFFFFF' }}
+                  title="Couleur de texte"
+                />
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* Aperçu du rendez-vous - Repositionné sous les couleurs */}
+        <div className="relative flex items-center w-full h-full">
+          <AppointmentItem
+            appointment={{
+              ...formData,
+              id: formData.id || 0,
+              top: 0,
+              title: formData.title || 'Nouveau rendez-vous',
+              libelle: formData.libelle || 'Libellé par défaut',
+              startDate: new Date(),
+              endDate: new Date(addDays(new Date(), 3)),
+            }}
+            isFullDay={isFullDay}
+            source='demo'
+            isMobile={false}
+            includeWeekend={false}
+            employee={{ id: formData.employeeId as number, name: employees.find(e => e.id === formData.employeeId)?.name || 'Employé' }}
+            onDoubleClick={() => {}}
+            onResize={() => {}}
+            handleContextMenu={() => {}}
+          />
         </div>
 
       
 
         {/* Dates et créneaux */}
         <div className="flex flex-col gap-4 bg-white">
-          <div className="flex-1 flex flex-row gap-4 items-center">
-            <label htmlFor="startDate" className={"block text-sm font-medium mr-auto"}>Début</label>
-            <input
-              type="date"
-              id="startDate"
-              name="startDate"
-              max={format(formData.endDate, 'yyyy-MM-dd')}
-              value={format(formData.startDate, 'yyyy-MM-dd')}
-              onChange={handleDateChange}
-              required
-              className="w-[145px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
-            />
+          <div className="flex-1 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <label htmlFor="startDate" className={"block text-sm font-medium sm:mr-auto"}>Début</label>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <input
+                type="date"
+                id="startDate"
+                name="startDate"
+                max={format(formData.endDate, 'yyyy-MM-dd')}
+                value={format(formData.startDate, 'yyyy-MM-dd')}
+                onChange={handleDateChange}
+                required
+                className="w-full sm:w-[145px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
+              />
         
-            <div className='w-[95px]'>
-              {!isFullDay && (
-                <select
-                  id="intervalNameStart"
-                  name="intervalName"
-                  value={
-                    formData.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
-                    && formData.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
-                    ? 'morning' : 'afternoon'
-                  }
-                  onChange={e => {
-                    const newHour = e.target.value === 'morning'
-                      ? HALF_DAY_INTERVALS[0].startHour
-                      : HALF_DAY_INTERVALS[1].startHour;
-                    setFormData(prev => ({
-                      ...prev,
-                      startDate: setHours(startOfDay(prev.startDate), newHour),
-                    }));
-                  }}
-                  className="w-full p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="morning">Matin</option>
-                  <option value="afternoon"
-                    disabled={
-                      format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
-                      formData.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
+              <div className='w-full sm:w-[145px]'>
+                {!isFullDay && (
+                  <select
+                    id="intervalNameStart"
+                    name="intervalName"
+                    value={
+                      formData.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
+                      && formData.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
+                      ? 'morning' : 'afternoon'
                     }
-                  >Après-midi</option>
-                </select>
-              )}
+                    onChange={e => {
+                      const newHour = e.target.value === 'morning'
+                        ? HALF_DAY_INTERVALS[0].startHour
+                        : HALF_DAY_INTERVALS[1].startHour;
+                      setFormData(prev => ({
+                        ...prev,
+                        startDate: setHours(startOfDay(prev.startDate), newHour),
+                      }));
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="morning">Matin</option>
+                    <option value="afternoon"
+                      disabled={
+                        format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
+                        formData.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
+                      }
+                    >Après-midi</option>
+                  </select>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex-1 flex flex-row gap-4 items-center">
-            <label htmlFor="endDate" className="block text-sm font-medium mr-auto">Fin</label>
-            <input
-              type="date"
-              id="endDate"
-              name="endDate"
-              min={format(formData.startDate, 'yyyy-MM-dd')}
-              value={format(formData.endDate, 'yyyy-MM-dd')}
-              onChange={handleDateChange}
-              required
-              className="w-[145px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 "
-            />
+          <div className="flex-1 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <label htmlFor="endDate" className="block text-sm font-medium sm:mr-auto">Fin</label>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <input
+                type="date"
+                id="endDate"
+                name="endDate"
+                min={format(formData.startDate, 'yyyy-MM-dd')}
+                value={format(formData.endDate, 'yyyy-MM-dd')}
+                onChange={handleDateChange}
+                required
+                className="w-full sm:w-[145px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
+              />
 
-            <div className='w-[95px]'>
-              {!isFullDay && (
-                <select
-                  id="intervalNameEnd"
-                  name="intervalName"
-                  value={
-                    formData.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
-                      ? 'morning'
-                      : 'afternoon'
-                  }
-                  onChange={e => {
-                    const isAfternoon = e.target.value === 'afternoon';
-                    setFormData(prev => {
-                      const endDateDay = new Date(format(prev.endDate, 'yyyy-MM-dd') + 'T00:00:00');
-                      let newEndDate;
-                      if (isAfternoon) {
-                        newEndDate = setHours(setMinutes(setSeconds(endDateDay, 59), 59), HALF_DAY_INTERVALS[1].endHour - 1);
-                      } else {
-                        newEndDate = setHours(setMinutes(setSeconds(endDateDay, 0), 0), HALF_DAY_INTERVALS[0].endHour);
-                      }
-                      return {
-                        ...prev,
-                        endDate: newEndDate,
-                      };
-                    });
-                  }}
-                  className="w-full p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
-                >
-                  <option 
-                    value="morning"
-                    disabled={
-                      format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
-                      formData.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
+              <div className='w-full sm:w-[145px]'>
+                {!isFullDay && (
+                  <select
+                    id="intervalNameEnd"
+                    name="intervalName"
+                    value={
+                      formData.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
+                        ? 'morning'
+                        : 'afternoon'
                     }
-                  >Matin</option>
-                  <option value="afternoon">Après-midi</option>
-                </select>
-              )}
+                    onChange={e => {
+                      const isAfternoon = e.target.value === 'afternoon';
+                      setFormData(prev => {
+                        const endDateDay = new Date(format(prev.endDate, 'yyyy-MM-dd') + 'T00:00:00');
+                        let newEndDate;
+                        if (isAfternoon) {
+                          newEndDate = setHours(setMinutes(setSeconds(endDateDay, 59), 59), HALF_DAY_INTERVALS[1].endHour - 1);
+                        } else {
+                          newEndDate = setHours(setMinutes(setSeconds(endDateDay, 0), 0), HALF_DAY_INTERVALS[0].endHour);
+                        }
+                        return {
+                          ...prev,
+                          endDate: newEndDate,
+                        };
+                      });
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                  >
+                    <option 
+                      value="morning"
+                      disabled={
+                        format(formData.startDate, 'yyyy-MM-dd') === format(formData.endDate, 'yyyy-MM-dd') &&
+                        formData.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
+                      }
+                    >Matin</option>
+                    <option value="afternoon">Après-midi</option>
+                  </select>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Sélecteur d'employé */}
-        <div className="flex flex-row items-center">
-          <label htmlFor="employeeId" className="block text-sm font-medium mr-auto">Affecté</label>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+          <label htmlFor="employeeId" className="block text-sm font-medium sm:mr-auto">Affecté</label>
           <select
             id="employeeId"
             name="employeeId"
             value={formData.employeeId || ''}
             onChange={handleChange}
-            className="w-[255px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
+            className="w-full sm:w-[305px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
           >
             {employees.map(employee => (
               <option key={employee.id} value={employee.id}>
@@ -440,30 +447,30 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </div>
 
         {/* Boutons d'action */}
-        <div className="flex justify-between mt-5">
+        <div className="flex flex-col sm:flex-row justify-between gap-3 mt-5">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-[#009580] text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
+          >
+            {appointment ? 'Enregistrer' : 'Créer'}
+          </button>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-[#009580] text-white rounded-xl w-[110px] flex items-center poppins text-[14px] justify-center"
+            className="px-4 py-2 bg-[#009580] text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
           >
             Annuler
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-[#009580] text-white rounded-xl w-[110px] flex items-center poppins text-[14px] justify-center"
-          >
-            {appointment ? 'Enregistrer' : 'Créer'}
           </button>
         </div>
       </form>
 
       {/* Section extensible - Options avancées */}
       {isExpanded && (
-        <div className="w-[530px] p-4 rounded-xl flex flex-col gap-4 animate-in slide-in-from-right duration-300 border-l border-gray-200 ">
+        <div className="w-full lg:w-[530px] p-4 rounded-xl flex flex-col gap-16 animate-in slide-in-from-right duration-300 lg:border-l border-gray-200 mt-4 lg:mt-0">
           
           {/* Cases à cocher */}
           <div className="mb-[50px]">
-            <label className="flex items-center space-x-2 cursor-pointer">
+            <label className="flex items-start space-x-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={includeAllNonWorkingDays}
@@ -473,9 +480,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   // Synchroniser avec les anciens états pour compatibilité
                   
                 }}
-                className="w-4 h-4 text-[#009580] border-gray-300 rounded focus:ring-[#009580]"
+                className="w-4 h-4 text-[#009580] border-gray-300 rounded focus:ring-[#009580] mt-0.5"
               />
-              <span className="text-sm text-gray-700">Inclure les week-ends, jours fériés et jours non travaillés</span>
+              <span className="text-sm text-gray-700 leading-tight">Inclure les week-ends, jours fériés et jours non travaillés</span>
             </label>
           </div>
 
