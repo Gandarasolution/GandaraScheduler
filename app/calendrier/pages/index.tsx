@@ -170,40 +170,6 @@ export default function HomePage() {
 
   const eventTypes = useRef<EventType[]>(allEventTypes);
   
- 
-
-  // --- FONCTIONS UTILITAIRES POUR EVENTTYPES ---
-  
-  /**
-   * Résoudre l'EventType d'un appointment à partir de son eventTypeId
-   * @param appointment - Le rendez-vous dont on veut récupérer le type
-   * @returns EventType correspondant ou premier type par défaut
-   */
-  const resolveEventType = useCallback((appointment: Appointment): EventType => {
-    return allEventTypes.find(et => et.id === appointment.eventTypeId) || allEventTypes[0];
-  }, []);
-
-  /**
-   * Met à jour tous les rendez-vous du même type EventType
-   * @param eventTypeId - ID du type d'événement à modifier
-   * @param updates - Modifications à appliquer
-   */
-  const handleEventTypeUpdate = useCallback((eventTypeId: number, updates: Partial<EventType>) => {
-    // Trouver le type d'événement et le mettre à jour globalement
-    const eventTypeIndex = allEventTypes.findIndex(et => et.id === eventTypeId);
-    if (eventTypeIndex !== -1) {
-      allEventTypes[eventTypeIndex] = { ...allEventTypes[eventTypeIndex], ...updates };
-      
-      // Déclencher une mise à jour de l'affichage
-      researchAppointments();
-      
-      // Afficher un message de confirmation
-      setModalInfo({ 
-        message: `Tous les rendez-vous de ce type ont été mis à jour`, 
-        color: 'blue' 
-      });
-    }
-  }, []);
 
   // Throttle ultra-performant avec requestAnimationFrame
   const throttledScrollHandler = useRef<(() => void) | null>(null);
@@ -369,7 +335,6 @@ export default function HomePage() {
         
     if (!searchInput) {
       setFilteredAppointments(appointments.current);
-      console.log("Mise à jour filteredAppointments (pas de recherche):", appointments.current.length, "rendez-vous");
       return;
     }
     const lowercasedQuery = searchInput.toLowerCase();
@@ -495,8 +460,6 @@ export default function HomePage() {
     if (history.current.length > maxHistorySize) {
       history.current.shift();
     }
-
-    console.log(history.current);
     
   }, []);
 
@@ -949,6 +912,8 @@ export default function HomePage() {
       nonWorkingDates
     );        
     
+    console.log("Jours travaillés calculés pour le rendez-vous :", days);
+    
     // Enregistrer l'état précédent pour l'historique
     let previousAppointment: Appointment | undefined;
     if (appointment.id) {
@@ -1182,6 +1147,7 @@ export default function HomePage() {
 
     if (origin === 'appointment' && appointment && cell) {      
       setSelectedAppointment(appointment);
+      setSelectedCell(cell);
       setContextMenu({
         x: e.clientX,
         y: e.clientY,
@@ -2088,6 +2054,10 @@ export default function HomePage() {
           eventSearchInput={eventSearchInput}
           setEventSearchInput={setEventSearchInput}
           filteredEvents={filteredEvents}
+          selectedCell={selectedCell}
+          addAppointmentFromSearch={handleSaveAppointment}
+          eventTypes={eventTypes.current}
+          isFullDay={isFullDay}
         />
       </div>
     </DndProvider>
@@ -2292,6 +2262,10 @@ type SearchOverlayProps = {
   eventSearchInput: string;
   setEventSearchInput: (input: string) => void;
   filteredEvents: (EventTemplate & { type: "Chantier" | "Absence" | "Autre" })[];
+  selectedCell:{ employeeId: number; date: Date } | null
+  addAppointmentFromSearch: (appointment: Appointment, eventType: EventType, includeAllNonWorkingDays: boolean) => void;
+  eventTypes: EventType[];
+  isFullDay: boolean;
 };
 
 const SearchOverlay: React.FC<SearchOverlayProps> = ({
@@ -2300,6 +2274,10 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
   eventSearchInput,
   setEventSearchInput,
   filteredEvents,
+  selectedCell,
+  addAppointmentFromSearch,
+  eventTypes,
+  isFullDay
 }) => {
   const dragDropManager = useDragDropManager();
   const [isDragging, setIsDragging] = useState(false);
@@ -2374,7 +2352,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
         <div className=" p-3"></div>
         {/* Liste des événements filtrés */}
-        <div className="flex-1 overflow-y-auto px-3 py-2 bg-white rounded-2xl">
+        <div className="flex-1 overflow-y-auto px-2 py-2 bg-white rounded-2xl">
           {eventSearchInput.trim() === '' ? (
             <div className="text-center text-gray-500 py-8">
               <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2394,12 +2372,40 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
           ) : (
             <div className="grid gap-3">
               {filteredEvents.map((event, index) => (
-                <DraggableSource
-                  key={`${event.label}-${event.id}-${index}`}
-                  id={event.id}
-                  title={event.label}
-                  type={event.type}
-                />
+                <div 
+                  key={`${event.label}-${event.id}-${index}`} 
+                  className="w-full flex justify-between hover:bg-[#e7f4f2] rounded-xl transition-colors px-2"
+                >
+                  <DraggableSource
+                    key={`${event.label}-${event.id}-${index}`}
+                    id={event.id}
+                    title={event.label}
+                    type={event.type}
+                  />
+                  {selectedCell && (
+                    <div className="h-full">
+                      <button
+                        className="px-2 py-1 text-xl cursor-pointer h-full"
+                        onClick={() => {
+                          addAppointmentFromSearch(
+                            {
+                              description: event.label,
+                              startDate: new Date(selectedCell.date),
+                              endDate: new Date(selectedCell.date.setHours(isFullDay ? 23 : 11, 59, 59)),
+                              employeeId: selectedCell.employeeId,
+                              eventTypeId: event.id,
+                            } as Appointment,
+                            eventTypes.find(et => et.id === event.id)!,
+                            false
+                          )
+                          onClose()
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}

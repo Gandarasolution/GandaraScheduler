@@ -51,7 +51,7 @@ interface AppointmentItemProps {
   /** Callback appelé lors du redimensionnement */
   onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
   /** Callback appelé lors du clic droit (menu contextuel) */
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null) => void;
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
 }
 
 /**
@@ -365,7 +365,55 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           onDoubleClick();
         }
       }}
-      onContextMenu={(e) => handleContextMenu(e, 'appointment', appointment)}
+      onContextMenu={(e) => {
+        // Calculer la cellule sous la souris lors du clic droit
+        const rect = e.currentTarget.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        
+        // Calculer l'intervalle sous la souris
+        const intervalIndex = Math.floor(mouseX / INTERVAL_WIDTH);
+        const totalIntervals = getIntervalCount(appointment.startDate, appointment.endDate);
+        const clampedIntervalIndex = Math.max(0, Math.min(intervalIndex, totalIntervals - 1));
+        
+        // Calculer la date correspondant à cet intervalle
+        const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+        let targetDate = new Date(appointment.startDate);
+        let currentIntervalCount = 0;
+        
+        // Parcourir les intervalles depuis le début du RDV jusqu'à celui sous la souris
+        while (currentIntervalCount < clampedIntervalIndex) {
+          // Trouver l'intervalle actuel
+          let currentIntervalIdx = intervals.findIndex(interval =>
+            targetDate.getHours() >= interval.startHour && targetDate.getHours() < interval.endHour
+          );
+          if (currentIntervalIdx === -1) currentIntervalIdx = 0;
+          
+          // Passer à l'intervalle suivant
+          currentIntervalIdx++;
+          if (currentIntervalIdx >= intervals.length) {
+            // Passer au jour suivant
+            targetDate = addDays(targetDate, 1);
+            targetDate.setHours(intervals[0].startHour, 0, 0, 0);
+            
+            // Vérifier si on doit ignorer les week-ends
+            while (!includeWeekend && isWeekend(targetDate)) {
+              targetDate = addDays(targetDate, 1);
+            }
+          } else {
+            // Rester sur le même jour, changer l'heure
+            targetDate.setHours(intervals[currentIntervalIdx].startHour, 0, 0, 0);
+          }
+          currentIntervalCount++;
+        }
+        
+        // Créer l'objet cellule correspondant à la position sous la souris
+        const cellUnderMouse = {
+          employeeId: appointment.employeeId as number,
+          date: new Date(targetDate)
+        };
+        
+        handleContextMenu(e, 'appointment', appointment, cellUnderMouse);
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`

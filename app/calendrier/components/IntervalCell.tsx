@@ -315,7 +315,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
             onResize={(id, newStartDate, newEndDate, resizeDirection) => {
               onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
             }}
-            handleContextMenu={(e, origin, appointment) => handleContextMenu && handleContextMenu(e, origin, appointment, { employeeId: employee.id, date: intervalStart })}
+            handleContextMenu={handleContextMenu ?? (() => {})}
             isMobile={isMobile}
           />
         ))}
