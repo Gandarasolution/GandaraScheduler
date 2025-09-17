@@ -300,7 +300,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         <div className="flex flex-col gap-4 bg-white">
           <div className="flex-1 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <label htmlFor="startDate" className={"block text-sm font-medium sm:mr-auto"}>Début</label>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
               <input
                 type="date"
                 id="startDate"
@@ -347,7 +347,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           </div>
           <div className="flex-1 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <label htmlFor="endDate" className="block text-sm font-medium sm:mr-auto">Fin</label>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
               <input
                 type="date"
                 id="endDate"
@@ -403,7 +403,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </div>
 
         {/* Sélecteur d'employé */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <label htmlFor="employeeId" className="block text-sm font-medium sm:mr-auto">Affecté</label>
           <select
             id="employeeId"

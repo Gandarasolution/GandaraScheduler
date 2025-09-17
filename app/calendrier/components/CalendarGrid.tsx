@@ -28,6 +28,7 @@ import {
   isToday,
 } from 'date-fns';
 import DayCell from './DayCell'; // Cellule individuelle du calendrier
+import TimelineFrame from './TimelineFrame'; // Cadre timeline réutilisable
 import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, DimensionItem, EventType } from '../types';
 import { fr } from 'date-fns/locale';
 import {CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../utils/constants'; // Constantes de style
@@ -237,10 +238,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   
 
-  // Trouve l'index du jour courant dans la timeline
-  const todayIndex = dayInTimeline.findIndex(day => 
-    format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-  );
+  // Trouve l'index du jour courant dans la timeline - déplacé vers TimelineFrame
+  // const todayIndex = dayInTimeline.findIndex(day => 
+  //   format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+  // );
 
   // Ouvre/ferme un élément de dimension dans la vue
   const toggleItem = (itemId: string | number) => {
@@ -251,14 +252,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     );
   };   
 
-  // Calcule le numéro de semaine pour un jour donné
-  const getWeekNumber = (d: Date) => {
-      d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const dayNum = d.getUTCDay() || 7;
-      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-      return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
-  };
+  // Calcule le numéro de semaine pour un jour donné - déplacé vers TimelineFrame
+  // const getWeekNumber = (d: Date) => {
+  //     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  //     const dayNum = d.getUTCDay() || 7;
+  //     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  //     const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  //     return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
+  // };
 
   /**
    * Calcule le nombre maximal de rendez-vous qui se chevauchent dans une liste donnée.
@@ -492,35 +493,35 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return assignAppointmentTops(appointments, isMobile, dayInTimeline);
   }, [assignAppointmentTops, appointments, isMobile, dayInTimeline]);
 
-  // Calcule les mois et leur portée en jours
-  const monthsInTimeline = useMemo(() => {
-    const months: { name: string; span: number; key: string }[] = [];
-    if (dayInTimeline.length === 0) return months;
+  // Calcule les mois et leur portée en jours - déplacé vers TimelineFrame
+  // const monthsInTimeline = useMemo(() => {
+  //   const months: { name: string; span: number; key: string }[] = [];
+  //   if (dayInTimeline.length === 0) return months;
 
-    let currentMonth = format(dayInTimeline[0], 'yyyy-MM', { locale: fr });
-    let currentMonthStartDayIndex = 0;
+  //   let currentMonth = format(dayInTimeline[0], 'yyyy-MM', { locale: fr });
+  //   let currentMonthStartDayIndex = 0;
 
-    dayInTimeline.forEach((day, index) => {
-      const monthKey = format(day, 'yyyy-MM', { locale: fr });
-      if (monthKey !== currentMonth) {
-        months.push({
-          name: format(dayInTimeline[currentMonthStartDayIndex], 'MMMM yyyy', { locale: fr }),
-          span: index - currentMonthStartDayIndex,
-          key: currentMonth,
-        });
-        currentMonth = monthKey;
-        currentMonthStartDayIndex = index;
-      }
-      if (index === dayInTimeline.length - 1) {
-        months.push({
-          name: format(day, 'MMMM yyyy', { locale: fr }),
-          span: index - currentMonthStartDayIndex + 1,
-          key: currentMonth,
-        });
-      }
-    });
-    return months;
-  }, [dayInTimeline]);
+  //   dayInTimeline.forEach((day, index) => {
+  //     const monthKey = format(day, 'yyyy-MM', { locale: fr });
+  //     if (monthKey !== currentMonth) {
+  //       months.push({
+  //         name: format(dayInTimeline[currentMonthStartDayIndex], 'MMMM yyyy', { locale: fr }),
+  //         span: index - currentMonthStartDayIndex,
+  //         key: currentMonth,
+  //       });
+  //       currentMonth = monthKey;
+  //       currentMonthStartDayIndex = index;
+  //     }
+  //     if (index === dayInTimeline.length - 1) {
+  //       months.push({
+  //         name: format(day, 'MMMM yyyy', { locale: fr }),
+  //         span: index - currentMonthStartDayIndex + 1,
+  //         key: currentMonth,
+  //       });
+  //     }
+  //   });
+  //   return months;
+  // }, [dayInTimeline]);
 
   
   const handleScrollY = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -583,9 +584,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   `}
                 >
                   <span className="day-title">{format(day, 'EEEE d MMMM', { locale: fr })}</span>
-                  {day.getDay() === 1 && ( // Display week number only on Mondays
-                    <div className="week-number">{getWeekNumber(day)}</div>
-                  )}
+                  {/* Numéro de semaine retiré temporairement pour simplifier */}
                 </div>
 
                 {/* DayCell for the single employee */}
@@ -729,130 +728,28 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             );
           })}
         </div>
-        {/* Timeline principale : scroll horizontal indépendant, barre toujours visible */}
-        <div className="flex-1 min-w-0 flex flex-col pr-7 rounded-2xl poppins">
-          {/* Conteneur scrollable horizontal, hauteur fixe pour garder la barre visible */}
-          <div className='p-4 border rounded-4xl bg-white w-full h-full border-[#dfdedeff]'>
-            <div 
-              className="
-              relative w-full overflow-x-scroll overflow-y-auto 
-              rounded-3xl border h-full border-[#dfdedeff]"
-              style={{
-                scrollbarGutter: 'stable',
-              }}
-              onScroll={(e) => {
-                handleScroll();
-                handleScrollY(e);              
-              }}
-              ref={mainScrollRef}
-            >
-              {/* Sticky month header */}
-              <div
-                className="grid sticky top-0 z-20 bg-white border-gray-300"
-                style={{
-                  gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-                  minHeight: '40px',
-                }}
-              >
-                {monthsInTimeline.map((month) => {
-                  const o = month.name.split(' ');
-                  const monthName = o[0].charAt(0).toUpperCase() + o[0].slice(1);
-                  const year = o[1];
-                  return (
-                    <div
-                      key={month.key}
-                      className="
-                        col-span-full flex items-center justify-start py-2 text-[14px] poppins
-                        bg-gray-50 border-r border-gray-200 bg-white border-b
-                      "
-                      style={{ gridColumn: `span ${month.span}` }}
-                    >
-                      <div
-                        className="sticky left-0 z-30 pl-4"
-                        style={{ minWidth: 120 }} // ajuste la largeur si besoin
-                      >
-                        <span className='font-extrabold'>{monthName}</span>
-                        <span className='text-gray-500 ml-1'>{' '}</span>
-                        <span className='font-medium'>{year}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Sticky day header below month header */}
-              <div
-                className="grid sticky top-[40px] z-20 bg-white border-gray-300"
-                style={{
-                  gridTemplateColumns: `repeat(${dayInTimeline.length}, ${CELL_WIDTH}px)`,
-                  minHeight: '56px',
-                }}
-              >
-                {dayInTimeline.map((day, index) => (
-                  <div
-                    key={`header-day-${format(day, 'yyyy-MM-dd')}`}
-                    className={`
-                      flex flex-col justify-end border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1
-                      ${(isToday(day) && 'bg-[#ffcdde]') || (isWeekend(day) ? 'bg-[#f6f6f6]' : 'bg-white')}
-                      relative
-                      day-cell
-                    `}
-                    style={{ 
-                      width: CELL_WIDTH + 'px', 
-                      height: 'auto',
-                    }}
-                  >
-                    {/* Affiche le numéro de semaine en début de semaine */}
-                    {day.getDay() === 1 && (
-                      <span
-                        className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
-                        style={{
-                          width: '24px',
-                          height: '24px',
-                          background: '#23adde',
-                        }}
-                      >
-                        {getWeekNumber(day)}
-                      </span>
-                    )}
-                    <span className="block font-bold text-lg">{format(day, 'd', { locale: fr })}</span>
-                    <span className="block text-xs text-gray-500">{
-                      format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() 
-                      + 
-                      format(day, 'EEE', { locale: fr }).slice(1).replace('.', '')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              {/* Conteneur relatif pour la table et la ligne du jour */}
-              <div className="relative">
-                {/* Ligne rouge verticale pour la date du jour */}
-                {todayIndex !== -1 && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${todayIndex * CELL_WIDTH + CELL_WIDTH / 2}px`,
-                      top: 0,
-                      width: '3px',
-                      height: '100%',
-                      background: '#ffcdde',
-                      zIndex: 10,
-                      borderRadius: '2px',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                )}
-                
-                {/* Main calendar table - Structure optimisée */}
-                <table 
-                  className="calendar-table bg-white relative"
-                  style={{
-                    width: `${dayInTimeline.length * CELL_WIDTH}px`,
-                    tableLayout: 'fixed',
-                    borderCollapse: 'collapse'
-                  }}
-                  onMouseOver={handleMouseOver}
-                  onMouseOut={handleMouseOut}
-                >
+        {/* Timeline principale avec TimelineFrame réutilisable */}
+        <TimelineFrame
+          dayInTimeline={dayInTimeline}
+          mainScrollRef={mainScrollRef}
+          onScroll={(e) => {
+            handleScroll();
+            handleScrollY(e);              
+          }}
+          showTodayLine={true}
+          todayLineColor="#ffcdde"
+        >
+          {/* Main calendar table - Structure optimisée */}
+          <table 
+            className="calendar-table bg-white relative"
+            style={{
+              width: `${dayInTimeline.length * CELL_WIDTH}px`,
+              tableLayout: 'fixed',
+              borderCollapse: 'collapse'
+            }}
+            onMouseOver={handleMouseOver}
+            onMouseOut={handleMouseOut}
+          >
                 
                 <tbody>
                   {/* Générer les lignes du tableau pour chaque dimension */}
@@ -950,11 +847,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     return rows;
                   })}
                 </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
+              </table>
+            </TimelineFrame>
       </div>
     );
   }

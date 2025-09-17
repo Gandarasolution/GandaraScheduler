@@ -68,6 +68,7 @@ import {
 } from "date-fns";
 import { Appointment, Employee, HistoryAction, EventTemplate, EventType } from "../types";
 import CalendarGrid from "../components/CalendarGrid";
+import ChantierTableFrame from "../components/ChantierTableFrame";
 import Modal from "../components/Modal";
 import AppointmentForm from "../components/AppointmentForm";
 import DraggableSource from "../components/DraggableSource";
@@ -84,6 +85,8 @@ import {
   chantiersEventTypes,
   absencesEventTypes,
   autresEventTypes,
+  chantiersDetailles,
+  ChantierDetailed
 } from "../../datasource";
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
@@ -128,6 +131,8 @@ export default function HomePage() {
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
   const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
   const mainScrollRef = useRef<HTMLDivElement>(null);
+  const chantiers = useRef<ChantierDetailed[]>(chantiersDetailles);
+  const [filteredChantiers, setFilteredChantiers] = useState<ChantierDetailed[]>(chantiersDetailles);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const employees = useRef<Employee[]>(initialEmployees);
@@ -156,6 +161,9 @@ export default function HomePage() {
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [eventSearchInput, setEventSearchInput] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(true);
+  const [viewType, setViewType] = useState<'calendar' | 'chantier-table'>('calendar'); // État pour basculer entre les vues
+  const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false); // État pour contrôler le menu déroulant
+  const viewDropdownRef = useRef<HTMLDivElement>(null); // Ref pour le menu déroulant
   const history = useRef<HistoryAction[]>([]);
   const maxHistorySize = 50; // Limiter la taille de l'historique
   const isInitializing = useRef(true); // Flag pour éviter d'enregistrer les actions lors de l'initialisation
@@ -331,29 +339,45 @@ export default function HomePage() {
     }
   ];
 
-  const researchAppointments = useCallback(() => {
-        
-    if (!searchInput) {
-      setFilteredAppointments(appointments.current);
-      return;
-    }
+  const handleResearch = useCallback(() => {
     const lowercasedQuery = searchInput.toLowerCase();
+    switch(viewType){
+      case 'calendar':
+        if (!searchInput) {
+          setFilteredAppointments(appointments.current);
+          return;
+        }
 
+        setFilteredAppointments(
+          appointments.current
+            .map(app => {
+              const eventType = eventTypes.current.find(et => et.id === app.eventTypeId);
+              if (eventType && eventType.label.toLowerCase().includes(lowercasedQuery)) {
+                return app;
+              }
+              return undefined;
+            })
+            .filter((app): app is Appointment => app !== undefined)
+        );
+      case 'chantier-table':
+        if (!searchInput) {
+          setFilteredChantiers(chantiers.current);
+          return;
+        }
 
-
-    setFilteredAppointments(
-      appointments.current
-        .map(app => {
-          const eventType = eventTypes.current.find(et => et.id === app.eventTypeId);
-          if (eventType && eventType.label.toLowerCase().includes(lowercasedQuery)) {
-            return app;
-          }
-          return undefined;
-        })
-        .filter((app): app is Appointment => app !== undefined)
-    );
-    //console.log("Mise à jour filteredAppointments (recherche active):", filtered.length, "rendez-vous trouvés sur", appointments.current.length);
-  }, [searchInput]);
+        setFilteredChantiers(
+          chantiers.current
+            .map(chantier => {
+              // Vérifie si le nom du chantier ou le client correspond à la recherche
+              if (chantier.attributs.libelle.toLowerCase().includes(lowercasedQuery) || chantier.attributs.chefChantier.toLowerCase().includes(lowercasedQuery)) {
+                return chantier;
+              }
+              return undefined;
+            })
+            .filter((chantier): chantier is ChantierDetailed => chantier !== undefined)
+        );
+      } 
+    }, [searchInput]);
 
   // Création de rendez-vous répétés
   const createRepeatedAppointments = useCallback((repeatInterval: "day" | "week" | "month", repeatCount: number, endDate?: Date, numberCount?: number) => {
@@ -448,10 +472,10 @@ export default function HomePage() {
     }
     // Ajoute les nouveaux rendez-vous à la liste
     appointments.current = [...appointments.current, ...newAppointments];
-    researchAppointments(); // Met à jour la liste filtrée
+    handleResearch(); // Met à jour la liste filtrée
     setModalInfo({ message: `${newAppointments.length} rendez-vous créé${newAppointments.length > 1 ? 's' : ''}`, color: 'green' });
     setRepeatAppointmentData(null);
-  }, [researchAppointments, selectedAppointment, isFullDay, nonWorkingDates]);
+  }, [handleResearch, selectedAppointment, isFullDay, nonWorkingDates]);
 
   // --- FONCTIONS D'HISTORIQUE POUR CTRL+Z ---
   const addToHistory = useCallback((action: HistoryAction) => {
@@ -495,8 +519,8 @@ export default function HomePage() {
           ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId }
           : app
       );
-      researchAppointments(); // Met à jour la liste filtrée
-    }, [researchAppointments, saveAppointmentState]
+      handleResearch(); // Met à jour la liste filtrée
+    }, [handleResearch, saveAppointmentState]
   );
 
   const undoLastAction = useCallback(() => {    
@@ -566,11 +590,11 @@ export default function HomePage() {
 
     // Forcer la mise à jour de l'affichage
     setTimeout(() => {
-      researchAppointments(); // Mettre à jour l'affichage
+      handleResearch(); // Mettre à jour l'affichage
     }, 0);
     
     setTimeout(() => setModalInfo(null), 2000);
-  }, [researchAppointments]);
+  }, [handleResearch]);
 
   // Compteur pour générer des IDs uniques de façon déterministe
   const idCounter = useRef(10000); // Commencer à 10000 pour éviter les conflits avec les IDs existants
@@ -597,9 +621,9 @@ export default function HomePage() {
         saveAppointmentState(newApp, 'create');
       }
       
-      researchAppointments(); // Met à jour la liste filtrée
+      handleResearch(); // Met à jour la liste filtrée
       return newApp; // Retourner le nouveau RDV créé
-  }, [researchAppointments, saveAppointmentState]);
+  }, [handleResearch, saveAppointmentState]);
 
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
     if (app) {
@@ -970,11 +994,11 @@ export default function HomePage() {
     }
     // Note: Les créations sont déjà enregistrées dans createAppointment
     
-    researchAppointments(); // Met à jour la liste filtrée
+    handleResearch(); // Met à jour la liste filtrée
     setIsModalOpen(false);
     setSelectedAppointment(null);
     setNewAppointmentInfo(null);
-  }, [researchAppointments, createAppointment, isFullDay, nonWorkingDates, saveAppointmentState]);
+  }, [handleResearch, createAppointment, isFullDay, nonWorkingDates, saveAppointmentState]);
 
 
   const handleDeleteAppointmentConfirm = useCallback(() => {
@@ -996,10 +1020,10 @@ export default function HomePage() {
     
     setIsAlertVisible(false);
     appointments.current = appointments.current.filter((app) => app.id !== id);
-    researchAppointments(); // Met à jour la liste filtrée
+    handleResearch(); // Met à jour la liste filtrée
     setIsModalOpen(false);
     setSelectedAppointment(null);
-  }, [researchAppointments, saveAppointmentState]);
+  }, [handleResearch, saveAppointmentState]);
 
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
     setSelectedAppointmentForm(appointment);
@@ -1050,10 +1074,10 @@ export default function HomePage() {
       saveAppointmentState(originalAppointment, 'resize_split', originalAppointment, [newAppointment]);
     }
 
-    researchAppointments();
+    handleResearch();
     setIsModalOpen(false);
     setSelectedAppointment(null);
-  }, [onResize, isFullDay, saveAppointmentState, researchAppointments]);
+  }, [onResize, isFullDay, saveAppointmentState, handleResearch]);
 
   const handleRepeat = useCallback(() => {
     if (!repeatAppointmentData) return;
@@ -1437,7 +1461,7 @@ export default function HomePage() {
 
   // Recherche dans les rendez-vous
   useEffect(() => {
-    researchAppointments();
+    handleResearch();
   }, [searchInput]);
 
   // Ajuste scrollLeft après ajout à gauche pour éviter le "saut"
@@ -1509,6 +1533,26 @@ export default function HomePage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Fermer le menu déroulant quand on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isViewDropdownOpen && viewDropdownRef.current) {
+        const target = event.target as HTMLElement;
+        if (!viewDropdownRef.current.contains(target)) {
+          setIsViewDropdownOpen(false);
+        }
+      }
+    };
+
+    if (isViewDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isViewDropdownOpen]);
+
   // Rendu principal de la page
   return (
     <NoSSR>
@@ -1520,193 +1564,261 @@ export default function HomePage() {
           }}
         >
           {/* Barre du haut modernisée */}
-        
          {!isMobile && (
-          <div className="flex flex-row items-center pr-5">
-            <div className={` p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}>
-              <img src={LogoUrl.src} alt="Logo" className="h-20 w-auto mb-2" />
-            </div>
-            <div className={`flex-1 flex flex-col items-center ${!isExpanded ? 'px-4 pt-4' : 'py-4 pr-4'}`}>
-              <div className="flex items-center justify-between w-full h-[50px]">
-                <div className="flex flex-col gap-1">
-                  <div className="relative w-72 max-w-full">
-                    <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                      <svg className="w-5 h-5 text-gray-400" aria-hidden="true" fill="none" viewBox="0 0 20 20">
-                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-                      </svg>
-                    </div>
-                    <input
-                      type="search"
-                      id="search"
-                      className="block w-full p-3 pl-8 text-base text-gray-900  rounded-xl transition focus:outline-0 poppins text-[14px]"
-                      placeholder="Rechercher"
-                      value={searchInput || ""}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {/* Flèche d'expansion */}
-                  <button
-                    type="button"
-                    onClick={() => toggleSetIsExpanded(!isExpanded)}
-                    className="w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10"
-                    title={isExpanded ? "Réduire" : "Options avancées"}
-                  >
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      width="25" 
-                      height="25" 
-                      fill="currentColor" 
-                      className={`transition-transform duration-300 bi bi-chevron-up text-[#84818a] ${!isExpanded ? 'rotate-180' : ''}`} 
-                      viewBox="0 0 16 16"
-                    >
-                      <path fillRule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
-                    </svg>
-                  </button>
-                  <button
-                    className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition "
-                    onClick={() => setIsSettingsOpen(true)}
-                    title="Paramètres"
-                  >
-                    <svg 
-                      id="Glyph" 
-                      enableBackground="new 0 0 32 32" 
-                      height="25" 
-                      viewBox="0 0 32 32" 
-                      width="25" 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      version="1.1" 
-                      xmlnsXlink="http://www.w3.org/1999/xlink" 
-                    >
-                      <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                        <path id="XMLID_273_" d="m27.526 18.036-.526-.304c-.626-.361-1-1.009-1-1.732s.374-1.371 1-1.732l.526-.304c1.436-.83 1.927-2.662 1.098-4.098l-1-1.732c-.827-1.433-2.666-1.925-4.098-1.098l-.526.303c-.626.362-1.375.362-2 0-.626-.362-1-1.009-1-1.732v-.607c0-1.654-1.346-3-3-3h-2c-1.654 0-3 1.346-3 3v.608c0 .723-.374 1.37-1 1.732-.626.361-1.374.362-2 0l-.526-.304c-1.432-.827-3.271-.335-4.099 1.098l-1 1.732c-.829 1.436-.338 3.269 1.098 4.098l.527.304c.626.361 1 1.009 1 1.732s-.374 1.371-1 1.732l-.526.304c-1.436.829-1.927 2.662-1.098 4.098l1 1.732c.828 1.433 2.667 1.925 4.098 1.098l.526-.303c.626-.363 1.374-.361 2 0 .626.362 1 1.009 1 1.732v.607c0 1.654 1.346 3 3 3h2c1.654 0 3-1.346 3-3v-.608c0-.723.374-1.37 1-1.732.625-.361 1.374-.362 2 0l.526.304c1.432.826 3.271.334 4.098-1.098l1-1.732c.829-1.436.338-3.269-1.098-4.098zm-11.526 2.964c-2.757 0-5-2.243-5-5s2.243-5 5-5 5 2.243 5 5-2.243 5-5 5z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/></g></svg>
-                  </button>
-                  <button
-                    className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition"
-                    onClick={() => setIsSettingsOpen(true)}
-                    title="multi"
-                  >
-                    <svg 
-                      id="Layer_1" 
-                        enableBackground="new 0 0 512 512" 
-                        height="25" 
-                        viewBox="0 0 512 512" 
-                        width="25" 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        version="1.1" 
-                        xmlnsXlink="http://www.w3.org/1999/xlink"
-                      >
-                        <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                          <path clipRule="evenodd" d="m40.583 21h71.806c10.771 0 19.583 8.812 19.583 19.583v71.806c0 10.771-8.812 19.583-19.583 19.583h-71.806c-10.771 0-19.583-8.812-19.583-19.583v-71.806c0-10.771 8.812-19.583 19.583-19.583zm159.931 19.583v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583z" fillRule="evenodd" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
-                        </g>
-                      </svg>
-                  </button>
-                  <button
-                    className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition relative"
-                    onClick={() => setIsSettingsOpen(true)}
-                    title="Notifications"
-                  >
-                    <div className="relative">
-                      <svg 
-                        id="Layer_1" 
-                        enableBackground="new 0 0 100 100" 
-                        viewBox="0 0 100 100" 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        width="25" 
-                        height="25" 
-                        version="1.1" 
-                        xmlnsXlink="http://www.w3.org/1999/xlink"
-                      >
-                        <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                          <path d="m84.9384384 78.6478882h-69.8768778c-4.2446356 0-6.8042536-4.7139664-4.4792337-8.2760315l4.8991413-7.4587746c2.6900654-4.0955315 4.1233788-8.8885002 4.1233788-13.7884827v-6.9935493c0-14.3977032 10.0250931-26.4705181 23.462925-29.5846062v-3.1142158c-.0000001-3.8393617 3.1142158-6.9322281 6.932228-6.9322281 1.9197464 0 3.6474648.7678463 4.9058571 2.0263696 1.237175 1.2583933 2.026371 2.9861126 2.026371 4.9058585v3.1142168c5.631134 1.2797441 10.622261 4.1380129 14.5683823 8.0839968 5.5030289 5.5031605 8.8945465 13.0966091 8.8945465 21.5006084v6.9935493c0 4.8999825 1.4333115 9.6929512 4.1233749 13.7884827l4.8991394 7.4587746c2.3250198 3.5620651-.2345962 8.2760315-4.4792328 8.2760315z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
-                          <path d="m50.0000114 97.5h-.0000229c-6.6999817 0-12.1313858-5.4314041-12.1313858-12.1313858v-.4888229h24.2627945v.4888229c0 6.6999817-5.4314041 12.1313858-12.1313858 12.1313858z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
-                        </g>
-                      </svg>
-                      <span className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
-                    </div>
-                  </button>
-                  <div
-                    className="p-5 rounded-full  transition bg-red-600 relative"
-                  >
-                    <span className="absolute bottom-0 -right-1 block h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
-                  </div>
-                </div>
+          <div className="flex flex-col items-center pr-9">
+            <div className="flex flex-row w-full">
+              <div className={` p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}>
+                <img src={LogoUrl.src} alt="Logo" className="h-20 w-auto mb-2" />
               </div>
-              <div className={`flex items-center justify-between w-full ${!isExpanded ? 'hidden' : 'mt-6 h-[50px]'}`}>
-                <div>
-                  <p className="text-5xl poppins">
-                    Planning
-                  </p>
-                </div>
-                <div className="flex flex-row items-center gap-4">
-                  <div className="flex flex-row items-center gap-2">
-                    <input
-                      id="date-select"
-                      type="date"
-                      className="border w-38 border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-gray-100 text-base"
-                      value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
-                      onChange={(e) => {
-                        const selectedDate = new Date(e.target.value);
-                        if (isNaN(selectedDate.getTime())) return;
-                        setSelectedDate(selectedDate);
-                        goToDate(selectedDate);
-                      }}
-                    />
+              <div className={`flex-1 flex flex-col items-center justify-center ${!isExpanded ? 'px-4 pt-4' : 'py-4'}`}>
+                <div className="flex items-center justify-between w-full h-[50px]">
+                  <div className="flex flex-col gap-1">
+                    <div className="relative w-72 max-w-full">
+                      <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+                          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                        </svg>
+                      </div>
+                      <input
+                        type="search"
+                        id="search"
+                        className="block w-full p-3 pl-8 text-base text-gray-900  rounded-xl transition focus:outline-0 poppins text-[14px]"
+                        placeholder="Rechercher"
+                        value={searchInput || ""}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className="border border-gray-300 rounded-2xl flex items-center multi-op">
+                  <div className="flex items-center gap-3">
+                    {/* Flèche d'expansion */}
                     <button
-                      className="transition btn-header cursor-pointer border-r border-gray-300 px-3 py-2"
-                      onClick={() => toggleSetIncludeWeekend(!includeWeekend)}
+                      type="button"
+                      onClick={() => toggleSetIsExpanded(!isExpanded)}
+                      className="w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10"
+                      title={isExpanded ? "Réduire" : "Options avancées"}
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        fill="currentColor"
-                        className="bi bi-calendar-event text-gray-500 transition duration-200"
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="25" 
+                        height="25" 
+                        fill="currentColor" 
+                        className={`transition-transform duration-300 bi bi-chevron-up text-[#84818a] ${!isExpanded ? 'rotate-180' : ''}`} 
                         viewBox="0 0 16 16"
                       >
-                        <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z" fill="#84818a" fillOpacity="1" stroke="none" strokeOpacity="1"/>
-                        <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z" fill="#84818a" fillOpacity="1" stroke="none" strokeOpacity="1"/>
+                        <path fillRule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
                       </svg>
                     </button>
-                    <button 
-                      className="transition cursor-pointer btn-header border-r border-gray-300 px-3 py-2"
-                      onClick={() => toggleSetIsFullDay(!isFullDay)}
+                    <button
+                      className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition "
+                      onClick={() => setIsSettingsOpen(true)}
+                      title="Paramètres"
                     >
-                      {!isFullDay ? (
+                      <svg 
+                        id="Glyph" 
+                        enableBackground="new 0 0 32 32" 
+                        height="25" 
+                        viewBox="0 0 32 32" 
+                        width="25" 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        version="1.1" 
+                        xmlnsXlink="http://www.w3.org/1999/xlink" 
+                      >
+                        <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                          <path id="XMLID_273_" d="m27.526 18.036-.526-.304c-.626-.361-1-1.009-1-1.732s.374-1.371 1-1.732l.526-.304c1.436-.83 1.927-2.662 1.098-4.098l-1-1.732c-.827-1.433-2.666-1.925-4.098-1.098l-.526.303c-.626.362-1.375.362-2 0-.626-.362-1-1.009-1-1.732v-.607c0-1.654-1.346-3-3-3h-2c-1.654 0-3 1.346-3 3v.608c0 .723-.374 1.37-1 1.732-.626.361-1.374.362-2 0l-.526-.304c-1.432-.827-3.271-.335-4.099 1.098l-1 1.732c-.829 1.436-.338 3.269 1.098 4.098l.527.304c.626.361 1 1.009 1 1.732s-.374 1.371-1 1.732l-.526.304c-1.436.829-1.927 2.662-1.098 4.098l1 1.732c.828 1.433 2.667 1.925 4.098 1.098l.526-.303c.626-.363 1.374-.361 2 0 .626.362 1 1.009 1 1.732v.607c0 1.654 1.346 3 3 3h2c1.654 0 3-1.346 3-3v-.608c0-.723.374-1.37 1-1.732.625-.361 1.374-.362 2 0l.526.304c1.432.826 3.271.334 4.098-1.098l1-1.732c.829-1.436.338-3.269-1.098-4.098zm-11.526 2.964c-2.757 0-5-2.243-5-5s2.243-5 5-5 5 2.243 5 5-2.243 5-5 5z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/></g></svg>
+                    </button>
+                    <div className="relative" ref={viewDropdownRef}>
+                      <button
+                        className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition"
+                        onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
+                        title="multi"
+                      >
                         <svg 
                           id="Layer_1" 
-                          enableBackground="new 0 0 32 32" 
-                          viewBox="0 0 32 32" 
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="20" 
-                          height="20" 
-                          version="1.1" 
-                          xmlnsXlink="http://www.w3.org/1999/xlink" 
-                        >
-                          <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                            <path d="m27 3v26c0 .5527344-.4472656 1-1 1h-8c-.5527344 0-1-.4472656-1-1v-26c0-.5527344.4472656-1 1-1h8c.5527344 0 1 .4472656 1 1zm-13-1h-8c-.5527344 0-1 .4472656-1 1v26c0 .5527344.4472656 1 1 1h8c.5527344 0 1-.4472656 1-1v-26c0-.5527344-.4472656-1-1-1z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
-                          </g>
-                        </svg>
-                      ) : (
+                            enableBackground="new 0 0 512 512" 
+                            height="25" 
+                            viewBox="0 0 512 512" 
+                            width="25" 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            version="1.1" 
+                            xmlnsXlink="http://www.w3.org/1999/xlink"
+                          >
+                            <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                              <path clipRule="evenodd" d="m40.583 21h71.806c10.771 0 19.583 8.812 19.583 19.583v71.806c0 10.771-8.812 19.583-19.583 19.583h-71.806c-10.771 0-19.583-8.812-19.583-19.583v-71.806c0-10.771 8.812-19.583 19.583-19.583zm159.931 19.583v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583z" fillRule="evenodd" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                            </g>
+                          </svg>
+                      </button>
+
+                      {/* Menu déroulant */}
+                      {isViewDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                          <div className="py-1">
+                            <button
+                              className={`w-full px-4 py-2 text-left flex items-center gap-3 transition ${
+                                viewType === 'calendar' ? 'bg-[#C8E6E1] text-[#16302C]' : 'text-gray-700  hover:bg-[#e7f4f2]'
+                              }`}
+                              onClick={() => {
+                                setViewType('calendar');
+                                setIsViewDropdownOpen(false);
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
+                                viewBox="0 0 16 16"
+                              >
+                                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                              </svg>
+                              Planning
+                              {viewType === 'calendar' && (
+                                <svg className="w-4 h-4 ml-auto text-[#16302C]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              className={`w-full px-4 py-2 text-left flex items-center gap-3 transition ${
+                                viewType === 'chantier-table' ? 'bg-[#C8E6E1] text-[#16302C]' : 'text-gray-700  hover:bg-[#e7f4f2]'
+                              }`}
+                              onClick={() => {
+                                setViewType('chantier-table');
+                                setIsViewDropdownOpen(false);
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
+                                viewBox="0 0 16 16"
+                              >
+                                <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zM1 2v2h4V2H1zm4 3H1v3h4V5zm0 4H1v3h4V9zm0 4H1v2a1 1 0 0 0 1 1h3v-3zm5-8H6v3h4V4zm0 4H6v3h4V8z" />
+                              </svg>
+                              Liste des chantiers
+                              {viewType === 'chantier-table' && (
+                                <svg className="w-4 h-4 ml-auto text-[#16302C]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition relative"
+                      onClick={() => setIsSettingsOpen(true)}
+                      title="Notifications"
+                    >
+                      <div className="relative">
                         <svg 
                           id="Layer_1" 
-                          height="20" 
-                          viewBox="0 0 512 512" 
-                          width="20" 
+                          enableBackground="new 0 0 100 100" 
+                          viewBox="0 0 100 100" 
                           xmlns="http://www.w3.org/2000/svg" 
-                          data-name="Layer 1" 
+                          width="25" 
+                          height="25" 
                           version="1.1" 
                           xmlnsXlink="http://www.w3.org/1999/xlink"
                         >
                           <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                            <rect height="480" rx="10.695" width="108.343" x="201.828" y="16" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                            <path d="m84.9384384 78.6478882h-69.8768778c-4.2446356 0-6.8042536-4.7139664-4.4792337-8.2760315l4.8991413-7.4587746c2.6900654-4.0955315 4.1233788-8.8885002 4.1233788-13.7884827v-6.9935493c0-14.3977032 10.0250931-26.4705181 23.462925-29.5846062v-3.1142158c-.0000001-3.8393617 3.1142158-6.9322281 6.932228-6.9322281 1.9197464 0 3.6474648.7678463 4.9058571 2.0263696 1.237175 1.2583933 2.026371 2.9861126 2.026371 4.9058585v3.1142168c5.631134 1.2797441 10.622261 4.1380129 14.5683823 8.0839968 5.5030289 5.5031605 8.8945465 13.0966091 8.8945465 21.5006084v6.9935493c0 4.8999825 1.4333115 9.6929512 4.1233749 13.7884827l4.8991394 7.4587746c2.3250198 3.5620651-.2345962 8.2760315-4.4792328 8.2760315z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                            <path d="m50.0000114 97.5h-.0000229c-6.6999817 0-12.1313858-5.4314041-12.1313858-12.1313858v-.4888229h24.2627945v.4888229c0 6.6999817-5.4314041 12.1313858-12.1313858 12.1313858z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
                           </g>
                         </svg>
-                      )}
+                        <span className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
+                      </div>
                     </button>
+                    <div
+                      className="p-5 rounded-full  transition bg-red-600 relative"
+                    >
+                      <span className="absolute bottom-0 -right-1 block h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={`flex items-center justify-between w-full ${!isExpanded ? 'hidden' : 'h-[50px]'}`}>
+                <div className={`${viewType === 'calendar' ? 'ml-80' : 'ml-7'}`}>
+                  <p className="text-5xl poppins">
+                    {viewType === 'calendar' ? 'Planning' : 'Liste des chantiers'}
+                  </p>
+                </div>
+                <div className="flex flex-row items-center gap-4">
+                  <div className="flex flex-row items-center gap-2">
+                    {viewType === 'calendar' && (
+                      <input
+                        id="date-select"
+                        type="date"
+                        className="border w-38 border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-gray-100 text-base"
+                        value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+                        onChange={(e) => {
+                          const selectedDate = new Date(e.target.value);
+                          if (isNaN(selectedDate.getTime())) return;
+                          setSelectedDate(selectedDate);
+                          goToDate(selectedDate);
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div className="border border-gray-300 rounded-xl flex items-center multi-op">
+                    {viewType === 'calendar' && (
+                      <>
+                        <button
+                          className="transition btn-header cursor-pointer border-r border-gray-300 px-3 py-2"
+                          onClick={() => toggleSetIncludeWeekend(!includeWeekend)}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            fill="currentColor"
+                            className="bi bi-calendar-event text-gray-500 transition duration-200"
+                            viewBox="0 0 16 16"
+                          >
+                            <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z" fill="#84818a" fillOpacity="1" stroke="none" strokeOpacity="1"/>
+                            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z" fill="#84818a" fillOpacity="1" stroke="none" strokeOpacity="1"/>
+                          </svg>
+                        </button>
+                        <button 
+                          className="transition cursor-pointer btn-header border-r border-gray-300 px-3 py-2"
+                          onClick={() => toggleSetIsFullDay(!isFullDay)}
+                        >
+                          {!isFullDay ? (
+                            <svg 
+                              id="Layer_1" 
+                              enableBackground="new 0 0 32 32" 
+                              viewBox="0 0 32 32" 
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="20" 
+                              height="20" 
+                              version="1.1" 
+                              xmlnsXlink="http://www.w3.org/1999/xlink" 
+                            >
+                              <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                                <path d="m27 3v26c0 .5527344-.4472656 1-1 1h-8c-.5527344 0-1-.4472656-1-1v-26c0-.5527344.4472656-1 1-1h8c.5527344 0 1 .4472656 1 1zm-13-1h-8c-.5527344 0-1 .4472656-1 1v26c0 .5527344.4472656 1 1 1h8c.5527344 0 1-.4472656 1-1v-26c0-.5527344-.4472656-1-1-1z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                              </g>
+                            </svg>
+                          ) : (
+                            <svg 
+                              id="Layer_1" 
+                              height="20" 
+                              viewBox="0 0 512 512" 
+                              width="20" 
+                              xmlns="http://www.w3.org/2000/svg" 
+                              data-name="Layer 1" 
+                              version="1.1" 
+                              xmlnsXlink="http://www.w3.org/1999/xlink"
+                            >
+                              <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                                <rect height="480" rx="10.695" width="108.343" x="201.828" y="16" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                              </g>
+                            </svg>
+                          )}
+                        </button>
+                      </>
+                    )}
                     <button 
                       className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
                     >
@@ -1730,25 +1842,25 @@ export default function HomePage() {
                       </svg>
                     </button>
                   </div>
-                  <button
-                    className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto"
-                    style={{ backgroundColor: '#00947f' }}
-                    type="button"
-                    onClick={() => setIsSearchOverlayOpen(true)}
-                  >
-                    + Ajouter un évènement
-                  </button>
+                  {viewType === 'calendar' && (
+                    <button
+                      className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto"
+                      style={{ backgroundColor: '#00947f' }}
+                      type="button"
+                      onClick={() => setIsSearchOverlayOpen(true)}
+                    >
+                      + Ajouter un évènement
+                    </button>
+                  )}
                 </div>
               </div>
-            </div>
-           
           </div>
         )}
         {/* Grille principale du calendrier modernisée */}
         <div className="flex-1 flex min-h-0
         ">
           <div
-            className={`flex flex-grow rounded-2xl border-gray-200 ${!isMobile ? 'mt-4' : ''}`}
+            className={`flex flex-grow rounded-2xl border-gray-200 ${!isMobile ? 'mt-8' : ''}`}
             tabIndex={0}
             style={{ outline: "none", minWidth: 0, minHeight: 0 }}
           >
@@ -1760,29 +1872,33 @@ export default function HomePage() {
             >
               <SelectedAppointmentContext.Provider value={{ selectedAppointment, setSelectedAppointment}}>
                 <SelectedCellContext.Provider value={{ selectedCell, setSelectedCell }}>
-                  <CalendarGrid
-                    employees={filteredEmployeesForCalendar}
-                    appointments={filteredAppointmentsForCalendar}
-                    initialTeams={initialTeams}
-                    dayInTimeline={dayInTimeline}
-                    HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
-                    isFullDay={isFullDay}
-                    eventTypes={eventTypes.current}
-                    //selectedCalendarId={selectedCalendarId}
-                    isMobile={isMobile}
-                    includeWeekend={includeWeekend}
-                    nonWorkingDates={nonWorkingDates}
-                    mainScrollRef={mainScrollRef}
-                    handleScroll={handleScroll}
-                    onAppointmentMoved={moveAppointment}
-                    onCellDoubleClick={() => setIsSearchOverlayOpen(true)}
-                    onAppointmentDoubleClick={handleOpenEditModal}
-                    onExternalDragDrop={createAppointmentFromDrag}
-                    handleContextMenu={handleContextMenu}
-                    calendarConfig={currentCalendarConfig}
-                    onCalendarConfigChange={setCurrentCalendarConfig}
-                    availableConfigs={availableConfigs}
-                  />
+                  {viewType === 'calendar' ? (
+                    <CalendarGrid
+                      employees={filteredEmployeesForCalendar}
+                      appointments={filteredAppointmentsForCalendar}
+                      initialTeams={initialTeams}
+                      dayInTimeline={dayInTimeline}
+                      HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
+                      isFullDay={isFullDay}
+                      eventTypes={eventTypes.current}
+                      //selectedCalendarId={selectedCalendarId}
+                      isMobile={isMobile}
+                      includeWeekend={includeWeekend}
+                      nonWorkingDates={nonWorkingDates}
+                      mainScrollRef={mainScrollRef}
+                      handleScroll={handleScroll}
+                      onAppointmentMoved={moveAppointment}
+                      onCellDoubleClick={() => setIsSearchOverlayOpen(true)}
+                      onAppointmentDoubleClick={handleOpenEditModal}
+                      onExternalDragDrop={createAppointmentFromDrag}
+                      handleContextMenu={handleContextMenu}
+                      calendarConfig={currentCalendarConfig}
+                      onCalendarConfigChange={setCurrentCalendarConfig}
+                      availableConfigs={availableConfigs}
+                    />
+                  ) : (
+                    <ChantierTableFrame chantiers={filteredChantiers} />
+                  )}
                 </SelectedCellContext.Provider>
               </SelectedAppointmentContext.Provider>
             </div>
