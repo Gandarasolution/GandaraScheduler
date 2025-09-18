@@ -643,6 +643,22 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     onCalendarConfigChange(selectedConfig);
                   }
                 }}
+                illustrationImage={
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 80 80" width="25" height="25">
+                    <defs>
+                      <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#00c6ff"/>
+                        <stop offset="100%" stopColor="#0072ff"/>
+                      </linearGradient>
+                      <linearGradient id="gradPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#8e2de2"/>
+                        <stop offset="100%" stopColor="#4a00e0"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M20 40 Q50 10 80 40 L60 50 Q40 60 20 40 Z" fill="url(#gradBlue)"/>
+                    <path d="M20 60 Q50 90 80 60 L60 50 Q40 40 20 60 Z" fill="url(#gradPurple)"/>
+                  </svg>
+                }
                 placeholder="Sélectionner un calendrier"
                 customArrow={<CustomArrow isOpen={false} />}
                 className='py-3 px-4 w-full'

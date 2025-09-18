@@ -23,6 +23,7 @@ interface CustomSelectWithImageProps {
   showImages?: boolean; // Afficher les images dans la liste au lieu du texte
   displayKey?: string; // Nouvelle prop pour choisir la clé d'affichage
   imageSize?: 'small' | 'medium' | 'large'; // Taille des images
+  illustrationImage: React.ReactNode; 
 }
 
 /**
@@ -42,6 +43,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   showImages = false, // Par défaut, affiche du texte dans la liste
   displayKey = "name", // Par défaut, utilise "name"
   imageSize = "medium", // Taille par défaut
+  illustrationImage
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -186,31 +188,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
                     </div>
                 ) : selectedOption ? (
                     <div className="flex items-center gap-2">
-                      <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="18" height="18" viewBox="0 0 510 510" enableBackground="new 0 0 510 510"  xmlSpace="preserve">
-                        <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                          <g>
-                            <g id="play-install">
-                              <path d="M459,114.75H357v-51l-51-51H204l-51,51v51H51c-28.05,0-51,22.95-51,51v280.5c0,28.05,22.95,51,51,51h408&#10;&#9;&#9;&#9;c28.05,0,51-22.95,51-51v-280.5C510,137.7,487.05,114.75,459,114.75z M204,63.75h102v51H204V63.75z M216.75,408l-89.25-89.25&#10;&#9;&#9;&#9;l35.7-35.7l53.55,53.55L349.35,204l35.7,35.7L216.75,408z" fill="#00957f" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
-                            </g>
-                          </g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                          <g></g>
-                        </g>
-                      </svg>
+                      {illustrationImage}
                       <span className="truncate font-bold">{getDisplayText(selectedOption)}</span>
                     </div>
                 ) :(

@@ -1608,8 +1608,30 @@ export default function HomePage() {
                         <path fillRule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
                       </svg>
                     </button>
+                    {viewType === 'chantier-table' && (
+                      <button
+                        className="p-3 rounded-full hover:bg-blue-100 transition"
+                        onClick={() => {setViewType('calendar')}}
+                        title="Chantiers"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 20 60 60" width="25" height="25">
+                          <defs>
+                            <linearGradient width="100%" height="100%" id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#00c6ff"/>
+                              <stop offset="100%" stopColor="#0072ff"/>
+                            </linearGradient>
+                            <linearGradient width="100%" height="100%" id="gradPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#8e2de2"/>
+                              <stop offset="100%" stopColor="#4a00e0"/>
+                            </linearGradient>
+                          </defs>
+                          <path width="100%"  height="100%" d="M20 40 Q50 10 80 40 L60 50 Q40 60 20 40 Z" fill="url(#gradBlue)"/>
+                          <path width="100%"  height="100%" d="M20 60 Q50 90 80 60 L60 50 Q40 40 20 60 Z" fill="url(#gradPurple)"/>
+                        </svg>
+                      </button>
+                    )}
                     <button
-                      className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition "
+                      className="p-3 rounded-full hover:bg-blue-100 transition "
                       onClick={() => setIsSettingsOpen(true)}
                       title="Paramètres"
                     >
@@ -1628,7 +1650,7 @@ export default function HomePage() {
                     </button>
                     <div className="relative" ref={viewDropdownRef}>
                       <button
-                        className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition"
+                        className="p-3 rounded-full hover:bg-blue-100 transition"
                         onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
                         title="multi"
                       >
@@ -1707,7 +1729,7 @@ export default function HomePage() {
                       )}
                     </div>
                     <button
-                      className="p-3 bg-gray-100 rounded-full hover:bg-blue-100 transition relative"
+                      className="p-3 rounded-full hover:bg-blue-100 transition relative"
                       onClick={() => setIsSettingsOpen(true)}
                       title="Notifications"
                     >
