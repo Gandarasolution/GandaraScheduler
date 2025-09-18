@@ -21,7 +21,8 @@ import { ChantierDetailed } from '../../datasource';
 interface ChantierTableFrameProps {
   className?: string;
   style?: React.CSSProperties;
-  chantiers: ChantierDetailed[]
+  chantiers: ChantierDetailed[];
+  containerWidth?: number; // Largeur du conteneur en pixels
 }
 
 /**
@@ -30,7 +31,8 @@ interface ChantierTableFrameProps {
 const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   className = '',
   style,
-  chantiers
+  chantiers,
+  containerWidth
 }) => {
   
   // Structure organisée des catégories avec leurs attributs
@@ -124,34 +126,72 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
 
   // Calculer les largeurs optimales pour chaque colonne
   const calculateColumnWidths = React.useMemo(() => {
-    if (!chantiers.length) return attributeLabels.map(() => 150);
+    if (!chantiers.length) return attributeLabels.map(() => 80);
 
-    const minWidth = 60; // Largeur minimale
-    const maxWidth = 500; // Largeur maximale
+    const fixedWidth = 89; // Largeur fixe pour les colonnes standard
     const padding = 24; // Padding horizontal (px-3 = 12px de chaque côté)
-
-    return attributeLabels.map((label, colIndex) => {
-      // Largeur du titre de la colonne
-      let maxWidthForColumn = Math.max(minWidth, label.length * 8 + padding);
+    
+    // Colonnes qui s'adaptent à leur contenu
+    const adaptiveColumns = ['libelle', 'chefChantier', 'chargeAffaire', 'etat', 'dateOS', 'dateFin', 'identifiant'];
+    
+    // Calculer d'abord les largeurs pour les colonnes adaptatives
+    const adaptiveWidths: { [key: string]: number } = {};
+    
+    attributeLabels.forEach((label, colIndex) => {
+      const attributeKey = attributeKeys[colIndex];
       
-      // Vérifier la largeur nécessaire pour chaque valeur de cette colonne
-      chantiers.forEach(chantier => {
-        const chantierByCategories = getChantierValuesByCategory(chantier);
-        const allValues = chantierByCategories.flatMap(cat => cat.values);
+      if (adaptiveColumns.includes(attributeKey)) {
+        let maxWidthForColumn = Math.max(85, label.length * 8 + padding); // Largeur minimale basée sur le titre
         
-        if (allValues[colIndex]) {
-          const value = allValues[colIndex].value;
-          if (value && typeof value === 'string' && allValues[colIndex].attributeKey !== 'image') {
-            // Estimation basique de la largeur du texte (8px par caractère + padding)
-            const estimatedWidth = Math.min(maxWidth, Math.max(minWidth, value.length * 8 + padding));
+        // Calculer la largeur nécessaire pour chaque valeur de cette colonne
+        chantiers.forEach(chantier => {
+          const value = chantier.attributs[attributeKey];
+          if (value && typeof value === 'string') {
+            let estimatedWidth;
+            
+            // Pour l'état, on compte le badge avec padding supplémentaire
+            if (attributeKey === 'etat') {
+              estimatedWidth = Math.max(85, value.length * 8 + padding + 20); // +20px pour le badge
+            }
+            else if (attributeKey === 'image') {
+              estimatedWidth = 60; // Largeur fixe pour l'image
+            } 
+            else {
+              estimatedWidth = Math.max(85, value.length * 8 + padding);
+            }
+            
             maxWidthForColumn = Math.max(maxWidthForColumn, estimatedWidth);
           }
-        }
-      });
-
-      return Math.min(maxWidth, Math.max(minWidth, maxWidthForColumn));
+        });
+        
+        // Limiter les largeurs maximales pour éviter que le tableau soit trop large
+        const maxLimits: { [key: string]: number } = {
+          'libelle': 296,
+          'chefChantier': 140,
+          'chargeAffaire': 140,
+          'etat': 108,
+          'dateOS': 120,
+          'dateFin': 120,
+          'identifiant': 120,
+        };
+        
+        adaptiveWidths[attributeKey] = Math.min(maxLimits[attributeKey] || 200, maxWidthForColumn);
+      }
     });
-  }, [chantiers, attributeLabels, getChantierValuesByCategory]);
+
+
+    return attributeLabels.map((label, colIndex) => {
+      const attributeKey = attributeKeys[colIndex];
+      
+      // Colonnes adaptatives
+      if (adaptiveColumns.includes(attributeKey)) {
+        return adaptiveWidths[attributeKey] || fixedWidth;
+      }
+      
+      // Colonnes fixes
+      return fixedWidth;
+    });
+  }, [chantiers, attributeLabels, attributeKeys, containerWidth]);
 
   // Créer le style CSS Grid avec les largeurs calculées
   const gridTemplateColumns = React.useMemo(() => {
@@ -169,7 +209,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
                          : value === 'Terminé' ? 'bg-gray-100 text-gray-800'
                          : 'bg-yellow-100 text-yellow-800';
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium poppins ${badgeColor}`}>
+          <span className={`inline-flex w-[80px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium poppins ${badgeColor}`}>
             {value}
           </span>
         );
@@ -193,7 +233,8 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
           items={attributeLabels}
           mainScrollRef={mainScrollRef}
           onScroll={handleScroll}
-          className="chantier-timeline-frame h-full pl-7"
+          isScrollX={false}
+          className="chantier-timeline-frame h-full pl-7 overflow-x-hidden"
           useAutoCells={false}
           customGridColumns={gridTemplateColumns}
           customItemHeaders={

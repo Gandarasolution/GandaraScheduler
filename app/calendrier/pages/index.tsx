@@ -1897,7 +1897,10 @@ export default function HomePage() {
                       availableConfigs={availableConfigs}
                     />
                   ) : (
-                    <ChantierTableFrame chantiers={filteredChantiers} />
+                    <ChantierTableFrame 
+                      chantiers={filteredChantiers} 
+                      containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
+                    />
                   )}
                 </SelectedCellContext.Provider>
               </SelectedAppointmentContext.Provider>

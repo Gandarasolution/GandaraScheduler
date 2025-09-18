@@ -39,6 +39,8 @@ interface FlexibleFrameProps {
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   /** Gestionnaire d'événement scroll */
   onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
+  /** Indicateur de défilement horizontal */
+  isScrollX: boolean;
   /** Contenu à afficher dans la zone principale (children) */
   children: ReactNode;
   /** Classes CSS additionnelles pour le conteneur principal */
@@ -69,6 +71,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   items,
   mainScrollRef,
   onScroll,
+  isScrollX,
   children,
   className = '',
   style,
@@ -97,7 +100,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
       <div className='p-4 border rounded-4xl bg-white w-full h-full border-[#dfdedeff]'>
         <div 
           className={`
-          relative w-full overflow-x-scroll overflow-y-auto 
+          relative w-full ${isScrollX ? 'overflow-x-scroll' : ''} overflow-y-auto 
           rounded-3xl border h-full border-[#dfdedeff] ${contentClassName}`}
           style={{
             scrollbarGutter: 'stable',

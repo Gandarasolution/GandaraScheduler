@@ -229,6 +229,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
       onScroll={onScroll}
       className={contentClassName}
       showGroupHeaders={showGroupHeaders}
+      isScrollX={true}
       showItemHeaders={showItemHeaders}
       useAutoCells={useAutoCells}
       cellWidth={CELL_WIDTH}
