@@ -493,36 +493,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return assignAppointmentTops(appointments, isMobile, dayInTimeline);
   }, [assignAppointmentTops, appointments, isMobile, dayInTimeline]);
 
-  // Calcule les mois et leur portée en jours - déplacé vers TimelineFrame
-  // const monthsInTimeline = useMemo(() => {
-  //   const months: { name: string; span: number; key: string }[] = [];
-  //   if (dayInTimeline.length === 0) return months;
-
-  //   let currentMonth = format(dayInTimeline[0], 'yyyy-MM', { locale: fr });
-  //   let currentMonthStartDayIndex = 0;
-
-  //   dayInTimeline.forEach((day, index) => {
-  //     const monthKey = format(day, 'yyyy-MM', { locale: fr });
-  //     if (monthKey !== currentMonth) {
-  //       months.push({
-  //         name: format(dayInTimeline[currentMonthStartDayIndex], 'MMMM yyyy', { locale: fr }),
-  //         span: index - currentMonthStartDayIndex,
-  //         key: currentMonth,
-  //       });
-  //       currentMonth = monthKey;
-  //       currentMonthStartDayIndex = index;
-  //     }
-  //     if (index === dayInTimeline.length - 1) {
-  //       months.push({
-  //         name: format(day, 'MMMM yyyy', { locale: fr }),
-  //         span: index - currentMonthStartDayIndex + 1,
-  //         key: currentMonth,
-  //       });
-  //     }
-  //   });
-  //   return months;
-  // }, [dayInTimeline]);
-
   
   const handleScrollY = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (!mainScrollRef.current || !columnEmployeeRef.current) return;
@@ -628,7 +598,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           ref={columnEmployeeRef}
         >
           <div 
-            className="h-[112px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
+            className="h-[121px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
             style={{
               backgroundColor: '#f3f7f8',
             }}
@@ -786,7 +756,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                             className="calendar-cell p-0"
                             style={{ 
                               width: `${CELL_WIDTH}px`,
-                              height: `${idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 8}px`
+                              height: `${idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 10}px`
                             }}
                           >
                             <DayCell
@@ -795,7 +765,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                               appointments={[]}
                               intervals={HALF_DAY_INTERVALS}
                               isFullDay={isFullDay}
-                              RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 8}
+                              RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 10}
                               isMobile={isMobile}
                               eventTypes={eventTypes}
                               nonWorkingDates={nonWorkingDates}

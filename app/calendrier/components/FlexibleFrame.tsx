@@ -129,7 +129,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
                       key={group.key}
                       className="
                          col-span-full flex items-center justify-start py-2 text-[14px] poppins
-                         bg-gray-50 border-r border-gray-200 bg-white border-b
+                         bg-gray-50 border-r border-gray-200 bg-white border-b max-h-[49px]
                       "
                       style={{ 
                         gridColumn: `${startColumn} / ${endColumn + 1}`,

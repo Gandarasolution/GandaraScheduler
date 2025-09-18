@@ -217,6 +217,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               placeholder="Sélectionnez une icône"
               className="w-full sm:w-[65px] py-2 px-2"
               showImages={true}
+              illustrationImage={<></>}
             />
           
             {/* Sélecteurs de couleur */}
