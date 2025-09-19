@@ -35,6 +35,43 @@
 
 "use client";
 
+// Imports React, hooks, DnD, date-fns, types, composants, et données
+import React, { useState, useCallback, useRef, useEffect, JSX, useMemo} from "react";
+import { DndProvider, useDragDropManager } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import {
+  addDays,
+  eachDayOfInterval,
+  setHours,
+  setMinutes,
+  format,
+  addWeeks,
+  addMonths,
+} from "date-fns";
+import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent} from "../types";
+import CalendarGrid from "../components/CalendarGrid";
+import ChantierTableFrame from "../components/ChantierTableFrame";
+import Modal from "../components/Modal";
+import AppointmentForm from "../components/AppointmentForm";
+import DraggableSource from "../components/DraggableSource";
+import RightClickComponent from "../components/RightClickComponent";
+import {
+  initialTeams,
+  initialEmployees,
+  initialAppointments,
+  colors,
+  Evenements,
+} from "../../datasource";
+import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
+import { SelectedCellContext } from "../context/SelectedCellContext";
+import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, WINDOW_SIZE } from "../utils/constants";
+import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend } from "../utils/dates";
+import { CalendarConfig } from "../types";
+import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
+
+
+import LogoUrl from "../image/LOGO_couleur_police_noire.svg";
+
 /**
  * Composant NoSSR pour éviter les problèmes d'hydratation
  * Nécessaire pour les composants avec état côté client uniquement
@@ -52,52 +89,6 @@ function NoSSR({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-
-// Imports React, hooks, DnD, date-fns, types, composants, et données
-import React, { useState, useCallback, useRef, useEffect, JSX, useMemo} from "react";
-import { DndProvider, useDragDropManager } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import {
-  addDays,
-  eachDayOfInterval,
-  setHours,
-  setMinutes,
-  format,
-  addWeeks,
-  addMonths,
-} from "date-fns";
-import { Appointment, Employee, HistoryAction, EventTemplate, EventType } from "../types";
-import CalendarGrid from "../components/CalendarGrid";
-import ChantierTableFrame from "../components/ChantierTableFrame";
-import Modal from "../components/Modal";
-import AppointmentForm from "../components/AppointmentForm";
-import DraggableSource from "../components/DraggableSource";
-import RightClickComponent from "../components/RightClickComponent";
-import {
-  initialTeams,
-  initialEmployees,
-  initialAppointments,
-  chantier,
-  absences,
-  autres,
-  colors,
-  allEventTypes,
-  chantiersEventTypes,
-  absencesEventTypes,
-  autresEventTypes,
-  chantiersDetailles,
-  ChantierDetailed
-} from "../../datasource";
-import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
-import { SelectedCellContext } from "../context/SelectedCellContext";
-import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, WINDOW_SIZE } from "../utils/constants";
-import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend } from "../utils/dates";
-import { CalendarConfig } from "../types";
-import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
-
-
-import LogoUrl from "../image/LOGO_couleur_police_noire.svg";
-
 
 /**
  * Page principale du calendrier (HomePage).
@@ -131,8 +122,8 @@ export default function HomePage() {
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
   const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
   const mainScrollRef = useRef<HTMLDivElement>(null);
-  const chantiers = useRef<ChantierDetailed[]>(chantiersDetailles);
-  const [filteredChantiers, setFilteredChantiers] = useState<ChantierDetailed[]>(chantiersDetailles);
+  const events = useRef<Evenement[]>(Evenements);
+  const [filteredChantiers, setFilteredChantiers] = useState<ChantierEvent[]>(Evenements.map(e => (e.type === 'Chantier' && e)) as ChantierEvent[]);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const employees = useRef<Employee[]>(initialEmployees);
@@ -157,6 +148,18 @@ export default function HomePage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // États pour le système de notifications
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+    timestamp: Date;
+    isRead: boolean;
+  }>>([]);
+  const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
+  
   const [isMobile, setIsMobile] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [eventSearchInput, setEventSearchInput] = useState<string>('');
@@ -176,8 +179,6 @@ export default function HomePage() {
   const continuousScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const isInfiniteScrollEnabled = useRef(false); // Désactivé par défaut jusqu'à la fin du scroll initial
 
-  const eventTypes = useRef<EventType[]>(allEventTypes);
-  
 
   // Throttle ultra-performant avec requestAnimationFrame
   const throttledScrollHandler = useRef<(() => void) | null>(null);
@@ -308,6 +309,47 @@ export default function HomePage() {
     return configs;
   }, []);
 
+  // --- FONCTIONS DE GESTION DES NOTIFICATIONS ---
+  const addNotification = useCallback((
+    type: 'success' | 'error' | 'warning' | 'info',
+    title: string,
+    message: string
+  ) => {
+    const newNotification = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      title,
+      message,
+      timestamp: new Date(),
+      isRead: false
+    };
+    
+    setNotifications(prev => [newNotification, ...prev].slice(0, 50)); // Garder seulement les 50 dernières
+    
+    // Auto-suppression après 5 secondes pour les notifications success/info
+    if (type === 'success' || type === 'info') {
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+      }, 5000);
+    }
+  }, []);
+
+  const markNotificationAsRead = useCallback((id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  }, []);
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  const clearAllNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  const unreadNotificationsCount = useMemo(() => {
+    return notifications.filter(n => !n.isRead).length;
+  }, [notifications]);
+
   const availableConfigs = getAvailableConfigs();
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig>(availableConfigs[1]);
 
@@ -351,8 +393,10 @@ export default function HomePage() {
         setFilteredAppointments(
           appointments.current
             .map(app => {
-              const eventType = eventTypes.current.find(et => et.id === app.eventTypeId);
-              if (eventType && eventType.label.toLowerCase().includes(lowercasedQuery)) {
+              // Récupérer les informations selon le type de rendez-vous
+              let title = events.current.find(e => e.id === app.EventId)?.label || '';
+              
+              if (title.toLowerCase().includes(lowercasedQuery)) {
                 return app;
               }
               return undefined;
@@ -361,12 +405,13 @@ export default function HomePage() {
         );
       case 'chantier-table':
         if (!searchInput) {
-          setFilteredChantiers(chantiers.current);
+          setFilteredChantiers(events.current.map(e => (e.type === 'Chantier' && e)) as ChantierEvent[]);
           return;
         }
 
         setFilteredChantiers(
-          chantiers.current
+          events.current
+            .filter(e => e.type === 'Chantier')
             .map(chantier => {
               // Vérifie si le nom du chantier ou le client correspond à la recherche
               if (chantier.attributs.libelle.toLowerCase().includes(lowercasedQuery) || chantier.attributs.chefChantier.toLowerCase().includes(lowercasedQuery)) {
@@ -374,7 +419,7 @@ export default function HomePage() {
               }
               return undefined;
             })
-            .filter((chantier): chantier is ChantierDetailed => chantier !== undefined)
+            .filter((chantier): chantier is ChantierEvent => chantier !== undefined)
         );
       } 
     }, [searchInput]);
@@ -419,19 +464,20 @@ export default function HomePage() {
 
         days.forEach(day => {
           newAppointments.push({
-          id: ++idCounter.current, // ID déterministe sans Date.now()
-          description: selectedAppointment?.description || "Description du rendez-vous répété",
-          startDate: day.start ,
-          endDate: day.end,
-          employeeId: selectedAppointment?.employeeId || 1,
-          eventTypeId: selectedAppointment?.eventTypeId || 1, // Premier type par défaut
+            id: ++idCounter.current, // ID déterministe sans Date.now()
+            description: selectedAppointment?.description || "Description du rendez-vous répété",
+            startDate: day.start ,
+            endDate: day.end,
+            employeeId: selectedAppointment?.employeeId || 1,
+            type: selectedAppointment?.type || 'chantier',
+            EventId: selectedAppointment?.EventId,
+          });
         });
-      });
 
-      // Incrémente la date pour le prochain rendez-vous
-      currentStartDate = repeatInterval === "day" ? addDays(newStartDate, numberCount || 1)
-        : repeatInterval === "week" ? addWeeks(newStartDate, numberCount || 1) 
-        : addMonths(newStartDate, numberCount || 1);
+        // Incrémente la date pour le prochain rendez-vous
+        currentStartDate = repeatInterval === "day" ? addDays(newStartDate, numberCount || 1)
+          : repeatInterval === "week" ? addWeeks(newStartDate, numberCount || 1) 
+          : addMonths(newStartDate, numberCount || 1);
       }
     }
     else if(endDate){      
@@ -460,7 +506,8 @@ export default function HomePage() {
           startDate: day.start ,
           endDate: day.end,
           employeeId: selectedAppointment?.employeeId || 1,
-          eventTypeId: selectedAppointment?.eventTypeId || 1, // Premier type par défaut
+          type: selectedAppointment?.type || 'chantier',
+          EventId: selectedAppointment?.EventId,
         });
       });
 
@@ -473,9 +520,9 @@ export default function HomePage() {
     // Ajoute les nouveaux rendez-vous à la liste
     appointments.current = [...appointments.current, ...newAppointments];
     handleResearch(); // Met à jour la liste filtrée
-    setModalInfo({ message: `${newAppointments.length} rendez-vous créé${newAppointments.length > 1 ? 's' : ''}`, color: 'green' });
+    addNotification('success', 'Rendez-vous répétés', `${newAppointments.length} rendez-vous créé${newAppointments.length > 1 ? 's' : ''}`);
     setRepeatAppointmentData(null);
-  }, [handleResearch, selectedAppointment, isFullDay, nonWorkingDates]);
+  }, [handleResearch, selectedAppointment, isFullDay, nonWorkingDates, addNotification]);
 
   // --- FONCTIONS D'HISTORIQUE POUR CTRL+Z ---
   const addToHistory = useCallback((action: HistoryAction) => {
@@ -526,8 +573,7 @@ export default function HomePage() {
   const undoLastAction = useCallback(() => {    
     
     if (history.current.length === 0) {
-      setModalInfo({ message: "Aucune action à annuler", color: "#e74c3c" });
-      setTimeout(() => setModalInfo(null), 2000);
+      addNotification('warning', 'Aucune action', 'Aucune action à annuler');
       return;
     }
 
@@ -539,7 +585,7 @@ export default function HomePage() {
         // Annuler une création = supprimer le rendez-vous
         if (lastAction.appointment) {
           appointments.current = appointments.current.filter(app => app.id !== lastAction.appointment!.id);
-          setModalInfo({ message: "Création annulée", color: "#27ae60" });
+          addNotification('success', 'Annulation', 'Création annulée');
         }
         break;
 
@@ -547,7 +593,7 @@ export default function HomePage() {
         // Annuler une suppression = restaurer le rendez-vous
         if (lastAction.appointment) {
           appointments.current = [...appointments.current, { ...lastAction.appointment }];
-          setModalInfo({ message: "Suppression annulée", color: "#27ae60" });
+          addNotification('success', 'Annulation', 'Suppression annulée');
         }
         break;
 
@@ -557,7 +603,7 @@ export default function HomePage() {
           appointments.current = appointments.current.map(app =>
             app.id === lastAction.previousAppointment!.id ? { ...lastAction.previousAppointment! } : app
           );
-          setModalInfo({ message: "Modification annulée", color: "#27ae60" });
+          addNotification('success', 'Annulation', 'Modification annulée');
         }
         break;
 
@@ -567,7 +613,7 @@ export default function HomePage() {
           appointments.current = appointments.current.map(app =>
             app.id === lastAction.previousAppointment!.id ? { ...lastAction.previousAppointment! } : app
           );
-          setModalInfo({ message: "Déplacement annulé", color: "#27ae60" });
+          addNotification('success', 'Annulation', 'Déplacement annulé');
         }
         break;
 
@@ -583,7 +629,7 @@ export default function HomePage() {
           const createdIds = lastAction.createdAppointments.map(app => app.id);
           appointments.current = appointments.current.filter(app => !createdIds.includes(app.id));
           
-          setModalInfo({ message: "Division annulée", color: "#27ae60" });
+          addNotification('success', 'Annulation', 'Division annulée');
         }
         break;
     }
@@ -592,9 +638,7 @@ export default function HomePage() {
     setTimeout(() => {
       handleResearch(); // Mettre à jour l'affichage
     }, 0);
-    
-    setTimeout(() => setModalInfo(null), 2000);
-  }, [handleResearch]);
+  }, [handleResearch, addNotification]);
 
   // Compteur pour générer des IDs uniques de façon déterministe
   const idCounter = useRef(10000); // Commencer à 10000 pour éviter les conflits avec les IDs existants
@@ -602,9 +646,12 @@ export default function HomePage() {
 
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (startDate: Date, endDate: Date, employeeId: number, eventTypeId: number, saveToHistory: boolean = true) => {
+    (startDate: Date, endDate: Date, employeeId: number, eventId: number, saveToHistory: boolean = true, type: 'chantier' | 'absence' | 'autres') => {
       // Générer un ID déterministe sans Date.now() ou Math.random()
       const id = ++idCounter.current;
+      const keyName = type === 'chantier' ? 'chantierId' 
+        : type === 'absence' ? 'absenceId' 
+        : 'autreId';
       
       const newApp: Appointment = {
         id: id,
@@ -612,7 +659,8 @@ export default function HomePage() {
         startDate,
         endDate,
         employeeId,
-        eventTypeId,
+        type: type,
+        EventId: eventId,
       };
       appointments.current = [...appointments.current, newApp];
       
@@ -664,7 +712,9 @@ export default function HomePage() {
         day.start,
         day.end,
         cell.employeeId,
-        clipboardAppointment.current.eventTypeId || 1
+        clipboardAppointment.current.EventId,
+        true,
+        clipboardAppointment.current.type
       );
     }
   }, [createAppointment, isFullDay, nonWorkingDates]);
@@ -874,8 +924,9 @@ export default function HomePage() {
             day.start, 
             day.end, 
             newEmployeeId, 
-            appointment.eventTypeId,
-            false
+            appointment.EventId,
+            false,
+            appointment.type
           );
           if (newApp) {
             createdAppointments.push(newApp);
@@ -892,8 +943,9 @@ export default function HomePage() {
             day.start, 
             day.end, 
             newEmployeeId, 
-            appointment.eventTypeId,
-            false
+            appointment.EventId,
+            false,
+            appointment.type
           );
           if (newApp) {
             createdAppointments.push(newApp);
@@ -918,87 +970,88 @@ export default function HomePage() {
 
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback(
-    (appointment: Appointment, eventType: EventType, includeAllNonWorkingDays: boolean) => {
-
-    // Mettre à jour le EventType correspondant dans le cache local `eventTypes` (et global `allEventTypes`)
-    const existingIndex = eventTypes.current.findIndex(et => et.id === eventType.id);
-    if (existingIndex !== -1) {
-      // Fusionner les changements fournis par le formulaire (ne perdre aucune propriété non fournie)
-      eventTypes.current[existingIndex] = { ...eventTypes.current[existingIndex], ...eventType };
-    }
+    (appointment: Appointment, eventUpdate: Evenement, includeAllNonWorkingDays: boolean) => {
 
 
-    const days = getWorkedDayIntervals(
-      appointment.startDate, 
-      appointment.endDate,
-      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-      includeAllNonWorkingDays,
-      nonWorkingDates
-    );        
-    
-    console.log("Jours travaillés calculés pour le rendez-vous :", days);
-    
-    // Enregistrer l'état précédent pour l'historique
-    let previousAppointment: Appointment | undefined;
-    if (appointment.id) {
-      previousAppointment = appointments.current.find(app => app.id === appointment.id);
-    }
-    
-    // Fonction utilitaire pour créer les rendez-vous supplémentaires
-    const createExtraAppointments = (fromIndex = 1) => {
-      days.slice(fromIndex).forEach(day => {
-        createAppointment(
-          day.start,
-          day.end,
-          appointment.employeeId as number,
-          appointment.eventTypeId
-        );
-      });
-    };
+      events.current = events.current.map(e =>
+        e.id === appointment.EventId ? { ...e, ...eventUpdate } : e
+      );
 
-    if (appointment.id) {
-      // Mise à jour du rendez-vous existant - ne traiter que le RDV en cours
-      if (days.length > 0) {
-        // Mettre à jour le rendez-vous principal avec le premier jour
-        appointments.current = appointments.current.map(app => {
-          if (app.id === appointment.id) {
-            return {
-              ...app,
-              description: appointment.description || app.description,
-              startDate: days[0].start,
-              endDate: days[0].end,
-              employeeId: appointment.employeeId,
-              eventTypeId: appointment.eventTypeId,
-            };   
-          }
-          return app;
+
+      const days = getWorkedDayIntervals(
+        appointment.startDate, 
+        appointment.endDate,
+        isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+        includeAllNonWorkingDays,
+        nonWorkingDates
+      );        
+      
+      
+      // Enregistrer l'état précédent pour l'historique
+      let previousAppointment: Appointment | undefined;
+      if (appointment.id) {
+        previousAppointment = appointments.current.find(app => app.id === appointment.id);
+      }
+     
+      
+      // Fonction utilitaire pour créer les rendez-vous supplémentaires
+      const createExtraAppointments = (fromIndex = 1) => {
+        days.slice(fromIndex).forEach(day => {
+          createAppointment(
+            day.start,
+            day.end,
+            appointment.employeeId as number,
+            appointment.EventId,
+            true,
+            appointment.type
+          );
         });
-        
-        // Créer des RDV supplémentaires pour les autres jours si nécessaire
-        if (days.length > 1) {
-          createExtraAppointments(1);
+      };
+
+      if (appointment.id) {
+        // Mise à jour du rendez-vous existant - ne traiter que le RDV en cours
+        if (days.length > 0) {
+          // Mettre à jour le rendez-vous principal avec le premier jour
+          appointments.current = appointments.current.map(app => {
+            if (app.id === appointment.id) {
+              return {
+                ...app,
+                description: appointment.description || app.description,
+                startDate: days[0].start,
+                endDate: days[0].end,
+                employeeId: appointment.employeeId,
+                type: appointment.type,
+                EventId: appointment.EventId,
+              };   
+            }
+            return app;
+          });
+          
+          // Créer des RDV supplémentaires pour les autres jours si nécessaire
+          if (days.length > 1) {
+            createExtraAppointments(1);
+          }
+        }
+      } else {
+        // Création d'un nouveau rendez-vous
+        createExtraAppointments(0);
+      }
+      
+      // Enregistrer dans l'historique
+      if (appointment.id && previousAppointment) {
+        // C'est une mise à jour
+        const updatedAppointment = appointments.current.find(app => app.id === appointment.id);
+        if (updatedAppointment) {
+          saveAppointmentState(updatedAppointment, 'update', previousAppointment);
         }
       }
-    } else {
-      // Création d'un nouveau rendez-vous
-      createExtraAppointments(0);
-    }
-    
-    // Enregistrer dans l'historique
-    if (appointment.id && previousAppointment) {
-      // C'est une mise à jour
-      const updatedAppointment = appointments.current.find(app => app.id === appointment.id);
-      if (updatedAppointment) {
-        saveAppointmentState(updatedAppointment, 'update', previousAppointment);
-      }
-    }
-    // Note: Les créations sont déjà enregistrées dans createAppointment
-    
-    handleResearch(); // Met à jour la liste filtrée
-    setIsModalOpen(false);
-    setSelectedAppointment(null);
-    setNewAppointmentInfo(null);
-  }, [handleResearch, createAppointment, isFullDay, nonWorkingDates, saveAppointmentState]);
+      // Note: Les créations sont déjà enregistrées dans createAppointment
+      
+      handleResearch(); // Met à jour la liste filtrée
+      setIsModalOpen(false);
+      setSelectedAppointment(null);
+      setNewAppointmentInfo(null);
+    }, [handleResearch, createAppointment, isFullDay, nonWorkingDates, saveAppointmentState]);
 
 
   const handleDeleteAppointmentConfirm = useCallback(() => {
@@ -1047,7 +1100,7 @@ export default function HomePage() {
     const { startDate, endDate, employeeId } = appointmentToDivide;
     const totalDuration = endDate.getTime() - startDate.getTime();
     const timeInterval = isFullDay ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
-    const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000)); // Nombre d'intervalles de travail dans la durée totale
+    const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000)); // Nombre d'intervalles de travail dans la durée totale;
     
     const EndDate = new Date(startDate.getTime() + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000)));
 
@@ -1062,7 +1115,8 @@ export default function HomePage() {
       startDate: EndDate,
       endDate: endDate,
       employeeId: employeeId as number,
-      eventTypeId: appointmentToDivide.eventTypeId,
+      type: appointmentToDivide.type,
+      EventId: appointmentToDivide.EventId
     };
 
     // Ajouter le nouveau RDV sans passer par createAppointment pour éviter l'historique
@@ -1113,24 +1167,20 @@ export default function HomePage() {
       const startDate = setHours(setMinutes(new Date(date), 0), startHour);
       const endDate = setHours(setMinutes(new Date(date), 0), endHour);
 
-      // Trouver le bon eventTypeId basé sur le typeEvent et le title
-      let eventTypeId = 1; // Par défaut
-      if (typeEvent === 'Chantier') {
-        const eventType = chantiersEventTypes.find(et => et.name === title);
-        eventTypeId = eventType ? eventType.id : chantiersEventTypes[0].id;
-      } else if (typeEvent === 'Absence') {
-        const eventType = absencesEventTypes.find(et => et.name === title);
-        eventTypeId = eventType ? eventType.id : absencesEventTypes[0].id;
-      } else {
-        const eventType = autresEventTypes.find(et => et.name === title);
-        eventTypeId = eventType ? eventType.id : autresEventTypes[0].id;
+      // Trouver l'ID de l'événement correspondant
+      let eventTypeId = events.current.find(e => e.label === title)?.id;
+      if (!eventTypeId) {
+        console.warn(`Événement introuvable pour le titre : ${title}`);
+        return;
       }
 
       createAppointment(
         startDate, 
         endDate, 
         employeeId, 
-        eventTypeId
+        eventTypeId,
+        true,
+        typeEvent.toLowerCase() as 'chantier' | 'absence' | 'autres'
       );
       
       // Fermer l'overlay après création
@@ -1144,13 +1194,7 @@ export default function HomePage() {
   const filteredEvents = useMemo(() => {
     if (!eventSearchInput.trim()) return [];
 
-    const allEvents = [
-      ...chantier.map(item => ({ ...item, type: 'Chantier' as const })),
-      ...absences.map(item => ({ ...item, type: 'Absence' as const })),
-      ...autres.map(item => ({ ...item, type: 'Autre' as const }))
-    ];
-
-    return allEvents.filter(event =>
+    return events.current.filter(event =>
       event.label.toLowerCase().includes(eventSearchInput.toLowerCase())
     );
   }, [eventSearchInput]);
@@ -1378,7 +1422,7 @@ export default function HomePage() {
           handleDeleteAppointmentConfirm();
         }
         else{
-          setModalInfo({ message: "Aucun rendez-vous sélectionné pour la suppression.", color: "red" });
+          addNotification('error', 'Erreur', 'Aucun rendez-vous sélectionné pour la suppression.');
         }
       }
 
@@ -1552,6 +1596,19 @@ export default function HomePage() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isViewDropdownOpen]);
+
+  // Test du système de notifications au chargement (à supprimer en production)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        addNotification('info', 'Bienvenue', 'Application chargée avec succès !');
+      }, 2000);
+      
+      setTimeout(() => {
+        addNotification('success', 'Données synchronisées', 'Tous vos rendez-vous sont à jour.');
+      }, 4000);
+    }
+  }, [addNotification]);
 
   // Rendu principal de la page
   return (
@@ -1728,9 +1785,11 @@ export default function HomePage() {
                         </div>
                       )}
                     </div>
+                    
+                    {/* Bouton Notifications */}
                     <button
                       className="p-3 rounded-full hover:bg-blue-100 transition relative"
-                      onClick={() => setIsSettingsOpen(true)}
+                      onClick={() => setIsNotificationsPanelOpen(!isNotificationsPanelOpen)}
                       title="Notifications"
                     >
                       <div className="relative">
@@ -1755,7 +1814,9 @@ export default function HomePage() {
                     <div
                       className="p-5 rounded-full  transition bg-red-600 relative"
                     >
-                      <span className="absolute bottom-0 -right-1 block h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
+                       {unreadNotificationsCount > 0 && (
+                        <span className="absolute bottom-0 -right-1 block h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1902,7 +1963,7 @@ export default function HomePage() {
                       dayInTimeline={dayInTimeline}
                       HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
                       isFullDay={isFullDay}
-                      eventTypes={eventTypes.current}
+                      events={events.current}
                       //selectedCalendarId={selectedCalendarId}
                       isMobile={isMobile}
                       includeWeekend={includeWeekend}
@@ -2141,7 +2202,7 @@ export default function HomePage() {
             <AppointmentForm
               appointments={appointments.current}
               appointment={selectedAppointmentForm as Appointment}
-              eventTypes={eventTypes.current}
+              event={events.current.find(e => e.id === selectedAppointmentForm?.EventId) as Evenement}
               initialEmployeeId={newAppointmentInfo?.employeeId || null}
               employees={employees.current}
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
@@ -2157,6 +2218,17 @@ export default function HomePage() {
           settings={settings} 
           isSettingsOpen={isSettingsOpen}
         />
+        
+        {/* Panneau de notifications */}
+        <NotificationsPanel 
+          isOpen={isNotificationsPanelOpen}
+          onClose={() => setIsNotificationsPanelOpen(false)}
+          notifications={notifications}
+          onMarkAsRead={markNotificationAsRead}
+          onRemove={removeNotification}
+          onClearAll={clearAllNotifications}
+        />
+        
         {/* Overlay de recherche d'événements */}
         
         {/* Barre de chargement modernisée */}
@@ -2197,7 +2269,6 @@ export default function HomePage() {
           filteredEvents={filteredEvents}
           selectedCell={selectedCell}
           addAppointmentFromSearch={handleSaveAppointment}
-          eventTypes={eventTypes.current}
           isFullDay={isFullDay}
         />
       </div>
@@ -2271,43 +2342,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       onClose={onClose}
       title="Paramètres"
     >
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 poppins">
         {settings.map((cat: any, idx: number) => (
-          <div key={cat.category} className={`border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm  ${openCategory?.length !== null ? 'w-auto' : 'w-[400px]'}`}>
+          <div key={cat.category} className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-300">
             <button
               type="button"
-              className="w-full text-left px-6 py-4 font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none focus:bg-gray-100 flex items-center justify-between"
+              className="w-full text-left px-6 py-5 font-semibold text-gray-800 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:ring-opacity-50 flex items-center justify-between border-b border-gray-200"
               onClick={() => setOpenCategory(openCategory === cat.category ? null : cat.category)}
             >
-              <span className="text-base">{cat.category}</span>
-              <svg 
-                className={`w-5 h-5 text-gray-500 transform transition-transform ${openCategory === cat.category ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-8 bg-[#009580] rounded-full"></div>
+                <span className="text-lg poppins font-medium">{cat.category}</span>
+              </div>
+              <div className={`p-2 rounded-full transition-all duration-300 ${openCategory === cat.category ? 'bg-[#009580] text-white rotate-180' : 'bg-white text-gray-500 hover:bg-gray-200'}`}>
+                <svg 
+                  className="w-5 h-5 transition-transform duration-300"
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </button>
-            {openCategory === cat.category && (
-              <div className="px-6 py-4 border-t border-gray-100">
-                {cat.items.map((setting: any) => (
-                  <div key={setting.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-50 last:border-b-0">
-                    <label htmlFor={setting.id} className="text-sm font-medium text-gray-700 mb-2 sm:mb-0 sm:mr-4 min-w-[180px]">
+            
+            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openCategory === cat.category ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="px-6 py-6 bg-gradient-to-br from-white to-gray-50">
+                {cat.items.map((setting: any, settingIdx: number) => (
+                  <div key={setting.id} className={`flex flex-col lg:flex-row lg:items-center justify-between py-4 ${settingIdx !== cat.items.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <label htmlFor={setting.id} className="text-base font-medium text-gray-700 mb-3 lg:mb-0 lg:mr-6 min-w-[200px] poppins">
                       {setting.label}
                     </label>
+                    
                     {setting.type === "custom-non-working-dates" ? (
-                      <div className="flex flex-col gap-3 w-full max-w-md">
-                        <div className="flex gap-2 items-center">
+                      <div className="flex flex-col gap-4 w-full max-w-lg">
+                        <div className="flex gap-3 items-center">
                           <input
                             type="date"
                             id={setting.id}
                             value={setting.newNonWorkingDate}
                             onChange={e => setting.setNewNonWorkingDate(e.target.value)}
-                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition flex-1"
+                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition-all duration-200 flex-1 poppins text-sm bg-white shadow-sm hover:shadow-md"
                           />
                           <button
-                            className="px-4 py-2 bg-[#009580] text-white rounded-lg hover:bg-[#007a6b] transition-colors font-medium"
+                            className="px-6 py-3 bg-[#009580] text-white rounded-xl hover:bg-[#007a6b] active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
                             onClick={() => {
                               if (
                                 setting.newNonWorkingDate &&
@@ -2324,19 +2402,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               }
                             }}
                           >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
                             Ajouter
                           </button>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3">
+                        
+                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
                           {setting.nonWorkingDates.length === 0 ? (
-                            <p className="text-gray-500 italic text-sm">Aucune date ajoutée</p>
+                            <div className="text-center py-8">
+                              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <p className="text-gray-500 text-sm poppins">Aucune date non travaillée ajoutée</p>
+                            </div>
                           ) : (
-                            <ul className="space-y-2 max-h-32 overflow-y-auto">
+                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                              <h4 className="text-sm font-semibold text-gray-700 mb-3 poppins">Dates non travaillées ({setting.nonWorkingDates.length})</h4>
                               {setting.nonWorkingDates.map((date: Date, idx: number) => (
-                                <li key={format(date, "yyyy-MM-dd") + idx} className="flex items-center justify-between bg-white rounded px-3 py-2 shadow-sm">
-                                  <span className="text-sm font-medium text-gray-700">{format(date, "dd/MM/yyyy")}</span>
+                                <div key={format(date, "yyyy-MM-dd") + idx} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 bg-[#009580] rounded-full"></div>
+                                    <span className="text-sm font-medium text-gray-800 poppins">{format(date, "dd/MM/yyyy")}</span>
+                                  </div>
                                   <button
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded text-xs font-medium transition-colors"
+                                    className="text-red-500 hover:text-white hover:bg-red-500 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1"
                                     onClick={() =>
                                       setting.setNonWorkingDates((prev: Date[]) =>
                                         prev.filter(
@@ -2346,11 +2439,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                       )
                                     }
                                   >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
                                     Supprimer
                                   </button>
-                                </li>
+                                </div>
                               ))}
-                            </ul>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -2358,19 +2454,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="flex items-center">
                         {setting.type === "checkbox" ? (
                           <div className="flex items-center">
-                            <input
-                              id={setting.id}
-                              type="checkbox"
-                              className="w-4 h-4 text-[#009580] border-gray-300 rounded focus:ring-[#009580] focus:ring-2"
-                              checked={setting.value}
-                              onChange={e => setting.onChange(e.target.checked)}
-                            />
+                            <div className="relative">
+                              <input
+                                id={setting.id}
+                                type="checkbox"
+                                className="sr-only"
+                                checked={setting.value}
+                                onChange={e => setting.onChange(e.target.checked)}
+                              />
+                              <div className={`w-12 h-6 rounded-full transition-all duration-300 cursor-pointer ${setting.value ? 'bg-[#009580]' : 'bg-gray-300'}`} onClick={() => setting.onChange(!setting.value)}>
+                                <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-all duration-300 ${setting.value ? 'translate-x-6' : 'translate-x-0.5'} translate-y-0.5`}></div>
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <input
                             id={setting.id}
                             type={setting.type}
-                            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition w-40"
+                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition-all duration-200 w-48 poppins text-sm bg-white shadow-sm hover:shadow-md"
                             value={setting.value}
                             onChange={e => setting.onChange(e.target.value)}
                           />
@@ -2380,14 +2481,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 ))}
               </div>
-            )}
+            </div>
           </div>
         ))}
-        <div className="flex justify-end pt-4">
+        
+        <div className="flex justify-end pt-6 border-t border-gray-200">
           <button
-            className="px-6 py-2 bg-[#009580] text-white rounded-xl hover:bg-[#007a6b] transition-colors font-medium"
+            className="px-8 py-3 bg-[#009580] text-white rounded-xl hover:bg-[#007a6b] active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
             onClick={onClose}
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
             Fermer
           </button>
         </div>
@@ -2402,10 +2507,9 @@ type SearchOverlayProps = {
   onClose: () => void;
   eventSearchInput: string;
   setEventSearchInput: (input: string) => void;
-  filteredEvents: (EventTemplate & { type: "Chantier" | "Absence" | "Autre" })[];
+  filteredEvents: (Evenement) [];
   selectedCell:{ employeeId: number; date: Date } | null
-  addAppointmentFromSearch: (appointment: Appointment, eventType: EventType, includeAllNonWorkingDays: boolean) => void;
-  eventTypes: EventType[];
+  addAppointmentFromSearch: (appointment: Appointment, eventType: Evenement, includeAllNonWorkingDays: boolean) => void;
   isFullDay: boolean;
 };
 
@@ -2417,7 +2521,6 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
   filteredEvents,
   selectedCell,
   addAppointmentFromSearch,
-  eventTypes,
   isFullDay
 }) => {
   const dragDropManager = useDragDropManager();
@@ -2534,9 +2637,9 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
                               startDate: new Date(selectedCell.date),
                               endDate: new Date(selectedCell.date.setHours(isFullDay ? 23 : 11, 59, 59)),
                               employeeId: selectedCell.employeeId,
-                              eventTypeId: event.id,
+                              
                             } as Appointment,
-                            eventTypes.find(et => et.id === event.id)!,
+                            event,
                             false
                           )
                           onClose()
@@ -2555,3 +2658,196 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
     </>
   );
 }
+
+// Composant NotificationsPanel
+type NotificationsPanelProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  notifications: Array<{
+    id: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+    timestamp: Date;
+    isRead: boolean;
+  }>;
+  onMarkAsRead: (id: string) => void;
+  onRemove: (id: string) => void;
+  onClearAll: () => void;
+};
+
+const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
+  isOpen,
+  onClose,
+  notifications,
+  onMarkAsRead,
+  onRemove,
+  onClearAll
+}) => {
+  if (!isOpen) return null;
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return (
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        );
+      case 'error':
+        return (
+          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+        );
+      case 'warning':
+        return (
+          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+            <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+        );
+      case 'info':
+      default:
+        return (
+          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        );
+    }
+  };
+
+  const formatTimestamp = (timestamp: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - timestamp.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'À l\'instant';
+    if (minutes < 60) return `Il y a ${minutes} min`;
+    if (hours < 24) return `Il y a ${hours}h`;
+    if (days < 7) return `Il y a ${days}j`;
+    return format(timestamp, 'dd/MM/yyyy HH:mm');
+  };
+
+  return (
+    <>
+      {/* Overlay pour fermer en cliquant à l'extérieur */}
+      <div 
+        className="fixed inset-0 z-40"
+        onClick={onClose}
+      />
+      
+      {/* Panneau de notifications */}
+      <div className="fixed top-16 right-4 w-96 max-h-[80vh] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col poppins">
+        {/* En-tête */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-[#009580] to-[#007a6b] text-white rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5V9.09c0-2.5-2.5-4.09-5-4.09S5 6.59 5 9.09V12l-5 5h5m0 0v1a3 3 0 006 0v-1m-6 0h6" />
+            </svg>
+            <h3 className="text-lg font-semibold">Notifications</h3>
+            {notifications.length > 0 && (
+              <span className="bg-white/20 text-xs px-2 py-1 rounded-full">
+                {notifications.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {notifications.length > 0 && (
+              <button
+                onClick={onClearAll}
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors"
+                title="Tout effacer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Contenu */}
+        <div className="flex-1 overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5V9.09c0-2.5-2.5-4.09-5-4.09S5 6.59 5 9.09V12l-5 5h5m0 0v1a3 3 0 006 0v-1m-6 0h6" />
+                </svg>
+              </div>
+              <h4 className="text-lg font-medium text-gray-900 mb-2">Aucune notification</h4>
+              <p className="text-sm text-gray-500 text-center">
+                Vos notifications apparaîtront ici
+              </p>
+            </div>
+          ) : (
+            <div className="p-2">
+              {notifications.map((notification, index) => (
+                <div
+                  key={notification.id}
+                  className={`relative p-4 mb-2 rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer ${
+                    notification.isRead 
+                      ? 'bg-gray-50 border-gray-200' 
+                      : 'bg-white border-l-4 border-l-[#009580] shadow-sm'
+                  }`}
+                  onClick={() => !notification.isRead && onMarkAsRead(notification.id)}
+                >
+                  <div className="flex items-start gap-3">
+                    {getNotificationIcon(notification.type)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h4 className={`text-sm font-medium ${notification.isRead ? 'text-gray-700' : 'text-gray-900'}`}>
+                          {notification.title}
+                        </h4>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemove(notification.id);
+                          }}
+                          className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <p className={`text-xs ${notification.isRead ? 'text-gray-500' : 'text-gray-700'} mb-2`}>
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {formatTimestamp(notification.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                  {!notification.isRead && (
+                    <div className="absolute top-4 right-4">
+                      <div className="w-2 h-2 bg-[#009580] rounded-full"></div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};

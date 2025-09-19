@@ -1,16 +1,30 @@
 import { Employee, Appointment, Filter, CalendarConfig, DimensionItem, DimensionType, Groupe } from '../types';
 
+// Types pour l'accès sécurisé aux propriétés
+type EmployeeField = keyof Employee;
+type AppointmentField = keyof Appointment;
+
+// Fonction d'accès sécurisé aux propriétés d'employé
+function getEmployeeProperty(employee: Employee, field: string): any {
+  return employee[field as EmployeeField];
+}
+
+// Fonction d'accès sécurisé aux propriétés de rendez-vous
+function getAppointmentProperty(appointment: Appointment, field: string): any {
+  return appointment[field as AppointmentField];
+}
+
 // Fonction pour appliquer les filtres aux employés
 export function applyFiltersToEmployees(employees: Employee[], filters: Filter[]): Employee[] {
   return employees.filter(employee => {
     return filters.every(filter => {
       switch (filter.type) {
         case 'equals':
-          return (employee as any)[filter.field] === filter.value;
+          return getEmployeeProperty(employee, filter.field) === filter.value;
         case 'contains':
-          return String((employee as any)[filter.field]).toLowerCase().includes(String(filter.value).toLowerCase());
+          return String(getEmployeeProperty(employee, filter.field)).toLowerCase().includes(String(filter.value).toLowerCase());
         case 'in':
-          return Array.isArray(filter.value) && filter.value.includes((employee as any)[filter.field]);
+          return Array.isArray(filter.value) && filter.value.includes(getEmployeeProperty(employee, filter.field));
         default:
           return true;
       }
@@ -33,23 +47,23 @@ export function applyFiltersToAppointments(
         case 'equals':
           // Si le filtre concerne un champ d'employé, utiliser les données de l'employé
           if (filter.field === 'pole' || filter.field === 'contrat' || filter.field === 'groupId') {
-            return employee ? (employee as any)[filter.field] === filter.value : false;
+            return employee ? getEmployeeProperty(employee, filter.field) === filter.value : false;
           }
           // Sinon, utiliser les données du rendez-vous
-          return (appointment as any)[filter.field] === filter.value;
+          return getAppointmentProperty(appointment, filter.field) === filter.value;
         case 'contains':
           if (filter.field === 'pole' || filter.field === 'contrat' || filter.field === 'groupId') {
-            return employee ? String((employee as any)[filter.field]).toLowerCase().includes(String(filter.value).toLowerCase()) : false;
+            return employee ? String(getEmployeeProperty(employee, filter.field)).toLowerCase().includes(String(filter.value).toLowerCase()) : false;
           }
-          return String((appointment as any)[filter.field]).toLowerCase().includes(String(filter.value).toLowerCase());
+          return String(getAppointmentProperty(appointment, filter.field)).toLowerCase().includes(String(filter.value).toLowerCase());
         case 'in':
           if (filter.field === 'pole' || filter.field === 'contrat' || filter.field === 'groupId') {
-            return employee ? Array.isArray(filter.value) && filter.value.includes((employee as any)[filter.field]) : false;
+            return employee ? Array.isArray(filter.value) && filter.value.includes(getEmployeeProperty(employee, filter.field)) : false;
           }
-          return Array.isArray(filter.value) && filter.value.includes((appointment as any)[filter.field]);
+          return Array.isArray(filter.value) && filter.value.includes(getAppointmentProperty(appointment, filter.field));
         case 'date_range':
           if (filter.field === 'startDate' || filter.field === 'endDate') {
-            const date = new Date((appointment as any)[filter.field]);
+            const date = new Date(getAppointmentProperty(appointment, filter.field));
             const [start, end] = filter.value as [Date, Date];
             return date >= start && date <= end;
           }

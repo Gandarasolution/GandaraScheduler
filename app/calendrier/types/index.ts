@@ -37,51 +37,6 @@ export interface Employee {
   pole: string;
 }
 
-/**
- * Interface représentant un type d'événement/modèle de rendez-vous
- * Cette interface contient les attributs communs partagés par tous les RDV du même type
- * @interface EventType
- */
-export interface EventType {
-  /** Identifiant unique du type d'événement */
-  id: number;
-  /** Nom du type d'événement */
-  name: string;
-  /** Libellé affiché dans les formulaires et listes */
-  label: string;
-  /** Catégorie du type d'événement */
-  category: "Chantier" | "Absence" | "Autre";
-  /** URL de l'icône associée au type d'événement */
-  image: string;
-  /** Couleur de fond pour tous les RDV de ce type (format hex) */
-  color: string;
-  /** Couleur de bordure pour tous les RDV de ce type (format hex) */
-  borderColor: string;
-  /** Couleur du texte pour tous les RDV de ce type (format hex) */
-  textColor: string;
-  /** Description par défaut pour ce type d'événement (optionnel) */
-  defaultDescription?: string;
-}
-
-/**
- * Interface représentant un rendez-vous/événement dans le calendrier
- * Simplifié pour ne contenir que les attributs spécifiques à chaque instance
- * @interface Appointment
- */
-export interface Appointment {
-  /** Identifiant unique du rendez-vous */
-  id: number;
-  /** Description spécifique du rendez-vous */
-  description: string;
-  /** Date et heure de début du rendez-vous */
-  startDate: Date;
-  /** Date et heure de fin du rendez-vous */
-  endDate: Date;
-  /** ID de l'employé assigné au rendez-vous */
-  employeeId: number | string;
-  /** ID du type d'événement auquel ce RDV est lié */
-  eventTypeId: number;
-}
 
 /**
  * Interface représentant un intervalle de demi-journée
@@ -136,39 +91,73 @@ export interface Filter {
  * Interface représentant un projet de chantier
  * @interface Chantier
  */
-export interface Chantier {
-  /** Identifiant unique du chantier */
+interface BaseEvent {
   id: number;
-  /** Libellé descriptif du chantier */
   label: string;
-  /** URL de l'icône du chantier */
-  image: string;
+  color: string;
+  borderColor: string;
+  textColor: string;
+  image?: string;
+  defaultDescription?: string;
+  category?: string;
 }
 
-/**
- * Interface représentant un type d'absence
- * @interface Absence
- */
-export interface Absence {
-  /** Identifiant unique du type d'absence */
-  id: number;
-  /** Libellé descriptif de l'absence */
-  label: string;
-  /** URL de l'icône de l'absence */
-  image: string;
+export interface ChantierEvent extends BaseEvent {
+  type: "Chantier";
+  attributs: {
+    code: string;
+    identifiant: string;
+    libelle: string;
+    etat: string;
+    chargeAffaire: string;
+    chefChantier: string;
+    dateOS: string;
+    dateFin: string;
+    TM: string;
+    HR: string;
+    SH: string;
+    DPF: string;
+    RPF: string;
+    AP: string;
+    SP: string;
+  };
+  location?: string;
+  client?: string;
 }
 
-/**
- * Interface représentant un autre type d'événement
- * @interface Autre
- */
-export interface Autre {
-  /** Identifiant unique de l'événement */
-  id: number;
-  /** Libellé descriptif de l'événement */
-  label: string;
-  image: string;
+export interface AbsenceEvent extends BaseEvent {
+  type: "Absence";
 }
+
+export interface AutreEvent extends BaseEvent {
+  type: "Autre";
+}
+
+export type Evenement = ChantierEvent | AbsenceEvent | AutreEvent;
+
+/**
+ * Interface représentant un rendez-vous/événement dans le calendrier
+ * Simplifié pour ne contenir que les attributs spécifiques à chaque instance
+ * @interface Appointment
+ */
+export interface Appointment{
+  /** Identifiant unique du rendez-vous */
+  id: number;
+  /** Description spécifique du rendez-vous */
+  description: string;
+  /** Date et heure de début du rendez-vous */
+  startDate: Date;
+  /** Date et heure de fin du rendez-vous */
+  endDate: Date;
+  /** ID de l'employé assigné au rendez-vous */
+  employeeId: number | string;
+  /** Type de rendez-vous */
+  type: 'chantier' | 'absence' | 'autres';
+  /** ID de l'événement auquel ce RDV est lié */
+  EventId: number;
+ 
+}
+
 
 export type DimensionType = 'employee' | 'group' | 'contract' | 'type' | 'pole';
 
@@ -189,6 +178,8 @@ export interface DimensionItem {
   data?: any; // Données additionnelles spécifiques à la dimension
 }
 
+
+
 // --- HISTORIQUE POUR CTRL+Z ---
 export interface HistoryAction {
   type: 'create' | 'update' | 'delete' | 'move' | 'resize_split';
@@ -198,10 +189,3 @@ export interface HistoryAction {
   appointments?: Appointment[]; // Pour une sauvegarde complète
   createdAppointments?: Appointment[]; // Pour les RDV créés lors d'un resize split
 } 
-
-
-export interface EventTemplate {
-  id: number;
-  label: string;
-  image: string;
-}

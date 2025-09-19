@@ -11,9 +11,10 @@
  */
 
 "use client";
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import FlexibleFrame from './FlexibleFrame';
-import { ChantierDetailed } from '../../datasource';
+import { chantiersDetailles } from '../../datasource';
+import { Chantier } from '../types';
 
 /**
  * Props du composant ChantierTableFrame
@@ -21,7 +22,7 @@ import { ChantierDetailed } from '../../datasource';
 interface ChantierTableFrameProps {
   className?: string;
   style?: React.CSSProperties;
-  chantiers: ChantierDetailed[];
+  chantiers: Chantier[];
   containerWidth?: number; // Largeur du conteneur en pixels
 }
 
@@ -87,7 +88,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   const attributeKeys = useMemo(() => 
     categoriesStructure.flatMap(category => 
       category.attributes.map(attr => attr.key)
-    ) as (keyof ChantierDetailed['attributs'])[]
+    ) as (keyof Chantier['attributs'])[]
   , [categoriesStructure]);
 
   const mainScrollRef = React.useRef<HTMLDivElement>(null);
@@ -99,14 +100,14 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   /**
    * Fonction qui retourne les valeurs d'un chantier organisées par catégorie
    */
-  const getChantierValuesByCategory = React.useCallback((chantier: ChantierDetailed) => {
+  const getChantierValuesByCategory = React.useCallback((chantier: Chantier) => {
     return categoriesStructure.map(category => ({
       categoryKey: category.key,
       categoryLabel: category.label,
       values: category.attributes.map(attr => ({
         attributeKey: attr.key,
         attributeLabel: attr.label,
-        value: chantier.attributs[attr.key as keyof ChantierDetailed['attributs']]
+        value: chantier.attributs[attr.key as keyof Chantier['attributs']]
       }))
     }));
   }, [categoriesStructure]);
@@ -199,7 +200,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   }, [calculateColumnWidths]);
 
   // Rendu des valeurs d'attributs avec styles appropriés
-  const renderAttributeValue = (value: string | undefined, attributeKey: keyof ChantierDetailed['attributs']) => {
+  const renderAttributeValue = (value: string | undefined, attributeKey: keyof Chantier['attributs']) => {
     if (!value) return <span className="text-gray-400">-</span>;
     
     switch (attributeKey) {
@@ -282,7 +283,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
                   }}
                   title={`${attributeLabel}: ${value || 'N/A'}`}
                 >
-                  {renderAttributeValue(value, attributeKey as keyof ChantierDetailed['attributs'])}
+                  {renderAttributeValue(value, attributeKey as keyof Chantier['attributs'])}
                 </div>
               );
             });

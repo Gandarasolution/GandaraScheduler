@@ -1,7 +1,7 @@
 // Fonctions utilitaires pour la gestion des jours travaillés, fériés, et intervalles
 // Centralisées pour la réutilisation dans tout le projet
 
-import { addHours, formatDate, isSameDay } from "date-fns";
+import { addHours, format, isSameDay } from "date-fns";
 import Holidays from "date-holidays";
 import { HalfDayInterval } from "../types";
 
@@ -9,7 +9,7 @@ import { HalfDayInterval } from "../types";
 const hd = new Holidays("FR");
 const holidays = hd.getHolidays(new Date().getFullYear());
 // Pré-calcul d'un Set pour accélérer la détection des jours fériés
-const holidaySet = new Set(holidays.map(h => h.date));
+const holidaySet = new Set(holidays.map(h => format(new Date(h.date), "yyyy-MM-dd")));
 
 /**
  * Vérifie si une date est un jour férié (France)
@@ -17,10 +17,15 @@ const holidaySet = new Set(holidays.map(h => h.date));
  * @returns true si férié, false sinon
  */
 export const isHoliday = (date: Date): boolean => {  
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  const dateStr = formatDate(d, "yyyy-MM-dd HH:mm:ss"); // Format YYYY-MM-DD HH:mm:ss
-  return holidaySet.has(dateStr);
+  try {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const dateStr = format(d, "yyyy-MM-dd"); // Format ISO standard
+    return holidaySet.has(dateStr);
+  } catch (error) {
+    console.warn("Erreur lors de la vérification du jour férié:", error);
+    return false;
+  }
 };
 
 /**
@@ -73,7 +78,10 @@ export const getNextWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterval
   while (!isWorkedDay(next, nonWorkingDates)) {
     next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
     safety++;
-    if (safety > maxIterations) throw new Error("Boucle infinie détectée dans getNextWorkedDay");
+    if (safety > maxIterations) {
+      console.error("Boucle infinie détectée dans getNextWorkedDay, date de départ:", date);
+      throw new Error("Impossible de trouver un jour travaillé après 1000 itérations");
+    }
   }
   return next;
 };
@@ -91,7 +99,10 @@ export const getBeforeWorkedDay = (date: Date, HALF_DAY_INTERVALS: HalfDayInterv
   while (!isWorkedDay(previous, nonWorkingDates)) {
     previous = addHours(previous, -(HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour));
     safety++;
-    if (safety > maxIterations) throw new Error("Boucle infinie détectée dans getBeforeWorkedDay");
+    if (safety > maxIterations) {
+      console.error("Boucle infinie détectée dans getBeforeWorkedDay, date de départ:", date);
+      throw new Error("Impossible de trouver un jour travaillé précédent après 1000 itérations");
+    }
   }
   return previous;
 };

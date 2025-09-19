@@ -21,7 +21,7 @@
 "use client";
 import React, { useState, useRef, memo, useEffect, useCallback, use } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
-import { Appointment, EventType, HalfDayInterval } from '../types';
+import {Appointment, HalfDayInterval, Evenement } from '../types';
 import { addDays, eachDayOfInterval, isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../utils/constants';
 import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
@@ -41,7 +41,7 @@ interface AppointmentItemProps {
   /** Inclure les week-ends dans le calcul de durée (optionnel) */
   includeWeekend?: boolean;
   /** Type d'événement associé au rendez-vous */
-  eventType: EventType;
+  event: Evenement;
   /** Informations de l'employé assigné */
   employee: { id: number; name: string };
   /** Source d'appel du composant */
@@ -76,7 +76,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   appointment,
   isFullDay,
   isMobile,
-  eventType,
+  event,
   employee,
   includeWeekend,
   source = 'calendar',
@@ -344,9 +344,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     setDragEndSafe(appointment.endDate);
   }, [appointment.startDate, appointment.endDate, setDragStartSafe, setDragEndSafe]);
   
-  const appointmentColor = eventType.color || '#1E40AF';
-  const appointmentBorderColor = eventType.borderColor || '#1E40AF';
-  const appointmentTextColor = eventType.textColor || '#FFFFFF';
+  const appointmentColor = event.color || '#1E40AF';
+  const appointmentBorderColor = event.borderColor || '#1E40AF';
+  const appointmentTextColor = event.textColor || '#FFFFFF';
 
   return (
     <div
@@ -419,14 +419,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       className={`
         appointment-item rounded-xl text-sm shadow-md
         flex flex-shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-all z-10 h-11 group duration-200
+        cursor-grab transition-all z-20 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
         ${source === 'calendar' ? 'absolute' : 'block'}
         hover:shadow-xl
       `}
-      title={eventType.label}
+      title={event.label}
       style={{
         width: source === 'demo' ? '100%' : calculatedWidth,
         height: `${CELL_HEIGHT + 4}px`,
@@ -452,9 +452,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
 
       {/* Image éventuelle */}
-      {eventType.image ? (
+      {event.image ? (
         <img
-          src={eventType.image}
+          src={event.image}
           alt="Icône"
           className="w-8 h-8 object-cover"
         />
@@ -470,7 +470,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             color: isHovered ? appointmentColor : `${appointmentTextColor || '#FFFFFF'}`
           }}
         >
-          {eventType.label.length > 20 ? eventType.label.slice(0, 20) + '…' : eventType.label}
+          {event.label.length > 20 ? event.label.slice(0, 20) + '…' : event.label}
         </span>
         <span 
           className="appointment-subtext text-xs truncate max-w-full transition-colors duration-200"

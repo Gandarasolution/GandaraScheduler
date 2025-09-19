@@ -16,7 +16,7 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo } from 'react';
-import { Appointment, Employee, EventType, HalfDayInterval } from '../types';
+import {Appointment, Employee, HalfDayInterval, Evenement } from '../types';
 import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
 import { isHoliday, isWeekend } from '../utils/dates';
 import { images } from '@/app/datasource';
@@ -32,8 +32,8 @@ interface AppointmentFormProps {
   appointments: Appointment[];
   /** Rendez-vous à éditer (null pour création) */
   appointment: Appointment;
-  /** Liste de tous les types d'événements disponibles */
-  eventTypes: EventType[];
+  /** Événement associé au rendez-vous */
+  event: Evenement;
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
@@ -46,7 +46,10 @@ interface AppointmentFormProps {
   nonWorkingDates: Date[];
   /** Palette de couleurs disponibles avec noms */
   /** Callback appelé lors de la sauvegarde */
-  onSave: (appointment: Appointment, eventType: EventType, includeAllNonWorkingDays: boolean) => void;
+  onSave: (
+    appointment: Appointment, 
+    eventType: Evenement, 
+    includeAllNonWorkingDays: boolean) => void;
   /** Callback appelé lors de la fermeture du formulaire */
   onClose: () => void;
 }
@@ -84,7 +87,7 @@ interface AppointmentFormProps {
 const AppointmentForm: React.FC<AppointmentFormProps> = ({
   appointments,
   appointment,
-  eventTypes,
+  event,
   employees,
   HALF_DAY_INTERVALS,
   isFullDay,
@@ -102,7 +105,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const [formDataAppointment, setFormDataAppointment] = useState<Omit<Appointment, 'id'> & { id?: number }>(
       { ...appointment, startDate: appointment.startDate, endDate:  addMinutes(appointment.endDate, -1) }
   );
-  const [formDataEventType, setFormDataEventType] = useState<EventType>(eventTypes.find(et => et.id === appointment.eventTypeId) || eventTypes[0]);
+  const [formDataEventType, setFormDataEventType] = useState<Evenement>(event);
 
   /**
    * Vérifie si le rendez-vous actuel chevauche des jours non-travaillés
@@ -280,10 +283,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               id: formDataAppointment.id || 0,
               top: 0,
               startDate: new Date(),
-              eventTypeId: formDataEventType.id,
               endDate: new Date(addDays(new Date(), 3)),
             }}
-            eventType={formDataEventType}
+            event={formDataEventType}
             isFullDay={isFullDay}
             source='demo'
             isMobile={false}

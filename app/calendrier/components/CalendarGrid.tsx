@@ -29,7 +29,7 @@ import {
 } from 'date-fns';
 import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import TimelineFrame from './TimelineFrame'; // Cadre timeline réutilisable
-import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, DimensionItem, EventType } from '../types';
+import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Evenement } from '../types';
 import { fr } from 'date-fns/locale';
 import {CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../utils/constants'; // Constantes de style
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../utils/filters';
@@ -45,7 +45,7 @@ interface CalendarGridProps {
   /** Liste de tous les rendez-vous */
   appointments: Appointment[];
   /** Type d'événement du rendez-vous */
-  eventTypes: EventType[];
+  events: Evenement[];
   /** Groupes/équipes disponibles */
   initialTeams: Groupe[];
   /** Dates à afficher dans la timeline */
@@ -110,7 +110,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   dayInTimeline,
   HALF_DAY_INTERVALS,
   isFullDay,
-  eventTypes,
+  events,
 //  selectedCalendarId,
   nonWorkingDates,
   isMobile,
@@ -567,7 +567,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     isFullDay={isFullDay}
                     nonWorkingDates={nonWorkingDates}
                     isMobile={isMobile}
-                    eventTypes={eventTypes}
+                    events={events}
                     RowHeight={dayEmployeeAppointments.length > 0 ? rowHeight : CELL_HEIGHT}
                     onAppointmentMoved={onAppointmentMoved}
                     onCellDoubleClick={onCellDoubleClick}
@@ -767,7 +767,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                               isFullDay={isFullDay}
                               RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 10}
                               isMobile={isMobile}
-                              eventTypes={eventTypes}
+                              events={events}
                               nonWorkingDates={nonWorkingDates}
                               includeWeekend={includeWeekend}
                               onAppointmentMoved={onAppointmentMoved}
@@ -812,7 +812,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     isFullDay={isFullDay}
                                     RowHeight={employeeRowHeight}
                                     isMobile={isMobile}
-                                    eventTypes={eventTypes}
+                                    events={events}
                                     nonWorkingDates={nonWorkingDates}
                                     includeWeekend={includeWeekend}
                                     onAppointmentMoved={onAppointmentMoved}

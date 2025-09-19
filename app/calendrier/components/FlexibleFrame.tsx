@@ -111,7 +111,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
           {/* Sticky group header */}
           {showGroupHeaders && (
             <div
-              className="grid sticky top-0 z-20 bg-white border-gray-300"
+              className="grid sticky top-0 z-30 bg-white border-gray-300"
               style={{
                 gridTemplateColumns: getGridColumns(),
                 minHeight: '40px',
@@ -152,7 +152,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
           {/* Sticky item header */}
           {showItemHeaders && (
             <div
-              className="grid sticky z-20 bg-white border-gray-300"
+              className="grid sticky z-30 bg-white border-gray-300"
               style={{
                 gridTemplateColumns: getGridColumns(),
                 minHeight: '56px',

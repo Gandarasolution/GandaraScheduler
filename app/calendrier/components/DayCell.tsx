@@ -2,9 +2,9 @@
 import React, {memo, useMemo, useState}from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
 import IntervalCell from './IntervalCell';
-import { Appointment, EventType, HalfDayInterval, } from '../types';
+import { Appointment, HalfDayInterval, Evenement} from '../types';
 import { isHoliday } from '../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
-import { CELL_HEIGHT, HALF_DAY_INTERVALS, DAY_INTERVALS } from '../utils/constants';
+import { CELL_HEIGHT, HALF_DAY_INTERVALS } from '../utils/constants';
 import { fr } from 'date-fns/locale';
 
 /**
@@ -16,7 +16,7 @@ interface DayCellProps {
   employee: { id: number; name: string };
   appointments: (Appointment & { top: number })[];
   intervals: HalfDayInterval[];
-  eventTypes: EventType[];
+  events: Evenement[];
   isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
   isFullDay?: boolean; // Indique si la cellule représente une journée complète
@@ -88,7 +88,7 @@ const DayCell: React.FC<DayCellProps> = ({
   appointments = [],
   intervals = [],
   isCellActive = true,
-  eventTypes,
+  events,
   isWeekend,
   isFullDay,
   RowHeight,
@@ -116,7 +116,7 @@ const DayCell: React.FC<DayCellProps> = ({
     const hiddenCount = appointments.length - maxVisible;
     const isToday = isSameDay(day, new Date());
     // État local pour afficher la bulle d'info
-    const [tooltip, setTooltip] = useState<{anchor: HTMLElement | null, app: Appointment | null, et: EventType | null} | null>(null);
+    const [tooltip, setTooltip] = useState<{anchor: HTMLElement | null, app: Appointment | null, et: Evenement | null} | null>(null);
     
     return (
       <div
@@ -154,16 +154,16 @@ const DayCell: React.FC<DayCellProps> = ({
                 hover:bg-blue-200 hover:text-blue-900 active:scale-95
                 flex items-center gap-1
               `}
-              title={eventTypes.find(et => et.id === app.eventTypeId)?.label}
+              title={events.find(et => et.id === app.EventId)?.label}
               style={{cursor: 'pointer'}}
               onClick={e => {
                 e.stopPropagation();
-                setTooltip({anchor: e.currentTarget, app, et: eventTypes.find(et => et.id === app.eventTypeId) || null});
+                setTooltip({anchor: e.currentTarget, app, et: events.find(et => et.id === app.EventId) || null});
               }}
             >
               {
                 (() => {
-                  const et = eventTypes.find(et => et.id === app.eventTypeId);
+                  const et = events.find(et => et.id === app.EventId);
                   return et?.label
                     ? (et.label.length > 12 ? et.label.slice(0, 12) + '…' : et.label)
                     : '';
@@ -252,7 +252,7 @@ const DayCell: React.FC<DayCellProps> = ({
             intervalStart={intervalStart}
             intervalEnd={intervalEnd}
             appointments={intervalAppointments}
-            eventTypes={eventTypes}
+            events={events}
             isFullDay={isFullDay ?? false}
             RowHeight={RowHeight}
             isMobile={isMobile}

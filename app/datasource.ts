@@ -24,7 +24,8 @@
  * @version 1.0.0
  */
 
-import { Appointment, Employee, Groupe, EventTemplate, EventType } from './calendrier/types/index';
+
+import { Appointment, Employee, Groupe, Evenement} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -156,106 +157,20 @@ export const initialEmployees: Employee[] = [
     { name: 'Frédéric GERARD', id: 35, groupId: 8, type: 'interim', pole: 'Technique'}
 ];
 
-// ===== BASE DE DONNÉES CHANTIERS DÉTAILLÉS =====
-
-/**
- * Interface définissant un chantier avec ses attributs détaillés
- * Structure organisée pour simuler une base de données réaliste
- * 
- * === STRUCTURE DE LA BASE DE DONNÉES CHANTIERS ===
- * Cette section simule une vraie base de données avec :
- * 
- * 🏗️ DONNÉES MÉTIER COHÉRENTES :
- * - Codes de référence structurés (CHT-XXX)
- * - Identifiants géographiques (VES-2024-001, PAR-2024-002...)
- * - États logiques et progressions cohérentes
- * - Budgets et durées réalistes selon le type de projet
- * 
- * 👥 RESSOURCES HUMAINES :
- * - Chargés d'affaires et chefs de chantier référencés
- * - Équipes géographiques organisées
- * - Correspondance avec la base employés
- * 
- * 📊 GESTION DE PROJET AVANCÉE :
- * - Dates OS (Ordre de Service) et fins prévisionnelles
- * - Temps Marché (TM) et Heures Réalisées (HR)
- * - Solde Heure (SH) et Durée Planifiée Future (DPF)
- * - Avancement prévisionnel (AP) et Solde Prévisionnel (SP)
- * - Calculs de performance et indicateurs KPI
- * 
- * 🎯 STRUCTURE ORGANISÉE EN CATÉGORIES :
- * - Informations Générales : Image, Code, Identifiant, Libellé, État, Responsables, Dates
- * - Analyse Chantier : TM, HR, SH, DPF, RPF, AP, SP (indicateurs métier spécialisés)
- * 
- * 💡 UTILISATION :
- * - Source unique de vérité pour les chantiers
- * - Liaison avec les EventTemplate pour le calendrier  
- * - Fonctions utilitaires d'accès et de statistiques
- * - Compatible avec le système de tableau ChantierTableFrame
- * - Indicateurs de performance calculés automatiquement
- */
-export interface ChantierDetailed {
-  id: number;
-  label: string;
-  image?: string;
-  attributs: {
-    // === CATÉGORIE INFORMATIONS GÉNÉRALES ===
-    image?: string;
-    code: string;
-    identifiant: string;
-    libelle: string;
-    etat: string;
-    chargeAffaire: string;
-    chefChantier: string;
-    dateOS: string;
-    dateFin: string;
-    // === CATÉGORIE ANALYSE CHANTIER ===
-    TM: string;        // Temps Marché
-    HR: string;        // Heures Réalisées  
-    SH: string;        // Solde Heure
-    DPF: string;       // Durée Planifiée Future
-    RPF: string;       // Réalisé - Planif Future
-    AP: string;        // Avancement prévisionnel
-    SP: string;        // Solde Prévisionnel
-  };
-}
-
-/**
- * Base de données complète des chantiers avec informations détaillées
- * BASE ÉTENDUE : 13 chantiers détaillés couvrant diverses régions françaises
- * 
- * 🏗️ DIVERSITÉ GÉOGRAPHIQUE :
- * - Vesoul, Paris, Reims, Dijon, Flins, Les Lilas (Nord/Est)
- * - Lyon, Toulouse, Marseille (Sud/Sud-Est) 
- * - Bordeaux, Strasbourg, Montpellier (Nouveaux ajouts 2024)
- * 
- * 📊 TYPES DE PROJETS :
- * - Logements sociaux et résidences (4 projets)
- * - Établissements publics (écoles, gares, mairies) (4 projets)
- * - Infrastructures industrielles et commerciales (3 projets)
- * - Équipements sportifs et de loisirs (2 projets)
- * 
- * ⚡ ÉTATS ET PROGRESSIONS RÉALISTES :
- * - En cours (6) : 25% à 90% d'avancement
- * - Planifiés (4) : 0% à 10% d'avancement
- * - Terminés (1) : 100% terminé
- * - Suspendus (1) : 15% suspendu
- * - Nouvelle balance : 1 terminé proche + nouveaux projets 2024
- * 
- * 💼 ÉQUIPES DIVERSIFIÉES :
- * - 13 chefs de chantier différents issus de la base employés
- * - Répartition équilibrée des responsabilités
- * - Correspondance avec les équipes régionales
- */
-export const chantiersDetailles: ChantierDetailed[] = [
-    // Nouveaux chantiers détaillés
+export const Evenements: Evenement[] = [
+    // Nouveaux événements
     {
       id: 1,
       label: '1052 Logements Vesoul',
       image: iconeChantier.src,
+      color: '#FF6B6B',
+      borderColor: '#FF5252',
+      textColor: '#FFFFFF',
+      location: 'Vesoul',
+      client: 'Ville de Vesoul',
+      type: 'Chantier',
       attributs: {
         // Informations Générales
-        image: iconeChantier.src,
         code: 'CHT-001',
         identifiant: 'VES-2024-001',
         libelle: '1052 Logements Vesoul',
@@ -278,9 +193,14 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 2,
       label: 'Résidence Les Jardins de Paris',
       image: iconeChantier.src,
+      color: '#4ECDC4',
+      borderColor: '#3FBDB6',
+      textColor: '#FFFFFF',
+      location: 'Paris 15ème',
+      client: 'SCI Jardins de Paris',
+      type: 'Chantier',
       attributs: {
         // Informations Générales
-        image: iconeChantier.src,
         code: 'CHT-002',
         identifiant: 'PAR-2024-002',
         libelle: 'Résidence Les Jardins de Paris',
@@ -303,9 +223,12 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 3,
       label: 'Chantier Lycée Jean Moulin',
       image: iconeChantier.src,
+      color: '#FFD700',
+      borderColor: '#FFC300',
+      textColor: '#000000',
+      type: 'Chantier',
       attributs: {
         // Informations Générales
-        image: iconeChantier.src,
         code: 'CHT-003',
         identifiant: 'REI-2024-003',
         libelle: 'Chantier Lycée Jean Moulin',
@@ -329,8 +252,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 4,
       label: 'Rénovation Hôtel de Ville',
       image: iconeChantier.src,
+      color: '#A3A3A3',
+      borderColor: '#737373',
+      textColor: '#FFFFFF',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-004',
         identifiant: 'HDV-2024-004',
         libelle: 'Rénovation Hôtel de Ville',
@@ -352,8 +278,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 5,
       label: 'Extension Usine Renault Flins',
       image: iconeChantier.src,
+      color: '#FFB300',
+      borderColor: '#FF9800',
+      textColor: '#000000',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-005',
         identifiant: 'REN-2024-005',
         libelle: 'Extension Usine Renault Flins',
@@ -375,8 +304,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 6,
       label: 'Construction EHPAD Les Lilas',
       image: iconeChantier.src,
+      color: '#8BC34A',
+      borderColor: '#689F38',
+      textColor: '#FFFFFF',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-006',
         identifiant: 'LIL-2024-006',
         libelle: 'Construction EHPAD Les Lilas',
@@ -398,8 +330,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 7,
       label: 'Réhabilitation Collège Victor Hugo',
       image: iconeChantier.src,
+      color: '#90CAF9',
+      borderColor: '#1976D2',
+      textColor: '#000000',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-007',
         identifiant: 'VHU-2024-007',
         libelle: 'Réhabilitation Collège Victor Hugo',
@@ -421,8 +356,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 8,
       label: 'Immeuble Le Belvédère Lyon',
       image: iconeChantier.src,
+      color: '#F06292',
+      borderColor: '#C2185B',
+      textColor: '#FFFFFF',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-008',
         identifiant: 'BEL-2024-008',
         libelle: 'Immeuble Le Belvédère Lyon',
@@ -444,8 +382,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 9,
       label: 'Bâtiment Industriel Toulouse',
       image: iconeChantier.src,
+      color: '#FFD54F',
+      borderColor: '#FFA000',
+      textColor: '#000000',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-009',
         identifiant: 'TOU-2024-009',
         libelle: 'Bâtiment Industriel Toulouse',
@@ -467,8 +408,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 10,
       label: 'Résidence Étudiante Marseille',
       image: iconeChantier.src,
+      color: '#4DD0E1',
+      borderColor: '#00838F',
+      textColor: '#000000',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-010',
         identifiant: 'MAR-2024-010',
         libelle: 'Résidence Étudiante Marseille',
@@ -490,8 +434,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 11,
       label: 'Centre Aquatique Bordeaux',
       image: iconeChantier.src,
+      color: '#BA68C8',
+      borderColor: '#7B1FA2',
+      textColor: '#FFFFFF',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-011',
         identifiant: 'BOR-2024-011',
         libelle: 'Centre Aquatique Bordeaux',
@@ -513,8 +460,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 12,
       label: 'Rénovation Gare SNCF Strasbourg',
       image: iconeChantier.src,
+      color: '#AED581',
+      borderColor: '#689F38',
+      textColor: '#000000',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-012',
         identifiant: 'STR-2024-012',
         libelle: 'Rénovation Gare SNCF Strasbourg',
@@ -536,8 +486,11 @@ export const chantiersDetailles: ChantierDetailed[] = [
       id: 13,
       label: 'Complexe Sportif Montpellier',
       image: iconeChantier.src,
+      color: '#FF8A65',
+      borderColor: '#D84315',
+      textColor: '#000000',
+      type: 'Chantier',
       attributs: {
-        image: iconeChantier.src,
         code: 'CHT-013',
         identifiant: 'MTP-2024-013',
         libelle: 'Complexe Sportif Montpellier',
@@ -554,233 +507,119 @@ export const chantiersDetailles: ChantierDetailed[] = [
         AP: '0%',
         SP: '100%'
       }
+    },
+    { 
+      id: 14, 
+      label: 'Congés payés', 
+      image: iconeAbsenceValide.src,
+      type: 'Absence',
+      color: '#22C55E',
+      borderColor: '#16A34A',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Congés payés',
+      category: 'Congés'
+    },
+    { 
+      id: 15, 
+      label: 'Arrêt maladie', 
+      image: iconeAbsenceNonValide.src,
+      type: 'Absence',
+      color: '#EF4444',
+      borderColor: '#DC2626',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Arrêt maladie',
+      category: 'Maladie'
+    },
+    { 
+      id: 16, 
+      label: 'Formation', 
+      image: iconeAbsenceValide.src,
+      type: 'Absence',
+      color: '#3B82F6',
+      borderColor: '#2563EB',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Formation professionnelle',
+      category: 'Formation'
+    },
+    { 
+      id: 17, 
+      label: 'RTT', 
+      image: iconeAbsenceValide.src,
+      type: 'Absence',
+      color: '#8B5CF6',
+      borderColor: '#7C3AED',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Réduction du temps de travail',
+      category: 'RTT'
+    },
+    { 
+      id: 18, 
+      label: 'Congé sans solde', 
+      image: iconeAbsenceNonValide.src,
+      type: 'Absence',
+      color: '#F59E0B',
+      borderColor: '#D97706',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Congé sans solde',
+      category: 'Congés'
+    },
+    { 
+      id: 19, 
+      label: 'Réunion équipe', 
+      image: mechanic.src,
+      type: 'Autre',
+      color: '#06B6D4',
+      borderColor: '#0891B2',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Réunion d\'équipe',
+      category: 'Réunion'
+    },
+    { 
+      id: 20, 
+      label: 'Rendez-vous client', 
+      image: toolbox.src,
+      color: '#EC4899',
+      type: 'Autre',
+      borderColor: '#DB2777',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Rendez-vous avec le client',
+      category: 'Commercial'
+    },
+    { 
+      id: 21, 
+      label: 'Visite technique', 
+      image: googleEyeProtector.src,
+      color: '#F97316',
+      borderColor: '#EA580C',
+      type: 'Autre',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Visite technique sur site',
+      category: 'Technique'
+    },
+    { 
+      id: 22, 
+      label: 'Réunion sécurité', 
+      image: vestProtect.src,
+      color: '#DC2626',
+      borderColor: '#B91C1C',
+      type: 'Autre',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Réunion sécurité',
+      category: 'Sécurité'
+    },
+    { 
+      id: 23, 
+      label: 'Formation technique', 
+      image: wrench.src,
+      color: '#7C3AED',
+      borderColor: '#6D28D9',
+      type: 'Autre',
+      textColor: '#FFFFFF',
+      defaultDescription: 'Formation technique',
+      category: 'Formation'
     }
 ];
 
-export const chantier: EventTemplate[] = [
-    // Les 13 premiers correspondent aux chantiers détaillés (ajout de 3 nouveaux)
-    { id: 1 , label: '1052 Logements Vesoul', image: iconeChantier.src },
-    { id: 2 , label: 'Résidence Les Jardins de Paris', image: iconeChantier.src},
-    { id: 3 , label: 'Chantier Lycée Jean Moulin' , image: iconeChantier.src},
-    { id: 4 , label: 'Rénovation Hôtel de Ville', image: iconeChantier.src},
-    { id: 5 , label: 'Extension Usine Renault Flins', image: iconeChantier.src},
-    { id: 6 , label: 'Construction EHPAD Les Lilas', image: iconeChantier.src},
-    { id: 7 , label: 'Réhabilitation Collège Victor Hugo' , image: iconeChantier.src},
-    { id: 8 , label: 'Immeuble Le Belvédère Lyon' , image: iconeChantier.src},
-    { id: 9 , label: 'Bâtiment Industriel Toulouse' , image: iconeChantier.src},
-    { id: 10 , label: 'Résidence Étudiante Marseille' , image: iconeChantier.src},
-    { id: 11 , label: 'Centre Aquatique Bordeaux' , image: iconeChantier.src},
-    { id: 12 , label: 'Rénovation Gare SNCF Strasbourg' , image: iconeChantier.src},
-    { id: 13 , label: 'Complexe Sportif Montpellier' , image: iconeChantier.src},
-    // Chantiers supplémentaires pour compléter la liste
-    { id: 14 , label: 'Villa Moderne Cannes', image: iconeChantier.src},
-    { id: 15 , label: 'Centre Commercial Avignon', image: iconeChantier.src},
-    { id: 16 , label: 'Piscine Municipale Nice', image: iconeChantier.src},
-    { id: 17 , label: 'Rénovation Théâtre Antique', image: iconeChantier.src},
-    { id: 18 , label: 'Parking Souterrain Montpellier', image: iconeChantier.src},
-    { id: 19 , label: 'Bureaux Tech Park Sophia', image: iconeChantier.src},
-    { id: 20 , label: 'Clinique Sainte-Marie Toulon', image: iconeChantier.src},
-    { id: 21 , label: 'Stade Municipal Perpignan', image: iconeChantier.src},
-    { id: 22 , label: 'Médiathèque Nîmes Centre', image: iconeChantier.src},
-    { id: 23 , label: 'Hôtel 4 étoiles Saint-Tropez', image: iconeChantier.src}
-];
-
-/**
- * Fonction utilitaire pour récupérer un chantier détaillé par son ID
- * @param chantierId - ID du chantier recherché
- * @returns Chantier détaillé ou undefined si non trouvé
- */
-export const getChantierDetailById = (chantierId: number): ChantierDetailed | undefined => {
-    return chantiersDetailles.find(chantier => chantier.id === chantierId);
-};
-
-/**
- * Fonction utilitaire pour obtenir tous les chantiers avec leurs détails (si disponibles)
- * Combine les EventTemplate basiques avec les données détaillées quand elles existent
- */
-export const getAllChantiersWithDetails = () => {
-    return chantier.map(chantierTemplate => {
-        const chantierDetail = getChantierDetailById(chantierTemplate.id);
-        return {
-            ...chantierTemplate,
-            details: chantierDetail?.attributs || null
-        };
-    });
-};
-
-/**
- * Fonction utilitaire pour obtenir les statistiques des chantiers
- */
-export const getChantierStats = () => {
-    const stats = {
-        total: chantiersDetailles.length,
-        enCours: chantiersDetailles.filter(c => c.attributs.etat === 'En cours').length,
-        planifies: chantiersDetailles.filter(c => c.attributs.etat === 'Planifié').length,
-        termines: chantiersDetailles.filter(c => c.attributs.etat === 'Terminé').length,
-        suspendus: chantiersDetailles.filter(c => c.attributs.etat === 'Suspendu').length,
-        // Calcul basé sur le Temps Marché total (TM)
-        tempsTotal: chantiersDetailles.reduce((total, chantier) => {
-            const tempsMarche = parseInt(chantier.attributs.TM.replace(/[h\s]/g, '')) || 0;
-            return total + tempsMarche;
-        }, 0),
-        // Calcul des heures réalisées total
-        heuresRealisees: chantiersDetailles.reduce((total, chantier) => {
-            const heuresReal = parseInt(chantier.attributs.HR.replace(/[h\s]/g, '')) || 0;
-            return total + heuresReal;
-        }, 0),
-        // Pourcentage d'avancement moyen
-        avancementMoyen: Math.round(
-            chantiersDetailles.reduce((total, chantier) => {
-                const avancement = parseInt(chantier.attributs.AP.replace(/[%\s]/g, '')) || 0;
-                return total + avancement;
-            }, 0) / chantiersDetailles.length
-        )
-    };
-    return stats;
-};
-
-// ===== EXEMPLES D'UTILISATION BDD CHANTIERS =====
-
-/**
- * Exemple d'utilisation des fonctionnalités de la base de données chantiers
- * Base de données étendue à 13 chantiers détaillés avec indicateurs complets
- * Décommentez pour tester dans la console
- */
-/*
-console.log('🏗️ === DEMO BASE DE DONNÉES CHANTIERS ===');
-
-// 1. Statistiques générales avec nouveaux indicateurs
-const stats = getChantierStats();
-console.log('📊 Statistiques (13 chantiers):', {
-  ...stats,
-  tempsTotal: `${stats.tempsTotal}h`,
-  heuresRealisees: `${stats.heuresRealisees}h`,
-  avancementMoyen: `${stats.avancementMoyen}%`
-});
-
-// 2. Nouveaux chantiers ajoutés
-const nouveauxChantiers = [11, 12, 13];
-nouveauxChantiers.forEach(id => {
-  const chantier = getChantierDetailById(id);
-  if (chantier) {
-    console.log(`� Nouveau chantier ${id}:`, {
-      nom: chantier.label,
-      etat: chantier.attributs.etat,
-      avancement: chantier.attributs.AP,
-      responsable: chantier.attributs.chargeAffaire
-    });
-  }
-});
-
-// 3. Analyse par secteur géographique
-const villes = ['Bordeaux', 'Strasbourg', 'Montpellier'];
-villes.forEach(ville => {
-  const chantiersVille = chantiersDetailles.filter(c => 
-    c.attributs.identifiant.includes(ville.substring(0, 3).toUpperCase())
-  );
-  console.log(`🏙️ Chantiers ${ville}:`, chantiersVille.map(c => c.label));
-});
-
-// 4. Chantiers proches de la fin (>= 90% d'avancement)
-const chantiersPresqueFinis = chantiersDetailles.filter(c => 
-  parseInt(c.attributs.AP.replace('%', '')) >= 90
-);
-console.log('🏁 Chantiers bientôt terminés (>=90%):',
-  chantiersPresqueFinis.map(c => ({
-    nom: c.label,
-    avancement: c.attributs.AP,
-    heuresRestantes: c.attributs.SH,
-    finPrevue: c.attributs.dateFin
-  }))
-);
-
-// 5. Répartition par équipe de chefs de chantier
-const chefEquipes = [...new Set(chantiersDetailles.map(c => c.attributs.chefChantier))];
-chefEquipes.forEach(chef => {
-  const chantiersChef = chantiersDetailles.filter(c => c.attributs.chefChantier === chef);
-  const totalHeures = chantiersChef.reduce((sum, c) => 
-    sum + parseInt(c.attributs.HR.replace('h', '')), 0
-  );
-  console.log(`👷 Chef ${chef}: ${chantiersChef.length} chantiers, ${totalHeures}h réalisées`);
-});
-*/
-
-export const absences: EventTemplate[] = [
-    { id: 1, label: 'RTT' , image: iconeAbsenceValide.src },
-    { id: 2, label: 'Maladie', image: iconeAbsenceValide.src },
-    { id: 3, label: 'Congés payés', image: iconeAbsenceValide.src },
-    { id: 4, label: 'Sans solde', image: iconeAbsenceNonValide.src },
-    { id: 5, label: 'Autre', image: iconeAbsenceNonValide.src },
-    { id: 6, label: 'Congé maternité', image: iconeAbsenceValide.src },
-    { id: 7, label: 'Congé paternité', image: iconeAbsenceValide.src },
-    { id: 8, label: 'Formation obligatoire', image: iconeAbsenceValide.src },
-    { id: 9, label: 'Visite médicale', image: iconeAbsenceValide.src },
-    { id: 10, label: 'Accident travail', image: iconeAbsenceValide.src },
-    { id: 11, label: 'Congé exceptionnel', image: iconeAbsenceValide.src },
-    { id: 12, label: 'Récupération heures', image: iconeAbsenceValide.src }
-];
-
-export const autres: EventTemplate[] = [
-    { id: 1, label: 'Heures SUP',image: iconeChantier.src },
-    { id: 2, label: 'Formation',image: iconeChantier.src },
-    { id: 3, label: 'Réunion' ,image: iconeChantier.src},
-    { id: 4, label: 'Déplacement',image: iconeChantier.src},
-    { id: 5, label: 'Maintenance' ,image: iconeChantier.src},
-    { id: 6, label: 'Rendez-vous client',image: iconeChantier.src},
-    { id: 7, label: 'Devis sur site',image: iconeChantier.src},
-    { id: 8, label: 'Livraison matériel',image: iconeChantier.src},
-    { id: 9, label: 'Contrôle qualité',image: iconeChantier.src},
-    { id: 10, label: 'Audit sécurité',image: iconeChantier.src},
-    { id: 11, label: 'Prospection',image: iconeChantier.src},
-    { id: 12, label: 'Documentation',image: iconeChantier.src},
-    { id: 13, label: 'Coordination équipes',image: iconeChantier.src},
-    { id: 14, label: 'Présentation projet',image: iconeChantier.src},
-    { id: 15, label: 'Réception travaux',image: iconeChantier.src}
-];
-
-
- // --- CRÉATION DES EVENTTYPES À PARTIR DES TEMPLATES ---
-  // Convertir les templates en EventTypes avec les nouvelles propriétés
-  const chantiersEventTypes: EventType[] = chantier.map((item, index) => ({
-    id: index + 1,
-    name: item.label,
-    label: item.label,
-    category: "Chantier",
-    image: item.image,
-    color: colors[index % colors.length]?.color || "#007BFF",
-    borderColor: colors[index % colors.length]?.color || "#007BFF",
-    textColor: "#FFFFFF",
-    defaultDescription: `Projet ${item.label}`
-  }));
-
-  const absencesEventTypes: EventType[] = absences.map((item, index) => ({
-    id: index + 21,
-    name: item.label,
-    label: item.label,
-    category: "Absence",
-    image: item.image,
-    color: colors[(index + chantier.length) % colors.length]?.color || "#DC2626",
-    borderColor: colors[(index + chantier.length) % colors.length]?.color || "#DC2626",
-    textColor: "#FFFFFF",
-    defaultDescription: `Absence: ${item.label}`
-  }));
-
-  const autresEventTypes: EventType[] = autres.map((item, index) => ({
-    id: index + 34,
-    name: item.label,
-    label: item.label,
-    category: "Autre",
-    image: item.image,
-    color: colors[(index + chantier.length + absences.length) % colors.length]?.color || "#059669",
-    borderColor: colors[(index + chantier.length + absences.length) % colors.length]?.color || "#059669",
-    textColor: "#FFFFFF",
-    defaultDescription: `Événement: ${item.label}`
-  }));
-
-  const allEventTypes: EventType[] = [...chantiersEventTypes, ...absencesEventTypes, ...autresEventTypes];
-
-// Export des EventTypes
-export { chantiersEventTypes, absencesEventTypes, autresEventTypes, allEventTypes };
 
 
 // ===== GÉNÉRATEUR DE RENDEZ-VOUS =====
@@ -825,8 +664,10 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       let isValid = false;
       let startDate: Date = new Date();
       let endDate: Date = new Date();
-      let eventType: EventType = chantiersEventTypes[0]; // Valeur par défaut
       let duration: number = 1;
+      let appointmentType: 'chantier' | 'absence' | 'autres' = 'chantier';
+      let selectedEvent: Evenement | null = null;
+      let description = '';
       
       // Essayer de trouver un créneau libre jusqu'à 100 tentatives
       while (!isValid && attempts < 100) {
@@ -835,14 +676,35 @@ function generateAppointments(employees: Employee[]): Appointment[] {
         // Choisir le type d'événement
         const rand = Math.random();
         if (rand < 0.6) { // 60% chantiers
-          eventType = chantiersEventTypes[Math.floor(Math.random() * chantiersEventTypes.length)];
+          appointmentType = 'chantier';
+          while (!selectedEvent) {
+            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
+            if (selectedEvent.type !== 'Chantier') {
+              selectedEvent = null;
+            }
+          }
           duration = Math.floor(Math.random() * 3) + 3; // 3 à 5 jours
+          description = `Chantier de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
         } else if (rand < 0.8) { // 20% absences
-          eventType = absencesEventTypes[Math.floor(Math.random() * absencesEventTypes.length)];
+          appointmentType = 'absence';
+          while (!selectedEvent) {
+            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
+            if (selectedEvent.type !== 'Absence') {
+              selectedEvent = null;
+            }
+          }
           duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
+          description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
         } else { // 20% autres
-          eventType = autresEventTypes[Math.floor(Math.random() * autresEventTypes.length)];
+          appointmentType = 'autres';
+          while (!selectedEvent) {
+            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
+            if (selectedEvent.type !== 'Autre') {
+              selectedEvent = null;
+            }
+          }
           duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
+          description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
         }
         
         // Générer date de début aléatoire (dans les 60 prochains jours)
@@ -869,14 +731,18 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       if (isValid) {
         employeeAppointments.push({ start: new Date(startDate), end: new Date(endDate) });
         
-        appointments.push({
+        // Créer l'appointment avec les bonnes propriétés selon le type
+        const newAppointment: Appointment = {
           id: appointmentId++,
-          description: eventType.defaultDescription || `${eventType.category} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`,
+          description: description,
           startDate: startDate,
           endDate: endDate,
           employeeId: employee.id,
-          eventTypeId: eventType.id
-        });
+          type: appointmentType,
+          EventId: selectedEvent?.id as number
+        };
+
+        appointments.push(newAppointment);
       }
     }
   });
@@ -886,6 +752,9 @@ function generateAppointments(employees: Employee[]): Appointment[] {
 
 
 export const initialAppointments: Appointment[] = generateAppointments(initialEmployees);
+
+
+
 
 
 
