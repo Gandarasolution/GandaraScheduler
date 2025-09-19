@@ -13,8 +13,7 @@
 "use client";
 import React, { useMemo } from 'react';
 import FlexibleFrame from './FlexibleFrame';
-import { chantiersDetailles } from '../../datasource';
-import { Chantier } from '../types';
+import { ChantierEvent } from '../types';
 
 /**
  * Props du composant ChantierTableFrame
@@ -22,7 +21,7 @@ import { Chantier } from '../types';
 interface ChantierTableFrameProps {
   className?: string;
   style?: React.CSSProperties;
-  chantiers: Chantier[];
+  chantiers: ChantierEvent[];
   containerWidth?: number; // Largeur du conteneur en pixels
 }
 
@@ -42,7 +41,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
       key: 'IG',
       label: 'Informations Générales', 
       attributes: [
-        { key: 'image', label: 'Image' },
+        { key: 'image', label: 'Image', isBaseProperty: true }, // Image vient de BaseEvent
         { key: 'code', label: 'Code' },
         { key: 'identifiant', label: 'Identifiant' },
         { key: 'libelle', label: 'Libellé' },
@@ -88,7 +87,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   const attributeKeys = useMemo(() => 
     categoriesStructure.flatMap(category => 
       category.attributes.map(attr => attr.key)
-    ) as (keyof Chantier['attributs'])[]
+    ) as (keyof ChantierEvent['attributs'] | 'image')[] // Include 'image' as possible key
   , [categoriesStructure]);
 
   const mainScrollRef = React.useRef<HTMLDivElement>(null);
@@ -100,14 +99,22 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   /**
    * Fonction qui retourne les valeurs d'un chantier organisées par catégorie
    */
-  const getChantierValuesByCategory = React.useCallback((chantier: Chantier) => {
+  const getChantierValuesByCategory = React.useCallback((chantier: ChantierEvent) => {
+    // Vérification de sécurité
+    if (!chantier || !chantier.attributs) {
+      console.error('Chantier invalide dans getChantierValuesByCategory:', chantier);
+      return [];
+    }
+    
     return categoriesStructure.map(category => ({
       categoryKey: category.key,
       categoryLabel: category.label,
       values: category.attributes.map(attr => ({
         attributeKey: attr.key,
         attributeLabel: attr.label,
-        value: chantier.attributs[attr.key as keyof Chantier['attributs']]
+        value: attr.isBaseProperty 
+          ? (chantier as any)[attr.key] // Propriété de BaseEvent (image, color, etc.)
+          : chantier.attributs[attr.key as keyof ChantierEvent['attributs']] // Propriété des attributs
       }))
     }));
   }, [categoriesStructure]);
@@ -133,7 +140,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
     const padding = 24; // Padding horizontal (px-3 = 12px de chaque côté)
     
     // Colonnes qui s'adaptent à leur contenu
-    const adaptiveColumns = ['libelle', 'chefChantier', 'chargeAffaire', 'etat', 'dateOS', 'dateFin', 'identifiant'];
+    const adaptiveColumns = ['libelle', 'chefChantier', 'chargeAffaire', 'etat', 'dateOS', 'dateFin', 'identifiant', 'image'];
     
     // Calculer d'abord les largeurs pour les colonnes adaptatives
     const adaptiveWidths: { [key: string]: number } = {};
@@ -146,7 +153,17 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
         
         // Calculer la largeur nécessaire pour chaque valeur de cette colonne
         chantiers.forEach(chantier => {
-          const value = chantier.attributs[attributeKey];
+          // Vérification de sécurité pour éviter les erreurs
+          if (!chantier || !chantier.attributs) {
+            console.warn('Chantier invalide détecté:', chantier);
+            return;
+          }
+          
+          // Récupérer la valeur selon le type de propriété
+          const value = attributeKey === 'image' 
+            ? chantier.image 
+            : chantier.attributs[attributeKey as keyof ChantierEvent['attributs']];
+            
           if (value && typeof value === 'string') {
             let estimatedWidth;
             
@@ -174,6 +191,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
           'dateOS': 120,
           'dateFin': 120,
           'identifiant': 120,
+          'image': 80, // Largeur fixe pour l'image
         };
         
         adaptiveWidths[attributeKey] = Math.min(maxLimits[attributeKey] || 200, maxWidthForColumn);
@@ -200,7 +218,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   }, [calculateColumnWidths]);
 
   // Rendu des valeurs d'attributs avec styles appropriés
-  const renderAttributeValue = (value: string | undefined, attributeKey: keyof Chantier['attributs']) => {
+  const renderAttributeValue = (value: string | undefined, attributeKey: keyof ChantierEvent['attributs'] | 'image') => {
     if (!value) return <span className="text-gray-400">-</span>;
     
     switch (attributeKey) {
@@ -261,7 +279,9 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
           }
         >
           {/* Contenu des chantiers avec largeurs calculées */}
-          {chantiers.flatMap((chantier, rowIndex) => {
+          {chantiers
+            .filter(chantier => chantier && chantier.attributs) // Filtrer les éléments invalides
+            .flatMap((chantier, rowIndex) => {
             const chantierByCategories = getChantierValuesByCategory(chantier);
             const allValues = chantierByCategories.flatMap(cat => cat.values);
             
@@ -283,7 +303,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
                   }}
                   title={`${attributeLabel}: ${value || 'N/A'}`}
                 >
-                  {renderAttributeValue(value, attributeKey as keyof Chantier['attributs'])}
+                  {renderAttributeValue(value, attributeKey as keyof ChantierEvent['attributs'] | 'image')}
                 </div>
               );
             });

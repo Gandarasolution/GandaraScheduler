@@ -123,7 +123,7 @@ export default function HomePage() {
   const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const events = useRef<Evenement[]>(Evenements);
-  const [filteredChantiers, setFilteredChantiers] = useState<ChantierEvent[]>(Evenements.map(e => (e.type === 'Chantier' && e)) as ChantierEvent[]);
+  const [filteredChantiers, setFilteredChantiers] = useState<ChantierEvent[]>(Evenements.filter(e => e.type === 'Chantier') as ChantierEvent[]);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const employees = useRef<Employee[]>(initialEmployees);
@@ -405,7 +405,7 @@ export default function HomePage() {
         );
       case 'chantier-table':
         if (!searchInput) {
-          setFilteredChantiers(events.current.map(e => (e.type === 'Chantier' && e)) as ChantierEvent[]);
+          setFilteredChantiers(events.current.filter(e => e.type === 'Chantier') as ChantierEvent[]);
           return;
         }
 
