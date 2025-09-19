@@ -99,11 +99,11 @@ export function getDimensionItems(
       }));
     
     case 'contract':
-      const contracts = ['CDI', 'CDD', 'Intérimaire'];
-      return contracts.map(contract => ({
-        id: contract,
-        name: contract,
-        data: { contract }
+      const contractTypes = Array.from(new Set(employees.map(emp => emp.type)));
+      return contractTypes.map(type => ({
+        id: type,
+        name: type === 'employee' ? 'CDI' : 'Intérimaire',
+        data: { contract: type }
       }));
     
     case 'type':
@@ -152,8 +152,10 @@ export function groupEmployeesByDimension(
     
     case 'contract':
       employees.forEach(emp => {
-        if (!result[emp.type]) result[emp.type] = [];
-        result[emp.type].push(emp);
+        // Utiliser le type réel de l'employé comme clé de regroupement
+        const contractKey = emp.type;
+        if (!result[contractKey]) result[contractKey] = [];
+        result[contractKey].push(emp);
       });
       break;
     

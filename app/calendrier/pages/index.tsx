@@ -48,9 +48,10 @@ import {
   addWeeks,
   addMonths,
 } from "date-fns";
-import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent} from "../types";
+import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent, PaieItem, Filter, FilterType, DimensionType} from "../types";
 import CalendarGrid from "../components/CalendarGrid";
 import ChantierTableFrame from "../components/ChantierTableFrame";
+import PaieTableFrame from "../components/PaieTableFrame";
 import Modal from "../components/Modal";
 import AppointmentForm from "../components/AppointmentForm";
 import DraggableSource from "../components/DraggableSource";
@@ -124,6 +125,42 @@ export default function HomePage() {
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const events = useRef<Evenement[]>(Evenements);
   const [filteredChantiers, setFilteredChantiers] = useState<ChantierEvent[]>(Evenements.filter(e => e.type === 'Chantier') as ChantierEvent[]);
+  const [paieItems, setPaieItems] = useState<PaieItem[]>([
+    {
+      id: 1,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Absences.png",
+      code: "ABS001",
+      libelle: "Absence (en jour)",
+      actf: "ABS",
+      categorie: "Absence"
+    },
+    {
+      id: 2,
+      verrou: true,
+      image: "/app/calendrier/image/Icones/briefcase-with-tick-inside.svg",
+      code: "REP001",
+      libelle: "Repas St Claude",
+      actf: "REP",
+      categorie: "Repas"
+    },
+    {
+      id: 3,
+      verrou: false,
+      code: "AST001",
+      libelle: "Astreinte",
+      actf: "AST",
+      categorie: "Astreinte"
+    },
+    {
+      id: 4,
+      verrou: false,
+      code: "AUT001",
+      libelle: "Autres",
+      actf: "AUT",
+      categorie: "Autres"
+    }
+  ]);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const employees = useRef<Employee[]>(initialEmployees);
@@ -164,9 +201,28 @@ export default function HomePage() {
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [eventSearchInput, setEventSearchInput] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(true);
-  const [viewType, setViewType] = useState<'calendar' | 'chantier-table'>('calendar'); // État pour basculer entre les vues
+  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table'>('calendar'); // État pour basculer entre les vues
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false); // État pour contrôler le menu déroulant
   const viewDropdownRef = useRef<HTMLDivElement>(null); // Ref pour le menu déroulant
+  
+  // États pour les filtres des chantiers
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<{
+    etat: string[];
+    chargeAffaire: string[];
+    chefChantier: string[];
+  }>({
+    etat: [],
+    chargeAffaire: [],
+    chefChantier: []
+  });
+
+  // États pour la gestion avancée des configurations
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [customConfigs, setCustomConfigs] = useState<CalendarConfig[]>([]);
+  const [editingConfig, setEditingConfig] = useState<CalendarConfig | null>(null);
+  const [isCreatingConfig, setIsCreatingConfig] = useState(false);
+
   const history = useRef<HistoryAction[]>([]);
   const maxHistorySize = 50; // Limiter la taille de l'historique
   const isInitializing = useRef(true); // Flag pour éviter d'enregistrer les actions lors de l'initialisation
@@ -219,21 +275,14 @@ export default function HomePage() {
     const poles = Array.from(new Set(employees.current.map(emp => emp.pole)));
     const configs: CalendarConfig[] = [];
 
-    // Configuration par défaut : Vue par employés (toujours disponible)
-    configs.push({
-      id: 1,
-      name: 'Vue par employés',
-      dimension: 'employee',
-      filters: []
-    });
-
     // Configuration par pôles (toujours disponible si plusieurs pôles)
     if (poles.length > 1) {
       configs.push({
         id: 2,
         name: 'Vue par pôles',
         dimension: 'pole',
-        filters: []
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
       });
     }
 
@@ -251,7 +300,8 @@ export default function HomePage() {
             value: 'Technique',
             label: 'Pôle Technique'
           }
-        ]
+        ],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
       });
     }
 
@@ -268,7 +318,8 @@ export default function HomePage() {
             value: 'Commercial',
             label: 'Pôle Commercial'
           }
-        ]
+        ],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
       });
     }
 
@@ -285,7 +336,8 @@ export default function HomePage() {
             value: 'Administrative',
             label: 'Pôle Administrative'
           }
-        ]
+        ],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
       });
     }
 
@@ -302,12 +354,16 @@ export default function HomePage() {
             value: 'RH',
             label: 'Pôle RH'
           }
-        ]
+        ],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
       });
     }
 
+    // Ajouter les configurations personnalisées
+    configs.push(...customConfigs);
+
     return configs;
-  }, []);
+  }, [employees.current, customConfigs]); // Dépendance ajoutée pour recalculer quand les employés ou configs changent
 
   // --- FONCTIONS DE GESTION DES NOTIFICATIONS ---
   const addNotification = useCallback((
@@ -346,21 +402,101 @@ export default function HomePage() {
     setNotifications([]);
   }, []);
 
+  // --- FONCTIONS DE GESTION DES CONFIGURATIONS PERSONNALISÉES ---
+  const saveCustomConfig = useCallback((config: Omit<CalendarConfig, 'id'>) => {
+    const newConfig: CalendarConfig = {
+      ...config,
+      id: Date.now() // ID unique basé sur timestamp
+    };
+    setCustomConfigs(prev => [...prev, newConfig]);
+    addNotification('success', 'Configuration sauvegardée', `La configuration "${config.name}" a été créée avec succès.`);
+    return newConfig;
+  }, [addNotification]);
+
+  // État pour la configuration actuelle du calendrier
+  const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
+
+  // Calculer les configurations disponibles dynamiquement
+  const availableConfigs = useMemo(() => {
+    return getAvailableConfigs();
+  }, [getAvailableConfigs]);
+
+  const updateCustomConfig = useCallback((updatedConfig: CalendarConfig) => {
+    setCustomConfigs(prev => prev.map(config => 
+      config.id === updatedConfig.id ? updatedConfig : config
+    ));
+    
+    // Si la configuration mise à jour est la configuration courante, la mettre à jour aussi
+    if (currentCalendarConfig?.id === updatedConfig.id) {
+      setCurrentCalendarConfig(updatedConfig);
+    }
+    
+    addNotification('success', 'Configuration modifiée', `La configuration "${updatedConfig.name}" a été mise à jour.`);
+  }, [addNotification, currentCalendarConfig?.id]);
+
+  const deleteCustomConfig = useCallback((configId: number) => {
+    const configToDelete = customConfigs.find(c => c.id === configId);
+    setCustomConfigs(prev => prev.filter(config => config.id !== configId));
+    
+    // Si la configuration supprimée était active, revenir à la première configuration
+    if (currentCalendarConfig?.id === configId && availableConfigs.length > 0) {
+      setCurrentCalendarConfig(availableConfigs[0]);
+    }
+    
+    if (configToDelete) {
+      addNotification('success', 'Configuration supprimée', `La configuration "${configToDelete.name}" a été supprimée.`);
+    }
+  }, [customConfigs, currentCalendarConfig, availableConfigs, addNotification]);
+
+  const duplicateConfig = useCallback((config: CalendarConfig) => {
+    const duplicatedConfig = {
+      ...config,
+      name: `${config.name} (copie)`,
+      id: Date.now()
+    };
+    setCustomConfigs(prev => [...prev, duplicatedConfig]);
+    addNotification('success', 'Configuration dupliquée', `Une copie de "${config.name}" a été créée.`);
+    return duplicatedConfig;
+  }, [addNotification]);
+
   const unreadNotificationsCount = useMemo(() => {
     return notifications.filter(n => !n.isRead).length;
   }, [notifications]);
-
-  const availableConfigs = getAvailableConfigs();
-  const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig>(availableConfigs[1]);
+  
 
   // Appliquer les filtres aux employés et rendez-vous selon la configuration
   const filteredEmployeesForCalendar = useMemo(() => {
+    if (!currentCalendarConfig) return employees.current;
     return applyFiltersToEmployees(employees.current, currentCalendarConfig.filters);
-  }, [currentCalendarConfig.filters]);
+  }, [currentCalendarConfig?.filters]);
 
   const filteredAppointmentsForCalendar = useMemo(() => {
-    return applyFiltersToAppointments(filteredAppointments, currentCalendarConfig.filters, employees.current);
-  }, [filteredAppointments, currentCalendarConfig.filters]);
+    if (!currentCalendarConfig) return filteredAppointments;
+    
+    // Filtrer d'abord par types de RDV sélectionnés
+    let filtered = filteredAppointments;
+    
+    // Appliquer le filtrage par types de RDV si certains types ne sont pas sélectionnés
+    if (currentCalendarConfig.selectedRdvTypes && currentCalendarConfig.selectedRdvTypes.length > 0) {
+      // Si tous les types ne sont pas sélectionnés, appliquer le filtrage
+      const allTypes = ['Chantier', 'Absence', 'Autre'];
+      const isAllSelected = allTypes.every(type => currentCalendarConfig.selectedRdvTypes.includes(type));
+      
+      if (!isAllSelected) {
+        filtered = filteredAppointments.filter(appointment => {
+          // Normaliser les types pour la comparaison (gérer les différences de casse et dénominations)
+          const appointmentType = appointment.type;
+          const normalizedType = appointmentType === 'chantier' ? 'Chantier' : 
+                                appointmentType === 'absence' ? 'Absence' :
+                                appointmentType === 'autres' ? 'Autre' : 'Autre';
+          return currentCalendarConfig.selectedRdvTypes.includes(normalizedType);
+        });
+      }
+    }
+    
+    // Puis appliquer les filtres de champs
+    return applyFiltersToAppointments(filtered, currentCalendarConfig.filters, employees.current);
+  }, [filteredAppointments, currentCalendarConfig?.filters, currentCalendarConfig?.selectedRdvTypes]);
 
 
   // --- PARAMÈTRES D'AFFICHAGE ET DE FILTRAGE ---
@@ -380,6 +516,44 @@ export default function HomePage() {
       ]
     }
   ];
+
+  // Fonction pour appliquer les filtres aux chantiers
+  const applyFiltersToChantiers = useCallback(() => {
+    let filtered = events.current.filter(e => e.type === 'Chantier') as ChantierEvent[];
+    
+    // Appliquer le filtre de recherche si présent
+    if (searchInput) {
+      const lowercasedQuery = searchInput.toLowerCase();
+      filtered = filtered.filter(chantier => 
+        chantier.attributs.libelle.toLowerCase().includes(lowercasedQuery) || 
+        chantier.attributs.chefChantier.toLowerCase().includes(lowercasedQuery) ||
+        chantier.attributs.chargeAffaire.toLowerCase().includes(lowercasedQuery)
+      );
+    }
+    
+    // Appliquer les filtres par état
+    if (activeFilters.etat.length > 0) {
+      filtered = filtered.filter(chantier => 
+        activeFilters.etat.includes(chantier.attributs.etat)
+      );
+    }
+    
+    // Appliquer les filtres par chargé d'affaire
+    if (activeFilters.chargeAffaire.length > 0) {
+      filtered = filtered.filter(chantier => 
+        activeFilters.chargeAffaire.includes(chantier.attributs.chargeAffaire)
+      );
+    }
+    
+    // Appliquer les filtres par chef de chantier
+    if (activeFilters.chefChantier.length > 0) {
+      filtered = filtered.filter(chantier => 
+        activeFilters.chefChantier.includes(chantier.attributs.chefChantier)
+      );
+    }
+    
+    setFilteredChantiers(filtered);
+  }, [searchInput, activeFilters]);
 
   const handleResearch = useCallback(() => {
     const lowercasedQuery = searchInput.toLowerCase();
@@ -403,26 +577,33 @@ export default function HomePage() {
             })
             .filter((app): app is Appointment => app !== undefined)
         );
+        break;
       case 'chantier-table':
-        if (!searchInput) {
-          setFilteredChantiers(events.current.filter(e => e.type === 'Chantier') as ChantierEvent[]);
-          return;
-        }
-
-        setFilteredChantiers(
-          events.current
-            .filter(e => e.type === 'Chantier')
-            .map(chantier => {
-              // Vérifie si le nom du chantier ou le client correspond à la recherche
-              if (chantier.attributs.libelle.toLowerCase().includes(lowercasedQuery) || chantier.attributs.chefChantier.toLowerCase().includes(lowercasedQuery)) {
-                return chantier;
-              }
-              return undefined;
-            })
-            .filter((chantier): chantier is ChantierEvent => chantier !== undefined)
-        );
+        // Utiliser la fonction de filtrage pour les chantiers
+        applyFiltersToChantiers();
+        break;
       } 
-    }, [searchInput]);
+    }, [searchInput, viewType, applyFiltersToChantiers]);
+
+  // Fonction pour obtenir les valeurs uniques pour les filtres
+  const getFilterOptions = useCallback(() => {
+    const allChantiers = events.current.filter(e => e.type === 'Chantier') as ChantierEvent[];
+    
+    const etats = [...new Set(allChantiers.map(c => c.attributs.etat))].sort();
+    const chargeAffaires = [...new Set(allChantiers.map(c => c.attributs.chargeAffaire))].sort();
+    const chefChantiers = [...new Set(allChantiers.map(c => c.attributs.chefChantier))].sort();
+    
+    return { etats, chargeAffaires, chefChantiers };
+  }, []);
+
+  // Fonction pour réinitialiser tous les filtres
+  const clearAllFilters = useCallback(() => {
+    setActiveFilters({
+      etat: [],
+      chargeAffaire: [],
+      chefChantier: []
+    });
+  }, []);
 
   // Création de rendez-vous répétés
   const createRepeatedAppointments = useCallback((repeatInterval: "day" | "week" | "month", repeatCount: number, endDate?: Date, numberCount?: number) => {
@@ -1417,6 +1598,10 @@ export default function HomePage() {
           searchInputElement.focus();
         }
       }
+      if (e.ctrlKey && e.key === 'q') {
+        e.preventDefault();
+        setIsViewDropdownOpen(true);
+      }
       if (e.key === 'suppr' || e.key === 'Delete') {
         if (selectedAppointment) {
           handleDeleteAppointmentConfirm();
@@ -1526,6 +1711,20 @@ export default function HomePage() {
       isLoadingMoreDays.current = false;
     }
   }, [dayInTimeline]);
+
+  // Appliquer les filtres quand ils changent
+  useEffect(() => {
+    if (viewType === 'chantier-table') {
+      applyFiltersToChantiers();
+    }
+  }, [activeFilters, applyFiltersToChantiers, viewType]);
+
+  // Initialiser la configuration du calendrier quand les configurations disponibles changent
+  useEffect(() => {
+    if (availableConfigs.length > 0 && !currentCalendarConfig) {
+      setCurrentCalendarConfig(availableConfigs[0]);
+    }
+  }, [availableConfigs, currentCalendarConfig]);
 
   useEffect(() => {
     if (modalInfo) {
@@ -1665,11 +1864,11 @@ export default function HomePage() {
                         <path fillRule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
                       </svg>
                     </button>
-                    {viewType === 'chantier-table' && (
+                    {viewType === 'chantier-table' || viewType === 'paie-table' && (
                       <button
                         className="p-3 rounded-full hover:bg-blue-100 transition"
                         onClick={() => {setViewType('calendar')}}
-                        title="Chantiers"
+                        title="Planning"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 20 60 60" width="25" height="25">
                           <defs>
@@ -1727,60 +1926,143 @@ export default function HomePage() {
                           </svg>
                       </button>
 
-                      {/* Menu déroulant */}
+                      {/* Menu déroulant modernisé */}
                       {isViewDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
-                          <div className="py-1">
+                        <div className="absolute top-full -left-30 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                          {/* En-tête du menu */}
+                          <div className="px-4 py-3 bg-gradient-to-r from-[#009580] to-[#007a6b] text-white">
+                            <h3 className="text-sm font-semibold">Changer de vue</h3>
+                            <p className="text-xs text-white/80 mt-1">Sélectionnez votre mode d'affichage</p>
+                          </div>
+                          
+                          <div className="py-2">
                             <button
-                              className={`w-full px-4 py-2 text-left flex items-center gap-3 transition ${
-                                viewType === 'calendar' ? 'bg-[#C8E6E1] text-[#16302C]' : 'text-gray-700  hover:bg-[#e7f4f2]'
+                              className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
+                                viewType === 'calendar' 
+                                  ? 'bg-[#C8E6E1] text-[#16302C] shadow-sm' 
+                                  : 'text-gray-700 hover:bg-[#e7f4f2] hover:shadow-sm'
                               }`}
                               onClick={() => {
                                 setViewType('calendar');
                                 setIsViewDropdownOpen(false);
                               }}
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="16"
-                                height="16"
-                                fill="currentColor"
-                                viewBox="0 0 16 16"
-                              >
-                                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
-                              </svg>
-                              Planning
-                              {viewType === 'calendar' && (
-                                <svg className="w-4 h-4 ml-auto text-[#16302C]" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                              <div className={`p-2 rounded-xl transition-all duration-200 ${
+                                viewType === 'calendar' 
+                                  ? 'bg-[#009580] text-white' 
+                                  : 'bg-gray-100 text-gray-600 group-hover:bg-[#009580] group-hover:text-white'
+                              }`}>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="18"
+                                  height="18"
+                                  fill="currentColor"
+                                  viewBox="0 0 16 16"
+                                >
+                                  <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
                                 </svg>
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium">Planning</div>
+                                <div className="text-xs text-gray-500 mt-0.5">Vue calendrier avec timeline</div>
+                              </div>
+                              {viewType === 'calendar' && (
+                                <div className="p-1 rounded-full bg-[#009580]">
+                                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                  </svg>
+                                </div>
                               )}
                             </button>
+                            
+                            {/* Séparateur */}
+                            <div className="mx-4 my-2 h-px bg-gray-200"></div>
+                            
                             <button
-                              className={`w-full px-4 py-2 text-left flex items-center gap-3 transition ${
-                                viewType === 'chantier-table' ? 'bg-[#C8E6E1] text-[#16302C]' : 'text-gray-700  hover:bg-[#e7f4f2]'
+                              className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
+                                viewType === 'chantier-table' 
+                                  ? 'bg-[#C8E6E1] text-[#16302C] shadow-sm' 
+                                  : 'text-gray-700 hover:bg-[#e7f4f2] hover:shadow-sm'
                               }`}
                               onClick={() => {
                                 setViewType('chantier-table');
                                 setIsViewDropdownOpen(false);
                               }}
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="16"
-                                height="16"
-                                fill="currentColor"
-                                viewBox="0 0 16 16"
-                              >
-                                <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zM1 2v2h4V2H1zm4 3H1v3h4V5zm0 4H1v3h4V9zm0 4H1v2a1 1 0 0 0 1 1h3v-3zm5-8H6v3h4V4zm0 4H6v3h4V8z" />
-                              </svg>
-                              Liste des chantiers
-                              {viewType === 'chantier-table' && (
-                                <svg className="w-4 h-4 ml-auto text-[#16302C]" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                              <div className={`p-2 rounded-xl transition-all duration-200 ${
+                                viewType === 'chantier-table' 
+                                  ? 'bg-[#009580] text-white' 
+                                  : 'bg-gray-100 text-gray-600 group-hover:bg-[#009580] group-hover:text-white'
+                              }`}>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="18"
+                                  height="18"
+                                  fill="currentColor"
+                                  viewBox="0 0 16 16"
+                                >
+                                  <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zM1 2v2h4V2H1zm4 3H1v3h4V5zm0 4H1v3h4V9zm0 4H1v2a1 1 0 0 0 1 1h3v-3zm5-8H6v3h4V4zm0 4H6v3h4V8z" />
                                 </svg>
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium">Liste des chantiers</div>
+                                <div className="text-xs text-gray-500 mt-0.5">Vue tableau avec filtres</div>
+                              </div>
+                              {viewType === 'chantier-table' && (
+                                <div className="p-1 rounded-full bg-[#009580]">
+                                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                  </svg>
+                                </div>
                               )}
                             </button>
+                            
+                            <button
+                              className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
+                                viewType === 'paie-table' 
+                                  ? 'bg-[#C8E6E1] text-[#16302C] shadow-sm' 
+                                  : 'text-gray-700 hover:bg-[#e7f4f2] hover:shadow-sm'
+                              }`}
+                              onClick={() => {
+                                setViewType('paie-table');
+                                setIsViewDropdownOpen(false);
+                              }}
+                            >
+                              <div className={`p-2 rounded-xl transition-all duration-200 ${
+                                viewType === 'paie-table' 
+                                  ? 'bg-[#009580] text-white' 
+                                  : 'bg-gray-100 text-gray-600 group-hover:bg-[#009580] group-hover:text-white'
+                              }`}>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="18"
+                                  height="18"
+                                  fill="currentColor"
+                                  viewBox="0 0 16 16"
+                                >
+                                  <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm13-1H2a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM2 5v7h12V5H2z"/>
+                                  <path d="M6 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 8zm0 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5z"/>
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium">Configuration Paie</div>
+                                <div className="text-xs text-gray-500 mt-0.5">Gestion des éléments de paie</div>
+                              </div>
+                              {viewType === 'paie-table' && (
+                                <div className="p-1 rounded-full bg-[#009580]">
+                                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                  </svg>
+                                </div>
+                              )}
+                            </button>
+                          </div>
+                          
+                          {/* Pied du menu */}
+                          <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
+                            <p className="text-xs text-gray-500 text-center">
+                              Raccourci : <span className="font-mono bg-white px-1 rounded">Ctrl + Q</span>
+                            </p>
                           </div>
                         </div>
                       )}
@@ -1825,7 +2107,7 @@ export default function HomePage() {
             <div className={`flex items-center justify-between w-full ${!isExpanded ? 'hidden' : 'h-[50px]'}`}>
                 <div className={`${viewType === 'calendar' ? 'ml-80' : 'ml-7'}`}>
                   <p className="text-5xl poppins">
-                    {viewType === 'calendar' ? 'Planning' : 'Liste des chantiers'}
+                    {viewType === 'calendar' ? 'Planning' : viewType === 'chantier-table' ? 'Liste des chantiers' : 'Rubrique Paie'}
                   </p>
                 </div>
                 <div className="flex flex-row items-center gap-4">
@@ -1904,6 +2186,9 @@ export default function HomePage() {
                     )}
                     <button 
                       className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
+                      name="filtrer"
+                      onClick={() => viewType === 'calendar' ? setIsConfigModalOpen(true) : setIsFilterModalOpen(true)}
+                      title="Filtrer"
                     >
                       <svg 
                         viewBox="0 0 16 16"
@@ -1956,33 +2241,44 @@ export default function HomePage() {
               <SelectedAppointmentContext.Provider value={{ selectedAppointment, setSelectedAppointment}}>
                 <SelectedCellContext.Provider value={{ selectedCell, setSelectedCell }}>
                   {viewType === 'calendar' ? (
-                    <CalendarGrid
-                      employees={filteredEmployeesForCalendar}
-                      appointments={filteredAppointmentsForCalendar}
-                      initialTeams={initialTeams}
-                      dayInTimeline={dayInTimeline}
-                      HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
-                      isFullDay={isFullDay}
-                      events={events.current}
-                      //selectedCalendarId={selectedCalendarId}
-                      isMobile={isMobile}
-                      includeWeekend={includeWeekend}
-                      nonWorkingDates={nonWorkingDates}
-                      mainScrollRef={mainScrollRef}
-                      handleScroll={handleScroll}
-                      onAppointmentMoved={moveAppointment}
-                      onCellDoubleClick={() => setIsSearchOverlayOpen(true)}
-                      onAppointmentDoubleClick={handleOpenEditModal}
-                      onExternalDragDrop={createAppointmentFromDrag}
-                      handleContextMenu={handleContextMenu}
-                      calendarConfig={currentCalendarConfig}
-                      onCalendarConfigChange={setCurrentCalendarConfig}
-                      availableConfigs={availableConfigs}
-                    />
-                  ) : (
+                    currentCalendarConfig ? (
+                      <CalendarGrid
+                        employees={filteredEmployeesForCalendar}
+                        appointments={filteredAppointmentsForCalendar}
+                        initialTeams={initialTeams}
+                        dayInTimeline={dayInTimeline}
+                        HALF_DAY_INTERVALS={isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS}
+                        isFullDay={isFullDay}
+                        events={events.current}
+                        //selectedCalendarId={selectedCalendarId}
+                        isMobile={isMobile}
+                        includeWeekend={includeWeekend}
+                        nonWorkingDates={nonWorkingDates}
+                        mainScrollRef={mainScrollRef}
+                        handleScroll={handleScroll}
+                        onAppointmentMoved={moveAppointment}
+                        onCellDoubleClick={() => setIsSearchOverlayOpen(true)}
+                        onAppointmentDoubleClick={handleOpenEditModal}
+                        onExternalDragDrop={createAppointmentFromDrag}
+                        handleContextMenu={handleContextMenu}
+                        calendarConfig={currentCalendarConfig}
+                        onCalendarConfigChange={setCurrentCalendarConfig}
+                        availableConfigs={availableConfigs}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-64">
+                        <div className="text-gray-500">Chargement des configurations...</div>
+                      </div>
+                    )
+                  ) : viewType === 'chantier-table' ? (
                     <ChantierTableFrame 
                       chantiers={filteredChantiers} 
                       appointments={appointments.current}
+                      containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
+                    />
+                  ) : (
+                    <PaieTableFrame 
+                      paieItems={paieItems}
                       containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
                     />
                   )}
@@ -2220,6 +2516,37 @@ export default function HomePage() {
           isSettingsOpen={isSettingsOpen}
         />
         
+        {/* Modal de gestion des configurations */}
+        <ConfigurationModal
+          isOpen={isConfigModalOpen}
+          onClose={() => {
+            setIsConfigModalOpen(false);
+            setEditingConfig(null);
+            setIsCreatingConfig(false);
+          }}
+          availableConfigs={availableConfigs}
+          currentConfig={currentCalendarConfig}
+          onConfigChange={setCurrentCalendarConfig}
+          onSaveConfig={saveCustomConfig}
+          onUpdateConfig={updateCustomConfig}
+          onDeleteConfig={deleteCustomConfig}
+          onDuplicateConfig={duplicateConfig}
+          editingConfig={editingConfig}
+          setEditingConfig={setEditingConfig}
+          isCreatingConfig={isCreatingConfig}
+          setIsCreatingConfig={setIsCreatingConfig}
+        />
+        
+        {/* Modal de filtres des chantiers */}
+        <FilterModal
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          activeFilters={activeFilters}
+          setActiveFilters={setActiveFilters}
+          filterOptions={getFilterOptions()}
+          onClearAll={clearAllFilters}
+        />
+        
         {/* Panneau de notifications */}
         <NotificationsPanel 
           isOpen={isNotificationsPanelOpen}
@@ -2230,7 +2557,6 @@ export default function HomePage() {
           onClearAll={clearAllNotifications}
         />
         
-        {/* Overlay de recherche d'événements */}
         
         {/* Barre de chargement modernisée */}
         {isLoading && (
@@ -2322,6 +2648,729 @@ const AlertModal: React.FC<AlertModalProps> = ({
     </div>
   </Modal>
 );
+
+
+// Modal de gestion des configurations
+type ConfigurationModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  availableConfigs: CalendarConfig[];
+  currentConfig: CalendarConfig | null;
+  onConfigChange: (config: CalendarConfig) => void;
+  onSaveConfig: (config: Omit<CalendarConfig, 'id'>) => CalendarConfig;
+  onUpdateConfig: (config: CalendarConfig) => void;
+  onDeleteConfig: (configId: number) => void;
+  onDuplicateConfig: (config: CalendarConfig) => CalendarConfig;
+  editingConfig: CalendarConfig | null;
+  setEditingConfig: (config: CalendarConfig | null) => void;
+  isCreatingConfig: boolean;
+  setIsCreatingConfig: (isCreating: boolean) => void;
+};
+
+const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
+  isOpen,
+  onClose,
+  availableConfigs,
+  currentConfig,
+  onConfigChange,
+  onSaveConfig,
+  onUpdateConfig,
+  onDeleteConfig,
+  onDuplicateConfig,
+  editingConfig,
+  setEditingConfig,
+  isCreatingConfig,
+  setIsCreatingConfig
+}) => {
+  const [configName, setConfigName] = useState('');
+  const [selectedDimension, setSelectedDimension] = useState<DimensionType>('employee');
+  const [configFilters, setConfigFilters] = useState<Filter[]>([]);
+  const [selectedRdvTypes, setSelectedRdvTypes] = useState<string[]>(['Chantier', 'Absence', 'Autre']);
+
+  // Réinitialiser le formulaire
+  const resetForm = () => {
+    setConfigName('');
+    setSelectedDimension('employee');
+    setConfigFilters([]);
+    setSelectedRdvTypes(['Chantier', 'Absence', 'Autre']);
+  };
+
+  // Charger les données pour l'édition
+  useEffect(() => {
+    if (editingConfig) {
+      setConfigName(editingConfig.name);
+      setSelectedDimension(editingConfig.dimension);
+      setConfigFilters(editingConfig.filters);
+      setSelectedRdvTypes(editingConfig.selectedRdvTypes || ['Chantier', 'Absence', 'Autre']);
+    } else {
+      resetForm();
+    }
+  }, [editingConfig]);
+
+  const handleSave = () => {
+    if (!configName.trim()) return;
+
+    const newConfig = {
+      name: configName.trim(),
+      dimension: selectedDimension,
+      filters: configFilters,
+      selectedRdvTypes: selectedRdvTypes
+    };
+
+    if (editingConfig) {
+      // Si on modifie une configuration prédéfinie (ID <= 10), créer une nouvelle config personnalisée
+      if (editingConfig.id <= 10) {
+        const savedConfig = onSaveConfig(newConfig);
+        onConfigChange(savedConfig);
+      } else {
+        // Sinon, mettre à jour la configuration existante
+        onUpdateConfig({ ...editingConfig, ...newConfig });
+      }
+      setEditingConfig(null);
+    } else {
+      const savedConfig = onSaveConfig(newConfig);
+      onConfigChange(savedConfig);
+    }
+
+    resetForm();
+    setIsCreatingConfig(false);
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Gestion des configurations">
+      <div className={`flex gap-6 poppins w-full mx-auto transition-all duration-300 ${
+        (isCreatingConfig || editingConfig) ? 'max-w-6xl flex-row' : 'max-w-2xl flex-col'
+      }`}>
+        
+        {/* Section principale - Liste des configurations */}
+        <div className={`${(isCreatingConfig || editingConfig) ? 'w-1/2' : 'w-full'} transition-all duration-300`}>
+          <div className="max-h-[70vh] overflow-y-auto scrollbar-hide space-y-6">
+        
+        {/* Configuration actuelle */}
+        <div className="bg-gradient-to-r from-[#e7f4f2] to-[#f0f9f7] p-4 rounded-xl border border-[#009580]/20">
+          <h3 className="font-semibold text-[#16302C] mb-2 flex items-center gap-2">
+            <div className="w-5 h-5 bg-[#009580] rounded-full flex items-center justify-center">
+              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+              </svg>
+            </div>
+            Configuration active
+          </h3>
+          <p className="text-sm text-[#16302C]/70">
+            {currentConfig ? currentConfig.name : 'Aucune configuration sélectionnée'}
+          </p>
+          {currentConfig && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs bg-[#009580]/10 px-2 py-1 rounded-full text-[#009580] font-medium">
+                {currentConfig.dimension}
+              </span>
+              {currentConfig.selectedRdvTypes && currentConfig.selectedRdvTypes.length < 3 && (
+                <span className="text-xs bg-blue-50 px-2 py-1 rounded-full text-blue-600 font-medium">
+                  {currentConfig.selectedRdvTypes.join(', ')}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Liste des configurations */}
+        <div>
+          <div className="flex items-center justify-between mb-4 gap-3">
+            <h3 className="font-semibold text-[#16302C] text-lg">Configurations disponibles</h3>
+            <button
+              onClick={() => setIsCreatingConfig(true)}
+              className="px-4 py-2 bg-[#009580] text-white rounded-xl text-sm hover:bg-[#007a6b] transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Nouvelle configuration
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {availableConfigs.map((config) => (
+              <div
+                key={config.id}
+                className={`p-4 border-2 rounded-xl transition-all duration-200 ${
+                  currentConfig?.id === config.id 
+                    ? 'border-[#009580] bg-gradient-to-r from-[#e7f4f2] to-[#f0f9f7] shadow-lg' 
+                    : 'border-gray-200 hover:border-[#009580]/30 hover:bg-gray-50/50'
+                }`}
+              >
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <button
+                      onClick={() => onConfigChange(config)}
+                      className="flex-1 text-left group"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-semibold text-[#16302C] group-hover:text-[#009580] transition-colors">
+                          {config.name}
+                        </span>
+                        {currentConfig?.id === config.id && (
+                          <div className="w-2 h-2 bg-[#009580] rounded-full animate-pulse"></div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-600 font-medium">
+                          {config.dimension === 'employee' ? 'Par employé' :
+                           config.dimension === 'group' ? 'Par équipe' :
+                           config.dimension === 'pole' ? 'Par pôle' :
+                           config.dimension === 'contract' ? 'Par type de contrat' :
+                           config.dimension === 'type' ? 'Par type de contrat' : config.dimension}
+                        </span>
+                        {config.filters.length > 0 && (
+                          <span className="text-xs bg-blue-50 px-3 py-1 rounded-full text-blue-600 font-medium">
+                            {config.filters.length} filtre{config.filters.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {config.selectedRdvTypes && config.selectedRdvTypes.length < 3 && (
+                          <span className="text-xs bg-purple-50 px-3 py-1 rounded-full text-purple-600 font-medium">
+                            {config.selectedRdvTypes.join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setEditingConfig(config)}
+                    className="p-2 text-gray-400 hover:text-[#009580] hover:bg-[#009580]/10 rounded-lg transition-all duration-200"
+                    title="Modifier"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  
+                  <button
+                    onClick={() => onDuplicateConfig(config)}
+                    className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                    title="Dupliquer"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+
+                  {config.id > 10 && ( // Seules les configs personnalisées peuvent être supprimées
+                    <button
+                      onClick={() => onDeleteConfig(config.id)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200"
+                      title="Supprimer"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        </div>
+        </div>
+
+        {/* Section de droite - Formulaire de création/édition */}
+        {(isCreatingConfig || editingConfig) && (
+          <div className="w-1/2 border-l pl-6">
+            <div className="max-h-[70vh] overflow-y-auto scrollbar-hide">
+              <div className="sticky top-0 bg-white pb-4 border-b mb-6">
+                <h3 className="font-semibold text-[#16302C] text-lg">
+                  {editingConfig ? 'Modifier la configuration' : 'Nouvelle configuration'}
+                </h3>
+              </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom de la configuration
+                </label>
+                <input
+                  type="text"
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#009580] focus:border-[#009580]"
+                  placeholder="Ex: Vue Technique par contrats"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Organisation d'affichage
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Par employé */}
+                  <div 
+                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      selectedDimension === 'employee' 
+                        ? 'border-[#009580] bg-[#e7f4f2]' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setSelectedDimension('employee')}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="radio"
+                        id="dim-employee"
+                        name="dimension"
+                        checked={selectedDimension === 'employee'}
+                        onChange={() => setSelectedDimension('employee')}
+                        className="text-[#009580] focus:ring-[#009580]"
+                      />
+                      <div>
+                        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mb-1">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <label htmlFor="dim-employee" className="font-medium text-gray-900 cursor-pointer">
+                          Par employé
+                        </label>
+                        <p className="text-xs text-gray-500">Vue individuelle</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Par équipe */}
+                  <div 
+                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      selectedDimension === 'group' 
+                        ? 'border-[#009580] bg-[#e7f4f2]' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setSelectedDimension('group')}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="radio"
+                        id="dim-group"
+                        name="dimension"
+                        checked={selectedDimension === 'group'}
+                        onChange={() => setSelectedDimension('group')}
+                        className="text-[#009580] focus:ring-[#009580]"
+                      />
+                      <div>
+                        <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mb-1">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        </div>
+                        <label htmlFor="dim-group" className="font-medium text-gray-900 cursor-pointer">
+                          Par équipe
+                        </label>
+                        <p className="text-xs text-gray-500">Vue collective</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Par pôle */}
+                  <div 
+                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      selectedDimension === 'pole' 
+                        ? 'border-[#009580] bg-[#e7f4f2]' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setSelectedDimension('pole')}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="radio"
+                        id="dim-pole"
+                        name="dimension"
+                        checked={selectedDimension === 'pole'}
+                        onChange={() => setSelectedDimension('pole')}
+                        className="text-[#009580] focus:ring-[#009580]"
+                      />
+                      <div>
+                        <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mb-1">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </div>
+                        <label htmlFor="dim-pole" className="font-medium text-gray-900 cursor-pointer">
+                          Par pôle
+                        </label>
+                        <p className="text-xs text-gray-500">Vue département</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Par contrat */}
+                  <div 
+                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      selectedDimension === 'contract' 
+                        ? 'border-[#009580] bg-[#e7f4f2]' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setSelectedDimension('contract')}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="radio"
+                        id="dim-contract"
+                        name="dimension"
+                        checked={selectedDimension === 'contract'}
+                        onChange={() => setSelectedDimension('contract')}
+                        className="text-[#009580] focus:ring-[#009580]"
+                      />
+                      <div>
+                        <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mb-1">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <label htmlFor="dim-contract" className="font-medium text-gray-900 cursor-pointer">
+                          Par contrat
+                        </label>
+                        <p className="text-xs text-gray-500">Employé/Intérim</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Par type de contrat */}
+                  <div 
+                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all col-span-2 ${
+                      selectedDimension === 'type' 
+                        ? 'border-[#009580] bg-[#e7f4f2]' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setSelectedDimension('type')}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="radio"
+                        id="dim-type"
+                        name="dimension"
+                        checked={selectedDimension === 'type'}
+                        onChange={() => setSelectedDimension('type')}
+                        className="text-[#009580] focus:ring-[#009580]"
+                      />
+                      <div>
+                        <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center mb-1">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                          </svg>
+                        </div>
+                        <label htmlFor="dim-type" className="font-medium text-gray-900 cursor-pointer">
+                          Par type de contrat
+                        </label>
+                        <p className="text-xs text-gray-500">Classification par type de contrat (Employé/Intérim)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Types de rendez-vous à afficher
+                  </label>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center p-4 border border-gray-200 rounded-lg">
+                    <span className="text-sm text-gray-500">Choisissez les types de RDV à inclure dans cette vue</span>
+                  </div>
+
+                  {/* Type Chantier */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="type-chantier"
+                      checked={selectedRdvTypes.includes('Chantier')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRdvTypes([...selectedRdvTypes, 'Chantier']);
+                        } else {
+                          setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Chantier'));
+                        }
+                      }}
+                      className="h-4 w-4 text-[#009580] focus:ring-[#009580] border-gray-300 rounded"
+                    />
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-[#FF6B6B] rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <label htmlFor="type-chantier" className="font-medium text-gray-900 cursor-pointer">
+                          Chantiers
+                        </label>
+                        <p className="text-sm text-gray-500">Projets de construction et travaux</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Type Absence */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="type-absence"
+                      checked={selectedRdvTypes.includes('Absence')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRdvTypes([...selectedRdvTypes, 'Absence']);
+                        } else {
+                          setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Absence'));
+                        }
+                      }}
+                      className="h-4 w-4 text-[#009580] focus:ring-[#009580] border-gray-300 rounded"
+                    />
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-[#FFC107] rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <label htmlFor="type-absence" className="font-medium text-gray-900 cursor-pointer">
+                          Absences
+                        </label>
+                        <p className="text-sm text-gray-500">Congés, formation, arrêts maladie</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Type Autre */}
+                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      id="type-autre"
+                      checked={selectedRdvTypes.includes('Autre')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRdvTypes([...selectedRdvTypes, 'Autre']);
+                        } else {
+                          setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Autre'));
+                        }
+                      }}
+                      className="h-4 w-4 text-[#009580] focus:ring-[#009580] border-gray-300 rounded"
+                    />
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-[#6C5CE7] rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <label htmlFor="type-autre" className="font-medium text-gray-900 cursor-pointer">
+                          Autres événements
+                        </label>
+                        <p className="text-sm text-gray-500">Réunions, formations, événements divers</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bouton Tout sélectionner/désélectionner */}
+                  <div className="flex justify-center pt-2">
+                    <button
+                      onClick={() => {
+                        const allTypesSelected = configFilters.filter(f => f.field === 'type').length === 3;
+                        if (allTypesSelected) {
+                          // Tout désélectionner
+                          setConfigFilters(configFilters.filter(f => f.field !== 'type'));
+                        } else {
+                          // Tout sélectionner
+                          const typeFilters = configFilters.filter(f => f.field !== 'type');
+                          const newFilters: Filter[] = [
+                            {
+                              id: `filter-chantier-${Date.now()}`,
+                              field: 'type',
+                              type: 'equals',
+                              value: 'Chantier',
+                              label: 'Chantiers'
+                            },
+                            {
+                              id: `filter-absence-${Date.now() + 1}`,
+                              field: 'type',
+                              type: 'equals',
+                              value: 'Absence',
+                              label: 'Absences'
+                            },
+                            {
+                              id: `filter-autre-${Date.now() + 2}`,
+                              field: 'type',
+                              type: 'equals',
+                              value: 'Autre',
+                              label: 'Autres événements'
+                            }
+                          ];
+                          setConfigFilters([...typeFilters, ...newFilters]);
+                        }
+                      }}
+                      className="text-sm text-[#009580] hover:text-[#007a6b] font-medium"
+                    >
+                      {configFilters.filter(f => f.field === 'type').length === 3 ? 'Tout désélectionner' : 'Tout sélectionner'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setIsCreatingConfig(false);
+                  setEditingConfig(null);
+                  resetForm();
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!configName.trim()}
+                className="px-4 py-2 bg-[#009580] text-white rounded-lg hover:bg-[#007a6b] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {editingConfig ? 'Modifier' : 'Créer'}
+              </button>
+            </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+};
+
+
+// Modal de filtres pour les chantiers
+type FilterModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  activeFilters: {
+    etat: string[];
+    chargeAffaire: string[];
+    chefChantier: string[];
+  };
+  setActiveFilters: React.Dispatch<React.SetStateAction<{
+    etat: string[];
+    chargeAffaire: string[];
+    chefChantier: string[];
+  }>>;
+  filterOptions: {
+    etats: string[];
+    chargeAffaires: string[];
+    chefChantiers: string[];
+  };
+  onClearAll: () => void;
+};
+
+const FilterModal: React.FC<FilterModalProps> = ({
+  isOpen,
+  onClose,
+  activeFilters,
+  setActiveFilters,
+  filterOptions,
+  onClearAll
+}) => {
+  const toggleFilter = (category: keyof typeof activeFilters, value: string) => {
+    setActiveFilters(prev => ({
+      ...prev,
+      [category]: prev[category].includes(value)
+        ? prev[category].filter(item => item !== value)
+        : [...prev[category], value]
+    }));
+  };
+
+  const activeFilterCount = Object.values(activeFilters).reduce((count, arr) => count + arr.length, 0);
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Filtres des chantiers">
+      <div className="flex flex-col gap-6 poppins max-h-96 overflow-y-auto">
+        {/* En-tête avec compteur et bouton reset */}
+        <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Filtres actifs:</span>
+            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
+              {activeFilterCount}
+            </span>
+          </div>
+          {activeFilterCount > 0 && (
+            <button
+              onClick={onClearAll}
+              className="text-sm text-red-600 hover:text-red-800 font-medium transition-colors"
+            >
+              Tout supprimer
+            </button>
+          )}
+        </div>
+
+        {/* Filtre par état */}
+        <div className="space-y-3">
+          <h3 className="font-semibold text-gray-800">État</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {filterOptions.etats.map(etat => (
+              <label key={etat} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                <input
+                  type="checkbox"
+                  checked={activeFilters.etat.includes(etat)}
+                  onChange={() => toggleFilter('etat', etat)}
+                  className="text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="text-sm text-gray-700">{etat}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Filtre par chargé d'affaire */}
+        <div className="space-y-3">
+          <h3 className="font-semibold text-gray-800">Chargé d'affaire</h3>
+          <div className="space-y-1">
+            {filterOptions.chargeAffaires.map(chargeAffaire => (
+              <label key={chargeAffaire} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                <input
+                  type="checkbox"
+                  checked={activeFilters.chargeAffaire.includes(chargeAffaire)}
+                  onChange={() => toggleFilter('chargeAffaire', chargeAffaire)}
+                  className="text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="text-sm text-gray-700">{chargeAffaire}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Filtre par chef de chantier */}
+        <div className="space-y-3">
+          <h3 className="font-semibold text-gray-800">Chef de chantier</h3>
+          <div className="space-y-1">
+            {filterOptions.chefChantiers.map(chefChantier => (
+              <label key={chefChantier} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                <input
+                  type="checkbox"
+                  checked={activeFilters.chefChantier.includes(chefChantier)}
+                  onChange={() => toggleFilter('chefChantier', chefChantier)}
+                  className="text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="text-sm text-gray-700">{chefChantier}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Pied de modal avec actions */}
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+        >
+          Fermer
+        </button>
+      </div>
+    </Modal>
+  );
+};
 
 
 type SettingsModalProps = {  
@@ -2625,7 +3674,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
                     key={`${event.label}-${event.id}-${index}`}
                     id={event.id}
                     title={event.label}
-                    type={event.type}
+                    type={event.type as "Chantier" | "Absence" | "Autre"}
                   />
                   {selectedCell && (
                     <div className="h-full">

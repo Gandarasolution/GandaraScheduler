@@ -348,81 +348,35 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   const calculateColumnWidths = React.useMemo(() => {
     if (!sortedChantiers.length) return attributeLabels.map(() => 80);
 
-    const fixedWidth = 89; // Largeur fixe pour les colonnes standard
-    const padding = 24; // Padding horizontal (px-3 = 12px de chaque côté)
+    const fixedWidth = 90.5; // Largeur fixe pour les colonnes standard
     
-    // Colonnes qui s'adaptent à leur contenu
+    // Colonnes qui utilisent des largeurs spécifiques
     const adaptiveColumns = ['libelle', 'chefChantier', 'chargeAffaire', 'etat', 'dateOS', 'dateFin', 'identifiant', 'image'];
     
-    // Calculer d'abord les largeurs pour les colonnes adaptatives
-    const adaptiveWidths: { [key: string]: number } = {};
-    
-    attributeLabels.forEach((label, colIndex) => {
-      const attributeKey = attributeKeys[colIndex];
-      
-      if (adaptiveColumns.includes(attributeKey)) {
-        let maxWidthForColumn = Math.max(85, label.length * 8 + padding); // Largeur minimale basée sur le titre
-        
-        // Calculer la largeur nécessaire pour chaque valeur de cette colonne
-        sortedChantiers.forEach(chantier => {
-          // Vérification de sécurité pour éviter les erreurs
-          if (!chantier || !chantier.attributs) {
-            console.warn('Chantier invalide détecté:', chantier);
-            return;
-          }
-          
-          // Récupérer la valeur selon le type de propriété
-          const value = attributeKey === 'image' 
-            ? chantier.image 
-            : chantier.attributs[attributeKey as keyof ChantierEvent['attributs']];
-            
-          if (value && typeof value === 'string') {
-            let estimatedWidth;
-            
-            // Pour l'état, on compte le badge avec padding supplémentaire
-            if (attributeKey === 'etat') {
-              estimatedWidth = Math.max(85, value.length * 8 + padding + 20); // +20px pour le badge
-            }
-            else if (attributeKey === 'image') {
-              estimatedWidth = 60; // Largeur fixe pour l'image
-            } 
-            else {
-              estimatedWidth = Math.max(85, value.length * 8 + padding);
-            }
-            
-            maxWidthForColumn = Math.max(maxWidthForColumn, estimatedWidth);
-          }
-        });
-        
-        // Limiter les largeurs maximales pour éviter que le tableau soit trop large
-        const maxLimits: { [key: string]: number } = {
-          'libelle': 296,
-          'chefChantier': 140,
-          'chargeAffaire': 140,
-          'etat': 108,
-          'dateOS': 120,
-          'dateFin': 120,
-          'identifiant': 120,
-          'image': 80, // Largeur fixe pour l'image
-        };
-        
-        adaptiveWidths[attributeKey] = Math.min(maxLimits[attributeKey] || 200, maxWidthForColumn);
-      }
-    });
-
+    // Largeurs fixes pour les colonnes adaptatives
+    const maxLimits: { [key: string]: number } = {
+      'libelle': 296,
+      'chefChantier': 140,
+      'chargeAffaire': 150,
+      'etat': 108,
+      'dateOS': 105,
+      'dateFin': 105,
+      'identifiant': 120,
+      'image': 80,
+    };
 
     return attributeLabels.map((label, colIndex) => {
       const attributeKey = attributeKeys[colIndex];
       
-      // Colonnes adaptatives
+      // Colonnes avec largeurs spécifiques
       if (adaptiveColumns.includes(attributeKey)) {
-        return adaptiveWidths[attributeKey] || fixedWidth;
+        return maxLimits[attributeKey] || fixedWidth;
       }
       
       // Colonnes fixes
       return fixedWidth;
     });
-  }, [sortedChantiers, attributeLabels, attributeKeys, containerWidth]);
+  }, [attributeLabels, attributeKeys]);
 
   // Créer le style CSS Grid avec les largeurs calculées
   const gridTemplateColumns = React.useMemo(() => {
@@ -518,8 +472,8 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
           items={attributeLabels}
           mainScrollRef={mainScrollRef}
           onScroll={handleScroll}
-          isScrollX={false}
           className="chantier-timeline-frame h-full pl-7 overflow-x-hidden"
+          contentClassName='overflow-x-hidden scroll-hidden'
           useAutoCells={false}
           customGridColumns={gridTemplateColumns}
           customItemHeaders={

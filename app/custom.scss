@@ -7,6 +7,17 @@
 @keyframes bubble-fade { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 .animate-bubble-fade { animation: bubble-fade 0.18s; }
 
+
+.scroll-hidden {
+  overflow-y: scroll;  /* active le scroll */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scroll-hidden::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+
 .poppins {
   font-family: 'Poppins', sans-serif;
 }
@@ -144,28 +155,6 @@
 }
 
 
-.btn-add {
-  background-color: black;
-  color: white;
-  position: fixed;
-  bottom: 30px;
-  right: 40px;
-  z-index: 1100; // au-dessus du drawer
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  font-size: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  transition: all 0.4s ease;
-
-  &:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  }
-}
 
 
 .overlay{
