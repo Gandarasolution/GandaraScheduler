@@ -11,9 +11,10 @@
  */
 
 "use client";
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import FlexibleFrame from './FlexibleFrame';
-import { ChantierEvent } from '../types';
+import { ChantierEvent, Appointment } from '../types';
+import { HOURS_PER_DAY } from '../utils/constants';
 
 /**
  * Props du composant ChantierTableFrame
@@ -22,6 +23,7 @@ interface ChantierTableFrameProps {
   className?: string;
   style?: React.CSSProperties;
   chantiers: ChantierEvent[];
+  appointments: Appointment[]; // Liste des rendez-vous pour les calculs
   containerWidth?: number; // Largeur du conteneur en pixels
 }
 
@@ -32,8 +34,195 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   className = '',
   style,
   chantiers,
+  appointments,
   containerWidth
 }) => {
+  
+  // État pour gérer le tri
+  const [sortConfig, setSortConfig] = useState<{
+    key: string | null;
+    direction: 'asc' | 'desc';
+  }>({
+    key: null,
+    direction: 'asc'
+  });
+
+  /**
+   * Calcule la durée planifiée future (DPF) pour un chantier donné
+   * Basé sur les rendez-vous à partir de la date actuelle et ceux qui chevauchent
+   */
+  const calculateDPF = useCallback((chantierId: number): string => {
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Début de la journée actuelle
+    
+    // Filtrer les rendez-vous du chantier qui sont à partir d'aujourd'hui ou qui chevauchent
+    const relevantAppointments = appointments.filter(appointment => {
+      // Vérifier si c'est un rendez-vous de ce chantier
+      if (appointment.type !== 'chantier' || appointment.EventId !== chantierId) {
+        return false;
+      }
+      
+      // Rendez-vous qui commencent à partir d'aujourd'hui
+      if (appointment.startDate >= currentDate) {
+        return true;
+      }
+      
+      // Rendez-vous qui chevauchent la date actuelle (commencent avant mais finissent après ou aujourd'hui)
+      if (appointment.startDate < currentDate && appointment.endDate >= currentDate) {
+        return true;
+      }
+      
+      return false;
+    });
+    
+    // Calculer le total d'heures
+    let totalHours = 0;
+    
+    relevantAppointments.forEach(appointment => {
+      const startDate = appointment.startDate < currentDate ? currentDate : appointment.startDate;
+      const endDate = appointment.endDate;
+      
+      // Calculer le nombre de jours (en incluant le jour de début et de fin)
+      const timeDiff = endDate.getTime() - startDate.getTime();
+      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // +1 pour inclure le jour de début
+      
+      totalHours += daysDiff * HOURS_PER_DAY;
+    });
+    
+    return `${totalHours}h`;
+  }, [appointments]);
+
+  /**
+   * Calcule le réalisé + planifié future (RPF) pour un chantier donné
+   * RPF = HR (Heures Réalisées) + DPF (Durée Planifiée Future)
+   */
+  const calculateRPF = useCallback((chantier: ChantierEvent): string => {
+    // Extraire les heures réalisées (enlever le 'h' et convertir en nombre)
+    const hrValue = parseFloat(chantier.attributs.HR.replace('h', '')) || 0;
+    
+    // Calculer DPF et extraire la valeur numérique
+    const dpfString = calculateDPF(chantier.id);
+    const dpfValue = parseFloat(dpfString.replace('h', '')) || 0;
+    
+    const totalRPF = hrValue + dpfValue;
+    return `${totalRPF}h`;
+  }, [calculateDPF]);
+
+  /**
+   * Calcule l'avancement prévisionnel (AP) pour un chantier donné
+   * AP = (Réalisé + Future) / Temps Marché * 100
+   */
+  const calculateAP = useCallback((chantier: ChantierEvent): string => {
+    // Extraire le temps marché (enlever le 'h' et convertir en nombre)
+    const tmValue = parseFloat(chantier.attributs.TM.replace('h', '')) || 0;
+    
+    if (tmValue === 0) return '0%'; // Éviter la division par zéro
+    
+    // Calculer RPF et extraire la valeur numérique
+    const rpfString = calculateRPF(chantier);
+    const rpfValue = parseFloat(rpfString.replace('h', '')) || 0;
+    
+    // Calculer le pourcentage
+    const percentage = Math.round((rpfValue / tmValue) * 100);
+    return `${percentage}%`;
+  }, [calculateRPF]);
+
+  /**
+   * Calcule le solde prévisionnel (SP) pour un chantier donné
+   * SP = Temps Marché - (Réalisé + Future) en heures brutes
+   */
+  const calculateSP = useCallback((chantier: ChantierEvent): string => {
+    // Extraire le temps marché (enlever le 'h' et convertir en nombre)
+    const tmValue = parseFloat(chantier.attributs.TM.replace('h', '')) || 0;
+    
+    // Calculer RPF et extraire la valeur numérique
+    const rpfString = calculateRPF(chantier);
+    const rpfValue = parseFloat(rpfString.replace('h', '')) || 0;
+    
+    // Calculer le solde en heures (TM - RPF)
+    const soldeHeures = tmValue - rpfValue;
+    return `${soldeHeures}h`;
+  }, [calculateRPF]);
+
+  // Fonction pour trier les chantiers
+  const sortedChantiers = useMemo(() => {
+    if (!sortConfig.key) return chantiers;
+    
+    const sorted = [...chantiers].sort((a, b) => {
+      // Vérifier si les chantiers ont des données valides
+      if (!a || !a.attributs || !b || !b.attributs) return 0;
+      
+      // Récupérer les valeurs selon le type de propriété
+      let aValue: any, bValue: any;
+      
+      if (sortConfig.key === 'image') {
+        aValue = a.image;
+        bValue = b.image;
+      } else if (sortConfig.key === 'DPF') {
+        // Valeurs calculées dynamiquement pour la Durée Planifiée Future
+        aValue = calculateDPF(a.id);
+        bValue = calculateDPF(b.id);
+      } else if (sortConfig.key === 'RPF') {
+        // Valeurs calculées dynamiquement pour Réalisé + Planif Future
+        aValue = calculateRPF(a);
+        bValue = calculateRPF(b);
+      } else if (sortConfig.key === 'AP') {
+        // Valeurs calculées dynamiquement pour Avancement Prévisionnel
+        aValue = calculateAP(a);
+        bValue = calculateAP(b);
+      } else if (sortConfig.key === 'SP') {
+        // Valeurs calculées dynamiquement pour Solde Prévisionnel
+        aValue = calculateSP(a);
+        bValue = calculateSP(b);
+      } else {
+        aValue = a.attributs[sortConfig.key as keyof ChantierEvent['attributs']];
+        bValue = b.attributs[sortConfig.key as keyof ChantierEvent['attributs']];
+      }
+      
+      // Gérer les valeurs nulles/undefined
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      
+      // Conversion en string pour la comparaison
+      const aStr = String(aValue).toLowerCase();
+      const bStr = String(bValue).toLowerCase();
+      
+      // Tri numérique pour les valeurs qui ressemblent à des nombres
+      const aNum = parseFloat(aStr);
+      const bNum = parseFloat(bStr);
+      
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+      
+      // Tri alphabétique
+      if (aStr < bStr) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aStr > bStr) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    return sorted;
+  }, [chantiers, sortConfig, calculateDPF, calculateRPF, calculateAP, calculateSP]);
+
+  // Fonction pour gérer le clic sur une en-tête de colonne
+  const handleSort = (attributeKey: string) => {
+    setSortConfig(prevConfig => {
+      if (prevConfig.key === attributeKey) {
+        // Si on clique sur la même colonne, changer la direction
+        return {
+          key: attributeKey,
+          direction: prevConfig.direction === 'asc' ? 'desc' : 'asc'
+        };
+      } else {
+        // Si on clique sur une nouvelle colonne, tri croissant par défaut
+        return {
+          key: attributeKey,
+          direction: 'asc'
+        };
+      }
+    });
+  };
   
   // Structure organisée des catégories avec leurs attributs
   const categoriesStructure = useMemo(() => [
@@ -60,9 +249,9 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
         { key: 'HR', label: 'Heures Réalisées' },
         { key: 'SH', label: 'Solde Heure' },
         { key: 'DPF', label: 'Durée Planifiée Future' },
-        { key: 'RPF', label: 'Réalisé - Planif Future' },
+        { key: 'RPF', label: 'Réalisé + Planif Future' },
         { key: 'AP', label: 'Avancement prévisionnel' },
-        { key: 'SP', label: 'Solide Prévisionnel' },
+        { key: 'SP', label: 'Solde Prévisionnel' },
       ]
     }
   ], []);
@@ -109,15 +298,37 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
     return categoriesStructure.map(category => ({
       categoryKey: category.key,
       categoryLabel: category.label,
-      values: category.attributes.map(attr => ({
-        attributeKey: attr.key,
-        attributeLabel: attr.label,
-        value: attr.isBaseProperty 
-          ? (chantier as any)[attr.key] // Propriété de BaseEvent (image, color, etc.)
-          : chantier.attributs[attr.key as keyof ChantierEvent['attributs']] // Propriété des attributs
-      }))
+      values: category.attributes.map(attr => {
+        let value: string | undefined;
+        
+        if (attr.isBaseProperty) {
+          // Propriété de BaseEvent (image, color, etc.)
+          value = (chantier as any)[attr.key];
+        } else if (attr.key === 'DPF') {
+          // Calcul dynamique de la Durée Planifiée Future
+          value = calculateDPF(chantier.id);
+        } else if (attr.key === 'RPF') {
+          // Calcul dynamique du Réalisé + Planif Future
+          value = calculateRPF(chantier);
+        } else if (attr.key === 'AP') {
+          // Calcul dynamique de l'Avancement Prévisionnel
+          value = calculateAP(chantier);
+        } else if (attr.key === 'SP') {
+          // Calcul dynamique du Solde Prévisionnel
+          value = calculateSP(chantier);
+        } else {
+          // Propriété des attributs standard
+          value = chantier.attributs[attr.key as keyof ChantierEvent['attributs']];
+        }
+        
+        return {
+          attributeKey: attr.key,
+          attributeLabel: attr.label,
+          value: value
+        };
+      })
     }));
-  }, [categoriesStructure]);
+  }, [categoriesStructure, calculateDPF, calculateRPF, calculateAP, calculateSP]);
 
   // Debug : Afficher la structure organisée dans la console
   React.useEffect(() => {
@@ -125,16 +336,17 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
     console.log('📊 Configuration des groupes:', groups);
     console.log('🏷️ Labels des attributs:', attributeLabels);
     console.log('🔑 Clés des attributs:', attributeKeys);
+    console.log('🔄 Configuration du tri:', sortConfig);
     
-    if (chantiers.length > 0) {
-      const exempleChantier = getChantierValuesByCategory(chantiers[0]);
+    if (sortedChantiers.length > 0) {
+      const exempleChantier = getChantierValuesByCategory(sortedChantiers[0]);
       console.log('📋 Exemple de chantier organisé par catégories:', exempleChantier);
     }
-  }, [categoriesStructure, groups, attributeLabels, attributeKeys, chantiers, getChantierValuesByCategory]);
+  }, [categoriesStructure, groups, attributeLabels, attributeKeys, sortedChantiers, getChantierValuesByCategory, sortConfig]);
 
   // Calculer les largeurs optimales pour chaque colonne
   const calculateColumnWidths = React.useMemo(() => {
-    if (!chantiers.length) return attributeLabels.map(() => 80);
+    if (!sortedChantiers.length) return attributeLabels.map(() => 80);
 
     const fixedWidth = 89; // Largeur fixe pour les colonnes standard
     const padding = 24; // Padding horizontal (px-3 = 12px de chaque côté)
@@ -152,7 +364,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
         let maxWidthForColumn = Math.max(85, label.length * 8 + padding); // Largeur minimale basée sur le titre
         
         // Calculer la largeur nécessaire pour chaque valeur de cette colonne
-        chantiers.forEach(chantier => {
+        sortedChantiers.forEach(chantier => {
           // Vérification de sécurité pour éviter les erreurs
           if (!chantier || !chantier.attributs) {
             console.warn('Chantier invalide détecté:', chantier);
@@ -210,7 +422,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
       // Colonnes fixes
       return fixedWidth;
     });
-  }, [chantiers, attributeLabels, attributeKeys, containerWidth]);
+  }, [sortedChantiers, attributeLabels, attributeKeys, containerWidth]);
 
   // Créer le style CSS Grid avec les largeurs calculées
   const gridTemplateColumns = React.useMemo(() => {
@@ -241,8 +453,62 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
           );
         }
         return <span className="text-gray-400">-</span>;
+      case 'AP':
+        // Style basique sauf si dépasse 100% (rouge avec icône danger)
+        const apValue = parseFloat(value.replace('%', '')) || 0;
+        if (apValue > 100) {
+          return (
+            <div className="flex items-center justify-end gap-1 w-full h-full">
+              <svg 
+                width="20" 
+                height="20" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-red-600"
+              >
+                <path 
+                  d="M12 2L21.09 20H2.91L12 2Z" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinejoin="round"
+                  fill="currentColor"
+                />
+                <path 
+                  d="M12 9V13M12 17H12.01" 
+                  stroke="white" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="text-red-600 font-bold poppins">{value}</span>
+            </div>
+          );
+        }
+        return (
+          <div className="text-left flex items-center justify-end w-full h-full">
+            <span className="text-gray-900 poppins">{value}</span>
+          </div>
+        );
+      case 'TM':
+      case 'HR':
+      case 'SH':
+      case 'DPF':
+      case 'RPF':
+      case 'SP':
+        // Tous les chiffres alignés à gauche avec style basique
+        return (
+          <div className="text-left flex items-center justify-end w-full h-full">
+            <span className="text-gray-900 poppins">{value}</span>
+          </div>
+        );
       default:
-        return <span className="text-gray-900 poppins">{value}</span>;
+        return (
+          <div className='flex items-center justify-start w-full h-full'>
+            <span className="text-gray-900 poppins ">{value}</span>
+          </div>
+        );
     }
   };
 
@@ -257,29 +523,54 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
           useAutoCells={false}
           customGridColumns={gridTemplateColumns}
           customItemHeaders={
-            // En-têtes d'items avec largeurs calculées
-            attributeLabels.map((label, index) => (
-              <div
-                key={`header-${index}`}
-                className="flex flex-col justify-center border-b border-r border-gray-300 text-center text-sm text-gray-700 p-2 bg-white"
-                style={{
-                  width: `${calculateColumnWidths[index]}px`,
-                  height: '56px',
-                  minWidth: `${calculateColumnWidths[index]}px`,
-                  maxWidth: `${calculateColumnWidths[index]}px`
-                }}
-              >
-                <div className="flex flex-col justify-center items-center h-full px-2">
-                  <span className="leading-3 break-words text-center">
-                    {label}
-                  </span>
+            // En-têtes d'items avec largeurs calculées et fonctionnalité de tri
+            attributeLabels.map((label, index) => {
+              const attributeKey = attributeKeys[index];
+              const isActive = sortConfig.key === attributeKey;
+              const direction = isActive ? sortConfig.direction : null;
+              
+              return (
+                <div
+                  key={`header-${index}`}
+                  className="flex flex-col justify-center border-b border-r border-gray-300 text-center text-sm text-gray-700 p-2 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+                  style={{
+                    width: `${calculateColumnWidths[index]}px`,
+                    height: '56px',
+                    minWidth: `${calculateColumnWidths[index]}px`,
+                    maxWidth: `${calculateColumnWidths[index]}px`
+                  }}
+                  onClick={() => handleSort(attributeKey)}
+                  title={`Cliquer pour trier par ${label}`}
+                >
+                  <div className="flex flex-col justify-center items-center h-full px-2">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="leading-3 break-words text-center">
+                        {label}
+                      </span>
+                      {/* Indicateur de tri */}
+                      <div className="flex flex-col items-center ml-1">
+                        {!isActive && (
+                          <div className="flex flex-col">
+                            <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[4px] border-l-transparent border-r-transparent border-b-gray-300 mb-[1px]"></div>
+                            <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-l-transparent border-r-transparent border-t-gray-300"></div>
+                          </div>
+                        )}
+                        {isActive && direction === 'asc' && (
+                          <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[4px] border-l-transparent border-r-transparent border-b-blue-600"></div>
+                        )}
+                        {isActive && direction === 'desc' && (
+                          <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-l-transparent border-r-transparent border-t-blue-600"></div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           }
         >
           {/* Contenu des chantiers avec largeurs calculées */}
-          {chantiers
+          {sortedChantiers
             .filter(chantier => chantier && chantier.attributs) // Filtrer les éléments invalides
             .flatMap((chantier, rowIndex) => {
             const chantierByCategories = getChantierValuesByCategory(chantier);
@@ -291,7 +582,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
               return (
                 <div
                   key={`${chantier.id}-${attributeKey}`}
-                  className="chantier-cell flex items-center justify-start px-3 py-2 border-r border-b border-gray-100 bg-white text-sm hover:bg-gray-50 transition-colors"
+                  className="chantier-cell px-3 py-2 border-r border-b border-gray-100 bg-white text-sm hover:bg-gray-50 transition-colors"
                   style={{ 
                     height: '58px',
                     width: `${columnWidth}px`,

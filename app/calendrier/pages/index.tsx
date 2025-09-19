@@ -1982,6 +1982,7 @@ export default function HomePage() {
                   ) : (
                     <ChantierTableFrame 
                       chantiers={filteredChantiers} 
+                      appointments={appointments.current}
                       containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
                     />
                   )}

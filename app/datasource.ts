@@ -183,10 +183,10 @@ export const Evenements: Evenement[] = [
         TM: '2500h',        // Temps Marché
         HR: '1625h',        // Heures Réalisées (65% de 2500h)
         SH: '875h',         // Solde Heure (2500h - 1625h)
-        DPF: '875h',        // Durée Planifiée Future
-        RPF: '0h',          // Réalisé - Planif Future
-        AP: '65%',          // Avancement prévisionnel
-        SP: '35%'           // Solde Prévisionnel
+        DPF: '',        // Durée Planifiée Future
+        RPF: '',          // Réalisé - Planif Future
+        AP: '',          // Avancement prévisionnel
+        SP: ''           // Solde Prévisionnel
       }
     },
     {
@@ -213,10 +213,10 @@ export const Evenements: Evenement[] = [
         TM: '5800h',        // Temps Marché
         HR: '580h',         // Heures Réalisées (10% de 5800h)
         SH: '5220h',        // Solde Heure (5800h - 580h)
-        DPF: '5220h',       // Durée Planifiée Future
-        RPF: '0h',          // Réalisé - Planif Future
-        AP: '10%',          // Avancement prévisionnel
-        SP: '90%'           // Solde Prévisionnel
+        DPF: '',       // Durée Planifiée Future
+        RPF: '',          // Réalisé - Planif Future
+        AP: '',          // Avancement prévisionnel
+        SP: ''           // Solde Prévisionnel
       }
     },
     {
@@ -241,10 +241,10 @@ export const Evenements: Evenement[] = [
         TM: '3200h',        // Temps Marché
         HR: '1280h',        // Heures Réalisées (40% de 3200h)
         SH: '1920h',        // Solde Heure (3200h - 1280h)
-        DPF: '1920h',       // Durée Planifiée Future
-        RPF: '0h',          // Réalisé - Planif Future
-        AP: '40%',          // Avancement prévisionnel
-        SP: '60%'           // Solde Prévisionnel
+        DPF: '',       // Durée Planifiée Future
+        RPF: '',          // Réalisé - Planif Future
+        AP: '',          // Avancement prévisionnel
+        SP: ''           // Solde Prévisionnel
       }
     },
     // Chantiers existants avec données enrichies
@@ -268,10 +268,10 @@ export const Evenements: Evenement[] = [
         TM: '1800h',
         HR: '1350h',
         SH: '450h',
-        DPF: '450h',
-        RPF: '0h',
-        AP: '75%',
-        SP: '25%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     {
@@ -294,10 +294,10 @@ export const Evenements: Evenement[] = [
         TM: '8500h',
         HR: '425h',
         SH: '8075h',
-        DPF: '8075h',
-        RPF: '0h',
-        AP: '5%',
-        SP: '95%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     {
@@ -320,10 +320,10 @@ export const Evenements: Evenement[] = [
         TM: '4200h',
         HR: '2310h',
         SH: '1890h',
-        DPF: '1890h',
-        RPF: '0h',
-        AP: '55%',
-        SP: '45%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     {
@@ -346,10 +346,10 @@ export const Evenements: Evenement[] = [
         TM: '2100h',
         HR: '2100h',
         SH: '0h',
-        DPF: '0h',
-        RPF: '0h',
-        AP: '100%',
-        SP: '0%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     {
@@ -372,10 +372,10 @@ export const Evenements: Evenement[] = [
         TM: '6800h',
         HR: '1700h',
         SH: '5100h',
-        DPF: '5100h',
-        RPF: '0h',
-        AP: '25%',
-        SP: '75%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     {
@@ -398,10 +398,10 @@ export const Evenements: Evenement[] = [
         TM: '3500h',
         HR: '525h',
         SH: '2975h',
-        DPF: '2975h',
-        RPF: '0h',
-        AP: '15%',
-        SP: '85%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     {
@@ -424,10 +424,10 @@ export const Evenements: Evenement[] = [
         TM: '4100h',
         HR: '0h',
         SH: '4100h',
-        DPF: '4100h',
-        RPF: '0h',
-        AP: '0%',
-        SP: '100%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     {
@@ -450,10 +450,10 @@ export const Evenements: Evenement[] = [
         TM: '3800h',
         HR: '2280h',
         SH: '1520h',
-        DPF: '1520h',
-        RPF: '0h',
-        AP: '60%',
-        SP: '40%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     {
@@ -476,10 +476,10 @@ export const Evenements: Evenement[] = [
         TM: '2200h',
         HR: '1980h',
         SH: '220h',
-        DPF: '220h',
-        RPF: '0h',
-        AP: '90%',
-        SP: '10%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     {
@@ -502,10 +502,10 @@ export const Evenements: Evenement[] = [
         TM: '4500h',
         HR: '0h',
         SH: '4500h',
-        DPF: '4500h',
-        RPF: '0h',
-        AP: '0%',
-        SP: '100%'
+        DPF: '',
+        RPF: '',
+        AP: '',
+        SP: ''
       }
     },
     { 
