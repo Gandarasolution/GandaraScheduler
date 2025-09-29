@@ -665,7 +665,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       let startDate: Date = new Date();
       let endDate: Date = new Date();
       let duration: number = 1;
-      let appointmentType: 'chantier' | 'absence' | 'autres' = 'chantier';
+      let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
       let selectedEvent: Evenement | null = null;
       let description = '';
       
@@ -696,7 +696,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
           duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
           description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
         } else { // 20% autres
-          appointmentType = 'autres';
+          appointmentType = 'autre';
           while (!selectedEvent) {
             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
             if (selectedEvent.type !== 'Autre') {

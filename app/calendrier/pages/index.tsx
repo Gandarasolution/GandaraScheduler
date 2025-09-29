@@ -47,6 +47,7 @@ import {
   format,
   addWeeks,
   addMonths,
+  addHours,
 } from "date-fns";
 import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent, PaieItem, Filter, FilterType, DimensionType} from "../types";
 import CalendarGrid from "../components/CalendarGrid";
@@ -72,6 +73,7 @@ import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/fi
 
 
 import LogoUrl from "../image/LOGO_couleur_police_noire.svg";
+import { log } from "console";
 
 /**
  * Composant NoSSR pour éviter les problèmes d'hydratation
@@ -488,7 +490,7 @@ export default function HomePage() {
           const appointmentType = appointment.type;
           const normalizedType = appointmentType === 'chantier' ? 'Chantier' : 
                                 appointmentType === 'absence' ? 'Absence' :
-                                appointmentType === 'autres' ? 'Autre' : 'Autre';
+                                appointmentType === 'autre' ? 'Autre' : 'Autre';
           return currentCalendarConfig.selectedRdvTypes.includes(normalizedType);
         });
       }
@@ -827,16 +829,13 @@ export default function HomePage() {
 
   // Création d'un rendez-vous (utilisé lors du resize fractionné)
   const createAppointment = useCallback(
-    (startDate: Date, endDate: Date, employeeId: number, eventId: number, saveToHistory: boolean = true, type: 'chantier' | 'absence' | 'autres') => {
+    (startDate: Date, endDate: Date, employeeId: number, eventId: number, saveToHistory: boolean = true, type: 'chantier' | 'absence' | 'autre', description?: string) => {
       // Générer un ID déterministe sans Date.now() ou Math.random()
       const id = ++idCounter.current;
-      const keyName = type === 'chantier' ? 'chantierId' 
-        : type === 'absence' ? 'absenceId' 
-        : 'autreId';
       
       const newApp: Appointment = {
         id: id,
-        description: `Nouvel rendez-vous`,
+        description: description || `Nouvel rendez-vous`,
         startDate,
         endDate,
         employeeId,
@@ -1157,8 +1156,7 @@ export default function HomePage() {
       events.current = events.current.map(e =>
         e.id === appointment.EventId ? { ...e, ...eventUpdate } : e
       );
-
-
+      
       const days = getWorkedDayIntervals(
         appointment.startDate, 
         appointment.endDate,
@@ -1166,7 +1164,7 @@ export default function HomePage() {
         includeAllNonWorkingDays,
         nonWorkingDates
       );        
-      
+            
       
       // Enregistrer l'état précédent pour l'historique
       let previousAppointment: Appointment | undefined;
@@ -1177,19 +1175,20 @@ export default function HomePage() {
       
       // Fonction utilitaire pour créer les rendez-vous supplémentaires
       const createExtraAppointments = (fromIndex = 1) => {
-        days.slice(fromIndex).forEach(day => {
+        days.slice(fromIndex).forEach(day => {          
           createAppointment(
             day.start,
             day.end,
             appointment.employeeId as number,
-            appointment.EventId,
+            eventUpdate.id,
             true,
-            appointment.type
+            appointment.type,
+            appointment.description
           );
         });
       };
 
-      if (appointment.id) {
+      if (appointment.id) {        
         // Mise à jour du rendez-vous existant - ne traiter que le RDV en cours
         if (days.length > 0) {
           // Mettre à jour le rendez-vous principal avec le premier jour
@@ -1214,10 +1213,10 @@ export default function HomePage() {
           }
         }
       } else {
+        
         // Création d'un nouveau rendez-vous
         createExtraAppointments(0);
-      }
-      
+      }      
       // Enregistrer dans l'historique
       if (appointment.id && previousAppointment) {
         // C'est une mise à jour
@@ -1361,7 +1360,7 @@ export default function HomePage() {
         employeeId, 
         eventTypeId,
         true,
-        typeEvent.toLowerCase() as 'chantier' | 'absence' | 'autres'
+        typeEvent.toLowerCase() as 'chantier' | 'absence' | 'autre'
       );
       
       // Fermer l'overlay après création
@@ -1826,7 +1825,7 @@ export default function HomePage() {
               <div className={` p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}>
                 <img src={LogoUrl.src} alt="Logo" className="h-20 w-auto mb-2" />
               </div>
-              <div className={`flex-1 flex flex-col items-center justify-center ${!isExpanded ? 'px-4 pt-4' : 'py-4'}`}>
+              <div className={`flex-1 flex flex-col items-center justify-center py-4 h-[82px]`}>
                 <div className="flex items-center justify-between w-full h-[50px]">
                   <div className="flex flex-col gap-1">
                     <div className="relative w-72 max-w-full">
@@ -2279,7 +2278,6 @@ export default function HomePage() {
                   ) : (
                     <PaieTableFrame 
                       paieItems={paieItems}
-                      containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
                     />
                   )}
                 </SelectedCellContext.Provider>
@@ -3603,7 +3601,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
   }, [onClose, setEventSearchInput, isOpen, isDragging]);
 
   if (!isOpen) return null;
-
+  
   return (
     <>
       <div 
@@ -3685,14 +3683,15 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
                             {
                               description: event.label,
                               startDate: new Date(selectedCell.date),
-                              endDate: new Date(selectedCell.date.setHours(isFullDay ? 23 : 11, 59, 59)),
+                              endDate: new Date((isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).setMinutes(59, 59)),
                               employeeId: selectedCell.employeeId,
-                              
+                              type: event.type.toLowerCase() as "chantier" | "absence" | "autre",
                             } as Appointment,
                             event,
                             false
                           )
                           onClose()
+                          setEventSearchInput('');
                         }}
                       >
                         +

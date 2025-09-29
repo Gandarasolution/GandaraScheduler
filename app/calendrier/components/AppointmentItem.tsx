@@ -95,6 +95,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
   
+  // if (appointment.id > 10000) {
+  //   console.log("appointment", appointment);
+  //   console.log("event", event);
+  // }
 
   // Contextes pour la sélection
   const { selectedCell, setSelectedCell } = useSelectedCell();

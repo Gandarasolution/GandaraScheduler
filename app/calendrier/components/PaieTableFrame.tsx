@@ -11,7 +11,7 @@
  */
 
 "use client";
-import React, { useMemo, useState } from 'react';
+import React, {useMemo, useState } from 'react';
 import FlexibleFrame from './FlexibleFrame';
 import { PaieItem } from '../types';
 
@@ -22,7 +22,6 @@ interface PaieTableFrameProps {
   className?: string;
   style?: React.CSSProperties;
   paieItems: PaieItem[];
-  containerWidth?: number; // Largeur du conteneur en pixels
 }
 
 /**
@@ -32,9 +31,13 @@ const PaieTableFrame: React.FC<PaieTableFrameProps> = ({
   className = '',
   style,
   paieItems,
-  containerWidth
 }) => {
-  
+
+  const containerWidth = useMemo(() => {
+    return typeof window !== 'undefined' ? window.innerWidth - 85 : 1200;
+  },[window.innerWidth]);
+
+  console.log(containerWidth);
   // État pour gérer le tri
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
@@ -210,33 +213,36 @@ const PaieTableFrame: React.FC<PaieTableFrameProps> = ({
   const calculateColumnWidths = React.useMemo(() => {
     if (!sortedPaieItems.length) return attributeLabels.map(() => 80);
 
-    const fixedWidth = 92; // Largeur fixe pour les colonnes standard
+    // Largeur disponible (en prenant en compte le padding du conteneur)
+    const availableWidth = containerWidth;
     
-    // Colonnes qui utilisent des largeurs spécifiques
-    const adaptiveColumns = ['verrou', 'image', 'code', 'libelle', 'actf', 'categorie'];
-    
-    // Largeurs fixes pour les colonnes adaptatives
-    const maxLimits: { [key: string]: number } = {
-      'verrou': 80,
-      'image': 80,
-      'code': 120,
-      'libelle': 300,
-      'actf': 100,
-      'categorie': 150,
-    };
+    // Colonnes avec leurs largeurs minimales
+    const columnConfig = [
+      { key: 'verrou', minWidth: 80, weight: 1 },
+      { key: 'image', minWidth: 80, weight: 1 },
+      { key: 'code', minWidth: 120, weight: 1.5 },
+      { key: 'libelle', minWidth: 250, weight: 4 }, // Plus de poids pour le libellé
+      { key: 'actf', minWidth: 100, weight: 1.2 },
+      { key: 'categorie', minWidth: 150, weight: 2 },
+    ];
 
-    return attributeLabels.map((label, colIndex) => {
-      const attributeKey = attributeKeys[colIndex];
+    // Calculer la largeur totale minimale
+    const totalMinWidth = columnConfig.reduce((sum, col) => sum + col.minWidth, 0);
+    const totalWeight = columnConfig.reduce((sum, col) => sum + col.weight, 0);
+    
+    // Si on a plus d'espace que le minimum, distribuer proportionnellement
+    if (availableWidth > totalMinWidth) {
+      const extraSpace = availableWidth - totalMinWidth;
       
-      // Colonnes avec largeurs spécifiques
-      if (adaptiveColumns.includes(attributeKey as string)) {
-        return maxLimits[attributeKey as string] || fixedWidth;
-      }
-      
-      // Colonnes fixes
-      return fixedWidth;
-    });
-  }, [attributeLabels, attributeKeys]);
+      return columnConfig.map(col => {
+        const extraWidth = (extraSpace * col.weight) / totalWeight;
+        return Math.floor(col.minWidth + extraWidth);
+      });
+    } else {
+      // Si pas assez d'espace, utiliser les largeurs minimales
+      return columnConfig.map(col => col.minWidth);
+    }
+  }, [attributeLabels, attributeKeys, containerWidth, sortedPaieItems.length]);
 
   // Créer le style CSS Grid avec les largeurs calculées
   const gridTemplateColumns = React.useMemo(() => {
@@ -320,9 +326,11 @@ const PaieTableFrame: React.FC<PaieTableFrameProps> = ({
                          : value === 'Autres' ? 'bg-gray-100 text-gray-800'
                          : 'bg-purple-100 text-purple-800';
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium poppins ${badgeColor}`}>
-            {value}
-          </span>
+          <div className="flex items-center justify-center gap-1 w-full h-full">
+            <span className={`inline-flex w-[70px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium poppins ${badgeColor}`}>
+              {value}
+            </span>
+          </div>
         );
       default:
         return (
@@ -339,6 +347,7 @@ const PaieTableFrame: React.FC<PaieTableFrameProps> = ({
       items={attributeLabels}
       mainScrollRef={mainScrollRef}
       onScroll={handleScroll}
+
       showGroupHeaders={false} // Pas de groupes visibles
       className="paie-timeline-frame h-full pl-7 overflow-x-hidden"
       contentClassName='overflow-x-hidden scroll-hidden'

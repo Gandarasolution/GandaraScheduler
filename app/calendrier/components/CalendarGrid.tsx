@@ -598,7 +598,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           ref={columnEmployeeRef}
         >
           <div 
-            className="h-[121px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
+            className="h-[112px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
             style={{
               backgroundColor: '#f3f7f8',
             }}

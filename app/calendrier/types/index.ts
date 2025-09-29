@@ -185,7 +185,7 @@ export interface Appointment{
   /** ID de l'employé assigné au rendez-vous */
   employeeId: number | string;
   /** Type de rendez-vous */
-  type: 'chantier' | 'absence' | 'autres';
+  type: 'chantier' | 'absence' | 'autre';
   /** ID de l'événement auquel ce RDV est lié */
   EventId: number;
  
