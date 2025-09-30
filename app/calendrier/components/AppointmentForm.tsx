@@ -106,6 +106,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       { ...appointment, startDate: appointment.startDate, endDate:  addMinutes(appointment.endDate, -1) }
   );
   const [formDataEventType, setFormDataEventType] = useState<Evenement>(event);
+  const [dateValidationError, setDateValidationError] = useState(false);
+
 
   /**
    * Vérifie si le rendez-vous actuel chevauche des jours non-travaillés
@@ -159,6 +161,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    * @param {React.ChangeEvent<HTMLInputElement>} e - Événement de changement de date.
    */
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Réinitialiser l'erreur de validation lors du changement de date
+    if (dateValidationError) {
+      setDateValidationError(false);
+    }
+
     const { name, value } = e.target;
     const datePart = parseISO(value);
     let newDate: Date;
@@ -181,6 +188,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation des dates
+    if (formDataAppointment.startDate >= formDataAppointment.endDate) {
+      setDateValidationError(true);
+      return;
+    }
+
+
+    setDateValidationError(false);
     onSave(formDataAppointment as Appointment, formDataEventType, includeAllNonWorkingDays);
   };
 
@@ -308,11 +324,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 type="date"
                 id="startDate"
                 name="startDate"
-                max={format(formDataAppointment.endDate, 'yyyy-MM-dd')}
                 value={format(formDataAppointment.startDate, 'yyyy-MM-dd')}
                 onChange={handleDateChange}
                 required
-                className="w-full sm:w-[145px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-gray-300'} rounded-xl focus:ring-blue-500 focus:border-blue-500`}
               />
         
               <div className='w-full sm:w-[145px]'>
@@ -350,57 +365,65 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           </div>
           <div className="flex-1 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <label htmlFor="endDate" className="block text-sm font-medium sm:mr-auto">Fin</label>
-            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-              <input
-                type="date"
-                id="endDate"
-                name="endDate"
-                min={format(formDataAppointment.startDate, 'yyyy-MM-dd')}
-                value={format(formDataAppointment.endDate, 'yyyy-MM-dd')}
-                onChange={handleDateChange}
-                required
-                className="w-full sm:w-[145px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
-              />
+            <div className="flex flex-col w-full sm:w-auto">
+              <div className="flex sm:flex-row gap-4 w-full sm:w-auto">
+                <input
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  value={format(formDataAppointment.endDate, 'yyyy-MM-dd')}
+                  onChange={handleDateChange}
+                  required
+                  className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-gray-300'} rounded-xl focus:ring-blue-500 focus:border-blue-500`}
+                />
 
-              <div className='w-full sm:w-[145px]'>
-                {!isFullDay && (
-                  <select
-                    id="intervalNameEnd"
-                    name="intervalName"
-                    value={
-                      formDataAppointment.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
-                        ? 'morning'
-                        : 'afternoon'
-                    }
-                    onChange={e => {
-                      const isAfternoon = e.target.value === 'afternoon';
-                      setFormDataAppointment(prev => {
-                        const endDateDay = new Date(format(prev.endDate, 'yyyy-MM-dd') + 'T00:00:00');
-                        let newEndDate;
-                        if (isAfternoon) {
-                          newEndDate = setHours(setMinutes(setSeconds(endDateDay, 59), 59), HALF_DAY_INTERVALS[1].endHour - 1);
-                        } else {
-                          newEndDate = setHours(setMinutes(setSeconds(endDateDay, 0), 0), HALF_DAY_INTERVALS[0].endHour);
-                        }
-                        return {
-                          ...prev,
-                          endDate: newEndDate,
-                        };
-                      });
-                    }}
-                    className="w-full p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
-                  >
-                    <option 
-                      value="morning"
-                      disabled={
-                        format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
-                        formDataAppointment.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
+                <div className='w-full sm:w-[145px]'>
+                  {!isFullDay && (
+                    <select
+                      id="intervalNameEnd"
+                      name="intervalName"
+                      value={
+                        formDataAppointment.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
+                          ? 'morning'
+                          : 'afternoon'
                       }
-                    >Matin</option>
-                    <option value="afternoon">Après-midi</option>
-                  </select>
-                )}
+                      onChange={e => {
+                        const isAfternoon = e.target.value === 'afternoon';
+                        setFormDataAppointment(prev => {
+                          const endDateDay = new Date(format(prev.endDate, 'yyyy-MM-dd') + 'T00:00:00');
+                          let newEndDate;
+                          if (isAfternoon) {
+                            newEndDate = setHours(setMinutes(setSeconds(endDateDay, 59), 59), HALF_DAY_INTERVALS[1].endHour - 1);
+                          } else {
+                            newEndDate = setHours(setMinutes(setSeconds(endDateDay, 0), 0), HALF_DAY_INTERVALS[0].endHour);
+                          }
+                          return {
+                            ...prev,
+                            endDate: newEndDate,
+                          };
+                        });
+                      }}
+                      className="w-full p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                    >
+                      <option 
+                        value="morning"
+                        disabled={
+                          format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
+                          formDataAppointment.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
+                        }
+                      >Matin</option>
+                      <option value="afternoon">Après-midi</option>
+                    </select>
+                  )}
+                </div>
               </div>
+              {dateValidationError && (
+                <div className='w-full sm:w-auto'>
+                  <span className="text-red-500 text-[11px] mt-1 block">
+                    La date de fin doit être postérieure à la date de début
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -427,14 +450,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         <div className="flex flex-col sm:flex-row justify-between gap-3 mt-5">
           <button
             type="submit"
-            className="px-4 py-2 bg-[#009580] text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
+            className="px-4 py-2 bg-[#009580] cursor-pointer text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
           >
             {appointment ? 'Enregistrer' : 'Créer'}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-[#009580] text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
+            className="px-4 py-2 bg-[#009580] cursor-pointer text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
           >
             Annuler
           </button>

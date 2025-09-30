@@ -355,7 +355,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   return (
     <div
       key={appointment.id}
-      ref={(node) => { if (node) drag(node); }} // Référence pour le drag & drop
+      ref={(node) => { if (node && source === 'calendar') drag(node); }} // Référence pour le drag & drop
       onClick={(e) => {
         e.stopPropagation();
         if (!isMobile) {
@@ -423,11 +423,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       className={`
         appointment-item rounded-xl text-sm shadow-md
         flex flex-shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-ellipsis
-        cursor-grab transition-all z-20 h-11 group duration-200
+        transition-all z-20 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
-        ${source === 'calendar' ? 'absolute' : 'block'}
+        ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
         hover:shadow-xl
       `}
       title={event.label}

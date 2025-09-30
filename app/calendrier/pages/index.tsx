@@ -2384,7 +2384,7 @@ export default function HomePage() {
                       type="number"
                       min={1}
                       disabled={repeatAppointmentData.endDate !== null}
-                      className={`${repeatAppointmentData.endDate !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[50px] ml-2`}
+                      className={`${repeatAppointmentData.endDate !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[70px] ml-2`}
                       value={repeatAppointmentData.repeatCount === null ||
                               repeatAppointmentData.repeatCount === undefined
                                 ? ""
