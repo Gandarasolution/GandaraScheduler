@@ -2446,14 +2446,14 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setRepeatAppointmentData(null)}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors cursor-pointer"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleRepeat}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors cursor-pointer"
                 >
                   {'Enregistrer'}
                 </button>
@@ -2479,14 +2479,14 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setExtendAppointmentData(null)}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors w-[110px] mr-[89px]"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl cursor-pointer transition-colors w-[110px] mr-[89px]"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleExtend}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl  transition-colors w-[110px]"
+                  className="px-4 py-2 bg-[#009580] text-white rounded-xl cursor-pointer transition-colors w-[110px]"
                 >
                   {'Valider'}
                 </button>
