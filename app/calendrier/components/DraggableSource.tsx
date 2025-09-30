@@ -15,13 +15,14 @@ interface DraggableSourceProps {
   title: string;
   imageUrl?: string; // URL de l'image associée à la source, optionnelle
   type: 'Chantier' | 'Absence' | 'Autre'; // Type de l'élément, pour catégoriser les sources
+  className?: string; // Classes CSS additionnelles
 }
 
 /**
  * Composant DraggableSource
  * Utilisé pour rendre un élément draggable depuis une source externe.
  */
-const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title, imageUrl = null, type }) => {
+const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title, imageUrl = null, type, className }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'external-item',
     item: { id, title, sourceType: 'external', imageUrl, typeEvent: type },
@@ -40,6 +41,7 @@ const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title, imageUrl =
         cursor-grab text-sm font-medium
         transition-opacity duration-100
         ${isDragging ? 'opacity-50' : 'opacity-100'}
+        ${className || ''}
       `}
     >
       <img 

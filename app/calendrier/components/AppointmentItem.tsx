@@ -154,7 +154,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   const intervalCount = getIntervalCount(dragStart, dragEnd);
   
-  
+  // Détection des petits rendez-vous (une seule case)
+  const isSmallAppointment = intervalCount <= 1;
+  const appointmentWidthPx = intervalCount * INTERVAL_WIDTH;
+  const hasSpaceForBothHandles = appointmentWidthPx >= 60; // Minimum 60px pour avoir les deux handles
 
   // Largeur calculée du rendez-vous (responsive mobile/desktop)
   const calculatedWidth = isMobile 
@@ -422,7 +425,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       className={`
         appointment-item rounded-xl text-sm shadow-md
-        flex flex-shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-ellipsis
+        flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
         transition-all z-20 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
@@ -443,15 +446,20 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         border: `2px solid ${appointmentBorderColor}`,
         transition: 'all 0.2s ease-in-out',
       }}
-      onMouseDown={handleDragStart}
     >
       {/* Handle de redimensionnement à gauche */}
       {source === 'calendar' && (
         <div
-          className="absolute left-0 top-0 h-full w-2 cursor-ew-resize z-30"
-          title="Redimensionner"
+          className={`absolute top-0 h-full cursor-ew-resize z-30 ${
+            isSmallAppointment || !hasSpaceForBothHandles 
+              ? 'left-0 w-1/3 bg-transparent' 
+              : '-left-1 w-3'
+          }`}
+          title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
           onMouseDown={(e) => handleMouseDown(e, 'left')}
-          style={{borderRadius: '4px 0 0 4px'}}
+          style={{
+            borderRadius: '4px 0 0 4px' 
+          }}
         />
       )}
 
@@ -490,10 +498,16 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       {/* Handle de redimensionnement à droite */}
       {source === 'calendar' && (
         <div
-          className="absolute right-0 top-0 h-full w-2 cursor-ew-resize z-30"
-          title="Redimensionner"
+          className={`absolute top-0 h-full cursor-ew-resize z-30 ${
+            isSmallAppointment || !hasSpaceForBothHandles 
+              ? 'right-0 w-1/3 bg-transparent' 
+              : '-right-1 w-3'
+          }`}
+          title={isSmallAppointment ? "Redimensionner (côté droit)" : "Redimensionner"}
           onMouseDown={(e) => handleMouseDown(e, 'right')}
-          style={{borderRadius: '0 4px 4px 0'}}
+          style={{
+            borderRadius: '0 4px 4px 0'
+          }}
         />
       )}
     </div>

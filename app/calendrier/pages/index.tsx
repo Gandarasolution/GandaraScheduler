@@ -3644,7 +3644,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
         <div className=" p-3"></div>
         {/* Liste des événements filtrés */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 bg-white rounded-2xl">
+        <div className="flex-1 overflow-y-auto px-2 py-2 bg-white rounded-2xl max-h-[50vh] shadow-lg border border-gray-200">
           {eventSearchInput.trim() === '' ? (
             <div className="text-center text-gray-500 py-8">
               <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3673,6 +3673,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
                     id={event.id}
                     title={event.label}
                     type={event.type as "Chantier" | "Absence" | "Autre"}
+                    className="w-full"
                   />
                   {selectedCell && (
                     <div className="h-full">
