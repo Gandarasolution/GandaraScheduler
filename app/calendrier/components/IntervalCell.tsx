@@ -73,7 +73,6 @@ interface DragItem {
   imageUrl: string;
   typeEvent: 'Chantier' | 'Absence' | 'Autre';
   dragOffset?: number;
-  width?: number;
 }
 
 /**
@@ -190,12 +189,15 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       let targetDate = intervalStart;
       let targetInterval = intervalName;
       // Si on a dragOffset et width, on centre l'event sur la cellule cible
-      if (item.dragOffset !== undefined && item.width) {
+      if (item.dragOffset !== undefined) {
         // Largeur d'une cellule (en px)
         const intervalWidth = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
         // Décalage en nombre de cellules (arrondi)
         const cellOffset = Math.ceil(-item.dragOffset / intervalWidth); // +1 pour centrer sur la cellule
         
+        console.log('cellOffset', cellOffset);
+        
+
         targetDate = isFullDay 
         ? addDays(intervalStart, cellOffset) 
         : addHours(

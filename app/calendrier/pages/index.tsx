@@ -1171,12 +1171,13 @@ export default function HomePage() {
       if (appointment.id) {
         previousAppointment = appointments.current.find(app => app.id === appointment.id);
       }
-     
+      
+      const createdAppointments: Appointment[] = [];
       
       // Fonction utilitaire pour créer les rendez-vous supplémentaires
       const createExtraAppointments = (fromIndex = 1) => {
         days.slice(fromIndex).forEach(day => {          
-          createAppointment(
+          const newApp = createAppointment(
             day.start,
             day.end,
             appointment.employeeId as number,
@@ -1185,6 +1186,9 @@ export default function HomePage() {
             appointment.type,
             appointment.description
           );
+          if (newApp) {
+            createdAppointments.push(newApp);
+          }
         });
       };
 
@@ -1222,11 +1226,14 @@ export default function HomePage() {
         // C'est une mise à jour
         const updatedAppointment = appointments.current.find(app => app.id === appointment.id);
         if (updatedAppointment) {
-          saveAppointmentState(updatedAppointment, 'update', previousAppointment);
+          if (createdAppointments.length > 0) {
+            // Resize avec split
+            saveAppointmentState(updatedAppointment, 'resize_split', previousAppointment, createdAppointments);
+          } else {
+            saveAppointmentState(updatedAppointment, 'update', previousAppointment);
+          }
         }
-      }
-      // Note: Les créations sont déjà enregistrées dans createAppointment
-      
+      }      
       handleResearch(); // Met à jour la liste filtrée
       setIsModalOpen(false);
       setSelectedAppointment(null);

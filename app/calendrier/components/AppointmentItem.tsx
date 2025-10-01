@@ -173,7 +173,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       startDate: appointment.startDate,
       endDate: appointment.endDate,
       dragOffset,
-      width: calculatedWidth,
     }),
     canDrag: () => !isResizingLeft && !isResizingRight,
     collect: (monitor) => ({
@@ -421,6 +420,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         
         handleContextMenu(e, 'appointment', appointment, cellUnderMouse);
       }}
+      onMouseDown={handleDragStart}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
