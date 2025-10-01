@@ -55,8 +55,13 @@ import ChantierTableFrame from "../components/ChantierTableFrame";
 import PaieTableFrame from "../components/PaieTableFrame";
 import Modal from "../components/Modal";
 import AppointmentForm from "../components/AppointmentForm";
-import DraggableSource from "../components/DraggableSource";
+import SearchOverlay from "../components/modals/SearchOverlay";
+import NotificationsPanel from "../components/modals/Notificationspanel";
+import ConfigurationModal from "../components/modals/ConfigurationModal";
+import AlertModal from "../components/modals/AlertModal";
+import SettingsModal from "../components/modals/SettingsModal";
 import RightClickComponent from "../components/RightClickComponent";
+import FilterModal from "../components/modals/FilterModal";
 import {
   initialTeams,
   initialEmployees,
@@ -71,9 +76,23 @@ import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend } from 
 import { CalendarConfig } from "../types";
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
 
+// Imports des hooks personnalisés
+import {
+  useNotifications,
+  useCalendarConfig,
+  useAppointmentHistory,
+  useInfiniteScroll
+} from "../hooks";
+
+// Imports des utilitaires
+import { createAppointmentUtils } from "../utils/appointmentUtils";
+import { createSearchAndFilterUtils } from "../utils/searchAndFilterUtils";
+
+// Imports des services
+import { notificationService } from "../services";
+
 
 import LogoUrl from "../image/LOGO_couleur_police_noire.svg";
-import { log } from "console";
 
 /**
  * Composant NoSSR pour éviter les problèmes d'hydratation
@@ -188,15 +207,8 @@ export default function HomePage() {
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
-  // États pour le système de notifications
-  const [notifications, setNotifications] = useState<Array<{
-    id: string;
-    type: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-    timestamp: Date;
-    isRead: boolean;
-  }>>([]);
+  // États pour le système de notifications (refactoré avec hook)
+  const notifications = useNotifications();
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
   
   const [isMobile, setIsMobile] = useState(false);
@@ -367,42 +379,21 @@ export default function HomePage() {
     return configs;
   }, [employees.current, customConfigs]); // Dépendance ajoutée pour recalculer quand les employés ou configs changent
 
-  // --- FONCTIONS DE GESTION DES NOTIFICATIONS ---
-  const addNotification = useCallback((
-    type: 'success' | 'error' | 'warning' | 'info',
-    title: string,
-    message: string
-  ) => {
-    const newNotification = {
-      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      title,
-      message,
-      timestamp: new Date(),
-      isRead: false
-    };
-    
-    setNotifications(prev => [newNotification, ...prev].slice(0, 50)); // Garder seulement les 50 dernières
-    
-    // Auto-suppression après 5 secondes pour les notifications success/info
-    if (type === 'success' || type === 'info') {
-      setTimeout(() => {
-        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
-      }, 5000);
-    }
-  }, []);
+  // Configuration du service de notifications
+  useEffect(() => {
+    notificationService.setNotificationCallback(notifications.addNotification);
+  }, [notifications.addNotification]);
 
-  const markNotificationAsRead = useCallback((id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  }, []);
+  // --- HOOKS PERSONNALISÉS ET UTILITAIRES ---
+  
+  // Utilitaires de gestion des rendez-vous
+  const appointmentUtils = useMemo(() => createAppointmentUtils(), []);
+  
+  // Utilitaires de recherche et filtrage
+  const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
-
-  const clearAllNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
+  // Hook de gestion de l'historique (sera ajouté après avoir refactorisé les fonctions d'historique)
+  // const history = useAppointmentHistory(appointments, handleResearch, notificationService.addNotification);
 
   // --- FONCTIONS DE GESTION DES CONFIGURATIONS PERSONNALISÉES ---
   const saveCustomConfig = useCallback((config: Omit<CalendarConfig, 'id'>) => {
@@ -411,9 +402,9 @@ export default function HomePage() {
       id: Date.now() // ID unique basé sur timestamp
     };
     setCustomConfigs(prev => [...prev, newConfig]);
-    addNotification('success', 'Configuration sauvegardée', `La configuration "${config.name}" a été créée avec succès.`);
+    notificationService.configSaved(config.name);
     return newConfig;
-  }, [addNotification]);
+  }, []);
 
   // État pour la configuration actuelle du calendrier
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
@@ -433,8 +424,8 @@ export default function HomePage() {
       setCurrentCalendarConfig(updatedConfig);
     }
     
-    addNotification('success', 'Configuration modifiée', `La configuration "${updatedConfig.name}" a été mise à jour.`);
-  }, [addNotification, currentCalendarConfig?.id]);
+    notificationService.configUpdated(updatedConfig.name);
+  }, [currentCalendarConfig?.id]);
 
   const deleteCustomConfig = useCallback((configId: number) => {
     const configToDelete = customConfigs.find(c => c.id === configId);
@@ -446,9 +437,9 @@ export default function HomePage() {
     }
     
     if (configToDelete) {
-      addNotification('success', 'Configuration supprimée', `La configuration "${configToDelete.name}" a été supprimée.`);
+      notificationService.configDeleted(configToDelete.name);
     }
-  }, [customConfigs, currentCalendarConfig, availableConfigs, addNotification]);
+  }, [customConfigs, currentCalendarConfig, availableConfigs]);
 
   const duplicateConfig = useCallback((config: CalendarConfig) => {
     const duplicatedConfig = {
@@ -457,13 +448,11 @@ export default function HomePage() {
       id: Date.now()
     };
     setCustomConfigs(prev => [...prev, duplicatedConfig]);
-    addNotification('success', 'Configuration dupliquée', `Une copie de "${config.name}" a été créée.`);
+    notificationService.configDuplicated(config.name);
     return duplicatedConfig;
-  }, [addNotification]);
+  }, []);
 
-  const unreadNotificationsCount = useMemo(() => {
-    return notifications.filter(n => !n.isRead).length;
-  }, [notifications]);
+  // Le comptage des notifications non lues est géré par le hook
   
 
   // Appliquer les filtres aux employés et rendez-vous selon la configuration
@@ -558,34 +547,22 @@ export default function HomePage() {
   }, [searchInput, activeFilters]);
 
   const handleResearch = useCallback(() => {
-    const lowercasedQuery = searchInput.toLowerCase();
     switch(viewType){
       case 'calendar':
-        if (!searchInput) {
-          setFilteredAppointments(appointments.current);
-          return;
-        }
-
-        setFilteredAppointments(
-          appointments.current
-            .map(app => {
-              // Récupérer les informations selon le type de rendez-vous
-              let title = events.current.find(e => e.id === app.EventId)?.label || '';
-              
-              if (title.toLowerCase().includes(lowercasedQuery)) {
-                return app;
-              }
-              return undefined;
-            })
-            .filter((app): app is Appointment => app !== undefined)
+        // Utiliser les nouveaux utilitaires de recherche
+        const filteredApps = searchUtils.searchAppointments(
+          appointments.current,
+          events.current,
+          searchInput
         );
+        setFilteredAppointments(filteredApps);
         break;
       case 'chantier-table':
         // Utiliser la fonction de filtrage pour les chantiers
         applyFiltersToChantiers();
         break;
       } 
-    }, [searchInput, viewType, applyFiltersToChantiers]);
+    }, [searchInput, viewType, applyFiltersToChantiers, searchUtils]);
 
   // Fonction pour obtenir les valeurs uniques pour les filtres
   const getFilterOptions = useCallback(() => {
@@ -607,105 +584,29 @@ export default function HomePage() {
     });
   }, []);
 
-  // Création de rendez-vous répétés
+  // Création de rendez-vous répétés (refactorisé avec utilitaires)
   const createRepeatedAppointments = useCallback((repeatInterval: "day" | "week" | "month", repeatCount: number, endDate?: Date, numberCount?: number) => {
-    const startDateOriginal = selectedAppointment?.startDate;
-    const endDateOriginal = selectedAppointment?.endDate;
-    if (!startDateOriginal || !endDateOriginal) {
-      console.warn("Start date or end date is undefined.");
+    if (!selectedAppointment) {
+      console.warn("Aucun rendez-vous sélectionné pour la répétition.");
       return;
     }
-    const diff = endDateOriginal.getTime() - startDateOriginal.getTime();
 
-    const newAppointments: Appointment[] = [];
-    let currentStartDate = repeatInterval === "day" ? addDays(startDateOriginal, numberCount || 0) 
-    : repeatInterval === "week" ? addWeeks(startDateOriginal, numberCount || 0) 
-    : addMonths(startDateOriginal, numberCount || 0);    
-
-    currentStartDate = getNextWorkedDay(
-      currentStartDate, 
-      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+    const newAppointments = appointmentUtils.createRepeatedAppointments({
+      appointment: selectedAppointment,
+      repeatInterval,
+      repeatCount,
+      endDate,
+      numberCount,
+      isFullDay,
       nonWorkingDates
-    );
+    });
 
-    if (repeatCount) {
-      for (let i = 0; i < repeatCount; i++) {
-        const newStartDate = getNextWorkedDay(
-          new Date(currentStartDate.getTime()),
-          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-          nonWorkingDates
-        );
-        const newEndDate = new Date(newStartDate.getTime() + diff);
-
-        const days = getWorkedDayIntervals(
-          newStartDate,
-          newEndDate,
-          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-          false,
-          nonWorkingDates
-        );
-
-        days.forEach(day => {
-          newAppointments.push({
-            id: ++idCounter.current, // ID déterministe sans Date.now()
-            description: selectedAppointment?.description || "Description du rendez-vous répété",
-            startDate: day.start ,
-            endDate: day.end,
-            employeeId: selectedAppointment?.employeeId || 1,
-            type: selectedAppointment?.type || 'chantier',
-            EventId: selectedAppointment?.EventId,
-          });
-        });
-
-        // Incrémente la date pour le prochain rendez-vous
-        currentStartDate = repeatInterval === "day" ? addDays(newStartDate, numberCount || 1)
-          : repeatInterval === "week" ? addWeeks(newStartDate, numberCount || 1) 
-          : addMonths(newStartDate, numberCount || 1);
-      }
-    }
-    else if(endDate){      
-      while (currentStartDate <= endDate) {
-        const newStartDate = getNextWorkedDay(
-          new Date(currentStartDate.getTime()), 
-          isFullDay
-          ? DAY_INTERVALS
-          : HALF_DAY_INTERVALS,
-          nonWorkingDates
-        );
-        const newEndDate = new Date(newStartDate.getTime() + diff);
-
-        const days = getWorkedDayIntervals(
-          newStartDate, 
-          newEndDate,
-          isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-          false,
-          nonWorkingDates
-        );
-
-        days.forEach(day => {
-          newAppointments.push({
-          id: ++idCounter.current, // ID déterministe sans Date.now()
-          description: selectedAppointment?.description || "Description du rendez-vous répété",
-          startDate: day.start ,
-          endDate: day.end,
-          employeeId: selectedAppointment?.employeeId || 1,
-          type: selectedAppointment?.type || 'chantier',
-          EventId: selectedAppointment?.EventId,
-        });
-      });
-
-      // Incrémente la date pour le prochain rendez-vous
-      currentStartDate = repeatInterval === "day" ? addDays(newStartDate, numberCount || 1)
-        : repeatInterval === "week" ? addWeeks(newStartDate, numberCount || 1)
-        : addMonths(newStartDate, numberCount || 1);
-      }
-    }
-    // Ajoute les nouveaux rendez-vous à la liste
+    // Ajouter les nouveaux rendez-vous à la liste
     appointments.current = [...appointments.current, ...newAppointments];
-    handleResearch(); // Met à jour la liste filtrée
-    addNotification('success', 'Rendez-vous répétés', `${newAppointments.length} rendez-vous créé${newAppointments.length > 1 ? 's' : ''}`);
+    handleResearch();
+    notificationService.appointmentRepeated(newAppointments.length);
     setRepeatAppointmentData(null);
-  }, [handleResearch, selectedAppointment, isFullDay, nonWorkingDates, addNotification]);
+  }, [handleResearch, selectedAppointment, isFullDay, nonWorkingDates, appointmentUtils]);
 
   // --- FONCTIONS D'HISTORIQUE POUR CTRL+Z ---
   const addToHistory = useCallback((action: HistoryAction) => {
@@ -756,7 +657,7 @@ export default function HomePage() {
   const undoLastAction = useCallback(() => {    
     
     if (history.current.length === 0) {
-      addNotification('warning', 'Aucune action', 'Aucune action à annuler');
+      notificationService.warning('Aucune action', 'Aucune action à annuler');
       return;
     }
 
@@ -768,7 +669,7 @@ export default function HomePage() {
         // Annuler une création = supprimer le rendez-vous
         if (lastAction.appointment) {
           appointments.current = appointments.current.filter(app => app.id !== lastAction.appointment!.id);
-          addNotification('success', 'Annulation', 'Création annulée');
+          notificationService.undoSuccess('Création');
         }
         break;
 
@@ -776,7 +677,7 @@ export default function HomePage() {
         // Annuler une suppression = restaurer le rendez-vous
         if (lastAction.appointment) {
           appointments.current = [...appointments.current, { ...lastAction.appointment }];
-          addNotification('success', 'Annulation', 'Suppression annulée');
+          notificationService.undoSuccess('Suppression');
         }
         break;
 
@@ -786,7 +687,7 @@ export default function HomePage() {
           appointments.current = appointments.current.map(app =>
             app.id === lastAction.previousAppointment!.id ? { ...lastAction.previousAppointment! } : app
           );
-          addNotification('success', 'Annulation', 'Modification annulée');
+          notificationService.undoSuccess('Modification');
         }
         break;
 
@@ -796,7 +697,7 @@ export default function HomePage() {
           appointments.current = appointments.current.map(app =>
             app.id === lastAction.previousAppointment!.id ? { ...lastAction.previousAppointment! } : app
           );
-          addNotification('success', 'Annulation', 'Déplacement annulé');
+          notificationService.undoSuccess('Déplacement');
         }
         break;
 
@@ -812,7 +713,7 @@ export default function HomePage() {
           const createdIds = lastAction.createdAppointments.map(app => app.id);
           appointments.current = appointments.current.filter(app => !createdIds.includes(app.id));
           
-          addNotification('success', 'Annulation', 'Division annulée');
+          notificationService.undoSuccess('Division');
         }
         break;
     }
@@ -821,7 +722,7 @@ export default function HomePage() {
     setTimeout(() => {
       handleResearch(); // Mettre à jour l'affichage
     }, 0);
-  }, [handleResearch, addNotification]);
+  }, [handleResearch]);
 
   // Compteur pour générer des IDs uniques de façon déterministe
   const idCounter = useRef(10000); // Commencer à 10000 pour éviter les conflits avec les IDs existants
@@ -855,49 +756,31 @@ export default function HomePage() {
 
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
     if (app) {
-      clipboardAppointment.current = { ...app };
+      clipboardAppointment.current = appointmentUtils.copyAppointment(app);
+      notificationService.info('Rendez-vous copié', 'Le rendez-vous a été copié dans le presse-papier');
     } else {
       console.warn("Aucun rendez-vous sélectionné à copier.");
     }    
-  }, [selectedAppointment]);
+  }, [appointmentUtils]);
 
   const pasteAppointment = useCallback((cell: { employeeId: number; date: Date }) => {
     if (!clipboardAppointment.current) return;
 
-    const startDate = clipboardAppointment.current.startDate;
-    const endDate = clipboardAppointment.current.endDate;
-    
-    // Différence entre les dates de début et de fin du rendez-vous copié
-    const diff = endDate.getTime() - startDate.getTime();
+    try {
+      const newAppointments = appointmentUtils.pasteAppointment({
+        clipboardAppointment: clipboardAppointment.current,
+        targetCell: cell,
+        isFullDay,
+        nonWorkingDates
+      });
 
-    // Nouvelle date de début basée sur la cellule sélectionnée
-    const newStartDate = new Date(cell.date.getTime());
-    const newEndDate = new Date(newStartDate.getTime() + diff);
-
-    if (!isWorkedDay(newStartDate, nonWorkingDates)) {
-      console.warn("Les dates sélectionnées ne sont pas des jours travaillés.");
-      return;
+      appointments.current = [...appointments.current, ...newAppointments];
+      handleResearch();
+      notificationService.appointmentCreated(newAppointments.length);
+    } catch (error) {
+      notificationService.error('Erreur', (error as Error).message);
     }
-
-    const days = getWorkedDayIntervals(
-      newStartDate, 
-      newEndDate,
-      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-      false,
-      nonWorkingDates
-    );
-
-    for (const day of days) {
-      createAppointment?.(
-        day.start,
-        day.end,
-        cell.employeeId,
-        clipboardAppointment.current.EventId,
-        true,
-        clipboardAppointment.current.type
-      );
-    }
-  }, [createAppointment, isFullDay, nonWorkingDates]);
+  }, [appointmentUtils, isFullDay, nonWorkingDates, handleResearch]);
 
 
 
@@ -1613,7 +1496,7 @@ export default function HomePage() {
           handleDeleteAppointmentConfirm();
         }
         else{
-          addNotification('error', 'Erreur', 'Aucun rendez-vous sélectionné pour la suppression.');
+          notificationService.error('Erreur', 'Aucun rendez-vous sélectionné pour la suppression.');
         }
       }
 
@@ -1806,14 +1689,14 @@ export default function HomePage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setTimeout(() => {
-        addNotification('info', 'Bienvenue', 'Application chargée avec succès !');
+        notificationService.info('Bienvenue', 'Application chargée avec succès !');
       }, 2000);
       
       setTimeout(() => {
-        addNotification('success', 'Données synchronisées', 'Tous vos rendez-vous sont à jour.');
+        notificationService.success('Données synchronisées', 'Tous vos rendez-vous sont à jour.');
       }, 4000);
     }
-  }, [addNotification]);
+  }, []);
 
   // Rendu principal de la page
   return (
@@ -2102,7 +1985,7 @@ export default function HomePage() {
                     <div
                       className="p-5 rounded-full  transition bg-red-600 relative"
                     >
-                       {unreadNotificationsCount > 0 && (
+                       {notifications.unreadCount > 0 && (
                         <span className="absolute bottom-0 -right-1 block h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
                       )}
                     </div>
@@ -2556,10 +2439,10 @@ export default function HomePage() {
         <NotificationsPanel 
           isOpen={isNotificationsPanelOpen}
           onClose={() => setIsNotificationsPanelOpen(false)}
-          notifications={notifications}
-          onMarkAsRead={markNotificationAsRead}
-          onRemove={removeNotification}
-          onClearAll={clearAllNotifications}
+          notifications={notifications.notifications}
+          onMarkAsRead={notifications.markAsRead}
+          onRemove={notifications.removeNotification}
+          onClearAll={notifications.clearAll}
         />
         
         
@@ -2610,1301 +2493,6 @@ export default function HomePage() {
 }
 
 
-// Modal d'alerte réutilisable
-type AlertModalProps = {
-  isOpen: boolean;
-  title: string;
-  message?: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  onConfirm: () => void;
-  onClose: () => void;
-};
-
-const AlertModal: React.FC<AlertModalProps> = ({
-  isOpen,
-  title,
-  message,
-  confirmLabel = "Confirmer",
-  cancelLabel = "Annuler",
-  onConfirm,
-  onClose,
-}) => (
-  <Modal isOpen={isOpen} onClose={onClose} title={title}>
-    <div className="w-full py-2 bg-white cursor-default pointer-events-auto dark:bg-gray-800 relative rounded-xl mx-auto max-w-sm">
-      {message && <div className="px-6 py-2 text-gray-700 dark:text-gray-200">{message}</div>}
-      <div className="grid gap-2 grid-cols-2 px-6 py-2">
-        <button
-          className="inline-flex items-center justify-center py-1 gap-1 font-medium rounded-lg border transition-colors outline-none focus:ring-offset-2 focus:ring-2 focus:ring-inset min-h-[2.25rem] px-4 text-sm text-gray-800 bg-white border-gray-300 hover:bg-gray-50 focus:ring-primary-600 focus:text-primary-600 focus:bg-primary-50 focus:border-primary-600 dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 dark:text-gray-200 dark:focus:text-primary-400 dark:focus:border-primary-400 dark:focus:bg-gray-800"
-          onClick={onClose}
-        >
-          {cancelLabel}
-        </button>
-        <button
-          className="inline-flex items-center justify-center py-1 gap-1 font-medium rounded-lg border transition-colors outline-none focus:ring-offset-2 focus:ring-2 focus:ring-inset min-h-[2.25rem] px-4 text-sm text-white shadow focus:ring-white border-transparent bg-red-600 hover:bg-red-500 focus:bg-red-700 focus:ring-offset-red-700"
-          onClick={() => {
-            onConfirm();
-            onClose();
-          }}
-        >
-          {confirmLabel}
-        </button>
-      </div>
-    </div>
-  </Modal>
-);
 
 
-// Modal de gestion des configurations
-type ConfigurationModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  availableConfigs: CalendarConfig[];
-  currentConfig: CalendarConfig | null;
-  onConfigChange: (config: CalendarConfig) => void;
-  onSaveConfig: (config: Omit<CalendarConfig, 'id'>) => CalendarConfig;
-  onUpdateConfig: (config: CalendarConfig) => void;
-  onDeleteConfig: (configId: number) => void;
-  onDuplicateConfig: (config: CalendarConfig) => CalendarConfig;
-  editingConfig: CalendarConfig | null;
-  setEditingConfig: (config: CalendarConfig | null) => void;
-  isCreatingConfig: boolean;
-  setIsCreatingConfig: (isCreating: boolean) => void;
-};
 
-const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
-  isOpen,
-  onClose,
-  availableConfigs,
-  currentConfig,
-  onConfigChange,
-  onSaveConfig,
-  onUpdateConfig,
-  onDeleteConfig,
-  onDuplicateConfig,
-  editingConfig,
-  setEditingConfig,
-  isCreatingConfig,
-  setIsCreatingConfig
-}) => {
-  const [configName, setConfigName] = useState('');
-  const [selectedDimension, setSelectedDimension] = useState<DimensionType>('employee');
-  const [configFilters, setConfigFilters] = useState<Filter[]>([]);
-  const [selectedRdvTypes, setSelectedRdvTypes] = useState<string[]>(['Chantier', 'Absence', 'Autre']);
-
-  // Réinitialiser le formulaire
-  const resetForm = () => {
-    setConfigName('');
-    setSelectedDimension('employee');
-    setConfigFilters([]);
-    setSelectedRdvTypes(['Chantier', 'Absence', 'Autre']);
-  };
-
-  // Charger les données pour l'édition
-  useEffect(() => {
-    if (editingConfig) {
-      setConfigName(editingConfig.name);
-      setSelectedDimension(editingConfig.dimension);
-      setConfigFilters(editingConfig.filters);
-      setSelectedRdvTypes(editingConfig.selectedRdvTypes || ['Chantier', 'Absence', 'Autre']);
-    } else {
-      resetForm();
-    }
-  }, [editingConfig]);
-
-  const handleSave = () => {
-    if (!configName.trim()) return;
-
-    const newConfig = {
-      name: configName.trim(),
-      dimension: selectedDimension,
-      filters: configFilters,
-      selectedRdvTypes: selectedRdvTypes
-    };
-
-    if (editingConfig) {
-      // Si on modifie une configuration prédéfinie (ID <= 10), créer une nouvelle config personnalisée
-      if (editingConfig.id <= 10) {
-        const savedConfig = onSaveConfig(newConfig);
-        onConfigChange(savedConfig);
-      } else {
-        // Sinon, mettre à jour la configuration existante
-        onUpdateConfig({ ...editingConfig, ...newConfig });
-      }
-      setEditingConfig(null);
-    } else {
-      const savedConfig = onSaveConfig(newConfig);
-      onConfigChange(savedConfig);
-    }
-
-    resetForm();
-    setIsCreatingConfig(false);
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Gestion des configurations">
-      <div className={`flex gap-6 poppins w-full mx-auto transition-all duration-300 ${
-        (isCreatingConfig || editingConfig) ? 'max-w-6xl flex-row' : 'max-w-2xl flex-col'
-      }`}>
-        
-        {/* Section principale - Liste des configurations */}
-        <div className={`${(isCreatingConfig || editingConfig) ? 'w-1/2' : 'w-full'} transition-all duration-300`}>
-          <div className="max-h-[70vh] overflow-y-auto scrollbar-hide space-y-6">
-        
-        {/* Configuration actuelle */}
-        <div className="bg-gradient-to-r from-[#e7f4f2] to-[#f0f9f7] p-4 rounded-xl border border-[#009580]/20">
-          <h3 className="font-semibold text-[#16302C] mb-2 flex items-center gap-2">
-            <div className="w-5 h-5 bg-[#009580] rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-              </svg>
-            </div>
-            Configuration active
-          </h3>
-          <p className="text-sm text-[#16302C]/70">
-            {currentConfig ? currentConfig.name : 'Aucune configuration sélectionnée'}
-          </p>
-          {currentConfig && (
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-xs bg-[#009580]/10 px-2 py-1 rounded-full text-[#009580] font-medium">
-                {currentConfig.dimension}
-              </span>
-              {currentConfig.selectedRdvTypes && currentConfig.selectedRdvTypes.length < 3 && (
-                <span className="text-xs bg-blue-50 px-2 py-1 rounded-full text-blue-600 font-medium">
-                  {currentConfig.selectedRdvTypes.join(', ')}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Liste des configurations */}
-        <div>
-          <div className="flex items-center justify-between mb-4 gap-3">
-            <h3 className="font-semibold text-[#16302C] text-lg">Configurations disponibles</h3>
-            <button
-              onClick={() => setIsCreatingConfig(true)}
-              className="px-4 py-2 bg-[#009580] text-white rounded-xl text-sm hover:bg-[#007a6b] transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Nouvelle configuration
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {availableConfigs.map((config) => (
-              <div
-                key={config.id}
-                className={`p-4 border-2 rounded-xl transition-all duration-200 ${
-                  currentConfig?.id === config.id 
-                    ? 'border-[#009580] bg-gradient-to-r from-[#e7f4f2] to-[#f0f9f7] shadow-lg' 
-                    : 'border-gray-200 hover:border-[#009580]/30 hover:bg-gray-50/50'
-                }`}
-              >
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <button
-                      onClick={() => onConfigChange(config)}
-                      className="flex-1 text-left group"
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-semibold text-[#16302C] group-hover:text-[#009580] transition-colors">
-                          {config.name}
-                        </span>
-                        {currentConfig?.id === config.id && (
-                          <div className="w-2 h-2 bg-[#009580] rounded-full animate-pulse"></div>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-600 font-medium">
-                          {config.dimension === 'employee' ? 'Par employé' :
-                           config.dimension === 'group' ? 'Par équipe' :
-                           config.dimension === 'pole' ? 'Par pôle' :
-                           config.dimension === 'contract' ? 'Par type de contrat' :
-                           config.dimension === 'type' ? 'Par type de contrat' : config.dimension}
-                        </span>
-                        {config.filters.length > 0 && (
-                          <span className="text-xs bg-blue-50 px-3 py-1 rounded-full text-blue-600 font-medium">
-                            {config.filters.length} filtre{config.filters.length > 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {config.selectedRdvTypes && config.selectedRdvTypes.length < 3 && (
-                          <span className="text-xs bg-purple-50 px-3 py-1 rounded-full text-purple-600 font-medium">
-                            {config.selectedRdvTypes.join(', ')}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setEditingConfig(config)}
-                    className="p-2 text-gray-400 hover:text-[#009580] hover:bg-[#009580]/10 rounded-lg transition-all duration-200"
-                    title="Modifier"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  
-                  <button
-                    onClick={() => onDuplicateConfig(config)}
-                    className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                    title="Dupliquer"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-
-                  {config.id > 10 && ( // Seules les configs personnalisées peuvent être supprimées
-                    <button
-                      onClick={() => onDeleteConfig(config.id)}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200"
-                      title="Supprimer"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        </div>
-        </div>
-
-        {/* Section de droite - Formulaire de création/édition */}
-        {(isCreatingConfig || editingConfig) && (
-          <div className="w-1/2 border-l pl-6">
-            <div className="max-h-[70vh] overflow-y-auto scrollbar-hide">
-              <div className="sticky top-0 bg-white pb-4 border-b mb-6">
-                <h3 className="font-semibold text-[#16302C] text-lg">
-                  {editingConfig ? 'Modifier la configuration' : 'Nouvelle configuration'}
-                </h3>
-              </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom de la configuration
-                </label>
-                <input
-                  type="text"
-                  value={configName}
-                  onChange={(e) => setConfigName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#009580] focus:border-[#009580]"
-                  placeholder="Ex: Vue Technique par contrats"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Organisation d'affichage
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Par employé */}
-                  <div 
-                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                      selectedDimension === 'employee' 
-                        ? 'border-[#009580] bg-[#e7f4f2]' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedDimension('employee')}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        id="dim-employee"
-                        name="dimension"
-                        checked={selectedDimension === 'employee'}
-                        onChange={() => setSelectedDimension('employee')}
-                        className="text-[#009580] focus:ring-[#009580]"
-                      />
-                      <div>
-                        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mb-1">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        </div>
-                        <label htmlFor="dim-employee" className="font-medium text-gray-900 cursor-pointer">
-                          Par employé
-                        </label>
-                        <p className="text-xs text-gray-500">Vue individuelle</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Par équipe */}
-                  <div 
-                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                      selectedDimension === 'group' 
-                        ? 'border-[#009580] bg-[#e7f4f2]' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedDimension('group')}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        id="dim-group"
-                        name="dimension"
-                        checked={selectedDimension === 'group'}
-                        onChange={() => setSelectedDimension('group')}
-                        className="text-[#009580] focus:ring-[#009580]"
-                      />
-                      <div>
-                        <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mb-1">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                          </svg>
-                        </div>
-                        <label htmlFor="dim-group" className="font-medium text-gray-900 cursor-pointer">
-                          Par équipe
-                        </label>
-                        <p className="text-xs text-gray-500">Vue collective</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Par pôle */}
-                  <div 
-                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                      selectedDimension === 'pole' 
-                        ? 'border-[#009580] bg-[#e7f4f2]' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedDimension('pole')}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        id="dim-pole"
-                        name="dimension"
-                        checked={selectedDimension === 'pole'}
-                        onChange={() => setSelectedDimension('pole')}
-                        className="text-[#009580] focus:ring-[#009580]"
-                      />
-                      <div>
-                        <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mb-1">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                        </div>
-                        <label htmlFor="dim-pole" className="font-medium text-gray-900 cursor-pointer">
-                          Par pôle
-                        </label>
-                        <p className="text-xs text-gray-500">Vue département</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Par contrat */}
-                  <div 
-                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                      selectedDimension === 'contract' 
-                        ? 'border-[#009580] bg-[#e7f4f2]' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedDimension('contract')}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        id="dim-contract"
-                        name="dimension"
-                        checked={selectedDimension === 'contract'}
-                        onChange={() => setSelectedDimension('contract')}
-                        className="text-[#009580] focus:ring-[#009580]"
-                      />
-                      <div>
-                        <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mb-1">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                        <label htmlFor="dim-contract" className="font-medium text-gray-900 cursor-pointer">
-                          Par contrat
-                        </label>
-                        <p className="text-xs text-gray-500">Employé/Intérim</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Par type de contrat */}
-                  <div 
-                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all col-span-2 ${
-                      selectedDimension === 'type' 
-                        ? 'border-[#009580] bg-[#e7f4f2]' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedDimension('type')}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        id="dim-type"
-                        name="dimension"
-                        checked={selectedDimension === 'type'}
-                        onChange={() => setSelectedDimension('type')}
-                        className="text-[#009580] focus:ring-[#009580]"
-                      />
-                      <div>
-                        <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center mb-1">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                          </svg>
-                        </div>
-                        <label htmlFor="dim-type" className="font-medium text-gray-900 cursor-pointer">
-                          Par type de contrat
-                        </label>
-                        <p className="text-xs text-gray-500">Classification par type de contrat (Employé/Intérim)</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Types de rendez-vous à afficher
-                  </label>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center p-4 border border-gray-200 rounded-lg">
-                    <span className="text-sm text-gray-500">Choisissez les types de RDV à inclure dans cette vue</span>
-                  </div>
-
-                  {/* Type Chantier */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="type-chantier"
-                      checked={selectedRdvTypes.includes('Chantier')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedRdvTypes([...selectedRdvTypes, 'Chantier']);
-                        } else {
-                          setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Chantier'));
-                        }
-                      }}
-                      className="h-4 w-4 text-[#009580] focus:ring-[#009580] border-gray-300 rounded"
-                    />
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-[#FF6B6B] rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                      </div>
-                      <div>
-                        <label htmlFor="type-chantier" className="font-medium text-gray-900 cursor-pointer">
-                          Chantiers
-                        </label>
-                        <p className="text-sm text-gray-500">Projets de construction et travaux</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Type Absence */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="type-absence"
-                      checked={selectedRdvTypes.includes('Absence')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedRdvTypes([...selectedRdvTypes, 'Absence']);
-                        } else {
-                          setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Absence'));
-                        }
-                      }}
-                      className="h-4 w-4 text-[#009580] focus:ring-[#009580] border-gray-300 rounded"
-                    />
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-[#FFC107] rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <label htmlFor="type-absence" className="font-medium text-gray-900 cursor-pointer">
-                          Absences
-                        </label>
-                        <p className="text-sm text-gray-500">Congés, formation, arrêts maladie</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Type Autre */}
-                  <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="checkbox"
-                      id="type-autre"
-                      checked={selectedRdvTypes.includes('Autre')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedRdvTypes([...selectedRdvTypes, 'Autre']);
-                        } else {
-                          setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Autre'));
-                        }
-                      }}
-                      className="h-4 w-4 text-[#009580] focus:ring-[#009580] border-gray-300 rounded"
-                    />
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-[#6C5CE7] rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <label htmlFor="type-autre" className="font-medium text-gray-900 cursor-pointer">
-                          Autres événements
-                        </label>
-                        <p className="text-sm text-gray-500">Réunions, formations, événements divers</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bouton Tout sélectionner/désélectionner */}
-                  <div className="flex justify-center pt-2">
-                    <button
-                      onClick={() => {
-                        const allTypesSelected = configFilters.filter(f => f.field === 'type').length === 3;
-                        if (allTypesSelected) {
-                          // Tout désélectionner
-                          setConfigFilters(configFilters.filter(f => f.field !== 'type'));
-                        } else {
-                          // Tout sélectionner
-                          const typeFilters = configFilters.filter(f => f.field !== 'type');
-                          const newFilters: Filter[] = [
-                            {
-                              id: `filter-chantier-${Date.now()}`,
-                              field: 'type',
-                              type: 'equals',
-                              value: 'Chantier',
-                              label: 'Chantiers'
-                            },
-                            {
-                              id: `filter-absence-${Date.now() + 1}`,
-                              field: 'type',
-                              type: 'equals',
-                              value: 'Absence',
-                              label: 'Absences'
-                            },
-                            {
-                              id: `filter-autre-${Date.now() + 2}`,
-                              field: 'type',
-                              type: 'equals',
-                              value: 'Autre',
-                              label: 'Autres événements'
-                            }
-                          ];
-                          setConfigFilters([...typeFilters, ...newFilters]);
-                        }
-                      }}
-                      className="text-sm text-[#009580] hover:text-[#007a6b] font-medium"
-                    >
-                      {configFilters.filter(f => f.field === 'type').length === 3 ? 'Tout désélectionner' : 'Tout sélectionner'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setIsCreatingConfig(false);
-                  setEditingConfig(null);
-                  resetForm();
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={!configName.trim()}
-                className="px-4 py-2 bg-[#009580] text-white rounded-lg hover:bg-[#007a6b] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {editingConfig ? 'Modifier' : 'Créer'}
-              </button>
-            </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
-};
-
-
-// Modal de filtres pour les chantiers
-type FilterModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  activeFilters: {
-    etat: string[];
-    chargeAffaire: string[];
-    chefChantier: string[];
-  };
-  setActiveFilters: React.Dispatch<React.SetStateAction<{
-    etat: string[];
-    chargeAffaire: string[];
-    chefChantier: string[];
-  }>>;
-  filterOptions: {
-    etats: string[];
-    chargeAffaires: string[];
-    chefChantiers: string[];
-  };
-  onClearAll: () => void;
-};
-
-const FilterModal: React.FC<FilterModalProps> = ({
-  isOpen,
-  onClose,
-  activeFilters,
-  setActiveFilters,
-  filterOptions,
-  onClearAll
-}) => {
-  const toggleFilter = (category: keyof typeof activeFilters, value: string) => {
-    setActiveFilters(prev => ({
-      ...prev,
-      [category]: prev[category].includes(value)
-        ? prev[category].filter(item => item !== value)
-        : [...prev[category], value]
-    }));
-  };
-
-  const activeFilterCount = Object.values(activeFilters).reduce((count, arr) => count + arr.length, 0);
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Filtres des chantiers">
-      <div className="flex flex-col gap-6 poppins max-h-96 overflow-y-auto">
-        {/* En-tête avec compteur et bouton reset */}
-        <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Filtres actifs:</span>
-            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
-              {activeFilterCount}
-            </span>
-          </div>
-          {activeFilterCount > 0 && (
-            <button
-              onClick={onClearAll}
-              className="text-sm text-red-600 hover:text-red-800 font-medium transition-colors"
-            >
-              Tout supprimer
-            </button>
-          )}
-        </div>
-
-        {/* Filtre par état */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-gray-800">État</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {filterOptions.etats.map(etat => (
-              <label key={etat} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                <input
-                  type="checkbox"
-                  checked={activeFilters.etat.includes(etat)}
-                  onChange={() => toggleFilter('etat', etat)}
-                  className="text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="text-sm text-gray-700">{etat}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Filtre par chargé d'affaire */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-gray-800">Chargé d'affaire</h3>
-          <div className="space-y-1">
-            {filterOptions.chargeAffaires.map(chargeAffaire => (
-              <label key={chargeAffaire} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                <input
-                  type="checkbox"
-                  checked={activeFilters.chargeAffaire.includes(chargeAffaire)}
-                  onChange={() => toggleFilter('chargeAffaire', chargeAffaire)}
-                  className="text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="text-sm text-gray-700">{chargeAffaire}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Filtre par chef de chantier */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-gray-800">Chef de chantier</h3>
-          <div className="space-y-1">
-            {filterOptions.chefChantiers.map(chefChantier => (
-              <label key={chefChantier} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                <input
-                  type="checkbox"
-                  checked={activeFilters.chefChantier.includes(chefChantier)}
-                  onChange={() => toggleFilter('chefChantier', chefChantier)}
-                  className="text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="text-sm text-gray-700">{chefChantier}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Pied de modal avec actions */}
-      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-        >
-          Fermer
-        </button>
-      </div>
-    </Modal>
-  );
-};
-
-
-type SettingsModalProps = {  
-  onClose: () => void;
-  settings: any;
-  isSettingsOpen: boolean;
-};
-
-const SettingsModal: React.FC<SettingsModalProps> = ({
-  onClose,
-  isSettingsOpen,
-  settings
-}) => {
-  const [openCategory, setOpenCategory] = useState<string | null>(null);
-
-  return (
-    <Modal
-      isOpen={isSettingsOpen}
-      onClose={onClose}
-      title="Paramètres"
-    >
-      <div className="flex flex-col gap-6 poppins">
-        {settings.map((cat: any, idx: number) => (
-          <div key={cat.category} className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-300">
-            <button
-              type="button"
-              className="w-full text-left px-6 py-5 font-semibold text-gray-800 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:ring-opacity-50 flex items-center justify-between border-b border-gray-200"
-              onClick={() => setOpenCategory(openCategory === cat.category ? null : cat.category)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-8 bg-[#009580] rounded-full"></div>
-                <span className="text-lg poppins font-medium">{cat.category}</span>
-              </div>
-              <div className={`p-2 rounded-full transition-all duration-300 ${openCategory === cat.category ? 'bg-[#009580] text-white rotate-180' : 'bg-white text-gray-500 hover:bg-gray-200'}`}>
-                <svg 
-                  className="w-5 h-5 transition-transform duration-300"
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </button>
-            
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openCategory === cat.category ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="px-6 py-6 bg-gradient-to-br from-white to-gray-50">
-                {cat.items.map((setting: any, settingIdx: number) => (
-                  <div key={setting.id} className={`flex flex-col lg:flex-row lg:items-center justify-between py-4 ${settingIdx !== cat.items.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                    <label htmlFor={setting.id} className="text-base font-medium text-gray-700 mb-3 lg:mb-0 lg:mr-6 min-w-[200px] poppins">
-                      {setting.label}
-                    </label>
-                    
-                    {setting.type === "custom-non-working-dates" ? (
-                      <div className="flex flex-col gap-4 w-full max-w-lg">
-                        <div className="flex gap-3 items-center">
-                          <input
-                            type="date"
-                            id={setting.id}
-                            value={setting.newNonWorkingDate}
-                            onChange={e => setting.setNewNonWorkingDate(e.target.value)}
-                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition-all duration-200 flex-1 poppins text-sm bg-white shadow-sm hover:shadow-md"
-                          />
-                          <button
-                            className="px-6 py-3 bg-[#009580] text-white rounded-xl hover:bg-[#007a6b] active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
-                            onClick={() => {
-                              if (
-                                setting.newNonWorkingDate &&
-                                !setting.nonWorkingDates.some(
-                                  (d: Date) =>
-                                    format(d, "yyyy-MM-dd") === setting.newNonWorkingDate
-                                )
-                              ) {
-                                setting.setNonWorkingDates((prev: Date[]) => [
-                                  ...prev,
-                                  new Date(setting.newNonWorkingDate),
-                                ]);
-                                setting.setNewNonWorkingDate("");
-                              }
-                            }}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Ajouter
-                          </button>
-                        </div>
-                        
-                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-                          {setting.nonWorkingDates.length === 0 ? (
-                            <div className="text-center py-8">
-                              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                              <p className="text-gray-500 text-sm poppins">Aucune date non travaillée ajoutée</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-2 max-h-40 overflow-y-auto">
-                              <h4 className="text-sm font-semibold text-gray-700 mb-3 poppins">Dates non travaillées ({setting.nonWorkingDates.length})</h4>
-                              {setting.nonWorkingDates.map((date: Date, idx: number) => (
-                                <div key={format(date, "yyyy-MM-dd") + idx} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-2 h-2 bg-[#009580] rounded-full"></div>
-                                    <span className="text-sm font-medium text-gray-800 poppins">{format(date, "dd/MM/yyyy")}</span>
-                                  </div>
-                                  <button
-                                    className="text-red-500 hover:text-white hover:bg-red-500 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1"
-                                    onClick={() =>
-                                      setting.setNonWorkingDates((prev: Date[]) =>
-                                        prev.filter(
-                                          (d: Date) =>
-                                            format(d, "yyyy-MM-dd") !== format(date, "yyyy-MM-dd")
-                                        )
-                                      )
-                                    }
-                                  >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                    Supprimer
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center">
-                        {setting.type === "checkbox" ? (
-                          <div className="flex items-center">
-                            <div className="relative">
-                              <input
-                                id={setting.id}
-                                type="checkbox"
-                                className="sr-only"
-                                checked={setting.value}
-                                onChange={e => setting.onChange(e.target.checked)}
-                              />
-                              <div className={`w-12 h-6 rounded-full transition-all duration-300 cursor-pointer ${setting.value ? 'bg-[#009580]' : 'bg-gray-300'}`} onClick={() => setting.onChange(!setting.value)}>
-                                <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-all duration-300 ${setting.value ? 'translate-x-6' : 'translate-x-0.5'} translate-y-0.5`}></div>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <input
-                            id={setting.id}
-                            type={setting.type}
-                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition-all duration-200 w-48 poppins text-sm bg-white shadow-sm hover:shadow-md"
-                            value={setting.value}
-                            onChange={e => setting.onChange(e.target.value)}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
-        
-        <div className="flex justify-end pt-6 border-t border-gray-200">
-          <button
-            className="px-8 py-3 bg-[#009580] text-white rounded-xl hover:bg-[#007a6b] active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
-            onClick={onClose}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            Fermer
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-};
-
-
-type SearchOverlayProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  eventSearchInput: string;
-  setEventSearchInput: (input: string) => void;
-  filteredEvents: (Evenement) [];
-  selectedCell:{ employeeId: number; date: Date } | null
-  addAppointmentFromSearch: (appointment: Appointment, eventType: Evenement, includeAllNonWorkingDays: boolean) => void;
-  isFullDay: boolean;
-};
-
-const SearchOverlay: React.FC<SearchOverlayProps> = ({
-  isOpen,
-  onClose,
-  eventSearchInput,
-  setEventSearchInput,
-  filteredEvents,
-  selectedCell,
-  addAppointmentFromSearch,
-  isFullDay
-}) => {
-  const dragDropManager = useDragDropManager();
-  const [isDragging, setIsDragging] = useState(false);
-
-  // Utiliser React DnD pour détecter l'état de drag
-  useEffect(() => {
-    const monitor = dragDropManager.getMonitor();
-    
-    const unsubscribe = monitor.subscribeToStateChange(() => {
-      const isDragInProgress = monitor.isDragging();
-      setIsDragging(isDragInProgress);
-    });
-
-    return unsubscribe;
-  }, [dragDropManager]);
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen && !isDragging) {
-        onClose();
-        setEventSearchInput('');
-      }
-    }
-
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [onClose, setEventSearchInput, isOpen, isDragging]);
-
-  if (!isOpen) return null;
-  
-  return (
-    <>
-      <div 
-        className={`fixed inset-0 overlay z-50  ${
-          isDragging ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        }`}
-        onClick={() => {
-          if (!isDragging) {
-            onClose();
-            setEventSearchInput('');
-          }
-        }}
-      />
-      <div 
-        className={`fixed z-60 bg-opacity-0 rounded-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col ${isDragging ? 'opacity-0' : 'opacity-100'} transition-all duration-300 ease-in-out`}
-        onClick={(e) => e.stopPropagation()}
-        style={{ 
-          top: '35%', 
-          left: !isDragging ? '32%' : '100%' 
-        }}
-      >
-        {/* Barre de recherche */}
-        <div className="">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Rechercher un événement..."
-              className="block bg-white w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-              value={eventSearchInput}
-              onChange={(e) => setEventSearchInput(e.target.value)}
-              autoFocus
-            />
-          </div>
-        </div>
-
-        <div className=" p-3"></div>
-        {/* Liste des événements filtrés */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 bg-white rounded-2xl max-h-[50vh] shadow-lg border border-gray-200">
-          {eventSearchInput.trim() === '' ? (
-            <div className="text-center text-gray-500 py-8">
-              <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <p className="text-lg font-medium mb-2">Rechercher un événement</p>
-              <p className="text-sm">Tapez pour rechercher parmi les chantiers, absences et autres événements</p>
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.562M15 6.5a7.5 7.5 0 11-6 0 7.5 7.5 0 016 0z" />
-              </svg>
-              <p className="text-lg font-medium mb-2">Aucun résultat</p>
-              <p className="text-sm">Aucun événement ne correspond à votre recherche</p>
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {filteredEvents.map((event, index) => (
-                <div 
-                  key={`${event.label}-${event.id}-${index}`} 
-                  className="w-full flex justify-between hover:bg-[#e7f4f2] rounded-xl transition-colors px-2"
-                >
-                  <DraggableSource
-                    key={`${event.label}-${event.id}-${index}`}
-                    id={event.id}
-                    title={event.label}
-                    type={event.type as "Chantier" | "Absence" | "Autre"}
-                    className="w-full"
-                  />
-                  {selectedCell && (
-                    <div className="h-full">
-                      <button
-                        className="px-2 py-1 text-xl cursor-pointer h-full"
-                        onClick={() => {
-                          addAppointmentFromSearch(
-                            {
-                              description: event.label,
-                              startDate: new Date(selectedCell.date),
-                              endDate: new Date((isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).setMinutes(59, 59)),
-                              employeeId: selectedCell.employeeId,
-                              type: event.type.toLowerCase() as "chantier" | "absence" | "autre",
-                            } as Appointment,
-                            event,
-                            false
-                          )
-                          onClose()
-                          setEventSearchInput('');
-                        }}
-                      >
-                        +
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
-
-// Composant NotificationsPanel
-type NotificationsPanelProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  notifications: Array<{
-    id: string;
-    type: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-    timestamp: Date;
-    isRead: boolean;
-  }>;
-  onMarkAsRead: (id: string) => void;
-  onRemove: (id: string) => void;
-  onClearAll: () => void;
-};
-
-const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
-  isOpen,
-  onClose,
-  notifications,
-  onMarkAsRead,
-  onRemove,
-  onClearAll
-}) => {
-  if (!isOpen) return null;
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return (
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-        );
-      case 'error':
-        return (
-          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-        );
-      case 'warning':
-        return (
-          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-        );
-      case 'info':
-      default:
-        return (
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        );
-    }
-  };
-
-  const formatTimestamp = (timestamp: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'À l\'instant';
-    if (minutes < 60) return `Il y a ${minutes} min`;
-    if (hours < 24) return `Il y a ${hours}h`;
-    if (days < 7) return `Il y a ${days}j`;
-    return format(timestamp, 'dd/MM/yyyy HH:mm');
-  };
-
-  return (
-    <>
-      {/* Overlay pour fermer en cliquant à l'extérieur */}
-      <div 
-        className="fixed inset-0 z-40"
-        onClick={onClose}
-      />
-      
-      {/* Panneau de notifications */}
-      <div className="fixed top-16 right-4 w-96 max-h-[80vh] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col poppins">
-        {/* En-tête */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-[#009580] to-[#007a6b] text-white rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5V9.09c0-2.5-2.5-4.09-5-4.09S5 6.59 5 9.09V12l-5 5h5m0 0v1a3 3 0 006 0v-1m-6 0h6" />
-            </svg>
-            <h3 className="text-lg font-semibold">Notifications</h3>
-            {notifications.length > 0 && (
-              <span className="bg-white/20 text-xs px-2 py-1 rounded-full">
-                {notifications.length}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {notifications.length > 0 && (
-              <button
-                onClick={onClearAll}
-                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors"
-                title="Tout effacer"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Contenu */}
-        <div className="flex-1 overflow-y-auto">
-          {notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5V9.09c0-2.5-2.5-4.09-5-4.09S5 6.59 5 9.09V12l-5 5h5m0 0v1a3 3 0 006 0v-1m-6 0h6" />
-                </svg>
-              </div>
-              <h4 className="text-lg font-medium text-gray-900 mb-2">Aucune notification</h4>
-              <p className="text-sm text-gray-500 text-center">
-                Vos notifications apparaîtront ici
-              </p>
-            </div>
-          ) : (
-            <div className="p-2">
-              {notifications.map((notification, index) => (
-                <div
-                  key={notification.id}
-                  className={`relative p-4 mb-2 rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer ${
-                    notification.isRead 
-                      ? 'bg-gray-50 border-gray-200' 
-                      : 'bg-white border-l-4 border-l-[#009580] shadow-sm'
-                  }`}
-                  onClick={() => !notification.isRead && onMarkAsRead(notification.id)}
-                >
-                  <div className="flex items-start gap-3">
-                    {getNotificationIcon(notification.type)}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h4 className={`text-sm font-medium ${notification.isRead ? 'text-gray-700' : 'text-gray-900'}`}>
-                          {notification.title}
-                        </h4>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRemove(notification.id);
-                          }}
-                          className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                      <p className={`text-xs ${notification.isRead ? 'text-gray-500' : 'text-gray-700'} mb-2`}>
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {formatTimestamp(notification.timestamp)}
-                      </p>
-                    </div>
-                  </div>
-                  {!notification.isRead && (
-                    <div className="absolute top-4 right-4">
-                      <div className="w-2 h-2 bg-[#009580] rounded-full"></div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
-};
