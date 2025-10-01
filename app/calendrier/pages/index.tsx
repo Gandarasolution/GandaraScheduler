@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @fileoverview Page principale du calendrier Gandara Scheduler
  * 
  * Cette page constitue le point d'entrée principal de l'application calendrier.
@@ -50,7 +50,7 @@ import {
   addHours,
 } from "date-fns";
 import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent, PaieItem, Filter, FilterType, DimensionType} from "../types";
-import CalendarGrid from "../components/CalendarGrid";
+import CalendarGridRefactored from '../components/CalendarGridRefactored';
 import ChantierTableFrame from "../components/ChantierTableFrame";
 import PaieTableFrame from "../components/PaieTableFrame";
 import Modal from "../components/Modal";
@@ -815,6 +815,8 @@ export default function HomePage() {
           addNotification('success', 'Annulation', 'Division annulée');
         }
         break;
+
+      
     }
 
     // Forcer la mise à jour de l'affichage
@@ -1172,11 +1174,12 @@ export default function HomePage() {
         previousAppointment = appointments.current.find(app => app.id === appointment.id);
       }
      
+      const createdAppointments: Appointment[] = [];
       
       // Fonction utilitaire pour créer les rendez-vous supplémentaires
       const createExtraAppointments = (fromIndex = 1) => {
         days.slice(fromIndex).forEach(day => {          
-          createAppointment(
+          const newApp = createAppointment(
             day.start,
             day.end,
             appointment.employeeId as number,
@@ -1185,6 +1188,9 @@ export default function HomePage() {
             appointment.type,
             appointment.description
           );
+          if (newApp) {
+            createdAppointments.push(newApp);
+          }
         });
       };
 
@@ -1222,11 +1228,14 @@ export default function HomePage() {
         // C'est une mise à jour
         const updatedAppointment = appointments.current.find(app => app.id === appointment.id);
         if (updatedAppointment) {
-          saveAppointmentState(updatedAppointment, 'update', previousAppointment);
+          if (createdAppointments.length > 0) {
+            // Resize avec split
+            saveAppointmentState(updatedAppointment, 'resize_split', previousAppointment, createdAppointments);
+          } else {
+            saveAppointmentState(updatedAppointment, 'update', previousAppointment);
+          }
         }
-      }
-      // Note: Les créations sont déjà enregistrées dans createAppointment
-      
+      }      
       handleResearch(); // Met à jour la liste filtrée
       setIsModalOpen(false);
       setSelectedAppointment(null);
@@ -2241,7 +2250,7 @@ export default function HomePage() {
                 <SelectedCellContext.Provider value={{ selectedCell, setSelectedCell }}>
                   {viewType === 'calendar' ? (
                     currentCalendarConfig ? (
-                      <CalendarGrid
+                      <CalendarGridRefactored
                         employees={filteredEmployeesForCalendar}
                         appointments={filteredAppointmentsForCalendar}
                         initialTeams={initialTeams}
