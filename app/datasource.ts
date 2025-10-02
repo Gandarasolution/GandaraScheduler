@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Employee, Groupe, Evenement} from './calendrier/types/index';
+import { Appointment, Employee, Groupe, Evenement, PaieItem} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -620,6 +620,234 @@ export const Evenements: Evenement[] = [
     }
 ];
 
+import iconesAbsences from './calendrier/image/Icones/Paie/Absence.svg'
+export const paieitems = <PaieItem[]>([
+    {
+      id: 1,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Repas.svg",
+      code: "38",
+      libelle: "Repas St Claude",
+      actf: "Internes",
+      categorie: "Internes"
+    },
+    {
+      id: 2,
+      verrou: true,
+      image: iconesAbsences.src,
+      code: "48",
+      libelle: "Absence (en Jour)",
+      actf: "Internes",
+      categorie: "Internes"
+    },
+    {
+      id: 3,
+      verrou: false,
+      image: iconesAbsences.src,
+      code: "19",
+      libelle: "Accident travail",
+      actf: "Absences - Indemnités",
+      categorie: "Absences - Indemnités"
+    },
+    {
+      id: 4,
+      verrou: true,
+      image: "/app/calendrier/image/Icones/Paie/Prime.svg",
+      code: "1",
+      libelle: "Acompte",
+      actf: "Financier - Retenues",
+      categorie: "Financier - Retenues"
+    },
+    {
+      id: 5,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Prime.svg",
+      code: "7",
+      libelle: "Ancienne",
+      actf: "Financier - Primes",
+      categorie: "Financier - Primes"
+    },
+    {
+      id: 6,
+      verrou: true,
+      image: "/app/calendrier/image/Icones/Paie/Astreinte.svg",
+      code: "62",
+      libelle: "Astreinte - Heure sup 2h (h en heure)",
+      actf: "Internes",
+      categorie: "Internes"
+    },
+    {
+      id: 7,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      code: "23",
+      libelle: "Autorités",
+      actf: "Absences - Sans Soldes",
+      categorie: "Absences - Sans Soldes"
+    },
+    {
+      id: 8,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Absence.svg",
+      code: "8",
+      libelle: "Avance sur salaire",
+      actf: "Financier - Retenues",
+      categorie: "Financier - Retenues"
+    },
+    {
+      id: 9,
+      verrou: true,
+      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      code: "97",
+      libelle: "Boost",
+      actf: "Financier - Primes",
+      categorie: "Financier - Primes"
+    },
+    {
+      id: 10,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      code: "64",
+      libelle: "Chèque déjeuner",
+      actf: "Internes",
+      categorie: "Internes"
+    },
+    {
+      id: 11,
+      verrou: true,
+      image: "/app/calendrier/image/Icones/Paie/Absence.svg",
+      code: "52",
+      libelle: "Chômage partiel",
+      actf: "Absences - Indemnités",
+      categorie: "Absences - Indemnités"
+    },
+    {
+      id: 12,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Prime.svg",
+      code: "14",
+      libelle: "Comité d'entreprise 46 (heure)",
+      actf: "Extérieur Entreprise",
+      categorie: "Extérieur Entreprise"
+    },
+    {
+      id: 13,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Formation.svg",
+      code: "31",
+      libelle: "Congé de fractionnement",
+      actf: "Absences - Indemnités",
+      categorie: "Absences - Indemnités"
+    },
+    {
+      id: 14,
+      verrou: true,
+      image: "/app/calendrier/image/Icones/Paie/CongesPayes.svg",
+      code: "21",
+      libelle: "Congé parental",
+      actf: "Absences - Indemnités",
+      categorie: "Absences - Indemnités"
+    },
+    {
+      id: 15,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/CongesPayes.svg",
+      code: "22",
+      libelle: "Congés payés",
+      actf: "Absences - Indemnités",
+      categorie: "Absences - Indemnités"
+    },
+    {
+      id: 16,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/CongesPayes.svg",
+      code: "32",
+      libelle: "Congés solidaire",
+      actf: "Absences - Indemnités",
+      categorie: "Absences - Indemnités"
+    },
+    {
+      id: 17,
+      verrou: true,
+      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      code: "44",
+      libelle: "Contra Four",
+      actf: "Internes",
+      categorie: "Internes"
+    },
+    {
+      id: 18,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      code: "43",
+      libelle: "Contra Froid",
+      actf: "Internes",
+      categorie: "Internes"
+    },
+    {
+      id: 19,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      code: "45",
+      libelle: "Contra Car",
+      actf: "Internes",
+      categorie: "Internes"
+    },
+    {
+      id: 20,
+      verrou: true,
+      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      code: "42",
+      libelle: "Dépannage",
+      actf: "Internes",
+      categorie: "Internes"
+    },
+    {
+      id: 21,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      code: "35",
+      libelle: "Divers",
+      actf: "Absences - Indemnités",
+      categorie: "Absences - Indemnités"
+    },
+    {
+      id: 22,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Prime.svg",
+      code: "5",
+      libelle: "Exceptionnelle",
+      actf: "Financier - Primes",
+      categorie: "Financier - Primes"
+    },
+    {
+      id: 23,
+      verrou: true,
+      image: "/app/calendrier/image/Icones/Paie/Absence.svg",
+      code: "57",
+      libelle: "Finit / Formation entreprise",
+      actf: "Absences - Indemnités",
+      categorie: "Absences - Indemnités"
+    },
+    {
+      id: 24,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Formation.svg",
+      code: "13",
+      libelle: "Formation (en heure)",
+      actf: "Extérieur Entreprise",
+      categorie: "Extérieur Entreprise"
+    },
+    {
+      id: 25,
+      verrou: false,
+      image: "/app/calendrier/image/Icones/Paie/Formation.svg",
+      code: "70",
+      libelle: "Formation - Temps déplacement",
+      actf: "Extérieur Entreprise",
+      categorie: "Extérieur Entreprise"
+    }
+  ]);
 
 
 // ===== GÉNÉRATEUR DE RENDEZ-VOUS =====

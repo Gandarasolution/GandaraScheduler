@@ -146,42 +146,6 @@ export default function HomePage() {
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const events = useRef<Evenement[]>(Evenements);
   const [filteredChantiers, setFilteredChantiers] = useState<ChantierEvent[]>(Evenements.filter(e => e.type === 'Chantier') as ChantierEvent[]);
-  const [paieItems, setPaieItems] = useState<PaieItem[]>([
-    {
-      id: 1,
-      verrou: false,
-      image: "/app/calendrier/image/Icones/Absences.png",
-      code: "ABS001",
-      libelle: "Absence (en jour)",
-      actf: "ABS",
-      categorie: "Absence"
-    },
-    {
-      id: 2,
-      verrou: true,
-      image: "/app/calendrier/image/Icones/briefcase-with-tick-inside.svg",
-      code: "REP001",
-      libelle: "Repas St Claude",
-      actf: "REP",
-      categorie: "Repas"
-    },
-    {
-      id: 3,
-      verrou: false,
-      code: "AST001",
-      libelle: "Astreinte",
-      actf: "AST",
-      categorie: "Astreinte"
-    },
-    {
-      id: 4,
-      verrou: false,
-      code: "AUT001",
-      libelle: "Autres",
-      actf: "AUT",
-      categorie: "Autres"
-    }
-  ]);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const employees = useRef<Employee[]>(initialEmployees);
@@ -206,6 +170,7 @@ export default function HomePage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState<string>('');
   
   // États pour le système de notifications (refactoré avec hook)
   const notifications = useNotifications();
@@ -1152,6 +1117,7 @@ export default function HomePage() {
     setSelectedAppointmentForm(appointment);
     setIsModalOpen(true);
   }, []);
+  
 
   const handleDivideAppointmentConfirm = useCallback(() => {
     setAlertTitle("Êtes-vous sûr de vouloir diviser ce rendez-vous ?");
@@ -1334,12 +1300,15 @@ export default function HomePage() {
               <path id="path8-1" d="m27.0194 9.0005a.99994 1 0 0 0 -1.0194.9999v7.9992a.99994 1 0 0 0 1.4959.86906l6.9989-3.9996a.99994 1 0 0 0 0-1.7381l-6.9989-3.9996a.99994 1 0 0 0 -.47649-.13085zm.98031 2.7243 3.9818 2.2752-3.9818 2.2752z" font-variant-ligatures="normal" font-variant-position="normal" font-variant-caps="normal" font-variant-numeric="normal" font-variant-alternates="normal" font-feature-settings="normal" text-indent="0" text-decoration-line="none" text-decoration-style="solid" text-decoration-color="#000000" text-transform="none" text-orientation="mixed" white-space="normal" shape-padding="0" mix-blend-mode="normal" solid-color="#000000"/>
               <path id="path845" d="m20.980645 29.0005a.99994 1 0 0 1 1.0194.9999v7.9992a.99994 1 0 0 1 -1.4959.86906l-6.9989-3.9996a.99994 1 0 0 1 0-1.7381l6.9989-3.9996a.99994 1 0 0 1 .47649-.13085zm-.98031 2.7243-3.9818 2.2752 3.9818 2.2752z" font-variant-ligatures="normal" font-variant-position="normal" font-variant-caps="normal" font-variant-numeric="normal" font-variant-alternates="normal" font-feature-settings="normal" text-indent="0" text-decoration-line="none" text-decoration-style="solid" text-decoration-color="#000000" text-transform="none" text-orientation="mixed" white-space="normal" shape-padding="0" mix-blend-mode="normal" solid-color="#000000"/>
              </svg>,
-            action: () => setRepeatAppointmentData({
-              numberCount: 1,
-              repeatCount: 1,
-              repeatInterval: 'day',
-              endDate: null,
-            })
+            action: () => {
+              setModalTitle("Répéter le rendez-vous");
+              setRepeatAppointmentData({
+                numberCount: 1,
+                repeatCount: 1,
+                repeatInterval: 'day',
+                endDate: null,
+              })
+            }
           },
           {
             label: 'Prolonger',
@@ -1354,6 +1323,7 @@ export default function HomePage() {
               </g>
             </svg>,  
             action: () => {
+              setModalTitle("Prolonger le rendez-vous");
               setExtendAppointmentData(new Date());
             } 
           },
@@ -2164,10 +2134,10 @@ export default function HomePage() {
                       chantiers={filteredChantiers} 
                       appointments={appointments.current}
                       containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
+                      onEditAppointment={handleOpenEditModal}
                     />
                   ) : (
                     <PaieTableFrame 
-                      paieItems={paieItems}
                     />
                   )}
                 </SelectedCellContext.Provider>
@@ -2192,12 +2162,10 @@ export default function HomePage() {
             setExtendAppointmentData(null);
           }}
           title={
-            !!repeatAppointmentData
-              ? "Répéter ce rendez-vous"
-              : extendAppointmentData
-              ? "Prolonger le rendez-vous"
-              : selectedAppointment
-              ? "Modifier le rendez-vous"
+            !!repeatAppointmentData ? "Répéter ce rendez-vous"
+            : extendAppointmentData ? "Prolonger le rendez-vous"
+            : selectedAppointment 
+              ? (selectedAppointment.id === 0 ? "Modification Évènement" : "Modifier le rendez-vous")
               : "Ajouter un rendez-vous"
           }
           whithoutCloseButton={true}
@@ -2389,6 +2357,7 @@ export default function HomePage() {
               appointment={selectedAppointmentForm as Appointment}
               event={events.current.find(e => e.id === selectedAppointmentForm?.EventId) as Evenement}
               initialEmployeeId={newAppointmentInfo?.employeeId || null}
+              isReducedVersion={selectedAppointment?.id === 0}
               employees={employees.current}
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
               isFullDay={isFullDay}

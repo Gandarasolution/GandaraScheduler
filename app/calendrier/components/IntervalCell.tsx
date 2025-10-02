@@ -313,12 +313,21 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
             isFullDay={isFullDay}
             includeWeekend={includeWeekend}
             event={events.find(et => et.id === app.EventId) as Evenement}
-            onDoubleClick={() => onAppointmentDoubleClick(app)}
+            onDoubleClick={() => {
+              onAppointmentDoubleClick(app)
+            }}
             onResize={(id, newStartDate, newEndDate, resizeDirection) => {
               onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
             }}
             handleContextMenu={handleContextMenu ?? (() => {})}
             isMobile={isMobile}
+            onClick={() => {
+              if (!isMobile) {
+                setSelectedAppointment(app);
+                setSelectedCell(null);
+              }
+            }}
+            isSelected={selectedAppointment?.id === app.id}
           />
         ))}
       {/* Affichage de la bulle d'info si besoin */}

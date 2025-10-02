@@ -46,12 +46,16 @@ interface AppointmentItemProps {
   employee: { id: number; name: string };
   /** Source d'appel du composant */
   source?: 'calendar' | 'demo';
+  /** Indique si le rendez-vous est sélectionné */
+  isSelected?: boolean;
+  /** Callback appelé lors du clic */
+  onClick?: () => void;
   /** Callback appelé lors du double-clic */
-  onDoubleClick: () => void;
+  onDoubleClick?: () => void;
   /** Callback appelé lors du redimensionnement */
-  onResize: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
+  onResize?: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
   /** Callback appelé lors du clic droit (menu contextuel) */
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
 }
 
 /**
@@ -80,6 +84,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   employee,
   includeWeekend,
   source = 'calendar',
+  isSelected,
+  onClick,
   onDoubleClick,
   onResize,
   handleContextMenu,
@@ -95,15 +101,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
   
-  // if (appointment.id > 10000) {
-  //   console.log("appointment", appointment);
-  //   console.log("event", event);
-  // }
-
-  // Contextes pour la sélection
-  const { selectedCell, setSelectedCell } = useSelectedCell();
-  const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
-  const isSelected = selectedAppointment?.id === appointment.id;
 
   // Largeur d'un intervalle selon le type de rendez-vous
   const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
@@ -321,10 +318,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     }
    
     if (isResizingRight) {
-      onResize(appointment.id, dragStartRef.current, newEndDate, 'right');
+      onResize && onResize(appointment.id, dragStartRef.current, newEndDate, 'right');
     }
     if (isResizingLeft) {
-      onResize(appointment.id, dragStartRef.current, newEndDate, 'left');
+      onResize && onResize(appointment.id, dragStartRef.current, newEndDate, 'left');
     }
     
     setIsResizingLeft(false);
@@ -360,16 +357,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       ref={(node) => { if (node && source === 'calendar') drag(node); }} // Référence pour le drag & drop
       onClick={(e) => {
         e.stopPropagation();
-        if (!isMobile) {
-          setSelectedAppointment(appointment);
-          setSelectedCell(null);
-        }
+        onClick && onClick();
       }}
       onDoubleClick={(e) => {
         e.stopPropagation();
-        if (! isMobile) {
-          onDoubleClick();
-        }
+        onDoubleClick && onDoubleClick();
       }}
       onContextMenu={(e) => {
         // Calculer la cellule sous la souris lors du clic droit
@@ -418,7 +410,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           date: new Date(targetDate)
         };
         
-        handleContextMenu(e, 'appointment', appointment, cellUnderMouse);
+        handleContextMenu && handleContextMenu(e, 'appointment', appointment, cellUnderMouse);
       }}
       onMouseDown={handleDragStart}
       onMouseEnter={() => setIsHovered(true)}
@@ -428,7 +420,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
         transition-all z-20 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
-        ${isSelected ? 'ring-2 ring-blue-500' : ''}
+        ${source === 'calendar' && isSelected ? 'ring-2 ring-blue-500' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
         hover:shadow-xl

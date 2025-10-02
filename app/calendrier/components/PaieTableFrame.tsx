@@ -14,6 +14,7 @@
 import React, {useMemo, useState } from 'react';
 import FlexibleFrame from './FlexibleFrame';
 import { PaieItem } from '../types';
+import { paieitems } from '../../datasource';
 
 /**
  * Props du composant PaieTableFrame
@@ -21,7 +22,6 @@ import { PaieItem } from '../types';
 interface PaieTableFrameProps {
   className?: string;
   style?: React.CSSProperties;
-  paieItems: PaieItem[];
 }
 
 /**
@@ -30,14 +30,14 @@ interface PaieTableFrameProps {
 const PaieTableFrame: React.FC<PaieTableFrameProps> = ({
   className = '',
   style,
-  paieItems,
 }) => {
 
   const containerWidth = useMemo(() => {
     return typeof window !== 'undefined' ? window.innerWidth - 85 : 1200;
   },[window.innerWidth]);
 
-  console.log(containerWidth);
+  const [paieItems, setPaieItems] = useState<PaieItem[]>(paieitems);
+
   // État pour gérer le tri
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
@@ -284,29 +284,7 @@ const PaieTableFrame: React.FC<PaieTableFrameProps> = ({
                 />
               </svg>
             ) : (
-              <svg 
-                width="20" 
-                height="20" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-green-600"
-              >
-                <path 
-                  d="M18 11H6C5.45 11 5 11.45 5 12V20C5 20.55 5.45 21 6 21H18C18.55 21 19 20.55 19 20V12C19 11.45 18.55 11 18 11Z" 
-                  stroke="currentColor" 
-                  strokeWidth="2"
-                  fill="currentColor"
-                />
-                <path 
-                  d="M15 7C15 5.34 13.66 4 12 4C10.34 4 9 5.34 9 7" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
+              <></>
             )}
           </div>
         );
@@ -319,19 +297,6 @@ const PaieTableFrame: React.FC<PaieTableFrameProps> = ({
           );
         }
         return <span className="text-gray-400">-</span>;
-      case 'categorie':
-        const badgeColor = value === 'Absence' ? 'bg-red-100 text-red-800' 
-                         : value === 'Repas' ? 'bg-blue-100 text-blue-800'
-                         : value === 'Astreinte' ? 'bg-orange-100 text-orange-800'
-                         : value === 'Autres' ? 'bg-gray-100 text-gray-800'
-                         : 'bg-purple-100 text-purple-800';
-        return (
-          <div className="flex items-center justify-center gap-1 w-full h-full">
-            <span className={`inline-flex w-[70px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium poppins ${badgeColor}`}>
-              {value}
-            </span>
-          </div>
-        );
       default:
         return (
           <div className='flex items-center justify-start w-full h-full'>

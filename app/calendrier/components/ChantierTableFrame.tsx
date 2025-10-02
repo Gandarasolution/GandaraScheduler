@@ -13,8 +13,11 @@
 "use client";
 import React, { useMemo, useState, useCallback } from 'react';
 import FlexibleFrame from './FlexibleFrame';
+import AppointmentItem from './AppointmentItem';
 import { ChantierEvent, Appointment } from '../types';
 import { HOURS_PER_DAY } from '../utils/constants';
+import { addHours } from 'date-fns';
+import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
 
 /**
  * Props du composant ChantierTableFrame
@@ -25,6 +28,7 @@ interface ChantierTableFrameProps {
   chantiers: ChantierEvent[];
   appointments: Appointment[]; // Liste des rendez-vous pour les calculs
   containerWidth?: number; // Largeur du conteneur en pixels
+  onEditAppointment: (appointment: Appointment) => void;
 }
 
 /**
@@ -35,9 +39,10 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   style,
   chantiers,
   appointments,
-  containerWidth
+  onEditAppointment
 }) => {
   
+  const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
   // État pour gérer le tri
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
@@ -46,7 +51,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
     key: null,
     direction: 'asc'
   });
-
+  
   /**
    * Calcule la durée planifiée future (DPF) pour un chantier donné
    * Basé sur les rendez-vous à partir de la date actuelle et ceux qui chevauchent
@@ -249,9 +254,9 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
         { key: 'HR', label: 'Heures Réalisées' },
         { key: 'SH', label: 'Solde Heure' },
         { key: 'DPF', label: 'Durée Planifiée Future' },
-        { key: 'RPF', label: 'Réalisé + Planif Future' },
-        { key: 'AP', label: 'Avancement prévisionnel' },
-        { key: 'SP', label: 'Solde Prévisionnel' },
+        { key: 'RPF', label: 'Réalisé + Future' },
+        { key: 'AP', label: 'Avanc. Prév.' },
+        { key: 'SP', label: 'Solde Prév.' },
       ]
     }
   ], []);
@@ -355,14 +360,14 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
     
     // Largeurs fixes pour les colonnes adaptatives
     const maxLimits: { [key: string]: number } = {
-      'libelle': 296,
-      'chefChantier': 140,
+      'libelle': 306,
+      'chefChantier': 145,
       'chargeAffaire': 150,
       'etat': 108,
       'dateOS': 105,
       'dateFin': 105,
       'identifiant': 120,
-      'image': 80,
+      'image': 65,
     };
 
     return attributeLabels.map((label, colIndex) => {
@@ -384,7 +389,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   }, [calculateColumnWidths]);
 
   // Rendu des valeurs d'attributs avec styles appropriés
-  const renderAttributeValue = (value: string | undefined, attributeKey: keyof ChantierEvent['attributs'] | 'image') => {
+  const renderAttributeValue = (value: string | undefined, attributeKey: keyof ChantierEvent['attributs'] | 'image', eventId?: number) => {
     if (!value) return <span className="text-gray-400">-</span>;
     
     switch (attributeKey) {
@@ -399,11 +404,21 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
           </span>
         );
       case 'image':
-        if (value && typeof value === 'string') {
+        if (value && typeof value === 'string' && eventId !== undefined) {
           return (
-            <div className="flex items-center justify-center w-10 h-10">
-              <img src={value} alt="Chantier" className="w-8 h-8" />
-            </div>
+            <AppointmentItem
+              appointment={{ id: 0, description: '', type: 'chantier', EventId: eventId, startDate: new Date(), endDate: addHours(new Date(), 12), employeeId: 0, top: 0 }}
+              isFullDay={false}
+              isMobile={false}
+              event={chantiers.find(c => c.id === eventId) as ChantierEvent}
+              employee={{ id: 0, name: '' }} // Placeholder, adapter selon le contexte
+              source='demo'
+              onDoubleClick={() => {
+                const newAppointment: Appointment = { id: 0, description: '', type: 'chantier', EventId: eventId, startDate: new Date(), endDate: addHours(new Date(), 12), employeeId: 0};
+                setSelectedAppointment(newAppointment);
+                onEditAppointment(newAppointment);
+              }}
+            />
           );
         }
         return <span className="text-gray-400">-</span>;
@@ -467,7 +482,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   };
 
   return (
-        <FlexibleFrame
+      <FlexibleFrame
           groups={groups}
           items={attributeLabels}
           mainScrollRef={mainScrollRef}
@@ -536,7 +551,7 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
               return (
                 <div
                   key={`${chantier.id}-${attributeKey}`}
-                  className="chantier-cell px-3 py-2 border-r border-b border-gray-100 bg-white text-sm hover:bg-gray-50 transition-colors"
+                  className="chantier-cell px-3 py-2 border-r border-b border-gray-100 bg-white text-sm transition-colors"
                   style={{ 
                     height: '58px',
                     width: `${columnWidth}px`,
@@ -546,14 +561,14 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}
-                  title={`${attributeLabel}: ${value || 'N/A'}`}
+                  title={`${attributeLabel}: ${value || 'N/A'} - Cliquer pour créer un RDV`}
                 >
-                  {renderAttributeValue(value, attributeKey as keyof ChantierEvent['attributs'] | 'image')}
+                  {renderAttributeValue(value, attributeKey as keyof ChantierEvent['attributs'] | 'image', chantier.id)}
                 </div>
               );
             });
           })}
-        </FlexibleFrame>
+      </FlexibleFrame>
   );
 };
 
