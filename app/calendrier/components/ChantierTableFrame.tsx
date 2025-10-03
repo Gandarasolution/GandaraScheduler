@@ -5,9 +5,22 @@
  * - Les groupes représentent les grandes catégories (Informations générales, Analyse chantier)
  * - Les colonnes représentent les attributs (code, identifiant, état, etc.)
  * 
+ * FONCTIONNALITÉ DE SURLIGNAGE EN "L" :
+ * - Surlignage visuel des cellules qui forment un "L" par rapport à la cellule survolée
+ * - Ligne horizontale : cellules de la même ligne ET colonnes avant la cellule survolée
+ * - Ligne verticale : cellules de la même colonne ET lignes avant la cellule survolée  
+ * - Intersection : cellules qui sont à la fois avant en ligne ET en colonne
+ * - Fonctionne avec tous les filtres et tris appliqués
+ * - Légende dynamique avec informations de position
+ * 
+ * FONCTIONS UTILITAIRES :
+ * - isChantierBeforeHovered(): vérifie si un chantier est avant le survolé
+ * - getChantierIndex(): obtient l'index d'un chantier dans la liste triée
+ * - getCellPositionClasses(): détermine les classes CSS pour l'effet "L"
+ * 
  * @component ChantierTableFrame
  * @author Gandara Solutions
- * @version 1.0.0
+ * @version 2.0.0 - Ajout du système de surlignage en "L"
  */
 
 "use client";
@@ -51,6 +64,8 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
     key: null,
     direction: 'asc'
   });
+  const [chantierHoveredId, setChantierHoveredId] = useState<number | null>(null);
+  const [columnHoveredKey, setColumnHoveredKey] = useState<string | null>(null);
   
   /**
    * Calcule la durée planifiée future (DPF) pour un chantier donné
@@ -210,6 +225,37 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
     return sorted;
   }, [chantiers, sortConfig, calculateDPF, calculateRPF, calculateAP, calculateSP]);
 
+  /**
+   * Fonction pour obtenir l'index d'un chantier dans la liste triée actuelle
+   * @param chantierId - ID du chantier
+   * @returns number - Index du chantier dans la liste triée (-1 si non trouvé)
+   */
+  const getChantierIndex = useCallback((chantierId: number): number => {
+    return sortedChantiers.findIndex(c => c && c.id === chantierId);
+  }, [sortedChantiers]);
+
+  /**
+   * Fonction pour vérifier si un chantier est placé AVANT le chantier survolé dans la liste triée
+   * @param currentChantierId - ID du chantier à vérifier
+   * @param hoveredChantierId - ID du chantier survolé (référence)
+   * @returns boolean - true si le chantier courant est avant le chantier survolé
+   */
+  const isChantierBeforeHovered = useCallback((currentChantierId: number, hoveredChantierId: number | null): boolean => {
+    if (!hoveredChantierId || currentChantierId === hoveredChantierId) return false;
+    
+    const currentIndex = getChantierIndex(currentChantierId);
+    const hoveredIndex = getChantierIndex(hoveredChantierId);
+    
+    // Si l'un des chantiers n'est pas trouvé, ne pas surligner
+    if (currentIndex === -1 || hoveredIndex === -1) return false;
+    
+    // Le chantier courant est avant le chantier survolé si son index est inférieur
+    return currentIndex < hoveredIndex;
+  }, [getChantierIndex]);
+
+
+
+
   // Fonction pour gérer le clic sur une en-tête de colonne
   const handleSort = (attributeKey: string) => {
     setSortConfig(prevConfig => {
@@ -283,6 +329,40 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
       category.attributes.map(attr => attr.key)
     ) as (keyof ChantierEvent['attributs'] | 'image')[] // Include 'image' as possible key
   , [categoriesStructure]);
+
+  /**
+   * Fonction pour obtenir la classe CSS d'une cellule selon sa position par rapport à la cellule survolée
+   * Crée un effet de "L" en surlignant uniquement les cellules qui sont AVANT la cellule survolée
+   * @param chantierId - ID du chantier
+   * @param columnKey - Clé de la colonne (attribut)
+   * @param columnIndex - Index de la colonne dans le tableau
+   * @returns string - Classes CSS à appliquer
+   */
+  const getCellPositionClasses = useCallback((chantierId: number, columnKey: string, columnIndex: number): string => {
+    if (!chantierHoveredId || !columnHoveredKey) {
+      return 'bg-white'; // Style normal quand rien n'est survolé
+    }
+
+    // Trouver l'index de la colonne survolée
+    const hoveredColumnIndex = attributeKeys.findIndex(key => key === columnHoveredKey);
+    if (hoveredColumnIndex === -1) return 'bg-white';
+
+    const isCurrentRowBeforeHovered = isChantierBeforeHovered(chantierId, chantierHoveredId);
+    const isCurrentColumnBeforeHovered = columnIndex < hoveredColumnIndex;
+    const isSameRow = chantierId === chantierHoveredId;
+    const isSameColumn = columnKey === columnHoveredKey;
+
+    // Effet "L" : surligner seulement les cellules qui forment un L avant la cellule survolée
+    if (isSameRow && isCurrentColumnBeforeHovered) {
+      // Ligne horizontale du L : même ligne (chantier) ET colonne avant
+      return 'bg-[#e7f4f2] ';
+    } else if (isSameColumn && isCurrentRowBeforeHovered) {
+      // Ligne verticale du L : même colonne ET ligne avant
+      return 'bg-[#e7f4f2]';
+    }
+    
+    return 'bg-white'; // Cellules non incluses dans le L
+  }, [chantierHoveredId, columnHoveredKey, isChantierBeforeHovered, attributeKeys]);
 
   const mainScrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -399,9 +479,11 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
                          : value === 'Terminé' ? 'bg-gray-100 text-gray-800'
                          : 'bg-yellow-100 text-yellow-800';
         return (
-          <span className={`inline-flex w-[80px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium poppins ${badgeColor}`}>
-            {value}
-          </span>
+          <div className='flex items-center w-full h-full'>
+            <span className={`inline-flex w-[80px] h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium poppins ${badgeColor}`}>
+              {value}
+            </span>
+          </div>
         );
       case 'image':
         if (value && typeof value === 'string' && eventId !== undefined) {
@@ -482,93 +564,107 @@ const ChantierTableFrame: React.FC<ChantierTableFrameProps> = ({
   };
 
   return (
-      <FlexibleFrame
-          groups={groups}
-          items={attributeLabels}
-          mainScrollRef={mainScrollRef}
-          onScroll={handleScroll}
-          className="chantier-timeline-frame h-full pl-7 overflow-x-hidden"
-          contentClassName='overflow-x-hidden scroll-hidden'
-          useAutoCells={false}
-          customGridColumns={gridTemplateColumns}
-          customItemHeaders={
-            // En-têtes d'items avec largeurs calculées et fonctionnalité de tri
-            attributeLabels.map((label, index) => {
-              const attributeKey = attributeKeys[index];
-              const isActive = sortConfig.key === attributeKey;
-              const direction = isActive ? sortConfig.direction : null;
-              
-              return (
-                <div
-                  key={`header-${index}`}
-                  className="flex flex-col justify-center border-b border-r border-gray-300 text-center text-sm text-gray-700 p-2 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
-                  style={{
-                    width: `${calculateColumnWidths[index]}px`,
-                    height: '56px',
-                    minWidth: `${calculateColumnWidths[index]}px`,
-                    maxWidth: `${calculateColumnWidths[index]}px`
-                  }}
-                  onClick={() => handleSort(attributeKey)}
-                  title={`Cliquer pour trier par ${label}`}
-                >
-                  <div className="flex flex-col justify-center items-center h-full px-2">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="leading-3 break-words text-center">
-                        {label}
-                      </span>
-                      {/* Indicateur de tri */}
-                      <div className="flex flex-col items-center ml-1">
-                        {!isActive && (
-                          <div className="flex flex-col">
-                            <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[4px] border-l-transparent border-r-transparent border-b-gray-300 mb-[1px]"></div>
-                            <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-l-transparent border-r-transparent border-t-gray-300"></div>
-                          </div>
-                        )}
-                        {isActive && direction === 'asc' && (
-                          <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[4px] border-l-transparent border-r-transparent border-b-blue-600"></div>
-                        )}
-                        {isActive && direction === 'desc' && (
-                          <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-l-transparent border-r-transparent border-t-blue-600"></div>
-                        )}
+    <FlexibleFrame
+      groups={groups}
+      items={attributeLabels}
+      mainScrollRef={mainScrollRef}
+      onScroll={handleScroll}
+      className="chantier-timeline-frame h-full pl-7 overflow-x-hidden"
+      contentClassName='overflow-x-hidden scroll-hidden'
+      useAutoCells={false}
+      customGridColumns={gridTemplateColumns}
+      customItemHeaders={
+        // En-têtes d'items avec largeurs calculées et fonctionnalité de tri
+        attributeLabels.map((label, index) => {
+          const attributeKey = attributeKeys[index];
+          const isActive = sortConfig.key === attributeKey;
+          const direction = isActive ? sortConfig.direction : null;
+          
+          return (
+            <div
+              key={`header-${index}`}
+              className="flex flex-col justify-center border-b border-r border-gray-300 text-center text-sm text-gray-700 p-2 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+              style={{
+                width: `${calculateColumnWidths[index]}px`,
+                height: '56px',
+                minWidth: `${calculateColumnWidths[index]}px`,
+                maxWidth: `${calculateColumnWidths[index]}px`
+              }}
+              onClick={() => handleSort(attributeKey)}
+              title={`Cliquer pour trier par ${label}`}
+            >
+              <div className="flex flex-col justify-center items-center h-full px-2">
+                <div className="flex items-center justify-center gap-1">
+                  <span className="leading-3 break-words text-center">
+                    {label}
+                  </span>
+                  {/* Indicateur de tri */}
+                  <div className="flex flex-col items-center ml-1">
+                    {!isActive && (
+                      <div className="flex flex-col">
+                        <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[4px] border-l-transparent border-r-transparent border-b-gray-300 mb-[1px]"></div>
+                        <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-l-transparent border-r-transparent border-t-gray-300"></div>
                       </div>
-                    </div>
+                    )}
+                    {isActive && direction === 'asc' && (
+                      <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[4px] border-l-transparent border-r-transparent border-b-blue-600"></div>
+                    )}
+                    {isActive && direction === 'desc' && (
+                      <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-l-transparent border-r-transparent border-t-blue-600"></div>
+                    )}
                   </div>
                 </div>
-              );
-            })
-          }
-        >
-          {/* Contenu des chantiers avec largeurs calculées */}
-          {sortedChantiers
-            .filter(chantier => chantier && chantier.attributs) // Filtrer les éléments invalides
-            .flatMap((chantier, rowIndex) => {
-            const chantierByCategories = getChantierValuesByCategory(chantier);
-            const allValues = chantierByCategories.flatMap(cat => cat.values);
+              </div>
+            </div>
+          );
+        })
+      }
+    >
+      {/* Contenu des chantiers avec largeurs calculées */}
+      {sortedChantiers
+        .filter(chantier => chantier && chantier.attributs) // Filtrer les éléments invalides
+        .flatMap((chantier, rowIndex) => {
+        const chantierByCategories = getChantierValuesByCategory(chantier);
+        const allValues = chantierByCategories.flatMap(cat => cat.values);
+        
+        return allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
+          const columnWidth = calculateColumnWidths[valueIndex] || 150;
+          
+          // Ajouter un highlight spécial pour la colonne survolée du chantier survolé
+          const isExactHoveredCell = chantierHoveredId === chantier.id && columnHoveredKey === attributeKey;
+          const finalClasses = isExactHoveredCell 
+            ? 'bg-[#e7f4f2] border-[#4CAF50]' 
+            : getCellPositionClasses(chantier.id, attributeKey, valueIndex);;
             
-            return allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
-              const columnWidth = calculateColumnWidths[valueIndex] || 150;
-                
-              return (
-                <div
-                  key={`${chantier.id}-${attributeKey}`}
-                  className="chantier-cell px-3 py-2 border-r border-b border-gray-100 bg-white text-sm transition-colors"
-                  style={{ 
-                    height: '58px',
-                    width: `${columnWidth}px`,
-                    minWidth: `${columnWidth}px`,
-                    maxWidth: `${columnWidth}px`,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                  title={`${attributeLabel}: ${value || 'N/A'} - Cliquer pour créer un RDV`}
-                >
-                  {renderAttributeValue(value, attributeKey as keyof ChantierEvent['attributs'] | 'image', chantier.id)}
-                </div>
-              );
-            });
-          })}
-      </FlexibleFrame>
+          return (
+            <div
+              key={`${chantier.id}-${attributeKey}`}
+              className={`chantier-cell px-3 py-2 border-r border-b border-gray-300 text-sm transition-all duration-200 ${finalClasses}`}
+              style={{ 
+                height: '58px',
+                width: `${columnWidth}px`,
+                minWidth: `${columnWidth}px`,
+                maxWidth: `${columnWidth}px`,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+              title={`${attributeLabel}: ${value || '-'}`}
+              onMouseEnter={() => {
+                setChantierHoveredId(chantier.id);
+                setColumnHoveredKey(attributeKey);
+              }}
+              onMouseLeave={() => {
+                setChantierHoveredId(null);
+                setColumnHoveredKey(null);
+              }}
+            >
+              {renderAttributeValue(value, attributeKey as keyof ChantierEvent['attributs'] | 'image', chantier.id)}
+            </div>
+          );
+        });
+      })}
+    </FlexibleFrame>
   );
 };
 
