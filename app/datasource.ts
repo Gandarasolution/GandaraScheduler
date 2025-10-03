@@ -621,11 +621,16 @@ export const Evenements: Evenement[] = [
 ];
 
 import iconesAbsences from './calendrier/image/Icones/Paie/Absence.svg'
+import iconesRepas from './calendrier/image/Icones/Paie/Repas.svg'
+import iconesPrime from './calendrier/image/Icones/Paie/Prime.svg'
+import iconesHeurSup from './calendrier/image/Icones/Paie/HeuresSupplementaires.svg'
+import iconesCongesPayes from './calendrier/image/Icones/Paie/CongesPayes.svg'
+
 export const paieitems = <PaieItem[]>([
     {
       id: 1,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Repas.svg",
+      image: iconesRepas.src,
       code: "38",
       libelle: "Repas St Claude",
       actf: "Internes",
@@ -652,7 +657,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 4,
       verrou: true,
-      image: "/app/calendrier/image/Icones/Paie/Prime.svg",
+      image: iconesPrime.src,
       code: "1",
       libelle: "Acompte",
       actf: "Financier - Retenues",
@@ -661,7 +666,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 5,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Prime.svg",
+      image: iconesPrime.src,
       code: "7",
       libelle: "Ancienne",
       actf: "Financier - Primes",
@@ -670,7 +675,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 6,
       verrou: true,
-      image: "/app/calendrier/image/Icones/Paie/Astreinte.svg",
+      image: iconesHeurSup.src,
       code: "62",
       libelle: "Astreinte - Heure sup 2h (h en heure)",
       actf: "Internes",
@@ -679,7 +684,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 7,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      image: iconesAbsences.src,
       code: "23",
       libelle: "Autorités",
       actf: "Absences - Sans Soldes",
@@ -688,7 +693,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 8,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Absence.svg",
+      image: iconesPrime.src,
       code: "8",
       libelle: "Avance sur salaire",
       actf: "Financier - Retenues",
@@ -697,7 +702,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 9,
       verrou: true,
-      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      image: iconesPrime.src,
       code: "97",
       libelle: "Boost",
       actf: "Financier - Primes",
@@ -706,7 +711,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 10,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      image: iconesRepas.src,
       code: "64",
       libelle: "Chèque déjeuner",
       actf: "Internes",
@@ -715,7 +720,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 11,
       verrou: true,
-      image: "/app/calendrier/image/Icones/Paie/Absence.svg",
+      image: iconesAbsences.src,
       code: "52",
       libelle: "Chômage partiel",
       actf: "Absences - Indemnités",
@@ -724,7 +729,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 12,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Prime.svg",
+      image: iconesPrime.src,
       code: "14",
       libelle: "Comité d'entreprise 46 (heure)",
       actf: "Extérieur Entreprise",
@@ -733,7 +738,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 13,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Formation.svg",
+      image: iconesAbsences.src,
       code: "31",
       libelle: "Congé de fractionnement",
       actf: "Absences - Indemnités",
@@ -742,7 +747,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 14,
       verrou: true,
-      image: "/app/calendrier/image/Icones/Paie/CongesPayes.svg",
+      image: iconesCongesPayes.src,
       code: "21",
       libelle: "Congé parental",
       actf: "Absences - Indemnités",
@@ -751,7 +756,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 15,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/CongesPayes.svg",
+      image: iconesCongesPayes.src,
       code: "22",
       libelle: "Congés payés",
       actf: "Absences - Indemnités",
@@ -760,7 +765,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 16,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/CongesPayes.svg",
+      image: iconesCongesPayes.src,
       code: "32",
       libelle: "Congés solidaire",
       actf: "Absences - Indemnités",
@@ -769,7 +774,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 17,
       verrou: true,
-      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      image: iconesAbsences.src,
       code: "44",
       libelle: "Contra Four",
       actf: "Internes",
@@ -778,7 +783,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 18,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      image: iconesAbsences.src,
       code: "43",
       libelle: "Contra Froid",
       actf: "Internes",
@@ -787,7 +792,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 19,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      image: iconesAbsences.src,
       code: "45",
       libelle: "Contra Car",
       actf: "Internes",
@@ -796,7 +801,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 20,
       verrou: true,
-      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      image: iconesHeurSup.src,
       code: "42",
       libelle: "Dépannage",
       actf: "Internes",
@@ -805,7 +810,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 21,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Autres.svg",
+      image: iconesAbsences.src,
       code: "35",
       libelle: "Divers",
       actf: "Absences - Indemnités",
@@ -814,7 +819,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 22,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Prime.svg",
+      image: iconesPrime.src,
       code: "5",
       libelle: "Exceptionnelle",
       actf: "Financier - Primes",
@@ -823,7 +828,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 23,
       verrou: true,
-      image: "/app/calendrier/image/Icones/Paie/Absence.svg",
+      image: iconesAbsences.src,
       code: "57",
       libelle: "Finit / Formation entreprise",
       actf: "Absences - Indemnités",
@@ -832,7 +837,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 24,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Formation.svg",
+      image: iconesAbsences.src,
       code: "13",
       libelle: "Formation (en heure)",
       actf: "Extérieur Entreprise",
@@ -841,7 +846,7 @@ export const paieitems = <PaieItem[]>([
     {
       id: 25,
       verrou: false,
-      image: "/app/calendrier/image/Icones/Paie/Formation.svg",
+      image: iconesAbsences.src,
       code: "70",
       libelle: "Formation - Temps déplacement",
       actf: "Extérieur Entreprise",
@@ -997,7 +1002,7 @@ export const drawerOptions = [
 ]
 
 
-export const images = [
+export const imagesÉvénement = [
   { id: 1, name: 'Pinceau peinture', image: brushPaint.src, category: 'Peinture' },
   { id: 2, name: 'Compas', image: caliper.src, category: 'Mesure' },
   { id: 3, name: 'Robinet', image: faucet.src, category: 'Plomberie' },

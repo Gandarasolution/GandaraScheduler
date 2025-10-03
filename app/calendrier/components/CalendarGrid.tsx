@@ -648,7 +648,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 style={{ marginBottom: MARGIN_BETWEEN_TEAMS }}
               >
                 <button
-                  className="flex justify-between items-center w-full px-4 py-2 rounded-t-2xl  focus:outline-none"
+                  className="flex justify-between items-center w-full px-4 py-2 rounded-t-2xl  focus:outline-none cursor-pointer"
                   onClick={() => toggleItem(item.id)}
                   type="button"
                 >

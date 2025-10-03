@@ -2177,14 +2177,14 @@ export default function HomePage() {
             >
               <div className="flex flex-col gap-4">
                 <span className="text-base underline">{'Rythme de répétition'}</span>
-                <div className="flex items-center gap-12">
+                <div className="flex items-center gap-7">
                   <label className="flex items-center gap-2 font-medium">
                     <span className="">{'Tous les'}</span>
                     <input
                       required
                       type="number"
                       min={1}
-                      className="border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[50px]  text-center"
+                      className="border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[70px]  text-center"
                       value={repeatAppointmentData.numberCount || 1}
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);

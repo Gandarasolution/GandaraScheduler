@@ -99,7 +99,7 @@ const Modal: React.FC<ModalProps> = ({
                     {!whithoutCloseButton && (
                         <button
                             onClick={onClose}
-                            className="ml-4 p-2 rounded-full hover:bg-gray-100 focus:bg-gray-200 transition group"
+                            className="cursor-pointer ml-4 p-2 rounded-full hover:bg-gray-100 focus:bg-gray-200 transition group"
                             aria-label="Fermer la fenêtre modale"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" className="bi bi-x text-gray-500 group-hover:text-red-500 transition" viewBox="0 0 16 16">

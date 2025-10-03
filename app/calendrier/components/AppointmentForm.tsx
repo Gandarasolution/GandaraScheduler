@@ -19,7 +19,7 @@ import React, { useState, memo, useMemo } from 'react';
 import {Appointment, Employee, HalfDayInterval, Evenement } from '../types';
 import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
 import { isHoliday, isWeekend } from '../utils/dates';
-import { images } from '@/app/datasource';
+import { imagesÉvénement } from '@/app/datasource';
 import CustomSelectWithImage from './CustomSelectWithImage';
 import AppointmentItem from './AppointmentItem';
 
@@ -169,6 +169,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
 
     const { name, value } = e.target;
+    if (!value) return;    
     const datePart = parseISO(value);
     let newDate: Date;
 
@@ -234,7 +235,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           <div className='flex item-start w-full sm:w-[68px]'>Icône</div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
             <CustomSelectWithImage
-              options={images}
+              options={imagesÉvénement}
               value={formDataEventType.image || ''}
               onChange={(value) => {setFormDataEventType(prev => ({ ...prev, image: value as string }))}}
               placeholder="Sélectionnez une icône"
