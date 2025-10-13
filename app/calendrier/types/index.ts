@@ -125,48 +125,23 @@ export interface ChantierEvent extends BaseEvent {
   client?: string;
 }
 
-export interface AbsenceEvent extends BaseEvent {
+// Interface commune pour les attributs partagés entre Absence et Autre
+interface CommonPaieAttributs extends BaseEvent {
+  verrou: string;
+  code: string;
+  actif: string;
+}
+
+export interface AbsenceEvent extends CommonPaieAttributs {
   type: "Absence";
 }
 
-export interface AutreEvent extends BaseEvent {
+export interface AutreEvent extends CommonPaieAttributs {
   type: "Autre";
 }
 
-export interface PaieEvent extends BaseEvent {
-  type: "Paie";
-  attributs: {
-    verrou: string;
-    code: string;
-    libelle: string;
-    actf: string;
-    categorie: string;
-  };
-}
 
-/**
- * Interface représentant un élément de configuration de paie
- * Ne hérite pas de BaseEvent car n'est pas lié aux rendez-vous
- * @interface PaieItem
- */
-export interface PaieItem {
-  /** Identifiant unique de l'élément de paie */
-  id: number;
-  /** État du verrou (true/false) */
-  verrou: boolean;
-  /** Image associée à l'élément (optionnel) */
-  image?: string;
-  /** Code de l'élément de paie */
-  code: string;
-  /** Libellé descriptif de l'élément */
-  libelle: string;
-  /** Code ACTF */
-  actf: string;
-  /** Catégorie de l'élément (Absence, Repas, Astreinte, Autres) */
-  categorie: string;
-}
-
-export type Evenement = ChantierEvent | AbsenceEvent | AutreEvent | PaieEvent;
+export type Evenement = ChantierEvent | AbsenceEvent | AutreEvent;
 
 /**
  * Interface représentant un rendez-vous/événement dans le calendrier

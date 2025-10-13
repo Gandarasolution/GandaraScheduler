@@ -1,7 +1,7 @@
 
 import { memo, useEffect, useState } from "react";
 import { CalendarConfig, DimensionType, Filter } from "../../types";
-import Modal from "../Modal";
+import Modal from "./Modal";
 
 // Modal de gestion des configurations
 type ConfigurationModalProps = {

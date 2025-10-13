@@ -1,5 +1,5 @@
 import { memo } from "react";
-import Modal from "../Modal";
+import Modal from "./Modal";
 
 // Modal d'alerte réutilisable
 type AlertModalProps = {

@@ -49,11 +49,10 @@ import {
   addMonths,
   addHours,
 } from "date-fns";
-import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent, PaieItem, Filter, FilterType, DimensionType} from "../types";
+import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent, Filter, FilterType, DimensionType} from "../types";
 import CalendarGrid from "../components/CalendarGrid";
-import ChantierTableFrame from "../components/ChantierTableFrame";
-import PaieTableFrame from "../components/PaieTableFrame";
-import Modal from "../components/Modal";
+import DataTableFrame from "../components/Table/DataTableFrame";
+import Modal from "../components/modals/Modal";
 import AppointmentForm from "../components/AppointmentForm";
 import SearchOverlay from "../components/modals/SearchOverlay";
 import NotificationsPanel from "../components/modals/Notificationspanel";
@@ -79,9 +78,6 @@ import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/fi
 // Imports des hooks personnalisés
 import {
   useNotifications,
-  useCalendarConfig,
-  useAppointmentHistory,
-  useInfiniteScroll
 } from "../hooks";
 
 // Imports des utilitaires
@@ -2130,14 +2126,20 @@ export default function HomePage() {
                       </div>
                     )
                   ) : viewType === 'chantier-table' ? (
-                    <ChantierTableFrame 
-                      chantiers={filteredChantiers} 
+                    <DataTableFrame 
+                      dataType="chantier"
+                      items={filteredChantiers} 
                       appointments={appointments.current}
+                      employees={employees.current}
                       containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
                       onEditAppointment={handleOpenEditModal}
                     />
                   ) : (
-                    <PaieTableFrame 
+                    <DataTableFrame 
+                      dataType="paie"
+                      items={events.current.filter(e => e.type === 'Absence' || e.type === 'Autre')}
+                      appointments={appointments.current}
+                      employees={employees.current}
                     />
                   )}
                 </SelectedCellContext.Provider>

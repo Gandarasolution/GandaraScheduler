@@ -9,12 +9,3 @@
 
 export { useNotifications } from './useNotifications';
 export type { Notification, NotificationsState } from './useNotifications';
-
-export { useCalendarConfig } from './useCalendarConfig';
-export type { CalendarConfigState } from './useCalendarConfig';
-
-export { useAppointmentHistory } from './useAppointmentHistory';
-export type { AppointmentHistoryState } from './useAppointmentHistory';
-
-export { useInfiniteScroll } from './useInfiniteScroll';
-export type { InfiniteScrollState } from './useInfiniteScroll';

@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Employee, Groupe, Evenement, PaieItem} from './calendrier/types/index';
+import { Appointment, Employee, Groupe, Evenement} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -517,7 +517,10 @@ export const Evenements: Evenement[] = [
       borderColor: '#16A34A',
       textColor: '#FFFFFF',
       defaultDescription: 'Congés payés',
-      category: 'Congés'
+      category: 'Congés',
+      verrou: 'false',
+      code: 'CP-2024',
+      actif: 'true',
     },
     { 
       id: 15, 
@@ -528,7 +531,10 @@ export const Evenements: Evenement[] = [
       borderColor: '#DC2626',
       textColor: '#FFFFFF',
       defaultDescription: 'Arrêt maladie',
-      category: 'Maladie'
+      category: 'Maladie',
+      verrou: 'false',
+      code: 'AM-2024',
+      actif: 'true',
     },
     { 
       id: 16, 
@@ -539,7 +545,10 @@ export const Evenements: Evenement[] = [
       borderColor: '#2563EB',
       textColor: '#FFFFFF',
       defaultDescription: 'Formation professionnelle',
-      category: 'Formation'
+      category: 'Formation',
+      verrou: 'false',
+      code: 'FOR-2024',
+      actif: 'true',
     },
     { 
       id: 17, 
@@ -550,7 +559,10 @@ export const Evenements: Evenement[] = [
       borderColor: '#7C3AED',
       textColor: '#FFFFFF',
       defaultDescription: 'Réduction du temps de travail',
-      category: 'RTT'
+      category: 'RTT',
+      verrou: 'false',
+      code: 'RTT-2024',
+      actif: 'true',
     },
     { 
       id: 18, 
@@ -561,7 +573,10 @@ export const Evenements: Evenement[] = [
       borderColor: '#D97706',
       textColor: '#FFFFFF',
       defaultDescription: 'Congé sans solde',
-      category: 'Congés'
+      category: 'Congés',
+      verrou: 'false',
+      code: 'CSS-2024',
+      actif: 'true',
     },
     { 
       id: 19, 
@@ -572,7 +587,10 @@ export const Evenements: Evenement[] = [
       borderColor: '#0891B2',
       textColor: '#FFFFFF',
       defaultDescription: 'Réunion d\'équipe',
-      category: 'Réunion'
+      category: 'Réunion',
+      verrou: 'false',
+      code: 'REU-2024',
+      actif: 'true',
     },
     { 
       id: 20, 
@@ -583,7 +601,10 @@ export const Evenements: Evenement[] = [
       borderColor: '#DB2777',
       textColor: '#FFFFFF',
       defaultDescription: 'Rendez-vous avec le client',
-      category: 'Commercial'
+      category: 'Commercial',
+      verrou: 'false',
+      code: 'RDC-2024',
+      actif: 'true',
     },
     { 
       id: 21, 
@@ -594,7 +615,10 @@ export const Evenements: Evenement[] = [
       type: 'Autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Visite technique sur site',
-      category: 'Technique'
+      category: 'Technique',
+      verrou: 'false',
+      code: 'VTS-2024',
+      actif: 'true',
     },
     { 
       id: 22, 
@@ -605,7 +629,10 @@ export const Evenements: Evenement[] = [
       type: 'Autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Réunion sécurité',
-      category: 'Sécurité'
+      category: 'Sécurité',
+      verrou: 'false',
+      code: 'RES-2024',
+      actif: 'true',
     },
     { 
       id: 23, 
@@ -616,243 +643,13 @@ export const Evenements: Evenement[] = [
       type: 'Autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Formation technique',
-      category: 'Formation'
+      category: 'Formation',
+      verrou: 'false',
+      code: 'FT-2024',
+      actif: 'true',
     }
 ];
 
-import iconesAbsences from './calendrier/image/Icones/Paie/Absence.svg'
-import iconesRepas from './calendrier/image/Icones/Paie/Repas.svg'
-import iconesPrime from './calendrier/image/Icones/Paie/Prime.svg'
-import iconesHeurSup from './calendrier/image/Icones/Paie/HeuresSupplementaires.svg'
-import iconesCongesPayes from './calendrier/image/Icones/Paie/CongesPayes.svg'
-
-export const paieitems = <PaieItem[]>([
-    {
-      id: 1,
-      verrou: false,
-      image: iconesRepas.src,
-      code: "38",
-      libelle: "Repas St Claude",
-      actf: "Internes",
-      categorie: "Internes"
-    },
-    {
-      id: 2,
-      verrou: true,
-      image: iconesAbsences.src,
-      code: "48",
-      libelle: "Absence (en Jour)",
-      actf: "Internes",
-      categorie: "Internes"
-    },
-    {
-      id: 3,
-      verrou: false,
-      image: iconesAbsences.src,
-      code: "19",
-      libelle: "Accident travail",
-      actf: "Absences - Indemnités",
-      categorie: "Absences - Indemnités"
-    },
-    {
-      id: 4,
-      verrou: true,
-      image: iconesPrime.src,
-      code: "1",
-      libelle: "Acompte",
-      actf: "Financier - Retenues",
-      categorie: "Financier - Retenues"
-    },
-    {
-      id: 5,
-      verrou: false,
-      image: iconesPrime.src,
-      code: "7",
-      libelle: "Ancienne",
-      actf: "Financier - Primes",
-      categorie: "Financier - Primes"
-    },
-    {
-      id: 6,
-      verrou: true,
-      image: iconesHeurSup.src,
-      code: "62",
-      libelle: "Astreinte - Heure sup 2h (h en heure)",
-      actf: "Internes",
-      categorie: "Internes"
-    },
-    {
-      id: 7,
-      verrou: false,
-      image: iconesAbsences.src,
-      code: "23",
-      libelle: "Autorités",
-      actf: "Absences - Sans Soldes",
-      categorie: "Absences - Sans Soldes"
-    },
-    {
-      id: 8,
-      verrou: false,
-      image: iconesPrime.src,
-      code: "8",
-      libelle: "Avance sur salaire",
-      actf: "Financier - Retenues",
-      categorie: "Financier - Retenues"
-    },
-    {
-      id: 9,
-      verrou: true,
-      image: iconesPrime.src,
-      code: "97",
-      libelle: "Boost",
-      actf: "Financier - Primes",
-      categorie: "Financier - Primes"
-    },
-    {
-      id: 10,
-      verrou: false,
-      image: iconesRepas.src,
-      code: "64",
-      libelle: "Chèque déjeuner",
-      actf: "Internes",
-      categorie: "Internes"
-    },
-    {
-      id: 11,
-      verrou: true,
-      image: iconesAbsences.src,
-      code: "52",
-      libelle: "Chômage partiel",
-      actf: "Absences - Indemnités",
-      categorie: "Absences - Indemnités"
-    },
-    {
-      id: 12,
-      verrou: false,
-      image: iconesPrime.src,
-      code: "14",
-      libelle: "Comité d'entreprise 46 (heure)",
-      actf: "Extérieur Entreprise",
-      categorie: "Extérieur Entreprise"
-    },
-    {
-      id: 13,
-      verrou: false,
-      image: iconesAbsences.src,
-      code: "31",
-      libelle: "Congé de fractionnement",
-      actf: "Absences - Indemnités",
-      categorie: "Absences - Indemnités"
-    },
-    {
-      id: 14,
-      verrou: true,
-      image: iconesCongesPayes.src,
-      code: "21",
-      libelle: "Congé parental",
-      actf: "Absences - Indemnités",
-      categorie: "Absences - Indemnités"
-    },
-    {
-      id: 15,
-      verrou: false,
-      image: iconesCongesPayes.src,
-      code: "22",
-      libelle: "Congés payés",
-      actf: "Absences - Indemnités",
-      categorie: "Absences - Indemnités"
-    },
-    {
-      id: 16,
-      verrou: false,
-      image: iconesCongesPayes.src,
-      code: "32",
-      libelle: "Congés solidaire",
-      actf: "Absences - Indemnités",
-      categorie: "Absences - Indemnités"
-    },
-    {
-      id: 17,
-      verrou: true,
-      image: iconesAbsences.src,
-      code: "44",
-      libelle: "Contra Four",
-      actf: "Internes",
-      categorie: "Internes"
-    },
-    {
-      id: 18,
-      verrou: false,
-      image: iconesAbsences.src,
-      code: "43",
-      libelle: "Contra Froid",
-      actf: "Internes",
-      categorie: "Internes"
-    },
-    {
-      id: 19,
-      verrou: false,
-      image: iconesAbsences.src,
-      code: "45",
-      libelle: "Contra Car",
-      actf: "Internes",
-      categorie: "Internes"
-    },
-    {
-      id: 20,
-      verrou: true,
-      image: iconesHeurSup.src,
-      code: "42",
-      libelle: "Dépannage",
-      actf: "Internes",
-      categorie: "Internes"
-    },
-    {
-      id: 21,
-      verrou: false,
-      image: iconesAbsences.src,
-      code: "35",
-      libelle: "Divers",
-      actf: "Absences - Indemnités",
-      categorie: "Absences - Indemnités"
-    },
-    {
-      id: 22,
-      verrou: false,
-      image: iconesPrime.src,
-      code: "5",
-      libelle: "Exceptionnelle",
-      actf: "Financier - Primes",
-      categorie: "Financier - Primes"
-    },
-    {
-      id: 23,
-      verrou: true,
-      image: iconesAbsences.src,
-      code: "57",
-      libelle: "Finit / Formation entreprise",
-      actf: "Absences - Indemnités",
-      categorie: "Absences - Indemnités"
-    },
-    {
-      id: 24,
-      verrou: false,
-      image: iconesAbsences.src,
-      code: "13",
-      libelle: "Formation (en heure)",
-      actf: "Extérieur Entreprise",
-      categorie: "Extérieur Entreprise"
-    },
-    {
-      id: 25,
-      verrou: false,
-      image: iconesAbsences.src,
-      code: "70",
-      libelle: "Formation - Temps déplacement",
-      actf: "Extérieur Entreprise",
-      categorie: "Extérieur Entreprise"
-    }
-  ]);
 
 
 // ===== GÉNÉRATEUR DE RENDEZ-VOUS =====

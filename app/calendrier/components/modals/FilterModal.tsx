@@ -1,5 +1,5 @@
 import { memo } from "react";
-import Modal from "../Modal";
+import Modal from "./Modal";
 
 // Modal de filtres pour les chantiers
 type FilterModalProps = {
