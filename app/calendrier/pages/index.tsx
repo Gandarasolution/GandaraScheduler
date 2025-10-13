@@ -71,7 +71,7 @@ import {
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
 import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, WINDOW_SIZE } from "../utils/constants";
-import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, isWeekend } from "../utils/dates";
+import { getWorkedDayIntervals, isWeekend } from "../utils/dates";
 import { CalendarConfig } from "../types";
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
 

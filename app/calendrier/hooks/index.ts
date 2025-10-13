@@ -7,5 +7,5 @@
  * @version 1.0.0
  */
 
-export { useNotifications } from './useNotifications';
-export type { Notification, NotificationsState } from './useNotifications';
+export { useNotifications } from './useNotifiactions';
+export type { Notification, NotificationsState } from './useNotifiactions';

@@ -18,7 +18,7 @@
 
 "use client";
 
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import FlexibleFrame from '../FlexibleFrame';
 import Modal from '../modals/Modal';
 import { ChantierEvent, AbsenceEvent, AutreEvent, Appointment, Employee } from '../../types';
