@@ -141,7 +141,7 @@ export default function HomePage() {
   const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const events = useRef<Evenement[]>(Evenements);
-  const [filteredChantiers, setFilteredChantiers] = useState<ChantierEvent[]>(Evenements.filter(e => e.type === 'Chantier') as ChantierEvent[]);
+  const [filteredEvent, setFilteredEvent] = useState<Evenement[]>(Evenements);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const employees = useRef<Employee[]>(initialEmployees);
@@ -504,7 +504,7 @@ export default function HomePage() {
       );
     }
     
-    setFilteredChantiers(filtered);
+    setFilteredEvent(filtered);
   }, [searchInput, activeFilters]);
 
   const handleResearch = useCallback(() => {
@@ -522,8 +522,13 @@ export default function HomePage() {
         // Utiliser la fonction de filtrage pour les chantiers
         applyFiltersToChantiers();
         break;
-      } 
-    }, [searchInput, viewType, applyFiltersToChantiers, searchUtils]);
+      
+      case "paie-table":
+        setFilteredEvent(events.current) 
+        break;
+
+    }
+  }, [searchInput, viewType, applyFiltersToChantiers, searchUtils]);
 
   // Fonction pour obtenir les valeurs uniques pour les filtres
   const getFilterOptions = useCallback(() => {
@@ -992,15 +997,21 @@ export default function HomePage() {
     [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, saveAppointmentState]
   );
 
+
+  const handleSaveEvent = useCallback((event: Evenement) => {    
+    events.current = events.current.map(e =>
+      e.id === event.id ? { ...e, ...event } : e
+    );
+
+    handleResearch(); // Met à jour la liste filtrée
+  }, [handleResearch]);
+
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback(
     (appointment: Appointment, eventUpdate: Evenement, includeAllNonWorkingDays: boolean) => {
 
+      handleSaveEvent(eventUpdate);
 
-      events.current = events.current.map(e =>
-        e.id === appointment.EventId ? { ...e, ...eventUpdate } : e
-      );
-      
       const days = getWorkedDayIntervals(
         appointment.startDate, 
         appointment.endDate,
@@ -1082,7 +1093,7 @@ export default function HomePage() {
       setIsModalOpen(false);
       setSelectedAppointment(null);
       setNewAppointmentInfo(null);
-    }, [handleResearch, createAppointment, isFullDay, nonWorkingDates, saveAppointmentState]);
+    }, [handleResearch, createAppointment, isFullDay, nonWorkingDates, saveAppointmentState, handleSaveEvent]);
 
 
   const handleDeleteAppointmentConfirm = useCallback(() => {
@@ -1571,6 +1582,9 @@ export default function HomePage() {
   useEffect(() => {
     if (viewType === 'chantier-table') {
       applyFiltersToChantiers();
+    }
+    if (viewType === 'paie-table') {
+      setFilteredEvent(events.current);
     }
   }, [activeFilters, applyFiltersToChantiers, viewType]);
 
@@ -2128,7 +2142,7 @@ export default function HomePage() {
                   ) : viewType === 'chantier-table' ? (
                     <DataTableFrame 
                       dataType="chantier"
-                      items={filteredChantiers} 
+                      items={filteredEvent} 
                       appointments={appointments.current}
                       employees={employees.current}
                       containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
@@ -2137,9 +2151,10 @@ export default function HomePage() {
                   ) : (
                     <DataTableFrame 
                       dataType="paie"
-                      items={events.current.filter(e => e.type === 'Absence' || e.type === 'Autre')}
+                      items={filteredEvent}
                       appointments={appointments.current}
                       employees={employees.current}
+                      onSave={handleSaveEvent}
                     />
                   )}
                 </SelectedCellContext.Provider>

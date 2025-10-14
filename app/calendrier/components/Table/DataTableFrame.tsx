@@ -18,11 +18,13 @@
 
 "use client";
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, memo } from 'react';
 import FlexibleFrame from '../FlexibleFrame';
 import Modal from '../modals/Modal';
-import { ChantierEvent, AbsenceEvent, AutreEvent, Appointment, Employee } from '../../types';
+import { ChantierEvent, AbsenceEvent, AutreEvent, Appointment, Employee, Evenement } from '../../types';
 import { useSelectedAppointment } from '../../context/SelectedAppointmentContext';
+import { imagesÉvénement } from '../../../datasource';
+import { processImageFile, compressExistingImage, validateImageFile, ImageData as ProcessedImageData } from '../../utils/imageCompressionUtils';
 
 // Import des constantes
 const HOURS_PER_DAY = 8;
@@ -46,9 +48,9 @@ type ItemType = ChantierEvent | AbsenceEvent | AutreEvent;
  * Interface pour les données d'image
  */
 interface ImageData {
-  src: string;
-  label: string;
-  description: string;
+  id: number;
+  image: string;
+  name: string;
   category?: string;
 }
 
@@ -100,15 +102,14 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
     if (!searchTerm.trim()) return images;
     
     return images.filter(image => 
-      image.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      image.description.toLowerCase().includes(searchTerm.toLowerCase())
+      image.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [images, searchTerm]);
 
   // Pagination
   const totalPages = Math.ceil(filteredImages.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedImages = filteredImages.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedImages = viewMode === 'grid' ? filteredImages.slice(startIndex, startIndex + itemsPerPage) : filteredImages;
 
   // Reset page quand on change le filtre
   React.useEffect(() => {
@@ -265,7 +266,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
       </div>
 
       {/* Contenu des images */}
-      <div className="mb-4 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+      <div className="mb-4 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 gap-4">
         {paginatedImages.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             {searchTerm ? 
@@ -274,42 +275,71 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
             }
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-4 gap-4">
-            {paginatedImages.map((image, index) => (
-              <div
-                key={index}
-                onClick={() => onImageSelect(image.src)}
-                className="cursor-pointer group"
-              >
-                <div className="border rounded-lg p-2 hover:border-[#009580] hover:shadow-md transition-all">
-                  <img 
-                    src={image.src} 
-                    alt={image.label} 
-                    className="w-full h-20 object-contain mb-2 group-hover:scale-105 transition-transform"
-                  />
-                  <div className="text-xs text-center text-gray-600 group-hover:text-[#009580]">
-                    {image.label}
+          <>
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              {paginatedImages.map((image, index) => (
+                <div
+                  key={index}
+                  onClick={() => onImageSelect(image.image)}
+                  className="cursor-pointer group"
+                >
+                  <div 
+                    className="border rounded-lg p-2 hover:border-[#009580] hover:shadow-md transition-all"
+                    title={image.name}
+                  >
+                    <img 
+                      src={image.image} 
+                      alt={image.name} 
+                      className="w-full h-20 object-contain mb-2 group-hover:scale-105 transition-transform"
+                    />
+                    <div className="text-xs text-center text-gray-600 group-hover:text-[#009580]">
+                      {image.name.length > 15 ? `${image.name.slice(0, 15)}...` : image.name}
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  ←
+                </button>
+                
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} sur {totalPages}
+                </span>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  →
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <div className="space-y-2">
             {paginatedImages.map((image, index) => (
               <div
                 key={index}
-                onClick={() => onImageSelect(image.src)}
+                onClick={() => onImageSelect(image.image)}
                 className="flex items-center p-3 border rounded-lg cursor-pointer hover:border-[#009580] hover:shadow-md transition-all group"
+                title={image.name}
               >
                 <img 
-                  src={image.src} 
-                  alt={image.label} 
+                  src={image.image} 
+                  alt={image.name} 
                   className="w-12 h-12 object-contain mr-3 group-hover:scale-105 transition-transform"
                 />
                 <div>
-                  <div className="font-medium text-gray-900 group-hover:text-[#009580]">{image.label}</div>
-                  <div className="text-sm text-gray-500">{image.description}</div>
+                  <div className="font-medium text-gray-900 group-hover:text-[#009580]">{image.name.length > 15 ? `${image.name.slice(0, 15)}...` : image.name}</div>
                 </div>
               </div>
             ))}
@@ -317,30 +347,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mb-4">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-          >
-            ←
-          </button>
-          
-          <span className="text-sm text-gray-600">
-            Page {currentPage} sur {totalPages}
-          </span>
-          
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-          >
-            →
-          </button>
-        </div>
-      )}
+     
 
       {/* Actions */}
       <div className="flex justify-between items-center">
@@ -371,6 +378,9 @@ interface DataTableFrameProps {
   paieEvents?: any[];
   containerWidth?: number;
   onEditAppointment?: (appointment: Appointment) => void;
+  onSave?: (
+      event: Evenement, 
+  ) => void;
 }
 
 /**
@@ -385,7 +395,9 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
   employees = [],
   paieEvents = [],
   containerWidth,
-  onEditAppointment
+  onEditAppointment,
+  onSave
+  
 }) => {
   const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
   
@@ -414,19 +426,20 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
   const [columnHoveredKey, setColumnHoveredKey] = useState<string | null>(null);
 
   // Images disponibles selon le type
-  const availableImages = useMemo(() => {
+  const [availableImages, setAvailableImages] = useState(() => {
     if (dataType === 'paie') {
       return [
-        { src: iconesAbsences.src, label: 'Absence', description: 'Congés, arrêts maladie' },
-        { src: iconesRepas.src, label: 'Repas', description: 'Tickets restaurant, indemnités repas' },
-        { src: iconesPrime.src, label: 'Prime', description: 'Primes diverses, bonus' },
-        { src: iconesHeurSup.src, label: 'Heures sup.', description: 'Heures supplémentaires' },
-        { src: iconesCongesPayes.src, label: 'Congés payés', description: 'Congés payés, RTT' },
-        { src: iconesSalaire.src, label: 'Salaire', description: 'Salaire de base, appointements' }
+        ...imagesÉvénement,
+        { id: 1, image: iconesAbsences.src, name: 'Absence' },
+        { id: 2, image: iconesRepas.src, name: 'Repas' },
+        { id: 3, image: iconesPrime.src, name: 'Prime' },
+        { id: 4, image: iconesHeurSup.src, name: 'Heures sup.' },
+        { id: 5, image: iconesCongesPayes.src, name: 'Congés payés' },
+        { id: 6, image: iconesSalaire.src, name: 'Salaire' }
       ];
     }
     return [];
-  }, [dataType]);
+  });
 
   // Fonctions de calcul pour les chantiers
   const calculateDPF = useCallback((chantierId: number): string => {
@@ -696,8 +709,18 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
     setIsImageModalOpen(true);
   };
 
-  const handleImageSelect = (newImageSrc: string) => {
+  const handleImageSelect = (newImageSrc: string) => {    
+    
     if (selectedItemId) {
+      console.log(selectedItemId);
+      
+      const item = items.find(i => i && i.id === selectedItemId);
+      onSave && onSave(
+        {
+          ...item,
+          image: newImageSrc
+        } as Evenement
+      );
       // Logique pour mettre à jour l'image de l'élément
       setIsImageModalOpen(false);
       setSelectedItemId(null);
@@ -756,6 +779,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
         const reader = new FileReader();
         reader.onload = (e) => {
           img.src = e.target?.result as string;
+          setAvailableImages(prev => [...prev, { id: prev.length + 1, image: img.src, name: file.name }]);
         };
         reader.readAsDataURL(file);
       });
@@ -1041,6 +1065,8 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
     // Logique de scroll personnalisée si nécessaire
   };
 
+  
+  
   return (
     <div className="relative h-full">
       <FlexibleFrame
@@ -1112,7 +1138,14 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
       >
         {/* Contenu des éléments */}
         {sortedItems
-          .filter(item => item && (dataType === 'chantier' ? 'attributs' in item : true))
+          .filter(item => {
+            if (!item) return false;
+            if (dataType === 'chantier') {
+              return 'attributs' in item;
+            } else {
+              return item.type === 'Absence' || item.type === 'Autre';
+            }
+          })
           .flatMap((item, rowIndex) => {
           const itemByCategories = getValuesByCategory(item);
           const allValues = itemByCategories.flatMap(cat => cat.values);
@@ -1176,4 +1209,4 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
   );
 };
 
-export default DataTableFrame;
+export default memo(DataTableFrame);
