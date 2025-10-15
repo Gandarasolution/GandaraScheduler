@@ -2,19 +2,19 @@
 import React, { useState, memo, useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import { format, addDays, addHours } from 'date-fns';
-import AppointmentItem from './AppointmentItem';
-import InfoBubble from './InfoBubble';
-import { Appointment, Evenement } from '../types';
+import AppointmentItem from '../AppointmentItem';
+import InfoBubble from '../InfoBubble';
+import { Appointment, Evenement } from '../../types';
 import {
   CELL_WIDTH, 
   CELL_HEIGHT, 
   DAY_INTERVALS, 
   HALF_DAY_INTERVALS,
   
-} from '../utils/constants';
-import { getNextWorkedDay } from '../utils/dates';
-import { useSelectedCell } from '../context/SelectedCellContext';
-import { useSelectedAppointment } from '../context/SelectedAppointmentContext';
+} from '../../utils/constants';
+import { getNextWorkedDay } from '../../utils/dates';
+import { useSelectedCell } from '../../context/SelectedCellContext';
+import { useSelectedAppointment } from '../../context/SelectedAppointmentContext';
 
 /**
  * IntervalCell

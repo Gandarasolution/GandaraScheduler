@@ -2,9 +2,9 @@
 import React, {memo, useMemo, useState}from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
 import IntervalCell from './IntervalCell';
-import { Appointment, HalfDayInterval, Evenement} from '../types';
-import { isHoliday } from '../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
-import { CELL_HEIGHT, HALF_DAY_INTERVALS } from '../utils/constants';
+import { Appointment, HalfDayInterval, Evenement} from '../../types';
+import { isHoliday } from '../../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
+import { CELL_HEIGHT, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { fr } from 'date-fns/locale';
 
 /**

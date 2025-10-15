@@ -29,11 +29,11 @@ import {
 } from 'date-fns';
 import DayCell from './DayCell'; // Cellule individuelle du calendrier
 import TimelineFrame from './TimelineFrame'; // Cadre timeline réutilisable
-import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Evenement } from '../types';
+import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Evenement } from '../../types';
 import { fr } from 'date-fns/locale';
-import {CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../utils/constants'; // Constantes de style
-import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../utils/filters';
-import CustomSelectWithImage, { SelectOptionWithImage } from './CustomSelectWithImage';
+import {CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../../utils/constants'; // Constantes de style
+import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
+import CustomSelectWithImage, { SelectOptionWithImage } from '../CustomSelectWithImage';
 
 /**
  * Interface définissant les propriétés du composant CalendarGrid

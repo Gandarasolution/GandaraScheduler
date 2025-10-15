@@ -50,7 +50,7 @@ import {
   addHours,
 } from "date-fns";
 import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent, Filter, FilterType, DimensionType} from "../types";
-import CalendarGrid from "../components/CalendarGrid";
+import CalendarGrid from "../components/Calendar/CalendarGrid";
 import DataTableFrame from "../components/Table/DataTableFrame";
 import Modal from "../components/modals/Modal";
 import AppointmentForm from "../components/AppointmentForm";
