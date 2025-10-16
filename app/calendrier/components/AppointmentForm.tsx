@@ -882,7 +882,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
                 >
                   <div 
                     className={`border-2 rounded-lg p-2 hover:border-[#009580] hover:shadow-md transition-all relative ${
-                      index === 0 
+                      index === 0 && currentPage === 1
                         ? 'border-[#009580] shadow-lg bg-green-50' 
                         : 'border-gray-200 hover:border-[#009580]'
                     }`}
@@ -892,7 +892,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
                       src={image.image} 
                       alt={image.name} 
                       className={`w-full h-20 object-contain mb-2 group-hover:scale-105 transition-transform ${
-                        index === 0 ? 'opacity-100' : 'opacity-90 hover:opacity-100'
+                        index === 0 && currentPage === 1 ? 'opacity-100' : 'opacity-90 hover:opacity-100'
                       }`}
                     />
                   </div>
