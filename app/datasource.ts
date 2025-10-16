@@ -168,7 +168,7 @@ export const Evenements: Evenement[] = [
       textColor: '#FFFFFF',
       location: 'Vesoul',
       client: 'Ville de Vesoul',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         // Informations Générales
         code: 'CHT-001',
@@ -198,7 +198,7 @@ export const Evenements: Evenement[] = [
       textColor: '#FFFFFF',
       location: 'Paris 15ème',
       client: 'SCI Jardins de Paris',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         // Informations Générales
         code: 'CHT-002',
@@ -226,7 +226,7 @@ export const Evenements: Evenement[] = [
       color: '#FFD700',
       borderColor: '#FFC300',
       textColor: '#000000',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         // Informations Générales
         code: 'CHT-003',
@@ -255,7 +255,7 @@ export const Evenements: Evenement[] = [
       color: '#A3A3A3',
       borderColor: '#737373',
       textColor: '#FFFFFF',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-004',
         identifiant: 'HDV-2024-004',
@@ -281,7 +281,7 @@ export const Evenements: Evenement[] = [
       color: '#FFB300',
       borderColor: '#FF9800',
       textColor: '#000000',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-005',
         identifiant: 'REN-2024-005',
@@ -307,7 +307,7 @@ export const Evenements: Evenement[] = [
       color: '#8BC34A',
       borderColor: '#689F38',
       textColor: '#FFFFFF',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-006',
         identifiant: 'LIL-2024-006',
@@ -333,7 +333,7 @@ export const Evenements: Evenement[] = [
       color: '#90CAF9',
       borderColor: '#1976D2',
       textColor: '#000000',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-007',
         identifiant: 'VHU-2024-007',
@@ -359,7 +359,7 @@ export const Evenements: Evenement[] = [
       color: '#F06292',
       borderColor: '#C2185B',
       textColor: '#FFFFFF',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-008',
         identifiant: 'BEL-2024-008',
@@ -385,7 +385,7 @@ export const Evenements: Evenement[] = [
       color: '#FFD54F',
       borderColor: '#FFA000',
       textColor: '#000000',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-009',
         identifiant: 'TOU-2024-009',
@@ -411,7 +411,7 @@ export const Evenements: Evenement[] = [
       color: '#4DD0E1',
       borderColor: '#00838F',
       textColor: '#000000',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-010',
         identifiant: 'MAR-2024-010',
@@ -437,7 +437,7 @@ export const Evenements: Evenement[] = [
       color: '#BA68C8',
       borderColor: '#7B1FA2',
       textColor: '#FFFFFF',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-011',
         identifiant: 'BOR-2024-011',
@@ -463,7 +463,7 @@ export const Evenements: Evenement[] = [
       color: '#AED581',
       borderColor: '#689F38',
       textColor: '#000000',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-012',
         identifiant: 'STR-2024-012',
@@ -489,7 +489,7 @@ export const Evenements: Evenement[] = [
       color: '#FF8A65',
       borderColor: '#D84315',
       textColor: '#000000',
-      type: 'Chantier',
+      type: 'chantier',
       attributs: {
         code: 'CHT-013',
         identifiant: 'MTP-2024-013',
@@ -512,7 +512,7 @@ export const Evenements: Evenement[] = [
       id: 14, 
       label: 'Congés payés', 
       image: iconeAbsenceValide.src,
-      type: 'Absence',
+      type: 'absence',
       color: '#22C55E',
       borderColor: '#16A34A',
       textColor: '#FFFFFF',
@@ -526,7 +526,7 @@ export const Evenements: Evenement[] = [
       id: 15, 
       label: 'Arrêt maladie', 
       image: iconeAbsenceNonValide.src,
-      type: 'Absence',
+      type: 'absence',
       color: '#EF4444',
       borderColor: '#DC2626',
       textColor: '#FFFFFF',
@@ -540,7 +540,7 @@ export const Evenements: Evenement[] = [
       id: 16, 
       label: 'Formation', 
       image: iconeAbsenceValide.src,
-      type: 'Absence',
+      type: 'absence',
       color: '#3B82F6',
       borderColor: '#2563EB',
       textColor: '#FFFFFF',
@@ -554,7 +554,7 @@ export const Evenements: Evenement[] = [
       id: 17, 
       label: 'RTT', 
       image: iconeAbsenceValide.src,
-      type: 'Absence',
+      type: 'absence',
       color: '#8B5CF6',
       borderColor: '#7C3AED',
       textColor: '#FFFFFF',
@@ -568,7 +568,7 @@ export const Evenements: Evenement[] = [
       id: 18, 
       label: 'Congé sans solde', 
       image: iconeAbsenceNonValide.src,
-      type: 'Absence',
+      type: 'absence',
       color: '#F59E0B',
       borderColor: '#D97706',
       textColor: '#FFFFFF',
@@ -582,7 +582,7 @@ export const Evenements: Evenement[] = [
       id: 19, 
       label: 'Réunion équipe', 
       image: mechanic.src,
-      type: 'Autre',
+      type: 'autre',
       color: '#06B6D4',
       borderColor: '#0891B2',
       textColor: '#FFFFFF',
@@ -597,7 +597,7 @@ export const Evenements: Evenement[] = [
       label: 'Rendez-vous client', 
       image: toolbox.src,
       color: '#EC4899',
-      type: 'Autre',
+      type: 'autre',
       borderColor: '#DB2777',
       textColor: '#FFFFFF',
       defaultDescription: 'Rendez-vous avec le client',
@@ -612,7 +612,7 @@ export const Evenements: Evenement[] = [
       image: googleEyeProtector.src,
       color: '#F97316',
       borderColor: '#EA580C',
-      type: 'Autre',
+      type: 'autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Visite technique sur site',
       category: 'Technique',
@@ -626,7 +626,7 @@ export const Evenements: Evenement[] = [
       image: vestProtect.src,
       color: '#DC2626',
       borderColor: '#B91C1C',
-      type: 'Autre',
+      type: 'autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Réunion sécurité',
       category: 'Sécurité',
@@ -640,7 +640,7 @@ export const Evenements: Evenement[] = [
       image: wrench.src,
       color: '#7C3AED',
       borderColor: '#6D28D9',
-      type: 'Autre',
+      type: 'autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Formation technique',
       category: 'Formation',
@@ -655,7 +655,7 @@ export const Evenements: Evenement[] = [
     color: '#4CAF50',
     borderColor: '#388E3C',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-024',
       identifiant: 'NAN-2024-024',
@@ -681,7 +681,7 @@ export const Evenements: Evenement[] = [
     color: '#2196F3',
     borderColor: '#1976D2',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-025',
       identifiant: 'LIL-2024-025',
@@ -707,7 +707,7 @@ export const Evenements: Evenement[] = [
     color: '#E91E63',
     borderColor: '#C2185B',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-026',
       identifiant: 'DIJ-2024-026',
@@ -733,7 +733,7 @@ export const Evenements: Evenement[] = [
     color: '#00BCD4',
     borderColor: '#0097A7',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-027',
       identifiant: 'TOU-2024-027',
@@ -759,7 +759,7 @@ export const Evenements: Evenement[] = [
     color: '#9C27B0',
     borderColor: '#7B1FA2',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-028',
       identifiant: 'LYO-2024-028',
@@ -785,7 +785,7 @@ export const Evenements: Evenement[] = [
     color: '#FF9800',
     borderColor: '#F57C00',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-029',
       identifiant: 'BRE-2024-029',
@@ -811,7 +811,7 @@ export const Evenements: Evenement[] = [
     color: '#CDDC39',
     borderColor: '#9E9D24',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-030',
       identifiant: 'NIC-2024-030',
@@ -837,7 +837,7 @@ export const Evenements: Evenement[] = [
     color: '#03A9F4',
     borderColor: '#0288D1',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-031',
       identifiant: 'BOR-2024-031',
@@ -863,7 +863,7 @@ export const Evenements: Evenement[] = [
     color: '#8BC34A',
     borderColor: '#558B2F',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-032',
       identifiant: 'REI-2024-032',
@@ -889,7 +889,7 @@ export const Evenements: Evenement[] = [
     color: '#FF5722',
     borderColor: '#E64A19',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-033',
       identifiant: 'LEM-2024-033',
@@ -915,7 +915,7 @@ export const Evenements: Evenement[] = [
     color: '#FFC107',
     borderColor: '#FFA000',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-034',
       identifiant: 'NAN-2024-034',
@@ -941,7 +941,7 @@ export const Evenements: Evenement[] = [
     color: '#9E9E9E',
     borderColor: '#616161',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-035',
       identifiant: 'ROU-2024-035',
@@ -967,7 +967,7 @@ export const Evenements: Evenement[] = [
     color: '#4DB6AC',
     borderColor: '#00796B',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-036',
       identifiant: 'MAR-2024-036',
@@ -993,7 +993,7 @@ export const Evenements: Evenement[] = [
     color: '#8E24AA',
     borderColor: '#6A1B9A',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-037',
       identifiant: 'CLE-2024-037',
@@ -1019,7 +1019,7 @@ export const Evenements: Evenement[] = [
     color: '#81C784',
     borderColor: '#388E3C',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-038',
       identifiant: 'REN-2024-038',
@@ -1045,7 +1045,7 @@ export const Evenements: Evenement[] = [
     color: '#03A9F4',
     borderColor: '#0288D1',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-039',
       identifiant: 'STR-2024-039',
@@ -1071,7 +1071,7 @@ export const Evenements: Evenement[] = [
     color: '#F06292',
     borderColor: '#C2185B',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-040',
       identifiant: 'CAE-2024-040',
@@ -1097,7 +1097,7 @@ export const Evenements: Evenement[] = [
     color: '#FF7043',
     borderColor: '#E64A19',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-041',
       identifiant: 'AVI-2024-041',
@@ -1123,7 +1123,7 @@ export const Evenements: Evenement[] = [
     color: '#AED581',
     borderColor: '#689F38',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-042',
       identifiant: 'ANN-2024-042',
@@ -1149,7 +1149,7 @@ export const Evenements: Evenement[] = [
     color: '#BA68C8',
     borderColor: '#7B1FA2',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-043',
       identifiant: 'NAN-2024-043',
@@ -1175,7 +1175,7 @@ export const Evenements: Evenement[] = [
     color: '#00ACC1',
     borderColor: '#00838F',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-044',
       identifiant: 'LAR-2024-044',
@@ -1201,7 +1201,7 @@ export const Evenements: Evenement[] = [
     color: '#EF5350',
     borderColor: '#C62828',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-045',
       identifiant: 'MET-2024-045',
@@ -1227,7 +1227,7 @@ export const Evenements: Evenement[] = [
     color: '#43A047',
     borderColor: '#2E7D32',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-046',
       identifiant: 'GRE-2024-046',
@@ -1253,7 +1253,7 @@ export const Evenements: Evenement[] = [
     color: '#FFB300',
     borderColor: '#F57C00',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-047',
       identifiant: 'POI-2024-047',
@@ -1279,7 +1279,7 @@ export const Evenements: Evenement[] = [
     color: '#1E88E5',
     borderColor: '#1565C0',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-048',
       identifiant: 'TOU-2024-048',
@@ -1305,7 +1305,7 @@ export const Evenements: Evenement[] = [
     color: '#AB47BC',
     borderColor: '#8E24AA',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-049',
       identifiant: 'MON-2024-049',
@@ -1331,7 +1331,7 @@ export const Evenements: Evenement[] = [
     color: '#26A69A',
     borderColor: '#00796B',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-050',
       identifiant: 'ORL-2024-050',
@@ -1357,7 +1357,7 @@ export const Evenements: Evenement[] = [
     color: '#C0CA33',
     borderColor: '#9E9D24',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-051',
       identifiant: 'BLO-2024-051',
@@ -1383,7 +1383,7 @@ export const Evenements: Evenement[] = [
     color: '#FBC02D',
     borderColor: '#F57F17',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-052',
       identifiant: 'PAR-2024-052',
@@ -1409,7 +1409,7 @@ export const Evenements: Evenement[] = [
     color: '#64B5F6',
     borderColor: '#1976D2',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-053',
       identifiant: 'ANG-2024-053',
@@ -1435,7 +1435,7 @@ export const Evenements: Evenement[] = [
     color: '#FF7043',
     borderColor: '#E64A19',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-054',
       identifiant: 'NIC-2024-054',
@@ -1461,7 +1461,7 @@ export const Evenements: Evenement[] = [
     color: '#26C6DA',
     borderColor: '#0097A7',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-055',
       identifiant: 'REN-2024-055',
@@ -1487,7 +1487,7 @@ export const Evenements: Evenement[] = [
     color: '#9CCC65',
     borderColor: '#689F38',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-056',
       identifiant: 'DIJ-2024-056',
@@ -1513,7 +1513,7 @@ export const Evenements: Evenement[] = [
     color: '#F06292',
     borderColor: '#C2185B',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-057',
       identifiant: 'PER-2024-057',
@@ -1539,7 +1539,7 @@ export const Evenements: Evenement[] = [
     color: '#9575CD',
     borderColor: '#512DA8',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-058',
       identifiant: 'ROU-2024-058',
@@ -1565,7 +1565,7 @@ export const Evenements: Evenement[] = [
     color: '#FFA726',
     borderColor: '#FB8C00',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-059',
       identifiant: 'CLE-2024-059',
@@ -1591,7 +1591,7 @@ export const Evenements: Evenement[] = [
     color: '#4DB6AC',
     borderColor: '#00796B',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-060',
       identifiant: 'BOR-2024-060',
@@ -1617,7 +1617,7 @@ export const Evenements: Evenement[] = [
     color: '#E57373',
     borderColor: '#D32F2F',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-061',
       identifiant: 'LIL-2024-061',
@@ -1643,7 +1643,7 @@ export const Evenements: Evenement[] = [
     color: '#81C784',
     borderColor: '#388E3C',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-062',
       identifiant: 'NAN-2024-062',
@@ -1669,7 +1669,7 @@ export const Evenements: Evenement[] = [
     color: '#7986CB',
     borderColor: '#3949AB',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-063',
       identifiant: 'AMI-2024-063',
@@ -1695,7 +1695,7 @@ export const Evenements: Evenement[] = [
     color: '#BA68C8',
     borderColor: '#7B1FA2',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-064',
       identifiant: 'AVI-2024-064',
@@ -1721,7 +1721,7 @@ export const Evenements: Evenement[] = [
     color: '#4DD0E1',
     borderColor: '#00838F',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-065',
       identifiant: 'BRE-2024-065',
@@ -1747,7 +1747,7 @@ export const Evenements: Evenement[] = [
     color: '#FDD835',
     borderColor: '#F9A825',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-066',
       identifiant: 'TOU-2024-066',
@@ -1773,7 +1773,7 @@ export const Evenements: Evenement[] = [
     color: '#81D4FA',
     borderColor: '#0288D1',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-067',
       identifiant: 'TOU-2024-067',
@@ -1799,7 +1799,7 @@ export const Evenements: Evenement[] = [
     color: '#A1887F',
     borderColor: '#5D4037',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-068',
       identifiant: 'REI-2024-068',
@@ -1825,7 +1825,7 @@ export const Evenements: Evenement[] = [
     color: '#FF8A65',
     borderColor: '#D84315',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-069',
       identifiant: 'LYO-2024-069',
@@ -1851,7 +1851,7 @@ export const Evenements: Evenement[] = [
     color: '#4CAF50',
     borderColor: '#2E7D32',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-070',
       identifiant: 'TOU-2024-070',
@@ -1877,7 +1877,7 @@ export const Evenements: Evenement[] = [
     color: '#F44336',
     borderColor: '#C62828',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-071',
       identifiant: 'PAR-2024-071',
@@ -1903,7 +1903,7 @@ export const Evenements: Evenement[] = [
     color: '#009688',
     borderColor: '#00695C',
     textColor: '#FFFFFF',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-072',
       identifiant: 'LIL-2024-072',
@@ -1929,7 +1929,7 @@ export const Evenements: Evenement[] = [
     color: '#FFB74D',
     borderColor: '#F57C00',
     textColor: '#000000',
-    type: 'Chantier',
+    type: 'chantier',
     attributs: {
       code: 'CHT-073',
       identifiant: 'MET-2024-073',
@@ -2009,7 +2009,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
           appointmentType = 'chantier';
           while (!selectedEvent) {
             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'Chantier') {
+            if (selectedEvent.type !== 'chantier') {
               selectedEvent = null;
             }
           }
@@ -2019,7 +2019,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
           appointmentType = 'absence';
           while (!selectedEvent) {
             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'Absence') {
+            if (selectedEvent.type !== 'absence') {
               selectedEvent = null;
             }
           }
@@ -2029,7 +2029,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
           appointmentType = 'autre';
           while (!selectedEvent) {
             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'Autre') {
+            if (selectedEvent.type !== 'autre') {
               selectedEvent = null;
             }
           }
@@ -2083,20 +2083,6 @@ function generateAppointments(employees: Employee[]): Appointment[] {
 
 export const initialAppointments: Appointment[] = generateAppointments(initialEmployees);
 
-
-
-
-
-
-
-
-
-
-export const drawerOptions = [
-    { content: 'Chantier'},
-    { content: 'Absences'},
-    { content: 'Autres'}
-]
 
 
 export const imagesÉvénement = [

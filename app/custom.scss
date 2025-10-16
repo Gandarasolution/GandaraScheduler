@@ -49,8 +49,9 @@
   border-spacing: 0;
   
   .calendar-cell {
-    transition: background-color 0.05s ease;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    will-change: background-color, box-shadow;
   }
   
   // Survol des lignes - CSS natif pour performance maximale

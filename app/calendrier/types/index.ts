@@ -103,7 +103,7 @@ interface BaseEvent {
 }
 
 export interface ChantierEvent extends BaseEvent {
-  type: "Chantier";
+  type: "chantier";
   attributs: {
     code: string;
     identifiant: string;
@@ -133,11 +133,11 @@ interface CommonPaieAttributs extends BaseEvent {
 }
 
 export interface AbsenceEvent extends CommonPaieAttributs {
-  type: "Absence";
+  type: "absence";
 }
 
 export interface AutreEvent extends CommonPaieAttributs {
-  type: "Autre";
+  type: "autre";
 }
 
 

@@ -471,7 +471,7 @@ export default function HomePage() {
 
   // Fonction pour appliquer les filtres aux chantiers
   const applyFiltersToChantiers = useCallback(() => {
-    let filtered = events.current.filter(e => e.type === 'Chantier') as ChantierEvent[];
+    let filtered = events.current.filter(e => e.type === 'chantier') as ChantierEvent[];
     
     // Appliquer le filtre de recherche si présent
     if (searchInput) {
@@ -532,7 +532,7 @@ export default function HomePage() {
 
   // Fonction pour obtenir les valeurs uniques pour les filtres
   const getFilterOptions = useCallback(() => {
-    const allChantiers = events.current.filter(e => e.type === 'Chantier') as ChantierEvent[];
+    const allChantiers = events.current.filter(e => e.type === 'chantier') as ChantierEvent[];
     
     const etats = [...new Set(allChantiers.map(c => c.attributs.etat))].sort();
     const chargeAffaires = [...new Set(allChantiers.map(c => c.attributs.chargeAffaire))].sort();
@@ -2008,11 +2008,11 @@ export default function HomePage() {
                             width="16"
                             height="16"
                             fill="currentColor"
-                            className="bi bi-calendar-event text-gray-500 transition duration-200"
+                            className={"bi bi-calendar-event transition duration-200 " + (!includeWeekend ? ' text-[#00947f]' : 'text-gray-500')}
                             viewBox="0 0 16 16"
                           >
-                            <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z" fill="#84818a" fillOpacity="1" stroke="none" strokeOpacity="1"/>
-                            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z" fill="#84818a" fillOpacity="1" stroke="none" strokeOpacity="1"/>
+                            <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z" fillOpacity="1" stroke="none" strokeOpacity="1"/>
+                            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z" fillOpacity="1" stroke="none" strokeOpacity="1"/>
                           </svg>
                         </button>
                         <button 
@@ -2139,22 +2139,14 @@ export default function HomePage() {
                         <div className="text-gray-500">Chargement des configurations...</div>
                       </div>
                     )
-                  ) : viewType === 'chantier-table' ? (
+                  ) :  (
                     <DataTableFrame 
-                      dataType="chantier"
+                      dataType={viewType === 'chantier-table' ? "chantier" : "paie"}
                       items={filteredEvent} 
                       appointments={appointments.current}
                       employees={employees.current}
                       containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
                       onEditAppointment={handleOpenEditModal}
-                    />
-                  ) : (
-                    <DataTableFrame 
-                      dataType="paie"
-                      items={filteredEvent}
-                      appointments={appointments.current}
-                      employees={employees.current}
-                      onSave={handleSaveEvent}
                     />
                   )}
                 </SelectedCellContext.Provider>
