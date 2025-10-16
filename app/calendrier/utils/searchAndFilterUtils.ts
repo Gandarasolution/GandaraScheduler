@@ -157,7 +157,7 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
       }
       
       // Recherche dans les attributs selon le type
-      if (event.type === 'Chantier') {
+      if (event.type === 'chantier') {
         const chantierEvent = event as ChantierEvent;
         return (
           chantierEvent.attributs.libelle.toLowerCase().includes(lowercasedQuery) ||
@@ -193,7 +193,7 @@ export const useSearchAndFilter = (
   const utils = createSearchAndFilterUtils();
   
   // Extraire les chantiers des événements
-  const chantiers = events.filter(e => e.type === 'Chantier') as ChantierEvent[];
+  const chantiers = events.filter(e => e.type === 'chantier') as ChantierEvent[];
   
   // Obtenir les options de filtrage disponibles
   const filterOptions = utils.getFilterOptions(chantiers);

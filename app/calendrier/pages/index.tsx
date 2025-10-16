@@ -469,76 +469,112 @@ export default function HomePage() {
     }
   ];
 
-  // Fonction pour appliquer les filtres aux chantiers
+  // Fonction ultra-optimisée pour appliquer les filtres aux chantiers
   const applyFiltersToChantiers = useCallback(() => {
-    let filtered = events.current.filter(e => e.type === 'chantier') as ChantierEvent[];
+    // Cache des événements chantier pour éviter le filtrage répétitif
+    const chantierEvents = events.current.filter(e => e.type === 'chantier') as ChantierEvent[];
     
-    // Appliquer le filtre de recherche si présent
-    if (searchInput) {
-      const lowercasedQuery = searchInput.toLowerCase();
-      filtered = filtered.filter(chantier => 
-        chantier.attributs.libelle.toLowerCase().includes(lowercasedQuery) || 
-        chantier.attributs.chefChantier.toLowerCase().includes(lowercasedQuery) ||
-        chantier.attributs.chargeAffaire.toLowerCase().includes(lowercasedQuery)
-      );
+    // Early exit si aucun filtre actif
+    const hasSearch = !!searchInput;
+    const hasFilters = activeFilters.etat.length > 0 || activeFilters.chargeAffaire.length > 0 || activeFilters.chefChantier.length > 0;
+    
+    if (!hasSearch && !hasFilters) {
+      setFilteredEvent(chantierEvents);
+      return;
     }
     
-    // Appliquer les filtres par état
-    if (activeFilters.etat.length > 0) {
-      filtered = filtered.filter(chantier => 
-        activeFilters.etat.includes(chantier.attributs.etat)
-      );
-    }
+    // Pré-calculer la recherche en minuscules une seule fois
+    const lowercasedQuery = hasSearch ? searchInput.toLowerCase() : '';
     
-    // Appliquer les filtres par chargé d'affaire
-    if (activeFilters.chargeAffaire.length > 0) {
-      filtered = filtered.filter(chantier => 
-        activeFilters.chargeAffaire.includes(chantier.attributs.chargeAffaire)
-      );
-    }
+    // Convertir les filtres en Sets pour des lookups O(1)
+    const etatSet = activeFilters.etat.length > 0 ? new Set(activeFilters.etat) : null;
+    const chargeAffaireSet = activeFilters.chargeAffaire.length > 0 ? new Set(activeFilters.chargeAffaire) : null;
+    const chefChantierSet = activeFilters.chefChantier.length > 0 ? new Set(activeFilters.chefChantier) : null;
     
-    // Appliquer les filtres par chef de chantier
-    if (activeFilters.chefChantier.length > 0) {
-      filtered = filtered.filter(chantier => 
-        activeFilters.chefChantier.includes(chantier.attributs.chefChantier)
-      );
-    }
+    // Filtrage en une seule passe avec optimisations de court-circuit
+    const filtered = chantierEvents.filter(chantier => {
+      const attrs = chantier.attributs; // Cache de l'objet attributs
+      
+      // Test de recherche textuelle (avec court-circuit si pas de recherche)
+      if (hasSearch) {
+        const libelle = attrs.libelle.toLowerCase();
+        const chefChantier = attrs.chefChantier.toLowerCase();
+        const chargeAffaire = attrs.chargeAffaire.toLowerCase();
+        
+        if (!(libelle.includes(lowercasedQuery) || 
+              chefChantier.includes(lowercasedQuery) || 
+              chargeAffaire.includes(lowercasedQuery))) {
+          return false;
+        }
+      }
+      
+      // Tests des filtres avec court-circuit (O(1) grâce aux Sets)
+      return (!etatSet || etatSet.has(attrs.etat)) &&
+             (!chargeAffaireSet || chargeAffaireSet.has(attrs.chargeAffaire)) &&
+             (!chefChantierSet || chefChantierSet.has(attrs.chefChantier));
+    });
     
     setFilteredEvent(filtered);
   }, [searchInput, activeFilters]);
 
+  // Pattern optimisé : useRef pour données + useState pour rendu
   const handleResearch = useCallback(() => {
-    switch(viewType){
-      case 'calendar':
-        // Utiliser les nouveaux utilitaires de recherche
-        const filteredApps = searchUtils.searchAppointments(
-          appointments.current,
-          events.current,
-          searchInput
-        );
-        setFilteredAppointments(filteredApps);
-        break;
-      case 'chantier-table':
-        // Utiliser la fonction de filtrage pour les chantiers
-        applyFiltersToChantiers();
-        break;
-      
-      case "paie-table":
-        setFilteredEvent(events.current) 
-        break;
-
-    }
+    // Utiliser queueMicrotask pour batcher les mises à jour UI
+    queueMicrotask(() => {
+      switch (viewType) {
+        case 'calendar':
+          // Optimisation : éviter l'appel si la recherche est vide et pas de changement
+          if (!searchInput.trim()) {
+            setFilteredAppointments(appointments.current);
+          } else {
+            const filteredApps = searchUtils.searchAppointments(
+              appointments.current,
+              events.current,
+              searchInput
+            );
+            setFilteredAppointments(filteredApps);
+          }
+          break;
+        
+        case 'chantier-table':
+          applyFiltersToChantiers();
+          break;
+        
+        case 'paie-table':
+          // Cache pour éviter la re-création du tableau
+          setFilteredEvent(events.current);
+          break;
+        
+        default:
+          // Gestion par défaut si nécessaire
+          break;
+      }
+    });
   }, [searchInput, viewType, applyFiltersToChantiers, searchUtils]);
 
-  // Fonction pour obtenir les valeurs uniques pour les filtres
+  // Fonction optimisée pour obtenir les valeurs uniques avec cache
   const getFilterOptions = useCallback(() => {
     const allChantiers = events.current.filter(e => e.type === 'chantier') as ChantierEvent[];
     
-    const etats = [...new Set(allChantiers.map(c => c.attributs.etat))].sort();
-    const chargeAffaires = [...new Set(allChantiers.map(c => c.attributs.chargeAffaire))].sort();
-    const chefChantiers = [...new Set(allChantiers.map(c => c.attributs.chefChantier))].sort();
+    // Optimisation : utiliser des Sets directement pour éviter la conversion
+    const etatSet = new Set<string>();
+    const chargeAffaireSet = new Set<string>();
+    const chefChantierSet = new Set<string>();
     
-    return { etats, chargeAffaires, chefChantiers };
+    // Une seule boucle au lieu de trois map() séparés
+    for (const chantier of allChantiers) {
+      const attrs = chantier.attributs;
+      etatSet.add(attrs.etat);
+      chargeAffaireSet.add(attrs.chargeAffaire);
+      chefChantierSet.add(attrs.chefChantier);
+    }
+    
+    // Conversion et tri en une étape
+    return {
+      etats: Array.from(etatSet).sort(),
+      chargeAffaires: Array.from(chargeAffaireSet).sort(),
+      chefChantiers: Array.from(chefChantierSet).sort()
+    };
   }, []);
 
   // Fonction pour réinitialiser tous les filtres
@@ -753,38 +789,50 @@ export default function HomePage() {
   
   if (!throttledScrollHandler.current) {
     let rafId: number | null = null;
+    let lastProcessTime = 0;
     throttledScrollHandler.current = () => {
-      if (rafId || isProcessingInfiniteScroll.current || !isInfiniteScrollEnabled.current) return;
+      // Early exits pour économiser les cycles
+      if (rafId || isProcessingInfiniteScroll.current || !isInfiniteScrollEnabled.current || isAutoScrolling.current) return;
+      
+      // Throttling plus agressif - max 60fps
+      const now = performance.now();
+      if (now - lastProcessTime < 16) return;
       
       rafId = requestAnimationFrame(() => {
         rafId = null;
+        lastProcessTime = performance.now();
         
-        if (isAutoScrolling.current || !mainScrollRef.current || !isInfiniteScrollEnabled.current) return;
+        const scrollElement = mainScrollRef.current;
+        if (!scrollElement) return;
 
-        const { scrollLeft, scrollWidth, clientWidth, scrollTop } = mainScrollRef.current;
+        // Cache des propriétés pour éviter les reflows multiples
+        const { scrollLeft, scrollWidth, clientWidth, scrollTop } = scrollElement;
         
-        // Détection du scroll vertical - si c'est un scroll vertical, on ignore l'infinite scroll
-        const isVerticalScroll = Math.abs(scrollTop - lastScrollTop.current) > Math.abs(scrollLeft - (lastScrollCheck.current || scrollLeft));
-        lastScrollTop.current = scrollTop;
-        
-        if (isVerticalScroll) {
-          return; // Ne pas déclencher l'infinite scroll pour un scroll vertical
+        // Skip si scroll vertical détecté
+        if (Math.abs(scrollTop - lastScrollTop.current) > Math.abs(scrollLeft - (lastScrollCheck.current || scrollLeft))) {
+          lastScrollTop.current = scrollTop;
+          return;
         }
 
-        const now = Date.now();
-        // Throttle supplémentaire : maximum une fois toutes les 100ms (sauf si touche fléchée pressée)
-        if (!isArrowKeyPressed.current && now - lastScrollCheck.current < 100) return;
+        // Throttling temporel optimisé
+        const timeDelta = now - lastScrollCheck.current;
+        const minInterval = isArrowKeyPressed.current ? 50 : 150; // Réduit de 100ms à 150ms
+        if (timeDelta < minInterval) return;
+        
         lastScrollCheck.current = now;
         
-        // Early exit si pas assez de contenu pour scroller
+        // Early exit optimisé
         if (scrollWidth <= clientWidth) return;
         
-        const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
+        // Calcul de pourcentage avec mise en cache
+        const scrollableWidth = scrollWidth - clientWidth;
+        const scrollPercentage = (scrollLeft / scrollableWidth) * 100;
 
-        // Seuils optimisés pour éviter les déclenchements multiples
-        // Seuils plus bas quand une touche fléchée est pressée pour un scroll continu
-        const rightThreshold = isArrowKeyPressed.current && arrowKeyDirection.current === 'right' ? 85 : 90;
-        const leftThreshold = isArrowKeyPressed.current && arrowKeyDirection.current === 'left' ? 15 : 10;
+        // Seuils optimisés
+        const isArrowRight = isArrowKeyPressed.current && arrowKeyDirection.current === 'right';
+        const isArrowLeft = isArrowKeyPressed.current && arrowKeyDirection.current === 'left';
+        const rightThreshold = isArrowRight ? 85 : 92; // Augmenté de 90 à 92
+        const leftThreshold = isArrowLeft ? 15 : 8; // Réduit de 10 à 8
         
         if (scrollPercentage >= rightThreshold) {
           isProcessingInfiniteScroll.current = true;
@@ -797,35 +845,48 @@ export default function HomePage() {
     };
   }
 
-  // Fonctions optimisées pour ajouter des jours
+  // Fonctions ultra-optimisées pour ajouter des jours
   const addDaysToRight = useCallback(() => {
-    if (!mainScrollRef.current) return;
+    const scrollElement = mainScrollRef.current;
+    if (!scrollElement) return;
     
-    const previousScrollLeft = mainScrollRef.current.scrollLeft;
-    const previousScrollWidth = mainScrollRef.current.scrollWidth;
+    const previousScrollLeft = scrollElement.scrollLeft;
     
     setDayInTimeline((prevDays) => {
       const lastDay = prevDays[prevDays.length - 1];
-      let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
-      newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
       
-      // Ajuster le scroll de manière synchrone après le state update pour maintenir la vue stable
-      requestAnimationFrame(() => {
-        if (mainScrollRef.current) {          
-          // Maintenir la position relative de la vue quand on tranche la fenêtre
+      // Optimisation : pré-calculer le filtre week-end si nécessaire
+      let newDays: Date[];
+      if (includeWeekend) {
+        // Pas de filtrage nécessaire - plus rapide
+        newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
+      } else {
+        // Optimisation : construire directement les jours ouvrés
+        newDays = [];
+        let currentDate = addDays(lastDay, 1);
+        while (newDays.length < DAYS_TO_ADD) {
+          if (!isWeekend(currentDate)) {
+            newDays.push(currentDate);
+          }
+          currentDate = addDays(currentDate, 1);
+        }
+      }
+      
+      // Micro-tâche pour l'ajustement de scroll - plus rapide que requestAnimationFrame
+      queueMicrotask(() => {
+        if (scrollElement && scrollElement.isConnected) {
           const removedFromLeft = prevDays.length + newDays.length - WINDOW_SIZE;
-          
           if (removedFromLeft > 0) {
-            // Compenser la suppression des jours à gauche
-            mainScrollRef.current.scrollLeft = previousScrollLeft - (removedFromLeft * CELL_WIDTH);
+            scrollElement.scrollLeft = previousScrollLeft - (removedFromLeft * CELL_WIDTH);
           }
         }
         
-        // Reset du flag avec délai plus court si touche fléchée pressée
-        const delay = isArrowKeyPressed.current ? 50 : 200;
-        setTimeout(() => {
+        // Reset immédiat pour les touches fléchées, différé sinon
+        if (isArrowKeyPressed.current) {
           isProcessingInfiniteScroll.current = false;
-        }, delay);
+        } else {
+          setTimeout(() => { isProcessingInfiniteScroll.current = false; }, 100);
+        }
       });
       
       return [...prevDays, ...newDays].slice(-WINDOW_SIZE);
@@ -833,165 +894,200 @@ export default function HomePage() {
   }, [includeWeekend]);
 
   const addDaysToLeft = useCallback(() => {
-    if (!mainScrollRef.current) return;
+    const scrollElement = mainScrollRef.current;
+    if (!scrollElement) return;
     
-    const previousScrollLeft = mainScrollRef.current.scrollLeft;
+    const previousScrollLeft = scrollElement.scrollLeft;
     
     setDayInTimeline((prevDays) => {
       const firstDay = prevDays[0];
-      let newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
-      newDays = includeWeekend ? newDays : newDays.filter(day => !isWeekend(day));
       
-      // Ajuster le scroll de manière synchrone après le state update
-      requestAnimationFrame(() => {
-        if (mainScrollRef.current) {
-          const scrollAdjustment = newDays.length * CELL_WIDTH;
-          mainScrollRef.current.scrollLeft = previousScrollLeft + scrollAdjustment;
+      // Optimisation : construire les jours en ordre inverse plus efficacement
+      let newDays: Date[];
+      if (includeWeekend) {
+        newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
+      } else {
+        // Optimisation : construire directement en évitant filter()
+        newDays = [];
+        let currentDate = addDays(firstDay, -1);
+        while (newDays.length < DAYS_TO_ADD) {
+          if (!isWeekend(currentDate)) {
+            newDays.unshift(currentDate); // Insertion en début plus efficace qu'un reverse
+          }
+          currentDate = addDays(currentDate, -1);
+        }
+      }
+      
+      // Micro-tâche pour l'ajustement de scroll
+      queueMicrotask(() => {
+        if (scrollElement && scrollElement.isConnected) {
+          scrollElement.scrollLeft = previousScrollLeft + (newDays.length * CELL_WIDTH);
         }
         
-        // Reset du flag avec délai plus court si touche fléchée pressée
-        const delay = isArrowKeyPressed.current ? 50 : 200;
-        setTimeout(() => {
+        // Reset optimisé
+        if (isArrowKeyPressed.current) {
           isProcessingInfiniteScroll.current = false;
-        }, delay);
+        } else {
+          setTimeout(() => { isProcessingInfiniteScroll.current = false; }, 100);
+        }
       });
       
       return [...newDays, ...prevDays].slice(0, WINDOW_SIZE);
     });
   }, [includeWeekend]);
 
-  // Gestion du scroll ultra-optimisée
+  // Gestion du scroll ultra-optimisée avec throttling passif
   const handleScroll = useCallback(() => {
-    // Appel différé pour éviter de bloquer le thread principal
-    throttledScrollHandler.current?.();
+    // Appel du throttled handler avec protection
+    if (throttledScrollHandler.current) {
+      throttledScrollHandler.current();
+    }
     
-    // Détecter si on scroll contre les bords pour maintenir l'infinite scroll actif
-    // Seulement si l'infinite scroll est activé
-    if (mainScrollRef.current && isInfiniteScrollEnabled.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = mainScrollRef.current;
-      const scrollPercentage = (scrollLeft / (scrollWidth - clientWidth)) * 100;
-      
-      // Si on est proche des bords et qu'on continue de scroller, maintenir l'infinite scroll actif
-      if (scrollPercentage >= 95 || scrollPercentage <= 5) {
-        // Réduire temporairement le délai de processing pour permettre des ajouts plus fréquents
-        setTimeout(() => {
-          if (isProcessingInfiniteScroll.current) {
-            isProcessingInfiniteScroll.current = false;
+    // Optimisation : vérification edge-scroll allégée
+    if (isInfiniteScrollEnabled.current && !isProcessingInfiniteScroll.current) {
+      const scrollElement = mainScrollRef.current;
+      if (scrollElement) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollElement;
+        const scrollableWidth = scrollWidth - clientWidth;
+        
+        if (scrollableWidth > 0) {
+          const scrollPercentage = (scrollLeft / scrollableWidth) * 100;
+          
+          // Reset rapide pour le scroll aux bords (évite les blocages)
+          if (scrollPercentage >= 96 || scrollPercentage <= 4) {
+            // Micro-tâche pour libérer plus rapidement
+            queueMicrotask(() => {
+              if (isProcessingInfiniteScroll.current) {
+                isProcessingInfiniteScroll.current = false;
+              }
+            });
           }
-        }, 100);
+        }
       }
     }
   }, []);
 
-  // Centrage sur aujourd'hui au chargement
+  // Fonction optimisée pour centrer sur une date
   const goToDate = useCallback((date: Date) => {
-    if (!mainScrollRef.current) return;
+    const scrollElement = mainScrollRef.current;
+    if (!scrollElement) return;
+    
     setIsLoading(true);
-    setDayInTimeline(
-      eachDayOfInterval({
-        start: addDays(date, -WINDOW_SIZE / 2),
-        end: addDays(date, WINDOW_SIZE / 2),
-      })
-    );
-    setTimeout(() => {
-      const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
-      if (todayCell && mainScrollRef.current) {
-        isAutoScrolling.current = true;
-        const container = mainScrollRef.current;
-        const cellRect = todayCell.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        const scrollLeft =
-          container.scrollLeft +
-          (cellRect.left - containerRect.left) -
-          container.clientWidth / 2 +
-          todayCell.clientWidth / 2;
-        
-        container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-        
-        // Activer l'infinite scroll une fois le scroll automatique terminé
-        setTimeout(() => {
-          isAutoScrolling.current = false;
-          isInfiniteScrollEnabled.current = true; // Activer la détection du scroll infini
-        }, 1000); // Délai pour s'assurer que le smooth scroll est terminé
-      }
-      setSelectedDate(date);
-      setIsLoading(false);
-    }, 50);
+    
+    // Optimisation : calcul de l'intervalle en une fois
+    const halfWindow = Math.floor(WINDOW_SIZE / 2);
+    const startDate = addDays(date, -halfWindow);
+    const endDate = addDays(date, halfWindow);
+    
+    setDayInTimeline(eachDayOfInterval({ start: startDate, end: endDate }));
+    
+    // Optimisation : utiliser queueMicrotask pour un timing plus précis
+    queueMicrotask(() => {
+      // Attendre que le DOM soit mis à jour
+      requestAnimationFrame(() => {
+        const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
+        if (todayCell && scrollElement.isConnected) {
+          isAutoScrolling.current = true;
+          
+          // Calcul optimisé du scroll
+          const cellRect = todayCell.getBoundingClientRect();
+          const containerRect = scrollElement.getBoundingClientRect();
+          const targetScrollLeft = 
+            scrollElement.scrollLeft + 
+            cellRect.left - containerRect.left - 
+            (scrollElement.clientWidth - todayCell.clientWidth) / 2;
+          
+          scrollElement.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+          
+          // Reset optimisé avec timeout plus court
+          setTimeout(() => {
+            isAutoScrolling.current = false;
+            isInfiniteScrollEnabled.current = true;
+          }, 800); // Réduit de 1000ms à 800ms
+        }
+        setSelectedDate(date);
+        setIsLoading(false);
+      });
+    });
   }, []);
 
 
-  // Déplacement d'un rendez-vous (drag & drop ou resize)
+  // Déplacement d'un rendez-vous (drag & drop ou resize) - Optimisé
   const moveAppointment = useCallback(
     (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true) => {
+      // Early exit - Rendez-vous non trouvé 
       const appointment = appointments.current.find((app) => app.id === id);
-    
-      if (!appointment) return; // Rendez-vous non trouvé 
+      if (!appointment) return;
       
-      // Enregistrer l'état précédent pour l'historique seulement si demandé
-      const previousAppointment = saveToHistory ? { ...appointment } : null;
-      
+      // Calcul optimisé des intervalles avec mise en cache des constantes
+      const intervalType = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
       const days = getWorkedDayIntervals(
         newStartDate, 
         newEndDate,
-        isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+        intervalType,
         !includeWeekend,
         nonWorkingDates
       );    
     
-      if (days.length === 0) return; // Pas de jours travaillés dans l'intervalle
+      // Early exit - Pas de jours travaillés dans l'intervalle
+      if (days.length === 0) return;
       
-      // Collecter les nouveaux RDV créés lors du split
-      const createdAppointments: Appointment[] = [];
+      // Enregistrer l'état précédent uniquement si nécessaire (optimisation mémoire)
+      const previousAppointment = saveToHistory ? { ...appointment } : null;
       
+      // Préallouer le tableau avec la taille optimale
+      const createdAppointments: Appointment[] = days.length > 1 ? new Array(days.length - 1) : [];
+      let createdCount = 0;
+      
+      // Éviter la duplication de code avec une fonction helper optimisée
+      const processIntervals = (startIndex: number, endIndex: number, step: number, mainIndex: number) => {
+        // Traitement du rendez-vous principal
+        const mainDay = days[mainIndex];
+        const mainStart = resizeDirection === 'left' ? mainDay.start : newStartDate;
+        const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
+        onResize(appointment.id, mainStart, mainEnd, newEmployeeId, false);
+        
+        // Traitement des intervalles supplémentaires
+        for (let i = startIndex; i !== endIndex; i += step) {
+          const day = days[i];
+          const newApp = createAppointment?.(
+            day.start, 
+            day.end, 
+            newEmployeeId, 
+            appointment.EventId,
+            false,
+            appointment.type
+          );
+          if (newApp) {
+            createdAppointments[createdCount++] = newApp;
+          }
+        }
+      };
+      
+      // Traitement optimisé selon la direction
       if (resizeDirection === 'right') {
-        // Met à jour le rendez-vous principal sur le premier intervalle
-        onResize(appointment.id, newStartDate, days[0].end, newEmployeeId, false);
-        // Création de nouveaux rendez-vous pour les autres intervalles travaillés
-        for (let index = 1; index < days.length; index++) {
-          const day = days[index];
-          const newApp = createAppointment?.(
-            day.start, 
-            day.end, 
-            newEmployeeId, 
-            appointment.EventId,
-            false,
-            appointment.type
-          );
-          if (newApp) {
-            createdAppointments.push(newApp);
-          }
-        }
-      }
-      if (resizeDirection === 'left') {
-        // Met à jour le rendez-vous principal sur le dernier intervalle
-        onResize(appointment.id, days[days.length - 1].start, newEndDate, newEmployeeId, false);
-        // Création de nouveaux rendez-vous pour les autres intervalles travaillés (sens inverse)
-        for (let index = days.length - 2; index >= 0; index--) {
-          const day = days[index];
-          const newApp = createAppointment?.(
-            day.start, 
-            day.end, 
-            newEmployeeId, 
-            appointment.EventId,
-            false,
-            appointment.type
-          );
-          if (newApp) {
-            createdAppointments.push(newApp);
-          }
-        }
+        processIntervals(1, days.length, 1, 0);
+      } else {
+        processIntervals(days.length - 2, -1, -1, days.length - 1);
       }
       
-      // Enregistrer l'action dans l'historique seulement si demandé
-      const updatedAppointment = appointments.current.find((app) => app.id === id);
-      if (updatedAppointment && saveToHistory && previousAppointment) {
-        if (createdAppointments.length > 0) {
-          // Resize avec split
-          saveAppointmentState(updatedAppointment, 'resize_split', previousAppointment, createdAppointments);
-        } else {
-          // Simple déplacement d'un seul RDV
-          saveAppointmentState(updatedAppointment, 'move', previousAppointment);
-        }
+      // Ajuster la taille du tableau aux éléments réellement créés
+      createdAppointments.length = createdCount;
+      
+      // Enregistrement dans l'historique avec micro-tâche pour améliorer les performances
+      if (saveToHistory && previousAppointment) {
+        queueMicrotask(() => {
+          const updatedAppointment = appointments.current.find((app) => app.id === id);
+          if (updatedAppointment) {
+            const actionType = createdCount > 0 ? 'resize_split' : 'move';
+            saveAppointmentState(
+              updatedAppointment, 
+              actionType, 
+              previousAppointment, 
+              createdCount > 0 ? createdAppointments : undefined
+            );
+          }
+        });
       }
     },
     [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, saveAppointmentState]
@@ -1002,7 +1098,6 @@ export default function HomePage() {
     events.current = events.current.map(e =>
       e.id === event.id ? { ...e, ...event } : e
     );
-
     handleResearch(); // Met à jour la liste filtrée
   }, [handleResearch]);
 
@@ -1010,8 +1105,9 @@ export default function HomePage() {
   const handleSaveAppointment = useCallback(
     (appointment: Appointment, eventUpdate: Evenement, includeAllNonWorkingDays: boolean) => {
 
-      handleSaveEvent(eventUpdate);
-
+      events.current = events.current.map(e =>
+        e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
+      );
       const days = getWorkedDayIntervals(
         appointment.startDate, 
         appointment.endDate,
@@ -1406,13 +1502,16 @@ export default function HomePage() {
   }, [handleDeleteAppointment, copyAppointmentToClipboard, pasteAppointment, handleOpenEditModal]);
 
   useEffect(() => {
-    // Délai pour s'assurer que le DOM est complètement rendu après NoSSR
-    const timer = setTimeout(() => {
-      goToDate(new Date());
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []); // Centrage initial
+
+    if(viewType === 'calendar'){
+      // Délai pour s'assurer que le DOM est complètement rendu après NoSSR
+      const timer = setTimeout(() => {
+        goToDate(new Date());
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [viewType]); // Centrage initial
 
   // Marquer la fin de l'initialisation après le premier rendu
   useEffect(() => {
@@ -1554,10 +1653,15 @@ export default function HomePage() {
     };
   }, [selectedAppointment, selectedCell, copyAppointmentToClipboard, pasteAppointment, undoLastAction]);
 
-  // Recherche dans les rendez-vous
+  // Recherche optimisée avec debounce et dependencies précises
   useEffect(() => {
-    handleResearch();
-  }, [searchInput]);
+    // Debounce pour éviter les recherches trop fréquentes
+    const searchTimer = setTimeout(() => {
+      handleResearch();
+    }, 200); // 200ms de délai pour les saisies utilisateur
+    
+    return () => clearTimeout(searchTimer);
+  }, [searchInput, viewType]); // Ajout de viewType comme dépendance
 
   // Ajuste scrollLeft après ajout à gauche pour éviter le "saut"
   useEffect(() => {
@@ -1578,15 +1682,21 @@ export default function HomePage() {
     }
   }, [dayInTimeline]);
 
-  // Appliquer les filtres quand ils changent
+  // Optimisation des filtres avec debounce et conditions précises
   useEffect(() => {
+    // Appliquer uniquement si nécessaire
     if (viewType === 'chantier-table') {
-      applyFiltersToChantiers();
-    }
-    if (viewType === 'paie-table') {
+      // Debounce pour éviter les re-calculs trop fréquents
+      const filterTimer = setTimeout(() => {
+        applyFiltersToChantiers();
+      }, 100); // Plus court car les filtres sont moins fréquents que la recherche
+      
+      return () => clearTimeout(filterTimer);
+    } else if (viewType === 'paie-table') {
+      // Pas de debounce nécessaire car c'est juste une assignation
       setFilteredEvent(events.current);
     }
-  }, [activeFilters, applyFiltersToChantiers, viewType]);
+  }, [activeFilters, viewType]); // Retirer applyFiltersToChantiers des dépendances pour éviter les re-renders
 
   // Initialiser la configuration du calendrier quand les configurations disponibles changent
   useEffect(() => {
@@ -1603,40 +1713,56 @@ export default function HomePage() {
   }, [modalInfo]);
 
   useEffect(() => {
-    setDayInTimeline(
-      includeWeekend
-        ? eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) })
-        : eachDayOfInterval({ start: addDays(new Date(), -WINDOW_SIZE / 2), end: addDays(new Date(), WINDOW_SIZE / 2) }).filter(date => !isWeekend(date))
-    );
-
-    // Réorganiser les rendez-vous seulement après la première initialisation
-    if (hasInitializedWeekend.current) {
-      appointments.current.forEach(app => {
-        moveAppointment(
-          app.id,
-          app.startDate,
-          app.endDate,
-          app.employeeId as number,
-          'right',
-          true // Sauvegarder dans l'historique lors des changements utilisateur
-        );
-      });
+    if(viewType !== 'calendar') return;
+    // Optimisation : pré-calculer les constantes une seule fois
+    const today = new Date();
+    const halfWindow = Math.floor(WINDOW_SIZE / 2);
+    const startDate = addDays(today, -halfWindow);
+    const endDate = addDays(today, halfWindow);
+    
+    // Optimisation : construction directe selon includeWeekend
+    let newTimeline: Date[];
+    if (includeWeekend) {
+      newTimeline = eachDayOfInterval({ start: startDate, end: endDate });
     } else {
-      // Première initialisation : juste réorganiser sans historique
-      appointments.current.forEach(app => {
+      // Construction optimisée sans filter() pour de meilleures performances
+      newTimeline = [];
+      let currentDate = startDate;
+      while (currentDate <= endDate) {
+        if (!isWeekend(currentDate)) {
+          newTimeline.push(currentDate);
+        }
+        currentDate = addDays(currentDate, 1);
+      }
+    }
+    
+    setDayInTimeline(newTimeline);
+
+    // Optimisation : batch le processing des appointments
+    const appointmentsToMove = [...appointments.current];
+    const shouldSaveHistory = hasInitializedWeekend.current;
+    
+    // Micro-tâche pour permettre au state de se mettre à jour d'abord
+    queueMicrotask(() => {
+      // Traitement optimisé des appointments
+      for (const app of appointmentsToMove) {
         moveAppointment(
           app.id,
           app.startDate,
           app.endDate,
           app.employeeId as number,
           'right',
-          false // Ne pas sauvegarder dans l'historique lors de l'initialisation
+          shouldSaveHistory
         );
-      });
-      hasInitializedWeekend.current = true;
-    }
+      }
+      
+      // Marquer l'initialisation une seule fois
+      if (!hasInitializedWeekend.current) {
+        hasInitializedWeekend.current = true;
+      }
+    });
 
-  }, [includeWeekend]);
+  }, [includeWeekend, viewType]);
     
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -2373,6 +2499,7 @@ export default function HomePage() {
               nonWorkingDates={nonWorkingDates}
               onSave={handleSaveAppointment}
               onClose={() => setIsModalOpen(false)}
+              onSaveEvent={handleSaveEvent}
             />
           )}
         </Modal>

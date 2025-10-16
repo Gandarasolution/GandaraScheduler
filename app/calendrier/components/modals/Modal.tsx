@@ -31,6 +31,8 @@ interface ModalProps {
     onClose: () => void;
     /** Contenu à afficher dans la modal */
     children: React.ReactNode;
+    /** Affiche ou masque l'overlay (défaut: true) */
+    isOverlayVisible?: boolean;
     /** Titre optionnel affiché en en-tête */
     title?: string;
     /** Masque le bouton de fermeture si true */
@@ -60,7 +62,8 @@ interface ModalProps {
 const Modal: React.FC<ModalProps> = ({ 
     isOpen, 
     onClose, 
-    children, 
+    children,
+    isOverlayVisible = true, 
     title, 
     whithoutCloseButton = false, 
     roundedSize = "2xl" 
@@ -90,7 +93,9 @@ const Modal: React.FC<ModalProps> = ({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center modal">
             {/* Overlay */}
-            <div className="fixed inset-0 bg-black bg-opacity-40 transition-opacity animate-fadeIn overlay" onClick={onClose} />
+            {isOverlayVisible && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 transition-opacity animate-fadeIn overlay" onClick={onClose} />
+            )}
             {/* Modal content */}
             <div className={`relative bg-white rounded-${roundedSize} shadow-2xl  mx-4 p-0 animate-zoomIn border border-gray-200 z-10 modal-content`}>
                 <div className="flex justify-between items-center px-4 pt-3 pb-2 modal-header">

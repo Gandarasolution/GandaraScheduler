@@ -60,6 +60,12 @@ import wheelbarrow from './calendrier/image/Icones/Evenement_Bibliotheque/Wheelb
 import woodenLogging from './calendrier/image/Icones/Evenement_Bibliotheque/Wooden logging.svg'
 import wrenchPipe from './calendrier/image/Icones/Evenement_Bibliotheque/wrench pipe.svg'
 import wrench from './calendrier/image/Icones/Evenement_Bibliotheque/wrench.svg'
+import iconesAbsences from './calendrier/image/Icones/Paie/Absence.svg';
+import iconesRepas from './calendrier/image/Icones/Paie/Repas.svg';
+import iconesPrime from './calendrier/image/Icones/Paie/Prime.svg';
+import iconesHeurSup from './calendrier/image/Icones/Paie/HeuresSupplementaires.svg';
+import iconesCongesPayes from './calendrier/image/Icones/Paie/CongesPayes.svg';
+import iconesSalaire from './calendrier/image/Icones/Paie/Salaire.svg';
 
 // ===== PALETTE DE COULEURS =====
 
@@ -2086,32 +2092,38 @@ export const initialAppointments: Appointment[] = generateAppointments(initialEm
 
 
 export const imagesÉvénement = [
-  { id: 1, name: 'Pinceau peinture', image: brushPaint.src, category: 'Peinture' },
-  { id: 2, name: 'Compas', image: caliper.src, category: 'Mesure' },
-  { id: 3, name: 'Robinet', image: faucet.src, category: 'Plomberie' },
-  { id: 4, name: 'Lunettes de protection', image: googleEyeProtector.src, category: 'Sécurité' },
-  { id: 5, name: 'Mécanicien', image: mechanic.src, category: 'Métier' },
-  { id: 6, name: 'Peinture', image: paint.src, category: 'Peinture' },
-  { id: 7, name: 'Parquet', image: parquet.src, category: 'Revêtement' },
-  { id: 8, name: 'Pinces', image: pliers.src, category: 'Outils' },
-  { id: 9, name: 'Plomberie', image: plumbing.src, category: 'Plomberie' },
-  { id: 10, name: 'Bras robotique', image: roboticArm.src, category: 'Technologie' },
-  { id: 11, name: 'Rouleau peinture', image: rollPaint.src, category: 'Peinture' },
-  { id: 12, name: 'Scie', image: saw.src, category: 'Outils' },
-  { id: 13, name: 'Vis', image: screw.src, category: 'Fixation' },
-  { id: 14, name: 'Pelle', image: shovel.src, category: 'Terrassement' },
-  { id: 15, name: 'Rouleau compresseur', image: steamroller.src, category: 'Engins' },
-  { id: 16, name: 'Boîte à outils', image: toolbox.src, category: 'Outils' },
-  { id: 17, name: 'Truelle', image: trowel.src, category: 'Maçonnerie' },
-  { id: 18, name: 'Camion', image: truck.src, category: 'Transport' },
-  { id: 19, name: 'Panneau chantier', image: underConstructionSign.src, category: 'Signalisation' },
-  { id: 20, name: 'Gilet de sécurité', image: vestProtect.src, category: 'Sécurité' },
-  { id: 21, name: 'Mur en briques', image: wallBrick.src, category: 'Maçonnerie' },
-  { id: 22, name: 'Brouette', image: wheelbarrow.src, category: 'Transport' },
-  { id: 23, name: 'Bois/Sciage', image: woodenLogging.src, category: 'Bois' },
-  { id: 24, name: 'Clé à pipe', image: wrenchPipe.src, category: 'Plomberie' },
-  { id: 25, name: 'Clé', image: wrench.src, category: 'Outils' },
-  { id: 26, name: 'Icone Chantier', image: iconeChantier.src, category: 'Chantier' },
-  { id: 27, name: 'Icone Absence', image: iconeAbsenceValide.src, category: 'Absence' },
-  { id: 28, name: 'Icone Absence Non Validée', image: iconeAbsenceNonValide.src, category: 'Autre' }
+  { id: 1, name: 'Pinceau peinture', image: brushPaint.src },
+  { id: 2, name: 'Compas', image: caliper.src },
+  { id: 3, name: 'Robinet', image: faucet.src },
+  { id: 4, name: 'Lunettes de protection', image: googleEyeProtector.src },
+  { id: 5, name: 'Mécanicien', image: mechanic.src },
+  { id: 6, name: 'Peinture', image: paint.src },
+  { id: 7, name: 'Parquet', image: parquet.src },
+  { id: 8, name: 'Pinces', image: pliers.src },
+  { id: 9, name: 'Plomberie', image: plumbing.src },
+  { id: 10, name: 'Bras robotique', image: roboticArm.src },
+  { id: 11, name: 'Rouleau peinture', image: rollPaint.src },
+  { id: 12, name: 'Scie', image: saw.src },
+  { id: 13, name: 'Vis', image: screw.src },
+  { id: 14, name: 'Pelle', image: shovel.src },
+  { id: 15, name: 'Rouleau compresseur', image: steamroller.src },
+  { id: 16, name: 'Boîte à outils', image: toolbox.src },
+  { id: 17, name: 'Truelle', image: trowel.src },
+  { id: 18, name: 'Camion', image: truck.src },
+  { id: 19, name: 'Panneau chantier', image: underConstructionSign.src },
+  { id: 20, name: 'Gilet de sécurité', image: vestProtect.src },
+  { id: 21, name: 'Mur en briques', image: wallBrick.src },
+  { id: 22, name: 'Brouette', image: wheelbarrow.src },
+  { id: 23, name: 'Bois/Sciage', image: woodenLogging.src },
+  { id: 24, name: 'Clé à pipe', image: wrenchPipe.src },
+  { id: 25, name: 'Clé', image: wrench.src },
+  { id: 26, name: 'Icone Chantier', image: iconeChantier.src },
+  { id: 27, name: 'Icone Absence', image: iconeAbsenceValide.src },
+  { id: 28, name: 'Icone Absence Non Validée', image: iconeAbsenceNonValide.src},
+  { id: 29, name: 'Absence', image: iconesAbsences.src },
+  { id: 30, name: 'Repas', image: iconesRepas.src },
+  { id: 31, name: 'Prime', image: iconesPrime.src },
+  { id: 32, name: 'Heures sup.', image: iconesHeurSup.src },
+  { id: 33, name: 'Congés payés', image: iconesCongesPayes.src },
+  { id: 34, name: 'Salaire', image: iconesSalaire.src }
 ]

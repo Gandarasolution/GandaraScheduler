@@ -554,7 +554,8 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
             )}
           </div>
         );
-      case 'image':        
+      case 'image':
+        
         if (value && typeof value === 'string' && itemId) {
           const item = items.find(i => i && i.id === itemId) as ItemType;
           return (
