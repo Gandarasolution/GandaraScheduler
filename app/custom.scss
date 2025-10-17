@@ -44,23 +44,23 @@
   background-color: #f9f9f9; /* gris très clair */
 }
 
-// Styles pour le survol du calendrier - table hover system
+// Styles pour le survol du calendrier - Système optimisé sans lag
 .calendar-table {
   border-spacing: 0;
   
   .calendar-cell {
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    will-change: background-color, box-shadow;
+    // Pas de transition pour éviter les lags - changement instantané
+    will-change: auto; // Retirer will-change pour réduire la consommation mémoire
   }
   
-  // Survol des lignes - CSS natif pour performance maximale
+  // Survol des lignes - CSS natif pour performance maximale (instantané)
   .calendar-row:hover .calendar-cell {
     background-color: #e7f4f2 !important;
   }
   
-  // Survol des colonnes - JavaScript géré
-  .calendar-cell.hover-column {
+  // Survol des colonnes - Utilisation d'attributs data pour sélecteurs CSS purs
+  .calendar-cell[data-hover-col="true"] {
     background-color: #e7f4f2 !important;
   }
   
@@ -72,9 +72,9 @@
 
 // Styles pour le survol des employés dans la colonne de gauche
 .employee-row-item {
-  transition: background-color 0.05s ease;
+  // Pas de transition pour changement instantané
   
-  &.hover-employee {
+  &[data-hover="true"] {
     background-color: #e7f4f2 !important;
   }
 }

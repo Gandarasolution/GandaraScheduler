@@ -14,7 +14,7 @@
  */
 
 "use client";
-import React, { useMemo, ReactNode } from 'react';
+import React, { useMemo, ReactNode, memo } from 'react';
 import { format, isToday, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CELL_WIDTH } from '../../utils/constants';
@@ -332,4 +332,4 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   );
 };
 
-export default TimelineFrame;
+export default memo(TimelineFrame);

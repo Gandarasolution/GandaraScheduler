@@ -18,7 +18,7 @@
  * @version 1.0.0
  */
 
-import { useEffect } from "react";
+import { useEffect, memo } from "react";
 
 /**
  * Interface définissant les propriétés du composant Modal
@@ -122,4 +122,4 @@ const Modal: React.FC<ModalProps> = ({
     );
 };
 
-export default Modal;
+export default memo(Modal);

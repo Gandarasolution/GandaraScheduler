@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 
 export interface SelectOptionWithImage {
   id: string | number;
@@ -261,4 +261,4 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   );
 };
 
-export default CustomSelectWithImage;
+export default memo(CustomSelectWithImage);

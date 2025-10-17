@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { memo } from 'react';
 import { useDrag } from 'react-dnd';
 
 import ChantierIcones from '../image/Icones/Chantier.png';
@@ -59,4 +59,4 @@ const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title, imageUrl =
   );
 };
 
-export default DraggableSource;
+export default memo(DraggableSource);

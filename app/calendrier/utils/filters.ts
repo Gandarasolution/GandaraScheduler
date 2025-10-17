@@ -38,9 +38,13 @@ export function applyFiltersToAppointments(
   filters: Filter[], 
   employees: Employee[]
 ): Appointment[] {
+  // Optimisation: Créer une Map pour O(1) lookup des employés
+  const employeeMap = new Map<number, Employee>();
+  employees.forEach(emp => employeeMap.set(emp.id, emp));
+  
   return appointments.filter(appointment => {
-    // Trouver l'employé associé au rendez-vous
-    const employee = employees.find(emp => emp.id === Number(appointment.employeeId));
+    // Trouver l'employé associé au rendez-vous avec O(1) lookup
+    const employee = employeeMap.get(Number(appointment.employeeId));
     
     return filters.every(filter => {
       switch (filter.type) {
@@ -99,6 +103,7 @@ export function getDimensionItems(
       }));
     
     case 'contract':
+      // Optimisation: Utiliser Set pour obtenir des valeurs uniques en O(n)
       const contractTypes = Array.from(new Set(employees.map(emp => emp.type)));
       return contractTypes.map(type => ({
         id: type,
@@ -115,6 +120,7 @@ export function getDimensionItems(
       }));
     
     case 'pole':
+      // Optimisation: Utiliser Set pour obtenir des valeurs uniques en O(n)
       const poles = Array.from(new Set(employees.map(emp => emp.pole)));
       return poles.map(pole => ({
         id: pole,

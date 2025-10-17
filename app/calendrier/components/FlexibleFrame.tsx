@@ -13,7 +13,7 @@
  */
 
 "use client";
-import React, { ReactNode } from 'react';
+import React, { ReactNode, memo } from 'react';
 
 /**
  * Interface pour définir un groupe/catégorie
@@ -196,4 +196,4 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   );
 };
 
-export default FlexibleFrame;
+export default memo(FlexibleFrame);

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { CELL_HEIGHT, CELL_WIDTH } from '../utils/constants';
 
 interface InfoBubbleProps {
@@ -98,4 +98,4 @@ const InfoBubble: React.FC<InfoBubbleProps> = ({ content, position, onClose }) =
   );
 };
 
-export default InfoBubble;
+export default memo(InfoBubble);

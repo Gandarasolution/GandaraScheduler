@@ -132,6 +132,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
   const isSyncingScroll = useRef(false);
+  
+  // Refs pour optimiser le système de hover
+  const lastHoveredCol = useRef<number>(-1);
+  const lastHoveredEmployee = useRef<string | null>(null);
 
   // Calculer les éléments de dimension basés sur la configuration
   const dimensionItems = useMemo(() => {
@@ -175,73 +179,91 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   useEffect(() => {
     setOpenItems(dimensionItems.map(item => item.id));
   }, [dimensionItems]);
+  
+ 
 
   const handleMouseOver = useCallback((e: React.MouseEvent<HTMLTableElement>) => {
-      const target = e.target as HTMLElement;
-      
-      // Trouver la cellule parente, même si on survole un rendez-vous
-      let cell = target.closest('.calendar-cell') as HTMLElement;
-      
-      if (cell && cell.classList.contains('calendar-cell')) {
-        // Nettoyer les anciennes classes hover
-        const existingHoverCells = document.querySelectorAll('.hover-column');
-        const existingHoverEmployees = document.querySelectorAll('.hover-employee');
-        existingHoverCells.forEach(cell => cell.classList.remove('hover-column'));
-        existingHoverEmployees.forEach(emp => emp.classList.remove('hover-employee'));
+    const target = e.target as HTMLElement;
+    
+    // Trouver la cellule parente, même si on survole un rendez-vous
+    const cell = target.closest('.calendar-cell') as HTMLElement;
+    
+    if (!cell || !cell.classList.contains('calendar-cell')) return;
+    
+    const table = e.currentTarget as HTMLTableElement;
+    if (!table) return;
+    
+    // Calculer l'index de colonne
+    const tableRect = table.getBoundingClientRect();
+    const mouseX = e.clientX - tableRect.left;
+    const colIndex = Math.floor(mouseX / CELL_WIDTH);
+    
+    // Trouver l'employé
+    const row = cell.closest('.calendar-row[data-employee-id]') as HTMLElement;
+    const employeeId = row ? row.getAttribute('data-employee-id') : null;
+    
+    // Si rien n'a changé, ne rien faire (optimisation majeure)
+    if (colIndex === lastHoveredCol.current && employeeId === lastHoveredEmployee.current) {
+      return;
+    }
+       
+    
+    // Mettre à jour les refs
+    lastHoveredCol.current = colIndex;
+    lastHoveredEmployee.current = employeeId;
+    
+    // Utiliser requestAnimationFrame pour des updates optimisés
+    requestAnimationFrame(() => {
+      // Vérifier que l'index de colonne est valide
+      if (colIndex >= 0 && colIndex < dayInTimeline.length) {
+        // Batch DOM updates: retirer puis ajouter
+        const cellsToUpdate = table.querySelectorAll('[data-hover-col="true"]');
+        cellsToUpdate.forEach(c => (c as HTMLElement).removeAttribute('data-hover-col'));
         
-        // Pour les rendez-vous multi-jours, calculer la colonne basée sur la position X de la souris
-        const table = e.currentTarget as HTMLTableElement;
-        if (table) {
-          const tableRect = table.getBoundingClientRect();
-          const mouseX = e.clientX - tableRect.left;
-          const colIndex = Math.floor(mouseX / CELL_WIDTH);
-          
-          // Vérifier que l'index de colonne est valide
-          if (colIndex >= 0 && colIndex < dayInTimeline.length) {
-            const rows = table.querySelectorAll('.calendar-row');
-            rows.forEach(row => {
-              const cellInCol = row.children[colIndex] as HTMLElement;
-              if (cellInCol) {
-                cellInCol.classList.add('hover-column');
-              }
-            });
+        // Marquer les nouvelles cellules (plus efficace avec children[])
+        const rows = table.querySelectorAll('.calendar-row');
+        rows.forEach(row => {
+          const cellInCol = row.children[colIndex] as HTMLElement;
+          if (cellInCol) {
+            cellInCol.setAttribute('data-hover-col', 'true');
           }
-          
-          // Trouver la ligne parent et l'employé correspondant
-          const row = cell.closest('.calendar-row[data-employee-id]') as HTMLElement;
-          if (row) {
-            const employeeId = row.getAttribute('data-employee-id');
-            if (employeeId) {
-              // Surligner l'employé dans la colonne de gauche
-              const employeeElement = document.querySelector(`.employee-row-item[data-employee-id="${employeeId}"]`) as HTMLElement;
-              if (employeeElement) {
-                employeeElement.classList.add('hover-employee');
-              }
-            }
-          }
+        });
+      }
+      
+      // Gérer le surlignage de l'employé
+      if (employeeId) {
+        // Batch: retirer puis ajouter
+        const employeesToUpdate = document.querySelectorAll('[data-hover="true"]');
+        employeesToUpdate.forEach(emp => (emp as HTMLElement).removeAttribute('data-hover'));
+        
+        const employeeElement = document.querySelector(
+          `.employee-row-item[data-employee-id="${employeeId}"]`
+        ) as HTMLElement;
+        if (employeeElement) {
+          employeeElement.setAttribute('data-hover', 'true');
         }
       }
-    }, [dayInTimeline]);
+    });
+  }, [dayInTimeline]);
 
     const handleMouseOut = useCallback((e: React.MouseEvent<HTMLTableElement>) => {
-      const target = e.target as HTMLElement;
-      const cell = target.closest('.calendar-cell') as HTMLElement;
+      const relatedTarget = e.relatedTarget as HTMLElement;
       
-      if (cell && cell.classList.contains('calendar-cell')) {
-        // Retirer toutes les classes hover
-        const cells = document.querySelectorAll('.hover-column');
-        const employees = document.querySelectorAll('.hover-employee');
-        cells.forEach(cell => cell.classList.remove('hover-column'));
-        employees.forEach(emp => emp.classList.remove('hover-employee'));
+      // Vérifier si on quitte vraiment le tableau
+      if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+        // Retirer tous les attributs hover en une seule passe
+        const table = e.currentTarget as HTMLTableElement;
+        if (table) {
+          table.querySelectorAll('[data-hover-col="true"]').forEach(c => {
+            (c as HTMLElement).removeAttribute('data-hover-col');
+          });
+        }
+        
+        document.querySelectorAll('[data-hover="true"]').forEach(emp => {
+          (emp as HTMLElement).removeAttribute('data-hover');
+        });
       }
     }, []);
-
-  
-
-  // Trouve l'index du jour courant dans la timeline - déplacé vers TimelineFrame
-  // const todayIndex = dayInTimeline.findIndex(day => 
-  //   format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-  // );
 
   // Ouvre/ferme un élément de dimension dans la vue
   const toggleItem = (itemId: string | number) => {
@@ -252,14 +274,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     );
   };   
 
-  // Calcule le numéro de semaine pour un jour donné - déplacé vers TimelineFrame
-  // const getWeekNumber = (d: Date) => {
-  //     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  //     const dayNum = d.getUTCDay() || 7;
-  //     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  //     const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  //     return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
-  // };
 
   /**
    * Calcule le nombre maximal de rendez-vous qui se chevauchent dans une liste donnée.
@@ -688,7 +702,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     return (
                       <div
                         key={employee.id}
-                        className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer transition hover:bg-[#e7f4f2] employee-row-item"
+                        className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer hover:bg-[#e7f4f2] employee-row-item"
                         style={{ height: employeeRowHeight, alignItems: 'center' }}
                         data-employee-id={employee.id}
                       >
