@@ -45,6 +45,9 @@ import {
   setHours,
   setMinutes,
   format,
+  isSameDay,
+  isSameMonth,
+  isSameYear,
 } from "date-fns";
 import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent, Filter, FilterType, DimensionType} from "../types";
 import CalendarGrid from "../components/Calendar/CalendarGrid";
@@ -150,6 +153,17 @@ export default function HomePage() {
     }
     return false; // Valeur par défaut
   });
+  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table'>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const savedView = window.localStorage.getItem('viewType');
+      if (savedView === 'calendar' || savedView === 'chantier-table' || savedView === 'paie-table') {
+        return savedView;
+      }
+    }
+    return 'calendar'; // Valeur par défaut
+  }); // État pour basculer entre les vues
+
+
 
   const [nonWorkingDates, setNonWorkingDates] = useState<Date[]>([]);
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
@@ -188,7 +202,6 @@ export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [eventSearchInput, setEventSearchInput] = useState<string>('');
-  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table'>('calendar'); // État pour basculer entre les vues
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false); // État pour contrôler le menu déroulant
   const viewDropdownRef = useRef<HTMLDivElement>(null); // Ref pour le menu déroulant
   
@@ -254,6 +267,16 @@ export default function HomePage() {
       }
     }, 0);
   }, []);
+  const toggleSetViewType = useCallback((value: 'calendar' | 'chantier-table' | 'paie-table') => {
+    setViewType(value);
+    // Sauvegarder dans localStorage de façon asynchrone après le rendu
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('viewType', value);
+      }
+    }, 0);
+  }, []);
+
 
 
   // --- GESTION DES CONFIGURATIONS DE CALENDRIER ET FILTRES ---
@@ -553,8 +576,8 @@ export default function HomePage() {
           break;
         
         case 'paie-table':
-          // Cache pour éviter la re-création du tableau
-          setFilteredEvent(events.current);
+          if (!searchInput.trim()) setFilteredEvent(events.current);
+          else setFilteredEvent(events.current.filter(e => e.label.toLocaleLowerCase().includes(searchInput.toLowerCase())));
           break;
         
         default:
@@ -1527,12 +1550,14 @@ export default function HomePage() {
   }, [handleDeleteAppointment, copyAppointmentToClipboard, pasteAppointment, handleOpenEditModal]);
 
   useEffect(() => {
-
-    if(viewType === 'calendar'){
+    
+    const day = new Date();
+    const isSame = isSameDay(selectedDate, day) && isSameMonth(selectedDate, day) && isSameYear(selectedDate, day);
+    if(viewType === 'calendar' && isSame) {
       // Délai pour s'assurer que le DOM est complètement rendu après NoSSR
       const timer = setTimeout(() => {
         goToDate(new Date());
-      }, 100);
+      }, 10);
 
       return () => clearTimeout(timer);
     }
@@ -1542,7 +1567,7 @@ export default function HomePage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       isInitializing.current = false;
-    }, 100); // Court délai pour s'assurer que l'initialisation est terminée
+    }, 10); // Court délai pour s'assurer que l'initialisation est terminée
     
     return () => clearTimeout(timer);
   }, []);
@@ -1667,7 +1692,7 @@ export default function HomePage() {
     // Debounce pour éviter les recherches trop fréquentes
     const searchTimer = setTimeout(() => {
       handleResearch();
-    }, 200); // 200ms de délai pour les saisies utilisateur
+    }, 20); // 200ms de délai pour les saisies utilisateur
     
     return () => clearTimeout(searchTimer);
   }, [searchInput, viewType]); // Ajout de viewType comme dépendance
@@ -1698,7 +1723,7 @@ export default function HomePage() {
       // Debounce pour éviter les re-calculs trop fréquents
       const filterTimer = setTimeout(() => {
         applyFiltersToChantiers();
-      }, 100); // Plus court car les filtres sont moins fréquents que la recherche
+      }, 10); // Plus court car les filtres sont moins fréquents que la recherche
       
       return () => clearTimeout(filterTimer);
     } else if (viewType === 'paie-table') {
@@ -1724,10 +1749,10 @@ export default function HomePage() {
   useEffect(() => {
     if(viewType !== 'calendar') return;
     // Optimisation : pré-calculer les constantes une seule fois
-    const today = new Date();
+    const date = selectedDate;
     const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = addDays(today, -halfWindow);
-    const endDate = addDays(today, halfWindow);
+    const startDate = addDays(date, -halfWindow);
+    const endDate = addDays(date, halfWindow);
     
     // Optimisation : construction directe selon includeWeekend
     let newTimeline: Date[];
@@ -1771,6 +1796,8 @@ export default function HomePage() {
         hasInitializedWeekend.current = true;
       }
     });
+
+    goToDate(selectedDate);
 
   }, [includeWeekend, viewType]);
     
@@ -1855,7 +1882,7 @@ export default function HomePage() {
                     <button
                       type="button"
                       onClick={() => toggleSetIsExpanded(!isExpanded)}
-                      className="w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10"
+                      className="w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10 cursor-pointer"
                       title={isExpanded ? "Réduire" : "Options avancées"}
                     >
                       <svg 
@@ -1869,10 +1896,10 @@ export default function HomePage() {
                         <path fillRule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
                       </svg>
                     </button>
-                    {viewType === 'chantier-table' || viewType === 'paie-table' && (
+                    {viewType !== 'calendar' && (
                       <button
-                        className="p-3 rounded-full hover:bg-blue-100 transition"
-                        onClick={() => {setViewType('calendar')}}
+                        className="p-3 rounded-full hover:bg-blue-100 transition cursor-pointer"
+                        onClick={() => {toggleSetViewType('calendar')}}
                         title="Planning"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 20 60 60" width="25" height="25">
@@ -1892,7 +1919,7 @@ export default function HomePage() {
                       </button>
                     )}
                     <button
-                      className="p-3 rounded-full hover:bg-blue-100 transition "
+                      className="p-3 rounded-full hover:bg-blue-100 transition cursor-pointer"
                       onClick={() => setIsSettingsOpen(true)}
                       title="Paramètres"
                     >
@@ -1911,7 +1938,7 @@ export default function HomePage() {
                     </button>
                     <div className="relative" ref={viewDropdownRef}>
                       <button
-                        className="p-3 rounded-full hover:bg-blue-100 transition"
+                        className="p-3 rounded-full hover:bg-blue-100 transition cursor-pointer"
                         onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
                         title="multi"
                       >
@@ -1948,7 +1975,7 @@ export default function HomePage() {
                                   : 'text-gray-700 hover:bg-[#e7f4f2] hover:shadow-sm'
                               }`}
                               onClick={() => {
-                                setViewType('calendar');
+                                toggleSetViewType('calendar');
                                 setIsViewDropdownOpen(false);
                               }}
                             >
@@ -1990,7 +2017,7 @@ export default function HomePage() {
                                   : 'text-gray-700 hover:bg-[#e7f4f2] hover:shadow-sm'
                               }`}
                               onClick={() => {
-                                setViewType('chantier-table');
+                                toggleSetViewType('chantier-table');
                                 setIsViewDropdownOpen(false);
                               }}
                             >
@@ -2029,7 +2056,7 @@ export default function HomePage() {
                                   : 'text-gray-700 hover:bg-[#e7f4f2] hover:shadow-sm'
                               }`}
                               onClick={() => {
-                                setViewType('paie-table');
+                                toggleSetViewType('paie-table');
                                 setIsViewDropdownOpen(false);
                               }}
                             >
@@ -2075,7 +2102,7 @@ export default function HomePage() {
                     
                     {/* Bouton Notifications */}
                     <button
-                      className="p-3 rounded-full hover:bg-blue-100 transition relative"
+                      className="p-3 rounded-full hover:bg-blue-100 transition relative cursor-pointer"
                       onClick={() => setIsNotificationsPanelOpen(!isNotificationsPanelOpen)}
                       title="Notifications"
                     >
@@ -2189,31 +2216,33 @@ export default function HomePage() {
                         </button>
                       </>
                     )}
-                    <button 
-                      className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
-                      name="filtrer"
-                      onClick={() => viewType === 'calendar' ? setIsConfigModalOpen(true) : setIsFilterModalOpen(true)}
-                      title="Filtrer"
-                    >
-                      <svg 
-                        viewBox="0 0 16 16"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        className="w-5 h-5 text-inherit text-gray-500 transition duration-200"
+                    {viewType !== 'paie-table' && (
+                      <button 
+                        className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
+                        name="filtrer"
+                        onClick={() => viewType === 'calendar' ? setIsConfigModalOpen(true) : setIsFilterModalOpen(true)}
+                        title="Filtrer"
                       >
-                        <g>
-                          <path 
-                            d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"
-                            fill="#84818a" 
-                            fillOpacity="1" 
-                            data-original-color="#000000ff" 
-                            stroke="none" 
-                            strokeOpacity="1"
-                          />
-                        </g>
-                      </svg>
-                    </button>
+                        <svg 
+                          viewBox="0 0 16 16"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          className="w-5 h-5 text-inherit text-gray-500 transition duration-200"
+                        >
+                          <g>
+                            <path 
+                              d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"
+                              fill="#84818a" 
+                              fillOpacity="1" 
+                              data-original-color="#000000ff" 
+                              stroke="none" 
+                              strokeOpacity="1"
+                            />
+                          </g>
+                        </svg>
+                      </button>
+                    )}
                   </div>
                   {viewType === 'calendar' && (
                     <button
