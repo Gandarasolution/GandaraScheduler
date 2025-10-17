@@ -1,0 +1,381 @@
+/**
+ * @fileoverview Système de Thèmes - Variables CSS pour tout le projet
+ * 
+ * Ce fichier centralise toutes les couleurs et styles du projet pour permettre:
+ * - Changement de thème facile (mode sombre/clair)
+ * - Personnalisation par client
+ * - Cohérence visuelle dans tout le projet
+ * 
+ * @author Gandara Solutions
+ * @version 1.0.0
+ */
+
+// ============================================================================
+// THÈME PAR DÉFAUT (CLAIR) - Gandara Scheduler
+// ============================================================================
+
+:root {
+  // ── Couleurs Primaires (Marque Gandara) ───────────────────────────────────
+  --color-primary: #009580;           // Vert principal Gandara
+  --color-primary-dark: #007a6b;      // Vert foncé pour hover
+  --color-primary-light: #00b597;     // Vert clair
+  --color-primary-lighter: #e7f4f2;   // Vert très clair (backgrounds)
+  --color-primary-ultra-light: #f0f9f7; // Vert ultra-clair
+  
+  // ── Couleurs Secondaires ──────────────────────────────────────────────────
+  --color-secondary: #23adde;         // Bleu pour accents
+  --color-secondary-light: #4cbee8;
+  --color-secondary-dark: #1a8bb3;
+  
+  // ── Couleurs Neutres (Gris) ───────────────────────────────────────────────
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  
+  // ── Couleurs de Statut ────────────────────────────────────────────────────
+  --color-success: #10b981;           // Vert succès
+  --color-success-light: #d1fae5;
+  --color-success-dark: #059669;
+  
+  --color-warning: #f59e0b;           // Orange warning
+  --color-warning-light: #fef3c7;
+  --color-warning-dark: #d97706;
+  
+  --color-error: #ef4444;             // Rouge erreur
+  --color-error-light: #fee2e2;
+  --color-error-dark: #dc2626;
+  
+  --color-info: #3b82f6;              // Bleu info
+  --color-info-light: #dbeafe;
+  --color-info-dark: #2563eb;
+  
+  // ── Couleurs de Texte ─────────────────────────────────────────────────────
+  --text-primary: #111827;            // Texte principal (gris très foncé)
+  --text-secondary: #6b7280;          // Texte secondaire
+  --text-tertiary: #9ca3af;           // Texte tertiaire
+  --text-inverse: #ffffff;            // Texte sur fond sombre
+  --text-link: #009580;               // Liens
+  --text-link-hover: #007a6b;
+  
+  // ── Couleurs de Background ────────────────────────────────────────────────
+  --bg-primary: #ffffff;              // Background principal
+  --bg-secondary: #f9fafb;            // Background secondaire
+  --bg-tertiary: #f3f4f6;             // Background tertiaire
+  --bg-hover: #f3f7f8;                // Hover sur cellules calendrier
+  --bg-active: #e7f4f2;               // Élément actif
+  --bg-disabled: #f9f9f9;             // Élément désactivé
+  
+  // ── Couleurs Spécifiques Calendrier ───────────────────────────────────────
+  --calendar-weekend: #f6f6f6;        // Week-end
+  --calendar-holiday: #fce4e4;        // Jours fériés (rose clair)
+  --calendar-today: #ffcdde;          // Aujourd'hui (rose)
+  --calendar-today-dark: #ffc1dd;
+  --calendar-border: #e5e7eb;
+  --calendar-cell-hover: #e7f4f2;     // Hover cellule
+  --calendar-cell-active: #d4ede9;    // Cellule active (intersection)
+  
+  // ── Bordures ──────────────────────────────────────────────────────────────
+  --border-light: #f0f0f0;
+  --border-default: #e5e7eb;
+  --border-dark: #d1d5db;
+  --border-focus: #009580;
+  
+  // ── Ombres ────────────────────────────────────────────────────────────────
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  // ── Rayons de Bordure ─────────────────────────────────────────────────────
+  --radius-sm: 0.375rem;              // 6px
+  --radius-md: 0.5rem;                // 8px
+  --radius-lg: 0.75rem;               // 12px
+  --radius-xl: 1rem;                  // 16px
+  --radius-2xl: 1.5rem;               // 24px
+  --radius-full: 9999px;
+  
+  // ── Transitions ───────────────────────────────────────────────────────────
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+// ============================================================================
+// THÈME SOMBRE
+// ============================================================================
+
+[data-theme="dark"] {
+  // ── Couleurs Primaires (Adaptées pour le sombre) ──────────────────────
+  --color-primary: #00b597;         // Vert plus clair pour contraste
+  --color-primary-dark: #009580;
+  --color-primary-light: #00d4ad;
+  --color-primary-lighter: #1a3d38;  // Vert foncé pour backgrounds
+  --color-primary-ultra-light: #0f2a26;
+    
+    // ── Couleurs Neutres (Inversées) ──────────────────────────────────────
+    --color-gray-50: #18181b;
+    --color-gray-100: #27272a;
+    --color-gray-200: #3f3f46;
+    --color-gray-300: #52525b;
+    --color-gray-400: #71717a;
+    --color-gray-500: #a1a1aa;
+    --color-gray-600: #d4d4d8;
+    --color-gray-700: #e4e4e7;
+    --color-gray-800: #f4f4f5;
+    --color-gray-900: #fafafa;
+    
+    // ── Couleurs de Statut (Adaptées) ─────────────────────────────────────
+    --color-success: #22c55e;
+    --color-success-light: #14532d;
+    --color-success-dark: #4ade80;
+    
+    --color-warning: #fbbf24;
+    --color-warning-light: #78350f;
+    --color-warning-dark: #fcd34d;
+    
+    --color-error: #f87171;
+    --color-error-light: #7f1d1d;
+    --color-error-dark: #fca5a5;
+    
+    --color-info: #60a5fa;
+    --color-info-light: #1e3a8a;
+    --color-info-dark: #93c5fd;
+    
+    // ── Couleurs de Texte (Inversées) ─────────────────────────────────────
+    --text-primary: #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-tertiary: #71717a;
+    --text-inverse: #18181b;
+    --text-link: #00b597;
+    --text-link-hover: #00d4ad;
+    
+    // ── Couleurs de Background (Sombres) ──────────────────────────────────
+    --bg-primary: #18181b;
+    --bg-secondary: #27272a;
+    --bg-tertiary: #3f3f46;
+    --bg-hover: #2d2d30;
+    --bg-active: #1a3d38;
+    --bg-disabled: #27272a;
+    
+    // ── Couleurs Spécifiques Calendrier (Mode Sombre) ─────────────────────
+    --calendar-weekend: #1e293b;      // Bleu foncé
+    --calendar-holiday: #7f1d1d;      // Rouge foncé
+    --calendar-today: #991b1b;        // Rouge plus visible
+    --calendar-today-dark: #7f1d1d;
+    --calendar-border: #3f3f46;
+    --calendar-cell-hover: #2d2d30;
+    --calendar-cell-active: #1a3d38;
+    
+    // ── Bordures (Sombres) ────────────────────────────────────────────────
+    --border-light: #27272a;
+    --border-default: #3f3f46;
+    --border-dark: #52525b;
+    --border-focus: #00b597;
+    
+    // ── Ombres (Adaptées) ─────────────────────────────────────────────────
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+
+// ============================================================================
+// THÈMES PERSONNALISÉS PAR CLIENT
+// ============================================================================
+
+// ── CLIENT: BLEU (Exemple) ────────────────────────────────────────────────
+[data-theme="client-blue"] {
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-primary-light: #60a5fa;
+  --color-primary-lighter: #dbeafe;
+  --color-primary-ultra-light: #eff6ff;
+  
+  --text-link: #3b82f6;
+  --text-link-hover: #2563eb;
+  --border-focus: #3b82f6;
+  --calendar-cell-hover: #dbeafe;
+  --calendar-cell-active: #bfdbfe;
+}
+
+// ── CLIENT: VIOLET (Exemple) ──────────────────────────────────────────────
+[data-theme="client-purple"] {
+  --color-primary: #8b5cf6;
+  --color-primary-dark: #7c3aed;
+  --color-primary-light: #a78bfa;
+  --color-primary-lighter: #ede9fe;
+  --color-primary-ultra-light: #f5f3ff;
+  
+  --text-link: #8b5cf6;
+  --text-link-hover: #7c3aed;
+  --border-focus: #8b5cf6;
+  --calendar-cell-hover: #ede9fe;
+  --calendar-cell-active: #ddd6fe;
+}
+
+// ── CLIENT: ORANGE (Exemple) ──────────────────────────────────────────────
+[data-theme="client-orange"] {
+  --color-primary: #f97316;
+  --color-primary-dark: #ea580c;
+  --color-primary-light: #fb923c;
+  --color-primary-lighter: #ffedd5;
+  --color-primary-ultra-light: #fff7ed;
+  
+  --text-link: #f97316;
+  --text-link-hover: #ea580c;
+  --border-focus: #f97316;
+  --calendar-cell-hover: #ffedd5;
+  --calendar-cell-active: #fed7aa;
+}
+
+
+// ============================================================================
+// CLASSES UTILITAIRES POUR UTILISER LES VARIABLES
+// ============================================================================
+
+// ── Backgrounds ────────────────────────────────────────────────────────────
+.bg-primary { background-color: var(--color-primary) !important; }
+.bg-primary-dark { background-color: var(--color-primary-dark) !important; }
+.bg-primary-light { background-color: var(--color-primary-light) !important; }
+.bg-primary-lighter { background-color: var(--color-primary-lighter) !important; }
+
+.bg-secondary { background-color: var(--color-secondary) !important; }
+.bg-success { background-color: var(--color-success) !important; }
+.bg-warning { background-color: var(--color-warning) !important; }
+.bg-error { background-color: var(--color-error) !important; }
+.bg-info { background-color: var(--color-info) !important; }
+
+// ── Texte ──────────────────────────────────────────────────────────────────
+.text-primary { color: var(--text-primary) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-tertiary { color: var(--text-tertiary) !important; }
+.text-inverse { color: var(--text-inverse) !important; }
+.text-link { color: var(--text-link) !important; }
+
+.text-color-primary { color: var(--color-primary) !important; }
+.text-color-success { color: var(--color-success) !important; }
+.text-color-warning { color: var(--color-warning) !important; }
+.text-color-error { color: var(--color-error) !important; }
+
+// ── Bordures ───────────────────────────────────────────────────────────────
+.border-primary { border-color: var(--color-primary) !important; }
+.border-default { border-color: var(--border-default) !important; }
+.border-light { border-color: var(--border-light) !important; }
+.border-dark { border-color: var(--border-dark) !important; }
+
+// ── Hover States ───────────────────────────────────────────────────────────
+.hover-bg-primary:hover { background-color: var(--color-primary) !important; }
+.hover-bg-primary-dark:hover { background-color: var(--color-primary-dark) !important; }
+.hover-bg-lighter:hover { background-color: var(--color-primary-lighter) !important; }
+
+.hover-text-primary:hover { color: var(--color-primary) !important; }
+.hover-border-primary:hover { border-color: var(--color-primary) !important; }
+
+// ── Focus States ───────────────────────────────────────────────────────────
+.focus-ring-primary:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(0, 149, 128, 0.1);
+}
+
+.focus-border-primary:focus {
+  border-color: var(--border-focus) !important;
+}
+
+
+// ============================================================================
+// MIXINS SASS POUR RÉUTILISATION
+// ============================================================================
+
+@mixin button-primary {
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  
+  &:hover:not(:disabled) {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@mixin button-secondary {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  
+  &:hover:not(:disabled) {
+    background-color: var(--bg-tertiary);
+    border-color: var(--color-primary);
+  }
+}
+
+@mixin input-primary {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(0, 149, 128, 0.1);
+  }
+  
+  &::placeholder {
+    color: var(--text-tertiary);
+  }
+}
+
+@mixin card-primary {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+}
+
+
+// ============================================================================
+// EXPORT POUR JAVASCRIPT (si nécessaire)
+// ============================================================================
+
+:export {
+  colorPrimary: #009580;
+  colorPrimaryDark: #007a6b;
+  colorPrimaryLight: #00b597;
+}

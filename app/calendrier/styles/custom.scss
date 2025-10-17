@@ -1,5 +1,13 @@
 @import 'https://fonts.googleapis.com/css2?family=Poppins:wght@300&display=swap';
 
+// ============================================================================
+// IMPORT DU SYSTÈME DE THÈMES
+// ============================================================================
+@import './themes.scss';
+
+// ============================================================================
+// ANIMATIONS
+// ============================================================================
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .animate-fadeIn { animation: fadeIn 0.2s; }
 @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -8,6 +16,9 @@
 .animate-bubble-fade { animation: bubble-fade 0.18s; }
 
 
+// ============================================================================
+// UTILITAIRES SCROLL
+// ============================================================================
 .scroll-hidden {
   overflow-y: scroll;  /* active le scroll */
   scrollbar-width: none; /* Firefox */
@@ -18,10 +29,17 @@
 }
 
 
+// ============================================================================
+// TYPOGRAPHIE
+// ============================================================================
 .poppins {
   font-family: 'Poppins', sans-serif;
 }
 
+
+// ============================================================================
+// CUSTOM SELECT
+// ============================================================================
 .custom-select {
   appearance: none;
   -webkit-appearance: none;
@@ -34,17 +52,23 @@
 }
 
 
+// ============================================================================
+// CLASSES DE JOUR SPÉCIALES (Utilisant les variables CSS)
+// ============================================================================
 .WEEKEND {
-  background-color: #f6f6f6;
+  background-color: var(--calendar-weekend);
 }
 .FERIE {
-  background-color: #fce4e4; /* rose clair */
+  background-color: var(--calendar-holiday);
 }
 .NON-WORKING {
-  background-color: #f9f9f9; /* gris très clair */
+  background-color: var(--bg-disabled);
 }
 
-// Styles pour le survol du calendrier - Système optimisé sans lag
+
+// ============================================================================
+// SYSTÈME DE HOVER DU CALENDRIER (Optimisé sans lag)
+// ============================================================================
 .calendar-table {
   border-spacing: 0;
   
@@ -56,26 +80,29 @@
   
   // Survol des lignes - CSS natif pour performance maximale (instantané)
   .calendar-row:hover .calendar-cell {
-    background-color: #e7f4f2 !important;
+    background-color: var(--calendar-cell-hover) !important;
   }
   
   // Survol des colonnes - Utilisation d'attributs data pour sélecteurs CSS purs
   .calendar-cell[data-hover-col="true"] {
-    background-color: #e7f4f2 !important;
+    background-color: var(--calendar-cell-hover) !important;
   }
   
   // Intersection - cellule exacte survolée (priorité la plus haute)
   .calendar-cell:hover {
-    background-color: #e7f4f2 !important;
+    background-color: var(--calendar-cell-hover) !important;
   }
 }
 
-// Styles pour le survol des employés dans la colonne de gauche
+
+// ============================================================================
+// HOVER EMPLOYÉS (Colonne gauche)
+// ============================================================================
 .employee-row-item {
   // Pas de transition pour changement instantané
   
   &[data-hover="true"] {
-    background-color: #e7f4f2 !important;
+    background-color: var(--calendar-cell-hover) !important;
   }
 }
 

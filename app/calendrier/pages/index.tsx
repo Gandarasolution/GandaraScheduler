@@ -36,6 +36,7 @@
 "use client";
 
 // Imports React, hooks, DnD, date-fns, types, composants, et données
+import '../styles/custom.scss';
 import React, { useState, useCallback, useRef, useEffect, JSX, useMemo} from "react";
 import { DndProvider, useDragDropManager } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -61,6 +62,7 @@ import AlertModal from "../components/modals/AlertModal";
 import SettingsModal from "../components/modals/SettingsModal";
 import RightClickComponent from "../components/RightClickComponent";
 import FilterModal from "../components/modals/FilterModal";
+import { ThemeSelector } from '../components/ThemeSelector';
 import {
   initialTeams,
   initialEmployees,
