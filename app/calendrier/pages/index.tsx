@@ -45,9 +45,6 @@ import {
   setHours,
   setMinutes,
   format,
-  addWeeks,
-  addMonths,
-  addHours,
 } from "date-fns";
 import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent, Filter, FilterType, DimensionType} from "../types";
 import CalendarGrid from "../components/Calendar/CalendarGrid";
@@ -135,7 +132,25 @@ function NoSSR({ children }: { children: React.ReactNode }) {
  */
 export default function HomePage() {
   // --- ETATS PRINCIPAUX ---
-  const [includeWeekend, setIncludeWeekend] = useState(true);
+  const [includeWeekend, setIncludeWeekend] = useState(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem('includeWeekend') === 'true';
+    }
+    return false; // Valeur par défaut
+  });
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem('isExpanded') === 'true';
+    }
+    return false; // Valeur par défaut
+  });
+  const [isFullDay, setIsFullDay] = useState(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem('isFullDay') === 'true';
+    }
+    return false; // Valeur par défaut
+  });
+
   const [nonWorkingDates, setNonWorkingDates] = useState<Date[]>([]);
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
   const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
@@ -160,13 +175,11 @@ export default function HomePage() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: { label: string; logo: JSX.Element; action: () => void; actif?: boolean }[]} | null>(null);
   const clipboardAppointment= useRef<Appointment | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: Date } | null>(null);
-  const [isFullDay, setIsFullDay] = useState(false); // Toujours false par défaut
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState<"Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?">("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState<string>('');
   
   // États pour le système de notifications (refactoré avec hook)
   const notifications = useNotifications();
@@ -175,7 +188,6 @@ export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [eventSearchInput, setEventSearchInput] = useState<string>('');
-  const [isExpanded, setIsExpanded] = useState(true);
   const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table'>('calendar'); // État pour basculer entre les vues
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false); // État pour contrôler le menu déroulant
   const viewDropdownRef = useRef<HTMLDivElement>(null); // Ref pour le menu déroulant
@@ -979,8 +991,23 @@ export default function HomePage() {
     const startDate = addDays(date, -halfWindow);
     const endDate = addDays(date, halfWindow);
     
-    setDayInTimeline(eachDayOfInterval({ start: startDate, end: endDate }));
+    let newTimeline: Date[];
+    if (includeWeekend) {
+      newTimeline = eachDayOfInterval({ start: startDate, end: endDate });
+    } else {
+      // Construction optimisée sans filter() pour de meilleures performances
+      newTimeline = [];
+      let currentDate = startDate;
+      while (currentDate <= endDate) {
+        if (!isWeekend(currentDate)) {
+          newTimeline.push(currentDate);
+        }
+        currentDate = addDays(currentDate, 1);
+      }
+    }
     
+    setDayInTimeline(newTimeline);
+
     // Optimisation : utiliser queueMicrotask pour un timing plus précis
     queueMicrotask(() => {
       // Attendre que le DOM soit mis à jour
@@ -1404,7 +1431,6 @@ export default function HomePage() {
               <path id="path845" d="m20.980645 29.0005a.99994 1 0 0 1 1.0194.9999v7.9992a.99994 1 0 0 1 -1.4959.86906l-6.9989-3.9996a.99994 1 0 0 1 0-1.7381l6.9989-3.9996a.99994 1 0 0 1 .47649-.13085zm-.98031 2.7243-3.9818 2.2752 3.9818 2.2752z" font-variant-ligatures="normal" font-variant-position="normal" font-variant-caps="normal" font-variant-numeric="normal" font-variant-alternates="normal" font-feature-settings="normal" text-indent="0" text-decoration-line="none" text-decoration-style="solid" text-decoration-color="#000000" text-transform="none" text-orientation="mixed" white-space="normal" shape-padding="0" mix-blend-mode="normal" solid-color="#000000"/>
              </svg>,
             action: () => {
-              setModalTitle("Répéter le rendez-vous");
               setRepeatAppointmentData({
                 numberCount: 1,
                 repeatCount: 1,
@@ -1426,7 +1452,6 @@ export default function HomePage() {
               </g>
             </svg>,  
             action: () => {
-              setModalTitle("Prolonger le rendez-vous");
               setExtendAppointmentData(new Date());
             } 
           },
@@ -1522,23 +1547,7 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Charger la valeur depuis localStorage après le montage (évite les problèmes d'hydratation)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      let storedValue = localStorage.getItem('isFullDay');
-      if (storedValue !== null) {
-        setIsFullDay(storedValue === 'true');
-      }
-      storedValue = localStorage.getItem('isExpanded');
-      if (storedValue !== null) {
-        setIsExpanded(storedValue === 'true');
-      }
-      storedValue = localStorage.getItem('includeWeekend');
-      if (storedValue !== null) {
-        setIncludeWeekend(storedValue === 'true');
-      }
-    }
-  }, []);
+  
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1722,6 +1731,7 @@ export default function HomePage() {
     
     // Optimisation : construction directe selon includeWeekend
     let newTimeline: Date[];
+    
     if (includeWeekend) {
       newTimeline = eachDayOfInterval({ start: startDate, end: endDate });
     } else {
