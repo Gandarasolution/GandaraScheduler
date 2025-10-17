@@ -78,6 +78,7 @@ import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/fi
 // Imports des hooks personnalisés
 import {
   useNotifications,
+  useCalendarConfig,
 } from "../hooks";
 
 // Imports des utilitaires
@@ -217,16 +218,14 @@ export default function HomePage() {
     chefChantier: []
   });
 
-  // États pour la gestion avancée des configurations
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-  const [customConfigs, setCustomConfigs] = useState<CalendarConfig[]>([]);
-  const [editingConfig, setEditingConfig] = useState<CalendarConfig | null>(null);
-  const [isCreatingConfig, setIsCreatingConfig] = useState(false);
+  // 🚀 Hook personnalisé pour la gestion des configurations du calendrier
+  const calendarConfig = useCalendarConfig({ employees });
 
   const history = useRef<HistoryAction[]>([]);
   const maxHistorySize = 50; // Limiter la taille de l'historique
   const isInitializing = useRef(true); // Flag pour éviter d'enregistrer les actions lors de l'initialisation
   const hasInitializedWeekend = useRef(false); // Flag pour éviter l'enregistrement lors du premier changement includeWeekend
+  
   // Solution ultra-performante avec throttle optimisé et early exit
   const isProcessingInfiniteScroll = useRef(false);
   const lastScrollCheck = useRef(0);
@@ -234,7 +233,6 @@ export default function HomePage() {
   const arrowKeyDirection = useRef<'left' | 'right' | null>(null);
   const continuousScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const isInfiniteScrollEnabled = useRef(false); // Désactivé par défaut jusqu'à la fin du scroll initial
-
 
   // Throttle ultra-performant avec requestAnimationFrame
   const throttledScrollHandler = useRef<(() => void) | null>(null);
@@ -280,101 +278,6 @@ export default function HomePage() {
 
 
   // --- GESTION DES CONFIGURATIONS DE CALENDRIER ET FILTRES ---
-  // Fonction pour obtenir les configurations disponibles selon les pôles des employés
-  const getAvailableConfigs = useCallback((): CalendarConfig[] => {
-    const poles = Array.from(new Set(employees.current.map(emp => emp.pole)));
-    const configs: CalendarConfig[] = [];
-
-    // Configuration par pôles (toujours disponible si plusieurs pôles)
-    if (poles.length > 1) {
-      configs.push({
-        id: 2,
-        name: 'Vue par pôles',
-        dimension: 'pole',
-        filters: [],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    // Configurations spécifiques selon les pôles présents
-    if (poles.includes('Technique')) {
-      configs.push({
-        id: 3,
-        name: 'Vue Technique - Par équipes',
-        dimension: 'group',
-        filters: [
-          {
-            id: 'pole-technique',
-            field: 'pole',
-            type: 'equals',
-            value: 'Technique',
-            label: 'Pôle Technique'
-          }
-        ],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    if (poles.includes('Commercial')) {
-      configs.push({
-        id: 4,
-        name: 'Vue Commercial - Par contrats',
-        dimension: 'contract',
-        filters: [
-          {
-            id: 'pole-commercial',
-            field: 'pole',
-            type: 'equals',
-            value: 'Commercial',
-            label: 'Pôle Commercial'
-          }
-        ],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    if (poles.includes('Administrative')) {
-      configs.push({
-        id: 5,
-        name: 'Vue Administrative - Par types',
-        dimension: 'type',
-        filters: [
-          {
-            id: 'pole-administrative',
-            field: 'pole',
-            type: 'equals',
-            value: 'Administrative',
-            label: 'Pôle Administrative'
-          }
-        ],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    if (poles.includes('RH')) {
-      configs.push({
-        id: 6,
-        name: 'Vue RH - Par contrats',
-        dimension: 'contract',
-        filters: [
-          {
-            id: 'pole-rh',
-            field: 'pole',
-            type: 'equals',
-            value: 'RH',
-            label: 'Pôle RH'
-          }
-        ],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    // Ajouter les configurations personnalisées
-    configs.push(...customConfigs);
-
-    return configs;
-  }, [employees.current, customConfigs]); // Dépendance ajoutée pour recalculer quand les employés ou configs changent
-
   // Configuration du service de notifications
   useEffect(() => {
     notificationService.setNotificationCallback(notifications.addNotification);
@@ -397,23 +300,19 @@ export default function HomePage() {
       ...config,
       id: Date.now() // ID unique basé sur timestamp
     };
-    setCustomConfigs(prev => [...prev, newConfig]);
+    calendarConfig.addConfig(newConfig);
     notificationService.configSaved(config.name);
     return newConfig;
-  }, []);
+  }, [calendarConfig]);
 
   // État pour la configuration actuelle du calendrier
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
 
   // Calculer les configurations disponibles dynamiquement
-  const availableConfigs = useMemo(() => {
-    return getAvailableConfigs();
-  }, [getAvailableConfigs]);
+  const availableConfigs = calendarConfig.getAvailableConfigs;
 
   const updateCustomConfig = useCallback((updatedConfig: CalendarConfig) => {
-    setCustomConfigs(prev => prev.map(config => 
-      config.id === updatedConfig.id ? updatedConfig : config
-    ));
+    calendarConfig.updateConfig(updatedConfig);
     
     // Si la configuration mise à jour est la configuration courante, la mettre à jour aussi
     if (currentCalendarConfig?.id === updatedConfig.id) {
@@ -421,11 +320,11 @@ export default function HomePage() {
     }
     
     notificationService.configUpdated(updatedConfig.name);
-  }, [currentCalendarConfig?.id]);
+  }, [currentCalendarConfig?.id, calendarConfig]);
 
   const deleteCustomConfig = useCallback((configId: number) => {
-    const configToDelete = customConfigs.find(c => c.id === configId);
-    setCustomConfigs(prev => prev.filter(config => config.id !== configId));
+    const configToDelete = calendarConfig.customConfigs.find(c => c.id === configId);
+    calendarConfig.deleteConfig(configId);
     
     // Si la configuration supprimée était active, revenir à la première configuration
     if (currentCalendarConfig?.id === configId && availableConfigs.length > 0) {
@@ -435,7 +334,7 @@ export default function HomePage() {
     if (configToDelete) {
       notificationService.configDeleted(configToDelete.name);
     }
-  }, [customConfigs, currentCalendarConfig, availableConfigs]);
+  }, [calendarConfig, currentCalendarConfig, availableConfigs]);
 
   const duplicateConfig = useCallback((config: CalendarConfig) => {
     const duplicatedConfig = {
@@ -443,10 +342,10 @@ export default function HomePage() {
       name: `${config.name} (copie)`,
       id: Date.now()
     };
-    setCustomConfigs(prev => [...prev, duplicatedConfig]);
+    calendarConfig.addConfig(duplicatedConfig);
     notificationService.configDuplicated(config.name);
     return duplicatedConfig;
-  }, []);
+  }, [calendarConfig]);
 
   // Le comptage des notifications non lues est géré par le hook
   
@@ -819,67 +718,6 @@ export default function HomePage() {
     }
   }, [appointmentUtils, isFullDay, nonWorkingDates, handleResearch]);
 
-
-
-  
-  if (!throttledScrollHandler.current) {
-    let rafId: number | null = null;
-    let lastProcessTime = 0;
-    throttledScrollHandler.current = () => {
-      // Early exits pour économiser les cycles
-      if (rafId || isProcessingInfiniteScroll.current || !isInfiniteScrollEnabled.current || isAutoScrolling.current) return;
-      
-      // Throttling plus agressif - max 60fps
-      const now = performance.now();
-      if (now - lastProcessTime < 16) return;
-      
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        lastProcessTime = performance.now();
-        
-        const scrollElement = mainScrollRef.current;
-        if (!scrollElement) return;
-
-        // Cache des propriétés pour éviter les reflows multiples
-        const { scrollLeft, scrollWidth, clientWidth, scrollTop } = scrollElement;
-        
-        // Skip si scroll vertical détecté
-        if (Math.abs(scrollTop - lastScrollTop.current) > Math.abs(scrollLeft - (lastScrollCheck.current || scrollLeft))) {
-          lastScrollTop.current = scrollTop;
-          return;
-        }
-
-        // Throttling temporel optimisé
-        const timeDelta = now - lastScrollCheck.current;
-        const minInterval = isArrowKeyPressed.current ? 50 : 150; // Réduit de 100ms à 150ms
-        if (timeDelta < minInterval) return;
-        
-        lastScrollCheck.current = now;
-        
-        // Early exit optimisé
-        if (scrollWidth <= clientWidth) return;
-        
-        // Calcul de pourcentage avec mise en cache
-        const scrollableWidth = scrollWidth - clientWidth;
-        const scrollPercentage = (scrollLeft / scrollableWidth) * 100;
-
-        // Seuils optimisés
-        const isArrowRight = isArrowKeyPressed.current && arrowKeyDirection.current === 'right';
-        const isArrowLeft = isArrowKeyPressed.current && arrowKeyDirection.current === 'left';
-        const rightThreshold = isArrowRight ? 85 : 92; // Augmenté de 90 à 92
-        const leftThreshold = isArrowLeft ? 15 : 8; // Réduit de 10 à 8
-        
-        if (scrollPercentage >= rightThreshold) {
-          isProcessingInfiniteScroll.current = true;
-          addDaysToRight();
-        } else if (scrollPercentage <= leftThreshold) {
-          isProcessingInfiniteScroll.current = true;
-          addDaysToLeft();
-        }
-      });
-    };
-  }
-
   // Fonctions ultra-optimisées pour ajouter des jours
   const addDaysToRight = useCallback(() => {
     const scrollElement = mainScrollRef.current;
@@ -970,6 +808,65 @@ export default function HomePage() {
       return [...newDays, ...prevDays].slice(0, WINDOW_SIZE);
     });
   }, [includeWeekend]);
+
+  // Configuration du gestionnaire throttlé de scroll (initialisation inline)
+  if (!throttledScrollHandler.current) {
+    let rafId: number | null = null;
+    let lastProcessTime = 0;
+    throttledScrollHandler.current = () => {
+      // Early exits pour économiser les cycles
+      if (rafId || isProcessingInfiniteScroll.current || !isInfiniteScrollEnabled.current || isAutoScrolling.current) return;
+      
+      // Throttling plus agressif - max 60fps
+      const now = performance.now();
+      if (now - lastProcessTime < 16) return;
+      
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        lastProcessTime = performance.now();
+        
+        const scrollElement = mainScrollRef.current;
+        if (!scrollElement) return;
+
+        // Cache des propriétés pour éviter les reflows multiples
+        const { scrollLeft, scrollWidth, clientWidth, scrollTop } = scrollElement;
+        
+        // Skip si scroll vertical détecté
+        if (Math.abs(scrollTop - lastScrollTop.current) > Math.abs(scrollLeft - (lastScrollCheck.current || scrollLeft))) {
+          lastScrollTop.current = scrollTop;
+          return;
+        }
+
+        // Throttling temporel optimisé
+        const timeDelta = now - lastScrollCheck.current;
+        const minInterval = isArrowKeyPressed.current ? 50 : 150;
+        if (timeDelta < minInterval) return;
+        
+        lastScrollCheck.current = now;
+        
+        // Early exit optimisé
+        if (scrollWidth <= clientWidth) return;
+        
+        // Calcul de pourcentage avec mise en cache
+        const scrollableWidth = scrollWidth - clientWidth;
+        const scrollPercentage = (scrollLeft / scrollableWidth) * 100;
+
+        // Seuils optimisés
+        const isArrowRight = isArrowKeyPressed.current && arrowKeyDirection.current === 'right';
+        const isArrowLeft = isArrowKeyPressed.current && arrowKeyDirection.current === 'left';
+        const rightThreshold = isArrowRight ? 85 : 92;
+        const leftThreshold = isArrowLeft ? 15 : 8;
+        
+        if (scrollPercentage >= rightThreshold) {
+          isProcessingInfiniteScroll.current = true;
+          addDaysToRight();
+        } else if (scrollPercentage <= leftThreshold) {
+          isProcessingInfiniteScroll.current = true;
+          addDaysToLeft();
+        }
+      });
+    };
+  }
 
   // Gestion du scroll ultra-optimisée avec throttling passif
   const handleScroll = useCallback(() => {
@@ -2220,7 +2117,7 @@ export default function HomePage() {
                       <button 
                         className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
                         name="filtrer"
-                        onClick={() => viewType === 'calendar' ? setIsConfigModalOpen(true) : setIsFilterModalOpen(true)}
+                        onClick={() => viewType === 'calendar' ? calendarConfig.openConfigModal() : setIsFilterModalOpen(true)}
                         title="Filtrer"
                       >
                         <svg 
@@ -2550,12 +2447,8 @@ export default function HomePage() {
         
         {/* Modal de gestion des configurations */}
         <ConfigurationModal
-          isOpen={isConfigModalOpen}
-          onClose={() => {
-            setIsConfigModalOpen(false);
-            setEditingConfig(null);
-            setIsCreatingConfig(false);
-          }}
+          isOpen={calendarConfig.isConfigModalOpen}
+          onClose={calendarConfig.closeConfigModal}
           availableConfigs={availableConfigs}
           currentConfig={currentCalendarConfig}
           onConfigChange={setCurrentCalendarConfig}
@@ -2563,10 +2456,10 @@ export default function HomePage() {
           onUpdateConfig={updateCustomConfig}
           onDeleteConfig={deleteCustomConfig}
           onDuplicateConfig={duplicateConfig}
-          editingConfig={editingConfig}
-          setEditingConfig={setEditingConfig}
-          isCreatingConfig={isCreatingConfig}
-          setIsCreatingConfig={setIsCreatingConfig}
+          editingConfig={calendarConfig.editingConfig}
+          setEditingConfig={calendarConfig.setEditingConfig}
+          isCreatingConfig={calendarConfig.isCreatingConfig}
+          setIsCreatingConfig={calendarConfig.setIsCreatingConfig}
         />
         
         {/* Modal de filtres des chantiers */}

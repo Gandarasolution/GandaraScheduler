@@ -9,3 +9,5 @@
 
 export { useNotifications } from './useNotifiactions';
 export type { Notification, NotificationsState } from './useNotifiactions';
+export { useCalendarScroll } from './useCalendarScroll';
+export { useCalendarConfig } from './useCalendarConfig';
