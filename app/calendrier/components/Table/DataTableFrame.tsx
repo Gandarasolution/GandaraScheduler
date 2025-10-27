@@ -20,22 +20,14 @@
 
 import React, { useMemo, useState, useCallback, memo } from 'react';
 import FlexibleFrame from '../FlexibleFrame';
-import Modal from '../modals/Modal';
 import { ChantierEvent, AbsenceEvent, AutreEvent, Appointment, Employee, Evenement } from '../../types';
 import { useSelectedAppointment } from '../../context/SelectedAppointmentContext';
-import { imagesÉvénement } from '../../../datasource';
 import { processImageFile, compressExistingImage, validateImageFile, ImageData as ProcessedImageData } from '../../utils/imageCompressionUtils';
 
 // Import des constantes
 const HOURS_PER_DAY = 8;
 
-// Import des images de paie disponibles
-import iconesAbsences from '../../image/Icones/Paie/Absence.svg';
-import iconesRepas from '../../image/Icones/Paie/Repas.svg';
-import iconesPrime from '../../image/Icones/Paie/Prime.svg';
-import iconesHeurSup from '../../image/Icones/Paie/HeuresSupplementaires.svg';
-import iconesCongesPayes from '../../image/Icones/Paie/CongesPayes.svg';
-import iconesSalaire from '../../image/Icones/Paie/Salaire.svg';
+
 import AppointmentItem from '../AppointmentItem';
 import { addHours } from 'date-fns';
 /**
@@ -110,28 +102,12 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
     direction: 'asc'
   });
 
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // États pour le surlignage (chantiers uniquement)
   const [itemHoveredId, setItemHoveredId] = useState<number | null>(null);
   const [columnHoveredKey, setColumnHoveredKey] = useState<string | null>(null);
 
-  // Images disponibles selon le type
-  const [availableImages, setAvailableImages] = useState(() => {
-    if (dataType === 'paie') {
-      return [
-        ...imagesÉvénement,
-        { id: 1, image: iconesAbsences.src, name: 'Absence' },
-        { id: 2, image: iconesRepas.src, name: 'Repas' },
-        { id: 3, image: iconesPrime.src, name: 'Prime' },
-        { id: 4, image: iconesHeurSup.src, name: 'Heures sup.' },
-        { id: 5, image: iconesCongesPayes.src, name: 'Congés payés' },
-        { id: 6, image: iconesSalaire.src, name: 'Salaire' }
-      ];
-    }
-    return [];
-  });
+
 
   // Fonctions de calcul pour les chantiers
   const calculateDPF = useCallback((chantierId: number): string => {
@@ -370,9 +346,9 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
     const isSameColumn = columnKey === columnHoveredKey;
 
     if (isSameRow && isCurrentColumnBeforeHovered) {
-      return 'bg-[#e7f4f2]';
+      return 'bg-primary-lighter';
     } else if (isSameColumn && isCurrentRowBeforeHovered) {
-      return 'bg-[#e7f4f2]';
+      return 'bg-primary-lighter';
     }
     
     return 'bg-white';
@@ -395,64 +371,6 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
     });
   };
 
-
-
-  const handleImageUpload = async (file: File): Promise<string> => {
-    setIsUploading(true);
-    setUploadError(null);
-
-    try {
-      if (file.size > 200 * 1024) {
-        throw new Error('Le fichier est trop volumineux. Taille maximum : 200 Ko');
-      }
-
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-      if (!allowedTypes.includes(file.type)) {
-        throw new Error('Format non supporté. Formats acceptés : JPG, PNG, GIF, WebP, SVG');
-      }
-
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        img.onload = () => {
-          const { width, height } = img;
-          
-          if (width > 480 || height > 480) {
-            setUploadError('Image trop grande. Dimensions maximum : 480x480px');
-            setIsUploading(false);
-            reject(new Error('Image trop grande'));
-            return;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          ctx?.drawImage(img, 0, 0);
-          
-          const dataURL = canvas.toDataURL('image/png');
-          setIsUploading(false);
-          resolve(dataURL);
-        };
-
-        img.onerror = () => {
-          setIsUploading(false);
-          reject(new Error('Impossible de charger l\'image'));
-        };
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          img.src = e.target?.result as string;
-          setAvailableImages(prev => [...prev, { id: prev.length + 1, image: img.src, name: file.name }]);
-        };
-        reader.readAsDataURL(file);
-      });
-    } catch (error) {
-      setIsUploading(false);
-      setUploadError(error instanceof Error ? error.message : 'Erreur inconnue');
-      throw error;
-    }
-  };
 
   // Calcul des largeurs de colonnes
   const calculateColumnWidths = useMemo(() => {
@@ -784,56 +702,62 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
           })
         }
       >
-        {/* Contenu des éléments */}
-        {sortedItems
-          .filter(item => {
-            if (!item) return false;
-            if (dataType === 'chantier') {
-              return 'attributs' in item;
-            } else {
-              return item.type === 'absence' || item.type === 'autre';
-            }
-          })
-          .flatMap((item, rowIndex) => {
-          const itemByCategories = getValuesByCategory(item);
-          const allValues = itemByCategories.flatMap(cat => cat.values);
-          
-          return allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
-            const columnIndex = attributeKeys.indexOf(attributeKey);
-            const isExactHoveredCell = itemHoveredId === item.id && columnHoveredKey === attributeKey;
+        <table className="w-full border-collapse overflow-auto">
+          {/* Corps du tableau */}
+          <tbody>
+            {sortedItems
+              .filter(item => {
+                if (!item) return false;
+                if (dataType === 'chantier') {
+                  return 'attributs' in item;
+                } else {
+                  return item.type === 'absence' || item.type === 'autre';
+                }
+              })
+              .map((item, rowIndex) => {
+                const itemByCategories = getValuesByCategory(item);
+                const allValues = itemByCategories.flatMap(cat => cat.values);
+                
+                return (
+                  <tr key={`row-${item.id}`} className="hover:bg-gray-50">
+                    {allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
+                      const columnIndex = attributeKeys.indexOf(attributeKey);
+                      const isExactHoveredCell = itemHoveredId === item.id && columnHoveredKey === attributeKey;
 
-            const cellClasses = isExactHoveredCell 
-            ? 'bg-[#e7f4f2] border-[#4CAF50]' 
-            :  getCellPositionClasses(item.id, attributeKey, columnIndex);
-            
-            return (
-              <div
-                key={`${item.id}-${attributeKey}`}
-                className={`border-b border-r border-gray-300 p-2 overflow-hidden text-sm transition-colors ${cellClasses}`}
-                title={`${attributeLabel}: ${value || '-'}`}
-                style={{
-                  width: `${calculateColumnWidths[valueIndex]}px`,
-                  minWidth: `${calculateColumnWidths[valueIndex]}px`,
-                  maxWidth: `${calculateColumnWidths[valueIndex]}px`,
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-                onMouseEnter={() => {
-                  setItemHoveredId(item.id);
-                  setColumnHoveredKey(attributeKey);
-                  
-                }}
-                onMouseLeave={() => {
-                  setItemHoveredId(null);
-                  setColumnHoveredKey(null);
-                  
-                }}
-              >
-                {renderAttributeValue(value, attributeKey, item.id)}
-              </div>
-            );
-          });
-        })}
+                      const cellClasses = isExactHoveredCell 
+                        ? 'bg-primary-lighter' 
+                        : getCellPositionClasses(item.id, attributeKey, columnIndex);
+                      
+                      return (
+                        <td
+                          key={`${item.id}-${attributeKey}`}
+                          className={`border-b border-r border-gray-300 p-2 overflow-hidden text-sm transition-colors ${cellClasses}`}
+                          title={`${attributeLabel}: ${value || '-'}`}
+                          style={{
+                            width: `${calculateColumnWidths[valueIndex]}px`,
+                            minWidth: `${calculateColumnWidths[valueIndex]}px`,
+                            maxWidth: `${calculateColumnWidths[valueIndex]}px`,
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                          onMouseEnter={() => {
+                            setItemHoveredId(item.id);
+                            setColumnHoveredKey(attributeKey);
+                          }}
+                          onMouseLeave={() => {
+                            setItemHoveredId(null);
+                            setColumnHoveredKey(null);
+                          }}
+                        >
+                          {renderAttributeValue(value, attributeKey, item.id)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
       </FlexibleFrame>
     </div>
   );

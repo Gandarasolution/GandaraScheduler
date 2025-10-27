@@ -1,19 +1,19 @@
-@import 'https://fonts.googleapis.com/css2?family=Poppins:wght@300&display=swap';
 
-// ============================================================================
-// IMPORT DU SYSTÈME DE THÈMES
-// ============================================================================
-@import './themes.scss';
 
 // ============================================================================
 // ANIMATIONS
 // ============================================================================
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px);}
+  to { opacity: 1; transform: translateY(0);}
+}
 .animate-fadeIn { animation: fadeIn 0.2s; }
 @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .animate-zoomIn { animation: zoomIn 0.2s; }
 @keyframes bubble-fade { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 .animate-bubble-fade { animation: bubble-fade 0.18s; }
+
 
 
 // ============================================================================
@@ -551,7 +551,3 @@
   }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-8px);}
-  to { opacity: 1; transform: translateY(0);}
-}

@@ -1744,12 +1744,7 @@ export default function HomePage() {
   return (
     <NoSSR>
       <DndProvider backend={HTML5Backend}>
-        <div 
-          className="h-screen flex flex-col overflow-hidden"
-          style={{
-            backgroundColor: '#f3f7f8'
-          }}
-        >
+        <div className="h-screen flex flex-col overflow-hidden bg-bg-primary">
           {/* Barre du haut modernisée */}
          {!isMobile && (
           <div className="flex flex-col items-center pr-9">
@@ -1818,7 +1813,7 @@ export default function HomePage() {
                       </button>
                     )}
                     <button
-                      className="p-3 rounded-full hover:bg-blue-100 transition cursor-pointer"
+                      className="p-3 rounded-full hover:bg-primary-lighter transition cursor-pointer"
                       onClick={() => setIsSettingsOpen(true)}
                       title="Paramètres"
                     >
@@ -1837,7 +1832,7 @@ export default function HomePage() {
                     </button>
                     <div className="relative" ref={viewDropdownRef}>
                       <button
-                        className="p-3 rounded-full hover:bg-blue-100 transition cursor-pointer"
+                        className="p-3 rounded-full hover:bg-primary-lighter transition cursor-pointer"
                         onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
                         title="multi"
                       >
@@ -1861,7 +1856,7 @@ export default function HomePage() {
                       {isViewDropdownOpen && (
                         <div className="absolute top-full -left-30 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                           {/* En-tête du menu */}
-                          <div className="px-4 py-3 bg-gradient-to-r from-[#009580] to-[#007a6b] text-white">
+                          <div className="px-4 py-3 bg-primary text-white">
                             <h3 className="text-sm font-semibold">Changer de vue</h3>
                             <p className="text-xs text-white/80 mt-1">Sélectionnez votre mode d'affichage</p>
                           </div>
@@ -1870,8 +1865,8 @@ export default function HomePage() {
                             <button
                               className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
                                 viewType === 'calendar' 
-                                  ? 'bg-[#C8E6E1] text-[#16302C] shadow-sm' 
-                                  : 'text-gray-700 hover:bg-[#e7f4f2] hover:shadow-sm'
+                                  ? 'bg-primary-lighter text-primary shadow-sm' 
+                                  : 'text-gray-700 hover:bg-primary-ultra-light hover:shadow-sm'
                               }`}
                               onClick={() => {
                                 toggleSetViewType('calendar');
@@ -1880,8 +1875,8 @@ export default function HomePage() {
                             >
                               <div className={`p-2 rounded-xl transition-all duration-200 ${
                                 viewType === 'calendar' 
-                                  ? 'bg-[#009580] text-white' 
-                                  : 'bg-gray-100 text-gray-600 group-hover:bg-[#009580] group-hover:text-white'
+                                  ? 'bg-primary text-white' 
+                                  : 'bg-gray-100 text-gray-600 group-hover:bg-primary group-hover:text-white'
                               }`}>
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -1898,7 +1893,7 @@ export default function HomePage() {
                                 <div className="text-xs text-gray-500 mt-0.5">Vue calendrier avec timeline</div>
                               </div>
                               {viewType === 'calendar' && (
-                                <div className="p-1 rounded-full bg-[#009580]">
+                                <div className="p-1 rounded-full bg-primary">
                                   <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
                                   </svg>
@@ -1912,8 +1907,8 @@ export default function HomePage() {
                             <button
                               className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
                                 viewType === 'chantier-table' 
-                                  ? 'bg-[#C8E6E1] text-[#16302C] shadow-sm' 
-                                  : 'text-gray-700 hover:bg-[#e7f4f2] hover:shadow-sm'
+                                 ? 'bg-primary-lighter text-primary shadow-sm' 
+                                  : 'text-gray-700 hover:bg-primary-ultra-light hover:shadow-sm'
                               }`}
                               onClick={() => {
                                 toggleSetViewType('chantier-table');
@@ -1922,8 +1917,8 @@ export default function HomePage() {
                             >
                               <div className={`p-2 rounded-xl transition-all duration-200 ${
                                 viewType === 'chantier-table' 
-                                  ? 'bg-[#009580] text-white' 
-                                  : 'bg-gray-100 text-gray-600 group-hover:bg-[#009580] group-hover:text-white'
+                                  ? 'bg-primary text-white' 
+                                  : 'bg-gray-100 text-gray-600 group-hover:bg-primary group-hover:text-white'
                               }`}>
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -1940,7 +1935,7 @@ export default function HomePage() {
                                 <div className="text-xs text-gray-500 mt-0.5">Vue tableau avec filtres</div>
                               </div>
                               {viewType === 'chantier-table' && (
-                                <div className="p-1 rounded-full bg-[#009580]">
+                                <div className="p-1 rounded-full bg-primary">
                                   <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
                                   </svg>
@@ -1951,8 +1946,8 @@ export default function HomePage() {
                             <button
                               className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
                                 viewType === 'paie-table' 
-                                  ? 'bg-[#C8E6E1] text-[#16302C] shadow-sm' 
-                                  : 'text-gray-700 hover:bg-[#e7f4f2] hover:shadow-sm'
+                                  ? 'bg-primary-lighter text-primary shadow-sm' 
+                                  : 'text-gray-700 hover:bg-primary-ultra-light hover:shadow-sm'
                               }`}
                               onClick={() => {
                                 toggleSetViewType('paie-table');
@@ -1961,8 +1956,8 @@ export default function HomePage() {
                             >
                               <div className={`p-2 rounded-xl transition-all duration-200 ${
                                 viewType === 'paie-table' 
-                                  ? 'bg-[#009580] text-white' 
-                                  : 'bg-gray-100 text-gray-600 group-hover:bg-[#009580] group-hover:text-white'
+                                  ? 'bg-primary text-white' 
+                                  : 'bg-gray-100 text-gray-600 group-hover:bg-primary group-hover:text-white'
                               }`}>
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -1980,7 +1975,7 @@ export default function HomePage() {
                                 <div className="text-xs text-gray-500 mt-0.5">Gestion des éléments de paie</div>
                               </div>
                               {viewType === 'paie-table' && (
-                                <div className="p-1 rounded-full bg-[#009580]">
+                                <div className="p-1 rounded-full bg-primary">
                                   <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
                                   </svg>
@@ -2001,7 +1996,7 @@ export default function HomePage() {
                     
                     {/* Bouton Notifications */}
                     <button
-                      className="p-3 rounded-full hover:bg-blue-100 transition relative cursor-pointer"
+                      className="p-3 rounded-full hover:bg-primary-lighter transition relative cursor-pointer"
                       onClick={() => setIsNotificationsPanelOpen(!isNotificationsPanelOpen)}
                       title="Notifications"
                     >
@@ -2070,7 +2065,7 @@ export default function HomePage() {
                             width="16"
                             height="16"
                             fill="currentColor"
-                            className={"bi bi-calendar-event transition duration-200 " + (!includeWeekend ? ' text-[#00947f]' : 'text-gray-500')}
+                            className={"bi bi-calendar-event transition duration-200 " + (!includeWeekend ? ' text-color-primary' : 'text-gray-500')}
                             viewBox="0 0 16 16"
                           >
                             <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z" fillOpacity="1" stroke="none" strokeOpacity="1"/>
@@ -2145,8 +2140,7 @@ export default function HomePage() {
                   </div>
                   {viewType === 'calendar' && (
                     <button
-                      className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto"
-                      style={{ backgroundColor: '#00947f' }}
+                      className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto bg-primary-light"
                       type="button"
                       onClick={() => setIsSearchOverlayOpen(true)}
                     >
@@ -2377,14 +2371,14 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setRepeatAppointmentData(null)}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-xl transition-colors cursor-pointer"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleRepeat}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-xl transition-colors cursor-pointer"
                 >
                   {'Enregistrer'}
                 </button>
@@ -2410,14 +2404,14 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setExtendAppointmentData(null)}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl cursor-pointer transition-colors w-[110px] mr-[89px]"
+                  className="px-4 py-2 bg-primary text-white rounded-xl cursor-pointer transition-colors w-[110px] mr-[89px]"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleExtend}
-                  className="px-4 py-2 bg-[#009580] text-white rounded-xl cursor-pointer transition-colors w-[110px]"
+                  className="px-4 py-2 bg-primary text-white rounded-xl cursor-pointer transition-colors w-[110px]"
                 >
                   {'Valider'}
                 </button>
@@ -2524,6 +2518,9 @@ export default function HomePage() {
           selectedCell={selectedCell}
           addAppointmentFromSearch={handleSaveAppointment}
           isFullDay={isFullDay}
+        />
+        <ThemeSelector
+          position='bottom-right'
         />
       </div>
     </DndProvider>

@@ -1,14 +1,22 @@
-/**
- * @fileoverview Système de Thèmes - Variables CSS pour tout le projet
- * 
- * Ce fichier centralise toutes les couleurs et styles du projet pour permettre:
- * - Changement de thème facile (mode sombre/clair)
- * - Personnalisation par client
- * - Cohérence visuelle dans tout le projet
- * 
- * @author Gandara Solutions
- * @version 1.0.0
- */
+/* ================================================== */
+/* 1. IMPORTS (TOUJOURS EN PREMIER)                   */
+/* ================================================== */
+
+/* Imports de vos fichiers Sass */
+/* Contient vos animations, .custom-select, .drawer-container, etc. */
+@use './calendrier/styles/custom.scss';
+
+
+/* Imports CSS (doivent être tout en haut) */
+@import 'https://fonts.googleapis.com/css2?family=Poppins:wght@300&display=swap';
+
+/* ================================================== */
+/* 2. INJECTION DE TAILWIND v4                        */
+/* (Après les imports, avant vos classes)             */
+/* ================================================== */
+@import "tailwindcss";
+
+
 
 // ============================================================================
 // THÈME PAR DÉFAUT (CLAIR) - Gandara Scheduler
@@ -18,10 +26,13 @@
   // ── Couleurs Primaires (Marque Gandara) ───────────────────────────────────
   --color-primary: #009580;           // Vert principal Gandara
   --color-primary-dark: #007a6b;      // Vert foncé pour hover
-  --color-primary-light: #00b597;     // Vert clair
-  --color-primary-lighter: #e7f4f2;   // Vert très clair (backgrounds)
-  --color-primary-ultra-light: #f0f9f7; // Vert ultra-clair
-  
+  --color-primary-light: #00947f;     // Vert clair
+  --color-primary-lighter: #C8E6E1;   // Vert très clair (backgrounds)
+  --color-primary-ultra-light: #e7f4f2; // Vert ultra-clair
+  --color-bg-primary: #f3f7f8;
+
+  --tw-ring-color: var(--color-primary);
+
   // ── Couleurs Secondaires ──────────────────────────────────────────────────
   --color-secondary: #23adde;         // Bleu pour accents
   --color-secondary-light: #4cbee8;
@@ -57,7 +68,7 @@
   --color-info-dark: #2563eb;
   
   // ── Couleurs de Texte ─────────────────────────────────────────────────────
-  --text-primary: #111827;            // Texte principal (gris très foncé)
+  --text-primary: #16302C;            // Texte principal (vert très foncé)
   --text-secondary: #6b7280;          // Texte secondaire
   --text-tertiary: #9ca3af;           // Texte tertiaire
   --text-inverse: #ffffff;            // Texte sur fond sombre
@@ -94,13 +105,6 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   
-  // ── Rayons de Bordure ─────────────────────────────────────────────────────
-  --radius-sm: 0.375rem;              // 6px
-  --radius-md: 0.5rem;                // 8px
-  --radius-lg: 0.75rem;               // 12px
-  --radius-xl: 1rem;                  // 16px
-  --radius-2xl: 1.5rem;               // 24px
-  --radius-full: 9999px;
   
   // ── Transitions ───────────────────────────────────────────────────────────
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -201,6 +205,8 @@
   --color-primary-light: #60a5fa;
   --color-primary-lighter: #dbeafe;
   --color-primary-ultra-light: #eff6ff;
+
+  --color-bg-primary: #f3f7f8;
   
   --text-link: #3b82f6;
   --text-link-hover: #2563eb;
@@ -240,142 +246,67 @@
 }
 
 
-// ============================================================================
-// CLASSES UTILITAIRES POUR UTILISER LES VARIABLES
-// ============================================================================
 
-// ── Backgrounds ────────────────────────────────────────────────────────────
-.bg-primary { background-color: var(--color-primary) !important; }
-.bg-primary-dark { background-color: var(--color-primary-dark) !important; }
-.bg-primary-light { background-color: var(--color-primary-light) !important; }
-.bg-primary-lighter { background-color: var(--color-primary-lighter) !important; }
-
-.bg-secondary { background-color: var(--color-secondary) !important; }
-.bg-success { background-color: var(--color-success) !important; }
-.bg-warning { background-color: var(--color-warning) !important; }
-.bg-error { background-color: var(--color-error) !important; }
-.bg-info { background-color: var(--color-info) !important; }
-
-// ── Texte ──────────────────────────────────────────────────────────────────
-.text-primary { color: var(--text-primary) !important; }
-.text-secondary { color: var(--text-secondary) !important; }
-.text-tertiary { color: var(--text-tertiary) !important; }
-.text-inverse { color: var(--text-inverse) !important; }
-.text-link { color: var(--text-link) !important; }
-
-.text-color-primary { color: var(--color-primary) !important; }
-.text-color-success { color: var(--color-success) !important; }
-.text-color-warning { color: var(--color-warning) !important; }
-.text-color-error { color: var(--color-error) !important; }
-
-// ── Bordures ───────────────────────────────────────────────────────────────
-.border-primary { border-color: var(--color-primary) !important; }
-.border-default { border-color: var(--border-default) !important; }
-.border-light { border-color: var(--border-light) !important; }
-.border-dark { border-color: var(--border-dark) !important; }
-
-// ── Hover States ───────────────────────────────────────────────────────────
-.hover-bg-primary:hover { background-color: var(--color-primary) !important; }
-.hover-bg-primary-dark:hover { background-color: var(--color-primary-dark) !important; }
-.hover-bg-lighter:hover { background-color: var(--color-primary-lighter) !important; }
-
-.hover-text-primary:hover { color: var(--color-primary) !important; }
-.hover-border-primary:hover { border-color: var(--color-primary) !important; }
-
-// ── Focus States ───────────────────────────────────────────────────────────
-.focus-ring-primary:focus {
-  outline: none;
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(0, 149, 128, 0.1);
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-.focus-border-primary:focus {
-  border-color: var(--border-focus) !important;
-}
-
-
-// ============================================================================
-// MIXINS SASS POUR RÉUTILISATION
-// ============================================================================
-
-@mixin button-primary {
-  background-color: var(--color-primary);
-  color: var(--text-inverse);
-  border: none;
-  border-radius: var(--radius-xl);
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  transition: all var(--transition-base);
-  
-  &:hover:not(:disabled) {
-    background-color: var(--color-primary-dark);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-  }
-  
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
   }
 }
 
-@mixin button-secondary {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xl);
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  transition: all var(--transition-base);
-  
-  &:hover:not(:disabled) {
-    background-color: var(--bg-tertiary);
-    border-color: var(--color-primary);
-  }
-}
-
-@mixin input-primary {
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: 0.5rem 0.75rem;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  transition: all var(--transition-fast);
-  
-  &:focus {
-    outline: none;
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba(0, 149, 128, 0.1);
-  }
-  
-  &::placeholder {
-    color: var(--text-tertiary);
-  }
-}
-
-@mixin card-primary {
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xl);
-  padding: 1rem;
-  box-shadow: var(--shadow-sm);
-  
-  &:hover {
-    box-shadow: var(--shadow-md);
-  }
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 
-// ============================================================================
-// EXPORT POUR JAVASCRIPT (si nécessaire)
-// ============================================================================
 
-:export {
-  colorPrimary: #009580;
-  colorPrimaryDark: #007a6b;
-  colorPrimaryLight: #00b597;
-}
+/* ================================================== */
+/* 4. VOS CLASSES UTILITAIRES PERSO (Syntaxe v4)      */
+/* (C'est la partie la plus importante)               */
+/* ================================================== */
+
+/* ── Backgrounds ────────────────────────────────── */
+@utility bg-primary { background-color: var(--color-primary) !important; }
+@utility bg-primary-dark { background-color: var(--color-primary-dark) !important; }
+@utility bg-primary-light { background-color: var(--color-primary-light) !important; }
+@utility bg-primary-lighter { background-color: var(--color-primary-lighter) !important; }
+@utility bg-primary-ultra-light { background-color: var(--color-primary-ultra-light) !important; }
+@utility bg-secondary { background-color: var(--color-secondary) !important; }
+@utility bg-success { background-color: var(--color-success) !important; }
+@utility bg-warning { background-color: var(--color-warning) !important; }
+@utility bg-error { background-color: var(--color-error) !important; }
+@utility bg-info { background-color: var(--color-info) !important; }
+
+@utility bg-bg-primary { background-color: var(--color-bg-primary) !important; }
+
+/* ── Gradients ──────────────────────────────────── */
+@utility from-primary { --tw-gradient-from: var(--color-primary) !important; --tw-gradient-to: rgb(0 149 128 / 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+@utility to-primary-dark { --tw-gradient-to: var(--color-primary-dark) !important; }
+
+/* ── Texte ──────────────────────────────────────── */
+@utility text-primary { color: var(--text-primary) !important; }
+@utility text-secondary { color: var(--text-secondary) !important; }
+@utility text-tertiary { color: var(--text-tertiary) !important; }
+@utility text-inverse { color: var(--text-inverse) !important; }
+@utility text-link { color: var(--text-link) !important; }
+@utility text-color-primary { color: var(--color-primary) !important; }
+@utility text-primary-dark { color: var(--color-primary-dark) !important; }
+@utility text-color-success { color: var(--color-success) !important; }
+@utility text-color-warning { color: var(--color-warning) !important; }
+@utility text-color-error { color: var(--color-error) !important; }
+
+/* ── Bordures ───────────────────────────────────── */
+@utility border-primary { border-color: var(--color-primary) !important; }
+@utility border-default { border-color: var(--border-default) !important; }
+@utility border-light { border-color: var(--border-light) !important; }
+@utility border-dark { border-color: var(--border-dark) !important; }
+
