@@ -49,7 +49,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
         <div className="flex items-center justify-between pb-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Filtres actifs:</span>
-            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
+            <span className="bg-primary-ultra-light text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
               {activeFilterCount}
             </span>
           </div>

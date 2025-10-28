@@ -221,7 +221,7 @@ const DayCell: React.FC<DayCellProps> = ({
   return (
     <div 
       className={`
-        snap-center day-cell flex flex-row border-gray-200
+        snap-center day-cell flex flex-row border-default
         ${
           isWeekend ? 'WEEKEND' :
           isFerie ? 'FERIE' :

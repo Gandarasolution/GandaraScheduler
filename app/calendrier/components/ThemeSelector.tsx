@@ -18,6 +18,7 @@ import { useTheme, ThemeType, AVAILABLE_THEMES } from '../utils/themeManager';
 // ============================================================================
 
 interface ThemeSelectorProps {
+  
   /** Position du sélecteur (défaut: 'bottom-left') */
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   /** Taille du bouton (défaut: 'medium') */

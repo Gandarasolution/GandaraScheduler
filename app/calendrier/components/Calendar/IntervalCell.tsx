@@ -287,7 +287,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       }}
       className={`
         relative flex-1 border-r
-        ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-gray-200  
+        ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-light
         ${bgColor} ${canDrop ? 'cursor-pointer' : ''}
         flex flex-row items-start gap-1
         ${isSelected ? 'bg-blue-200' : ''}

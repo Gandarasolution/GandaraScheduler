@@ -91,7 +91,10 @@ import { createSearchAndFilterUtils } from "../utils/searchAndFilterUtils";
 import { notificationService } from "../services";
 
 
-import LogoUrl from "../image/LOGO_couleur_police_noire.svg";
+import LogoUrlN from "../image/LOGO_couleur_police_noire.svg";
+import LogoUrlB from "../image/LOGO_couleur_police_blanche.svg";
+import { useTheme } from '../utils/themeManager';
+
 
 /**
  * Composant NoSSR pour éviter les problèmes d'hydratation
@@ -137,6 +140,8 @@ function NoSSR({ children }: { children: React.ReactNode }) {
  * @returns {JSX.Element} L'interface complète de la page calendrier avec toutes ses fonctionnalités.
  */
 export default function HomePage() {
+  const { theme, setTheme, availableThemes } = useTheme();
+  
   // --- ETATS PRINCIPAUX ---
   const [includeWeekend, setIncludeWeekend] = useState(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -1744,27 +1749,27 @@ export default function HomePage() {
   return (
     <NoSSR>
       <DndProvider backend={HTML5Backend}>
-        <div className="h-screen flex flex-col overflow-hidden bg-bg-primary">
+        <div className="h-screen flex flex-col overflow-hidden bg-bg-primary poppins">
           {/* Barre du haut modernisée */}
          {!isMobile && (
           <div className="flex flex-col items-center pr-9">
             <div className="flex flex-row w-full">
               <div className={` p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}>
-                <img src={LogoUrl.src} alt="Logo" className="h-20 w-auto mb-2" />
+                <img src={theme === 'dark' ? LogoUrlB.src : LogoUrlN.src} alt="Logo" className="h-20 w-auto mb-2" />
               </div>
               <div className={`flex-1 flex flex-col items-center justify-center py-4 h-[82px]`}>
                 <div className="flex items-center justify-between w-full h-[50px]">
                   <div className="flex flex-col gap-1">
                     <div className="relative w-72 max-w-full">
                       <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                        <svg className="w-5 h-5 text-gray-400" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5 text-gray-400 bg-icon" aria-hidden="true" fill="none" viewBox="0 0 20 20">
                           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
                         </svg>
                       </div>
                       <input
                         type="search"
                         id="search"
-                        className="block w-full p-3 pl-8 text-base text-gray-900  rounded-xl transition focus:outline-0 poppins text-[14px]"
+                        className="block w-full p-3 pl-8 text-base placeholder:bg-icon bg-icon  rounded-xl transition focus:outline-0 poppins text-[14px]"
                         placeholder="Rechercher"
                         value={searchInput || ""}
                         onChange={(e) => setSearchInput(e.target.value)}
@@ -1784,7 +1789,7 @@ export default function HomePage() {
                         width="25" 
                         height="25" 
                         fill="currentColor" 
-                        className={`transition-transform duration-300 bi bi-chevron-up text-[#84818a] ${!isExpanded ? 'rotate-180' : ''}`} 
+                        className={`transition-transform duration-300 bi bi-chevron-up bg-icon ${!isExpanded ? 'rotate-180' : ''}`} 
                         viewBox="0 0 16 16"
                       >
                         <path fillRule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708z"/>
@@ -1792,7 +1797,7 @@ export default function HomePage() {
                     </button>
                     {viewType !== 'calendar' && (
                       <button
-                        className="p-3 rounded-full hover:bg-blue-100 transition cursor-pointer"
+                        className="p-3 rounded-full hover:bg-primary-lighter transition cursor-pointer"
                         onClick={() => {toggleSetViewType('calendar')}}
                         title="Planning"
                       >
@@ -1825,10 +1830,12 @@ export default function HomePage() {
                         width="25" 
                         xmlns="http://www.w3.org/2000/svg" 
                         version="1.1" 
+                        fill='currentColor'
                         xmlnsXlink="http://www.w3.org/1999/xlink" 
+                        className='bg-icon'
                       >
                         <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                          <path id="XMLID_273_" d="m27.526 18.036-.526-.304c-.626-.361-1-1.009-1-1.732s.374-1.371 1-1.732l.526-.304c1.436-.83 1.927-2.662 1.098-4.098l-1-1.732c-.827-1.433-2.666-1.925-4.098-1.098l-.526.303c-.626.362-1.375.362-2 0-.626-.362-1-1.009-1-1.732v-.607c0-1.654-1.346-3-3-3h-2c-1.654 0-3 1.346-3 3v.608c0 .723-.374 1.37-1 1.732-.626.361-1.374.362-2 0l-.526-.304c-1.432-.827-3.271-.335-4.099 1.098l-1 1.732c-.829 1.436-.338 3.269 1.098 4.098l.527.304c.626.361 1 1.009 1 1.732s-.374 1.371-1 1.732l-.526.304c-1.436.829-1.927 2.662-1.098 4.098l1 1.732c.828 1.433 2.667 1.925 4.098 1.098l.526-.303c.626-.363 1.374-.361 2 0 .626.362 1 1.009 1 1.732v.607c0 1.654 1.346 3 3 3h2c1.654 0 3-1.346 3-3v-.608c0-.723.374-1.37 1-1.732.625-.361 1.374-.362 2 0l.526.304c1.432.826 3.271.334 4.098-1.098l1-1.732c.829-1.436.338-3.269-1.098-4.098zm-11.526 2.964c-2.757 0-5-2.243-5-5s2.243-5 5-5 5 2.243 5 5-2.243 5-5 5z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/></g></svg>
+                          <path id="XMLID_273_" d="m27.526 18.036-.526-.304c-.626-.361-1-1.009-1-1.732s.374-1.371 1-1.732l.526-.304c1.436-.83 1.927-2.662 1.098-4.098l-1-1.732c-.827-1.433-2.666-1.925-4.098-1.098l-.526.303c-.626.362-1.375.362-2 0-.626-.362-1-1.009-1-1.732v-.607c0-1.654-1.346-3-3-3h-2c-1.654 0-3 1.346-3 3v.608c0 .723-.374 1.37-1 1.732-.626.361-1.374.362-2 0l-.526-.304c-1.432-.827-3.271-.335-4.099 1.098l-1 1.732c-.829 1.436-.338 3.269 1.098 4.098l.527.304c.626.361 1 1.009 1 1.732s-.374 1.371-1 1.732l-.526.304c-1.436.829-1.927 2.662-1.098 4.098l1 1.732c.828 1.433 2.667 1.925 4.098 1.098l.526-.303c.626-.363 1.374-.361 2 0 .626.362 1 1.009 1 1.732v.607c0 1.654 1.346 3 3 3h2c1.654 0 3-1.346 3-3v-.608c0-.723.374-1.37 1-1.732.625-.361 1.374-.362 2 0l.526.304c1.432.826 3.271.334 4.098-1.098l1-1.732c.829-1.436.338-3.269-1.098-4.098zm-11.526 2.964c-2.757 0-5-2.243-5-5s2.243-5 5-5 5 2.243 5 5-2.243 5-5 5z" /></g></svg>
                     </button>
                     <div className="relative" ref={viewDropdownRef}>
                       <button
@@ -1844,10 +1851,12 @@ export default function HomePage() {
                             width="25" 
                             xmlns="http://www.w3.org/2000/svg" 
                             version="1.1" 
+                            fill='currentColor'
                             xmlnsXlink="http://www.w3.org/1999/xlink"
+                            className='bg-icon'
                           >
                             <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                              <path clipRule="evenodd" d="m40.583 21h71.806c10.771 0 19.583 8.812 19.583 19.583v71.806c0 10.771-8.812 19.583-19.583 19.583h-71.806c-10.771 0-19.583-8.812-19.583-19.583v-71.806c0-10.771 8.812-19.583 19.583-19.583zm159.931 19.583v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583z" fillRule="evenodd" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                              <path clipRule="evenodd" d="m40.583 21h71.806c10.771 0 19.583 8.812 19.583 19.583v71.806c0 10.771-8.812 19.583-19.583 19.583h-71.806c-10.771 0-19.583-8.812-19.583-19.583v-71.806c0-10.771 8.812-19.583 19.583-19.583zm159.931 19.583v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583z"/>
                             </g>
                           </svg>
                       </button>
@@ -1856,7 +1865,7 @@ export default function HomePage() {
                       {isViewDropdownOpen && (
                         <div className="absolute top-full -left-30 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                           {/* En-tête du menu */}
-                          <div className="px-4 py-3 bg-primary text-white">
+                          <div className="px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white">
                             <h3 className="text-sm font-semibold">Changer de vue</h3>
                             <p className="text-xs text-white/80 mt-1">Sélectionnez votre mode d'affichage</p>
                           </div>
@@ -2010,10 +2019,12 @@ export default function HomePage() {
                           height="25" 
                           version="1.1" 
                           xmlnsXlink="http://www.w3.org/1999/xlink"
+                          fill='currentColor'
+                          className='bg-icon'
                         >
                           <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                            <path d="m84.9384384 78.6478882h-69.8768778c-4.2446356 0-6.8042536-4.7139664-4.4792337-8.2760315l4.8991413-7.4587746c2.6900654-4.0955315 4.1233788-8.8885002 4.1233788-13.7884827v-6.9935493c0-14.3977032 10.0250931-26.4705181 23.462925-29.5846062v-3.1142158c-.0000001-3.8393617 3.1142158-6.9322281 6.932228-6.9322281 1.9197464 0 3.6474648.7678463 4.9058571 2.0263696 1.237175 1.2583933 2.026371 2.9861126 2.026371 4.9058585v3.1142168c5.631134 1.2797441 10.622261 4.1380129 14.5683823 8.0839968 5.5030289 5.5031605 8.8945465 13.0966091 8.8945465 21.5006084v6.9935493c0 4.8999825 1.4333115 9.6929512 4.1233749 13.7884827l4.8991394 7.4587746c2.3250198 3.5620651-.2345962 8.2760315-4.4792328 8.2760315z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
-                            <path d="m50.0000114 97.5h-.0000229c-6.6999817 0-12.1313858-5.4314041-12.1313858-12.1313858v-.4888229h24.2627945v.4888229c0 6.6999817-5.4314041 12.1313858-12.1313858 12.1313858z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                            <path d="m84.9384384 78.6478882h-69.8768778c-4.2446356 0-6.8042536-4.7139664-4.4792337-8.2760315l4.8991413-7.4587746c2.6900654-4.0955315 4.1233788-8.8885002 4.1233788-13.7884827v-6.9935493c0-14.3977032 10.0250931-26.4705181 23.462925-29.5846062v-3.1142158c-.0000001-3.8393617 3.1142158-6.9322281 6.932228-6.9322281 1.9197464 0 3.6474648.7678463 4.9058571 2.0263696 1.237175 1.2583933 2.026371 2.9861126 2.026371 4.9058585v3.1142168c5.631134 1.2797441 10.622261 4.1380129 14.5683823 8.0839968 5.5030289 5.5031605 8.8945465 13.0966091 8.8945465 21.5006084v6.9935493c0 4.8999825 1.4333115 9.6929512 4.1233749 13.7884827l4.8991394 7.4587746c2.3250198 3.5620651-.2345962 8.2760315-4.4792328 8.2760315z"/>
+                            <path d="m50.0000114 97.5h-.0000229c-6.6999817 0-12.1313858-5.4314041-12.1313858-12.1313858v-.4888229h24.2627945v.4888229c0 6.6999817-5.4314041 12.1313858-12.1313858 12.1313858z"/>
                           </g>
                         </svg>
                         <span className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
@@ -2042,7 +2053,7 @@ export default function HomePage() {
                       <input
                         id="date-select"
                         type="date"
-                        className="border w-38 border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-gray-100 text-base"
+                        className="date-input border w-38 border-default rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-color transition bg-bg-secondary text-base text-primary"
                         value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
                         onChange={(e) => {
                           const selectedDate = new Date(e.target.value);
@@ -2053,11 +2064,11 @@ export default function HomePage() {
                       />
                     )}
                   </div>
-                  <div className="border border-gray-300 rounded-xl flex items-center multi-op">
+                  <div className="border border-default rounded-xl flex items-center multi-op">
                     {viewType === 'calendar' && (
                       <>
                         <button
-                          className="transition btn-header cursor-pointer border-r border-gray-300 px-3 py-2"
+                          className="transition btn-header cursor-pointer border-r border-default px-3 py-2"
                           onClick={() => toggleSetIncludeWeekend(!includeWeekend)}
                         >
                           <svg
@@ -2065,7 +2076,7 @@ export default function HomePage() {
                             width="16"
                             height="16"
                             fill="currentColor"
-                            className={"bi bi-calendar-event transition duration-200 " + (!includeWeekend ? ' text-color-primary' : 'text-gray-500')}
+                            className={"bg-icon bi bi-calendar-event transition duration-200 " + (!includeWeekend ? ' text-color-primary' : 'text-gray-500')}
                             viewBox="0 0 16 16"
                           >
                             <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z" fillOpacity="1" stroke="none" strokeOpacity="1"/>
@@ -2073,7 +2084,7 @@ export default function HomePage() {
                           </svg>
                         </button>
                         <button 
-                          className="transition cursor-pointer btn-header border-r border-gray-300 px-3 py-2"
+                          className="transition cursor-pointer btn-header border-r border-default px-3 py-2"
                           onClick={() => toggleSetIsFullDay(!isFullDay)}
                         >
                           {!isFullDay ? (
@@ -2085,10 +2096,12 @@ export default function HomePage() {
                               width="20" 
                               height="20" 
                               version="1.1" 
+                              fill='currentColor'
+                              className='bg-icon'
                               xmlnsXlink="http://www.w3.org/1999/xlink" 
                             >
                               <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                                <path d="m27 3v26c0 .5527344-.4472656 1-1 1h-8c-.5527344 0-1-.4472656-1-1v-26c0-.5527344.4472656-1 1-1h8c.5527344 0 1 .4472656 1 1zm-13-1h-8c-.5527344 0-1 .4472656-1 1v26c0 .5527344.4472656 1 1 1h8c.5527344 0 1-.4472656 1-1v-26c0-.5527344-.4472656-1-1-1z" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                                <path d="m27 3v26c0 .5527344-.4472656 1-1 1h-8c-.5527344 0-1-.4472656-1-1v-26c0-.5527344.4472656-1 1-1h8c.5527344 0 1 .4472656 1 1zm-13-1h-8c-.5527344 0-1 .4472656-1 1v26c0 .5527344.4472656 1 1 1h8c.5527344 0 1-.4472656 1-1v-26c0-.5527344-.4472656-1-1-1z"/>
                               </g>
                             </svg>
                           ) : (
@@ -2101,9 +2114,11 @@ export default function HomePage() {
                               data-name="Layer 1" 
                               version="1.1" 
                               xmlnsXlink="http://www.w3.org/1999/xlink"
+                              fill='currentColor'
+                              className='bg-icon'
                             >
                               <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                                <rect height="480" rx="10.695" width="108.343" x="201.828" y="16" fill="#84818a" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                                <rect height="480" rx="10.695" width="108.343" x="201.828" y="16"/>
                               </g>
                             </svg>
                           )}
@@ -2122,16 +2137,12 @@ export default function HomePage() {
                           xmlns="http://www.w3.org/2000/svg"
                           width="20"
                           height="20"
-                          className="w-5 h-5 text-inherit text-gray-500 transition duration-200"
+                          fill="currentColor"
+                          className="bg-icon w-5 h-5 text-inherit text-gray-500 transition duration-200"
                         >
                           <g>
                             <path 
                               d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"
-                              fill="#84818a" 
-                              fillOpacity="1" 
-                              data-original-color="#000000ff" 
-                              stroke="none" 
-                              strokeOpacity="1"
                             />
                           </g>
                         </svg>
@@ -2251,7 +2262,7 @@ export default function HomePage() {
                       required
                       type="number"
                       min={1}
-                      className="border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[70px]  text-center"
+                      className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[70px]  text-center"
                       value={repeatAppointmentData.numberCount || 1}
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
@@ -2266,7 +2277,7 @@ export default function HomePage() {
                     />
                   </label>
                   <select
-                    className="border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition ml-2 custom-select"
+                    className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition ml-2 custom-select"
                     value={repeatAppointmentData.repeatInterval || "day"}
                     onChange={(e) => {
                       const value = e.target.value as "day" | "week" | "month";
@@ -2309,7 +2320,7 @@ export default function HomePage() {
                       type="number"
                       min={1}
                       disabled={repeatAppointmentData.endDate !== null}
-                      className={`${repeatAppointmentData.endDate !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[70px] ml-2`}
+                      className={`${repeatAppointmentData.endDate !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[70px] ml-2`}
                       value={repeatAppointmentData.repeatCount === null ||
                               repeatAppointmentData.repeatCount === undefined
                                 ? ""
@@ -2351,7 +2362,7 @@ export default function HomePage() {
                   </div>
                   <input
                     type="date"
-                    className={`${repeatAppointmentData.repeatCount !== null ? 'opacity-50 cursor-not-allowed text-sm' : 'opacity-100 text-base'} ml-2 border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[145px]`}
+                    className={`${repeatAppointmentData.repeatCount !== null ? 'opacity-50 cursor-not-allowed text-sm' : 'opacity-100 text-base focus:ring-2 focus:ring-color'} ml-2 border border-default rounded-xl px-3 py-2 focus:outline-none  transition w-[145px]`}
                     value={repeatAppointmentData.endDate ? format(repeatAppointmentData.endDate, "yyyy-MM-dd") : ""}
                     min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
                     onChange={e => {
@@ -2390,7 +2401,7 @@ export default function HomePage() {
                 <span className="text-base poppins mr-[65px]">Jusqu'au</span>
                 <input
                   type="date"
-                  className="text-base border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-[145px]"
+                  className="text-base border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[145px]"
                   value={format(extendAppointmentData, "yyyy-MM-dd")}
                   min={selectedAppointment?.endDate ? format(selectedAppointment.endDate, "yyyy-MM-dd") : undefined}
                   onChange={(e) => {

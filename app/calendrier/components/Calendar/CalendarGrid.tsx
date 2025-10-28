@@ -603,19 +603,15 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       <div className="relative flex h-full flex-row calendar-grid">
         {/* Colonne employés sticky à gauche */}
         <div
-          className="min-w-80 max-w-80 pl-2 flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
+          className="min-w-80 max-w-80 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
           style={{
-            backgroundColor: '#f3f7f8',
             scrollbarGutter: 'stable',
           }}
           onScroll={handleScrollY}
           ref={columnEmployeeRef}
         >
           <div 
-            className="h-[112px] sticky top-0 z-10 flex items-center  justify-center pb-2 flex-shrink-0"
-            style={{
-              backgroundColor: '#f3f7f8',
-            }}
+            className="h-[112px] sticky top-0 z-10 flex items-center bg-bg-primary justify-center pb-2 flex-shrink-0"
           >
             <div className="custom-select-wrapper relative inline-block w-full">
               <CustomSelectWithImage
@@ -658,7 +654,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             return (
               <div
                 key={item.id}
-                className="rounded-4xl bg-white border border-gray-100"
+                className="rounded-4xl bg-white border border-default bg-bg-secondary text-primary"
                 style={{ marginBottom: MARGIN_BETWEEN_TEAMS }}
               >
                 <button
@@ -702,7 +698,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     return (
                       <div
                         key={employee.id}
-                        className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer hover:bg-[#e7f4f2] employee-row-item"
+                        className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer hover:bg-primary-ultra-light employee-row-item"
                         style={{ height: employeeRowHeight, alignItems: 'center' }}
                         data-employee-id={employee.id}
                       >
@@ -741,7 +737,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         >
           {/* Main calendar table - Structure optimisée */}
           <table 
-            className="calendar-table bg-white relative"
+            className="calendar-table bg-bg-secondary relative"
             style={{
               width: `${dayInTimeline.length * CELL_WIDTH}px`,
               tableLayout: 'fixed',

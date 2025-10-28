@@ -314,14 +314,6 @@ export function useTheme() {
   };
 }
 
-/**
- * Hook pour vérifier si le thème actuel est sombre
- */
-export function useIsDarkTheme(): boolean {
-  const { effectiveTheme } = useTheme();
-  return effectiveTheme === 'dark';
-}
-
 // ============================================================================
 // FONCTIONS UTILITAIRES
 // ============================================================================

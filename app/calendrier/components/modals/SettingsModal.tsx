@@ -26,14 +26,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div key={cat.category} className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-300">
             <button
               type="button"
-              className="w-full text-left px-6 py-5 font-semibold text-gray-800 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:ring-opacity-50 flex items-center justify-between border-b border-gray-200"
+              className="w-full text-left px-6 py-5 font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 flex items-center justify-between border-b border-gray-200"
               onClick={() => setOpenCategory(openCategory === cat.category ? null : cat.category)}
             >
               <div className="flex items-center gap-3">
-                <div className="w-2 h-8 bg-[#009580] rounded-full"></div>
+                <div className="w-2 h-8 bg-primary rounded-full"></div>
                 <span className="text-lg poppins font-medium">{cat.category}</span>
               </div>
-              <div className={`p-2 rounded-full transition-all duration-300 ${openCategory === cat.category ? 'bg-[#009580] text-white rotate-180' : 'bg-white text-gray-500 hover:bg-gray-200'}`}>
+              <div className={`p-2 rounded-full transition-all duration-300 ${openCategory === cat.category ? 'bg-primary text-white rotate-180' : 'bg-white text-gray-500 hover:bg-gray-200'}`}>
                 <svg 
                   className="w-5 h-5 transition-transform duration-300"
                   fill="none" 
@@ -61,10 +61,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             id={setting.id}
                             value={setting.newNonWorkingDate}
                             onChange={e => setting.setNewNonWorkingDate(e.target.value)}
-                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition-all duration-200 flex-1 poppins text-sm bg-white shadow-sm hover:shadow-md"
+                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-color transition-all duration-200 flex-1 poppins text-sm bg-white shadow-sm hover:shadow-md"
                           />
                           <button
-                            className="px-6 py-3 bg-[#009580] text-white rounded-xl hover:bg-[#007a6b] active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
+                            className="px-6 py-3 cursor-pointer bg-primary text-white rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
                             onClick={() => {
                               if (
                                 setting.newNonWorkingDate &&
@@ -88,7 +88,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           </button>
                         </div>
                         
-                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                           {setting.nonWorkingDates.length === 0 ? (
                             <div className="text-center py-8">
                               <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -104,7 +104,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               {setting.nonWorkingDates.map((date: Date, idx: number) => (
                                 <div key={format(date, "yyyy-MM-dd") + idx} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-2 h-2 bg-[#009580] rounded-full"></div>
+                                    <div className="w-2 h-2 bg-primary rounded-full"></div>
                                     <span className="text-sm font-medium text-gray-800 poppins">{format(date, "dd/MM/yyyy")}</span>
                                   </div>
                                   <button
@@ -141,7 +141,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 checked={setting.value}
                                 onChange={e => setting.onChange(e.target.checked)}
                               />
-                              <div className={`w-12 h-6 rounded-full transition-all duration-300 cursor-pointer ${setting.value ? 'bg-[#009580]' : 'bg-gray-300'}`} onClick={() => setting.onChange(!setting.value)}>
+                              <div className={`w-12 h-6 rounded-full transition-all duration-300 cursor-pointer ${setting.value ? 'bg-primary' : 'bg-gray-300'}`} onClick={() => setting.onChange(!setting.value)}>
                                 <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-all duration-300 ${setting.value ? 'translate-x-6' : 'translate-x-0.5'} translate-y-0.5`}></div>
                               </div>
                             </div>
@@ -150,7 +150,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           <input
                             id={setting.id}
                             type={setting.type}
-                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#009580] focus:border-[#009580] transition-all duration-200 w-48 poppins text-sm bg-white shadow-sm hover:shadow-md"
+                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 w-48 poppins text-sm bg-white shadow-sm hover:shadow-md"
                             value={setting.value}
                             onChange={e => setting.onChange(e.target.value)}
                           />
@@ -166,7 +166,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         
         <div className="flex justify-end pt-6 border-t border-gray-200">
           <button
-            className="px-8 py-3 bg-[#009580] text-white rounded-xl hover:bg-[#007a6b] active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
+            className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
             onClick={onClose}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -91,7 +91,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
       {/* Panneau de notifications */}
       <div className="fixed top-16 right-4 w-96 max-h-[80vh] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col poppins">
         {/* En-tête */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-[#009580] to-[#007a6b] text-white rounded-t-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-primary to-primary-dark text-white rounded-t-2xl">
           <div className="flex items-center gap-3">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5V9.09c0-2.5-2.5-4.09-5-4.09S5 6.59 5 9.09V12l-5 5h5m0 0v1a3 3 0 006 0v-1m-6 0h6" />

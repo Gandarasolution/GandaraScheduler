@@ -674,7 +674,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
                       <svg 
                         className={`w-2 h-2 transition-colors ${
                           isActive && direction === 'asc' 
-                            ? 'text-blue-600' 
+                            ? 'text-color-primary' 
                             : 'text-gray-300'
                         }`}
                         fill="currentColor" 
@@ -686,7 +686,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
                       <svg 
                         className={`w-2 h-2 -mt-0.5 transition-colors ${
                           isActive && direction === 'desc' 
-                            ? 'text-blue-600' 
+                            ? 'text-color-primary' 
                             : 'text-gray-300'
                         }`}
                         fill="currentColor" 

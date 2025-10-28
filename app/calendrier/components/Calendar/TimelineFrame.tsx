@@ -188,15 +188,6 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
     return dayInTimeline.map(day => format(day, 'd', { locale: fr }));
   }, [dayInTimeline, customDayLabels, columns]);
 
-  /**
-   * Calcule le nombre total de colonnes
-   */
-  const totalColumns = useMemo(() => {
-    if (columns) {
-      return columns.items.length;
-    }
-    return dayInTimeline?.length || 0;
-  }, [dayInTimeline, columns]);
 
   /**
    * Trouve l'index du jour courant dans la timeline
@@ -241,7 +232,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
               return (
                 <div
                   key={`header-item-${index}`}
-                  className="flex flex-col justify-center border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-2 bg-white relative item-cell"
+                  className="flex flex-col justify-center border-b border-r border-default text-center text-sm font-semibold text-primary p-2 bg-bg-secondary relative item-cell"
                   style={{ 
                     width: `${CELL_WIDTH}px`,
                     height: 'auto',
@@ -263,16 +254,14 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
             }
             
             const day = dayInTimeline[index];
-            const isCurrentDay = isToday(day);
-            const isWeekendDay = isWeekend(day);
             const weekNumber = getWeekNumber(day);
             
             return (
               <div
                 key={`day-${index}`}
                 className={`
-                  flex flex-col justify-end border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-1
-                  ${(isToday(day) && 'bg-[#ffcdde]') || (isWeekend(day) ? 'bg-[#f6f6f6]' : 'bg-white')}
+                  flex flex-col justify-end border-b border-r border-default text-center text-sm font-semibold text-primary p-1
+                  ${(isToday(day) && 'calendar-today') || (isWeekend(day) ? 'calendar-weekend' : 'bg-bg-secondary')}
                   relative
                   day-cell
                 `}
@@ -302,7 +291,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
                       : format(day, 'd', { locale: fr }) // Numéro du jour sinon
                     }
                   </span>
-                  <span className="block text-xs text-gray-500">
+                  <span className="block text-xs text-secondary">
                     {customDayLabels && customDayLabels[index]
                       ? customDayLabels[index].split(' ').slice(1).join(' ') // Reste du label si personnalisé
                       : format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() 

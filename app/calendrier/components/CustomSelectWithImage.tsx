@@ -17,7 +17,6 @@ interface CustomSelectWithImageProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
-  error?: boolean;
   helperText?: string;
   customArrow?: React.ReactNode;
   showImages?: boolean; // Afficher les images dans la liste au lieu du texte
@@ -37,7 +36,6 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   placeholder = "Sélectionner une option",
   className = "",
   disabled = false,
-  error = false,
   helperText,
   customArrow,
   showImages = false, // Par défaut, affiche du texte dans la liste
@@ -134,13 +132,12 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   };
 
   const baseClasses = `
-    relative border rounded-2xl text-gray-700 
-    poppins text-[14px] font-medium bg-white cursor-pointer
+    relative border rounded-2xl
+    poppins text-[14px] font-medium bg-bg-secondary cursor-pointer
     transition-colors duration-200 ease-in-out
-    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+    border border-default
+    focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent
     ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'hover:border-gray-400'}
-    ${error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'}
-    ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}
     ${className}
   `;
 
@@ -179,7 +176,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <div className="flex items-center justify-between h-full">
+        <div className="flex items-center justify-between h-full text-primary ">
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 {/* Image ou icône de l'option sélectionnée dans le bouton */}
                 {selectedOption && showImages ? (
@@ -205,14 +202,14 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
 
       {/* Dropdown des options */}
       {isOpen && (
-        <div className={`absolute z-50 ${showImages ? 'w-auto' : 'w-full'} mt-1 bg-white border border-gray-300 rounded-2xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide`}>
+        <div className={`absolute z-50 ${showImages ? 'w-auto' : 'w-full'} mt-1 bg-bg-secondary text-primary rounded-2xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide`}>
           <ul role="listbox" className="py-1">
             {options.map((option) => (
               <li
                 key={option.id}
                 className={`
                   px-3 py-2 cursor-pointer flex items-center gap-2 transition-colors duration-150 
-                  ${String(option.value || option.id) === String(value) ? 'bg-[#C8E6E1] text-[#16302C] font-medium' : 'hover:bg-[#E7F4F2] hover:text-[#244F49]'}
+                  ${String(option.value || option.id) === String(value) ? 'bg-primary-lighter text-primary font-medium' : 'hover:bg-primary-ultra-light hover:text-secondary'}
                 `}
                 onClick={() => handleOptionClick(option)}
                 role="option"
@@ -234,7 +231,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
                 {/* Indicateur de sélection */}
                 {String(option.value || option.id) === String(value) && (
                   <svg
-                    className="w-4 h-4 text-[#16302C] flex-shrink-0"
+                    className="w-4 h-4 bg-icon flex-shrink-0"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -249,13 +246,6 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
             ))}
           </ul>
         </div>
-      )}
-      
-      {/* Texte d'aide ou d'erreur */}
-      {helperText && (
-        <p className={`mt-1 text-sm ${error ? 'text-red-600' : 'text-gray-500'}`}>
-          {helperText}
-        </p>
       )}
     </div>
   );

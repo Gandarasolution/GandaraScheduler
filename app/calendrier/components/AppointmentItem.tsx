@@ -420,7 +420,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
         transition-all z-20 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
-        ${source === 'calendar' && isSelected ? 'ring-2 ring-blue-500' : ''}
+        ${source === 'calendar' && isSelected ? 'ring-3 ring-color' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
         hover:shadow-xl

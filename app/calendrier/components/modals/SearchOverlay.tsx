@@ -88,7 +88,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
             <input
               type="text"
               placeholder="Rechercher un événement..."
-              className="block bg-white w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+              className="block bg-white w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-base"
               value={eventSearchInput}
               onChange={(e) => setEventSearchInput(e.target.value)}
               autoFocus
@@ -120,7 +120,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
               {filteredEvents.map((event, index) => (
                 <div 
                   key={`${event.label}-${event.id}-${index}`} 
-                  className="w-full flex justify-between hover:bg-[#e7f4f2] rounded-xl transition-colors px-2"
+                  className="w-full flex justify-between hover:bg-primary-ultra-light rounded-xl transition-colors px-2"
                 >
                   <DraggableSource
                     key={`${event.label}-${event.id}-${index}`}

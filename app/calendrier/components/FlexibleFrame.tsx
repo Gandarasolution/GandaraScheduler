@@ -95,7 +95,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   return (
     <div className={`flex-1 min-w-0 flex flex-col pr-7 rounded-2xl poppins ${className}`} style={style}>
       {/* Conteneur avec le même style que TimelineFrame */}
-      <div className='p-4 border rounded-4xl bg-white w-full h-full border-[#dfdedeff]'>
+      <div className='p-4 border rounded-4xl bg-bg-secondary w-full h-full border-[#dfdedeff]'>
         <div 
           className={`
           relative w-full  overflow-y-auto
@@ -109,7 +109,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
           {/* Sticky group header */}
           {showGroupHeaders && (
             <div
-              className="grid sticky top-0 z-30 bg-white border-gray-300"
+              className="grid sticky top-0 z-30 bg-bg-secondary border-gray-300"
               style={{
                 gridTemplateColumns: getGridColumns(),
                 minHeight: '40px',
@@ -126,8 +126,8 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
                     <div
                       key={group.key}
                       className="
-                         col-span-full flex items-center justify-start py-2 text-[14px] poppins
-                         bg-gray-50 border-r border-gray-200 bg-white border-b max-h-[49px]
+                         col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins
+                         bg-gray-50 border-r border-gray-200 bg-bg-secondary border-b max-h-[49px]
                       "
                       style={{ 
                         gridColumn: `${startColumn} / ${endColumn + 1}`,

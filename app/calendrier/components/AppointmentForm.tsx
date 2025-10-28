@@ -325,7 +325,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="absolute top-4 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10"
+              className="absolute top-4 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10 cursor-pointer"
               title={isExpanded ? "Réduire" : "Options avancées"}
             >
               <svg 
@@ -353,7 +353,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 <button
                   type="button"
                   onClick={handleImageButtonClick}
-                  className="absolute -top-1 -right-1 w-4 h-4 bg-[#009580] text-white rounded-full flex items-center justify-center text-[10px] hover:bg-[#00856e] transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm"
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
                   title="Modifier l'image"
                 >
                   <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">
@@ -454,7 +454,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     value={format(formDataAppointment.startDate, 'yyyy-MM-dd')}
                     onChange={handleDateChange}
                     required
-                    className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-gray-300'} rounded-xl focus:ring-blue-500 focus:border-blue-500`}
+                    className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-gray-300'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color`}
                   />
             
                   <div className='w-full sm:w-[145px]'>
@@ -476,7 +476,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                             startDate: setHours(startOfDay(prev.startDate), newHour),
                           }));
                         }}
-                        className="w-full p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
                       >
                         <option value="morning">Matin</option>
                         <option value="afternoon"
@@ -501,7 +501,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                       value={format(formDataAppointment.endDate, 'yyyy-MM-dd')}
                       onChange={handleDateChange}
                       required
-                      className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-gray-300'} rounded-xl focus:ring-blue-500 focus:border-blue-500`}
+                      className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-gray-300'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color`}
                     />
 
                     <div className='w-full sm:w-[145px]'>
@@ -530,7 +530,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                               };
                             });
                           }}
-                          className="w-full p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                          className="w-full p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-gray-50"
                         >
                           <option 
                             value="morning"
@@ -563,7 +563,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 name="employeeId"
                 value={formDataAppointment.employeeId || ''}
                 onChange={handleChange}
-                className="w-full sm:w-[305px] p-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"
+                className="w-full sm:w-[305px] p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
               >
                 {employees.map(employee => (
                   <option key={employee.id} value={employee.id}>
@@ -579,14 +579,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           <div className="flex flex-col sm:flex-row justify-between gap-3 mt-5">
             <button
               type="submit"
-              className="px-4 py-2 bg-[#009580] cursor-pointer text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
+              className="px-4 py-2 bg-primary cursor-pointer text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
             >
               {appointment ? 'Enregistrer' : 'Créer'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-[#009580] cursor-pointer text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
+              className="px-4 py-2 bg-primary cursor-pointer text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
             >
               Annuler
             </button>
@@ -622,7 +622,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 value={formDataAppointment.description || ''}
                 onChange={(e) => setFormDataAppointment(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Ajoutez des annotations..."
-                className="w-full h-24 p-3 border border-gray-300 rounded-xl resize-none focus:ring-[#009580] focus:border-[#009580] text-sm"
+                className="w-full h-24 p-3 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-color text-sm"
               />
             </div>
           </div>
@@ -761,8 +761,8 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
         <div
           className={`relative border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
             dragActive 
-              ? 'border-[#009580] bg-green-50' 
-              : 'border-gray-300 hover:border-[#009580] hover:bg-gray-50'
+              ? 'border-primary bg-primary-ultra-light' 
+              : 'border-gray-300 hover:border-primary'
           }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -779,8 +779,8 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
           
           {isUploading ? (
             <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#009580]"></div>
-              <span className="ml-2 text-[#009580]">Upload en cours...</span>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <span className="ml-2 text-primary">Upload en cours...</span>
             </div>
           ) : (
             <div>
@@ -789,7 +789,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
                 Glissez-déposez une image ici ou{' '}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-[#009580] underline hover:text-green-700"
+                  className="text-primary underline "
                 >
                   parcourez vos fichiers
                 </button>
@@ -816,7 +816,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
             placeholder="Rechercher une image..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg  focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent"
           />
           <svg
             className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
@@ -836,7 +836,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-[#009580] text-white' : 'bg-gray-100'}`}
+              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-primary text-white' : 'bg-gray-100'}`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M10 4H4C2.9 4 2 4.9 2 6V12C2 13.1 2.9 14 4 14H10C11.1 14 12 13.1 12 12V6C12 4.9 11.1 4 10 4Z"/>
@@ -847,7 +847,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded ${viewMode === 'list' ? 'bg-[#009580] text-white' : 'bg-gray-100'}`}
+              className={`p-2 rounded ${viewMode === 'list' ? 'bg-primary text-white' : 'bg-gray-100'}`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M3 13H1V11H3V13Z"/>
@@ -881,10 +881,10 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
                   className="cursor-pointer group relative"
                 >
                   <div 
-                    className={`border-2 rounded-lg p-2 hover:border-[#009580] hover:shadow-md transition-all relative ${
+                    className={`border-2 rounded-lg p-2 hover:border-primary hover:shadow-md transition-all relative ${
                       index === 0 && currentPage === 1
-                        ? 'border-[#009580] shadow-lg bg-green-50' 
-                        : 'border-gray-200 hover:border-[#009580]'
+                        ? 'border-primary shadow-lg bg-primary-ultra-light' 
+                        : 'border-gray-200 hover:border-primary'
                     }`}
                     title={image.name}
                   >
@@ -905,7 +905,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
                 >
                   ←
                 </button>
@@ -917,7 +917,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
                 >
                   →
                 </button>
@@ -930,9 +930,9 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
               <div
                 key={index}
                 onClick={() => onImageSelect(image.image)}
-                className={`flex items-center p-3 border-2 rounded-lg cursor-pointer hover:border-[#009580] hover:shadow-md transition-all group relative ${
+                className={`flex items-center p-3 border-2 rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all group relative ${
                   index === 0 
-                    ? 'border-[#009580] shadow-md bg-green-50' 
+                    ? 'border-primary shadow-md bg-primary-ultra-light' 
                     : 'border-gray-200'
                 }`}
                 title={image.name}
@@ -945,7 +945,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
                   }`}
                 />
                 <div>
-                  <div className="font-medium text-gray-900 group-hover:text-[#009580]">{image.name.length > 15 ? `${image.name.slice(0, 15)}...` : image.name}</div>
+                  <div className="font-medium text-gray-900 group-hover:text-primary">{image.name.length > 15 ? `${image.name.slice(0, 15)}...` : image.name}</div>
                 </div>
               </div>
             ))}

@@ -30,8 +30,12 @@
   --color-primary-lighter: #C8E6E1;   // Vert très clair (backgrounds)
   --color-primary-ultra-light: #e7f4f2; // Vert ultra-clair
   --color-bg-primary: #f3f7f8;
+  --color-bg-secondary: #ffffff;
 
-  --tw-ring-color: var(--color-primary);
+  --color-icon: #84818a;             // Couleur des icônes (gris moyen)
+
+  --calendar-indicator-filter: brightness(0) saturate(100%); // noir (texte clair)
+
 
   // ── Couleurs Secondaires ──────────────────────────────────────────────────
   --color-secondary: #23adde;         // Bleu pour accents
@@ -68,8 +72,8 @@
   --color-info-dark: #2563eb;
   
   // ── Couleurs de Texte ─────────────────────────────────────────────────────
-  --text-primary: #16302C;            // Texte principal (vert très foncé)
-  --text-secondary: #6b7280;          // Texte secondaire
+  --text-primary: #364153;            // Texte principal 
+  --text-secondary: #6a7282;          // Texte secondaire
   --text-tertiary: #9ca3af;           // Texte tertiaire
   --text-inverse: #ffffff;            // Texte sur fond sombre
   --text-link: #009580;               // Liens
@@ -93,8 +97,8 @@
   --calendar-cell-active: #d4ede9;    // Cellule active (intersection)
   
   // ── Bordures ──────────────────────────────────────────────────────────────
-  --border-light: #f0f0f0;
-  --border-default: #e5e7eb;
+  --border-light: #e5e7eb;
+  --border-default: #d1d5db;
   --border-dark: #d1d5db;
   --border-focus: #009580;
   
@@ -121,22 +125,16 @@
   // ── Couleurs Primaires (Adaptées pour le sombre) ──────────────────────
   --color-primary: #00b597;         // Vert plus clair pour contraste
   --color-primary-dark: #009580;
-  --color-primary-light: #00d4ad;
-  --color-primary-lighter: #1a3d38;  // Vert foncé pour backgrounds
-  --color-primary-ultra-light: #0f2a26;
-    
-    // ── Couleurs Neutres (Inversées) ──────────────────────────────────────
-    --color-gray-50: #18181b;
-    --color-gray-100: #27272a;
-    --color-gray-200: #3f3f46;
-    --color-gray-300: #52525b;
-    --color-gray-400: #71717a;
-    --color-gray-500: #a1a1aa;
-    --color-gray-600: #d4d4d8;
-    --color-gray-700: #e4e4e7;
-    --color-gray-800: #f4f4f5;
-    --color-gray-900: #fafafa;
-    
+  --color-primary-light: #008068;
+  --color-primary-lighter: #585858;  // Vert foncé pour backgrounds
+  --color-primary-ultra-light: #757575;
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #383838;
+
+  --color-icon: #e4e4e7;           // Couleur des icônes (gris clair)
+  --calendar-indicator-filter: invert(0.9) brightness(1.2); // gris très clair
+
+
     // ── Couleurs de Statut (Adaptées) ─────────────────────────────────────
     --color-success: #22c55e;
     --color-success-light: #14532d;
@@ -155,8 +153,8 @@
     --color-info-dark: #93c5fd;
     
     // ── Couleurs de Texte (Inversées) ─────────────────────────────────────
-    --text-primary: #fafafa;
-    --text-secondary: #a1a1aa;
+    --text-primary: #e4e4e7;
+    --text-secondary: #d1d1d1;
     --text-tertiary: #71717a;
     --text-inverse: #18181b;
     --text-link: #00b597;
@@ -180,8 +178,9 @@
     --calendar-cell-active: #1a3d38;
     
     // ── Bordures (Sombres) ────────────────────────────────────────────────
-    --border-light: #27272a;
-    --border-default: #3f3f46;
+    --border-light: #686868;
+    --border-ultra-light: #dfdedeff;
+    --border-default: #525252;
     --border-dark: #52525b;
     --border-focus: #00b597;
     
@@ -207,7 +206,9 @@
   --color-primary-ultra-light: #eff6ff;
 
   --color-bg-primary: #f3f7f8;
-  
+
+  --text-primary: #3b82f6;
+  --text-secondary: #1748aa;
   --text-link: #3b82f6;
   --text-link-hover: #2563eb;
   --border-focus: #3b82f6;
@@ -264,9 +265,14 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
+// ============================================================================
+// TYPOGRAPHIE
+// ============================================================================
+.poppins {
+  font-family: 'Poppins', sans-serif;
+}
 
 
 /* ================================================== */
@@ -287,6 +293,8 @@ body {
 @utility bg-info { background-color: var(--color-info) !important; }
 
 @utility bg-bg-primary { background-color: var(--color-bg-primary) !important; }
+@utility bg-bg-secondary { background-color: var(--color-bg-secondary) !important; }
+@utility bg-icon { color: var(--color-icon) !important; }
 
 /* ── Gradients ──────────────────────────────────── */
 @utility from-primary { --tw-gradient-from: var(--color-primary) !important; --tw-gradient-to: rgb(0 149 128 / 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
@@ -309,4 +317,18 @@ body {
 @utility border-default { border-color: var(--border-default) !important; }
 @utility border-light { border-color: var(--border-light) !important; }
 @utility border-dark { border-color: var(--border-dark) !important; }
+@utility border-ultra-light { border-color: var(--border-ultra-light) !important; }
 
+@utility ring-color {--tw-ring-color: var(--color-primary-light) !important;}
+
+@utility calendar-weekend { background-color: var(--calendar-weekend) !important; }
+@utility calendar-holiday { background-color: var(--calendar-holiday) !important; }
+@utility calendar-today { background-color: var(--calendar-today) !important; }
+
+
+@layer base {
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: var(--calendar-indicator-filter);
+    opacity: 1;
+  }
+}
