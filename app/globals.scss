@@ -36,11 +36,9 @@
 
   --calendar-indicator-filter: brightness(0) saturate(100%); // noir (texte clair)
 
+  --color-interim: #e6b11a;        // Jaune intermédiaire (non utilisé)
+  --color-employee: #4baea4;     // Turquoise (non utilisé)
 
-  // ── Couleurs Secondaires ──────────────────────────────────────────────────
-  --color-secondary: #23adde;         // Bleu pour accents
-  --color-secondary-light: #4cbee8;
-  --color-secondary-dark: #1a8bb3;
   
   // ── Couleurs Neutres (Gris) ───────────────────────────────────────────────
   --color-gray-50: #f9fafb;
@@ -98,6 +96,7 @@
   
   // ── Bordures ──────────────────────────────────────────────────────────────
   --border-light: #e5e7eb;
+  --border-ultra-light: #dfdedeff;
   --border-default: #d1d5db;
   --border-dark: #d1d5db;
   --border-focus: #009580;
@@ -134,6 +133,9 @@
   --color-icon: #e4e4e7;           // Couleur des icônes (gris clair)
   --calendar-indicator-filter: invert(0.9) brightness(1.2); // gris très clair
 
+
+  --color-gray-200: #575757;
+  --color-gray-400: #b8bcc2;
 
     // ── Couleurs de Statut (Adaptées) ─────────────────────────────────────
     --color-success: #22c55e;
@@ -172,14 +174,13 @@
     --calendar-weekend: #1e293b;      // Bleu foncé
     --calendar-holiday: #7f1d1d;      // Rouge foncé
     --calendar-today: #991b1b;        // Rouge plus visible
-    --calendar-today-dark: #7f1d1d;
     --calendar-border: #3f3f46;
-    --calendar-cell-hover: #2d2d30;
+    --calendar-cell-hover: var( --color-primary-ultra-light);
     --calendar-cell-active: #1a3d38;
     
     // ── Bordures (Sombres) ────────────────────────────────────────────────
     --border-light: #686868;
-    --border-ultra-light: #dfdedeff;
+    --border-ultra-light: var(--border-default);
     --border-default: #525252;
     --border-dark: #52525b;
     --border-focus: #00b597;
@@ -207,8 +208,7 @@
 
   --color-bg-primary: #f3f7f8;
 
-  --text-primary: #3b82f6;
-  --text-secondary: #1748aa;
+ 
   --text-link: #3b82f6;
   --text-link-hover: #2563eb;
   --border-focus: #3b82f6;
@@ -286,7 +286,8 @@ body {
 @utility bg-primary-light { background-color: var(--color-primary-light) !important; }
 @utility bg-primary-lighter { background-color: var(--color-primary-lighter) !important; }
 @utility bg-primary-ultra-light { background-color: var(--color-primary-ultra-light) !important; }
-@utility bg-secondary { background-color: var(--color-secondary) !important; }
+@utility bg-secondary { background-color: var(--bg-secondary) !important; }
+@utility bg-tertiary { background-color: var(--bg-tertiary) !important; }
 @utility bg-success { background-color: var(--color-success) !important; }
 @utility bg-warning { background-color: var(--color-warning) !important; }
 @utility bg-error { background-color: var(--color-error) !important; }
@@ -295,6 +296,12 @@ body {
 @utility bg-bg-primary { background-color: var(--color-bg-primary) !important; }
 @utility bg-bg-secondary { background-color: var(--color-bg-secondary) !important; }
 @utility bg-icon { color: var(--color-icon) !important; }
+
+@utility bg-interim { background-color: var(--color-interim) !important; }
+@utility bg-employee { background-color: var(--color-employee) !important; }
+
+@utility border-interim { border-color: var(--color-interim) !important; }
+@utility border-employee { border-color: var(--color-employee) !important; }
 
 /* ── Gradients ──────────────────────────────────── */
 @utility from-primary { --tw-gradient-from: var(--color-primary) !important; --tw-gradient-to: rgb(0 149 128 / 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
@@ -324,6 +331,7 @@ body {
 @utility calendar-weekend { background-color: var(--calendar-weekend) !important; }
 @utility calendar-holiday { background-color: var(--calendar-holiday) !important; }
 @utility calendar-today { background-color: var(--calendar-today) !important; }
+
 
 
 @layer base {

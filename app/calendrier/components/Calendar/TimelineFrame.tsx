@@ -310,10 +310,9 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
       {/* Ligne verticale pour aujourd'hui */}
       {showTodayLine && todayIndex >= 0 && (
         <div
-          className="absolute top-0 bottom-0 w-0.5 z-10 pointer-events-none"
+          className="absolute top-0 bottom-0 w-0.5 z-10 pointer-events-none calendar-today"
           style={{
-            left: `${todayIndex * CELL_WIDTH + CELL_WIDTH / 2}px`,
-            backgroundColor: todayLineColor,
+            left: `${(todayIndex * CELL_WIDTH + CELL_WIDTH / 2) - 2}px`,
           }}
         />
       )}

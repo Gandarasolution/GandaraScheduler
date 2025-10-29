@@ -23,17 +23,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     >
       <div className="flex flex-col gap-6 poppins">
         {settings.map((cat: any, idx: number) => (
-          <div key={cat.category} className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-300">
+          <div key={cat.category} className="border border-light text-primary rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-300">
             <button
               type="button"
-              className="w-full text-left px-6 py-5 font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 flex items-center justify-between border-b border-gray-200"
+              className="w-full text-left px-6 py-5 font-semibold bg-secondary hover:bg-tertiary transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 flex items-center justify-between border-b border-light"
               onClick={() => setOpenCategory(openCategory === cat.category ? null : cat.category)}
             >
               <div className="flex items-center gap-3">
                 <div className="w-2 h-8 bg-primary rounded-full"></div>
                 <span className="text-lg poppins font-medium">{cat.category}</span>
               </div>
-              <div className={`p-2 rounded-full transition-all duration-300 ${openCategory === cat.category ? 'bg-primary text-white rotate-180' : 'bg-white text-gray-500 hover:bg-gray-200'}`}>
+              <div className={`p-2 rounded-full transition-all duration-300 ${openCategory === cat.category ? 'bg-primary text-white rotate-180' : 'bg-transparent text-gray-500'}`}>
                 <svg 
                   className="w-5 h-5 transition-transform duration-300"
                   fill="none" 
@@ -46,10 +46,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
             
             <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openCategory === cat.category ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="px-6 py-6 bg-gradient-to-br from-white to-gray-50">
+              <div className="px-6 py-6 bg-bg-secondary">
                 {cat.items.map((setting: any, settingIdx: number) => (
                   <div key={setting.id} className={`flex flex-col lg:flex-row lg:items-center justify-between py-4 ${settingIdx !== cat.items.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                    <label htmlFor={setting.id} className="text-base font-medium text-gray-700 mb-3 lg:mb-0 lg:mr-6 min-w-[200px] poppins">
+                    <label htmlFor={setting.id} className="text-base font-medium mb-3 lg:mb-0 lg:mr-6 min-w-[200px] poppins">
                       {setting.label}
                     </label>
                     
@@ -61,7 +61,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             id={setting.id}
                             value={setting.newNonWorkingDate}
                             onChange={e => setting.setNewNonWorkingDate(e.target.value)}
-                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-color transition-all duration-200 flex-1 poppins text-sm bg-white shadow-sm hover:shadow-md"
+                            className="border border-default rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-color transition-all duration-200 flex-1 poppins text-sm bg-transparent shadow-sm hover:shadow-md"
                           />
                           <button
                             className="px-6 py-3 cursor-pointer bg-primary text-white rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
@@ -88,7 +88,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           </button>
                         </div>
                         
-                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <div className="bg-secondary rounded-xl p-4 border border-light">
                           {setting.nonWorkingDates.length === 0 ? (
                             <div className="text-center py-8">
                               <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -96,16 +96,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                               </div>
-                              <p className="text-gray-500 text-sm poppins">Aucune date non travaillée ajoutée</p>
+                              <p className="text-sm poppins">Aucune date non travaillée ajoutée</p>
                             </div>
                           ) : (
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                              <h4 className="text-sm font-semibold text-gray-700 mb-3 poppins">Dates non travaillées ({setting.nonWorkingDates.length})</h4>
+                              <h4 className="text-sm font-semibold  mb-3 poppins">Dates non travaillées ({setting.nonWorkingDates.length})</h4>
                               {setting.nonWorkingDates.map((date: Date, idx: number) => (
-                                <div key={format(date, "yyyy-MM-dd") + idx} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
+                                <div key={format(date, "yyyy-MM-dd") + idx} className="flex items-center justify-between bg-bg-secondary rounded-xl px-4 py-3 shadow-sm border border-ultra-light hover:shadow-md transition-all duration-200">
                                   <div className="flex items-center gap-3">
                                     <div className="w-2 h-2 bg-primary rounded-full"></div>
-                                    <span className="text-sm font-medium text-gray-800 poppins">{format(date, "dd/MM/yyyy")}</span>
+                                    <span className="text-sm font-medium poppins">{format(date, "dd/MM/yyyy")}</span>
                                   </div>
                                   <button
                                     className="text-red-500 hover:text-white hover:bg-red-500 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1"

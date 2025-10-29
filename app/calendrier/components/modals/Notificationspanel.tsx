@@ -89,16 +89,16 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
       />
       
       {/* Panneau de notifications */}
-      <div className="fixed top-16 right-4 w-96 max-h-[80vh] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col poppins">
+      <div className="fixed top-16 right-4 w-96 max-h-[80vh] bg-bg-secondary text-primary rounded-2xl shadow-2xl border border-default z-50 flex flex-col poppins">
         {/* En-tête */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-primary to-primary-dark text-white rounded-t-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-light bg-gradient-to-r from-primary to-primary-dark text-white rounded-t-2xl">
           <div className="flex items-center gap-3">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5V9.09c0-2.5-2.5-4.09-5-4.09S5 6.59 5 9.09V12l-5 5h5m0 0v1a3 3 0 006 0v-1m-6 0h6" />
             </svg>
             <h3 className="text-lg font-semibold">Notifications</h3>
             {notifications.length > 0 && (
-              <span className="bg-white/20 text-xs px-2 py-1 rounded-full">
+              <span className="bg-bg-secondary/20 text-xs px-2 py-1 rounded-full">
                 {notifications.length}
               </span>
             )}
@@ -107,7 +107,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
             {notifications.length > 0 && (
               <button
                 onClick={onClearAll}
-                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors"
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-bg-secondary/20 transition-colors"
                 title="Tout effacer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +117,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
             )}
             <button
               onClick={onClose}
-              className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20 transition-colors"
+              className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-bg-secondary/20 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -135,8 +135,8 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5V9.09c0-2.5-2.5-4.09-5-4.09S5 6.59 5 9.09V12l-5 5h5m0 0v1a3 3 0 006 0v-1m-6 0h6" />
                 </svg>
               </div>
-              <h4 className="text-lg font-medium text-gray-900 mb-2">Aucune notification</h4>
-              <p className="text-sm text-gray-500 text-center">
+              <h4 className="text-lg font-medium text-secondary mb-2">Aucune notification</h4>
+              <p className="text-sm text-center">
                 Vos notifications apparaîtront ici
               </p>
             </div>
@@ -148,7 +148,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                   className={`relative p-4 mb-2 rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer ${
                     notification.isRead 
                       ? 'bg-gray-50 border-gray-200' 
-                      : 'bg-white border-l-4 border-l-[#009580] shadow-sm'
+                      : 'bg-secondary border-l-4 border-l-[#009580] shadow-sm'
                   }`}
                   onClick={() => !notification.isRead && onMarkAsRead(notification.id)}
                 >

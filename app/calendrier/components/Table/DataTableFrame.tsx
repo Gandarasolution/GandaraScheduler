@@ -334,11 +334,11 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
 
   const getCellPositionClasses = useCallback((itemId: number, columnKey: string, columnIndex: number): string => {
     if (!itemHoveredId || !columnHoveredKey) {
-      return 'bg-white';
+      return 'bg-transparent';
     }
 
     const hoveredColumnIndex = attributeKeys.findIndex(key => key === columnHoveredKey);
-    if (hoveredColumnIndex === -1) return 'bg-white';
+    if (hoveredColumnIndex === -1) return 'bg-transparent';
 
     const isCurrentRowBeforeHovered = isItemBeforeHovered(itemId, itemHoveredId);
     const isCurrentColumnBeforeHovered = columnIndex < hoveredColumnIndex;
@@ -351,7 +351,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
       return 'bg-primary-lighter';
     }
     
-    return 'bg-white';
+    return 'bg-transparent';
   }, [dataType, itemHoveredId, columnHoveredKey, isItemBeforeHovered, attributeKeys]);
 
   // Gestion du tri
@@ -545,7 +545,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
           }
           return (
             <div className='flex items-center justify-end w-full h-full'>
-              <span className="text-gray-900 poppins">{value}</span>
+              <span className="poppins">{value}</span>
             </div>
           );
         }
@@ -559,7 +559,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
         if (dataType === 'chantier') {
           return (
             <div className='flex items-center justify-start w-full h-full'>
-              <span className="text-gray-900 poppins">{value}</span>
+              <span className="poppins">{value}</span>
             </div>
           );
         }
@@ -567,14 +567,14 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
       default:
         return (
           <div className='flex items-center justify-start w-full h-full'>
-            <span className="text-gray-900 poppins">{value}</span>
+            <span className=" poppins">{value}</span>
           </div>
         );
     }
     
     return (
       <div className='flex items-center justify-start w-full h-full'>
-        <span className="text-gray-900 poppins">{value}</span>
+        <span className=" poppins">{value}</span>
       </div>
     );
   };
@@ -654,7 +654,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
             return (
               <div
                 key={`header-${index}`}
-                className="flex flex-col justify-center border-b border-r border-gray-300 text-center text-sm text-gray-700 p-2 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+                className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-bg-secondary hover:bg-gray-50 cursor-pointer transition-colors"
                 style={{
                   width: `${calculateColumnWidths[index]}px`,
                   height: '56px',
@@ -719,7 +719,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
                 const allValues = itemByCategories.flatMap(cat => cat.values);
                 
                 return (
-                  <tr key={`row-${item.id}`} className="hover:bg-gray-50">
+                  <tr key={`row-${item.id}`} className="">
                     {allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
                       const columnIndex = attributeKeys.indexOf(attributeKey);
                       const isExactHoveredCell = itemHoveredId === item.id && columnHoveredKey === attributeKey;
@@ -731,7 +731,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
                       return (
                         <td
                           key={`${item.id}-${attributeKey}`}
-                          className={`border-b border-r border-gray-300 p-2 overflow-hidden text-sm transition-colors ${cellClasses}`}
+                          className={`border-b border-r border-default p-2 overflow-hidden text-sm transition-colors text-primary ${cellClasses}`}
                           title={`${attributeLabel}: ${value || '-'}`}
                           style={{
                             width: `${calculateColumnWidths[valueIndex]}px`,

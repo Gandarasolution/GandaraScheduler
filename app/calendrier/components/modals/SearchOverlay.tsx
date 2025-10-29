@@ -81,14 +81,14 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
         <div className="">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <input
               type="text"
               placeholder="Rechercher un événement..."
-              className="block bg-white w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-base"
+              className="block bg-bg-secondary placeholder:text-primary text-primary w-full pl-10 pr-4 py-3 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-base"
               value={eventSearchInput}
               onChange={(e) => setEventSearchInput(e.target.value)}
               autoFocus
@@ -98,19 +98,20 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
         <div className=" p-3"></div>
         {/* Liste des événements filtrés */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 bg-white rounded-2xl max-h-[50vh] shadow-lg border border-gray-200">
+        <div className="flex-1 overflow-y-auto px-2 py-2 bg-bg-secondary rounded-2xl max-h-[50vh] shadow-lg border border-light text-primary">
           {eventSearchInput.trim() === '' ? (
-            <div className="text-center text-gray-500 py-8">
-              <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center py-8">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <p className="text-lg font-medium mb-2">Rechercher un événement</p>
               <p className="text-sm">Tapez pour rechercher parmi les chantiers, absences et autres événements</p>
             </div>
           ) : filteredEvents.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.562M15 6.5a7.5 7.5 0 11-6 0 7.5 7.5 0 016 0z" />
+            <div className="text-center py-8">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="w-16 h-16 mx-auto mb-4" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
               </svg>
               <p className="text-lg font-medium mb-2">Aucun résultat</p>
               <p className="text-sm">Aucun événement ne correspond à votre recherche</p>

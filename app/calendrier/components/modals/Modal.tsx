@@ -97,7 +97,7 @@ const Modal: React.FC<ModalProps> = ({
                 <div className="fixed inset-0 bg-black bg-opacity-40 transition-opacity animate-fadeIn overlay" onClick={onClose} />
             )}
             {/* Modal content */}
-            <div className={`relative bg-white rounded-${roundedSize} shadow-2xl  mx-4 p-0 animate-zoomIn border border-gray-200 z-10 modal-content`}>
+            <div className={`text-primary relative bg-bg-secondary rounded-${roundedSize} shadow-2xl  mx-4 p-0 animate-zoomIn border border-default z-10 modal-content`}>
                 <div className="flex justify-between items-center px-4 pt-3 pb-2 modal-header">
                     <h2 className="text-xl font-bold ">{title}</h2>
 

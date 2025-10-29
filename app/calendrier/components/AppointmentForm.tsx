@@ -348,7 +348,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 <img 
                   src={formDataEventType.image} 
                   alt="Icône" 
-                  className="w-12 h-12 rounded border border-gray-200 object-cover" 
+                  className="w-12 h-12 rounded border border-default object-cover" 
                 />
                 <button
                   type="button"
@@ -373,7 +373,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     title="Couleur de fond"
                   />
                   <div 
-                    className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                    className="w-4 h-4  border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
                     style={{ backgroundColor: formDataEventType.color || '#1E40AF' }}
                     title="Couleur de fond"
                   />
@@ -389,7 +389,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     title="Couleur de bordure"
                   />
                   <div 
-                    className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                    className="w-4 h-4  border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
                     style={{ backgroundColor: formDataEventType.borderColor || '#1E40AF' }}
                     title="Couleur de bordure"
                   />
@@ -406,7 +406,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     title="Couleur de texte"
                   />
                   <div 
-                    className="w-4 h-4  border-1 border-gray-300 cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                    className="w-4 h-4  border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
                     style={{ backgroundColor: formDataEventType.textColor || '#FFFFFF' }}
                     title="Couleur de texte"
                   />
@@ -443,7 +443,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           {!isReducedVersion && (
             <>
               {/* Dates et créneaux */}
-              <div className="flex flex-col gap-4 bg-white">
+              <div className="flex flex-col gap-4 bg-transparent">
               <div className="flex-1 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 <label htmlFor="startDate" className={"block text-sm font-medium sm:mr-auto"}>Début</label>
                 <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
@@ -454,7 +454,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     value={format(formDataAppointment.startDate, 'yyyy-MM-dd')}
                     onChange={handleDateChange}
                     required
-                    className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-gray-300'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color`}
+                    className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color`}
                   />
             
                   <div className='w-full sm:w-[145px]'>
@@ -476,7 +476,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                             startDate: setHours(startOfDay(prev.startDate), newHour),
                           }));
                         }}
-                        className="w-full p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
+                        className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
                       >
                         <option value="morning">Matin</option>
                         <option value="afternoon"
@@ -501,7 +501,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                       value={format(formDataAppointment.endDate, 'yyyy-MM-dd')}
                       onChange={handleDateChange}
                       required
-                      className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-gray-300'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color`}
+                      className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color`}
                     />
 
                     <div className='w-full sm:w-[145px]'>
@@ -530,7 +530,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                               };
                             });
                           }}
-                          className="w-full p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-gray-50"
+                          className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-gray-50"
                         >
                           <option 
                             value="morning"
@@ -563,7 +563,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 name="employeeId"
                 value={formDataAppointment.employeeId || ''}
                 onChange={handleChange}
-                className="w-full sm:w-[305px] p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
+                className="w-full sm:w-[305px] p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
               >
                 {employees.map(employee => (
                   <option key={employee.id} value={employee.id}>
@@ -595,7 +595,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
         {/* Section extensible - Options avancées */}
         {isExpanded && (
-          <div className="w-full lg:w-[530px] p-4 rounded-xl flex flex-col gap-1 animate-in slide-in-from-right duration-300 lg:border-l border-gray-200 mt-4 lg:mt-0">
+          <div className="w-full lg:w-[530px] p-4 flex flex-col gap-1 animate-in slide-in-from-right text-primary duration-300 lg:border-l border-light mt-4 lg:mt-0">
             
             {/* Cases à cocher */}
             <div className="mb-[50px]">
@@ -609,20 +609,20 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     // Synchroniser avec les anciens états pour compatibilité
                     
                   }}
-                  className="w-4 h-4 text-[#009580] border-gray-300 rounded focus:ring-[#009580] mt-0.5"
+                  className="w-4 h-4 border-default rounded mt-0.5"
                 />
-                <span className="text-sm text-gray-700 leading-tight">Inclure les week-ends, jours fériés et jours non travaillés</span>
+                <span className="text-sm  leading-tight">Inclure les week-ends, jours fériés et jours non travaillés</span>
               </label>
             </div>
 
             {/* Zone de texte pour annotations */}
             <div className="flex flex-col gap-6">
-              <label className="text-sm font-medium text-gray-700">Annotations</label>
+              <label className="text-sm font-medium">Annotations</label>
               <textarea
                 value={formDataAppointment.description || ''}
                 onChange={(e) => setFormDataAppointment(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Ajoutez des annotations..."
-                className="w-full h-24 p-3 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-color text-sm"
+                className="w-full h-24 p-3 border border-default rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-color text-sm"
               />
             </div>
           </div>

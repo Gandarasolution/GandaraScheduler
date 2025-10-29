@@ -963,7 +963,7 @@ export default function HomePage() {
         setIsLoading(false);
       });
     });
-  }, []);
+  }, [includeWeekend, selectedDate]);
 
 
   // Déplacement d'un rendez-vous (drag & drop ou resize) - Optimisé
@@ -1863,7 +1863,7 @@ export default function HomePage() {
 
                       {/* Menu déroulant modernisé */}
                       {isViewDropdownOpen && (
-                        <div className="absolute top-full -left-30 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                        <div className="absolute top-full -left-30 mt-2 w-56 bg-bg-secondary rounded-2xl shadow-2xl  border-gray-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                           {/* En-tête du menu */}
                           <div className="px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white">
                             <h3 className="text-sm font-semibold">Changer de vue</h3>
@@ -1875,7 +1875,7 @@ export default function HomePage() {
                               className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
                                 viewType === 'calendar' 
                                   ? 'bg-primary-lighter text-primary shadow-sm' 
-                                  : 'text-gray-700 hover:bg-primary-ultra-light hover:shadow-sm'
+                                  : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'
                               }`}
                               onClick={() => {
                                 toggleSetViewType('calendar');
@@ -1885,7 +1885,7 @@ export default function HomePage() {
                               <div className={`p-2 rounded-xl transition-all duration-200 ${
                                 viewType === 'calendar' 
                                   ? 'bg-primary text-white' 
-                                  : 'bg-gray-100 text-gray-600 group-hover:bg-primary group-hover:text-white'
+                                  : 'group-hover:bg-primary group-hover:text-white'
                               }`}>
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -1899,7 +1899,7 @@ export default function HomePage() {
                               </div>
                               <div className="flex-1">
                                 <div className="font-medium">Planning</div>
-                                <div className="text-xs text-gray-500 mt-0.5">Vue calendrier avec timeline</div>
+                                <div className="text-xs text-primary mt-0.5">Vue calendrier avec timeline</div>
                               </div>
                               {viewType === 'calendar' && (
                                 <div className="p-1 rounded-full bg-primary">
@@ -1911,13 +1911,13 @@ export default function HomePage() {
                             </button>
                             
                             {/* Séparateur */}
-                            <div className="mx-4 my-2 h-px bg-gray-200"></div>
+                            <div className="mx-4 my-2 h-px bg-primary-lighter"></div>
                             
                             <button
                               className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
                                 viewType === 'chantier-table' 
                                  ? 'bg-primary-lighter text-primary shadow-sm' 
-                                  : 'text-gray-700 hover:bg-primary-ultra-light hover:shadow-sm'
+                                  : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'
                               }`}
                               onClick={() => {
                                 toggleSetViewType('chantier-table');
@@ -1927,7 +1927,7 @@ export default function HomePage() {
                               <div className={`p-2 rounded-xl transition-all duration-200 ${
                                 viewType === 'chantier-table' 
                                   ? 'bg-primary text-white' 
-                                  : 'bg-gray-100 text-gray-600 group-hover:bg-primary group-hover:text-white'
+                                  : 'group-hover:bg-primary group-hover:text-white'
                               }`}>
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -1941,7 +1941,7 @@ export default function HomePage() {
                               </div>
                               <div className="flex-1">
                                 <div className="font-medium">Liste des chantiers</div>
-                                <div className="text-xs text-gray-500 mt-0.5">Vue tableau avec filtres</div>
+                                <div className="text-xs text-primary mt-0.5">Vue tableau avec filtres</div>
                               </div>
                               {viewType === 'chantier-table' && (
                                 <div className="p-1 rounded-full bg-primary">
@@ -1956,7 +1956,7 @@ export default function HomePage() {
                               className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
                                 viewType === 'paie-table' 
                                   ? 'bg-primary-lighter text-primary shadow-sm' 
-                                  : 'text-gray-700 hover:bg-primary-ultra-light hover:shadow-sm'
+                                  : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'
                               }`}
                               onClick={() => {
                                 toggleSetViewType('paie-table');
@@ -1966,7 +1966,7 @@ export default function HomePage() {
                               <div className={`p-2 rounded-xl transition-all duration-200 ${
                                 viewType === 'paie-table' 
                                   ? 'bg-primary text-white' 
-                                  : 'bg-gray-100 text-gray-600 group-hover:bg-primary group-hover:text-white'
+                                  : 'group-hover:bg-primary group-hover:text-white'
                               }`}>
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -1980,8 +1980,8 @@ export default function HomePage() {
                                 </svg>
                               </div>
                               <div className="flex-1">
-                                <div className="font-medium">Configuration Paie</div>
-                                <div className="text-xs text-gray-500 mt-0.5">Gestion des éléments de paie</div>
+                                <div className="font-medium">Rubrique Sociale</div>
+                                <div className="text-xs text-primary mt-0.5">Gestion des éléments de paie</div>
                               </div>
                               {viewType === 'paie-table' && (
                                 <div className="p-1 rounded-full bg-primary">
@@ -1994,9 +1994,9 @@ export default function HomePage() {
                           </div>
                           
                           {/* Pied du menu */}
-                          <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
-                            <p className="text-xs text-gray-500 text-center">
-                              Raccourci : <span className="font-mono bg-white px-1 rounded">Ctrl + Q</span>
+                          <div className="px-4 py-2 bg-transparent border-t border-light">
+                            <p className="text-xs text-primary text-center">
+                              Raccourci : <span className="font-mono bg-transparent px-1 rounded">Ctrl + Q</span>
                             </p>
                           </div>
                         </div>
@@ -2043,7 +2043,7 @@ export default function HomePage() {
             </div>
             <div className={`flex items-center justify-between w-full ${!isExpanded ? 'hidden' : 'h-[50px]'}`}>
                 <div className={`${viewType === 'calendar' ? 'ml-80' : 'ml-7'}`}>
-                  <p className="text-5xl poppins">
+                  <p className="text-5xl poppins text-primary">
                     {viewType === 'calendar' ? 'Planning' : viewType === 'chantier-table' ? 'Liste des chantiers' : 'Rubrique Paie'}
                   </p>
                 </div>
@@ -2179,7 +2179,7 @@ export default function HomePage() {
               <SelectedAppointmentContext.Provider value={{ selectedAppointment, setSelectedAppointment}}>
                 <SelectedCellContext.Provider value={{ selectedCell, setSelectedCell }}>
                   {viewType === 'calendar' ? (
-                    currentCalendarConfig ? (
+                    currentCalendarConfig  ? (
                       <CalendarGrid
                         employees={filteredEmployeesForCalendar}
                         appointments={filteredAppointmentsForCalendar}
@@ -2277,7 +2277,7 @@ export default function HomePage() {
                     />
                   </label>
                   <select
-                    className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition ml-2 custom-select"
+                    className="border border-default bg-bg-secondary rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition ml-2 custom-select"
                     value={repeatAppointmentData.repeatInterval || "day"}
                     onChange={(e) => {
                       const value = e.target.value as "day" | "week" | "month";

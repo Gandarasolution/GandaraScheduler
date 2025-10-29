@@ -95,11 +95,11 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   return (
     <div className={`flex-1 min-w-0 flex flex-col pr-7 rounded-2xl poppins ${className}`} style={style}>
       {/* Conteneur avec le même style que TimelineFrame */}
-      <div className='p-4 border rounded-4xl bg-bg-secondary w-full h-full border-[#dfdedeff]'>
+      <div className='p-4 border rounded-4xl bg-bg-secondary w-full h-full border-ultra-light'>
         <div 
           className={`
           relative w-full  overflow-y-auto
-          rounded-3xl border h-full border-[#dfdedeff] ${contentClassName}`}
+          rounded-3xl border h-full border-ultra-light ${contentClassName}`}
           style={{
             scrollbarGutter: 'stable',
           }}
@@ -109,7 +109,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
           {/* Sticky group header */}
           {showGroupHeaders && (
             <div
-              className="grid sticky top-0 z-30 bg-bg-secondary border-gray-300"
+              className="grid sticky top-0 z-30 bg-bg-secondary border-ultra-light"
               style={{
                 gridTemplateColumns: getGridColumns(),
                 minHeight: '40px',
@@ -127,7 +127,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
                       key={group.key}
                       className="
                          col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins
-                         bg-gray-50 border-r border-gray-200 bg-bg-secondary border-b max-h-[49px]
+                         border-r border-ultra-light bg-bg-secondary border-b max-h-[49px]
                       "
                       style={{ 
                         gridColumn: `${startColumn} / ${endColumn + 1}`,
@@ -150,7 +150,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
           {/* Sticky item header */}
           {showItemHeaders && (
             <div
-              className="grid sticky z-30 bg-white border-gray-300"
+              className="grid sticky z-30 bg-bg-secondary border-ultra-light"
               style={{
                 gridTemplateColumns: getGridColumns(),
                 minHeight: '56px',
@@ -162,8 +162,8 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
                   <div
                     key={`header-item-${index}`}
                     className="
-                      flex flex-col justify-center border-b border-r border-gray-300 text-center text-sm font-semibold text-gray-700 p-2
-                      bg-white relative item-cell
+                      flex flex-col justify-center border-b border-r border-ultra-light text-center text-sm font-semibold text-primary p-2
+                      bg-bg-secondary relative item-cell
                     "
                     style={{ 
                       height: 'auto',
