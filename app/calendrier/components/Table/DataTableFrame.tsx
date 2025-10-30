@@ -22,7 +22,6 @@ import React, { useMemo, useState, useCallback, memo } from 'react';
 import FlexibleFrame from '../FlexibleFrame';
 import { ChantierEvent, AbsenceEvent, AutreEvent, Appointment, Employee, Evenement } from '../../types';
 import { useSelectedAppointment } from '../../context/SelectedAppointmentContext';
-import { processImageFile, compressExistingImage, validateImageFile, ImageData as ProcessedImageData } from '../../utils/imageCompressionUtils';
 
 // Import des constantes
 const HOURS_PER_DAY = 8;
@@ -435,11 +434,12 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
   }, [calculateColumnWidths]);
 
   // Fonction de rendu des valeurs
-  const renderAttributeValue = (value: string | undefined, attributeKey: string, itemId: number) => {
+  const renderAttributeValue = (value: string | number | undefined, attributeKey: string, itemId: number) => {
     if (!value) return <span className="text-gray-400">-</span>;
     
     switch (attributeKey) {
       case 'verrou':
+        value = String(value);
         const isLocked = value.toLowerCase() === 'true' || value === '1' || value.toLowerCase() === 'verrouillé';
         return (
           <div className="flex items-center justify-center w-full h-full">
@@ -511,7 +511,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
         }
         break;
       case 'AP':
-        if (dataType === 'chantier') {
+        if (dataType === 'chantier' && typeof value === 'string') {
           const apValue = parseFloat(value.replace('%', '')) || 0;
           if (apValue > 100) {
             return (
@@ -550,6 +550,15 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
           );
         }
         break;
+      case 'chargeAffaire':
+      case 'chefChantier':
+        if (dataType === 'chantier') {
+          return (
+            <div className='flex items-center justify-start w-full h-full'>
+              <span className="poppins">{employees.find(emp => emp.id === Number(value))?.name}</span>
+            </div>
+          );
+        }
       case 'TM':
       case 'HR':
       case 'SH':
@@ -590,7 +599,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
       categoryKey: category.key,
       categoryLabel: category.label,
       values: category.attributes.map(attr => {
-        let value: string | undefined;
+        let value: string | number | undefined;
         
         if (attr.isBaseProperty) {
           value = (item as any)[attr.key];

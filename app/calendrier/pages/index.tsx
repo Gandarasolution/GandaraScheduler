@@ -37,7 +37,7 @@
 
 // Imports React, hooks, DnD, date-fns, types, composants, et données
 import '../styles/custom.scss';
-import React, { useState, useCallback, useRef, useEffect, JSX, useMemo} from "react";
+import React, { useState, useCallback, useRef, useEffect, JSX, useMemo, use} from "react";
 import { DndProvider, useDragDropManager } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -67,8 +67,7 @@ import {
   initialTeams,
   initialEmployees,
   initialAppointments,
-  colors,
-  Evenements,
+  getEvenements,
 } from "../../datasource";
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
@@ -93,7 +92,7 @@ import { notificationService } from "../services";
 
 import LogoUrlN from "../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../image/LOGO_couleur_police_blanche.svg";
-import { useTheme } from '../utils/themeManager';
+import { ThemeType, useTheme } from '../utils/themeManager';
 
 
 /**
@@ -139,7 +138,13 @@ function NoSSR({ children }: { children: React.ReactNode }) {
  * @component
  * @returns {JSX.Element} L'interface complète de la page calendrier avec toutes ses fonctionnalités.
  */
-export default function HomePage() {
+export default function HomePage({
+  user,
+  setUser,
+}: {
+  user: { id: number, name: string, role: string, theme: string, image: string };
+  setUser: React.Dispatch<React.SetStateAction<any>>;
+}) {
   const { theme, setTheme, availableThemes } = useTheme();
   
   // --- ETATS PRINCIPAUX ---
@@ -177,8 +182,8 @@ export default function HomePage() {
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
   const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
   const mainScrollRef = useRef<HTMLDivElement>(null);
-  const events = useRef<Evenement[]>(Evenements);
-  const [filteredEvent, setFilteredEvent] = useState<Evenement[]>(Evenements);
+  const events = useRef<Evenement[]>(getEvenements());
+  const [filteredEvent, setFilteredEvent] = useState<Evenement[]>(events.current);
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const employees = useRef<Employee[]>(initialEmployees);
@@ -360,7 +365,7 @@ export default function HomePage() {
   // Appliquer les filtres aux employés et rendez-vous selon la configuration
   const filteredEmployeesForCalendar = useMemo(() => {
     if (!currentCalendarConfig) return employees.current;
-    return applyFiltersToEmployees(employees.current, currentCalendarConfig.filters);
+    return applyFiltersToEmployees(employees.current.filter(emp => emp.type === 'employee' || emp.type === 'interim'), currentCalendarConfig.filters);
   }, [currentCalendarConfig?.filters]);
 
   const filteredAppointmentsForCalendar = useMemo(() => {
@@ -412,8 +417,10 @@ export default function HomePage() {
 
   // Fonction ultra-optimisée pour appliquer les filtres aux chantiers
   const applyFiltersToChantiers = useCallback(() => {
+    
     // Cache des événements chantier pour éviter le filtrage répétitif
     const chantierEvents = events.current.filter(e => e.type === 'chantier') as ChantierEvent[];
+    
     
     // Early exit si aucun filtre actif
     const hasSearch = !!searchInput;
@@ -434,14 +441,18 @@ export default function HomePage() {
     
     // Filtrage en une seule passe avec optimisations de court-circuit
     const filtered = chantierEvents.filter(chantier => {
-      const attrs = chantier.attributs; // Cache de l'objet attributs
+    const attrs = chantier.attributs; // Cache de l'objet attributs
+    const chefChantier = attrs.chefChantier.toLowerCase() || '';
+    const chargeAffaire = attrs.chargeAffaire.toLowerCase() || '';
+
+
+
       
       // Test de recherche textuelle (avec court-circuit si pas de recherche)
       if (hasSearch) {
         const libelle = attrs.libelle.toLowerCase();
-        const chefChantier = attrs.chefChantier.toLowerCase();
-        const chargeAffaire = attrs.chargeAffaire.toLowerCase();
-        
+       
+
         if (!(libelle.includes(lowercasedQuery) || 
               chefChantier.includes(lowercasedQuery) || 
               chargeAffaire.includes(lowercasedQuery))) {
@@ -451,8 +462,8 @@ export default function HomePage() {
       
       // Tests des filtres avec court-circuit (O(1) grâce aux Sets)
       return (!etatSet || etatSet.has(attrs.etat)) &&
-             (!chargeAffaireSet || chargeAffaireSet.has(attrs.chargeAffaire)) &&
-             (!chefChantierSet || chefChantierSet.has(attrs.chefChantier));
+             (!chargeAffaireSet || chargeAffaireSet.has(chargeAffaire)) &&
+             (!chefChantierSet || chefChantierSet.has(chefChantier));
     });
     
     setFilteredEvent(filtered);
@@ -506,8 +517,9 @@ export default function HomePage() {
     for (const chantier of allChantiers) {
       const attrs = chantier.attributs;
       etatSet.add(attrs.etat);
-      chargeAffaireSet.add(attrs.chargeAffaire);
-      chefChantierSet.add(attrs.chefChantier);
+      chargeAffaireSet.add(attrs.chargeAffaire.toLowerCase() || '');
+      chefChantierSet.add(attrs.chefChantier.toLowerCase() || '');
+
     }
     
     // Conversion et tri en une étape
@@ -1062,6 +1074,10 @@ export default function HomePage() {
       events.current = events.current.map(e =>
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
       );
+
+      console.log(eventUpdate.id);
+      
+
       const days = getWorkedDayIntervals(
         appointment.startDate, 
         appointment.endDate,
@@ -1745,6 +1761,10 @@ export default function HomePage() {
     }
   }, []);
 
+  useEffect(() => {
+    setTheme(user.theme as ThemeType);
+  }, [user.theme]);
+
   // Rendu principal de la page
   return (
     <NoSSR>
@@ -2163,8 +2183,7 @@ export default function HomePage() {
           </div>
         )}
         {/* Grille principale du calendrier modernisée */}
-        <div className="flex-1 flex min-h-0
-        ">
+        <div className="flex-1 flex min-h-0">
           <div
             className={`flex flex-grow rounded-2xl border-gray-200 ${!isMobile ? 'mt-8' : ''}`}
             tabIndex={0}
@@ -2223,6 +2242,10 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        <ThemeSelector
+          position='bottom-right'
+        />
+
         {/* Menu contextuel modernisé */}
         <RightClickComponent
           open={!!contextMenu}
@@ -2434,6 +2457,7 @@ export default function HomePage() {
               appointments={appointments.current}
               appointment={selectedAppointmentForm as Appointment}
               event={events.current.find(e => e.id === selectedAppointmentForm?.EventId) as Evenement}
+              events={events.current}
               initialEmployeeId={newAppointmentInfo?.employeeId || null}
               isReducedVersion={selectedAppointment?.id === 0}
               employees={employees.current}
@@ -2529,9 +2553,6 @@ export default function HomePage() {
           selectedCell={selectedCell}
           addAppointmentFromSearch={handleSaveAppointment}
           isFullDay={isFullDay}
-        />
-        <ThemeSelector
-          position='bottom-right'
         />
       </div>
     </DndProvider>

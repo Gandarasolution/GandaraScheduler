@@ -16,7 +16,7 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo } from 'react';
-import {Appointment, Employee, HalfDayInterval, Evenement } from '../types';
+import {Appointment, Employee, HalfDayInterval, Evenement, ChantierEvent } from '../types';
 import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
 import { isHoliday, isWeekend } from '../utils/dates';
 import Modal from './modals/Modal';
@@ -34,6 +34,8 @@ interface AppointmentFormProps {
   appointment: Appointment;
   /** Événement associé au rendez-vous */
   event: Evenement;
+  /** Liste des événements associés au rendez-vous */
+  events: Evenement[];
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
@@ -92,6 +94,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   appointment,
   event,
   employees,
+  events,
   HALF_DAY_INTERVALS,
   isFullDay,
   nonWorkingDates,
@@ -172,8 +175,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === 'employeeId') {
-      setFormDataAppointment((prev) => ({ ...prev, employeeId: Number(value) }));
+    
+    if (name === 'chargeAffaire') {
+      setFormDataEventType((prev) => {
+        if ((prev as any).type !== 'chantier') return prev;
+        const chantierPrev = prev as ChantierEvent;
+        return { ...chantierPrev, attributs: { ...(chantierPrev.attributs || {}), chargeAffaire: value } } as Evenement;
+      });
       return;
     }
     setFormDataAppointment((prev) => ({ ...prev, [name]: value }));
@@ -555,23 +563,25 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               </div>
             </div>
 
-            {/* Sélecteur d'employé */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <label htmlFor="employeeId" className="block text-sm font-medium sm:mr-auto">Affecté</label>
-              <select
-                id="employeeId"
-                name="employeeId"
-                value={formDataAppointment.employeeId || ''}
-                onChange={handleChange}
-                className="w-full sm:w-[305px] p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
-              >
-                {employees.map(employee => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Sélecteur de chargé d'affaire */}
+            {formDataEventType.type === 'chantier' && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <label htmlFor="chargeAffaire" className="block text-sm font-medium sm:mr-auto">Affecté</label>
+                <select
+                  id="chargeAffaire"
+                  name="chargeAffaire"
+                  value={formDataEventType.attributs.chargeAffaire || ''}
+                  onChange={handleChange}
+                  className="w-full sm:w-[305px] p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
+                >
+                  {employees.filter(emp => emp.type === 'chargeAffaire' || emp.type === 'chefChantier').map(emp => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </option>
+                  ))} 
+                </select>
+              </div>
+            )}
             </>
           )}
 

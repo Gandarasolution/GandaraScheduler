@@ -32,9 +32,9 @@ export interface Employee {
   /** ID de l'équipe à laquelle appartient l'employé (optionnel) */
   groupId?: number;
   /** Type de contrat de l'employé */
-  type: 'employee' | 'interim';
+  type: 'employee' | 'interim' | 'chargeAffaire' | 'chefChantier';
   /** Pôle auquel appartient l'employé (Technique, Commercial, etc.) */
-  pole: string;
+  pole?: string;
 }
 
 
@@ -142,6 +142,12 @@ export interface AutreEvent extends CommonPaieAttributs {
 
 
 export type Evenement = ChantierEvent | AbsenceEvent | AutreEvent;
+
+export type Image = {
+  id: number;
+  image: string;
+  name: string;
+};
 
 /**
  * Interface représentant un rendez-vous/événement dans le calendrier

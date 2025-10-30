@@ -121,7 +121,7 @@ export function getDimensionItems(
     
     case 'pole':
       // Optimisation: Utiliser Set pour obtenir des valeurs uniques en O(n)
-      const poles = Array.from(new Set(employees.map(emp => emp.pole)));
+      const poles = Array.from(new Set(employees.map(emp => emp.pole).filter((p): p is string => p !== undefined)));
       return poles.map(pole => ({
         id: pole,
         name: pole,
@@ -167,6 +167,9 @@ export function groupEmployeesByDimension(
     
     case 'pole':
       employees.forEach(emp => {
+        if (!emp.pole) {
+          return;
+        }
         if (!result[emp.pole]) result[emp.pole] = [];
         result[emp.pole].push(emp);
       });
