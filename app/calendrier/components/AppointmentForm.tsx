@@ -180,7 +180,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       setFormDataEventType((prev) => {
         if ((prev as any).type !== 'chantier') return prev;
         const chantierPrev = prev as ChantierEvent;
-        return { ...chantierPrev, attributs: { ...(chantierPrev.attributs || {}), chargeAffaire: value } } as Evenement;
+        return { ...chantierPrev, attributs: { ...(chantierPrev.attributs || {}), chargeAffaire: employees.find(emp => emp.id === Number(value))?.name } } as Evenement;
       });
       return;
     }

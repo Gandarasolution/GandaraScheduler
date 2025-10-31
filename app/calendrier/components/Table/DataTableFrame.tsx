@@ -33,7 +33,6 @@ import { addHours } from 'date-fns';
  * Types supportés par le composant
  */
 type DataType = 'chantier' | 'paie';
-type ItemType = ChantierEvent | AbsenceEvent | AutreEvent;
 
 
 /**
@@ -58,7 +57,7 @@ interface DataTableFrameProps {
   className?: string;
   style?: React.CSSProperties;
   dataType: DataType;
-  items: ItemType[];
+  items: Evenement[];
   appointments?: Appointment[];
   employees?: Employee[];
   paieEvents?: any[];
@@ -86,6 +85,8 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
   
 }) => {
   const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
+  //console.log(items);
+  
   
   // Calculer la largeur du conteneur
   const calculatedContainerWidth = useMemo(() => {
@@ -475,7 +476,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
       case 'image':
         
         if (value && typeof value === 'string' && itemId) {
-          const item = items.find(i => i && i.id === itemId) as ItemType;
+          const item = items.find(i => i && i.id === itemId) as Evenement;
           return (
             <AppointmentItem
               appointment={{ id: 0, description: '', type: item?.type, EventId: itemId, startDate: new Date(), endDate: addHours(new Date(), 12), employeeId: 0, top: 0 }}
@@ -511,9 +512,10 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
         }
         break;
       case 'AP':
+      case 'SP':
         if (dataType === 'chantier' && typeof value === 'string') {
-          const apValue = parseFloat(value.replace('%', '')) || 0;
-          if (apValue > 100) {
+          const apValue = parseFloat(value) || 0;
+          if ((attributeKey === 'AP' && apValue > 100) || (attributeKey === 'SP' && apValue < 0)) {
             return (
               <div className='flex items-center justify-end w-full h-full gap-2'>
                 <svg 
@@ -544,27 +546,18 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
             );
           }
           return (
-            <div className='flex items-center justify-end w-full h-full'>
+            <div className='flex items-center justify-end w-full h-full font-bold'>
               <span className="poppins">{value}</span>
             </div>
           );
         }
         break;
-      case 'chargeAffaire':
-      case 'chefChantier':
-        if (dataType === 'chantier') {
-          return (
-            <div className='flex items-center justify-start w-full h-full'>
-              <span className="poppins">{employees.find(emp => emp.id === Number(value))?.name}</span>
-            </div>
-          );
-        }
+
       case 'TM':
       case 'HR':
       case 'SH':
       case 'DPF':
       case 'RPF':
-      case 'SP':
         if (dataType === 'chantier') {
           return (
             <div className='flex items-center justify-start w-full h-full'>
@@ -589,7 +582,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
   };
 
   // Fonction pour obtenir les valeurs organisées par catégorie
-  const getValuesByCategory = useCallback((item: ItemType) => {
+  const getValuesByCategory = useCallback((item: Evenement) => {
     if (!item) {
       console.error('Élément invalide dans getValuesByCategory:', item);
       return [];
@@ -605,6 +598,8 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
           value = (item as any)[attr.key];
         } else if (dataType === 'chantier') {
           const chantier = item as ChantierEvent;
+          //console.log('chantier', chantier);
+          
           if (attr.key === 'DPF') {
             value = calculateDPF(chantier.id);
           } else if (attr.key === 'RPF') {

@@ -2,7 +2,7 @@
 import Calendrier from './calendrier/pages/index';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import icon from './calendrier/image/Icones/Chantier.png';
+import icon from './calendrier/image/Icones/Evenement_Chantier.svg';
 import { ThemeType, useTheme } from './calendrier/utils/themeManager';
 
 export default function Home() {

@@ -2155,11 +2155,19 @@ export const getEvenements = (): Evenement[] => {
       chefChantier: initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.name || ''  
     } : 
     null;
-    return {
-      ...event,
-      image,
-      attributs
-    } as Evenement;
+
+    if(event.type === 'chantier' ){
+      return {
+        ...event,
+        image,
+        attributs
+      } as Evenement;
+    } else {
+      return {
+        ...event,
+        image
+      } as Evenement;
+    }
   });
 };
 

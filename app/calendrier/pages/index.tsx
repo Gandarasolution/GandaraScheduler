@@ -50,7 +50,7 @@ import {
   isSameMonth,
   isSameYear,
 } from "date-fns";
-import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent, Filter, FilterType, DimensionType} from "../types";
+import { Appointment, Employee, HistoryAction, Evenement, Filter, FilterType, DimensionType} from "../types";
 import CalendarGrid from "../components/Calendar/CalendarGrid";
 import DataTableFrame from "../components/Table/DataTableFrame";
 import Modal from "../components/modals/Modal";
@@ -183,7 +183,7 @@ export default function HomePage({
   const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const events = useRef<Evenement[]>(getEvenements());
-  const [filteredEvent, setFilteredEvent] = useState<Evenement[]>(events.current);
+  const [filteredEvent, setFilteredEvent] = useState<Evenement[]>(events.current);  
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
   const employees = useRef<Employee[]>(initialEmployees);
@@ -419,7 +419,10 @@ export default function HomePage({
   const applyFiltersToChantiers = useCallback(() => {
     
     // Cache des événements chantier pour éviter le filtrage répétitif
-    const chantierEvents = events.current.filter(e => e.type === 'chantier') as ChantierEvent[];
+    const chantierEvents = events.current.filter(e => e.type === 'chantier');
+
+    console.log('avant ', chantierEvents);
+    
     
     
     // Early exit si aucun filtre actif
@@ -441,9 +444,9 @@ export default function HomePage({
     
     // Filtrage en une seule passe avec optimisations de court-circuit
     const filtered = chantierEvents.filter(chantier => {
-    const attrs = chantier.attributs; // Cache de l'objet attributs
-    const chefChantier = attrs.chefChantier.toLowerCase() || '';
-    const chargeAffaire = attrs.chargeAffaire.toLowerCase() || '';
+      const attrs = chantier.attributs; // Cache de l'objet attributs
+      const chefChantier = attrs.chefChantier.toLowerCase() || '';
+      const chargeAffaire = attrs.chargeAffaire.toLowerCase() || '';
 
 
 
@@ -465,6 +468,9 @@ export default function HomePage({
              (!chargeAffaireSet || chargeAffaireSet.has(chargeAffaire)) &&
              (!chefChantierSet || chefChantierSet.has(chefChantier));
     });
+    
+
+    console.log('après ', filtered);
     
     setFilteredEvent(filtered);
   }, [searchInput, activeFilters]);
@@ -506,7 +512,7 @@ export default function HomePage({
 
   // Fonction optimisée pour obtenir les valeurs uniques avec cache
   const getFilterOptions = useCallback(() => {
-    const allChantiers = events.current.filter(e => e.type === 'chantier') as ChantierEvent[];
+    const allChantiers = events.current.filter(e => e.type === 'chantier');
     
     // Optimisation : utiliser des Sets directement pour éviter la conversion
     const etatSet = new Set<string>();
@@ -1639,7 +1645,7 @@ export default function HomePage({
   // Optimisation des filtres avec debounce et conditions précises
   useEffect(() => {
     // Appliquer uniquement si nécessaire
-    if (viewType === 'chantier-table') {
+    if (viewType === 'chantier-table') {      
       // Debounce pour éviter les re-calculs trop fréquents
       const filterTimer = setTimeout(() => {
         applyFiltersToChantiers();
@@ -1650,7 +1656,7 @@ export default function HomePage({
       // Pas de debounce nécessaire car c'est juste une assignation
       setFilteredEvent(events.current);
     }
-  }, [activeFilters, viewType]); // Retirer applyFiltersToChantiers des dépendances pour éviter les re-renders
+  }, [activeFilters, viewType, applyFiltersToChantiers]); // Retirer applyFiltersToChantiers des dépendances pour éviter les re-renders
 
   // Initialiser la configuration du calendrier quand les configurations disponibles changent
   useEffect(() => {
@@ -2047,15 +2053,19 @@ export default function HomePage({
                             <path d="m50.0000114 97.5h-.0000229c-6.6999817 0-12.1313858-5.4314041-12.1313858-12.1313858v-.4888229h24.2627945v.4888229c0 6.6999817-5.4314041 12.1313858-12.1313858 12.1313858z"/>
                           </g>
                         </svg>
-                        <span className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
+                        {notifications.unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
+                        )}
                       </div>
                     </button>
                     <div
-                      className="p-5 rounded-full  transition bg-red-600 relative"
+                      className="p-4 transition relative"
                     >
-                       {notifications.unreadCount > 0 && (
-                        <span className="absolute bottom-0 -right-1 block h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
-                      )}
+                      <img
+                        src={user.image}
+                        alt="Avatar"
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
                     </div>
                   </div>
                 </div>
