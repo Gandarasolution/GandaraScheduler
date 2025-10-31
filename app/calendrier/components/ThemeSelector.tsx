@@ -27,6 +27,8 @@ interface ThemeSelectorProps {
   showLabels?: boolean;
   /** Classe CSS personnalisée */
   className?: string;
+  /** Callback appelé lors du changement de thème */
+  onThemeChange?: (theme: ThemeType) => void;
 }
 
 // ============================================================================
@@ -38,6 +40,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   size = 'medium',
   showLabels = true,
   className = '',
+  onThemeChange,
 }) => {
   const { theme, setTheme, availableThemes } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -146,8 +149,13 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 <button
                   key={themeConfig.name}
                   onClick={() => {
-                    setTheme(themeConfig.name as ThemeType);
+                    const newTheme = themeConfig.name as ThemeType;
+                    setTheme(newTheme);
                     setIsOpen(false);
+                    // Notifier le parent du changement
+                    if (onThemeChange) {
+                      onThemeChange(newTheme);
+                    }
                   }}
                   className={`
                     w-full px-3 py-2.5 
@@ -209,7 +217,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
           {showLabels && (
             <div className="px-3 py-2 mt-2 border-t border-gray-200 dark:border-gray-700">
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                Le thème est sauvegardé automatiquement
+                Le thème est lié à votre profil utilisateur
               </p>
             </div>
           )}

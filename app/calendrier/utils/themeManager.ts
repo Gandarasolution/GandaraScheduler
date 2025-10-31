@@ -18,7 +18,6 @@
 export type ThemeType = 
   | 'light'           // Thème clair par défaut
   | 'dark'            // Thème sombre
-  | 'auto'            // Automatique (suit le système)
   | 'client-blue'     // Thème personnalisé bleu
   | 'client-purple'   // Thème personnalisé violet
   | 'client-orange';  // Thème personnalisé orange
@@ -37,8 +36,6 @@ export interface ThemeConfig {
 // ============================================================================
 // CONSTANTES
 // ============================================================================
-
-const THEME_STORAGE_KEY = 'gandara-scheduler-theme';
 
 export const AVAILABLE_THEMES: Record<ThemeType, ThemeConfig> = {
   light: {
@@ -59,16 +56,6 @@ export const AVAILABLE_THEMES: Record<ThemeType, ThemeConfig> = {
       primary: '#00b597',
       background: '#18181b',
       text: '#fafafa',
-    },
-  },
-  auto: {
-    name: 'auto',
-    displayName: 'Automatique',
-    description: 'Suit les préférences système',
-    preview: {
-      primary: 'bg-primary',
-      background: '#ffffff',
-      text: '#111827',
     },
   },
   'client-blue': {
@@ -122,9 +109,8 @@ class ThemeManager {
    * Initialise le gestionnaire de thème
    */
   private initialize(): void {
-    // Charger le thème sauvegardé ou utiliser 'auto'
-    const savedTheme = this.getSavedTheme();
-    this.applyTheme(savedTheme);
+    // Appliquer le thème par défaut
+    this.applyTheme('light');
 
     // Écouter les changements du thème système
     this.setupSystemThemeListener();
@@ -138,33 +124,6 @@ class ThemeManager {
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     this.systemThemeListener = mediaQuery;
-
-    mediaQuery.addEventListener('change', (e) => {
-      if (this.currentTheme === 'auto') {
-        this.applySystemTheme(e.matches);
-      }
-    });
-  }
-
-  /**
-   * Récupère le thème sauvegardé dans le localStorage
-   */
-  private getSavedTheme(): ThemeType {
-    if (typeof window === 'undefined') return 'light';
-
-    const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    if (saved && this.isValidTheme(saved)) {
-      return saved as ThemeType;
-    }
-    return 'auto';
-  }
-
-  /**
-   * Sauvegarde le thème dans le localStorage
-   */
-  private saveTheme(theme: ThemeType): void {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
   }
 
   /**
@@ -202,18 +161,12 @@ class ThemeManager {
 
   /**
    * Applique un thème spécifique
+   * Le thème est maintenant géré par la prop user, pas de sauvegarde locale
    */
   public applyTheme(theme: ThemeType): void {
     this.currentTheme = theme;
-    this.saveTheme(theme);
-
-    if (theme === 'auto') {
-      // Détecter et appliquer le thème système
-      const isDark = this.systemThemeListener?.matches ?? false;
-      this.applySystemTheme(isDark);
-    } else {
-      this.applyThemeToDOM(theme);
-    }
+    this.applyThemeToDOM(theme);
+    
   }
 
   /**
@@ -227,10 +180,6 @@ class ThemeManager {
    * Récupère le thème effectif (résolution de 'auto')
    */
   public getEffectiveTheme(): Exclude<ThemeType, 'auto'> {
-    if (this.currentTheme === 'auto') {
-      const isDark = this.systemThemeListener?.matches ?? false;
-      return isDark ? 'dark' : 'light';
-    }
     return this.currentTheme;
   }
 

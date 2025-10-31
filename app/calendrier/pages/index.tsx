@@ -140,10 +140,10 @@ function NoSSR({ children }: { children: React.ReactNode }) {
  */
 export default function HomePage({
   user,
-  setUser,
+  onThemeChange,
 }: {
   user: { id: number, name: string, role: string, theme: string, image: string };
-  setUser: React.Dispatch<React.SetStateAction<any>>;
+  onThemeChange?: (theme: ThemeType) => void;
 }) {
   const { theme, setTheme, availableThemes } = useTheme();
   
@@ -2244,6 +2244,7 @@ export default function HomePage({
         </div>
         <ThemeSelector
           position='bottom-right'
+          onThemeChange={onThemeChange}
         />
 
         {/* Menu contextuel modernisé */}
