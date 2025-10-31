@@ -73,18 +73,18 @@
     will-change: auto; // Retirer will-change pour réduire la consommation mémoire
   }
   
-  // Survol des lignes - CSS natif pour performance maximale (instantané)
-  .calendar-row:hover .calendar-cell {
-    background-color: var(--calendar-cell-hover) !important;
-  }
-  
   // Survol des colonnes - Utilisation d'attributs data pour sélecteurs CSS purs
+  .calendar-cell[data-hover-col="true"] .WEEKEND,
+  .calendar-cell[data-hover-col="true"] .NON-WORKING,
+  .calendar-cell[data-hover-col="true"] .FERIE,
   .calendar-cell[data-hover-col="true"] {
     background-color: var(--calendar-cell-hover) !important;
   }
-  
-  // Intersection - cellule exacte survolée (priorité la plus haute)
-  .calendar-cell:hover {
+
+  .calendar-row[data-hover-row="true"] .WEEKEND,
+  .calendar-row[data-hover-row="true"] .NON-WORKING,
+  .calendar-row[data-hover-row="true"] .FERIE,
+  .calendar-row[data-hover-row="true"] {
     background-color: var(--calendar-cell-hover) !important;
   }
 }
@@ -197,172 +197,6 @@
 
 .btn-header:hover{
   color: #00947f;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --drawer-bg: #18181b;
-    --drawer-header-bg: #23232b;
-    --drawer-border: #505050;
-    --modal-bg: #23232b;
-    --modal-header-bg: #18181b;
-    --modal-text: #f3f4f6;
-    --btn-bg: #333;
-    --btn-text: #fff;
-  }
-
-  body{
-    background-color: var(--drawer-bg);
-    color: var(--modal-text);
-  }
-
-  .calendar-grid{
-    background-color: var(--drawer-bg);
-    color: var(--modal-text);
-    border-color: var(--drawer-border);
-  }
-
-  .day-cell {
-    background-color: var(--drawer-bg);
-    color: var(--modal-text);
-    border-color: var(--drawer-border);
-
-    span{
-      color: var(--modal-text);
-    }
-
-    &.WEEKEND {
-      background-color: #1e293b; /* bleu foncé */
-    }
-    &.FERIE {
-      background-color: #7f1d1d; /* rouge foncé */
-    }
-  }
-
-  .interval-cell{
-    border-color: var(--drawer-border);
-  }
-
-
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(1) brightness(2); /* blanc éclatant */
-    opacity: 1;
-    
-    font-size: 1.5em;
-  }
-
-
-  .employee-column{
-    background-color: var(--drawer-bg);
-    color: var(--modal-text);
-    border-color: var(--drawer-border);
-
-    span{
-      color: var(--modal-text);
-    }
-  }
-
-  .main-header{
-    background-color: var(--drawer-header-bg);
-    color: var(--modal-text);
-    border-bottom: 1px solid var(--drawer-border);
-
-    select{
-      background-color: var(--drawer-header-bg);
-      color: var(--modal-text);
-      border: 1px solid var(--drawer-border);
-    }
-
-    input{
-      background-color: var(--drawer-header-bg);
-      color: var(--modal-text);
-      border: 1px solid var(--drawer-border);
-    }
-
-    button{
-      background-color: var(--btn-bg);
-      color: var(--btn-text);
-      border: 1px solid var(--drawer-border);
-      border-radius: 4px;
-      padding: 8px 12px;
-      cursor: pointer;
-
-      &:hover {
-        background-color: var(--btn-bg);
-        filter: brightness(0.9);
-      }
-    }
-  }
-
-  .drawer-content {
-    background: var(--drawer-bg) !important;
-    color: var(--modal-text);
-    border-color: var(--drawer-border);
-  }
-  .drawer-header {
-    background: var(--drawer-header-bg);
-    border-bottom: 1px solid var(--drawer-border);
-    color: var(--modal-text);
-  }
-  .drawer-body {
-    color: var(--modal-text);
-    background-color: var(--drawer-bg);
-
-    div{
-      color: var(--modal-text);
-    }
-    select{
-      background-color: var(--modal-bg);
-      color: var(--modal-text);
-      border: 1px solid var(--drawer-border);
-    }
-  }
-  .modal-content {
-    background: var(--modal-bg) !important;
-    color: var(--modal-text);
-  }
-  .modal-header {
-    background: transparent;
-    color: var(--modal-text);
-  }
-
-  .modal-body {
-    color: var(--modal-text);
-    background-color: var(--modal-bg);
-
-   *:not(
-    .self-end, 
-    .add,
-    .btn-cancel,
-    .btn-delete,
-    .btn-save
-    ) {
-      color: inherit;
-      background-color: inherit;
-    }
-
-  }
-
-  .btn-add {
-    background-color: var(--btn-bg);
-    color: var(--btn-text);
-  }
-
-
-  .rightClickComponent{
-    background-color: var(--drawer-bg);
-    color: var(--modal-text);
-    border: 1px solid var(--drawer-border);
-
-    .item:hover {
-      background-color: rgba(255, 255, 255, 0.1); /* léger survol */
-    }
-
-    svg{
-      filter: brightness(0) invert(1) ; /* icônes blanches éclatantes */
-    }
-  }
-
 }
 
 

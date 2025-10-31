@@ -136,6 +136,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   // Refs pour optimiser le système de hover
   const lastHoveredCol = useRef<number>(-1);
   const lastHoveredEmployee = useRef<string | null>(null);
+  const tableRef = useRef<HTMLTableElement | null>(null);
+  const isDragging = useRef(false);
 
   // Calculer les éléments de dimension basés sur la configuration
   const dimensionItems = useMemo(() => {
@@ -179,34 +181,28 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   useEffect(() => {
     setOpenItems(dimensionItems.map(item => item.id));
   }, [dimensionItems]);
-  
- 
 
-  const handleMouseOver = useCallback((e: React.MouseEvent<HTMLTableElement>) => {
-    const target = e.target as HTMLElement;
-    
-    // Trouver la cellule parente, même si on survole un rendez-vous
-    const cell = target.closest('.calendar-cell') as HTMLElement;
-    
-    if (!cell || !cell.classList.contains('calendar-cell')) return;
-    
-    const table = e.currentTarget as HTMLTableElement;
-    if (!table) return;
+  // Fonction commune pour gérer le surlignement (hover normal et pendant drag)
+  const updateHighlight = useCallback((clientX: number, clientY: number, tableElement: HTMLTableElement) => {
+    if (!tableElement) return;
     
     // Calculer l'index de colonne
-    const tableRect = table.getBoundingClientRect();
-    const mouseX = e.clientX - tableRect.left;
+    const tableRect = tableElement.getBoundingClientRect();
+    const mouseX = clientX - tableRect.left;
     const colIndex = Math.floor(mouseX / CELL_WIDTH);
     
+    // Trouver la cellule sous la souris
+    const elementAtPoint = document.elementFromPoint(clientX, clientY) as HTMLElement;
+    const cell = elementAtPoint?.closest('.calendar-cell') as HTMLElement;
+    
     // Trouver l'employé
-    const row = cell.closest('.calendar-row[data-employee-id]') as HTMLElement;
+    const row = cell?.closest('.calendar-row[data-employee-id]') as HTMLElement;    
     const employeeId = row ? row.getAttribute('data-employee-id') : null;
     
     // Si rien n'a changé, ne rien faire (optimisation majeure)
     if (colIndex === lastHoveredCol.current && employeeId === lastHoveredEmployee.current) {
       return;
     }
-       
     
     // Mettre à jour les refs
     lastHoveredCol.current = colIndex;
@@ -217,17 +213,23 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       // Vérifier que l'index de colonne est valide
       if (colIndex >= 0 && colIndex < dayInTimeline.length) {
         // Batch DOM updates: retirer puis ajouter
-        const cellsToUpdate = table.querySelectorAll('[data-hover-col="true"]');
+        const cellsToUpdate = tableElement.querySelectorAll('[data-hover-col="true"]');
         cellsToUpdate.forEach(c => (c as HTMLElement).removeAttribute('data-hover-col'));
+        const rowsToUpdate = tableElement.querySelectorAll('[data-hover-row="true"]');
+        rowsToUpdate.forEach(r => (r as HTMLElement).removeAttribute('data-hover-row'));
         
         // Marquer les nouvelles cellules (plus efficace avec children[])
-        const rows = table.querySelectorAll('.calendar-row');
+        const rows = tableElement.querySelectorAll('.calendar-row');
         rows.forEach(row => {
+          if (row.getAttribute('data-employee-id') === employeeId) {            
+            row.setAttribute('data-hover-row', 'true');
+          }
           const cellInCol = row.children[colIndex] as HTMLElement;
           if (cellInCol) {
             cellInCol.setAttribute('data-hover-col', 'true');
           }
         });
+
       }
       
       // Gérer le surlignage de l'employé
@@ -246,7 +248,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     });
   }, [dayInTimeline]);
 
-    const handleMouseOut = useCallback((e: React.MouseEvent<HTMLTableElement>) => {
+  const handleMouseOver = useCallback((e: React.MouseEvent<HTMLElement> ) => {
+    const target = e.target as HTMLElement;
+    
+    // Trouver la cellule parente, même si on survole un rendez-vous
+    const cell = target.closest('.calendar-cell') as HTMLElement;
+    
+    if (!cell || !cell.classList.contains('calendar-cell')) return;
+    
+    const table = e.currentTarget as HTMLTableElement;
+    if (!table) return;
+    
+    updateHighlight(e.clientX, e.clientY, table);
+  }, [updateHighlight]);
+
+    const handleMouseOut = useCallback((e: React.MouseEvent<HTMLElement>) => {
       const relatedTarget = e.relatedTarget as HTMLElement;
       
       // Vérifier si on quitte vraiment le tableau
@@ -274,6 +290,44 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     );
   };   
 
+  // Gérer le surlignement pendant le drag
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      if (!isDragging.current || !tableRef.current) return;
+      updateHighlight(e.clientX, e.clientY, tableRef.current);
+    };
+
+    const handleDragStart = () => {
+      isDragging.current = true;
+    };
+
+    const handleDragEnd = () => {
+      isDragging.current = false;
+      // Nettoyer tous les highlights
+      if (tableRef.current) {
+        tableRef.current.querySelectorAll('[data-hover-col="true"]').forEach(c => {
+          (c as HTMLElement).removeAttribute('data-hover-col');
+        });
+      }
+      document.querySelectorAll('[data-hover="true"]').forEach(emp => {
+        (emp as HTMLElement).removeAttribute('data-hover');
+      });
+      lastHoveredCol.current = -1;
+      lastHoveredEmployee.current = null;
+    };
+
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('dragstart', handleDragStart);
+    document.addEventListener('dragend', handleDragEnd);
+    document.addEventListener('drop', handleDragEnd);
+
+    return () => {
+      document.removeEventListener('dragover', handleDragOver);
+      document.removeEventListener('dragstart', handleDragStart);
+      document.removeEventListener('dragend', handleDragEnd);
+      document.removeEventListener('drop', handleDragEnd);
+    };
+  }, [updateHighlight]);
 
   /**
    * Calcule le nombre maximal de rendez-vous qui se chevauchent dans une liste donnée.
@@ -525,6 +579,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     }
   }, []);
   
+  
   if (isMobile) {
     const displayEmployee = employees[0];
     return (
@@ -737,6 +792,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         >
           {/* Main calendar table - Structure optimisée */}
           <table 
+            ref={tableRef}
             className="calendar-table bg-bg-secondary relative"
             style={{
               width: `${dayInTimeline.length * CELL_WIDTH}px`,
@@ -799,7 +855,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
                         
                         rows.push(
-                          <tr key={`employee-row-${employee.id}`} className="calendar-row employee-row" data-employee-id={employee.id}>
+                          <tr 
+                            key={`employee-row-${employee.id}`} 
+                            className="calendar-row employee-row" 
+                            data-employee-id={employee.id}
+                          >
                             {dayInTimeline.map((day, dayIdx) => {
                               const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
                                 isSameDay(app.startDate, day) && app.employeeId === employee.id

@@ -176,6 +176,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
   const { selectedCell, setSelectedCell } = useSelectedCell();
   const isSelected = selectedCell?.date.getTime() === intervalStart.getTime() && selectedCell?.employeeId === employee.id;
+  const cellRef = useRef<HTMLDivElement>(null);
 
   // Gestion du drop (drag & drop)
   const [{ isOver, canDrop }, drop] = useDrop({
@@ -239,12 +240,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
     }),
   });
 
-  // Détermine le style de fond selon l'état de drop et d'activité
-  const isActive = isCellActive && isOver && canDrop;
-  let bgColor = '';
-  if (isActive) {
-    bgColor = 'bg-green-100';
-  }
+  
 
   
   // Affiche une bulle d'info au clic sur la cellule
@@ -272,15 +268,19 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
     onCellDoubleClick(date, employee.id, isFullDay ? 'day' : intervalName);
   };
 
-  
+   const setRefs = (node: HTMLDivElement | null) => {
+    // Assigner à ta ref personnelle
+    cellRef.current = node;
+    
+    // Assigner à la ref de react-dnd (drop)
+    if (isCellActive && node) {
+      drop(node);
+    }
+  };
 
   return (
     <div
-      ref={
-        isCellActive ? (node) => {
-          if (node) drop(node);
-        } : undefined
-      }
+      ref={setRefs}
       onClick={handleCellClick}
       onDoubleClick={() =>{  
         if (isCellActive && !!employee.id) handleCellDoubleClick();
@@ -288,7 +288,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       className={`
         relative flex-1 border-r
         ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-light
-        ${bgColor} ${canDrop ? 'cursor-pointer' : ''}
+        ${canDrop ? 'cursor-pointer' : ''}
         flex flex-row items-start gap-1
         ${isSelected ? 'bg-blue-200' : ''}
         interval-cell

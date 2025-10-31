@@ -2,7 +2,6 @@
 import Calendrier from './calendrier/pages/index';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import icon from './calendrier/image/Icones/Evenement_Chantier.svg';
 import { ThemeType, useTheme } from './calendrier/utils/themeManager';
 
 export default function Home() {
@@ -12,7 +11,7 @@ export default function Home() {
     name: "John Doe",
     role: "admin",
     theme: "light",
-    image: icon.src
+    image: "https://i.pravatar.cc/40?img=1"
   })
 
   const { theme, setTheme, availableThemes } = useTheme();
