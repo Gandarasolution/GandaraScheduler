@@ -43,8 +43,8 @@ interface FlexibleFrameProps {
   children: ReactNode;
   /** Classes CSS additionnelles pour le conteneur principal */
   className?: string;
-  /** Style inline pour le conteneur principal */
-  style?: React.CSSProperties;
+  /** Classes CSS additionnelles pour l'en-tête */
+  classNameHeader?: string;
   /** Afficher les en-têtes de groupes (défaut: true) */
   showGroupHeaders?: boolean;
   /** Afficher les en-têtes d'items (défaut: true) */
@@ -72,7 +72,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   onScroll,
   children,
   className = '',
-  style,
+  classNameHeader = '',
   showGroupHeaders = true,
   showItemHeaders = true,
   contentClassName = '',
@@ -93,7 +93,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   };
 
   return (
-    <div className={`flex-1 min-w-0 flex flex-col pr-7 rounded-2xl poppins ${className}`} style={style}>
+    <div className={`flex-1 min-w-0 flex flex-col pr-7 rounded-2xl poppins ${className}`}>
       {/* Conteneur avec le même style que TimelineFrame */}
       <div className='p-4 border rounded-4xl bg-bg-secondary w-full h-full border-ultra-light'>
         <div 
@@ -125,10 +125,10 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
                   return (
                     <div
                       key={group.key}
-                      className="
+                      className={`
                          col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins
-                         border-r border-ultra-light bg-bg-secondary border-b max-h-[49px]
-                      "
+                         border-r border-ultra-light bg-bg-secondary border-b max-h-[49px] ${classNameHeader}
+                      `}
                       style={{ 
                         gridColumn: `${startColumn} / ${endColumn + 1}`,
                       }}

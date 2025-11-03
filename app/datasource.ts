@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Employee, Groupe, Evenement, Image} from './calendrier/types/index';
+import { Appointment, Employee, Groupe, Evenement, Image, poleActivite} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -102,6 +102,13 @@ export const initialTeams: Groupe[] = [
     { name: 'Equipe Pierre', id: 6},      // Équipe commerciale développement
     { name: 'Equipe Sylvie', id: 7},      // Équipe administrative
     { name: 'Equipe Thomas', id: 8}       // Équipe technique innovation
+];
+
+const PA: poleActivite[] = [
+  { id: 1, name: 'Technique' },
+  { id: 2, name: 'Commercial' },
+  { id: 3, name: 'Administrative' },
+  { id: 4, name: 'RH' },
 ];
 
 // ===== EMPLOYÉS DE L'ENTREPRISE =====
@@ -188,6 +195,7 @@ const Evenements = [
       client: 'Ville de Vesoul',
       type: 'chantier',
       attributs: {
+        poleActivite: 1,
         // Informations Générales
         code: 'CHT-001',
         identifiant: 'VES-2024-001',
@@ -219,6 +227,7 @@ const Evenements = [
       type: 'chantier',
       attributs: {
         // Informations Générales
+        poleActivite: 2,
         code: 'CHT-002',
         identifiant: 'PAR-2024-002',
         libelle: 'Résidence Les Jardins de Paris',
@@ -247,6 +256,7 @@ const Evenements = [
       type: 'chantier',
       attributs: {
         // Informations Générales
+        poleActivite: 2,
         code: 'CHT-003',
         identifiant: 'REI-2024-003',
         libelle: 'Chantier Lycée Jean Moulin',
@@ -275,6 +285,7 @@ const Evenements = [
       textColor: '#FFFFFF',
       type: 'chantier',
       attributs: {
+        poleActivite: 3,
         code: 'CHT-004',
         identifiant: 'HDV-2024-004',
         libelle: 'Rénovation Hôtel de Ville',
@@ -301,6 +312,7 @@ const Evenements = [
       textColor: '#000000',
       type: 'chantier',
       attributs: {
+        poleActivite: 3,
         code: 'CHT-005',
         identifiant: 'REN-2024-005',
         libelle: 'Extension Usine Renault Flins',
@@ -327,6 +339,7 @@ const Evenements = [
       textColor: '#FFFFFF',
       type: 'chantier',
       attributs: {
+        poleActivite: 1,
         code: 'CHT-006',
         identifiant: 'LIL-2024-006',
         libelle: 'Construction EHPAD Les Lilas',
@@ -353,6 +366,7 @@ const Evenements = [
       textColor: '#000000',
       type: 'chantier',
       attributs: {
+        poleActivite: 2,
         code: 'CHT-007',
         identifiant: 'VHU-2024-007',
         libelle: 'Réhabilitation Collège Victor Hugo',
@@ -379,6 +393,7 @@ const Evenements = [
       textColor: '#FFFFFF',
       type: 'chantier',
       attributs: {
+        poleActivite: 1,
         code: 'CHT-008',
         identifiant: 'BEL-2024-008',
         libelle: 'Immeuble Le Belvédère Lyon',
@@ -405,6 +420,7 @@ const Evenements = [
       textColor: '#000000',
       type: 'chantier',
       attributs: {
+        poleActivite: 1,
         code: 'CHT-009',
         identifiant: 'TOU-2024-009',
         libelle: 'Bâtiment Industriel Toulouse',
@@ -431,6 +447,7 @@ const Evenements = [
       textColor: '#000000',
       type: 'chantier',
       attributs: {
+        poleActivite: 1,
         code: 'CHT-010',
         identifiant: 'MAR-2024-010',
         libelle: 'Résidence Étudiante Marseille',
@@ -462,6 +479,7 @@ const Evenements = [
         libelle: 'Centre Aquatique Bordeaux',
         etat: 'En cours',
         chargeAffaire: 41,
+        poleActivite: 1,
         chefChantier: 42,
         dateOS: '01/02/2024',
         dateFin: '01/01/2025',
@@ -488,6 +506,7 @@ const Evenements = [
         libelle: 'Rénovation Gare SNCF Strasbourg',
         etat: 'En cours',
         chargeAffaire: 36,
+        poleActivite: 1,
         chefChantier: 42,
         dateOS: '15/03/2024',
         dateFin: '15/09/2024',
@@ -514,6 +533,7 @@ const Evenements = [
         libelle: 'Complexe Sportif Montpellier',
         etat: 'Planifié',
         chargeAffaire: 36,
+        poleActivite: 1,
         chefChantier: 38,
         dateOS: '01/08/2024',
         dateFin: '01/06/2025',
@@ -675,6 +695,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-024',
       identifiant: 'NAN-2024-024',
       libelle: 'Résidence Les Tilleuls Nantes',
@@ -701,6 +722,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-025',
       identifiant: 'LIL-2024-025',
       libelle: 'Bureaux Innovants Lille',
@@ -727,6 +749,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-026',
       identifiant: 'DIJ-2024-026',
       libelle: 'Hôpital Saint-Charles Dijon',
@@ -753,6 +776,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-027',
       identifiant: 'TOU-2024-027',
       libelle: 'Résidence Étudiante Toulouse II',
@@ -779,6 +803,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-028',
       identifiant: 'LYO-2024-028',
       libelle: 'Centre Logistique Lyon Est',
@@ -805,6 +830,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-029',
       identifiant: 'BRE-2024-029',
       libelle: 'Complexe Sportif Brest',
@@ -831,6 +857,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-030',
       identifiant: 'NIC-2024-030',
       libelle: 'Résidence Les Oliviers Nice',
@@ -857,6 +884,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-031',
       identifiant: 'BOR-2024-031',
       libelle: 'Centre Culturel Bordeaux Sud',
@@ -883,6 +911,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-032',
       identifiant: 'REI-2024-032',
       libelle: 'Bâtiment Administratif Reims',
@@ -909,6 +938,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-033',
       identifiant: 'LEM-2024-033',
       libelle: 'Usine Agroalimentaire Le Mans',
@@ -935,6 +965,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-034',
       identifiant: 'NAN-2024-034',
       libelle: 'Rénovation École Primaire Nancy',
@@ -961,6 +992,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-035',
       identifiant: 'ROU-2024-035',
       libelle: 'Extension Mairie Rouen',
@@ -987,6 +1019,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-036',
       identifiant: 'MAR-2024-036',
       libelle: 'Immeuble Horizon Marseille',
@@ -1013,6 +1046,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-037',
       identifiant: 'CLE-2024-037',
       libelle: 'Centre de Recyclage Clermont-Ferrand',
@@ -1039,6 +1073,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-038',
       identifiant: 'REN-2024-038',
       libelle: 'Bâtiment Pôle Emploi Rennes',
@@ -1065,6 +1100,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-039',
       identifiant: 'STR-2024-039',
       libelle: 'Parking Souterrain Strasbourg',
@@ -1091,6 +1127,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-040',
       identifiant: 'CAE-2024-040',
       libelle: 'Rénovation Musée de Caen',
@@ -1117,6 +1154,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-041',
       identifiant: 'AVI-2024-041',
       libelle: 'Hôtel du Parc Avignon',
@@ -1143,6 +1181,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-042',
       identifiant: 'ANN-2024-042',
       libelle: 'Résidence Les Pins Annecy',
@@ -1169,6 +1208,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-043',
       identifiant: 'NAN-2024-043',
       libelle: 'Centre Commercial Nancy Sud',
@@ -1195,6 +1235,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-044',
       identifiant: 'LAR-2024-044',
       libelle: 'Résidence Océane La Rochelle',
@@ -1221,6 +1262,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-045',
       identifiant: 'MET-2024-045',
       libelle: 'Centre Hospitalier Metz Nord',
@@ -1247,6 +1289,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-046',
       identifiant: 'GRE-2024-046',
       libelle: 'Campus Universitaire Grenoble',
@@ -1273,6 +1316,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-047',
       identifiant: 'POI-2024-047',
       libelle: 'Résidence étudiante Poitiers',
@@ -1299,6 +1343,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-048',
       identifiant: 'TOU-2024-048',
       libelle: 'Centre Aquatique Tours',
@@ -1325,6 +1370,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-049',
       identifiant: 'MON-2024-049',
       libelle: 'Résidence Séniors Montpellier',
@@ -1351,6 +1397,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-050',
       identifiant: 'ORL-2024-050',
       libelle: 'Halle Polyvalente Orléans',
@@ -1377,6 +1424,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-051',
       identifiant: 'BLO-2024-051',
       libelle: 'Rénovation Château Blois',
@@ -1403,6 +1451,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-052',
       identifiant: 'PAR-2024-052',
       libelle: 'Immeuble Haussmann Paris 8e',
@@ -1429,6 +1478,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-053',
       identifiant: 'ANG-2024-053',
       libelle: 'Résidence Les Jardins Angers',
@@ -1455,6 +1505,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-054',
       identifiant: 'NIC-2024-054',
       libelle: 'Centre de Conférences Nice',
@@ -1481,6 +1532,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-055',
       identifiant: 'REN-2024-055',
       libelle: 'Usine Agroalimentaire Rennes',
@@ -1507,6 +1559,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-056',
       identifiant: 'DIJ-2024-056',
       libelle: 'Centre Culturel Dijon',
@@ -1533,6 +1586,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-057',
       identifiant: 'PER-2024-057',
       libelle: 'Résidence Les Pins Perpignan',
@@ -1559,6 +1613,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-058',
       identifiant: 'ROU-2024-058',
       libelle: 'Complexe Sportif Rouen',
@@ -1585,6 +1640,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-059',
       identifiant: 'CLE-2024-059',
       libelle: 'Bâtiment Administratif Clermont-Ferrand',
@@ -1611,6 +1667,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-060',
       identifiant: 'BOR-2024-060',
       libelle: 'École Primaire Bordeaux',
@@ -1637,6 +1694,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-061',
       identifiant: 'LIL-2024-061',
       libelle: 'Hôpital Pédiatrique Lille',
@@ -1663,6 +1721,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-062',
       identifiant: 'NAN-2024-062',
       libelle: 'Résidence étudiante Nancy',
@@ -1689,6 +1748,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-063',
       identifiant: 'AMI-2024-063',
       libelle: 'Centre Commercial Amiens',
@@ -1715,6 +1775,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-064',
       identifiant: 'AVI-2024-064',
       libelle: 'Médiathèque Avignon',
@@ -1741,6 +1802,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-065',
       identifiant: 'BRE-2024-065',
       libelle: 'Résidence étudiante Brest',
@@ -1767,6 +1829,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-066',
       identifiant: 'TOU-2024-066',
       libelle: 'Bâtiment Logistique Toulon',
@@ -1793,6 +1856,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-067',
       identifiant: 'TOU-2024-067',
       libelle: 'École Maternelle Tours',
@@ -1819,6 +1883,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-068',
       identifiant: 'REI-2024-068',
       libelle: 'Résidence Les Chênes Reims',
@@ -1845,6 +1910,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-069',
       identifiant: 'LYO-2024-069',
       libelle: 'Immeuble Le Panorama Lyon',
@@ -1871,6 +1937,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-070',
       identifiant: 'TOU-2024-070',
       libelle: 'Centre Technique Toulouse',
@@ -1897,6 +1964,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-071',
       identifiant: 'PAR-2024-071',
       libelle: 'Bureaux Innovalia Paris',
@@ -1923,6 +1991,7 @@ const Evenements = [
     textColor: '#FFFFFF',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-072',
       identifiant: 'LIL-2024-072',
       libelle: 'Centre Logistique Lille',
@@ -1949,6 +2018,7 @@ const Evenements = [
     textColor: '#000000',
     type: 'chantier',
     attributs: {
+      poleActivite: 1,
       code: 'CHT-073',
       identifiant: 'MET-2024-073',
       libelle: 'Résidence Les Tilleuls Metz',
@@ -2152,7 +2222,8 @@ export const getEvenements = (): Evenement[] => {
     { 
       ...(event as any).attributs,
       chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.name || '',
-      chefChantier: initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.name || ''  
+      chefChantier: initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.name || '',
+      poleActivite: PA.find(pa => pa.id === (event as any).attributs.poleActivite)?.name || ''
     } : 
     null;
 

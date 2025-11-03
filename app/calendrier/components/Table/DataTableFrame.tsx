@@ -1,238 +1,249 @@
 /**
- * @fileoverview Composant DataTableFrame - Vue tableau unifiée
+ * @fileoverview Composant DataTableFrame - Vue tableau générique et réutilisable
  * 
- * Ce composant unifié gère l'affichage des tableaux pour :
- * - Chantiers : avec calculs dynamiques et surlignage en "L"
- * - Paie : avec gestion d'images et résumés de rendez-vous
+ * Ce composant générique gère l'affichage de tableaux pour n'importe quel type de données.
  * 
- * Fonctionnalités communes :
+ * Fonctionnalités :
  * - Tri par colonnes
- * - Gestion d'images avec modal
- * - Calculs dynamiques de largeurs
+ * - Surlignage en "L" au survol
+ * - Calculs automatiques de largeurs basés sur le contenu réel
+ *   * Mesure précise de la largeur du texte de chaque cellule
+ *   * Largeur fixe de 70px pour les colonnes image
+ *   * Largeur maximale de 300px par colonne
+ *   * Adaptation automatique à la taille de la fenêtre
+ *   * Redistribution proportionnelle de l'espace disponible
  * - Structure organisée par catégories
+ * - Rendu personnalisable des cellules
+ * - Support des fonctions de calcul dynamiques
+ * - Responsive: s'adapte aux changements de taille de fenêtre
  * 
  * @component DataTableFrame
  * @author Gandara Solutions
- * @version 1.0.0
+ * @version 2.1.0 - Generic & Reusable avec calcul automatique des largeurs
+ * 
+ * @example
+ * // Nomenclature des données :
+ * // 1. Définir la structure des catégories
+ * const categoriesStructure = [
+ *   {
+ *     key: 'general',
+ *     label: 'Informations Générales',
+ *     attributes: [
+ *       { key: 'id', label: 'ID', type: 'number' },
+ *       { key: 'name', label: 'Nom', type: 'string' },
+ *       { key: 'image', label: 'Image', type: 'custom', renderer: (value, item) => <img src={value} /> }
+ *     ]
+ *   },
+ *   {
+ *     key: 'details',
+ *     label: 'Détails',
+ *     attributes: [
+ *       { key: 'TM', label: 'Temps Marché', subKey: 'attributs' }, // Accède à item.attributs.TM
+ *       { key: 'HR', label: 'Heures Réalisées', subKey: 'attributs' }, // Accède à item.attributs.HR
+ *       { key: 'status', label: 'Statut' } // Accès direct à item.status (pas de subKey)
+ *     ]
+ *   }
+ * ];
+ * 
+ * // 2. Définir les données
+ * const items = [
+ *   { 
+ *     id: 1, 
+ *     name: 'Item 1', 
+ *     image: 'url',
+ *     status: 'En cours',
+ *     attributs: {  // Propriétés imbriquées accessibles via subKey dans AttributeConfig
+ *       TM: '100h',
+ *       HR: '75h'
+ *     }
+ *   }
+ * ];
+ * 
+ * // 3. (Optionnel) Définir les fonctions de calcul dynamiques
+ * const computedFields = {
+ *   total: (item) => item.price * item.quantity,
+ *   percentage: (item) => (item.completed / item.total) * 100
+ * };
+ * 
+ * // 4. (Optionnel) Définir les largeurs de colonnes
+ * const columnWidths = {
+ *   id: 80,
+ *   name: { min: 150, weight: 2 },
+ *   image: 100
+ * };
+ * 
+ * // 5. (Optionnel) Définir les renderers personnalisés
+ * const customRenderers = {
+ *   status: (value, item) => <Badge color={value}>{value}</Badge>,
+ *   actions: (value, item) => <Button onClick={() => edit(item)}>Edit</Button>
+ * };
  */
 
 "use client";
 
 import React, { useMemo, useState, useCallback, memo } from 'react';
 import FlexibleFrame from '../FlexibleFrame';
-import { ChantierEvent, AbsenceEvent, AutreEvent, Appointment, Employee, Evenement } from '../../types';
-import { useSelectedAppointment } from '../../context/SelectedAppointmentContext';
 
-// Import des constantes
-const HOURS_PER_DAY = 8;
-
-
-import AppointmentItem from '../AppointmentItem';
-import { addHours } from 'date-fns';
 /**
- * Types supportés par le composant
+ * Type générique pour un élément de données
  */
-type DataType = 'chantier' | 'paie';
+export type GenericDataItem = Record<string, any> & { id: number | string };
 
+/**
+ * Type pour les fonctions de calcul dynamiques
+ */
+export type ComputedField<T = GenericDataItem> = (item: T) => string | number;
+
+/**
+ * Type pour les renderers personnalisés
+ */
+export type CellRenderer<T = GenericDataItem> = (
+  value: any,
+  item: T,
+  attributeKey: string
+) => React.ReactNode;
+
+/**
+ * Interface pour la structure des attributs
+ */
+export interface AttributeConfig {
+  /** Clé unique de l'attribut */
+  key: string;
+  /** Sous-clé pour les attributs imbriqués */
+  subKey?: string;
+  /** Label affiché dans l'en-tête */
+  label: string;
+  /** Type de données (pour le tri et l'affichage) */
+  type?: 'string' | 'number' | 'date' | 'boolean' | 'custom';
+  /** Renderer personnalisé pour cette colonne */
+  renderer?: CellRenderer;
+  /** Indique si c'est une propriété de base de l'objet */
+  isBaseProperty?: boolean;
+  /** Indique si la colonne peut être triée */
+  sortable?: boolean;
+  /** Alignement du texte dans la cellule */
+  align?: 'left' | 'center' | 'right';
+}
 
 /**
  * Interface pour la structure des catégories
  */
-interface CategoryStructure {
+export interface CategoryStructure {
+  /** Clé unique de la catégorie */
   key: string;
+  /** Label affiché pour le groupe */
   label: string;
-  attributes: {
-    key: string;
-    label: string;
-    isBaseProperty?: boolean;
-  }[];
+  /** Liste des attributs de cette catégorie */
+  attributes: AttributeConfig[];
 }
 
-
+/**
+ * Configuration des largeurs de colonnes
+ */
+export interface ColumnWidthConfig {
+  /** Largeur fixe en pixels */
+  fixed?: number;
+  /** Largeur minimale en pixels */
+  min?: number;
+  /** Largeur maximale en pixels */
+  max?: number;
+  /** Poids pour la répartition de l'espace disponible */
+  weight?: number;
+}
 
 /**
  * Props du composant DataTableFrame
  */
-interface DataTableFrameProps {
+export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem> {
+  /** Classes CSS additionnelles */
   className?: string;
+  /** Styles inline */
   style?: React.CSSProperties;
-  dataType: DataType;
-  items: Evenement[];
-  appointments?: Appointment[];
-  employees?: Employee[];
-  paieEvents?: any[];
+  /** Structure des catégories et colonnes */
+  categoriesStructure: CategoryStructure[];
+  /** Données à afficher */
+  items: T[];
+  /** Largeur du conteneur (auto-détectée si non fournie) */
   containerWidth?: number;
-  onEditAppointment?: (appointment: Appointment) => void;
-  onSave?: (
-      event: Evenement, 
-  ) => void;
+  /** Fonctions de calcul pour les champs dynamiques */
+  computedFields?: Record<string, ComputedField<T>>;
+  /** Configuration des largeurs de colonnes */
+  columnWidths?: Record<string, number | ColumnWidthConfig>;
+  /** Renderers personnalisés pour des colonnes spécifiques */
+  customRenderers?: Record<string, CellRenderer<T>>;
+  /** Active/désactive le surlignage en L au survol */
+  enableHighlight?: boolean;
+  /** Affiche les en-têtes de groupes */
+  showGroupHeaders?: boolean;
+  /** Classe CSS pour les en-têtes */
+  headerClassName?: string;
+  /** Callback lors du clic sur une ligne */
+  onRowClick?: (item: T) => void;
+  /** Callback lors du double-clic sur une cellule */
+  onCellDoubleClick?: (item: T, attributeKey: string, value: any) => void;
+  /** Tri initial */
+  defaultSort?: {
+    key: string;
+    direction: 'asc' | 'desc';
+  };
 }
 
 /**
- * Composant DataTableFrame - Tableau unifié pour chantiers et paie
+ * Composant DataTableFrame - Tableau générique et réutilisable
  */
-const DataTableFrame: React.FC<DataTableFrameProps> = ({
+const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   className = '',
   style,
-  dataType,
+  categoriesStructure,
   items,
-  appointments = [],
-  employees = [],
-  paieEvents = [],
   containerWidth,
-  onEditAppointment,
-  onSave
+  computedFields = {},
+  columnWidths: customColumnWidths,
+  customRenderers = {},
+  enableHighlight = true,
+  showGroupHeaders = true,
+  headerClassName = 'bg-primary-ultra-light',
+  onRowClick,
+  onCellDoubleClick,
+  defaultSort,
+}: DataTableFrameProps<T>) => {
   
-}) => {
-  const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
-  //console.log(items);
   
-  
+  // État pour la largeur du conteneur (pour réagir aux changements de taille de fenêtre)
+  const [windowWidth, setWindowWidth] = useState<number>(
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  );
+
+  // Écouter les changements de taille de fenêtre
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Calculer la largeur du conteneur
   const calculatedContainerWidth = useMemo(() => {
-    return containerWidth || (typeof window !== 'undefined' ? window.innerWidth - 85 : 1200);
-  }, [containerWidth]);
+    return containerWidth || (windowWidth - 85);
+  }, [containerWidth, windowWidth]);
 
   // États pour gérer le tri
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
     direction: 'asc' | 'desc';
-  }>({
+  }>(defaultSort || {
     key: null,
     direction: 'asc'
   });
 
-
-  // États pour le surlignage (chantiers uniquement)
-  const [itemHoveredId, setItemHoveredId] = useState<number | null>(null);
+  // États pour le surlignage
+  const [itemHoveredId, setItemHoveredId] = useState<string | number | null>(null);
   const [columnHoveredKey, setColumnHoveredKey] = useState<string | null>(null);
 
-
-
-  // Fonctions de calcul pour les chantiers
-  const calculateDPF = useCallback((chantierId: number): string => {
-    if (dataType !== 'chantier') return '0h';
-    
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0);
-    
-    const relevantAppointments = appointments.filter(appointment => {
-      if (appointment.type !== 'chantier' || appointment.EventId !== chantierId) {
-        return false;
-      }
-      
-      if (appointment.startDate >= currentDate) {
-        return true;
-      }
-      
-      if (appointment.startDate < currentDate && appointment.endDate >= currentDate) {
-        return true;
-      }
-      
-      return false;
-    });
-    
-    let totalHours = 0;
-    
-    relevantAppointments.forEach(appointment => {
-      const startDate = appointment.startDate < currentDate ? currentDate : appointment.startDate;
-      const endDate = appointment.endDate;
-      
-      const timeDiff = endDate.getTime() - startDate.getTime();
-      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
-      
-      totalHours += daysDiff * HOURS_PER_DAY;
-    });
-    
-    return `${totalHours}h`;
-  }, [appointments, dataType]);
-
-  const calculateRPF = useCallback((chantier: ChantierEvent): string => {
-    if (dataType !== 'chantier') return '0h';
-    
-    const hrValue = parseFloat(chantier.attributs.HR.replace('h', '')) || 0;
-    const dpfString = calculateDPF(chantier.id);
-    const dpfValue = parseFloat(dpfString.replace('h', '')) || 0;
-    
-    const totalRPF = hrValue + dpfValue;
-    return `${totalRPF}h`;
-  }, [calculateDPF, dataType]);
-
-  const calculateAP = useCallback((chantier: ChantierEvent): string => {
-    if (dataType !== 'chantier') return '0%';
-    
-    const tmValue = parseFloat(chantier.attributs.TM.replace('h', '')) || 0;
-    
-    if (tmValue === 0) return '0%';
-    
-    const rpfString = calculateRPF(chantier);
-    const rpfValue = parseFloat(rpfString.replace('h', '')) || 0;
-    
-    const percentage = Math.round((rpfValue / tmValue) * 100);
-    return `${percentage}%`;
-  }, [calculateRPF, dataType]);
-
-  const calculateSP = useCallback((chantier: ChantierEvent): string => {
-    if (dataType !== 'chantier') return '0h';
-    
-    const tmValue = parseFloat(chantier.attributs.TM.replace('h', '')) || 0;
-    const rpfString = calculateRPF(chantier);
-    const rpfValue = parseFloat(rpfString.replace('h', '')) || 0;
-    
-    const soldeHeures = tmValue - rpfValue;
-    return `${soldeHeures}h`;
-  }, [calculateRPF, dataType]);
-
-  // Structure des catégories selon le type de données
-  const categoriesStructure: CategoryStructure[] = useMemo(() => {
-    if (dataType === 'chantier') {
-      return [
-        {
-          key: 'IG',
-          label: 'Informations Générales', 
-          attributes: [
-            { key: 'image', label: 'Image', isBaseProperty: true },
-            { key: 'code', label: 'Code' },
-            { key: 'identifiant', label: 'Identifiant' },
-            { key: 'libelle', label: 'Libellé' },
-            { key: 'etat', label: 'État' },
-            { key: 'chargeAffaire', label: 'Chargé Affaire' },
-            { key: 'chefChantier', label: 'Chef Chantier' },
-            { key: 'dateOS', label: 'Date OS' },
-            { key: 'dateFin', label: 'Date Fin' }
-          ]
-        },
-        {
-          key: 'analyse',
-          label: 'Analyse Chantier',
-          attributes: [
-            { key: 'TM', label: 'Temps Marché' },
-            { key: 'HR', label: 'Heures Réalisées' },
-            { key: 'SH', label: 'Solde Heure' },
-            { key: 'DPF', label: 'Durée Planifiée Future' },
-            { key: 'RPF', label: 'Réalisé + Future' },
-            { key: 'AP', label: 'Avanc. Prév.' },
-            { key: 'SP', label: 'Solde Prév.' }
-          ]
-        }
-      ];
-    } else {
-      return [
-        {
-          key: 'all',
-          label: '', 
-          attributes: [
-            { key: 'verrou', label: 'Verrou' },
-            { key: 'image', label: 'Image', isBaseProperty: true },
-            { key: 'code', label: 'Code' },
-            { key: 'label', label: 'Libellé' },
-            { key: 'actif', label: 'ACTF' },
-            { key: 'category', label: 'Catégorie' }
-          ]
-        }
-      ];
-    }
-  }, [dataType]);
 
   // Configuration des groupes
   const groups = useMemo(() => 
@@ -257,50 +268,56 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
     )
   , [categoriesStructure]);
 
-  // Fonction de tri
+  // Fonction pour extraire la valeur d'un attribut (avec support des champs calculés et subKey)
+  const getAttributeValue = useCallback((item: T, attribute: AttributeConfig): any => {
+    const { key, subKey } = attribute;
+    
+    // Si c'est un champ calculé
+    if (computedFields[key]) {
+      return computedFields[key](item);
+    }
+    
+    // Si subKey est défini, accéder à la propriété imbriquée
+    if (subKey) {
+      // Accès à item[subKey][key]
+      const parentObject = item[subKey];
+      if (parentObject && typeof parentObject === 'object') {
+        return parentObject[key];
+      }
+      return undefined;
+    }
+    
+    // Sinon, accès direct à la propriété
+    return item[key];
+  }, [computedFields]);
+
+  // Fonction de tri générique
   const sortedItems = useMemo(() => {
     if (!sortConfig.key) return items;
     
     const sorted = [...items].sort((a, b) => {
       if (!a || !b) return 0;
       
-      let aValue: any, bValue: any;
+      // Trouver la configuration de l'attribut pour obtenir son subKey
+      const attributeConfig = categoriesStructure
+        .flatMap(cat => cat.attributes)
+        .find(attr => attr.key === sortConfig.key);
       
-      if (sortConfig.key === 'image') {
-        aValue = a.image;
-        bValue = b.image;
-      } else if (dataType === 'chantier' && sortConfig.key === 'DPF') {
-        aValue = calculateDPF(a.id);
-        bValue = calculateDPF(b.id);
-      } else if (dataType === 'chantier' && sortConfig.key === 'RPF') {
-        aValue = calculateRPF(a as ChantierEvent);
-        bValue = calculateRPF(b as ChantierEvent);
-      } else if (dataType === 'chantier' && sortConfig.key === 'AP') {
-        aValue = calculateAP(a as ChantierEvent);
-        bValue = calculateAP(b as ChantierEvent);
-      } else if (dataType === 'chantier' && sortConfig.key === 'SP') {
-        aValue = calculateSP(a as ChantierEvent);
-        bValue = calculateSP(b as ChantierEvent);
-      } else if (dataType === 'paie' && sortConfig.key === 'verrou') {
-        aValue = (a as AbsenceEvent | AutreEvent).verrou;
-        bValue = (b as AbsenceEvent | AutreEvent).verrou;
-      } else if (dataType === 'chantier' && 'attributs' in a && 'attributs' in b) {
-        aValue = (a as ChantierEvent).attributs[sortConfig.key as keyof ChantierEvent['attributs']];
-        bValue = (b as ChantierEvent).attributs[sortConfig.key as keyof ChantierEvent['attributs']];
-      } else if (dataType === 'paie') {
-        const aPaie = a as AbsenceEvent | AutreEvent;
-        const bPaie = b as AbsenceEvent | AutreEvent;
-        aValue = aPaie[sortConfig.key as keyof (AbsenceEvent | AutreEvent)];
-        bValue = bPaie[sortConfig.key as keyof (AbsenceEvent | AutreEvent)];
-      }
+      if (!attributeConfig) return 0;
       
+      const aValue = getAttributeValue(a, attributeConfig);
+      const bValue = getAttributeValue(b, attributeConfig);
+      
+      // Gestion des valeurs nulles/undefined
       if (aValue == null && bValue == null) return 0;
       if (aValue == null) return 1;
       if (bValue == null) return -1;
       
+      // Conversion en string pour comparaison
       const aStr = String(aValue).toLowerCase();
       const bStr = String(bValue).toLowerCase();
       
+      // Tentative de comparaison numérique
       const aNum = parseFloat(aStr);
       const bNum = parseFloat(bStr);
       
@@ -308,20 +325,21 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
         return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
       }
       
+      // Comparaison alphabétique
       if (aStr < bStr) return sortConfig.direction === 'asc' ? -1 : 1;
       if (aStr > bStr) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
     
     return sorted;
-  }, [items, sortConfig, dataType, calculateDPF, calculateRPF, calculateAP, calculateSP]);
+  }, [items, sortConfig, getAttributeValue, categoriesStructure]);
 
-  // Fonctions utilitaires pour les chantiers
-  const getItemIndex = useCallback((itemId: number): number => {
+  // Fonctions utilitaires pour le surlignage
+  const getItemIndex = useCallback((itemId: string | number): number => {
     return sortedItems.findIndex(item => item && item.id === itemId);
   }, [sortedItems]);
 
-  const isItemBeforeHovered = useCallback((currentItemId: number, hoveredItemId: number | null): boolean => {
+  const isItemBeforeHovered = useCallback((currentItemId: string | number, hoveredItemId: string | number | null): boolean => {
     if (!hoveredItemId || currentItemId === hoveredItemId) return false;
     
     const currentIndex = getItemIndex(currentItemId);
@@ -332,7 +350,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
     return currentIndex < hoveredIndex;
   }, [getItemIndex]);
 
-  const getCellPositionClasses = useCallback((itemId: number, columnKey: string, columnIndex: number): string => {
+  const getCellPositionClasses = useCallback((itemId: string | number, columnKey: string, columnIndex: number): string => {
     if (!itemHoveredId || !columnHoveredKey) {
       return 'bg-transparent';
     }
@@ -346,13 +364,13 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
     const isSameColumn = columnKey === columnHoveredKey;
 
     if (isSameRow && isCurrentColumnBeforeHovered) {
-      return 'bg-primary-lighter';
+      return 'bg-primary-ultra-light';
     } else if (isSameColumn && isCurrentRowBeforeHovered) {
-      return 'bg-primary-lighter';
+      return 'bg-primary-ultra-light';
     }
     
     return 'bg-transparent';
-  }, [dataType, itemHoveredId, columnHoveredKey, isItemBeforeHovered, attributeKeys]);
+  }, [enableHighlight, itemHoveredId, columnHoveredKey, isItemBeforeHovered, attributeKeys]);
 
   // Gestion du tri
   const handleSort = (attributeKey: string) => {
@@ -372,217 +390,170 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
   };
 
 
-  // Calcul des largeurs de colonnes
+  // Fonction pour mesurer la largeur du texte
+  const measureTextWidth = useCallback((text: string, fontSize: number = 14): number => {
+    if (typeof window === 'undefined') return 100;
+    
+    // Créer un élément temporaire pour mesurer le texte
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return 100;
+    
+    context.font = `${fontSize}px Poppins, sans-serif`;
+    const metrics = context.measureText(text);
+    
+    // Ajouter du padding (16px de chaque côté) et une marge
+    return Math.ceil(metrics.width) + 32 + 10;
+  }, []);
+
+  /**
+   * Calcul des largeurs de colonnes basé sur le contenu réel
+   * 
+   * Algorithme :
+   * 1. Mesure la largeur du header de chaque colonne
+   * 2. Parcourt tous les items et mesure le contenu de chaque cellule
+   * 3. Détermine la largeur max nécessaire pour chaque colonne
+   * 4. Applique des contraintes (min: 80px, max: 300px, image: 70px fixe)
+   * 5. Compare la largeur totale avec la largeur de la fenêtre :
+   *    - Si trop large : réduit proportionnellement (sauf images)
+   *    - Si trop petit : distribue l'espace supplémentaire (sauf images)
+   * 6. S'adapte automatiquement aux changements de taille de fenêtre
+   */
   const calculateColumnWidths = useMemo(() => {
-    if (!sortedItems.length) return attributeLabels.map(() => 80);
+    const MIN_WIDTH = 60;
+    const MAX_WIDTH = 300;
+    const PADDING = 20; // Padding supplémentaire pour l'espacement
+    
+    if (!sortedItems.length) return attributeLabels.map(() => MIN_WIDTH);
 
-    if (dataType === 'chantier') {
-      const fixedWidth = 90.5;
-      const adaptiveColumns = ['libelle', 'chefChantier', 'chargeAffaire', 'etat', 'dateOS', 'dateFin', 'identifiant', 'image'];
+    // Calculer la largeur max pour chaque colonne
+    const columnWidths = attributeKeys.map((key, columnIndex) => {
+      // Trouver la configuration de l'attribut
+      const attributeConfig = categoriesStructure
+        .flatMap(cat => cat.attributes)
+        .find(attr => attr.key === key);
       
-      const maxLimits: { [key: string]: number } = {
-        'libelle': 306,
-        'chefChantier': 150,
-        'chargeAffaire': 150,
-        'etat': 108,
-        'dateOS': 105,
-        'dateFin': 105,
-        'identifiant': 120,
-        'image': 60,
-      };
-
-      return attributeLabels.map((label, colIndex) => {
-        const attributeKey = attributeKeys[colIndex];
+      // Si c'est une colonne image, retourner la largeur fixe
+      if (key === 'image') {
+        return MIN_WIDTH;
+      }
+      
+      // Mesurer la largeur du header
+      const headerWidth = measureTextWidth(attributeLabels[columnIndex], 14);
+      
+      // Mesurer la largeur maximale du contenu
+      let maxContentWidth = headerWidth;
+      
+      sortedItems.forEach(item => {
+        if (!item) return;
         
-        if (adaptiveColumns.includes(attributeKey)) {
-          return maxLimits[attributeKey] || fixedWidth;
+        const value = getAttributeValue(item, attributeConfig || { key, label: '' });
+        
+        if (value != null && value !== undefined) {
+          const textValue = String(value);
+          const contentWidth = measureTextWidth(textValue, 14);
+          maxContentWidth = Math.max(maxContentWidth, contentWidth);
+        }
+      });
+      
+      // Appliquer les limites min/max et ajouter du padding
+      return Math.min(Math.max(maxContentWidth + PADDING, MIN_WIDTH), MAX_WIDTH);
+    });
+
+    // Calculer la largeur totale nécessaire
+    const totalRequiredWidth = columnWidths.reduce((sum, width) => sum + width, 0);
+    const availableWidth = calculatedContainerWidth;
+
+    // Si la largeur totale dépasse la largeur disponible, proportionner
+    if (totalRequiredWidth > availableWidth) {
+      const ratio = availableWidth / totalRequiredWidth;
+      return columnWidths.map((width, index) => {
+        // Ne pas réduire les colonnes image
+        const attributeKey = attributeKeys[index];
+        const attributeConfig = categoriesStructure
+          .flatMap(cat => cat.attributes)
+          .find(attr => attr.key === attributeKey);
+        
+        if (attributeKey === 'image') {
+          return MIN_WIDTH;
         }
         
-        return fixedWidth;
+        return Math.max(Math.floor(width * ratio), MIN_WIDTH);
       });
-    } else {
-      // Paie
-      const availableWidth = calculatedContainerWidth;
-      
-      const columnConfig = [
-        { key: 'verrou', minWidth: 80, weight: 1 },
-        { key: 'image', minWidth: 80, weight: 1 },
-        { key: 'code', minWidth: 120, weight: 1.5 },
-        { key: 'libelle', minWidth: 250, weight: 4 },
-        { key: 'actf', minWidth: 100, weight: 1.2 },
-        { key: 'categorie', minWidth: 150, weight: 2 },
-      ];
-
-      const totalMinWidth = columnConfig.reduce((sum, col) => sum + col.minWidth, 0);
-      const totalWeight = columnConfig.reduce((sum, col) => sum + col.weight, 0);
-      
-      if (availableWidth > totalMinWidth) {
-        const extraSpace = availableWidth - totalMinWidth;
-        
-        return columnConfig.map(col => {
-          const extraWidth = (extraSpace * col.weight) / totalWeight;
-          return Math.floor(col.minWidth + extraWidth);
-        });
-      } else {
-        return columnConfig.map(col => col.minWidth);
-      }
     }
-  }, [attributeLabels, attributeKeys, calculatedContainerWidth, sortedItems.length, dataType]);
+
+    // Si la largeur totale est inférieure à la largeur disponible, étendre proportionnellement
+    if (totalRequiredWidth < availableWidth) {
+      const extraSpace = availableWidth - totalRequiredWidth;
+      const nonImageColumns = columnWidths.filter((_, index) => {
+        const attributeKey = attributeKeys[index];
+        const attributeConfig = categoriesStructure
+          .flatMap(cat => cat.attributes)
+          .find(attr => attr.key === attributeKey);
+        
+        return !(attributeConfig?.type === 'custom' && (attributeKey === 'image' || attributeConfig.label.toLowerCase().includes('image')));
+      }).length;
+      
+      const extraPerColumn = extraSpace / nonImageColumns;
+      
+      return columnWidths.map((width, index) => {
+        const attributeKey = attributeKeys[index];
+        const attributeConfig = categoriesStructure
+          .flatMap(cat => cat.attributes)
+          .find(attr => attr.key === attributeKey);
+        
+        // Les colonnes image restent fixes
+        if (attributeKey === 'image') {
+          return MIN_WIDTH;
+        }
+        
+        // Les autres colonnes reçoivent l'espace supplémentaire
+        const newWidth = width + extraPerColumn;
+        return Math.min(Math.floor(newWidth), MAX_WIDTH);
+      });
+    }
+
+    return columnWidths;
+  }, [attributeLabels, attributeKeys, calculatedContainerWidth, sortedItems, categoriesStructure, getAttributeValue, measureTextWidth]);
 
   // Style CSS Grid
   const gridTemplateColumns = useMemo(() => {
     return calculateColumnWidths.map(width => `${width}px`).join(' ');
   }, [calculateColumnWidths]);
 
-  // Fonction de rendu des valeurs
-  const renderAttributeValue = (value: string | number | undefined, attributeKey: string, itemId: number) => {
-    if (!value) return <span className="text-gray-400">-</span>;
-    
-    switch (attributeKey) {
-      case 'verrou':
-        value = String(value);
-        const isLocked = value.toLowerCase() === 'true' || value === '1' || value.toLowerCase() === 'verrouillé';
-        return (
-          <div className="flex items-center justify-center w-full h-full">
-            {isLocked ? (
-              <svg 
-                width="20" 
-                height="20" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-red-600"
-              >
-                <path 
-                  d="M18 11H6C5.45 11 5 11.45 5 12V20C5 20.55 5.45 21 6 21H18C18.55 21 19 20.55 19 20V12C19 11.45 18.55 11 18 11Z" 
-                  stroke="currentColor" 
-                  strokeWidth="2"
-                  fill="currentColor"
-                />
-                <path 
-                  d="M7 11V7C7 4.24 9.24 2 12 2C14.76 2 17 4.24 17 7V11" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
-            ) : (
-              <></>
-            )}
-          </div>
-        );
-      case 'image':
-        
-        if (value && typeof value === 'string' && itemId) {
-          const item = items.find(i => i && i.id === itemId) as Evenement;
-          return (
-            <AppointmentItem
-              appointment={{ id: 0, description: '', type: item?.type, EventId: itemId, startDate: new Date(), endDate: addHours(new Date(), 12), employeeId: 0, top: 0 }}
-              isFullDay={false}
-              isMobile={false}
-              event={items.find(c => c.id === itemId) as ChantierEvent}
-              chargeeAffaire={''} // Placeholder, adapter selon le contexte
-              source='demo'
-              onDoubleClick={() => {
-                const newAppointment: Appointment = { id: 0, description: '', type: item?.type, EventId: itemId, startDate: new Date(), endDate: addHours(new Date(), 12), employeeId: 0};
-                console.log("oui");
-                
-                setSelectedAppointment(newAppointment);
-                onEditAppointment ? onEditAppointment(newAppointment) : null;
-              }}
-            />
-          );
-        }
-        return <span className="text-gray-400">-</span>;
-      case 'etat':
-        if (dataType === 'chantier') {
-          const badgeColor = value === 'En cours' ? 'bg-green-100 text-green-800' 
-                           : value === 'Planifié' ? 'bg-blue-100 text-blue-800'
-                           : value === 'Terminé' ? 'bg-gray-100 text-gray-800'
-                           : 'bg-yellow-100 text-yellow-800';
-          return (
-            <div className="flex items-center justify-center w-full h-full">
-              <span className={`inline-flex w-[80px] h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium poppins ${badgeColor}`}>
-                {value}
-              </span>
-            </div>
-          );
-        }
-        break;
-      case 'AP':
-      case 'SP':
-        if (dataType === 'chantier' && typeof value === 'string') {
-          const apValue = parseFloat(value) || 0;
-          if ((attributeKey === 'AP' && apValue > 100) || (attributeKey === 'SP' && apValue < 0)) {
-            return (
-              <div className='flex items-center justify-end w-full h-full gap-2'>
-                <svg 
-                  width="20" 
-                  height="20" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-red-600"
-                >
-                  <path 
-                    d="M12 2L21.09 20H2.91L12 2Z" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinejoin="round"
-                    fill="currentColor"
-                  />
-                  <path 
-                    d="M12 9V13M12 17H12.01" 
-                    stroke="white" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-red-600 poppins font-medium">{value}</span>
-              </div>
-            );
-          }
-          return (
-            <div className='flex items-center justify-end w-full h-full font-bold'>
-              <span className="poppins">{value}</span>
-            </div>
-          );
-        }
-        break;
-
-      case 'TM':
-      case 'HR':
-      case 'SH':
-      case 'DPF':
-      case 'RPF':
-        if (dataType === 'chantier') {
-          return (
-            <div className='flex items-center justify-start w-full h-full'>
-              <span className="poppins">{value}</span>
-            </div>
-          );
-        }
-        break;
-      default:
-        return (
-          <div className='flex items-center justify-start w-full h-full'>
-            <span className=" poppins">{value}</span>
-          </div>
-        );
+  // Fonction de rendu des valeurs générique
+  const renderAttributeValue = (value: any, attributeKey: string, item: T) => {
+    // 1. Vérifier si un renderer personnalisé existe
+    if (customRenderers[attributeKey]) {
+      return customRenderers[attributeKey](value, item, attributeKey);
     }
     
+    // 2. Trouver la configuration de l'attribut
+    const attributeConfig = categoriesStructure
+      .flatMap(cat => cat.attributes)
+      .find(attr => attr.key === attributeKey);
+    
+    // 3. Utiliser le renderer de la configuration si disponible
+    if (attributeConfig?.renderer) {
+      return attributeConfig.renderer(value, item, attributeKey);
+    }
+    
+    // 4. Rendu par défaut selon le type et l'alignement
+    if (!value && value !== 0) return <span className="text-gray-400">-</span>;
+    
+    const align = attributeConfig?.align || 'left';
+    const alignClass = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start';
+    
+    // 5. Rendu générique par défaut
     return (
-      <div className='flex items-center justify-start w-full h-full'>
-        <span className=" poppins">{value}</span>
+      <div className={`flex items-center ${alignClass} w-full h-full`}>
+        <span className="poppins">{String(value)}</span>
       </div>
     );
   };
 
   // Fonction pour obtenir les valeurs organisées par catégorie
-  const getValuesByCategory = useCallback((item: Evenement) => {
+  const getValuesByCategory = useCallback((item: T) => {
     if (!item) {
       console.error('Élément invalide dans getValuesByCategory:', item);
       return [];
@@ -592,33 +563,8 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
       categoryKey: category.key,
       categoryLabel: category.label,
       values: category.attributes.map(attr => {
-        let value: string | number | undefined;
-        
-        if (attr.isBaseProperty) {
-          value = (item as any)[attr.key];
-        } else if (dataType === 'chantier') {
-          const chantier = item as ChantierEvent;
-          //console.log('chantier', chantier);
-          
-          if (attr.key === 'DPF') {
-            value = calculateDPF(chantier.id);
-          } else if (attr.key === 'RPF') {
-            value = calculateRPF(chantier);
-          } else if (attr.key === 'AP') {
-            value = calculateAP(chantier);
-          } else if (attr.key === 'SP') {
-            value = calculateSP(chantier);
-          } else {
-            value = chantier.attributs[attr.key as keyof ChantierEvent['attributs']];
-          }
-        } else if (dataType === 'paie') {
-          const paieItem = item as AbsenceEvent | AutreEvent;
-          if (attr.key === 'verrou') {
-            value = paieItem.verrou ? 'true' : 'false';
-          } else {
-            value = paieItem[attr.key as keyof (AbsenceEvent | AutreEvent)] as string;
-          }
-        }
+        // Utiliser getAttributeValue qui gère les champs calculés, subKey et l'accès aux propriétés
+        const value = getAttributeValue(item, attr);
         
         return {
           attributeKey: attr.key,
@@ -627,7 +573,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
         };
       })
     }));
-  }, [categoriesStructure, dataType, calculateDPF, calculateRPF, calculateAP, calculateSP]);
+  }, [categoriesStructure, getAttributeValue]);
 
   const mainScrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -644,8 +590,9 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
         items={attributeLabels}
         mainScrollRef={mainScrollRef}
         onScroll={handleScroll}
-        showGroupHeaders={dataType === 'chantier'}
-        className={`${dataType}-timeline-frame h-full pl-7 overflow-x-hidden ${className}`}
+        showGroupHeaders={showGroupHeaders}
+        className={`data-table-frame h-full pl-7 overflow-x-hidden ${className}`}
+        classNameHeader={headerClassName}
         contentClassName='overflow-x-hidden scroll-hidden'
         useAutoCells={false}
         customGridColumns={gridTemplateColumns}
@@ -658,7 +605,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
             return (
               <div
                 key={`header-${index}`}
-                className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-bg-secondary hover:bg-gray-50 cursor-pointer transition-colors"
+                className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-primary-ultra-light hover:bg-gray-50 cursor-pointer transition-colors"
                 style={{
                   width: `${calculateColumnWidths[index]}px`,
                   height: '56px',
@@ -710,14 +657,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
           {/* Corps du tableau */}
           <tbody>
             {sortedItems
-              .filter(item => {
-                if (!item) return false;
-                if (dataType === 'chantier') {
-                  return 'attributs' in item;
-                } else {
-                  return item.type === 'absence' || item.type === 'autre';
-                }
-              })
+              .filter(item => !!item)
               .map((item, rowIndex) => {
                 const itemByCategories = getValuesByCategory(item);
                 const allValues = itemByCategories.flatMap(cat => cat.values);
@@ -729,7 +669,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
                       const isExactHoveredCell = itemHoveredId === item.id && columnHoveredKey === attributeKey;
 
                       const cellClasses = isExactHoveredCell 
-                        ? 'bg-primary-lighter' 
+                        ? 'bg-primary-ultra-light' 
                         : getCellPositionClasses(item.id, attributeKey, columnIndex);
                       
                       return (
@@ -753,7 +693,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
                             setColumnHoveredKey(null);
                           }}
                         >
-                          {renderAttributeValue(value, attributeKey, item.id)}
+                          {renderAttributeValue(value, attributeKey, item)}
                         </td>
                       );
                     })}

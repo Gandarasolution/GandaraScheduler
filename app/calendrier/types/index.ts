@@ -18,6 +18,11 @@ export interface Groupe {
   name: string;  
 }
 
+export type poleActivite = {
+  id: number;
+  name: string;
+};
+
 /**
  * Interface représentant un employé de l'entreprise
  * @interface Employee
@@ -107,6 +112,7 @@ export interface ChantierEvent extends BaseEvent {
   attributs: {
     code: string;
     identifiant: string;
+    poleActivite: string;
     libelle: string;
     etat: string;
     chargeAffaire: string;

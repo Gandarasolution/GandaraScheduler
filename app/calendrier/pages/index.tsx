@@ -49,8 +49,9 @@ import {
   isSameDay,
   isSameMonth,
   isSameYear,
+  addHours,
 } from "date-fns";
-import { Appointment, Employee, HistoryAction, Evenement, Filter, FilterType, DimensionType} from "../types";
+import { Appointment, Employee, HistoryAction, Evenement, Filter, FilterType, DimensionType, ChantierEvent} from "../types";
 import CalendarGrid from "../components/Calendar/CalendarGrid";
 import DataTableFrame from "../components/Table/DataTableFrame";
 import Modal from "../components/modals/Modal";
@@ -93,6 +94,7 @@ import { notificationService } from "../services";
 import LogoUrlN from "../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../image/LOGO_couleur_police_blanche.svg";
 import { ThemeType, useTheme } from '../utils/themeManager';
+import AppointmentItem from '../components/AppointmentItem';
 
 
 /**
@@ -513,6 +515,8 @@ export default function HomePage({
   // Fonction optimisée pour obtenir les valeurs uniques avec cache
   const getFilterOptions = useCallback(() => {
     const allChantiers = events.current.filter(e => e.type === 'chantier');
+
+    console.log('Chantiers filtrés :', allChantiers);
     
     // Optimisation : utiliser des Sets directement pour éviter la conversion
     const etatSet = new Set<string>();
@@ -1654,7 +1658,7 @@ export default function HomePage({
       return () => clearTimeout(filterTimer);
     } else if (viewType === 'paie-table') {
       // Pas de debounce nécessaire car c'est juste une assignation
-      setFilteredEvent(events.current);
+      setFilteredEvent(events.current.filter(event => event.type !== 'chantier'));
     }
   }, [activeFilters, viewType, applyFiltersToChantiers]); // Retirer applyFiltersToChantiers des dépendances pour éviter les re-renders
 
@@ -2239,12 +2243,245 @@ export default function HomePage({
                     )
                   ) :  (
                     <DataTableFrame 
-                      dataType={viewType === 'chantier-table' ? "chantier" : "paie"}
                       items={filteredEvent} 
-                      appointments={appointments.current}
-                      employees={employees.current}
                       containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
-                      onEditAppointment={handleOpenEditModal}
+                      categoriesStructure={
+                        viewType === 'chantier-table' ?
+                         [
+                          {
+                            key: 'IG',
+                            label: 'Informations Générales', 
+                            attributes: [
+                              { key: 'image', label: 'Image' },
+                              { key: 'poleActivite', subKey: 'attributs',  label: 'Pole d\'activité' },
+                              { key: 'code', subKey: 'attributs', label: 'Code' },
+                              { key: 'identifiant', subKey: 'attributs', label: 'Identifiant' },
+                              { key: 'libelle', subKey: 'attributs' , label: 'Libellé' },
+                              { key: 'etat', subKey: 'attributs' , label: 'État' },
+                              { key: 'chargeAffaire', subKey: 'attributs' , label: 'Chargé Affaire' },
+                              { key: 'chefChantier', subKey: 'attributs' , label: 'Chef Chantier' },
+                              { key: 'dateOS', subKey: 'attributs' , label: 'Date OS' },
+                              { key: 'dateFin', subKey: 'attributs' , label: 'Date Fin' }
+                            ]
+                          },
+                          {
+                            key: 'analyse',
+                            label: 'Analyse Chantier',
+                            attributes: [
+                              { key: 'TM', subKey: 'attributs', label: 'Temps Marché' },
+                              { key: 'HR', subKey: 'attributs', label: 'Heures Réalisées' },
+                              { key: 'SH', subKey: 'attributs', label: 'Solde Heure' },
+                              { key: 'DPF', subKey: 'attributs', label: 'Durée Planifiée Future' },
+                              { key: 'RPF', subKey: 'attributs', label: 'Réalisé + Future' },
+                              { key: 'AP', subKey: 'attributs', label: 'Avanc. Prév.' },
+                              { key: 'SP', subKey: 'attributs', label: 'Solde Prév.' }
+                            ]
+                          }
+                        ] :
+                        [
+                          {
+                            key: 'all',
+                            label: '', 
+                            attributes: [
+                              { key: 'verrou', label: 'Verrou' },
+                              { key: 'image', label: 'Image' },
+                              { key: 'code', label: 'Code' },
+                              { key: 'label', label: 'Libellé' },
+                              { key: 'actif', label: 'ACTF' },
+                              { key: 'category', label: 'Catégorie' }
+                            ]
+                          }
+                        ]
+                      }
+                      computedFields={
+                        viewType === 'chantier-table' ? {
+                          DPF: (item) => {
+                            // Calcul de la Durée Planifiée Future
+                            const futureAppointments = appointments.current.filter(app => 
+                              app.EventId === item.id && app.startDate > new Date()
+                            );
+                            const totalHours = futureAppointments.reduce((sum, app) => {
+                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
+                              return sum + duration;
+                            }, 0);
+                            return totalHours.toFixed(2);
+                          },
+                          HR: (item) => {
+                            // Calcul des Heures Réalisées
+                            const pastAppointments = appointments.current.filter(app => 
+                              app.EventId === item.id && app.endDate <= new Date()
+                            );
+                            const totalHours = pastAppointments.reduce((sum, app) => {
+                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
+                              return sum + duration;
+                            }, 0);
+                            return totalHours.toFixed(2);
+                          },
+                          RPF: (item) => {
+                            // Calcul Réalisé + Future
+                            const allAppointments = appointments.current.filter(app => app.EventId === item.id);
+                            const totalHours = allAppointments.reduce((sum, app) => {
+                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
+                              return sum + duration;
+                            }, 0);
+                            return totalHours.toFixed(2);
+                          },
+                          SH: (item) => {
+                            // Calcul du Solde Heure (Temps Marché - Heures Réalisées)
+                            const TM = parseFloat(item.attributs?.TM || '0');
+                            const pastAppointments = appointments.current.filter(app => 
+                              app.EventId === item.id && app.endDate <= new Date()
+                            );
+                            const HR = pastAppointments.reduce((sum, app) => {
+                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
+                              return sum + duration;
+                            }, 0);
+                            return (TM - HR).toFixed(2);
+                          },
+                          AP: (item) => {
+                            // Calcul Avancement Prévisionnel (%)
+                            const TM = parseFloat(item.attributs?.TM || '0');
+                            if (TM === 0) return '0.00';
+                            const allAppointments = appointments.current.filter(app => app.EventId === item.id);
+                            const RPF = allAppointments.reduce((sum, app) => {
+                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
+                              return sum + duration;
+                            }, 0);
+                            return ((RPF / TM) * 100).toFixed(2);
+                          },
+                          SP: (item) => {
+                            // Calcul Solde Prévisionnel (Temps Marché - Réalisé + Future)
+                            const TM = parseFloat(item.attributs?.TM || '0');
+                            const allAppointments = appointments.current.filter(app => app.EventId === item.id);
+                            const RPF = allAppointments.reduce((sum, app) => {
+                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
+                              return sum + duration;
+                            }, 0);
+                            return (TM - RPF).toFixed(2);
+                          }
+                        } : undefined
+                      }
+                      customRenderers={
+                        viewType === 'chantier-table' ? {
+                          image: (value, item) => (
+                            <AppointmentItem
+                              appointment={{
+                                id:0,
+                                description: '',
+                                type: item.type,
+                                EventId: Number(item.id),
+                                startDate: new Date(),
+                                endDate: addHours(new Date(), 12),
+                                employeeId: 0,
+                                top: 0,
+                              }}
+                              isFullDay={false}
+                              isMobile={false}
+                              event={item as ChantierEvent}
+                              chargeeAffaire = ''
+                              source='demo'
+                              onDoubleClick={() => {
+                                const newAppointment: Appointment = {
+                                  id:0,
+                                  description: '',
+                                  type: item.type,
+                                  EventId: Number(item.id),
+                                  startDate: new Date(),
+                                  endDate: addHours(new Date(), 12),
+                                  employeeId: 0,
+                                }
+
+                                setSelectedAppointment(newAppointment);
+                                handleOpenEditModal(newAppointment);
+                              }}
+                            />
+                          ),
+                          etat: (value) => {
+                           // console.log(value);
+                            
+                            const statusColors: Record<string, string> = {
+                              'En cours': 'bg-green-100 text-green-800',
+                              'Planifié': 'bg-blue-100 text-blue-800',
+                              'Suspendu': 'bg-yellow-100 text-yellow-800',
+                              'Terminé': 'bg-gray-100 text-gray-800',
+                              'Annulé': 'bg-red-100 text-red-800'
+                            };
+                            const colorClass = statusColors[value as string]
+                            //console.log(colorClass);
+                            
+                            return (
+                              <div className="flex items-center justify-center w-full h-full">
+                                <span className={`inline-flex w-[80px] h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+                                  {value}
+                                </span>
+                              </div>
+                            );
+                          }
+                        } : {
+                          image: (value, item) => (
+                            <AppointmentItem
+                              appointment={{
+                                id:0,
+                                description: '',
+                                type: item.type,
+                                EventId: Number(item.id),
+                                startDate: new Date(),
+                                endDate: addHours(new Date(), 12),
+                                employeeId: 0,
+                                top: 0,
+                              }}
+                              isFullDay={false}
+                              isMobile={false}
+                              event={item as ChantierEvent}
+                              chargeeAffaire = ''
+                              source='demo'
+                              onDoubleClick={() => {
+                                const newAppointment: Appointment = {
+                                  id:0,
+                                  description: '',
+                                  type: item.type,
+                                  EventId: Number(item.id),
+                                  startDate: new Date(),
+                                  endDate: addHours(new Date(), 12),
+                                  employeeId: 0,
+                                }
+
+                                setSelectedAppointment(newAppointment);
+                                handleOpenEditModal(newAppointment);
+                              }}
+                            />
+                          ),
+                          verrou: (value) => (
+                            <div className="flex items-center justify-center">
+                              {value ? (
+                                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/>
+                                </svg>
+                              ) : (
+                                <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"/>
+                                </svg>
+                              )}
+                            </div>
+                          ),
+                          actif: (value) => (
+                            <div className="flex items-center justify-center">
+                              {value ? (
+                                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                              ) : (
+                                <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+                              )}
+                            </div>
+                          )
+                        }
+                      }
+                      onRowClick={viewType === 'chantier-table' ? (item) => {
+                        // Trouver le premier rendez-vous lié à ce chantier
+                        const relatedAppointment = appointments.current.find(app => app.EventId === item.id);
+                        if (relatedAppointment) {
+                          handleOpenEditModal(relatedAppointment);
+                        }
+                      } : undefined}
                     />
                   )}
                 </SelectedCellContext.Provider>

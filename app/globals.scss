@@ -91,7 +91,7 @@
   --calendar-today: #ffcdde;          // Aujourd'hui (rose)
   --calendar-today-dark: #ffc1dd;
   --calendar-border: #e5e7eb;
-  --calendar-cell-hover: #e7f4f2;     // Hover cellule
+  --calendar-cell-hover: var(--color-primary-ultra-light);     // Hover cellule
   --calendar-cell-active: #d4ede9;    // Cellule active (intersection)
   
   // ── Bordures ──────────────────────────────────────────────────────────────
