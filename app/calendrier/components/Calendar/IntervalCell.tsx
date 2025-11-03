@@ -305,31 +305,35 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
       }}
       suppressHydrationWarning={true} // Pour éviter les erreurs de rendu côté serveur
     >
-        {isCellActive && appointments.map((app) => (
-          <AppointmentItem
-            key={app.id}
-            employee={employee}
-            appointment={app}
-            isFullDay={isFullDay}
-            includeWeekend={includeWeekend}
-            event={events.find(et => et.id === app.EventId) as Evenement}
-            onDoubleClick={() => {
-              onAppointmentDoubleClick(app)
-            }}
-            onResize={(id, newStartDate, newEndDate, resizeDirection) => {
-              onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
-            }}
-            handleContextMenu={handleContextMenu ?? (() => {})}
-            isMobile={isMobile}
-            onClick={() => {
+        {isCellActive && appointments.map((app) => {
+          const event = events.find(et => et.id === app.EventId);
+          const chargeeAffaire = event && 'attributs' in event ? event.attributs.chargeAffaire : '';
+          return (
+            <AppointmentItem
+              key={app.id}
+              chargeeAffaire={chargeeAffaire || ''}
+              appointment={app}
+              isFullDay={isFullDay}
+              includeWeekend={includeWeekend}
+              event={events.find(et => et.id === app.EventId) as Evenement}
+              onDoubleClick={() => {
+                onAppointmentDoubleClick(app)
+              }}
+              onResize={(id, newStartDate, newEndDate, resizeDirection) => {
+                onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
+              }}
+              handleContextMenu={handleContextMenu ?? (() => {})}
+              isMobile={isMobile}
+               onClick={() => {
               if (!isMobile) {
                 setSelectedAppointment(app);
                 setSelectedCell(null);
               }
             }}
             isSelected={selectedAppointment?.id === app.id}
-          />
-        ))}
+            />
+          )
+        })}
       {/* Affichage de la bulle d'info si besoin */}
       {isCellActive && showInfoBubble && (
         <InfoBubble

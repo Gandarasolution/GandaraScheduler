@@ -176,12 +176,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    if (name === 'chargeAffaire') {
-      setFormDataEventType((prev) => {
-        if ((prev as any).type !== 'chantier') return prev;
-        const chantierPrev = prev as ChantierEvent;
-        return { ...chantierPrev, attributs: { ...(chantierPrev.attributs || {}), chargeAffaire: employees.find(emp => emp.id === Number(value))?.name } } as Evenement;
-      });
+     if (name === 'employeeId') {
+      setFormDataAppointment((prev) => ({ ...prev, employeeId: Number(value) }));
       return;
     }
     setFormDataAppointment((prev) => ({ ...prev, [name]: value }));
@@ -439,7 +435,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               source='demo'
               isMobile={false}
               includeWeekend={false}
-              employee={{ id: formDataAppointment.employeeId as number, name: employees.find(e => e.id === formDataAppointment.employeeId)?.name || 'Employé' }}
+              chargeeAffaire={formDataEventType && 'attributs' in formDataEventType ? formDataEventType.attributs.chargeAffaire : ''}
               onDoubleClick={() => {}}
               onResize={() => {}}
               handleContextMenu={() => {}}
@@ -564,25 +560,23 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             </div>
 
             {/* Sélecteur de chargé d'affaire */}
-            {formDataEventType.type === 'chantier' && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <label htmlFor="chargeAffaire" className="block text-sm font-medium sm:mr-auto">Affecté</label>
-                <select
-                  id="chargeAffaire"
-                  name="chargeAffaire"
-                  value={formDataEventType.attributs.chargeAffaire || ''}
-                  onChange={handleChange}
-                  className="w-full sm:w-[305px] p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
-                >
-                  {employees.filter(emp => emp.type === 'chargeAffaire' || emp.type === 'chefChantier').map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name}
-                      </option>
-                  ))} 
-                </select>
-              </div>
-            )}
-            </>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <label htmlFor="employeeId" className="block text-sm font-medium sm:mr-auto">Affecté</label>
+              <select
+                id="employeeId"
+                name="employeeId"
+                value={formDataAppointment.employeeId || ''}
+                onChange={handleChange}
+                className="w-full sm:w-[305px] p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-bg-secondary"
+              >
+                {employees.map(employee => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
           )}
 
           {/* Boutons d'action */}
@@ -795,7 +789,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
           ) : (
             <div>
               <div className="text-4xl mb-2">📁</div>
-              <div className="text-gray-600 mb-2">
+              <div className="text-secondary mb-2">
                 Glissez-déposez une image ici ou{' '}
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -804,7 +798,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
                   parcourez vos fichiers
                 </button>
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-secondary">
                 Formats acceptés : JPG, PNG, GIF, WebP, SVG - Max 480x480px, 200Ko
               </div>
             </div>
@@ -826,7 +820,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
             placeholder="Rechercher une image..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg  focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent"
+            className="w-full placeholder:text-primary pl-10 pr-4 py-2 border border-gray-300 rounded-lg  focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent"
           />
           <svg
             className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
@@ -839,14 +833,14 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-primary">
             {filteredImages.length} image{filteredImages.length !== 1 ? 's' : ''} trouvée{filteredImages.length !== 1 ? 's' : ''}
           </span>
           
           <div className="flex items-center gap-2">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-primary text-white' : 'bg-gray-100'}`}
+              className={`p-2 rounded cursor-pointer ${viewMode === 'grid' ? 'bg-primary text-white' : 'bg-transparent'}`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M10 4H4C2.9 4 2 4.9 2 6V12C2 13.1 2.9 14 4 14H10C11.1 14 12 13.1 12 12V6C12 4.9 11.1 4 10 4Z"/>
@@ -857,7 +851,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded ${viewMode === 'list' ? 'bg-primary text-white' : 'bg-gray-100'}`}
+              className={`p-2 rounded cursor-pointer  ${viewMode === 'list' ? 'bg-primary text-white' : 'bg-transparent'}`}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M3 13H1V11H3V13Z"/>
@@ -920,7 +914,7 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
                   ←
                 </button>
                 
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-primary">
                   Page {currentPage} sur {totalPages}
                 </span>
                 
@@ -967,12 +961,12 @@ const ImageSelectorContent: React.FC<ImageSelectorContentProps> = ({
 
       {/* Actions */}
       <div className="flex justify-between items-center">
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-primary">
           💡 Astuce : Vous pouvez également glisser-déposer une image directement sur cette zone
         </div>
         <button
           onClick={onClose}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+          className="px-4 py-2 bg-gray-200 text-primary rounded-lg transition-colors"
         >
           Annuler
         </button>

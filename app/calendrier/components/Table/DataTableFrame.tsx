@@ -483,7 +483,7 @@ const DataTableFrame: React.FC<DataTableFrameProps> = ({
               isFullDay={false}
               isMobile={false}
               event={items.find(c => c.id === itemId) as ChantierEvent}
-              employee={{ id: 0, name: '' }} // Placeholder, adapter selon le contexte
+              chargeeAffaire={''} // Placeholder, adapter selon le contexte
               source='demo'
               onDoubleClick={() => {
                 const newAppointment: Appointment = { id: 0, description: '', type: item?.type, EventId: itemId, startDate: new Date(), endDate: addHours(new Date(), 12), employeeId: 0};

@@ -199,6 +199,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     const row = cell?.closest('.calendar-row[data-employee-id]') as HTMLElement;    
     const employeeId = row ? row.getAttribute('data-employee-id') : null;
     
+    
     // Si rien n'a changé, ne rien faire (optimisation majeure)
     if (colIndex === lastHoveredCol.current && employeeId === lastHoveredEmployee.current) {
       return;

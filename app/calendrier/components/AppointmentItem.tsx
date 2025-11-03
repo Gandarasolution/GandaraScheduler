@@ -43,7 +43,7 @@ interface AppointmentItemProps {
   /** Type d'événement associé au rendez-vous */
   event: Evenement;
   /** Informations de l'employé assigné */
-  employee: { id: number; name: string };
+  chargeeAffaire: string ;
   /** Source d'appel du composant */
   source?: 'calendar' | 'demo';
   /** Indique si le rendez-vous est sélectionné */
@@ -81,7 +81,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   isFullDay,
   isMobile,
   event,
-  employee,
+  chargeeAffaire,
   includeWeekend,
   source = 'calendar',
   isSelected,
@@ -474,7 +474,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             color: isHovered ? appointmentColor : `${appointmentTextColor || '#FFFFFF'}`
           }}
         >
-          {event.label.length > 20 ? event.label.slice(0, 20) + '…' : event.label}
+          {event.label}
         </span>
         <span 
           className="appointment-subtext text-xs truncate max-w-full transition-colors duration-200"
@@ -482,7 +482,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             color: isHovered ? `${appointmentColor}` : `${appointmentTextColor || '#FFFFFF'}`
           }}
         >
-          {employee.name}
+          {chargeeAffaire}
         </span>
       </div>
     

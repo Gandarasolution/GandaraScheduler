@@ -163,7 +163,7 @@ export const initialEmployees: Employee[] = [
     { name: 'Frédéric GERARD', id: 35, groupId: 8, type: 'interim', pole: 'Technique'},
 
 
-    { name: 'Frédéric GERARD', id: 35, type: 'chargeAffaire'},
+    { name: 'Frédéric GERARD', id: 44, type: 'chargeAffaire'},
     { name: 'Jean Dupont', id: 36, type: 'chefChantier'},
     { name: 'Marie Dubois', id: 37, type: 'chargeAffaire'},
     { name: 'Luc Moreau', id: 38, type: 'chefChantier'},
