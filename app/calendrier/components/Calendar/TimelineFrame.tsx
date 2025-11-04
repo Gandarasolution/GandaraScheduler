@@ -216,7 +216,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
     <FlexibleFrame
       groups={flexibleGroups}
       items={itemsInTimeline}
-      mainScrollRef={mainScrollRef}
+      mainRef={mainScrollRef}
       onScroll={onScroll}
       className={contentClassName}
       showGroupHeaders={showGroupHeaders}

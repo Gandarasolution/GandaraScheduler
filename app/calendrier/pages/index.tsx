@@ -51,7 +51,7 @@ import {
   isSameYear,
   addHours,
 } from "date-fns";
-import { Appointment, Employee, HistoryAction, Evenement, Filter, FilterType, DimensionType, ChantierEvent} from "../types";
+import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent} from "../types";
 import CalendarGrid from "../components/Calendar/CalendarGrid";
 import DataTableFrame from "../components/Table/DataTableFrame";
 import Modal from "../components/modals/Modal";
@@ -63,6 +63,7 @@ import AlertModal from "../components/modals/AlertModal";
 import SettingsModal from "../components/modals/SettingsModal";
 import RightClickComponent from "../components/RightClickComponent";
 import FilterModal from "../components/modals/FilterModal";
+import DraggableSource from "../components/DraggableSource";
 import { ThemeSelector } from '../components/ThemeSelector';
 import {
   initialTeams,
@@ -72,7 +73,7 @@ import {
 } from "../../datasource";
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
-import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, WINDOW_SIZE } from "../utils/constants";
+import { CELL_WIDTH, DAY_INTERVALS, DAYS_TO_ADD, HALF_DAY_INTERVALS, HOURS_PER_DAY, WINDOW_SIZE } from "../utils/constants";
 import { getWorkedDayIntervals, isWeekend } from "../utils/dates";
 import { CalendarConfig } from "../types";
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
@@ -248,6 +249,7 @@ export default function HomePage({
   const continuousScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const isInfiniteScrollEnabled = useRef(false); // Désactivé par défaut jusqu'à la fin du scroll initial
 
+
   // Throttle ultra-performant avec requestAnimationFrame
   const throttledScrollHandler = useRef<(() => void) | null>(null);
   const lastScrollTop = useRef(0);
@@ -421,12 +423,9 @@ export default function HomePage({
   const applyFiltersToChantiers = useCallback(() => {
     
     // Cache des événements chantier pour éviter le filtrage répétitif
-    const chantierEvents = events.current.filter(e => e.type === 'chantier');
-
-    console.log('avant ', chantierEvents);
+    const chantierEvents = events.current.filter(e => e.type === 'chantier');    
     
-    
-    
+  
     // Early exit si aucun filtre actif
     const hasSearch = !!searchInput;
     const hasFilters = activeFilters.etat.length > 0 || activeFilters.chargeAffaire.length > 0 || activeFilters.chefChantier.length > 0;
@@ -471,8 +470,6 @@ export default function HomePage({
              (!chefChantierSet || chefChantierSet.has(chefChantier));
     });
     
-
-    console.log('après ', filtered);
     
     setFilteredEvent(filtered);
   }, [searchInput, activeFilters]);
@@ -500,8 +497,8 @@ export default function HomePage({
           applyFiltersToChantiers();
           break;
         
-        case 'paie-table':
-          if (!searchInput.trim()) setFilteredEvent(events.current);
+        case 'paie-table':   
+          if (!searchInput.trim()) setFilteredEvent(events.current.filter(e => e.type !== 'chantier'));
           else setFilteredEvent(events.current.filter(e => e.label.toLocaleLowerCase().includes(searchInput.toLowerCase())));
           break;
         
@@ -515,8 +512,6 @@ export default function HomePage({
   // Fonction optimisée pour obtenir les valeurs uniques avec cache
   const getFilterOptions = useCallback(() => {
     const allChantiers = events.current.filter(e => e.type === 'chantier');
-
-    console.log('Chantiers filtrés :', allChantiers);
     
     // Optimisation : utiliser des Sets directement pour éviter la conversion
     const etatSet = new Set<string>();
@@ -1083,10 +1078,7 @@ export default function HomePage({
 
       events.current = events.current.map(e =>
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
-      );
-
-      console.log(eventUpdate.id);
-      
+      );      
 
       const days = getWorkedDayIntervals(
         appointment.startDate, 
@@ -1309,15 +1301,6 @@ export default function HomePage({
     [createAppointment]
   );
 
-  // Filtrer les événements en fonction de la recherche
-  const filteredEvents = useMemo(() => {
-    if (!eventSearchInput.trim()) return [];
-
-    return events.current.filter(event =>
-      event.label.toLowerCase().includes(eventSearchInput.toLowerCase())
-    );
-  }, [eventSearchInput]);
-
   // Mémorise la fonction de fermeture du menu contextuel
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -1480,7 +1463,6 @@ export default function HomePage({
   }, [handleDeleteAppointment, copyAppointmentToClipboard, pasteAppointment, handleOpenEditModal]);
 
   useEffect(() => {
-    
     const day = new Date();
     const isSame = isSameDay(selectedDate, day) && isSameMonth(selectedDate, day) && isSameYear(selectedDate, day);
     if(viewType === 'calendar' && isSame) {
@@ -1617,6 +1599,18 @@ export default function HomePage({
     };
   }, [selectedAppointment, selectedCell, copyAppointmentToClipboard, pasteAppointment, undoLastAction]);
 
+
+  // Filtrer les événements en fonction de la recherche
+  useEffect(() => {
+    if (!eventSearchInput.trim()) setFilteredEvent([]);
+    
+    setFilteredEvent(
+      events.current.filter(event =>
+        event.label.toLowerCase().includes(eventSearchInput.toLowerCase())
+      )
+    );
+  }, [eventSearchInput]);
+
   // Recherche optimisée avec debounce et dependencies précises
   useEffect(() => {
     // Debounce pour éviter les recherches trop fréquentes
@@ -1646,21 +1640,6 @@ export default function HomePage({
     }
   }, [dayInTimeline]);
 
-  // Optimisation des filtres avec debounce et conditions précises
-  useEffect(() => {
-    // Appliquer uniquement si nécessaire
-    if (viewType === 'chantier-table') {      
-      // Debounce pour éviter les re-calculs trop fréquents
-      const filterTimer = setTimeout(() => {
-        applyFiltersToChantiers();
-      }, 10); // Plus court car les filtres sont moins fréquents que la recherche
-      
-      return () => clearTimeout(filterTimer);
-    } else if (viewType === 'paie-table') {
-      // Pas de debounce nécessaire car c'est juste une assignation
-      setFilteredEvent(events.current.filter(event => event.type !== 'chantier'));
-    }
-  }, [activeFilters, viewType, applyFiltersToChantiers]); // Retirer applyFiltersToChantiers des dépendances pour éviter les re-renders
 
   // Initialiser la configuration du calendrier quand les configurations disponibles changent
   useEffect(() => {
@@ -1761,19 +1740,241 @@ export default function HomePage({
   // Test du système de notifications au chargement (à supprimer en production)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setTimeout(() => {
-        notificationService.info('Bienvenue', 'Application chargée avec succès !');
-      }, 2000);
-      
-      setTimeout(() => {
-        notificationService.success('Données synchronisées', 'Tous vos rendez-vous sont à jour.');
-      }, 4000);
+      notificationService.info('Bienvenue', 'Application chargée avec succès !');
+      notificationService.success('Données synchronisées', 'Tous vos rendez-vous sont à jour.');
     }
   }, []);
 
   useEffect(() => {
     setTheme(user.theme as ThemeType);
   }, [user.theme]);
+
+
+  const customRenderersFactory = useMemo(() =>  {
+    const imageRenderer = (value: any, item: any) => {
+      const chantierItem = item as ChantierEvent;
+      return (
+        <AppointmentItem
+          appointment={{
+            id: 0,
+            description: '',
+            type: chantierItem.type,
+            EventId: Number(chantierItem.id),
+            startDate: new Date(),
+            endDate: addHours(new Date(), 12),
+            employeeId: 0,
+            top: 0,
+          }}
+          isFullDay={false}
+          isMobile={false}
+          event={chantierItem}
+          chargeeAffaire=''
+          source='demo'
+          onDoubleClick={() => {
+            const newAppointment: Appointment = {
+              id: 0,
+              description: '',
+              type: chantierItem.type,
+              EventId: Number(chantierItem.id),
+              startDate: new Date(),
+              endDate: addHours(new Date(), 12),
+              employeeId: 0,
+            }
+            setSelectedAppointment(newAppointment);
+            handleOpenEditModal(newAppointment);
+          }}
+        />
+      );
+    };
+
+    const importantRenderer = (value: any, item: any, attributeKey: string) => {
+      const apValue = parseFloat(value) || 0;
+      if ((attributeKey === 'AP' && apValue > 100) || (attributeKey === 'SP' && apValue < 0)) {
+        return (
+          <div className='flex items-center justify-end w-full h-full gap-2'>
+            <svg 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+              className="text-red-600"
+            >
+              <path 
+                d="M12 2L21.09 20H2.91L12 2Z" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinejoin="round"
+                fill="currentColor"
+              />
+              <path 
+                d="M12 9V13M12 17H12.01" 
+                stroke="white" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="text-red-600 poppins font-medium">{value}</span>
+          </div>
+        );
+      }
+      return (
+        <div className='flex items-center justify-end w-full h-full font-bold'>
+          <span className="poppins">{value}</span>
+        </div>
+      );
+    };
+
+    return {
+      chantierTable: {
+        image: imageRenderer,
+        etat: (value: string) => {
+          const statusColors: Record<string, string> = {
+            'En cours': 'bg-green-100 text-green-800',
+            'Planifié': 'bg-blue-100 text-blue-800',
+            'Suspendu': 'bg-yellow-100 text-yellow-800',
+            'Terminé': 'bg-gray-100 text-gray-800',
+            'Annulé': 'bg-red-100 text-red-800'
+          };
+          const colorClass = statusColors[value];
+          return (
+            <div className="flex items-center justify-center w-full h-full">
+              <span className={`inline-flex w-[80px] h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+                {value}
+              </span>
+            </div>
+          );
+        },
+        AP: (value: any, item: any) => importantRenderer(value, item, 'AP'),
+        SP: (value: any, item: any) => importantRenderer(value, item, 'SP'),
+      },
+      paieTable: {
+        image: imageRenderer,
+        verrou: (value: boolean) => (
+          <div className="flex items-center justify-center">
+            {value ? (
+              <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/>
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"/>
+              </svg>
+            )}
+          </div>
+        ),
+        actif: (value: boolean) => (
+          <div className="flex items-center justify-center">
+            <span className={`w-3 h-3 rounded-full ${value ? 'bg-green-500' : 'bg-red-500'}`}></span>
+          </div>
+        )
+      }
+    };
+  }, [handleOpenEditModal]);
+
+
+  const customComputedFieldsFactory = useMemo(() => {
+
+    const calculateDPF = (chantierId: number): string => {
+      if (viewType !== 'chantier-table') return '0h';
+
+      const currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+
+      const relevantAppointments = appointments.current.filter(appointment => {
+        if (appointment.type !== 'chantier' || appointment.EventId !== chantierId) {
+          return false;
+        }
+
+        if (appointment.startDate >= currentDate) {
+          return true;
+        }
+
+        if (appointment.startDate < currentDate && appointment.endDate >= currentDate) {
+          return true;
+        }
+
+        return false;
+      });
+
+      let totalHours = 0;
+
+      relevantAppointments.forEach((appointment: Appointment) => {
+        const startDate = appointment.startDate < currentDate ? currentDate : appointment.startDate;
+        const endDate = appointment.endDate;
+
+        const timeDiff = endDate.getTime() - startDate.getTime();
+        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+
+        totalHours += daysDiff * HOURS_PER_DAY;
+      });
+
+      return `${totalHours}h`;
+    }
+
+    const calculateRPF = (chantier: ChantierEvent): string => {
+      if (viewType !== 'chantier-table') return '0h';      
+      const hrValue = parseFloat(chantier.attributs.HR.replace('h', '')) || 0;
+      const dpfString = calculateDPF(chantier.id);
+      const dpfValue = parseFloat(dpfString.replace('h', '')) || 0;
+
+      const totalRPF = hrValue + dpfValue;
+      return `${totalRPF}h`;
+    };
+
+    const calculateAP = (chantier: ChantierEvent): string => {
+    if (viewType !== 'chantier-table') return '0%';
+
+    const tmValue = parseFloat(chantier.attributs.TM.replace('h', '')) || 0;
+
+    if (tmValue === 0) return '0%';
+
+    const rpfString = calculateRPF(chantier);
+    const rpfValue = parseFloat(rpfString.replace('h', '')) || 0;
+
+    const percentage = Math.round((rpfValue / tmValue) * 100);
+    return `${percentage}%`;
+  };
+  const calculateSP = (chantier: ChantierEvent): string => {
+    if (viewType !== 'chantier-table') return '0h';
+
+    const tmValue = parseFloat(chantier.attributs.TM.replace('h', '')) || 0;
+    const rpfString = calculateRPF(chantier);
+    const rpfValue = parseFloat(rpfString.replace('h', '')) || 0;
+
+    const soldeHeures = tmValue - rpfValue;
+    return `${soldeHeures}h`;
+  };
+
+    return {
+      chantierTable: {
+        DPF: (item: any) => {
+          return calculateDPF(item.id);
+        },
+        HR: (item: any) => {
+          return item.attributs?.HR || '0h';
+        },
+        RPF: (item: any) => {
+          return calculateRPF(item);
+        },
+        SH: (item: any) => {
+          return item.attributs?.SH || '0h';
+        },
+        AP: (item: any) => {
+          return calculateAP(item);
+        },
+        SP: (item: any) => {
+          return calculateSP(item);
+        }
+      },
+      paieTable: {}
+    }
+  }, []);
+
+
+
+
 
   // Rendu principal de la page
   return (
@@ -2243,8 +2444,10 @@ export default function HomePage({
                     )
                   ) :  (
                     <DataTableFrame 
-                      items={filteredEvent} 
-                      containerWidth={typeof window !== 'undefined' ? window.innerWidth - 50 : 1200}
+                      items={viewType === 'chantier-table' 
+                        ? filteredEvent.filter(event => event.type === 'chantier') 
+                        : filteredEvent.filter(event => event.type !== 'chantier')
+                      } 
                       categoriesStructure={
                         viewType === 'chantier-table' ?
                          [
@@ -2252,29 +2455,29 @@ export default function HomePage({
                             key: 'IG',
                             label: 'Informations Générales', 
                             attributes: [
-                              { key: 'image', label: 'Image' },
-                              { key: 'poleActivite', subKey: 'attributs',  label: 'Pole d\'activité' },
-                              { key: 'code', subKey: 'attributs', label: 'Code' },
-                              { key: 'identifiant', subKey: 'attributs', label: 'Identifiant' },
-                              { key: 'libelle', subKey: 'attributs' , label: 'Libellé' },
-                              { key: 'etat', subKey: 'attributs' , label: 'État' },
-                              { key: 'chargeAffaire', subKey: 'attributs' , label: 'Chargé Affaire' },
-                              { key: 'chefChantier', subKey: 'attributs' , label: 'Chef Chantier' },
-                              { key: 'dateOS', subKey: 'attributs' , label: 'Date OS' },
-                              { key: 'dateFin', subKey: 'attributs' , label: 'Date Fin' }
+                              { key: 'image', label: 'Image', isFixed: true },
+                              { key: 'poleActivite', subKey: 'attributs',  label: 'Pôle', type:'string' },
+                              { key: 'code', subKey: 'attributs', label: 'Code', type:'string' },
+                              { key: 'identifiant', subKey: 'attributs', label: 'Identifiant', type:'string' },
+                              { key: 'libelle', subKey: 'attributs' , label: 'Libellé', type:'string' },
+                              { key: 'etat', subKey: 'attributs' , label: 'État', type:'string' },
+                              { key: 'chargeAffaire', subKey: 'attributs', label: 'Chargé Aff.', type:'string' },
+                              { key: 'chefChantier', subKey: 'attributs', label: 'Chef Ch.', type:'string' },
+                              { key: 'dateOS', subKey: 'attributs' , label: 'Date OS', type:'date' },
+                              { key: 'dateFin', subKey: 'attributs' , label: 'Date Fin', type:'date' }
                             ]
                           },
                           {
                             key: 'analyse',
                             label: 'Analyse Chantier',
                             attributes: [
-                              { key: 'TM', subKey: 'attributs', label: 'Temps Marché' },
-                              { key: 'HR', subKey: 'attributs', label: 'Heures Réalisées' },
-                              { key: 'SH', subKey: 'attributs', label: 'Solde Heure' },
-                              { key: 'DPF', subKey: 'attributs', label: 'Durée Planifiée Future' },
-                              { key: 'RPF', subKey: 'attributs', label: 'Réalisé + Future' },
-                              { key: 'AP', subKey: 'attributs', label: 'Avanc. Prév.' },
-                              { key: 'SP', subKey: 'attributs', label: 'Solde Prév.' }
+                              { key: 'TM', subKey: 'attributs', label: 'T. Marché', type:'string' },      // Temps Marché
+                              { key: 'HR', subKey: 'attributs', label: 'H. Réal.', type:'string' },       // Heures Réalisées
+                              { key: 'SH', subKey: 'attributs', label: 'Solde H.', type:'string' },       // Solde Heure
+                              { key: 'DPF', subKey: 'attributs', label: 'D. Planif.', type:'string' },    // Durée Planifiée
+                              { key: 'RPF', subKey: 'attributs', label: 'Réal. + Fut.', type:'string' },  // Réalisé + Future
+                              { key: 'AP', subKey: 'attributs', label: 'Avanc. %', type:'string' },       // Avancement Prév.
+                              { key: 'SP', subKey: 'attributs', label: 'Solde P.', type:'string' }        // Solde Prév.
                             ]
                           }
                         ] :
@@ -2284,7 +2487,7 @@ export default function HomePage({
                             label: '', 
                             attributes: [
                               { key: 'verrou', label: 'Verrou' },
-                              { key: 'image', label: 'Image' },
+                              { key: 'image', label: 'Image', isFixed: true },
                               { key: 'code', label: 'Code' },
                               { key: 'label', label: 'Libellé' },
                               { key: 'actif', label: 'ACTF' },
@@ -2294,194 +2497,15 @@ export default function HomePage({
                         ]
                       }
                       computedFields={
-                        viewType === 'chantier-table' ? {
-                          DPF: (item) => {
-                            // Calcul de la Durée Planifiée Future
-                            const futureAppointments = appointments.current.filter(app => 
-                              app.EventId === item.id && app.startDate > new Date()
-                            );
-                            const totalHours = futureAppointments.reduce((sum, app) => {
-                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
-                              return sum + duration;
-                            }, 0);
-                            return totalHours.toFixed(2);
-                          },
-                          HR: (item) => {
-                            // Calcul des Heures Réalisées
-                            const pastAppointments = appointments.current.filter(app => 
-                              app.EventId === item.id && app.endDate <= new Date()
-                            );
-                            const totalHours = pastAppointments.reduce((sum, app) => {
-                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
-                              return sum + duration;
-                            }, 0);
-                            return totalHours.toFixed(2);
-                          },
-                          RPF: (item) => {
-                            // Calcul Réalisé + Future
-                            const allAppointments = appointments.current.filter(app => app.EventId === item.id);
-                            const totalHours = allAppointments.reduce((sum, app) => {
-                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
-                              return sum + duration;
-                            }, 0);
-                            return totalHours.toFixed(2);
-                          },
-                          SH: (item) => {
-                            // Calcul du Solde Heure (Temps Marché - Heures Réalisées)
-                            const TM = parseFloat(item.attributs?.TM || '0');
-                            const pastAppointments = appointments.current.filter(app => 
-                              app.EventId === item.id && app.endDate <= new Date()
-                            );
-                            const HR = pastAppointments.reduce((sum, app) => {
-                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
-                              return sum + duration;
-                            }, 0);
-                            return (TM - HR).toFixed(2);
-                          },
-                          AP: (item) => {
-                            // Calcul Avancement Prévisionnel (%)
-                            const TM = parseFloat(item.attributs?.TM || '0');
-                            if (TM === 0) return '0.00';
-                            const allAppointments = appointments.current.filter(app => app.EventId === item.id);
-                            const RPF = allAppointments.reduce((sum, app) => {
-                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
-                              return sum + duration;
-                            }, 0);
-                            return ((RPF / TM) * 100).toFixed(2);
-                          },
-                          SP: (item) => {
-                            // Calcul Solde Prévisionnel (Temps Marché - Réalisé + Future)
-                            const TM = parseFloat(item.attributs?.TM || '0');
-                            const allAppointments = appointments.current.filter(app => app.EventId === item.id);
-                            const RPF = allAppointments.reduce((sum, app) => {
-                              const duration = (app.endDate.getTime() - app.startDate.getTime()) / (1000 * 60 * 60);
-                              return sum + duration;
-                            }, 0);
-                            return (TM - RPF).toFixed(2);
-                          }
-                        } : undefined
+                        viewType === 'chantier-table' 
+                        ? customComputedFieldsFactory.chantierTable
+                        : customComputedFieldsFactory.paieTable
                       }
                       customRenderers={
-                        viewType === 'chantier-table' ? {
-                          image: (value, item) => (
-                            <AppointmentItem
-                              appointment={{
-                                id:0,
-                                description: '',
-                                type: item.type,
-                                EventId: Number(item.id),
-                                startDate: new Date(),
-                                endDate: addHours(new Date(), 12),
-                                employeeId: 0,
-                                top: 0,
-                              }}
-                              isFullDay={false}
-                              isMobile={false}
-                              event={item as ChantierEvent}
-                              chargeeAffaire = ''
-                              source='demo'
-                              onDoubleClick={() => {
-                                const newAppointment: Appointment = {
-                                  id:0,
-                                  description: '',
-                                  type: item.type,
-                                  EventId: Number(item.id),
-                                  startDate: new Date(),
-                                  endDate: addHours(new Date(), 12),
-                                  employeeId: 0,
-                                }
-
-                                setSelectedAppointment(newAppointment);
-                                handleOpenEditModal(newAppointment);
-                              }}
-                            />
-                          ),
-                          etat: (value) => {
-                           // console.log(value);
-                            
-                            const statusColors: Record<string, string> = {
-                              'En cours': 'bg-green-100 text-green-800',
-                              'Planifié': 'bg-blue-100 text-blue-800',
-                              'Suspendu': 'bg-yellow-100 text-yellow-800',
-                              'Terminé': 'bg-gray-100 text-gray-800',
-                              'Annulé': 'bg-red-100 text-red-800'
-                            };
-                            const colorClass = statusColors[value as string]
-                            //console.log(colorClass);
-                            
-                            return (
-                              <div className="flex items-center justify-center w-full h-full">
-                                <span className={`inline-flex w-[80px] h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
-                                  {value}
-                                </span>
-                              </div>
-                            );
-                          }
-                        } : {
-                          image: (value, item) => (
-                            <AppointmentItem
-                              appointment={{
-                                id:0,
-                                description: '',
-                                type: item.type,
-                                EventId: Number(item.id),
-                                startDate: new Date(),
-                                endDate: addHours(new Date(), 12),
-                                employeeId: 0,
-                                top: 0,
-                              }}
-                              isFullDay={false}
-                              isMobile={false}
-                              event={item as ChantierEvent}
-                              chargeeAffaire = ''
-                              source='demo'
-                              onDoubleClick={() => {
-                                const newAppointment: Appointment = {
-                                  id:0,
-                                  description: '',
-                                  type: item.type,
-                                  EventId: Number(item.id),
-                                  startDate: new Date(),
-                                  endDate: addHours(new Date(), 12),
-                                  employeeId: 0,
-                                }
-
-                                setSelectedAppointment(newAppointment);
-                                handleOpenEditModal(newAppointment);
-                              }}
-                            />
-                          ),
-                          verrou: (value) => (
-                            <div className="flex items-center justify-center">
-                              {value ? (
-                                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/>
-                                </svg>
-                              ) : (
-                                <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                  <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"/>
-                                </svg>
-                              )}
-                            </div>
-                          ),
-                          actif: (value) => (
-                            <div className="flex items-center justify-center">
-                              {value ? (
-                                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                              ) : (
-                                <span className="w-3 h-3 bg-red-500 rounded-full"></span>
-                              )}
-                            </div>
-                          )
-                        }
+                        viewType === 'chantier-table' 
+                          ? customRenderersFactory.chantierTable
+                          : customRenderersFactory.paieTable 
                       }
-                      onRowClick={viewType === 'chantier-table' ? (item) => {
-                        // Trouver le premier rendez-vous lié à ce chantier
-                        const relatedAppointment = appointments.current.find(app => app.EventId === item.id);
-                        if (relatedAppointment) {
-                          handleOpenEditModal(relatedAppointment);
-                        }
-                      } : undefined}
                     />
                   )}
                 </SelectedCellContext.Provider>
@@ -2795,12 +2819,44 @@ export default function HomePage({
         <SearchOverlay
           isOpen={isSearchOverlayOpen}
           onClose={() => setIsSearchOverlayOpen(false)}
-          eventSearchInput={eventSearchInput}
-          setEventSearchInput={setEventSearchInput}
-          filteredEvents={filteredEvents}
-          selectedCell={selectedCell}
-          addAppointmentFromSearch={handleSaveAppointment}
-          isFullDay={isFullDay}
+          searchInput={eventSearchInput}
+          setSearchInput={setEventSearchInput}
+          items={filteredEvent}
+          placeholder="Rechercher un événement..."
+          emptyStateConfig={{
+            noInput: {
+              title: "Rechercher un événement",
+              description: "Tapez pour rechercher parmi les chantiers, absences et autres événements"
+            },
+            noResults: {
+              title: "Aucun résultat",
+              description: "Aucun événement ne correspond à votre recherche"
+            }
+          }}
+          renderItem={(event, index) => (
+            <DraggableSource
+              key={`${event.label}-${event.id}-${index}`}
+              id={event.id as number}
+              title={event.label}
+              type={(event as any).type as "Chantier" | "Absence" | "Autre"}
+              className="w-full"
+            />
+          )}
+          onItemAction={selectedCell ? (event) => {
+            handleSaveAppointment(
+              {
+                description: event.label,
+                startDate: new Date(selectedCell.date),
+                endDate: new Date((isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).setMinutes(59, 59)),
+                employeeId: selectedCell.employeeId,
+                type: (event as any).type.toLowerCase() as "chantier" | "absence" | "autre",
+              } as Appointment,
+              event as Evenement,
+              false
+            );
+          } : undefined}
+          actionLabel="+"
+          enableDragDetection={true}
         />
       </div>
     </DndProvider>

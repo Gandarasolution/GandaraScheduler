@@ -81,7 +81,7 @@
 
 "use client";
 
-import React, { useMemo, useState, useCallback, memo } from 'react';
+import React, { useMemo, useState, useCallback, memo, useRef, useEffect } from 'react';
 import FlexibleFrame from '../FlexibleFrame';
 
 /**
@@ -123,6 +123,8 @@ export interface AttributeConfig {
   sortable?: boolean;
   /** Alignement du texte dans la cellule */
   align?: 'left' | 'center' | 'right';
+  /** Indique si la colonne est fixe (ex: image) */
+  isFixed?: boolean;
 }
 
 /**
@@ -177,6 +179,10 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   showGroupHeaders?: boolean;
   /** Classe CSS pour les en-têtes */
   headerClassName?: string;
+  /** Taille de la police */
+  FontSize?: number;
+  /** Padding par cellule */
+  cellPadding?: number;
   /** Callback lors du clic sur une ligne */
   onRowClick?: (item: T) => void;
   /** Callback lors du double-clic sur une cellule */
@@ -196,7 +202,9 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   style,
   categoriesStructure,
   items,
-  containerWidth,
+  FontSize = 14,
+  cellPadding = 8,
+  containerWidth: customContainerWidth,
   computedFields = {},
   columnWidths: customColumnWidths,
   customRenderers = {},
@@ -210,26 +218,35 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   
   
   // État pour la largeur du conteneur (pour réagir aux changements de taille de fenêtre)
-  const [windowWidth, setWindowWidth] = useState<number>(
-    typeof window !== 'undefined' ? window.innerWidth : 1200
-  );
+  const [containerWidth, setContainerWidth] = useState<number>(
+    customContainerWidth || 1200
+  );    
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Écouter les changements de taille de fenêtre
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
+    // Si une largeur custom est fournie, l'utiliser directement
+    if (customContainerWidth) {
+      setContainerWidth(customContainerWidth);
+      return;
+    }
+
+    // Sinon, mesurer la largeur réelle du conteneur
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width } = entry.contentRect;
+        setContainerWidth(width);
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    // Cleanup
+    return () => {
+      resizeObserver.disconnect();
     };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Calculer la largeur du conteneur
-  const calculatedContainerWidth = useMemo(() => {
-    return containerWidth || (windowWidth - 85);
-  }, [containerWidth, windowWidth]);
+  }, [customContainerWidth]);
 
   // États pour gérer le tri
   const [sortConfig, setSortConfig] = useState<{
@@ -402,8 +419,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     context.font = `${fontSize}px Poppins, sans-serif`;
     const metrics = context.measureText(text);
     
+    console.log(text, Math.ceil(metrics.width) + cellPadding);
+    
     // Ajouter du padding (16px de chaque côté) et une marge
-    return Math.ceil(metrics.width) + 32 + 10;
+    return Math.ceil(metrics.width) + cellPadding;
   }, []);
 
   /**
@@ -413,7 +432,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
    * 1. Mesure la largeur du header de chaque colonne
    * 2. Parcourt tous les items et mesure le contenu de chaque cellule
    * 3. Détermine la largeur max nécessaire pour chaque colonne
-   * 4. Applique des contraintes (min: 80px, max: 300px, image: 70px fixe)
+   * 4. Applique des contraintes (min: 80px, max: 300px, image: 60px fixe)
    * 5. Compare la largeur totale avec la largeur de la fenêtre :
    *    - Si trop large : réduit proportionnellement (sauf images)
    *    - Si trop petit : distribue l'espace supplémentaire (sauf images)
@@ -432,10 +451,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       const attributeConfig = categoriesStructure
         .flatMap(cat => cat.attributes)
         .find(attr => attr.key === key);
-      
+              
       // Si c'est une colonne image, retourner la largeur fixe
-      if (key === 'image') {
-        return MIN_WIDTH;
+      if (attributeConfig?.isFixed) {
+        return { width: MIN_WIDTH, isFixed: true };
       }
       
       // Mesurer la largeur du header
@@ -451,71 +470,92 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
         
         if (value != null && value !== undefined) {
           const textValue = String(value);
-          const contentWidth = measureTextWidth(textValue, 14);
+          const contentWidth = measureTextWidth(textValue, FontSize);
           maxContentWidth = Math.max(maxContentWidth, contentWidth);
         }
       });
       
       // Appliquer les limites min/max et ajouter du padding
-      return Math.min(Math.max(maxContentWidth + PADDING, MIN_WIDTH), MAX_WIDTH);
+      const idealWidth = Math.min(Math.max(maxContentWidth + PADDING, MIN_WIDTH), MAX_WIDTH);
+    
+      return { width: idealWidth, isFixed: false };
     });
 
-    // Calculer la largeur totale nécessaire
-    const totalRequiredWidth = columnWidths.reduce((sum, width) => sum + width, 0);
-    const availableWidth = calculatedContainerWidth;
+   //console.log('columnWidths:', columnWidths);
+    
+    const fixedColumns = columnWidths.filter(col => col.isFixed);
+    const flexibleColumns = columnWidths.filter(col => !col.isFixed);
+  
+    const totalFixedWidth = fixedColumns.reduce((sum, col) => sum + col.width, 0);
+    const totalFlexibleWidth = flexibleColumns.reduce((sum, col) => sum + col.width, 0);
+    const availableFlexibleWidth = containerWidth - totalFixedWidth;
 
-    // Si la largeur totale dépasse la largeur disponible, proportionner
-    if (totalRequiredWidth > availableWidth) {
-      const ratio = availableWidth / totalRequiredWidth;
-      return columnWidths.map((width, index) => {
-        // Ne pas réduire les colonnes image
-        const attributeKey = attributeKeys[index];
-        const attributeConfig = categoriesStructure
-          .flatMap(cat => cat.attributes)
-          .find(attr => attr.key === attributeKey);
-        
-        if (attributeKey === 'image') {
-          return MIN_WIDTH;
-        }
-        
-        return Math.max(Math.floor(width * ratio), MIN_WIDTH);
-      });
-    }
-
-    // Si la largeur totale est inférieure à la largeur disponible, étendre proportionnellement
-    if (totalRequiredWidth < availableWidth) {
-      const extraSpace = availableWidth - totalRequiredWidth;
-      const nonImageColumns = columnWidths.filter((_, index) => {
-        const attributeKey = attributeKeys[index];
-        const attributeConfig = categoriesStructure
-          .flatMap(cat => cat.attributes)
-          .find(attr => attr.key === attributeKey);
-        
-        return !(attributeConfig?.type === 'custom' && (attributeKey === 'image' || attributeConfig.label.toLowerCase().includes('image')));
-      }).length;
+    //console.log(availableWidth);
+    
+    let adjustedWidths: number[];
+    
+    if (totalFlexibleWidth > availableFlexibleWidth) {
+      // CAS 1 : Le tableau est trop large - réduire proportionnellement
+      const ratio = availableFlexibleWidth / totalFlexibleWidth;
       
-      const extraPerColumn = extraSpace / nonImageColumns;
-      
-      return columnWidths.map((width, index) => {
-        const attributeKey = attributeKeys[index];
-        const attributeConfig = categoriesStructure
-          .flatMap(cat => cat.attributes)
-          .find(attr => attr.key === attributeKey);
+      adjustedWidths = columnWidths.map(col => {
+        if (col.isFixed) return col.width;
         
-        // Les colonnes image restent fixes
-        if (attributeKey === 'image') {
-          return MIN_WIDTH;
-        }
-        
-        // Les autres colonnes reçoivent l'espace supplémentaire
-        const newWidth = width + extraPerColumn;
-        return Math.min(Math.floor(newWidth), MAX_WIDTH);
+        // Réduire proportionnellement, mais respecter le minimum
+        const reducedWidth = Math.floor(col.width * ratio);
+        return Math.max(reducedWidth, MIN_WIDTH);
       });
+      
+    } 
+    else if (totalFlexibleWidth < availableFlexibleWidth) {
+    // CAS 2 : Le tableau est trop petit - distribuer l'espace supplémentaire
+    const extraSpace = availableFlexibleWidth - totalFixedWidth;
+    const extraPerColumn = extraSpace / fixedColumns.length;
+
+    adjustedWidths = columnWidths.map(col => {
+      if (col.isFixed) return col.width;
+      
+      // Ajouter l'espace supplémentaire, mais respecter le maximum
+      const expandedWidth = Math.floor(col.width + extraPerColumn);
+      return Math.min(expandedWidth, MAX_WIDTH);
+    });
+    
+  } else {
+    // CAS 3 : Taille parfaite - utiliser les largeurs idéales
+    adjustedWidths = columnWidths.map(col => col.width);
+  }
+
+  // Étape 4 : CORRECTION FINALE - Ajuster pour correspondre EXACTEMENT à containerWidth
+  // Cette étape élimine les erreurs d'arrondi
+  const currentTotal = adjustedWidths.reduce((sum, width) => sum + width, 0);
+  const difference = containerWidth - currentTotal;
+  
+  if (difference !== 0) {
+    // Trouver l'index de la dernière colonne flexible (non-fixe)
+    let lastFlexibleIndex = -1;
+    for (let i = adjustedWidths.length - 1; i >= 0; i--) {
+      if (!columnWidths[i].isFixed) {
+        lastFlexibleIndex = i;
+        break;
+      }
     }
+    
+    // Ajuster la dernière colonne flexible pour compenser la différence
+    if (lastFlexibleIndex !== -1) {
+      adjustedWidths[lastFlexibleIndex] += difference;
+      
+      // S'assurer que la largeur reste dans les limites min/max
+      adjustedWidths[lastFlexibleIndex] = Math.max(
+        MIN_WIDTH,
+        Math.min(adjustedWidths[lastFlexibleIndex], MAX_WIDTH)
+      );
+    }
+  }
 
-    return columnWidths;
-  }, [attributeLabels, attributeKeys, calculatedContainerWidth, sortedItems, categoriesStructure, getAttributeValue, measureTextWidth]);
+    return adjustedWidths;
+  }, [attributeLabels, attributeKeys, containerWidth, sortedItems, categoriesStructure, getAttributeValue, measureTextWidth]);
 
+  
   // Style CSS Grid
   const gridTemplateColumns = useMemo(() => {
     return calculateColumnWidths.map(width => `${width}px`).join(' ');
@@ -575,25 +615,20 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     }));
   }, [categoriesStructure, getAttributeValue]);
 
-  const mainScrollRef = React.useRef<HTMLDivElement>(null);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    // Logique de scroll personnalisée si nécessaire
-  };
-
-  
   
   return (
-    <div className="relative h-full">
+    <div 
+      className="relative h-full"
+      style={style}
+    >
       <FlexibleFrame
         groups={groups}
         items={attributeLabels}
-        mainScrollRef={mainScrollRef}
-        onScroll={handleScroll}
+        mainRef={containerRef}
         showGroupHeaders={showGroupHeaders}
-        className={`data-table-frame h-full pl-7 overflow-x-hidden ${className}`}
+        className={`data-table-frame h-full pl-7 ${className}`}
         classNameHeader={headerClassName}
-        contentClassName='overflow-x-hidden scroll-hidden'
+        contentClassName=''
         useAutoCells={false}
         customGridColumns={gridTemplateColumns}
         customItemHeaders={
@@ -663,7 +698,12 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                 const allValues = itemByCategories.flatMap(cat => cat.values);
                 
                 return (
-                  <tr key={`row-${item.id}`} className="">
+                  <tr 
+                    key={`row-${item.id}`} 
+                    className=""
+                    style={style}
+                    onClick={() => onRowClick?.(item)}
+                  >
                     {allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
                       const columnIndex = attributeKeys.indexOf(attributeKey);
                       const isExactHoveredCell = itemHoveredId === item.id && columnHoveredKey === attributeKey;
@@ -675,14 +715,15 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                       return (
                         <td
                           key={`${item.id}-${attributeKey}`}
-                          className={`border-b border-r border-default p-2 overflow-hidden text-sm transition-colors text-primary ${cellClasses}`}
+                          className={`border-b border-r border-default overflow-hidden text-sm transition-colors text-primary ${cellClasses}`}
                           title={`${attributeLabel}: ${value || '-'}`}
                           style={{
                             width: `${calculateColumnWidths[valueIndex]}px`,
                             minWidth: `${calculateColumnWidths[valueIndex]}px`,
                             maxWidth: `${calculateColumnWidths[valueIndex]}px`,
                             textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            padding: `${cellPadding}px`
                           }}
                           onMouseEnter={() => {
                             setItemHoveredId(item.id);
@@ -692,6 +733,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                             setItemHoveredId(null);
                             setColumnHoveredKey(null);
                           }}
+                          onDoubleClick={() => onCellDoubleClick?.(item, attributeKey, value)}
                         >
                           {renderAttributeValue(value, attributeKey, item)}
                         </td>

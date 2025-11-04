@@ -36,9 +36,9 @@ interface FlexibleFrameProps {
   /** Labels des items/colonnes individuelles */
   items: string[];
   /** Référence pour le scroll principal */
-  mainScrollRef: React.RefObject<HTMLDivElement | null>;
+  mainRef: React.RefObject<HTMLDivElement | null>;
   /** Gestionnaire d'événement scroll */
-  onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
   /** Contenu à afficher dans la zone principale (children) */
   children: ReactNode;
   /** Classes CSS additionnelles pour le conteneur principal */
@@ -68,7 +68,7 @@ interface FlexibleFrameProps {
 const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   groups,
   items,
-  mainScrollRef,
+  mainRef,
   onScroll,
   children,
   className = '',
@@ -104,7 +104,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
             scrollbarGutter: 'stable',
           }}
           onScroll={onScroll}
-          ref={mainScrollRef}
+          ref={mainRef}
         >
           {/* Sticky group header */}
           {showGroupHeaders && (
