@@ -195,6 +195,7 @@ export default function HomePage({
   const isAddingLeft = useRef(false);
   const isAddingRight = useRef(false);
   const appointments = useRef<Appointment[]>(initialAppointments);
+  const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Compteur pour forcer le recalcul
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>(initialAppointments);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -291,7 +292,10 @@ export default function HomePage({
     }, 0);
   }, []);
 
-
+  // Incrémenter le compteur quand viewType change pour forcer le recalcul des valeurs calculées
+  useEffect(() => {
+    setAppointmentsVersion(prev => prev + 1);
+  }, [viewType]);
 
   // --- GESTION DES CONFIGURATIONS DE CALENDRIER ET FILTRES ---
   // Configuration du service de notifications
@@ -476,6 +480,9 @@ export default function HomePage({
 
   // Pattern optimisé : useRef pour données + useState pour rendu
   const handleResearch = useCallback(() => {
+    // Incrémenter le compteur pour forcer le recalcul des valeurs calculées
+    setAppointmentsVersion(prev => prev + 1);
+    
     // Utiliser queueMicrotask pour batcher les mises à jour UI
     queueMicrotask(() => {
       switch (viewType) {
@@ -1970,7 +1977,7 @@ export default function HomePage({
       },
       paieTable: {}
     }
-  }, []);
+  }, [viewType, appointmentsVersion]);
 
 
 

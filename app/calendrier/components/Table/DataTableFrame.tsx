@@ -290,7 +290,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     const { key, subKey } = attribute;
     
     // Si c'est un champ calculé
-    if (computedFields[key]) {
+    if (computedFields && computedFields[key]) {
       return computedFields[key](item);
     }
     
@@ -423,7 +423,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     
     // Ajouter du padding (16px de chaque côté) et une marge
     return Math.ceil(metrics.width) + cellPadding;
-  }, []);
+  }, [cellPadding]);
 
   /**
    * Calcul des largeurs de colonnes basé sur le contenu réel
@@ -553,7 +553,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   }
 
     return adjustedWidths;
-  }, [attributeLabels, attributeKeys, containerWidth, sortedItems, categoriesStructure, getAttributeValue, measureTextWidth]);
+  }, [attributeLabels, attributeKeys, containerWidth, sortedItems, categoriesStructure, getAttributeValue, measureTextWidth, FontSize]);
 
   
   // Style CSS Grid
