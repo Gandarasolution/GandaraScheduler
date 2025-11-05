@@ -2513,6 +2513,7 @@ export default function HomePage({
                           ? customRenderersFactory.chantierTable
                           : customRenderersFactory.paieTable 
                       }
+                      showGroupHeaders={viewType === 'chantier-table'}
                     />
                   )}
                 </SelectedCellContext.Provider>

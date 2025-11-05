@@ -1,196 +1,270 @@
 /**
- * @fileoverview Composant FlexibleFrame - Version simplifiée et flexible du TimelineFrame
+ * @fileoverview Composant FlexibleFrame - Grille ultra-flexible et réutilisable
  * 
- * Ce composant fournit une structure de grille flexible avec :
- * - En-têtes de groupes configurables
- * - En-têtes d'items configurables
- * - Cellules auto-dimensionnées ou de taille fixe
- * - Structure adaptable pour différents types de données
+ * Ce composant fournit une structure de grille hautement configurable avec :
+ * - En-têtes multi-niveaux (groupes, sous-groupes, colonnes)
+ * - Configuration CSS Grid flexible (auto, fixe, personnalisée)
+ * - Rendu personnalisé complet ou partiel
+ * - Gestion intelligente du scroll et du sticky
+ * - Support des layouts complexes (tableau, timeline, kanban, etc.)
+ * 
+ * Design Philosophy:
+ * - Zero configuration par défaut (tout est optionnel)
+ * - Composable (combine les fonctionnalités nécessaires)
+ * - Extensible (override n'importe quelle partie)
+ * - Agnostique du domaine (aucune logique métier)
  * 
  * @component FlexibleFrame
  * @author Gandara Solutions
- * @version 1.0.0
+ * @version 2.0.0 - Ultra-Flexible & Universal
  */
 
 "use client";
-import React, { ReactNode, memo } from 'react';
+import React, { ReactNode, memo, CSSProperties } from 'react';
 
 /**
- * Interface pour définir un groupe/catégorie
+ * Interface unifiée pour définir un item d'en-tête
+ * Peut représenter un groupe, sous-groupe, colonne, ou tout autre niveau
+ * Tous les niveaux d'en-têtes utilisent cette même structure
+ * 
+ * Le rendu est TOUJOURS contrôlé par l'appelant via la fonction `render`
  */
-interface Group {
-  /** Libellé du groupe */
-  label: string;
-  /** Nombre de colonnes que ce groupe occupe */
+interface HeaderItem {
+  /** Nombre de colonnes occupées (span) */
   span: number;
-  /** Identifiant unique du groupe */
+  /** Identifiant unique */
   key: string;
+  /** Classes CSS personnalisées pour cet item */
+  className?: string;
+  /** Styles inline personnalisés */
+  style?: CSSProperties;
+  /** Fonction de rendu personnalisé (OBLIGATOIRE) - Contrôle total du rendu par l'appelant */
+  render: () => ReactNode;
+}
+
+/**
+ * Configuration unifiée d'un niveau d'en-tête
+ * Groups et Items utilisent maintenant exactement la même structure
+ * La seule différence est le style appliqué via les props de configuration
+ */
+interface HeaderLevel {
+  /** Items de ce niveau (groupes, colonnes, etc.) */
+  items: HeaderItem[];
+  /** Afficher ce niveau (défaut: true) */
+  show?: boolean;
+  /** Position sticky top (auto-calculée si non fournie) */
+  stickyTop?: number | string;
+  /** Hauteur minimale */
+  minHeight?: number | string;
+  /** Classes CSS pour le conteneur du niveau */
+  containerClassName?: string;
+  /** Classes CSS pour chaque item du niveau */
+  itemClassName?: string;
+  /** Styles du conteneur */
+  containerStyle?: CSSProperties;
+  /** Rendu personnalisé complet du niveau */
+  customRender?: ReactNode;
 }
 
 /**
  * Interface définissant les propriétés du composant FlexibleFrame
  */
 interface FlexibleFrameProps {
-  /** Configuration des groupes/catégories */
-  groups: Group[];
-  /** Labels des items/colonnes individuelles */
-  items: string[];
   /** Référence pour le scroll principal */
   mainRef: React.RefObject<HTMLDivElement | null>;
-  /** Gestionnaire d'événement scroll */
-  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+  
   /** Contenu à afficher dans la zone principale (children) */
   children: ReactNode;
+  
+  /** Configuration des niveaux d'en-têtes (ex: [groupes, items]) */
+  headers?: HeaderLevel[];
+  
+  /** Configuration CSS Grid pour les colonnes */
+  gridConfig?: {
+    /** Mode: 'auto' | 'fixed' | 'custom' */
+    mode?: 'auto' | 'fixed' | 'custom';
+    /** Nombre total de colonnes (requis pour auto et fixed) */
+    columns?: number;
+    /** Largeur fixe par cellule (mode fixed) */
+    cellWidth?: number;
+    /** Template CSS Grid personnalisé (mode custom) */
+    template?: string;
+    /** Largeur min pour mode auto */
+    minColumnWidth?: number;
+    /** Largeur max pour mode auto */
+    maxColumnWidth?: number;
+  };
+  
+  /** Gestionnaire d'événement scroll */
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+  
   /** Classes CSS additionnelles pour le conteneur principal */
   className?: string;
-  /** Classes CSS additionnelles pour l'en-tête */
-  classNameHeader?: string;
-  /** Afficher les en-têtes de groupes (défaut: true) */
-  showGroupHeaders?: boolean;
-  /** Afficher les en-têtes d'items (défaut: true) */
-  showItemHeaders?: boolean;
-  /** Classes CSS additionnelles pour la zone de contenu scrollable */
+  
+  /** Classes CSS pour la zone de contenu scrollable */
   contentClassName?: string;
-  /** Utiliser des cellules de taille automatique au lieu de largeur fixe */
-  useAutoCells?: boolean;
-  /** Largeur fixe des cellules en pixels (défaut: 120) */
-  cellWidth?: number;
-  /** Rendu personnalisé des en-têtes d'items */
-  customItemHeaders?: ReactNode;
-  /** Configuration CSS Grid personnalisée pour les colonnes */
-  customGridColumns?: string;
-  /** Afficher ou masquer les groupes */
+  
+  /** Styles inline pour le conteneur principal */
+  style?: CSSProperties;
+  
+  /** Désactiver le conteneur externe (uniquement la grille) */
+  bareMode?: boolean;
 }
 
 /**
- * Composant FlexibleFrame - Structure flexible pour grilles de données
+ * Composant FlexibleFrame - Grille ultra-flexible
  */
 const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
-  groups,
-  items,
   mainRef,
-  onScroll,
   children,
+  headers = [],
+  gridConfig,
+  onScroll,
   className = '',
-  classNameHeader = '',
-  showGroupHeaders = true,
-  showItemHeaders = true,
   contentClassName = '',
-  useAutoCells = false,
-  cellWidth = 120,
-  customItemHeaders,
-  customGridColumns
+  style,
+  bareMode = false,
 }) => {
 
-  const totalColumns = items.length;
-
-  // Configuration CSS Grid - utilise customGridColumns si fourni
-  const getGridColumns = () => {
-    if (customGridColumns) return customGridColumns;
-    return useAutoCells 
-      ? `repeat(${totalColumns}, minmax(100px, max-content))` 
-      : `repeat(${totalColumns}, ${cellWidth}px)`;
+  // ========== LOGIQUE DE GRILLE ==========
+  const getGridColumns = (): string => {
+    if (!gridConfig) {
+      return 'repeat(auto-fit, minmax(100px, 1fr))';
+    }
+    
+    // Mode custom : utiliser le template fourni
+    if (gridConfig.mode === 'custom' && gridConfig.template) {
+      return gridConfig.template;
+    }
+    
+    // Mode auto : colonnes flexibles avec min/max
+    if (gridConfig.mode === 'auto' && gridConfig.columns) {
+      const min = gridConfig.minColumnWidth || 100;
+      const max = gridConfig.maxColumnWidth ? `, ${gridConfig.maxColumnWidth}px` : '';
+      return `repeat(${gridConfig.columns}, minmax(${min}px${max}, max-content))`;
+    }
+    
+    // Mode fixed : largeur uniforme
+    if (gridConfig.mode === 'fixed' && gridConfig.columns) {
+      return `repeat(${gridConfig.columns}, ${gridConfig.cellWidth || 120}px)`;
+    }
+    
+    // Fallback
+    return 'repeat(auto-fit, minmax(100px, 1fr))';
   };
 
-  return (
-    <div className={`flex-1 min-w-0 flex flex-col pr-7 rounded-2xl poppins ${className}`}>
-      {/* Conteneur avec le même style que TimelineFrame */}
-      <div className='p-4 border rounded-4xl bg-bg-secondary w-full h-full border-ultra-light'>
-        <div 
-          className={`
-          relative w-full  overflow-y-auto
-          rounded-3xl border h-full border-ultra-light ${contentClassName}`}
-          style={{
-            scrollbarGutter: 'stable',
-          }}
-          onScroll={onScroll}
-          ref={mainRef}
-        >
-          {/* Sticky group header */}
-          {showGroupHeaders && (
-            <div
-              className="grid sticky top-0 z-30 bg-bg-secondary border-ultra-light"
-              style={{
-                gridTemplateColumns: getGridColumns(),
-                minHeight: '40px',
-              }}
-            >
-              {(() => {
-                let columnIndex = 0;
-                return groups.map((group) => {
-                  const startColumn = columnIndex + 1;
-                  const endColumn = columnIndex + group.span;
-                  columnIndex += group.span;
-                  
-                  return (
-                    <div
-                      key={group.key}
-                      className={`
-                         col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins
-                         border-r border-ultra-light bg-bg-secondary border-b max-h-[49px] ${classNameHeader}
-                      `}
-                      style={{ 
-                        gridColumn: `${startColumn} / ${endColumn + 1}`,
-                      }}
-                    >
-                      <div
-                        className="sticky left-0 z-30 pl-4"
-                      >
-                        <div className="flex sticky flex-col items-center">
-                          <span className='poppins text-center font-semibold'>{group.label}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          )}
-          
-          {/* Sticky item header */}
-          {showItemHeaders && (
-            <div
-              className="grid sticky z-30 bg-bg-secondary border-ultra-light"
-              style={{
-                gridTemplateColumns: getGridColumns(),
-                minHeight: '56px',
-                top: showGroupHeaders ? '40px' : '0'
-              }}
-            >
-              {customItemHeaders ? customItemHeaders : (
-                items.map((item, index) => (
-                  <div
-                    key={`header-item-${index}`}
-                    className="
-                      flex flex-col justify-center border-b border-r border-ultra-light text-center text-sm font-semibold text-primary p-2
-                      bg-bg-secondary relative item-cell
-                    "
-                    style={{ 
-                      height: 'auto',
-                    }}
-                  >
-                    <div className="flex flex-col justify-center items-center h-full px-2">
-                      <span className="text-xs leading-3 break-words text-center">
-                        {item}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+  const gridTemplateColumns = getGridColumns();
 
-          {/* Content area */}
-          <div 
-            className="relative"
-            style={{
-              gridTemplateColumns: getGridColumns(),
-              display: 'grid'
-            }}
-          >
-            {children}
-          </div>
+  // ========== CALCUL DES POSITIONS STICKY ==========
+  const calculateStickyTop = (levelIndex: number): string => {
+    let cumulativeTop = 0;
+    for (let i = 0; i < levelIndex; i++) {
+      const header = headers[i];
+      if (header && header.show !== false) {
+        const height = header.minHeight;
+        cumulativeTop += typeof height === 'number' ? height : parseInt(String(height)) || 0;
+      }
+    }
+    return `${cumulativeTop}px`;
+  };
+
+  // ========== RENDU DES EN-TÊTES ==========
+  /**
+   * Rendu d'un niveau d'en-tête
+   * Le rendu est TOUJOURS contrôlé par l'appelant via customRender ou item.render()
+   */
+  const renderHeader = (headerLevel: HeaderLevel, levelIndex: number) => {
+    // Ne pas afficher si show === false
+    if (headerLevel.show === false) return null;
+
+    // Si customRender au niveau est fourni, l'utiliser directement
+    // Cela permet un contrôle total du rendu du niveau entier depuis le parent
+    if (headerLevel.customRender) {
+      return (
+        <div
+          key={`header-level-${levelIndex}`}
+          className={`grid sticky z-30 ${headerLevel.containerClassName || ''}`}
+          style={{
+            gridTemplateColumns,
+            minHeight: headerLevel.minHeight || 'auto',
+            top: headerLevel.stickyTop || calculateStickyTop(levelIndex),
+            ...headerLevel.containerStyle,
+          }}
+        >
+          {headerLevel.customRender}
         </div>
+      );
+    }
+
+    // Rendu item par item avec contrôle total depuis le parent
+    let columnIndex = 0;
+    return (
+      <div
+        key={`header-level-${levelIndex}`}
+        className={`grid sticky z-30 ${headerLevel.containerClassName || ''}`}
+        style={{
+          gridTemplateColumns,
+          minHeight: headerLevel.minHeight || 'auto',
+          top: headerLevel.stickyTop || calculateStickyTop(levelIndex),
+          ...headerLevel.containerStyle,
+        }}
+      >
+        {headerLevel.items.map((item: HeaderItem) => {
+          const startColumn = columnIndex + 1;
+          const endColumn = columnIndex + item.span;
+          columnIndex += item.span;
+
+          // Appel de la fonction render fournie par le parent
+          return (
+            <div
+              key={item.key}
+              style={{ gridColumn: `${startColumn} / ${endColumn + 1}`, ...item.style }}
+              className={item.className}
+            >
+              {item.render()}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ========== RENDU PRINCIPAL ==========
+  const contentArea = (
+    <div
+      className={`relative w-full overflow-y-auto rounded-3xl border h-full border-ultra-light ${contentClassName}`}
+      style={{
+        scrollbarGutter: 'stable',
+      }}
+      onScroll={onScroll}
+      ref={mainRef}
+    >
+      {/* Rendu de tous les niveaux d'en-têtes */}
+      {headers.map((headerLevel: HeaderLevel, index: number) => renderHeader(headerLevel, index))}
+
+      {/* Zone de contenu */}
+      <div
+        className="relative"
+        style={{
+          gridTemplateColumns,
+          display: 'grid',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+
+  // Mode bare : retourner uniquement la zone de contenu
+  if (bareMode) {
+    return contentArea;
+  }
+
+  // Mode normal : avec conteneurs
+  return (
+    <div className={`flex-1 min-w-0 flex flex-col pr-7 rounded-2xl poppins ${className}`} style={style}>
+      <div className="p-4 border rounded-4xl bg-bg-secondary w-full h-full border-ultra-light">
+        {contentArea}
       </div>
     </div>
   );

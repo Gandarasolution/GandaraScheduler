@@ -199,111 +199,126 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
     );
   }, [dayInTimeline, showTodayLine]);
 
-  /**
-   * Convertit les groupes TimelineFrame vers le format FlexibleFrame
-   */
-  const flexibleGroups = useMemo(() => {
-    return groupsInTimeline.map(group => ({
-      label: group.name.split(' ').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' '),
-      span: group.span,
-      key: group.key
-    }));
-  }, [groupsInTimeline]);
-
   return (
     <FlexibleFrame
-      groups={flexibleGroups}
-      items={itemsInTimeline}
       mainRef={mainScrollRef}
       onScroll={onScroll}
       className={contentClassName}
-      showGroupHeaders={showGroupHeaders}
-      showItemHeaders={showItemHeaders}
-      useAutoCells={useAutoCells}
-      cellWidth={CELL_WIDTH}
-      customItemHeaders={
-        // En-têtes personnalisés pour les jours avec logique date/custom
-        showItemHeaders ? (
-          itemsInTimeline.map((item, index) => {
-            // Si on utilise des labels personnalisés ou le mode colonnes
-            if ((customDayLabels && customDayLabels.length > 0) || columns) {
+      gridConfig={{
+        mode: useAutoCells ? 'auto' : 'fixed',
+        columns: itemsInTimeline.length,
+        cellWidth: CELL_WIDTH,
+        minColumnWidth: CELL_WIDTH
+      }}
+      headers={[
+        // Niveau 1: Groupes (Mois ou catégories)
+        ...(showGroupHeaders ? [{
+          items: groupsInTimeline.map(group => ({
+            span: group.span,
+            key: group.key,
+            render: () => (
+              <div className="sticky left-0 z-30 pl-4">
+                <div className="flex sticky flex-col items-center">
+                  <span className="poppins text-center font-semibold">
+                    {group.name.split(' ').map(word => 
+                      word.charAt(0).toUpperCase() + word.slice(1)
+                    ).join(' ')}
+                  </span>
+                </div>
+              </div>
+            ),
+            className: ' col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-bg-secondary border-b max-h-[49px] '
+          })),
+          show: true,
+          minHeight: '40px',
+          containerClassName: 'bg-bg-secondary border-ultra-light',
+        }] : []),
+        // Niveau 2: Items (Jours)
+        ...(showItemHeaders ? [{
+          items: itemsInTimeline.map((item, index) => ({
+            span: 1,
+            key: `item-${index}`,
+            render: () => {
+              // Si on utilise des labels personnalisés ou le mode colonnes
+              if ((customDayLabels && customDayLabels.length > 0) || columns) {
+                return (
+                  <div
+                    className="flex flex-col justify-center border-b border-r border-default text-center text-sm font-semibold text-primary p-2 bg-bg-secondary relative item-cell"
+                    style={{ 
+                      width: `${CELL_WIDTH}px`,
+                      height: 'auto',
+                      minWidth: `${CELL_WIDTH}px`
+                    }}
+                  >
+                    <div className="flex flex-col justify-center items-center h-full px-2">
+                      <span className="text-xs leading-3 break-words text-center">
+                        {item}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+              
+              // Mode normal avec vraies dates
+              if (!dayInTimeline || !dayInTimeline[index]) {
+                return null;
+              }
+              
+              const day = dayInTimeline[index];
+              const weekNumber = getWeekNumber(day);
+              
               return (
                 <div
-                  key={`header-item-${index}`}
-                  className="flex flex-col justify-center border-b border-r border-default text-center text-sm font-semibold text-primary p-2 bg-bg-secondary relative item-cell"
+                  className={`
+                    flex flex-col justify-end border-b border-r border-default text-center text-sm font-semibold text-primary p-1
+                    ${(isToday(day) && 'calendar-today') || (isWeekend(day) ? 'calendar-weekend' : 'bg-bg-secondary')}
+                    relative
+                    day-cell
+                  `}
                   style={{ 
                     width: `${CELL_WIDTH}px`,
-                    height: 'auto',
+                    height: '100%',
                     minWidth: `${CELL_WIDTH}px`
                   }}
                 >
-                  <div className="flex flex-col justify-center items-center h-full px-2">
-                    <span className="text-xs leading-3 break-words text-center">
-                      {item}
+                  {/* Affiche le numéro de semaine en début de semaine */}
+                  {day.getDay() === 1 && (
+                    <span
+                      className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        background: '#23adde',
+                      }}
+                    >
+                      {weekNumber}
+                    </span>
+                  )}
+                  <div className="flex flex-col justify-center items-center h-full">
+                    <span className="block font-bold text-lg">
+                      {customDayLabels && customDayLabels[index] 
+                        ? customDayLabels[index].split(' ')[0]
+                        : format(day, 'd', { locale: fr })
+                      }
+                    </span>
+                    <span className="block text-xs text-secondary">
+                      {customDayLabels && customDayLabels[index]
+                        ? customDayLabels[index].split(' ').slice(1).join(' ')
+                        : format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() 
+                          + format(day, 'EEE', { locale: fr }).slice(1).replace('.', '')
+                      }
                     </span>
                   </div>
                 </div>
               );
-            }
-            
-            // Mode normal avec vraies dates
-            if (!dayInTimeline || !dayInTimeline[index]) {
-              return null;
-            }
-            
-            const day = dayInTimeline[index];
-            const weekNumber = getWeekNumber(day);
-            
-            return (
-              <div
-                key={`day-${index}`}
-                className={`
-                  flex flex-col justify-end border-b border-r border-default text-center text-sm font-semibold text-primary p-1
-                  ${(isToday(day) && 'calendar-today') || (isWeekend(day) ? 'calendar-weekend' : 'bg-bg-secondary')}
-                  relative
-                  day-cell
-                `}
-                style={{ 
-                  width: `${CELL_WIDTH}px`,
-                  height: 'auto',
-                  minWidth: `${CELL_WIDTH}px`
-                }}
-              >
-                {/* Affiche le numéro de semaine en début de semaine */}
-                {day.getDay() === 1 && (
-                  <span
-                    className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      background: '#23adde',
-                    }}
-                  >
-                    {weekNumber}
-                  </span>
-                )}
-                <div className="flex flex-col justify-center items-center h-full">
-                  <span className="block font-bold text-lg">
-                    {customDayLabels && customDayLabels[index] 
-                      ? customDayLabels[index].split(' ')[0] // Premier mot si c'est un label personnalisé
-                      : format(day, 'd', { locale: fr }) // Numéro du jour sinon
-                    }
-                  </span>
-                  <span className="block text-xs text-secondary">
-                    {customDayLabels && customDayLabels[index]
-                      ? customDayLabels[index].split(' ').slice(1).join(' ') // Reste du label si personnalisé
-                      : format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() 
-                        + format(day, 'EEE', { locale: fr }).slice(1).replace('.', '') // Jour de la semaine sinon
-                    }
-                  </span>
-                </div>
-              </div>
-            );
-          })
-        ) : undefined
-      }
+            },
+            className: 'h-full',
+          })),
+          show: true,
+          minHeight: '56px',
+          containerClassName: 'bg-bg-secondary border-ultra-light',
+        }] : [])
+      ]}
     >
       {children}
       

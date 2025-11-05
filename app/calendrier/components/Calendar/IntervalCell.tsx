@@ -249,11 +249,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
     if (!isCellActive || isWeekend || !employee.id) return;
     setSelectedCell({ date: intervalStart, employeeId: employee.id });
     setSelectedAppointment(null);
-    if (appointments.length > 0) {
-      setBubbleContent(events.map((type) => type.label).join(', '));
-    } else {
-      setBubbleContent(`Créneau du ${format(date, 'dd/MM')} ${!isFullDay ? (intervalName === 'morning' ? '- Matin' : '- Après-midi') : ''}`);
-    }
+    setBubbleContent(`Créneau du ${format(date, 'dd/MM')} ${!isFullDay ? (intervalName === 'morning' ? '- Matin' : '- Après-midi') : ''}`);
     setShowInfoBubble(true);
     const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
     bubblePosition.current = {

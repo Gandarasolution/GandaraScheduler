@@ -183,6 +183,10 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   FontSize?: number;
   /** Padding par cellule */
   cellPadding?: number;
+  /** Affiche l'en-tête du tableau */
+  withHeader?: boolean;
+  /** Contenu personnalisé pour l'en-tête */
+  customHeader?: React.ReactNode;
   /** Callback lors du clic sur une ligne */
   onRowClick?: (item: T) => void;
   /** Callback lors du double-clic sur une cellule */
@@ -211,6 +215,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   enableHighlight = true,
   showGroupHeaders = true,
   headerClassName = 'bg-primary-ultra-light',
+  withHeader = true,
+  customHeader,
   onRowClick,
   onCellDoubleClick,
   defaultSort,
@@ -419,7 +425,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     context.font = `${fontSize}px Poppins, sans-serif`;
     const metrics = context.measureText(text);
     
-    console.log(text, Math.ceil(metrics.width) + cellPadding);
     
     // Ajouter du padding (16px de chaque côté) et une marge
     return Math.ceil(metrics.width) + cellPadding;
@@ -439,8 +444,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
    * 6. S'adapte automatiquement aux changements de taille de fenêtre
    */
   const calculateColumnWidths = useMemo(() => {
-    const MIN_WIDTH = 60;
-    const MAX_WIDTH = 300;
+    const MIN_WIDTH = 61;
+    const MAX_WIDTH = 450;
     const PADDING = 20; // Padding supplémentaire pour l'espacement
     
     if (!sortedItems.length) return attributeLabels.map(() => MIN_WIDTH);
@@ -458,10 +463,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       }
       
       // Mesurer la largeur du header
-      const headerWidth = measureTextWidth(attributeLabels[columnIndex], 14);
+      //const headerWidth = measureTextWidth(attributeLabels[columnIndex], 14);
       
       // Mesurer la largeur maximale du contenu
-      let maxContentWidth = headerWidth;
+      let maxContentWidth = MIN_WIDTH;
       
       sortedItems.forEach(item => {
         if (!item) return;
@@ -481,36 +486,47 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       return { width: idealWidth, isFixed: false };
     });
 
-   //console.log('columnWidths:', columnWidths);
+    //console.log('columnWidths avant ajustement:', columnWidths);
     
     const fixedColumns = columnWidths.filter(col => col.isFixed);
     const flexibleColumns = columnWidths.filter(col => !col.isFixed);
   
     const totalFixedWidth = fixedColumns.reduce((sum, col) => sum + col.width, 0);
     const totalFlexibleWidth = flexibleColumns.reduce((sum, col) => sum + col.width, 0);
-    const availableFlexibleWidth = containerWidth - totalFixedWidth;
+
+    const totalWidth = totalFixedWidth + totalFlexibleWidth;
+    const availableWidth = containerWidth - totalWidth;
 
     //console.log(availableWidth);
     
     let adjustedWidths: number[];
+
+    // console.log('totalWidth:', totalWidth);
+    // console.log('availableWidth:', availableWidth);
+    // console.log('containerWidth:', containerWidth);
     
-    if (totalFlexibleWidth > availableFlexibleWidth) {
+
+    if (totalWidth > containerWidth) {
       // CAS 1 : Le tableau est trop large - réduire proportionnellement
-      const ratio = availableFlexibleWidth / totalFlexibleWidth;
+      const ratio = availableWidth / flexibleColumns.length;
+      console.log('ratio', ratio);
+      
       
       adjustedWidths = columnWidths.map(col => {
         if (col.isFixed) return col.width;
         
         // Réduire proportionnellement, mais respecter le minimum
-        const reducedWidth = Math.floor(col.width * ratio);
+        const reducedWidth = Math.floor(col.width + ratio);
         return Math.max(reducedWidth, MIN_WIDTH);
       });
       
     } 
-    else if (totalFlexibleWidth < availableFlexibleWidth) {
+    else if (totalWidth < containerWidth) {
     // CAS 2 : Le tableau est trop petit - distribuer l'espace supplémentaire
-    const extraSpace = availableFlexibleWidth - totalFixedWidth;
-    const extraPerColumn = extraSpace / fixedColumns.length;
+    const extraSpace = availableWidth;
+    const extraPerColumn = extraSpace / flexibleColumns.length;
+    //console.log('extraPerColumn', extraPerColumn);
+    
 
     adjustedWidths = columnWidths.map(col => {
       if (col.isFixed) return col.width;
@@ -525,10 +541,14 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     adjustedWidths = columnWidths.map(col => col.width);
   }
 
+  //console.log('adjustedWidths avant correction finale:', adjustedWidths);
+  
   // Étape 4 : CORRECTION FINALE - Ajuster pour correspondre EXACTEMENT à containerWidth
   // Cette étape élimine les erreurs d'arrondi
   const currentTotal = adjustedWidths.reduce((sum, width) => sum + width, 0);
   const difference = containerWidth - currentTotal;
+  console.log('currentTotal:', currentTotal);
+  console.log('difference:', difference);
   
   if (difference !== 0) {
     // Trouver l'index de la dernière colonne flexible (non-fixe)
@@ -622,71 +642,107 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       style={style}
     >
       <FlexibleFrame
-        groups={groups}
-        items={attributeLabels}
         mainRef={containerRef}
-        showGroupHeaders={showGroupHeaders}
         className={`data-table-frame h-full pl-7 ${className}`}
-        classNameHeader={headerClassName}
         contentClassName=''
-        useAutoCells={false}
-        customGridColumns={gridTemplateColumns}
-        customItemHeaders={
-          attributeLabels.map((label, index) => {
-            const attributeKey = attributeKeys[index];
-            const isActive = sortConfig.key === attributeKey;
-            const direction = isActive ? sortConfig.direction : null;
-            
-            return (
-              <div
-                key={`header-${index}`}
-                className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-primary-ultra-light hover:bg-gray-50 cursor-pointer transition-colors"
-                style={{
-                  width: `${calculateColumnWidths[index]}px`,
-                  height: '56px',
-                  minWidth: `${calculateColumnWidths[index]}px`,
-                  maxWidth: `${calculateColumnWidths[index]}px`
-                }}
-                onClick={() => handleSort(attributeKey)}
-                title={`Cliquer pour trier par ${label}`}
-              >
-                <div className="flex flex-col justify-center items-center h-full px-2">
-                  <div className="flex items-center justify-center gap-1">
-                    <span className="leading-3 break-words text-center">
-                      {label}
-                    </span>
-                    <div className="flex flex-col items-center ml-1">
-                      {/* Flèche vers le haut */}
-                      <svg 
-                        className={`w-2 h-2 transition-colors ${
-                          isActive && direction === 'asc' 
-                            ? 'text-color-primary' 
-                            : 'text-gray-300'
-                        }`}
-                        fill="currentColor" 
-                        viewBox="0 0 8 8"
-                      >
-                        <path d="M4 0L0 4h8z" />
-                      </svg>
-                      {/* Flèche vers le bas */}
-                      <svg 
-                        className={`w-2 h-2 -mt-0.5 transition-colors ${
-                          isActive && direction === 'desc' 
-                            ? 'text-color-primary' 
-                            : 'text-gray-300'
-                        }`}
-                        fill="currentColor" 
-                        viewBox="0 0 8 8"
-                      >
-                        <path d="M4 8L8 4H0z" />
-                      </svg>
-                    </div>
+        gridConfig={{
+          mode: 'custom',
+          template: gridTemplateColumns
+        }}
+        headers={[
+          // Niveau 1: Groupes (si fournis)
+          ...(groups && showGroupHeaders ? [{
+            items: groups.map(g => ({
+              span: g.span,
+              key: g.key,
+              render: () => (
+                <div className="sticky left-0 z-30 pl-4">
+                  <div className="flex sticky flex-col items-center">
+                    <span className="poppins text-center font-semibold">{g.label}</span>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        }
+              ),
+              className: 'col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-primary-ultra-light border-b max-h-[49px]'
+            })),
+            show: true,
+            minHeight: '40px',
+            containerClassName: 'bg-bg-secondary border-ultra-light',
+          }] : []),
+          // Niveau 2: En-têtes de colonnes (si withHeader=true)
+          ...(withHeader ? [{
+            items: customHeader ? 
+              // Si customHeader fourni, l'utiliser
+              attributeLabels.map((label, index) => ({
+                span: 1,
+                key: `header-${index}`,
+                render: () => customHeader,
+              })) :
+              // Sinon, rendu par défaut avec tri
+              attributeLabels.map((label, index) => {
+                const attributeKey = attributeKeys[index];
+                
+                return {
+                  span: 1,
+                  key: `header-${index}`,
+                  render: () => {
+                    const isActive = sortConfig.key === attributeKey;
+                    const direction = isActive ? sortConfig.direction : null;
+                    
+                    return (
+                      <div
+                        className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-primary-ultra-light hover:bg-gray-50 cursor-pointer transition-colors"
+                        style={{
+                          width: `${calculateColumnWidths[index]}px`,
+                          height: '56px',
+                          minWidth: `${calculateColumnWidths[index]}px`,
+                          maxWidth: `${calculateColumnWidths[index]}px`
+                        }}
+                        onClick={() => handleSort(attributeKey)}
+                        title={`Cliquer pour trier par ${label}`}
+                      >
+                        <div className="flex flex-col justify-center items-center h-full px-2">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="leading-3 break-words text-center">
+                              {label}
+                            </span>
+                            <div className="flex flex-col items-center ml-1">
+                              {/* Flèche vers le haut */}
+                              <svg 
+                                className={`w-2 h-2 transition-colors ${
+                                  isActive && direction === 'asc' 
+                                    ? 'text-color-primary' 
+                                    : 'text-gray-300'
+                                }`}
+                                fill="currentColor" 
+                                viewBox="0 0 8 8"
+                              >
+                                <path d="M4 0L0 4h8z" />
+                              </svg>
+                              {/* Flèche vers le bas */}
+                              <svg 
+                                className={`w-2 h-2 -mt-0.5 transition-colors ${
+                                  isActive && direction === 'desc' 
+                                    ? 'text-color-primary' 
+                                    : 'text-gray-300'
+                                }`}
+                                fill="currentColor" 
+                                viewBox="0 0 8 8"
+                              >
+                                <path d="M4 8L8 4H0z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                };
+              }),
+            show: true,
+            minHeight: '56px',
+            containerClassName: 'bg-bg-secondary border-ultra-light',
+          }] : [])
+        ]}
       >
         <table className="w-full border-collapse overflow-auto">
           {/* Corps du tableau */}
