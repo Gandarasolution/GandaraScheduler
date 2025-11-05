@@ -213,7 +213,8 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
           const startColumn = columnIndex + 1;
           const endColumn = columnIndex + item.span;
           columnIndex += item.span;
-
+          // Ne pas rendre si isHidden est true
+          
           // Appel de la fonction render fournie par le parent
           return (
             <div

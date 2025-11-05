@@ -81,7 +81,7 @@
 
 "use client";
 
-import React, { useMemo, useState, useCallback, memo, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, memo, useRef, useEffect, use } from 'react';
 import FlexibleFrame from '../FlexibleFrame';
 
 /**
@@ -114,7 +114,7 @@ export interface AttributeConfig {
   /** Label affiché dans l'en-tête */
   label: string;
   /** Type de données (pour le tri et l'affichage) */
-  type?: 'string' | 'number' | 'date' | 'boolean' | 'custom';
+  type?: 'string' | 'number' | 'date' | 'boolean' | 'custom' | 'hidden-column';
   /** Renderer personnalisé pour cette colonne */
   renderer?: CellRenderer;
   /** Indique si c'est une propriété de base de l'objet */
@@ -125,6 +125,8 @@ export interface AttributeConfig {
   align?: 'left' | 'center' | 'right';
   /** Indique si la colonne est fixe (ex: image) */
   isFixed?: boolean;
+  /** Clé de la colonne cachée à réafficher (pour type='hidden-column') */
+  hiddenColumnKey?: string;
 }
 
 /**
@@ -187,6 +189,8 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   withHeader?: boolean;
   /** Contenu personnalisé pour l'en-tête */
   customHeader?: React.ReactNode;
+  /** Affiche la possibilité de cacher une colonne */
+  showColumnVisibilityToggle?: boolean;
   /** Callback lors du clic sur une ligne */
   onRowClick?: (item: T) => void;
   /** Callback lors du double-clic sur une cellule */
@@ -204,7 +208,7 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
 const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   className = '',
   style,
-  categoriesStructure,
+  categoriesStructure: categoriesStructureSource,
   items,
   FontSize = 14,
   cellPadding = 8,
@@ -215,6 +219,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   enableHighlight = true,
   showGroupHeaders = true,
   headerClassName = 'bg-primary-ultra-light',
+  showColumnVisibilityToggle = true,
   withHeader = true,
   customHeader,
   onRowClick,
@@ -226,7 +231,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   // État pour la largeur du conteneur (pour réagir aux changements de taille de fenêtre)
   const [containerWidth, setContainerWidth] = useState<number>(
     customContainerWidth || 1200
-  );    
+  );  
+  
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -266,7 +272,60 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   // États pour le surlignage
   const [itemHoveredId, setItemHoveredId] = useState<string | number | null>(null);
   const [columnHoveredKey, setColumnHoveredKey] = useState<string | null>(null);
+  const [categoriesStructure, setCategoriesStructure] = useState<CategoryStructure[]>(categoriesStructureSource);
 
+  // État pour les colonnes cachées
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  
+  // État pour le menu de gestion des colonnes
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
+
+  // Fonction pour toggle la visibilité d'une colonne
+  const toggleColumnVisibility = (columnKey: string) => {
+    setHiddenColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(columnKey)) {
+        newSet.delete(columnKey);
+      } else {
+        newSet.add(columnKey);
+      }
+      return newSet;
+    });
+  };
+
+  // Mettre à jour la structure des catégories quand une colonne est cachée
+  useEffect(() => {
+    setCategoriesStructure( 
+      categoriesStructureSource.map(category => {
+        // Pour chaque attribut de la catégorie
+        const updatedAttributes: AttributeConfig[] = [];
+        
+        category.attributes.forEach(attr => {
+          const isHidden = hiddenColumns.has(attr.key);
+          
+          if (isHidden) {
+            // Remplacer par une colonne spéciale "hidden-column"
+            updatedAttributes.push({
+              key: `hidden-${attr.key}`,
+              label: attr.label,
+              type: 'hidden-column',
+              hiddenColumnKey: attr.key,
+              isFixed: true, // Largeur fixe de 30px
+            });
+          } else {
+            // Garder la colonne normale
+            updatedAttributes.push(attr);
+          }
+        });
+        
+        return {
+          ...category,
+          attributes: updatedAttributes
+        };
+      })
+    )
+  }, [hiddenColumns, categoriesStructureSource]);
+    
 
   // Configuration des groupes
   const groups = useMemo(() => 
@@ -446,6 +505,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   const calculateColumnWidths = useMemo(() => {
     const MIN_WIDTH = 60;
     const MAX_WIDTH = 450;
+    const HIDDEN_COLUMN_WIDTH = 20; // Largeur fine pour colonnes cachées
     const PADDING = 20; // Padding supplémentaire pour l'espacement
     
     if (!sortedItems.length) return attributeLabels.map(() => MIN_WIDTH);
@@ -456,8 +516,13 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       const attributeConfig = categoriesStructure
         .flatMap(cat => cat.attributes)
         .find(attr => attr.key === key);
+      
+      // Si c'est une colonne "hidden-column" (colonne cachée à réafficher)
+      if (attributeConfig?.type === 'hidden-column') {
+        return { width: HIDDEN_COLUMN_WIDTH, isFixed: true };
+      }
               
-      // Si c'est une colonne image, retourner la largeur fixe
+      // Si c'est une colonne image ou fixe, retourner la largeur fixe
       if (attributeConfig?.isFixed) {
         return { width: MIN_WIDTH, isFixed: true };
       }
@@ -509,7 +574,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     if (totalWidth > containerWidth) {
       // CAS 1 : Le tableau est trop large - réduire proportionnellement
       const ratio = availableWidth / flexibleColumns.length;
-      console.log('ratio', ratio);
+      //console.log('ratio', ratio);
       
       
       adjustedWidths = columnWidths.map(col => {
@@ -547,8 +612,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   // Cette étape élimine les erreurs d'arrondi
   const currentTotal = adjustedWidths.reduce((sum, width) => sum + width, 0);
   const difference = containerWidth - currentTotal;
-  console.log('currentTotal:', currentTotal);
-  console.log('difference:', difference);
+  // console.log('currentTotal:', currentTotal);
+  // console.log('difference:', difference);
   
   if (difference !== 0) {
     // Trouver l'index de la dernière colonne flexible (non-fixe)
@@ -681,26 +746,97 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
               attributeLabels.map((label, index) => {
                 const attributeKey = attributeKeys[index];
                 
+                // Trouver la configuration de l'attribut
+                const attributeConfig = categoriesStructure
+                  .flatMap(cat => cat.attributes)
+                  .find(attr => attr.key === attributeKey);
+
                 return {
                   span: 1,
                   key: `header-${index}`,
                   render: () => {
+                    // Si c'est une colonne cachée (type='hidden-column')
+                    if (attributeConfig?.type === 'hidden-column' && attributeConfig.hiddenColumnKey) {
+                      // Vérifier si la colonne précédente est aussi cachée
+                      const prevAttributeConfig = index > 0 
+                        ? categoriesStructure.flatMap(cat => cat.attributes).find(attr => attr.key === attributeKeys[index - 1])
+                        : null;
+                      const isPrevHidden = prevAttributeConfig?.type === 'hidden-column';
+                      
+                      // Vérifier si la colonne suivante est aussi cachée
+                      const nextAttributeConfig = index < attributeKeys.length - 1
+                        ? categoriesStructure.flatMap(cat => cat.attributes).find(attr => attr.key === attributeKeys[index + 1])
+                        : null;
+                      const isNextHidden = nextAttributeConfig?.type === 'hidden-column';
+
+                      return (
+                        <div
+                          className="flex items-center justify-center border-b border-default bg-gradient-to-r from-gray-50 to-gray-100 hover:from-primary-ultra-light hover:to-primary-light transition-all cursor-pointer group"
+                          style={{
+                            width: `${calculateColumnWidths[index]}px`,
+                            height: '56px',
+                            minWidth: `${calculateColumnWidths[index]}px`,
+                            maxWidth: `${calculateColumnWidths[index]}px`,
+                            borderRight: isNextHidden ? '1px dashed #e5e7eb' : '1px solid #e5e7eb',
+                            borderLeft: isPrevHidden ? 'none' : '1px solid #e5e7eb',
+                          }}
+                          onClick={() => toggleColumnVisibility(attributeConfig.hiddenColumnKey!)}
+                          title={`Afficher la colonne "${label}"`}
+                        >
+                          <svg 
+                            className="w-3.5 h-3.5 text-gray-400 group-hover:text-primary-dark transition-colors" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </div>
+                      );
+                    }
+
+                    // Rendu normal pour les colonnes visibles
                     const isActive = sortConfig.key === attributeKey;
                     const direction = isActive ? sortConfig.direction : null;
                     
                     return (
                       <div
-                        className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-primary-ultra-light hover:bg-gray-50 cursor-pointer transition-colors"
+                        className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-primary-ultra-light hover:bg-gray-50 transition-colors relative group"
                         style={{
                           width: `${calculateColumnWidths[index]}px`,
                           height: '56px',
                           minWidth: `${calculateColumnWidths[index]}px`,
                           maxWidth: `${calculateColumnWidths[index]}px`
                         }}
-                        onClick={() => handleSort(attributeKey)}
-                        title={`Cliquer pour trier par ${label}`}
                       >
-                        <div className="flex flex-col justify-center items-center h-full px-2">
+                        {/* Bouton cacher/afficher colonne */}
+                        {showColumnVisibilityToggle && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleColumnVisibility(attributeKey);
+                            }}
+                            className="absolute top-1 right-1 p-1 rounded transition-colors opacity-0 group-hover:opacity-100 z-10 cursor-pointer"
+                            title="Cacher la colonne"
+                          >
+                            <svg 
+                              className="w-3 h-3 text-gray-600" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              {/* Icône œil barré */}
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          </button>
+                        )}
+
+                        {/* En-tête cliquable pour le tri */}
+                        <div 
+                          className="flex flex-col justify-center items-center h-full px-2 cursor-pointer"
+                          onClick={() => handleSort(attributeKey)}
+                          title={`Cliquer pour trier par ${label}`}
+                        >
                           <div className="flex items-center justify-center gap-1">
                             <span className="leading-3 break-words text-center">
                               {label}
@@ -763,7 +899,43 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                     {allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
                       const columnIndex = attributeKeys.indexOf(attributeKey);
                       const isExactHoveredCell = itemHoveredId === item.id && columnHoveredKey === attributeKey;
+                      
+                      // Trouver la configuration de l'attribut pour détecter les colonnes cachées
+                      const attributeConfig = categoriesStructure
+                        .flatMap(cat => cat.attributes)
+                        .find(attr => attr.key === attributeKey);
+                      
+                      // Si c'est une colonne cachée (type='hidden-column'), afficher cellule vide
+                      if (attributeConfig?.type === 'hidden-column') {
+                        // Vérifier si la colonne précédente est aussi cachée
+                        const prevAttributeConfig = valueIndex > 0 
+                          ? categoriesStructure.flatMap(cat => cat.attributes).find(attr => attr.key === attributeKeys[valueIndex - 1])
+                          : null;
+                        const isPrevHidden = prevAttributeConfig?.type === 'hidden-column';
+                        
+                        // Vérifier si la colonne suivante est aussi cachée
+                        const nextAttributeConfig = valueIndex < attributeKeys.length - 1
+                          ? categoriesStructure.flatMap(cat => cat.attributes).find(attr => attr.key === attributeKeys[valueIndex + 1])
+                          : null;
+                        const isNextHidden = nextAttributeConfig?.type === 'hidden-column';
 
+                        return (
+                          <td
+                            key={`${item.id}-${attributeKey}`}
+                            className="border-b border-default bg-gradient-to-r from-gray-50 to-gray-100"
+                            style={{
+                              width: `${calculateColumnWidths[valueIndex]}px`,
+                              minWidth: `${calculateColumnWidths[valueIndex]}px`,
+                              maxWidth: `${calculateColumnWidths[valueIndex]}px`,
+                              padding: 0,
+                              borderRight: isNextHidden ? '1px dashed #e5e7eb' : '1px solid #e5e7eb',
+                              borderLeft: isPrevHidden ? 'none' : '1px solid #e5e7eb',
+                            }}
+                          />
+                        );
+                      }
+
+                      // Rendu normal pour colonnes visibles
                       const cellClasses = isExactHoveredCell 
                         ? 'bg-primary-ultra-light' 
                         : getCellPositionClasses(item.id, attributeKey, columnIndex);
