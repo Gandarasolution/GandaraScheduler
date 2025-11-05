@@ -369,52 +369,64 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               <div className="flex flex-row sm:flex-col gap-2">
                 {/* Couleur de fond */}
                 <div className="relative group flex items-center gap-1">
-                  <input
-                    type="color"
-                    value={formDataEventType.color || '#1E40AF'}
-                    onChange={(e) => setFormDataEventType(prev => ({ ...prev, color: e.target.value }))}
-                    className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
-                    title="Couleur de fond"
-                  />
-                  <div 
-                    className="w-4 h-4  border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                  <label 
+                    htmlFor="color-fond"
+                    className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
                     style={{ backgroundColor: formDataEventType.color || '#1E40AF' }}
                     title="Couleur de fond"
                   />
-                  <span>Couleur de fond</span>
+                  <input
+                    id="color-fond"
+                    type="color"
+                    value={formDataEventType.color || '#1E40AF'}
+                    onChange={(e) => setFormDataEventType(prev => ({ ...prev, color: e.target.value }))}
+                    className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+                    title="Couleur de fond"
+                  />
+                  <label htmlFor="color-fond" className="cursor-pointer">
+                    Couleur de fond
+                  </label>
                 </div>
                 {/* Couleur de bordure */}
                 <div className="relative group flex items-center gap-1">
-                  <input
-                    type="color"
-                    value={formDataEventType.borderColor || '#1E40AF'}
-                    onChange={(e) => setFormDataEventType(prev => ({ ...prev, borderColor: e.target.value }))}
-                    className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
-                    title="Couleur de bordure"
-                  />
-                  <div 
-                    className="w-4 h-4  border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                 <label 
+                    htmlFor="color-bordure"
+                    className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
                     style={{ backgroundColor: formDataEventType.borderColor || '#1E40AF' }}
                     title="Couleur de bordure"
                   />
-                  <span>Couleur de bordure</span>
+                  <input
+                    id="color-bordure"
+                    type="color"
+                    value={formDataEventType.borderColor || '#1E40AF'}
+                    onChange={(e) => setFormDataEventType(prev => ({ ...prev, borderColor: e.target.value }))}
+                    className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+                    title="Couleur de bordure"
+                  />
+                  <label htmlFor="color-bordure" className="cursor-pointer">
+                    Couleur de bordure
+                  </label>
                 </div>
               
                 {/* Couleur de texte */}
                 <div className="relative group flex items-center gap-1">
-                  <input
-                    type="color"
-                    value={formDataEventType.textColor || '#FFFFFF'}
-                    onChange={(e) => setFormDataEventType(prev => ({ ...prev, textColor: e.target.value }))}
-                    className="w-4 h-4  border-0 cursor-pointer opacity-0 absolute inset-0"
-                    title="Couleur de texte"
-                  />
-                  <div 
-                    className="w-4 h-4  border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                  <label 
+                    htmlFor="color-texte"
+                    className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
                     style={{ backgroundColor: formDataEventType.textColor || '#FFFFFF' }}
                     title="Couleur de texte"
                   />
-                  <span>Couleur de texte</span>
+                  <input
+                    id="color-texte"
+                    type="color"
+                    value={formDataEventType.textColor || '#FFFFFF'}
+                    onChange={(e) => setFormDataEventType(prev => ({ ...prev, textColor: e.target.value }))}
+                    className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+                    title="Couleur de texte"
+                  />
+                  <label htmlFor="color-texte" className="cursor-pointer">
+                    Couleur de texte
+                  </label>
                 </div>
               </div>
             </div>

@@ -1993,8 +1993,15 @@ export default function HomePage({
          {!isMobile && (
           <div className="flex flex-col items-center pr-9">
             <div className="flex flex-row w-full">
-              <div className={` p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}>
-                <img src={theme === 'dark' ? LogoUrlB.src : LogoUrlN.src} alt="Logo" className="h-20 w-auto mb-2" />
+              <div 
+                className={` p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}
+              >
+                <img 
+                  src={theme === 'dark' ? LogoUrlB.src : LogoUrlN.src} 
+                  alt="Logo" 
+                  className="h-20 w-auto mb-2 cursor-pointer" 
+                  onClick={() => setViewType('calendar')}
+                />
               </div>
               <div className={`flex-1 flex flex-col items-center justify-center py-4 h-[82px]`}>
                 <div className="flex items-center justify-between w-full h-[50px]">
