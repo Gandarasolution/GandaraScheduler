@@ -96,6 +96,7 @@ import LogoUrlN from "../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../image/LOGO_couleur_police_blanche.svg";
 import { ThemeType, useTheme } from '../utils/themeManager';
 import AppointmentItem from '../components/AppointmentItem';
+import { it } from 'node:test';
 
 
 /**
@@ -1858,7 +1859,7 @@ export default function HomePage({
       },
       paieTable: {
         image: imageRenderer,
-        verrou: (value: boolean) => (
+        verrou: (value: boolean) => (          
           <div className="flex items-center justify-center">
             {value ? (
               <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">

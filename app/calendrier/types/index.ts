@@ -133,9 +133,9 @@ export interface ChantierEvent extends BaseEvent {
 
 // Interface commune pour les attributs partagés entre Absence et Autre
 interface CommonPaieAttributs extends BaseEvent {
-  verrou: string;
+  verrou: boolean;
   code: string;
-  actif: string;
+  actif: boolean;
 }
 
 export interface AbsenceEvent extends CommonPaieAttributs {

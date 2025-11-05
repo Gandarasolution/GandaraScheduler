@@ -183,6 +183,8 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   headerClassName?: string;
   /** Taille de la police */
   FontSize?: number;
+  /** Hauteur des cellules */
+  heightCell?: number;
   /** Padding par cellule */
   cellPadding?: number;
   /** Affiche l'en-tête du tableau */
@@ -212,6 +214,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   items,
   FontSize = 14,
   cellPadding = 8,
+  heightCell = 60,
   containerWidth: customContainerWidth,
   computedFields = {},
   columnWidths: customColumnWidths,
@@ -927,6 +930,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                               width: `${calculateColumnWidths[valueIndex]}px`,
                               minWidth: `${calculateColumnWidths[valueIndex]}px`,
                               maxWidth: `${calculateColumnWidths[valueIndex]}px`,
+                              height: `${heightCell}px`,
                               padding: 0,
                               borderRight: isNextHidden ? '1px dashed #e5e7eb' : '1px solid #e5e7eb',
                               borderLeft: isPrevHidden ? 'none' : '1px solid #e5e7eb',
@@ -949,6 +953,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                             width: `${calculateColumnWidths[valueIndex]}px`,
                             minWidth: `${calculateColumnWidths[valueIndex]}px`,
                             maxWidth: `${calculateColumnWidths[valueIndex]}px`,
+                            height: `${heightCell}px`,
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             padding: `${cellPadding}px`
