@@ -233,9 +233,6 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   const contentArea = (
     <div
       className={`relative w-full overflow-y-auto rounded-3xl border h-full border-ultra-light ${contentClassName}`}
-      style={{
-        scrollbarGutter: 'stable',
-      }}
       onScroll={onScroll}
       ref={mainRef}
     >

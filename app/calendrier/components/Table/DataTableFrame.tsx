@@ -444,7 +444,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
    * 6. S'adapte automatiquement aux changements de taille de fenêtre
    */
   const calculateColumnWidths = useMemo(() => {
-    const MIN_WIDTH = 61;
+    const MIN_WIDTH = 60;
     const MAX_WIDTH = 450;
     const PADDING = 20; // Padding supplémentaire pour l'espacement
     
@@ -635,7 +635,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     }));
   }, [categoriesStructure, getAttributeValue]);
 
-  
+
   return (
     <div 
       className="relative h-full"
@@ -644,7 +644,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       <FlexibleFrame
         mainRef={containerRef}
         className={`data-table-frame h-full pl-7 ${className}`}
-        contentClassName=''
+        contentClassName='overflow-x-hidden'
         gridConfig={{
           mode: 'custom',
           template: gridTemplateColumns

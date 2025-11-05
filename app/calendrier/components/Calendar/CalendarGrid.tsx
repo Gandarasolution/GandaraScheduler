@@ -233,12 +233,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
       }
       
+      // Batch: retirer puis ajouter
+      const employeesToUpdate = document.querySelectorAll('[data-hover="true"]');
+      employeesToUpdate.forEach(emp => (emp as HTMLElement).removeAttribute('data-hover'));
+      
       // Gérer le surlignage de l'employé
       if (employeeId) {
-        // Batch: retirer puis ajouter
-        const employeesToUpdate = document.querySelectorAll('[data-hover="true"]');
-        employeesToUpdate.forEach(emp => (emp as HTMLElement).removeAttribute('data-hover'));
-        
         const employeeElement = document.querySelector(
           `.employee-row-item[data-employee-id="${employeeId}"]`
         ) as HTMLElement;
