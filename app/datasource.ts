@@ -2218,20 +2218,19 @@ export const imagesÉvénement: Image[] = [
 export const getEvenements = (): Evenement[] => {
   return Evenements.map(event => {
     const image = imagesÉvénement.find(img => img.id === event.image)?.image || null;
-    const attributs = 'attributs' in event && event.attributs ? 
-    { 
-      ...(event as any).attributs,
-      chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.name || '',
-      chefChantier: initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.name || '',
-      poleActivite: PA.find(pa => pa.id === (event as any).attributs.poleActivite)?.name || ''
-    } : 
-    null;
+    
+
+
+    const attributs = event.attributs || {};
 
     if(event.type === 'chantier' ){
       return {
         ...event,
+        ...attributs,
         image,
-        attributs
+        chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.name || '',
+        chefChantier : initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.name || '',
+        poleActivite : PA.find(pa => pa.id === (event as any).attributs.poleActivite)?.name || ''
       } as Evenement;
     } else {
       return {

@@ -1,46 +1,100 @@
 import { memo } from "react";
 import Modal from "./Modal";
+import { FilterCategory, FilterConfig, ActiveFilters } from "../../utils/searchAndFilterUtils";
 
-// Modal de filtres pour les chantiers
 type FilterModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  activeFilters: {
-    etat: string[];
-    chargeAffaire: string[];
-    chefChantier: string[];
-  };
-  setActiveFilters: React.Dispatch<React.SetStateAction<{
-    etat: string[];
-    chargeAffaire: string[];
-    chefChantier: string[];
-  }>>;
-  filterOptions: {
-    etats: string[];
-    chargeAffaires: string[];
-    chefChantiers: string[];
-  };
+  filterConfig: FilterConfig;
+  activeFilters: ActiveFilters;
+  setActiveFilters: React.Dispatch<React.SetStateAction<ActiveFilters>>;
   onClearAll: () => void;
 };
 
 const FilterModal: React.FC<FilterModalProps> = ({
   isOpen,
   onClose,
+  filterConfig,
   activeFilters,
   setActiveFilters,
-  filterOptions,
   onClearAll
 }) => {
-  const toggleFilter = (category: keyof typeof activeFilters, value: string) => {
+  const toggleFilter = (categoryKey: string, value: string) => {
     setActiveFilters(prev => ({
       ...prev,
-      [category]: prev[category].includes(value)
-        ? prev[category].filter(item => item !== value)
-        : [...prev[category], value]
+      [categoryKey]: prev[categoryKey].includes(value)
+        ? prev[categoryKey].filter(item => item !== value)
+        : [...prev[categoryKey], value]
     }));
   };
 
-  const activeFilterCount = Object.values(activeFilters).reduce((count, arr) => count + arr.length, 0);
+  const setSelectFilter = (categoryKey: string, value: string) => {
+    setActiveFilters(prev => ({
+      ...prev,
+      [categoryKey]: [value]
+    }));
+  };
+
+  const activeFilterCount = Object.values(activeFilters).reduce(
+    (count, category) => count + category.length, 
+    0
+  );
+
+  const renderFilterInput = (categoryKey: string, category: FilterCategory) => {
+    switch (category.type) {
+      case 'checkbox':
+        return (
+          <div className={category.options.length > 4 ? "space-y-1" : "grid grid-cols-2 gap-2"}>
+            {category.options.map(option => (
+              <label key={option} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
+                <input
+                  type="checkbox"
+                  checked={activeFilters[categoryKey].includes(option)}
+                  onChange={() => toggleFilter(categoryKey, option)}
+                  className="rounded"
+                />
+                <span className="text-sm">{option}</span>
+              </label>
+            ))}
+          </div>
+        );
+
+      case 'select':
+        return (
+          <select
+            value={activeFilters[categoryKey][0] || ''}
+            onChange={(e) => setSelectFilter(categoryKey, e.target.value)}
+            className="w-full p-2 border border-light rounded focus:outline-none focus:border-primary"
+          >
+            <option value="">Tous</option>
+            {category.options.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        );
+
+      case 'radio':
+        return (
+          <div className="space-y-1">
+            {category.options.map(option => (
+              <label key={option} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
+                <input
+                  type="radio"
+                  name={categoryKey}
+                  checked={activeFilters[categoryKey].includes(option)}
+                  onChange={() => setSelectFilter(categoryKey, option)}
+                  className="rounded-full"
+                />
+                <span className="text-sm">{option}</span>
+              </label>
+            ))}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Filtres des chantiers">
@@ -63,63 +117,16 @@ const FilterModal: React.FC<FilterModalProps> = ({
           )}
         </div>
 
-        {/* Filtre par état */}
-        <div className="space-y-3">
-          <h3 className="font-semibold ">État</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {filterOptions.etats.map(etat => (
-              <label key={etat} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
-                <input
-                  type="checkbox"
-                  checked={activeFilters.etat.includes(etat)}
-                  onChange={() => toggleFilter('etat', etat)}
-                  className="rounded"
-                />
-                <span className="text-sm">{etat}</span>
-              </label>
-            ))}
+        {/* Rendu dynamique des filtres */}
+        {Object.entries(filterConfig).map(([key, category]) => (
+          <div key={key} className="space-y-3">
+            <h3 className="font-semibold">{category.label}</h3>
+            {renderFilterInput(key, category)}
           </div>
-        </div>
-
-        {/* Filtre par chargé d'affaire */}
-        <div className="space-y-3">
-          <h3 className="font-semibold ">Chargé d'affaire</h3>
-          <div className="space-y-1">
-            {filterOptions.chargeAffaires.map(chargeAffaire => (
-              <label key={chargeAffaire} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
-                <input
-                  type="checkbox"
-                  checked={activeFilters.chargeAffaire.includes(chargeAffaire)}
-                  onChange={() => toggleFilter('chargeAffaire', chargeAffaire)}
-                  className="rounded"
-                />
-                <span className="text-sm ">{chargeAffaire}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Filtre par chef de chantier */}
-        <div className="space-y-3">
-          <h3 className="font-semibold">Chef de chantier</h3>
-          <div className="space-y-1">
-            {filterOptions.chefChantiers.map(chefChantier => (
-              <label key={chefChantier} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
-                <input
-                  type="checkbox"
-                  checked={activeFilters.chefChantier.includes(chefChantier)}
-                  onChange={() => toggleFilter('chefChantier', chefChantier)}
-                  className="rounded"
-                />
-                <span className="text-sm">{chefChantier}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </Modal>
   );
 };
-
 
 export default memo(FilterModal);

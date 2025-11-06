@@ -12,18 +12,30 @@
  * @version 1.0.0
  */
 
-import { Appointment, Evenement, ChantierEvent, Employee } from '../types';
+import { Appointment, Evenement, ChantierEvent, Employee, SocialEvent } from '../types';
 
-export interface FilterOptions {
-  etats: string[];
-  chargeAffaires: string[];
-  chefChantiers: string[];
+// Types pour la configuration des filtres
+type FilterType = 'checkbox' | 'select' | 'radio' | 'search';
+
+/**
+ * Type représentant une catégorie de filtre
+ * - label : Nom affiché de la catégorie
+ * - type : Type de filtre (checkbox, select, radio, search)
+ * - options : Options disponibles pour le filtre
+ * - values : Valeurs actuellement sélectionnées
+ */
+export type FilterCategory = {
+  label: string;
+  type: FilterType;
+  options: string[];
+};
+
+export type FilterConfig = {
+  [key: string]: FilterCategory;
 }
 
 export interface ActiveFilters {
-  etat: string[];
-  chargeAffaire: string[];
-  chefChantier: string[];
+  [key: string]: string[];
 }
 
 export interface SearchAndFilterUtils {
@@ -38,9 +50,12 @@ export interface SearchAndFilterUtils {
     events: Evenement[],
     searchQuery: string
   ) => Appointment[];
-  
-  getFilterOptions: (chantiers: ChantierEvent[]) => FilterOptions;
-  
+
+  getFilterOptions: (  
+    events: Evenement[], 
+    viewtype: 'chantier' | null, 
+    keyOfFilter: { [key: string]: { label: string; type: FilterType } }) => FilterConfig;
+
   createEmptyFilters: () => ActiveFilters;
   
   filterEventsBySearch: (
@@ -66,30 +81,30 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
     if (searchQuery) {
       const lowercasedQuery = searchQuery.toLowerCase();
       filtered = filtered.filter(chantier => 
-        chantier.attributs.libelle.toLowerCase().includes(lowercasedQuery) || 
-        chantier.attributs.chefChantier.toLowerCase().includes(lowercasedQuery) ||
-        chantier.attributs.chargeAffaire.toLowerCase().includes(lowercasedQuery)
+        chantier.libelle.toLowerCase().includes(lowercasedQuery) || 
+        chantier.chefChantier.toLowerCase().includes(lowercasedQuery) ||
+        chantier.chargeAffaire.toLowerCase().includes(lowercasedQuery)
       );
     }
     
     // Appliquer les filtres par état
     if (activeFilters.etat.length > 0) {
       filtered = filtered.filter(chantier => 
-        activeFilters.etat.includes(chantier.attributs.etat)
+        activeFilters.etat.includes(chantier.etat)
       );
     }
     
     // Appliquer les filtres par chargé d'affaire
     if (activeFilters.chargeAffaire.length > 0) {
       filtered = filtered.filter(chantier => 
-        activeFilters.chargeAffaire.includes(chantier.attributs.chargeAffaire)
+        activeFilters.chargeAffaire.includes(chantier.chargeAffaire)
       );
     }
     
     // Appliquer les filtres par chef de chantier
     if (activeFilters.chefChantier.length > 0) {
       filtered = filtered.filter(chantier => 
-        activeFilters.chefChantier.includes(chantier.attributs.chefChantier)
+        activeFilters.chefChantier.includes(chantier.chefChantier)
       );
     }
     
@@ -126,12 +141,41 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
       .filter((app): app is Appointment => app !== undefined);
   };
 
-  const getFilterOptions = (chantiers: ChantierEvent[]): FilterOptions => {
-    const etats = [...new Set(chantiers.map(c => c.attributs.etat))].sort();
-    const chargeAffaires = [...new Set(chantiers.map(c => c.attributs.chargeAffaire))].sort();
-    const chefChantiers = [...new Set(chantiers.map(c => c.attributs.chefChantier))].sort();
+  const getFilterOptions = (
+    events: Evenement[], 
+    viewtype: 'chantier' | null, 
+    keyOfFilter: { [key: string]: { label: string; type: FilterType } }
+  ): FilterConfig => {
+    const eventsToProcess = viewtype === 'chantier'
+      ? events.filter(e => e.type === 'chantier') as ChantierEvent[]
+      : events.filter(e => e.type !== 'chantier') as SocialEvent[];
     
-    return { etats, chargeAffaires, chefChantiers };
+    // Initialiser la structure avec label, type et options vides
+    const result: FilterConfig = Object.entries(keyOfFilter).reduce((acc, [key, config]) => {
+      acc[key] = {
+        label: config.label,
+        type: config.type,
+        options: []
+      };
+      return acc;
+    }, {} as FilterConfig);
+
+    // Collecter les options uniques pour chaque filtre
+    for (const event of eventsToProcess) {
+      for (const key in keyOfFilter) {
+        const eventAsAny = event as any;
+        if (eventAsAny[key] && !result[key].options.includes(eventAsAny[key])) {
+          result[key].options.push(eventAsAny[key]);
+        }
+      }
+    }
+
+    // Trier les options alphabétiquement
+    Object.keys(result).forEach(key => {
+      result[key].options.sort();
+    });
+
+    return result;
   };
 
   const createEmptyFilters = (): ActiveFilters => ({
@@ -160,10 +204,10 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
       if (event.type === 'chantier') {
         const chantierEvent = event as ChantierEvent;
         return (
-          chantierEvent.attributs.libelle.toLowerCase().includes(lowercasedQuery) ||
-          chantierEvent.attributs.chefChantier.toLowerCase().includes(lowercasedQuery) ||
-          chantierEvent.attributs.chargeAffaire.toLowerCase().includes(lowercasedQuery) ||
-          chantierEvent.attributs.etat.toLowerCase().includes(lowercasedQuery)
+          chantierEvent.libelle.toLowerCase().includes(lowercasedQuery) ||
+          chantierEvent.chefChantier.toLowerCase().includes(lowercasedQuery) ||
+          chantierEvent.chargeAffaire.toLowerCase().includes(lowercasedQuery) ||
+          chantierEvent.etat.toLowerCase().includes(lowercasedQuery)
         );
       }
       
@@ -180,27 +224,3 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
   };
 };
 
-/**
- * Hook personnalisé pour la gestion des filtres et de la recherche
- * @param events - Liste des événements
- * @param appointments - Liste des rendez-vous
- * @returns Utilitaires et état pour la recherche et le filtrage
- */
-export const useSearchAndFilter = (
-  events: Evenement[],
-  appointments: Appointment[]
-) => {
-  const utils = createSearchAndFilterUtils();
-  
-  // Extraire les chantiers des événements
-  const chantiers = events.filter(e => e.type === 'chantier') as ChantierEvent[];
-  
-  // Obtenir les options de filtrage disponibles
-  const filterOptions = utils.getFilterOptions(chantiers);
-  
-  return {
-    ...utils,
-    chantiers,
-    filterOptions
-  };
-};

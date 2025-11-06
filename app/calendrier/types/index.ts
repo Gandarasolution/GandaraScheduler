@@ -102,6 +102,7 @@ interface BaseEvent {
   color: string;
   borderColor: string;
   textColor: string;
+  code: string;
   image?: string;
   defaultDescription?: string;
   category?: string;
@@ -109,24 +110,21 @@ interface BaseEvent {
 
 export interface ChantierEvent extends BaseEvent {
   type: "chantier";
-  attributs: {
-    code: string;
-    identifiant: string;
-    poleActivite: string;
-    libelle: string;
-    etat: string;
-    chargeAffaire: string;
-    chefChantier: string;
-    dateOS: string;
-    dateFin: string;
-    TM: string;
-    HR: string;
-    SH: string;
-    DPF: string;
-    RPF: string;
-    AP: string;
-    SP: string;
-  };
+  identifiant: string;
+  poleActivite: string;
+  libelle: string;
+  etat: string;
+  chargeAffaire: string;
+  chefChantier: string;
+  dateOS: string;
+  dateFin: string;
+  TM: string;
+  HR: string;
+  SH: string;
+  DPF: string;
+  RPF: string;
+  AP: string;
+  SP: string;
   location?: string;
   client?: string;
 }
@@ -134,7 +132,6 @@ export interface ChantierEvent extends BaseEvent {
 // Interface commune pour les attributs partagés entre Absence et Autre
 interface CommonPaieAttributs extends BaseEvent {
   verrou: boolean;
-  code: string;
   actif: boolean;
 }
 
@@ -146,8 +143,8 @@ export interface AutreEvent extends CommonPaieAttributs {
   type: "autre";
 }
 
-
-export type Evenement = ChantierEvent | AbsenceEvent | AutreEvent;
+export type SocialEvent = AbsenceEvent | AutreEvent;
+export type Evenement = ChantierEvent | SocialEvent;
 
 export type Image = {
   id: number;

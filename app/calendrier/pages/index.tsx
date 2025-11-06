@@ -86,7 +86,7 @@ import {
 
 // Imports des utilitaires
 import { createAppointmentUtils } from "../utils/appointmentUtils";
-import { createSearchAndFilterUtils } from "../utils/searchAndFilterUtils";
+import { ActiveFilters, createSearchAndFilterUtils, FilterCategory, FilterConfig } from "../utils/searchAndFilterUtils";
 
 // Imports des services
 import { notificationService } from "../services";
@@ -96,7 +96,6 @@ import LogoUrlN from "../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../image/LOGO_couleur_police_blanche.svg";
 import { ThemeType, useTheme } from '../utils/themeManager';
 import AppointmentItem from '../components/AppointmentItem';
-import { it } from 'node:test';
 
 
 /**
@@ -225,14 +224,11 @@ export default function HomePage({
   
   // États pour les filtres des chantiers
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<{
-    etat: string[];
-    chargeAffaire: string[];
-    chefChantier: string[];
-  }>({
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({
+    code: [],
     etat: [],
-    chargeAffaire: [],
-    chefChantier: []
+    chargeAffaire:[],
+    chefChantier: [],
   });
 
   // 🚀 Hook personnalisé pour la gestion des configurations du calendrier
@@ -450,17 +446,16 @@ export default function HomePage({
     
     // Filtrage en une seule passe avec optimisations de court-circuit
     const filtered = chantierEvents.filter(chantier => {
-      const attrs = chantier.attributs; // Cache de l'objet attributs
-      const chefChantier = attrs.chefChantier.toLowerCase() || '';
-      const chargeAffaire = attrs.chargeAffaire.toLowerCase() || '';
+      const chefChantier = chantier.chefChantier.toLowerCase() || '';
+      const chargeAffaire = chantier.chargeAffaire.toLowerCase() || '';
 
 
 
       
       // Test de recherche textuelle (avec court-circuit si pas de recherche)
       if (hasSearch) {
-        const libelle = attrs.libelle.toLowerCase();
-       
+        const libelle = chantier.libelle.toLowerCase();
+
 
         if (!(libelle.includes(lowercasedQuery) || 
               chefChantier.includes(lowercasedQuery) || 
@@ -470,7 +465,7 @@ export default function HomePage({
       }
       
       // Tests des filtres avec court-circuit (O(1) grâce aux Sets)
-      return (!etatSet || etatSet.has(attrs.etat)) &&
+      return (!etatSet || etatSet.has(chantier.etat)) &&
              (!chargeAffaireSet || chargeAffaireSet.has(chargeAffaire)) &&
              (!chefChantierSet || chefChantierSet.has(chefChantier));
     });
@@ -516,32 +511,6 @@ export default function HomePage({
       }
     });
   }, [searchInput, viewType, applyFiltersToChantiers, searchUtils]);
-
-  // Fonction optimisée pour obtenir les valeurs uniques avec cache
-  const getFilterOptions = useCallback(() => {
-    const allChantiers = events.current.filter(e => e.type === 'chantier');
-    
-    // Optimisation : utiliser des Sets directement pour éviter la conversion
-    const etatSet = new Set<string>();
-    const chargeAffaireSet = new Set<string>();
-    const chefChantierSet = new Set<string>();
-    
-    // Une seule boucle au lieu de trois map() séparés
-    for (const chantier of allChantiers) {
-      const attrs = chantier.attributs;
-      etatSet.add(attrs.etat);
-      chargeAffaireSet.add(attrs.chargeAffaire.toLowerCase() || '');
-      chefChantierSet.add(attrs.chefChantier.toLowerCase() || '');
-
-    }
-    
-    // Conversion et tri en une étape
-    return {
-      etats: Array.from(etatSet).sort(),
-      chargeAffaires: Array.from(chargeAffaireSet).sort(),
-      chefChantiers: Array.from(chefChantierSet).sort()
-    };
-  }, []);
 
   // Fonction pour réinitialiser tous les filtres
   const clearAllFilters = useCallback(() => {
@@ -1922,8 +1891,8 @@ export default function HomePage({
     }
 
     const calculateRPF = (chantier: ChantierEvent): string => {
-      if (viewType !== 'chantier-table') return '0h';      
-      const hrValue = parseFloat(chantier.attributs.HR.replace('h', '')) || 0;
+      if (viewType !== 'chantier-table') return '0h';            
+      const hrValue = parseFloat(chantier.HR.replace('h', '')) || 0;
       const dpfString = calculateDPF(chantier.id);
       const dpfValue = parseFloat(dpfString.replace('h', '')) || 0;
 
@@ -1934,7 +1903,7 @@ export default function HomePage({
     const calculateAP = (chantier: ChantierEvent): string => {
     if (viewType !== 'chantier-table') return '0%';
 
-    const tmValue = parseFloat(chantier.attributs.TM.replace('h', '')) || 0;
+    const tmValue = parseFloat(chantier.TM.replace('h', '')) || 0;
 
     if (tmValue === 0) return '0%';
 
@@ -1947,7 +1916,7 @@ export default function HomePage({
   const calculateSP = (chantier: ChantierEvent): string => {
     if (viewType !== 'chantier-table') return '0h';
 
-    const tmValue = parseFloat(chantier.attributs.TM.replace('h', '')) || 0;
+    const tmValue = parseFloat(chantier.TM.replace('h', '')) || 0;
     const rpfString = calculateRPF(chantier);
     const rpfValue = parseFloat(rpfString.replace('h', '')) || 0;
 
@@ -2471,28 +2440,28 @@ export default function HomePage({
                             label: 'Informations Générales', 
                             attributes: [
                               { key: 'image', label: 'Image', isFixed: true },
-                              { key: 'poleActivite', subKey: 'attributs',  label: 'Pôle', type:'string' },
-                              { key: 'code', subKey: 'attributs', label: 'Code', type:'string' },
-                              { key: 'identifiant', subKey: 'attributs', label: 'Identifiant', type:'string' },
+                              { key: 'poleActivite',   label: 'Pôle', type:'string' },
+                              { key: 'code',  label: 'Code', type:'string' },
+                              { key: 'identifiant',  label: 'Identifiant', type:'string' },
                               { key: 'libelle', subKey: 'attributs' , label: 'Libellé', type:'string' },
                               { key: 'etat', subKey: 'attributs' , label: 'État', type:'string' },
-                              { key: 'chargeAffaire', subKey: 'attributs', label: 'Chargé Aff.', type:'string' },
-                              { key: 'chefChantier', subKey: 'attributs', label: 'Chef Ch.', type:'string' },
-                              { key: 'dateOS', subKey: 'attributs' , label: 'Date OS', type:'date' },
-                              { key: 'dateFin', subKey: 'attributs' , label: 'Date Fin', type:'date' }
+                              { key: 'chargeAffaire',  label: 'Chargé Aff.', type:'string' },
+                              { key: 'chefChantier',  label: 'Chef Ch.', type:'string' },
+                              { key: 'dateOS' , label: 'Date OS', type:'date' },
+                              { key: 'dateFin', label: 'Date Fin', type:'date' }
                             ]
                           },
                           {
                             key: 'analyse',
                             label: 'Analyse Chantier',
                             attributes: [
-                              { key: 'TM', subKey: 'attributs', label: 'T. Marché', type:'string' },      // Temps Marché
-                              { key: 'HR', subKey: 'attributs', label: 'H. Réal.', type:'string' },       // Heures Réalisées
-                              { key: 'SH', subKey: 'attributs', label: 'Solde H.', type:'string' },       // Solde Heure
-                              { key: 'DPF', subKey: 'attributs', label: 'D. Planif.', type:'string' },    // Durée Planifiée
-                              { key: 'RPF', subKey: 'attributs', label: 'Réal. + Fut.', type:'string' },  // Réalisé + Future
-                              { key: 'AP', subKey: 'attributs', label: 'Avanc. %', type:'string' },       // Avancement Prév.
-                              { key: 'SP', subKey: 'attributs', label: 'Solde P.', type:'string' }        // Solde Prév.
+                              { key: 'TM',  label: 'T. Marché', type:'string' },      // Temps Marché
+                              { key: 'HR',  label: 'H. Réal.', type:'string' },       // Heures Réalisées
+                              { key: 'SH',  label: 'Solde H.', type:'string' },       // Solde Heure
+                              { key: 'DPF',  label: 'D. Planif.', type:'string' },    // Durée Planifiée
+                              { key: 'RPF',  label: 'Réal. + Fut.', type:'string' },  // Réalisé + Future
+                              { key: 'AP',  label: 'Avanc. %', type:'string' },       // Avancement Prév.
+                              { key: 'SP',  label: 'Solde P.', type:'string' }        // Solde Prév.
                             ]
                           }
                         ] :
@@ -2787,7 +2756,21 @@ export default function HomePage({
           onClose={() => setIsFilterModalOpen(false)}
           activeFilters={activeFilters}
           setActiveFilters={setActiveFilters}
-          filterOptions={getFilterOptions()}
+          filterConfig={
+            searchUtils.getFilterOptions(
+              events.current, 
+              viewType === 'chantier-table' ? 'chantier' : null,
+              viewType === 'chantier-table' 
+              ? { 
+                  code: { label: 'Code', type: 'checkbox' }, 
+                  etat: { label: 'État', type: 'checkbox' }, 
+                  chargeAffaire: { label: 'Chargé Aff.', type: 'checkbox' }, 
+                  chefChantier: { label: 'Chef Ch.', type: 'checkbox' }
+                } 
+              : { 
+                  code: { label: 'Code', type: 'checkbox' }, 
+                }
+            )}
           onClearAll={clearAllFilters}
         />
         

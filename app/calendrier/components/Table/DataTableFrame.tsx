@@ -279,9 +279,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
 
   // État pour les colonnes cachées
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
-  
-  // État pour le menu de gestion des colonnes
-  const [showColumnMenu, setShowColumnMenu] = useState(false);
+
 
   // Fonction pour toggle la visibilité d'une colonne
   const toggleColumnVisibility = (columnKey: string) => {
