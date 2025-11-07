@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import Modal from "./Modal";
 import { FilterCategory, FilterConfig, ActiveFilters } from "../../utils/searchAndFilterUtils";
 import { Combobox } from "../Combobox";
@@ -6,9 +6,9 @@ import { Combobox } from "../Combobox";
 type FilterModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  onSubmit: (filters: ActiveFilters) => void;
   filterConfig: FilterConfig;
   activeFilters: ActiveFilters;
-  setActiveFilters: React.Dispatch<React.SetStateAction<ActiveFilters>>;
   onClearAll: () => void;
   title?: string;
 };
@@ -16,12 +16,16 @@ type FilterModalProps = {
 const FilterModal: React.FC<FilterModalProps> = ({
   isOpen,
   onClose,
+  onSubmit,
   filterConfig,
-  activeFilters,
-  setActiveFilters,
+  activeFilters: initialActiveFilters,
   onClearAll,
   title
 }) => {
+
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>(initialActiveFilters);
+
+
   const toggleFilter = (categoryKey: string, value: string) => {
     setActiveFilters(prev => ({
       ...prev,
@@ -186,7 +190,12 @@ const FilterModal: React.FC<FilterModalProps> = ({
           Réinitialiser
         </button>
         <button
-          onClick={onClose}
+          onClick={
+            () => {
+              onSubmit(activeFilters);
+              onClose();
+          }
+        }
           className="px-4 py-2 cursor-pointer bg-primary text-white rounded hover:bg-primary-dark transition rounded-lg"
         >
           Appliquer les filtres

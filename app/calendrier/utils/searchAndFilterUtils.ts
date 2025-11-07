@@ -15,7 +15,7 @@
 import { Appointment, Evenement, ChantierEvent, Employee, SocialEvent } from '../types';
 
 // Types pour la configuration des filtres
-type FilterType = 'checkbox' | 'select' | 'radio' | 'search' | 'combobox' | 'badge';
+export type FilterType = 'checkbox' | 'select' | 'radio' | 'search' | 'combobox' | 'badge';
 
 /**
  * Type représentant une catégorie de filtre
@@ -43,7 +43,7 @@ export interface SearchAndFilterUtils {
   applyFiltersToChantiers: (
     chantiers: ChantierEvent[],
     searchQuery: string,
-    activeFilters: ActiveFilters
+    activeFilters: ActiveFilters,
   ) => ChantierEvent[];
   
   searchAppointments: (
@@ -74,41 +74,34 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
   const applyFiltersToChantiers = (
     chantiers: ChantierEvent[],
     searchQuery: string,
-    activeFilters: ActiveFilters
+    activeFilters: ActiveFilters,
   ): ChantierEvent[] => {
+
     let filtered = [...chantiers];
     
     // Appliquer le filtre de recherche si présent
     if (searchQuery) {
       const lowercasedQuery = searchQuery.toLowerCase();
-      filtered = filtered.filter(chantier => 
-        chantier.libelle.toLowerCase().includes(lowercasedQuery) || 
-        chantier.chefChantier.toLowerCase().includes(lowercasedQuery) ||
-        chantier.chargeAffaire.toLowerCase().includes(lowercasedQuery)
-      );
+      filtered = filtered.filter(chantier => {
+
+        for (const key in chantier) {
+          if ((chantier as any)[key] === undefined) continue;
+          if (typeof (chantier as any)[key] !== 'string') continue;
+          if ((chantier as any)[key].toLowerCase().includes(lowercasedQuery)) {
+            return true;
+          }
+        }
+        return false;
+      });
     }
     
-    // Appliquer les filtres par état
-    if (activeFilters.etat.length > 0) {
+    for (const categoryKey in activeFilters) {
+      const selectedOptions = activeFilters[categoryKey];
+      if (selectedOptions.length === 0) continue; // Ignorer si aucune option sélectionnée
       filtered = filtered.filter(chantier => 
-        activeFilters.etat.includes(chantier.etat)
+        selectedOptions.includes((chantier as any)[categoryKey])
       );
     }
-    
-    // Appliquer les filtres par chargé d'affaire
-    if (activeFilters.chargeAffaire.length > 0) {
-      filtered = filtered.filter(chantier => 
-        activeFilters.chargeAffaire.includes(chantier.chargeAffaire)
-      );
-    }
-    
-    // Appliquer les filtres par chef de chantier
-    if (activeFilters.chefChantier.length > 0) {
-      filtered = filtered.filter(chantier => 
-        activeFilters.chefChantier.includes(chantier.chefChantier)
-      );
-    }
-    
     return filtered;
   };
 

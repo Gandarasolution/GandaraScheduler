@@ -69,28 +69,6 @@ export interface Calendar {
   color?: string;
 }
 
-/**
- * Types disponibles pour le système de filtres
- * @type FilterType
- */
-export type FilterType = 'equals' | 'contains' | 'in' | 'range' | 'date_range';
-
-/**
- * Interface représentant un filtre de recherche
- * @interface Filter
- */
-export interface Filter {
-  /** Identifiant unique du filtre */
-  id: string;
-  /** Champ à filtrer (ex: 'contrat', 'groupId', 'type') */
-  field: string;
-  /** Type de filtre à appliquer */
-  type: FilterType;
-  /** Valeur du filtre */
-  value: any;
-  /** Libellé affiché à l'utilisateur */
-  label: string;
-}
 
 /**
  * Interface représentant un projet de chantier
@@ -125,8 +103,6 @@ export interface ChantierEvent extends BaseEvent {
   RPF: string;
   AP: string;
   SP: string;
-  location?: string;
-  client?: string;
 }
 
 // Interface commune pour les attributs partagés entre Absence et Autre
@@ -175,6 +151,30 @@ export interface Appointment{
  
 }
 
+
+
+/**
+ * Types disponibles pour le système de filtres
+ * @type FilterType
+ */
+export type FilterType = 'equals' | 'contains' | 'in' | 'range' | 'date_range';
+
+/**
+ * Interface représentant un filtre de recherche
+ * @interface Filter
+ */
+export interface Filter {
+  /** Identifiant unique du filtre */
+  id: string;
+  /** Champ à filtrer (ex: 'contrat', 'groupId', 'type') */
+  field: string;
+  /** Type de filtre à appliquer */
+  type: FilterType;
+  /** Valeur du filtre */
+  value: any;
+  /** Libellé affiché à l'utilisateur */
+  label: string;
+}
 
 export type DimensionType = 'employee' | 'group' | 'contract' | 'type' | 'pole';
 

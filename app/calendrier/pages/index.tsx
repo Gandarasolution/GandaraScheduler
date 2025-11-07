@@ -86,7 +86,7 @@ import {
 
 // Imports des utilitaires
 import { createAppointmentUtils } from "../utils/appointmentUtils";
-import { ActiveFilters, createSearchAndFilterUtils, FilterCategory, FilterConfig } from "../utils/searchAndFilterUtils";
+import { ActiveFilters, createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils";
 
 // Imports des services
 import { notificationService } from "../services";
@@ -230,6 +230,28 @@ export default function HomePage({
     chargeAffaire:[],
     chefChantier: [],
   });
+  const keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } } = useMemo(() => {
+    return viewType === 'chantier-table' 
+      ? { 
+          code: { label: 'Code', type: 'combobox' as FilterType }, 
+          etat: { 
+            label: 'État', 
+            type: 'badge' as FilterType,
+            badgeColors: {
+              'En cours': 'bg-green-100 text-green-800',
+              'Planifié': 'bg-blue-100 text-blue-800',
+              'Suspendu': 'bg-yellow-100 text-yellow-800',
+              'Terminé': 'bg-gray-100 text-gray-800',
+              'Annulé': 'bg-red-100 text-red-800'
+            }
+          }, 
+          chargeAffaire: { label: 'Chargé Aff.', type: 'combobox' as FilterType }, 
+          chefChantier: { label: 'Chef Ch.', type: 'combobox' as FilterType }
+        } as { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }
+      : { 
+          code: { label: 'Code', type: 'checkbox' as FilterType }
+        } as { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }
+  }, [viewType]);
 
   // 🚀 Hook personnalisé pour la gestion des configurations du calendrier
   const calendarConfig = useCalendarConfig({ employees });
@@ -308,8 +330,6 @@ export default function HomePage({
   // Utilitaires de recherche et filtrage
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
 
-  // Hook de gestion de l'historique (sera ajouté après avoir refactorisé les fonctions d'historique)
-  // const history = useAppointmentHistory(appointments, handleResearch, notificationService.addNotification);
 
   // --- FONCTIONS DE GESTION DES CONFIGURATIONS PERSONNALISÉES ---
   const saveCustomConfig = useCallback((config: Omit<CalendarConfig, 'id'>) => {
@@ -496,10 +516,15 @@ export default function HomePage({
           }
           break;
         
-        case 'chantier-table':
-          applyFiltersToChantiers();
+        case 'chantier-table':          
+          const chantierEvents = events.current.filter(e => e.type === 'chantier');
+          const filtered = searchUtils.applyFiltersToChantiers(
+            chantierEvents, 
+            searchInput, 
+            activeFilters,
+          );
+          setFilteredEvent(filtered);          
           break;
-        
         case 'paie-table':   
           if (!searchInput.trim()) setFilteredEvent(events.current.filter(e => e.type !== 'chantier'));
           else setFilteredEvent(events.current.filter(e => e.label.toLocaleLowerCase().includes(searchInput.toLowerCase())));
@@ -510,7 +535,7 @@ export default function HomePage({
           break;
       }
     });
-  }, [searchInput, viewType, applyFiltersToChantiers, searchUtils]);
+  }, [searchInput, viewType, searchUtils, activeFilters]);
 
   // Fonction pour réinitialiser tous les filtres
   const clearAllFilters = useCallback(() => {
@@ -1596,7 +1621,7 @@ export default function HomePage({
     }, 20); // 200ms de délai pour les saisies utilisateur
     
     return () => clearTimeout(searchTimer);
-  }, [searchInput, viewType]); // Ajout de viewType comme dépendance
+  }, [searchInput, viewType, activeFilters]); // Ajout de viewType comme dépendance
 
   // Ajuste scrollLeft après ajout à gauche pour éviter le "saut"
   useEffect(() => {
@@ -2755,33 +2780,16 @@ export default function HomePage({
         <FilterModal
           title='Filtres avancés'
           isOpen={isFilterModalOpen}
+          onSubmit={(filters) => {
+            setActiveFilters(filters);
+          }}
           onClose={() => setIsFilterModalOpen(false)}
           activeFilters={activeFilters}
-          setActiveFilters={setActiveFilters}
           filterConfig={
             searchUtils.getFilterOptions(
               events.current, 
               viewType === 'chantier-table' ? 'chantier' : null,
-              viewType === 'chantier-table' 
-              ? { 
-                  code: { label: 'Code', type: 'combobox' }, 
-                  etat: { 
-                    label: 'État', 
-                    type: 'badge',
-                    badgeColors: {
-                      'En cours': 'bg-green-100 text-green-800',
-                      'Planifié': 'bg-blue-100 text-blue-800',
-                      'Suspendu': 'bg-yellow-100 text-yellow-800',
-                      'Terminé': 'bg-gray-100 text-gray-800',
-                      'Annulé': 'bg-red-100 text-red-800'
-                    }
-                  }, 
-                  chargeAffaire: { label: 'Chargé Aff.', type: 'combobox' }, 
-                  chefChantier: { label: 'Chef Ch.', type: 'combobox' }
-                } 
-              : { 
-                  code: { label: 'Code', type: 'checkbox' }, 
-                }
+              keyOfFilter
             )}
           onClearAll={clearAllFilters}
         />
