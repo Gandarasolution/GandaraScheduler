@@ -33,7 +33,7 @@ import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Eveneme
 import { fr } from 'date-fns/locale';
 import {CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../../utils/constants'; // Constantes de style
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
-import CustomSelectWithImage, { SelectOptionWithImage } from '../CustomSelectWithImage';
+import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
 
 /**
  * Interface définissant les propriétés du composant CalendarGrid

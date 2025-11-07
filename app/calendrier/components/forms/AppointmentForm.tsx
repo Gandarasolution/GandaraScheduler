@@ -16,11 +16,11 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo } from 'react';
-import {Appointment, Employee, HalfDayInterval, Evenement, ChantierEvent } from '../types';
+import {Appointment, Employee, HalfDayInterval, Evenement, ChantierEvent } from '../../types';
 import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
-import { isHoliday, isWeekend } from '../utils/dates';
-import Modal from './modals/Modal';
-import AppointmentItem from './AppointmentItem';
+import { isHoliday, isWeekend } from '../../utils/dates';
+import Modal from '../modals/Modal';
+import AppointmentItem from '../calendar/AppointmentItem';
 import { imagesÉvénement } from '@/app/datasource';
 
 /**

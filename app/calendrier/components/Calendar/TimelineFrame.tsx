@@ -18,7 +18,7 @@ import React, { useMemo, ReactNode, memo } from 'react';
 import { format, isToday, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CELL_WIDTH } from '../../utils/constants';
-import FlexibleFrame from '../FlexibleFrame';
+import FlexibleFrame from '../dnd/FlexibleFrame';
 
 /**
  * Interface définissant les propriétés du composant TimelineFrame

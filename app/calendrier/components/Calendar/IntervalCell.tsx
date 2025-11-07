@@ -2,8 +2,8 @@
 import React, { useState, memo, useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import { format, addDays, addHours } from 'date-fns';
-import AppointmentItem from '../AppointmentItem';
-import InfoBubble from '../InfoBubble';
+import AppointmentItem from './AppointmentItem';
+import InfoBubble from '../ui/InfoBubble';
 import { Appointment, Evenement } from '../../types';
 import {
   CELL_WIDTH, 

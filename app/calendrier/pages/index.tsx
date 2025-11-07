@@ -38,7 +38,7 @@
 // Imports React, hooks, DnD, date-fns, types, composants, et données
 import '../styles/custom.scss';
 import React, { useState, useCallback, useRef, useEffect, JSX, useMemo, use} from "react";
-import { DndProvider, useDragDropManager } from "react-dnd";
+import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   addDays,
@@ -52,19 +52,23 @@ import {
   addHours,
 } from "date-fns";
 import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent} from "../types";
-import CalendarGrid from "../components/Calendar/CalendarGrid";
-import DataTableFrame from "../components/Table/DataTableFrame";
-import Modal from "../components/modals/Modal";
-import AppointmentForm from "../components/AppointmentForm";
-import SearchOverlay from "../components/modals/SearchOverlay";
-import NotificationsPanel from "../components/modals/Notificationspanel";
-import ConfigurationModal from "../components/modals/ConfigurationModal";
-import AlertModal from "../components/modals/AlertModal";
-import SettingsModal from "../components/modals/SettingsModal";
-import RightClickComponent from "../components/RightClickComponent";
-import FilterModal from "../components/modals/FilterModal";
-import DraggableSource from "../components/DraggableSource";
-import { ThemeSelector } from '../components/ThemeSelector';
+import { 
+  CalendarGrid, 
+  DataTableFrame, 
+  Modal, 
+  AppointmentForm,
+  SearchOverlay,
+  Notificationspanel,
+  ConfigurationModal,
+  AlertModal,
+  SettingsModal,
+  FilterModal,
+  RightClickComponent,
+  DraggableSource,
+  ThemeSelector
+} from '@/app/calendrier/components'
+
+
 import {
   initialTeams,
   initialEmployees,
@@ -95,7 +99,7 @@ import { notificationService } from "../services";
 import LogoUrlN from "../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../image/LOGO_couleur_police_blanche.svg";
 import { ThemeType, useTheme } from '../utils/themeManager';
-import AppointmentItem from '../components/AppointmentItem';
+import AppointmentItem from '../components/calendar/AppointmentItem';
 
 
 /**
@@ -2789,7 +2793,7 @@ export default function HomePage({
         />
         
         {/* Panneau de notifications */}
-        <NotificationsPanel 
+        <Notificationspanel 
           isOpen={isNotificationsPanelOpen}
           onClose={() => setIsNotificationsPanelOpen(false)}
           notifications={notifications.notifications}

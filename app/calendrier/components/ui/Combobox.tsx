@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 
 interface ComboboxOption {
   value: string;
@@ -157,3 +157,5 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
     </div>
   );
 }
+
+export default memo(Combobox);

@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
 import Modal from "./Modal";
 import { FilterCategory, FilterConfig, ActiveFilters } from "../../utils/searchAndFilterUtils";
-import { Combobox } from "../Combobox";
+import { Combobox } from "../ui/Combobox";
 
 type FilterModalProps = {
   isOpen: boolean;
@@ -29,9 +29,9 @@ const FilterModal: React.FC<FilterModalProps> = ({
   const toggleFilter = (categoryKey: string, value: string) => {
     setActiveFilters(prev => ({
       ...prev,
-      [categoryKey]: prev[categoryKey].includes(value)
-        ? prev[categoryKey].filter(item => item !== value)
-        : [...prev[categoryKey], value]
+      [categoryKey]: (prev[categoryKey] || []).includes(value)
+        ? (prev[categoryKey] || []).filter(item => item !== value)
+        : [...(prev[categoryKey] || []), value]
     }));
   };
 
@@ -61,7 +61,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
               <label key={option} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
                 <input
                   type="checkbox"
-                  checked={activeFilters[categoryKey].includes(option)}
+                  checked={activeFilters[categoryKey]?.includes(option) ?? false}
                   onChange={() => toggleFilter(categoryKey, option)}
                   className="rounded"
                 />
@@ -75,7 +75,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
         return (
           <div className="flex flex-wrap gap-4">
             {category.options.map(option => {
-              const isSelected = activeFilters[categoryKey].includes(option);
+              const isSelected = activeFilters[categoryKey]?.includes(option) ?? false;
               const badgeClass = getBadgeClass(option, category);
               return (
                 <button
@@ -126,7 +126,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 <input
                   type="radio"
                   name={categoryKey}
-                  checked={activeFilters[categoryKey].includes(option)}
+                  checked={activeFilters[categoryKey]?.includes(option) ?? false}
                   onChange={() => setSelectFilter(categoryKey, option)}
                   className="rounded-full"
                 />
@@ -139,7 +139,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
         return (
           <Combobox
             options={category.options.map(option => ({ label: option, value: option }))}
-            value={activeFilters[categoryKey]}
+            value={activeFilters[categoryKey] || []}
             onValueChange={(newValues) =>
               setActiveFilters(prev => ({
                 ...prev,

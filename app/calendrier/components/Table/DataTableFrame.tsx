@@ -82,7 +82,7 @@
 "use client";
 
 import React, { useMemo, useState, useCallback, memo, useRef, useEffect, use } from 'react';
-import FlexibleFrame from '../FlexibleFrame';
+import FlexibleFrame from '../dnd/FlexibleFrame';
 
 /**
  * Type générique pour un élément de données

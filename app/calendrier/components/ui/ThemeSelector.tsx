@@ -11,7 +11,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useTheme, ThemeType, AVAILABLE_THEMES } from '../utils/themeManager';
+import { useTheme, ThemeType, AVAILABLE_THEMES } from '../../utils/themeManager';
 
 // ============================================================================
 // TYPES

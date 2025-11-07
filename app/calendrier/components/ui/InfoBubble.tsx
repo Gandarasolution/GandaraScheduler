@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, memo } from 'react';
-import { CELL_HEIGHT, CELL_WIDTH } from '../utils/constants';
+import { CELL_HEIGHT, CELL_WIDTH } from '../../utils/constants';
 
 interface InfoBubbleProps {
   content: string;

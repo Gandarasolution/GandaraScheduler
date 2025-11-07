@@ -2,9 +2,9 @@
 import React, { memo } from 'react';
 import { useDrag } from 'react-dnd';
 
-import ChantierIcones from '../image/Icones/Chantier.png';
-import AbsenceIcones from '../image/Icones/Absences.png';
-import AutreIcones from '../image/Icones/Autres.png';
+import ChantierIcones from '../../image/Icones/Chantier.png';
+import AbsenceIcones from '../../image/Icones/Absences.png';
+import AutreIcones from '../../image/Icones/Autres.png';
 
 /**
  * Props du composant DraggableSource
