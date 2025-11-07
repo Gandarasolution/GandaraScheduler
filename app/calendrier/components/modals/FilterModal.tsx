@@ -156,7 +156,16 @@ const FilterModal: React.FC<FilterModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} className="max-w-lg w-full" classNameContent="px-4">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={() => {
+        onClose();
+        onSubmit(activeFilters);
+      }} 
+      title={title} 
+      className="max-w-lg w-full" 
+      classNameContent="px-4"
+    >
       <div className="flex flex-col gap-6 poppins text-primary py-4">
         {/* Rendu dynamique des filtres */}
         {Object.entries(filterConfig).map(([key, category]) => (

@@ -40,11 +40,12 @@ export interface ActiveFilters {
 }
 
 export interface SearchAndFilterUtils {
-  applyFiltersToChantiers: (
-    chantiers: ChantierEvent[],
+  applyFilters: (
+    chantiers: Evenement[],
     searchQuery: string,
     activeFilters: ActiveFilters,
-  ) => ChantierEvent[];
+  ) => Evenement[];
+  
   
   searchAppointments: (
     appointments: Appointment[],
@@ -58,11 +59,6 @@ export interface SearchAndFilterUtils {
     keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }) => FilterConfig;
 
   createEmptyFilters: () => ActiveFilters;
-  
-  filterEventsBySearch: (
-    events: Evenement[],
-    searchQuery: string
-  ) => Evenement[];
 }
 
 /**
@@ -71,11 +67,11 @@ export interface SearchAndFilterUtils {
  */
 export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
   
-  const applyFiltersToChantiers = (
-    chantiers: ChantierEvent[],
+  const applyFilters = (
+    chantiers: Evenement[],
     searchQuery: string,
     activeFilters: ActiveFilters,
-  ): ChantierEvent[] => {
+  ): Evenement[] => {
 
     let filtered = [...chantiers];
     
@@ -179,43 +175,13 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
     chefChantier: []
   });
 
-  const filterEventsBySearch = (
-    events: Evenement[],
-    searchQuery: string
-  ): Evenement[] => {
-    if (!searchQuery) {
-      return events;
-    }
-
-    const lowercasedQuery = searchQuery.toLowerCase();
-    
-    return events.filter(event => {
-      // Recherche dans le label
-      if (event.label.toLowerCase().includes(lowercasedQuery)) {
-        return true;
-      }
-      
-      // Recherche dans les attributs selon le type
-      if (event.type === 'chantier') {
-        const chantierEvent = event as ChantierEvent;
-        return (
-          chantierEvent.libelle.toLowerCase().includes(lowercasedQuery) ||
-          chantierEvent.chefChantier.toLowerCase().includes(lowercasedQuery) ||
-          chantierEvent.chargeAffaire.toLowerCase().includes(lowercasedQuery) ||
-          chantierEvent.etat.toLowerCase().includes(lowercasedQuery)
-        );
-      }
-      
-      return false;
-    });
-  };
+  
 
   return {
-    applyFiltersToChantiers,
+    applyFilters,
     searchAppointments,
     getFilterOptions,
     createEmptyFilters,
-    filterEventsBySearch
   };
 };
 

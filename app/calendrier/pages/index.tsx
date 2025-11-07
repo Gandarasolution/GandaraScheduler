@@ -249,7 +249,7 @@ export default function HomePage({
           chefChantier: { label: 'Chef Ch.', type: 'combobox' as FilterType }
         } as { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }
       : { 
-          code: { label: 'Code', type: 'checkbox' as FilterType }
+          code: { label: 'Code', type: 'combobox' as FilterType },
         } as { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }
   }, [viewType]);
 
@@ -440,60 +440,6 @@ export default function HomePage({
     }
   ];
 
-  // Fonction ultra-optimisée pour appliquer les filtres aux chantiers
-  const applyFiltersToChantiers = useCallback(() => {
-    
-    // Cache des événements chantier pour éviter le filtrage répétitif
-    const chantierEvents = events.current.filter(e => e.type === 'chantier');    
-    
-  
-    // Early exit si aucun filtre actif
-    const hasSearch = !!searchInput;
-    const hasFilters = activeFilters.etat.length > 0 || activeFilters.chargeAffaire.length > 0 || activeFilters.chefChantier.length > 0;
-    
-    if (!hasSearch && !hasFilters) {
-      setFilteredEvent(chantierEvents);
-      return;
-    }
-    
-    // Pré-calculer la recherche en minuscules une seule fois
-    const lowercasedQuery = hasSearch ? searchInput.toLowerCase() : '';
-    
-    // Convertir les filtres en Sets pour des lookups O(1)
-    const etatSet = activeFilters.etat.length > 0 ? new Set(activeFilters.etat) : null;
-    const chargeAffaireSet = activeFilters.chargeAffaire.length > 0 ? new Set(activeFilters.chargeAffaire) : null;
-    const chefChantierSet = activeFilters.chefChantier.length > 0 ? new Set(activeFilters.chefChantier) : null;
-    
-    // Filtrage en une seule passe avec optimisations de court-circuit
-    const filtered = chantierEvents.filter(chantier => {
-      const chefChantier = chantier.chefChantier.toLowerCase() || '';
-      const chargeAffaire = chantier.chargeAffaire.toLowerCase() || '';
-
-
-
-      
-      // Test de recherche textuelle (avec court-circuit si pas de recherche)
-      if (hasSearch) {
-        const libelle = chantier.libelle.toLowerCase();
-
-
-        if (!(libelle.includes(lowercasedQuery) || 
-              chefChantier.includes(lowercasedQuery) || 
-              chargeAffaire.includes(lowercasedQuery))) {
-          return false;
-        }
-      }
-      
-      // Tests des filtres avec court-circuit (O(1) grâce aux Sets)
-      return (!etatSet || etatSet.has(chantier.etat)) &&
-             (!chargeAffaireSet || chargeAffaireSet.has(chargeAffaire)) &&
-             (!chefChantierSet || chefChantierSet.has(chefChantier));
-    });
-    
-    
-    setFilteredEvent(filtered);
-  }, [searchInput, activeFilters]);
-
   // Pattern optimisé : useRef pour données + useState pour rendu
   const handleResearch = useCallback(() => {
     // Incrémenter le compteur pour forcer le recalcul des valeurs calculées
@@ -518,7 +464,7 @@ export default function HomePage({
         
         case 'chantier-table':          
           const chantierEvents = events.current.filter(e => e.type === 'chantier');
-          const filtered = searchUtils.applyFiltersToChantiers(
+          const filtered = searchUtils.applyFilters(
             chantierEvents, 
             searchInput, 
             activeFilters,
@@ -526,8 +472,13 @@ export default function HomePage({
           setFilteredEvent(filtered);          
           break;
         case 'paie-table':   
-          if (!searchInput.trim()) setFilteredEvent(events.current.filter(e => e.type !== 'chantier'));
-          else setFilteredEvent(events.current.filter(e => e.label.toLocaleLowerCase().includes(searchInput.toLowerCase())));
+          const paieEvents = events.current.filter(e => e.type !== 'chantier');
+          const filteredPaie = searchUtils.applyFilters(
+            paieEvents,
+            searchInput,
+            activeFilters,
+          );
+          setFilteredEvent(filteredPaie);
           break;
         
         default:
@@ -2369,29 +2320,27 @@ export default function HomePage({
                         </button>
                       </>
                     )}
-                    {viewType !== 'paie-table' && (
-                      <button 
-                        className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
-                        name="filtrer"
-                        onClick={() => viewType === 'calendar' ? calendarConfig.openConfigModal() : setIsFilterModalOpen(true)}
-                        title="Filtrer"
+                    <button 
+                      className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
+                      name="filtrer"
+                      onClick={() => viewType === 'calendar' ? calendarConfig.openConfigModal() : setIsFilterModalOpen(true)}
+                      title="Filtrer"
+                    >
+                      <svg 
+                        viewBox="0 0 16 16"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        fill="currentColor"
+                        className="bg-icon w-5 h-5 text-inherit text-gray-500 transition duration-200"
                       >
-                        <svg 
-                          viewBox="0 0 16 16"
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="20"
-                          height="20"
-                          fill="currentColor"
-                          className="bg-icon w-5 h-5 text-inherit text-gray-500 transition duration-200"
-                        >
-                          <g>
-                            <path 
-                              d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"
-                            />
-                          </g>
-                        </svg>
-                      </button>
-                    )}
+                        <g>
+                          <path 
+                            d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"
+                          />
+                        </g>
+                      </svg>
+                    </button>
                   </div>
                   {viewType === 'calendar' && (
                     <button
