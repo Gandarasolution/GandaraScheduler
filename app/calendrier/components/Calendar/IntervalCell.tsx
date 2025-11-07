@@ -303,7 +303,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
     >
         {isCellActive && appointments.map((app) => {
           const event = events.find(et => et.id === app.EventId);
-          const chargeeAffaire = event && 'attributs' in event ? event.attributs.chargeAffaire : '';
+          const chargeeAffaire = event && event.type === 'chantier' ? event.chargeAffaire : '';          
           return (
             <AppointmentItem
               key={app.id}

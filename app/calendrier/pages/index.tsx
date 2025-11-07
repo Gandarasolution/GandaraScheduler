@@ -151,6 +151,13 @@ export default function HomePage({
   const { theme, setTheme, availableThemes } = useTheme();
   
   // --- ETATS PRINCIPAUX ---
+  const [isDisplayWeekend, setIsDisplayWeekend] = useState(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem('isDisplayWeekend') === 'true';
+    }
+    return false; // Valeur par défaut
+  });
+  
   const [includeWeekend, setIncludeWeekend] = useState(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
       return localStorage.getItem('includeWeekend') === 'true';
@@ -178,11 +185,15 @@ export default function HomePage({
     }
     return 'calendar'; // Valeur par défaut
   }); // État pour basculer entre les vues
-
+  const [respectNonWorkingDays, setRespectNonWorkingDays] = useState(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return localStorage.getItem('respectNonWorkingDays') === 'true';
+    }
+    return false; // Valeur par défaut
+  });
 
 
   const [nonWorkingDates, setNonWorkingDates] = useState<Date[]>([]);
-  const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
   const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const events = useRef<Evenement[]>(getEvenements());
@@ -225,10 +236,7 @@ export default function HomePage({
   // États pour les filtres des chantiers
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({
-    code: [],
-    etat: [],
-    chargeAffaire:[],
-    chefChantier: [],
+    empty: [],
   });
   const keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } } = useMemo(() => {
     return viewType === 'chantier-table' 
@@ -270,6 +278,23 @@ export default function HomePage({
   const isInfiniteScrollEnabled = useRef(false); // Désactivé par défaut jusqu'à la fin du scroll initial
 
 
+  const includeWeekendRef = useRef(includeWeekend);
+  const respectNonWorkingDaysRef = useRef(respectNonWorkingDays);
+  const isDisplayWeekendRef = useRef(isDisplayWeekend);
+  // Mettre à jour les refs quand les états changent
+  useEffect(() => {
+    includeWeekendRef.current = includeWeekend;
+  }, [includeWeekend]);
+
+  useEffect(() => {
+    respectNonWorkingDaysRef.current = respectNonWorkingDays;
+  }, [respectNonWorkingDays]);
+
+  useEffect(() => {
+    isDisplayWeekendRef.current = isDisplayWeekend;
+  }, [isDisplayWeekend]);
+
+
   // Throttle ultra-performant avec requestAnimationFrame
   const throttledScrollHandler = useRef<(() => void) | null>(null);
   const lastScrollTop = useRef(0);
@@ -292,12 +317,12 @@ export default function HomePage({
       }
     }, 0);
   }, []);
-  const toggleSetIncludeWeekend = useCallback((value: boolean) => {
-    setIncludeWeekend(value);
+  const toggleSetIsDisplayWeekend = useCallback((value: boolean) => {
+    setIsDisplayWeekend(value);
     // Sauvegarder dans localStorage de façon asynchrone après le rendu
     setTimeout(() => {
       if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem('includeWeekend', JSON.stringify(value));
+        localStorage.setItem('isDisplayWeekend', JSON.stringify(value));
       }
     }, 0);
   }, []);
@@ -307,6 +332,24 @@ export default function HomePage({
     setTimeout(() => {
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem('viewType', value);
+      }
+    }, 0);
+  }, []);
+  const toggleSetRespectNonWorkingDays = useCallback((value: boolean) => {
+    setRespectNonWorkingDays(value);
+    // Sauvegarder dans localStorage de façon asynchrone après le rendu
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('respectNonWorkingDays', JSON.stringify(value));
+      }
+    }, 0);
+  }, []);
+  const toggleSetIncludeWeekend = useCallback((value: boolean) => {
+    setIncludeWeekend(value);
+    // Sauvegarder dans localStorage de façon asynchrone après le rendu
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('includeWeekend', JSON.stringify(value));
       }
     }, 0);
   }, []);
@@ -423,22 +466,34 @@ export default function HomePage({
 
 
   // --- PARAMÈTRES D'AFFICHAGE ET DE FILTRAGE ---
-  const settings = [
+  const settings = useMemo(() => [
     {
-      category: "Calendrier",
+      category: "Gestion des jours travaillés",
       items: [
         {
+          id: "includeWeekend", 
+          label: "Autoriser la planification sur les week-ends", 
+          type: "checkbox",
+          value: includeWeekend,
+          onChange: toggleSetIncludeWeekend,
+        },
+        {
+          id: "respectNonWorkingDays", 
+          label: "Respecter les jours non travaillés", 
+          type: "checkbox",
+          value: respectNonWorkingDays,
+          onChange: toggleSetRespectNonWorkingDays,
+        },
+        {
           id: "nonWorkedDay", 
-          label: "Dates non travaillées :", 
+          label: "Dates non travaillées personnalisées", 
           type: "custom-non-working-dates", // type personnalisé
           nonWorkingDates,
           setNonWorkingDates,
-          newNonWorkingDate,
-          setNewNonWorkingDate,  
         }
       ]
     }
-  ];
+  ], [includeWeekend, respectNonWorkingDays, nonWorkingDates, toggleSetIncludeWeekend, toggleSetRespectNonWorkingDays]);
 
   // Pattern optimisé : useRef pour données + useState pour rendu
   const handleResearch = useCallback(() => {
@@ -487,15 +542,6 @@ export default function HomePage({
       }
     });
   }, [searchInput, viewType, searchUtils, activeFilters]);
-
-  // Fonction pour réinitialiser tous les filtres
-  const clearAllFilters = useCallback(() => {
-    setActiveFilters({
-      etat: [],
-      chargeAffaire: [],
-      chefChantier: []
-    });
-  }, []);
 
   // Création de rendez-vous répétés (refactorisé avec utilitaires)
   const createRepeatedAppointments = useCallback((repeatInterval: "day" | "week" | "month", repeatCount: number, endDate?: Date, numberCount?: number) => {
@@ -707,7 +753,7 @@ export default function HomePage({
       
       // Optimisation : pré-calculer le filtre week-end si nécessaire
       let newDays: Date[];
-      if (includeWeekend) {
+      if (isDisplayWeekend) {
         // Pas de filtrage nécessaire - plus rapide
         newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(lastDay, i + 1));
       } else {
@@ -741,7 +787,7 @@ export default function HomePage({
       
       return [...prevDays, ...newDays].slice(-WINDOW_SIZE);
     });
-  }, [includeWeekend]);
+  }, [isDisplayWeekend]);
 
   const addDaysToLeft = useCallback(() => {
     const scrollElement = mainScrollRef.current;
@@ -754,7 +800,7 @@ export default function HomePage({
       
       // Optimisation : construire les jours en ordre inverse plus efficacement
       let newDays: Date[];
-      if (includeWeekend) {
+      if (isDisplayWeekend) {
         newDays = Array.from({ length: DAYS_TO_ADD }, (_, i) => addDays(firstDay, -(i + 1))).reverse();
       } else {
         // Optimisation : construire directement en évitant filter()
@@ -784,7 +830,7 @@ export default function HomePage({
       
       return [...newDays, ...prevDays].slice(0, WINDOW_SIZE);
     });
-  }, [includeWeekend]);
+  }, [isDisplayWeekend]);
 
   // Configuration du gestionnaire throttlé de scroll (initialisation inline)
   if (!throttledScrollHandler.current) {
@@ -889,7 +935,7 @@ export default function HomePage({
     const endDate = addDays(date, halfWindow);
     
     let newTimeline: Date[];
-    if (includeWeekend) {
+    if (isDisplayWeekend) {
       newTimeline = eachDayOfInterval({ start: startDate, end: endDate });
     } else {
       // Construction optimisée sans filter() pour de meilleures performances
@@ -933,26 +979,26 @@ export default function HomePage({
         setIsLoading(false);
       });
     });
-  }, [includeWeekend, selectedDate]);
+  }, [isDisplayWeekend, selectedDate]);
 
 
   // Déplacement d'un rendez-vous (drag & drop ou resize) - Optimisé
-  const moveAppointment = useCallback(
-    (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true) => {
+  const moveAppointment = useCallback((id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true) => {
       // Early exit - Rendez-vous non trouvé 
       const appointment = appointments.current.find((app) => app.id === id);
       if (!appointment) return;
-      
+
       // Calcul optimisé des intervalles avec mise en cache des constantes
       const intervalType = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
       const days = getWorkedDayIntervals(
         newStartDate, 
         newEndDate,
         intervalType,
-        !includeWeekend,
+        respectNonWorkingDaysRef.current || !isDisplayWeekendRef.current,
+        includeWeekendRef.current || !isDisplayWeekendRef.current,
         nonWorkingDates
       );    
-    
+          
       // Early exit - Pas de jours travaillés dans l'intervalle
       if (days.length === 0) return;
       
@@ -1013,9 +1059,7 @@ export default function HomePage({
           }
         });
       }
-    },
-    [onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, nonWorkingDates, saveAppointmentState]
-  );
+    },[onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, respectNonWorkingDays, nonWorkingDates, isDisplayWeekend, saveAppointmentState]);
 
 
   const handleSaveEvent = useCallback((event: Evenement) => {    
@@ -1027,7 +1071,7 @@ export default function HomePage({
 
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback(
-    (appointment: Appointment, eventUpdate: Evenement, includeAllNonWorkingDays: boolean) => {
+    (appointment: Appointment, eventUpdate: Evenement, includeNonWorkingDays: boolean) => {
 
       events.current = events.current.map(e =>
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
@@ -1037,7 +1081,8 @@ export default function HomePage({
         appointment.startDate, 
         appointment.endDate,
         isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-        includeAllNonWorkingDays,
+        includeNonWorkingDays || !isDisplayWeekend,
+        includeWeekend || !isDisplayWeekend,
         nonWorkingDates
       );        
             
@@ -1114,7 +1159,7 @@ export default function HomePage({
       setIsModalOpen(false);
       setSelectedAppointment(null);
       setNewAppointmentInfo(null);
-    }, [handleResearch, createAppointment, isFullDay, nonWorkingDates, saveAppointmentState, handleSaveEvent]);
+    }, [handleResearch, createAppointment, isFullDay, isDisplayWeekend, includeWeekend, nonWorkingDates, saveAppointmentState, handleSaveEvent]);
 
 
   const handleDeleteAppointmentConfirm = useCallback(() => {
@@ -1619,7 +1664,7 @@ export default function HomePage({
     // Optimisation : construction directe selon includeWeekend
     let newTimeline: Date[];
     
-    if (includeWeekend) {
+    if (isDisplayWeekend) {
       newTimeline = eachDayOfInterval({ start: startDate, end: endDate });
     } else {
       // Construction optimisée sans filter() pour de meilleures performances
@@ -1661,7 +1706,7 @@ export default function HomePage({
 
     goToDate(selectedDate);
 
-  }, [includeWeekend, viewType]);
+  }, [isDisplayWeekend, viewType]);
     
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -2264,14 +2309,14 @@ export default function HomePage({
                       <>
                         <button
                           className="transition btn-header cursor-pointer border-r border-default px-3 py-2"
-                          onClick={() => toggleSetIncludeWeekend(!includeWeekend)}
+                          onClick={() => toggleSetIsDisplayWeekend(!isDisplayWeekend)}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="16"
                             height="16"
                             fill="currentColor"
-                            className={"bg-icon bi bi-calendar-event transition duration-200 " + (!includeWeekend ? ' text-color-primary' : 'text-gray-500')}
+                            className={"bg-icon bi bi-calendar-event transition duration-200 " + (!isDisplayWeekend ? ' text-color-primary' : 'text-gray-500')}
                             viewBox="0 0 16 16"
                           >
                             <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z" fillOpacity="1" stroke="none" strokeOpacity="1"/>
@@ -2382,7 +2427,7 @@ export default function HomePage({
                         events={events.current}
                         //selectedCalendarId={selectedCalendarId}
                         isMobile={isMobile}
-                        includeWeekend={includeWeekend}
+                        includeWeekend={isDisplayWeekend}
                         nonWorkingDates={nonWorkingDates}
                         mainScrollRef={mainScrollRef}
                         handleScroll={handleScroll}
@@ -2740,7 +2785,7 @@ export default function HomePage({
               viewType === 'chantier-table' ? 'chantier' : null,
               keyOfFilter
             )}
-          onClearAll={clearAllFilters}
+          onClearAll={() => setActiveFilters({ empty: [] })}
         />
         
         {/* Panneau de notifications */}

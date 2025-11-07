@@ -119,14 +119,16 @@ export const getWorkedDayIntervals = (
   start: Date,
   end: Date,
   HALF_DAY_INTERVALS: HalfDayInterval[],
-  includeAllNonWorkingDays: boolean,
+  includeNonWorkingDays: boolean,
+  includeWeekends: boolean,
   nonWorkingDates: Date[],
 ): { start: Date; end: Date }[] => {
   const intervals: { start: Date; end: Date }[] = [];
   let day = new Date(start);
 
   const isIncluded = (date: Date) => {
-    if (includeAllNonWorkingDays && (isWeekend(date) || isHoliday(date) || nonWorkingDates.some(d => isSameDay(d, date)))) return true;
+    if (includeNonWorkingDays && (isHoliday(date) || nonWorkingDates.some(d => isSameDay(d, date)))) return true;
+    if (includeWeekends && isWeekend(date)) return true;
     return isWorkedDay(date, nonWorkingDates);
   };
 

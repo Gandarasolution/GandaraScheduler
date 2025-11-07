@@ -14,6 +14,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   settings
 }) => {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
+  const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
+  
 
   return (
     <Modal
@@ -46,13 +48,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </button>
             
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openCategory === cat.category ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openCategory === cat.category ? 'max-h-150 opacity-100' : 'max-h-0 opacity-0'}`}>
               <div className="px-6 py-6 bg-bg-secondary">
                 {cat.items.map((setting: any, settingIdx: number) => (
                   <div key={setting.id} className={`flex flex-col lg:flex-row lg:items-center justify-between py-4 ${settingIdx !== cat.items.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                    <label htmlFor={setting.id} className="text-base font-medium mb-3 lg:mb-0 lg:mr-6 min-w-[200px] poppins">
-                      {setting.label}
-                    </label>
+                    <div className="mb-3 lg:mb-0 lg:mr-6 min-w-[200px]">
+                      <label htmlFor={setting.id} className="text-base font-medium poppins block">
+                        {setting.label}
+                      </label>
+                      {setting.id === "includeWeekend" && (
+                        <p className="text-xs text-secondary mt-1 poppins">
+                          Permet de placer des rendez-vous les samedis et dimanches
+                        </p>
+                      )}
+                      {setting.id === "respectNonWorkingDays" && (
+                        <p className="text-xs text-secondary mt-1 poppins">
+                          Bloque la planification sur les dates non travaillées définies ci-dessous
+                        </p>
+                      )}
+                      {setting.id === "nonWorkedDay" && (
+                        <p className="text-xs text-secondary mt-1 poppins">
+                          Définissez les congés d'entreprise
+                        </p>
+                      )}
+                    </div>
                     
                     {setting.type === "custom-non-working-dates" ? (
                       <div className="flex flex-col gap-4 w-full max-w-lg">
@@ -60,25 +79,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           <input
                             type="date"
                             id={setting.id}
-                            value={setting.newNonWorkingDate}
-                            onChange={e => setting.setNewNonWorkingDate(e.target.value)}
+                            value={newNonWorkingDate}
+                            onChange={e => setNewNonWorkingDate(e.target.value)}
                             className="border border-default rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-color transition-all duration-200 flex-1 poppins text-sm bg-transparent shadow-sm hover:shadow-md"
                           />
                           <button
                             className="px-6 py-3 cursor-pointer bg-primary text-white rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
                             onClick={() => {
                               if (
-                                setting.newNonWorkingDate &&
+                                newNonWorkingDate &&
                                 !setting.nonWorkingDates.some(
                                   (d: Date) =>
-                                    format(d, "yyyy-MM-dd") === setting.newNonWorkingDate
+                                    format(d, "yyyy-MM-dd") === newNonWorkingDate
                                 )
                               ) {
                                 setting.setNonWorkingDates((prev: Date[]) => [
                                   ...prev,
-                                  new Date(setting.newNonWorkingDate),
+                                  new Date(newNonWorkingDate),
                                 ]);
-                                setting.setNewNonWorkingDate("");
+                                setNewNonWorkingDate("");
                               }
                             }}
                           >
