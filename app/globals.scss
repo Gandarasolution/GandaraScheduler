@@ -5,16 +5,13 @@
 /* Imports de vos fichiers Sass */
 /* Contient vos animations, .custom-select, .drawer-container, etc. */
 @use './calendrier/styles/custom.scss';
+@use "tailwindcss";
+
 
 
 /* Imports CSS (doivent être tout en haut) */
 @import 'https://fonts.googleapis.com/css2?family=Poppins:wght@300&display=swap';
 
-/* ================================================== */
-/* 2. INJECTION DE TAILWIND v4                        */
-/* (Après les imports, avant vos classes)             */
-/* ================================================== */
-@import "tailwindcss";
 
 
 
@@ -38,6 +35,9 @@
 
   --color-interim: #e6b11a;        // Jaune intermédiaire (non utilisé)
   --color-employee: #4baea4;     // Turquoise (non utilisé)
+
+
+  
 
   
   // ── Couleurs Neutres (Gris) ───────────────────────────────────────────────
