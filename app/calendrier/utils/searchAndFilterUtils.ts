@@ -15,19 +15,20 @@
 import { Appointment, Evenement, ChantierEvent, Employee, SocialEvent } from '../types';
 
 // Types pour la configuration des filtres
-type FilterType = 'checkbox' | 'select' | 'radio' | 'search';
+type FilterType = 'checkbox' | 'select' | 'radio' | 'search' | 'combobox' | 'badge';
 
 /**
  * Type représentant une catégorie de filtre
  * - label : Nom affiché de la catégorie
- * - type : Type de filtre (checkbox, select, radio, search)
+ * - type : Type de filtre (checkbox, select, radio, search, badge, combobox)
  * - options : Options disponibles pour le filtre
- * - values : Valeurs actuellement sélectionnées
+ * - badgeColors : Couleurs optionnelles pour chaque option (uniquement pour type 'badge')
  */
 export type FilterCategory = {
   label: string;
   type: FilterType;
   options: string[];
+  badgeColors?: Record<string, string>;
 };
 
 export type FilterConfig = {
@@ -54,7 +55,7 @@ export interface SearchAndFilterUtils {
   getFilterOptions: (  
     events: Evenement[], 
     viewtype: 'chantier' | null, 
-    keyOfFilter: { [key: string]: { label: string; type: FilterType } }) => FilterConfig;
+    keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }) => FilterConfig;
 
   createEmptyFilters: () => ActiveFilters;
   
@@ -144,7 +145,7 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
   const getFilterOptions = (
     events: Evenement[], 
     viewtype: 'chantier' | null, 
-    keyOfFilter: { [key: string]: { label: string; type: FilterType } }
+    keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }
   ): FilterConfig => {
     const eventsToProcess = viewtype === 'chantier'
       ? events.filter(e => e.type === 'chantier') as ChantierEvent[]
@@ -155,7 +156,8 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
       acc[key] = {
         label: config.label,
         type: config.type,
-        options: []
+        options: [],
+        ...(config.badgeColors && { badgeColors: config.badgeColors })
       };
       return acc;
     }, {} as FilterConfig);

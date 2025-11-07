@@ -447,7 +447,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               source='demo'
               isMobile={false}
               includeWeekend={false}
-              chargeeAffaire={formDataEventType && 'attributs' in formDataEventType ? formDataEventType.attributs.chargeAffaire : ''}
+              chargeeAffaire={formDataEventType && formDataEventType.type === 'chantier' ? formDataEventType.chargeAffaire : ''}
               onDoubleClick={() => {}}
               onResize={() => {}}
               handleContextMenu={() => {}}

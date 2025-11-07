@@ -21,7 +21,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
   onConfirm,
   onClose,
 }) => (
-  <Modal isOpen={isOpen} onClose={onClose} title={title}>
+  <Modal isOpen={isOpen} onClose={onClose} title={title} className="px-4 py-4">
     <div className="w-full py-2 bg-transparent cursor-default pointer-events-auto dark:bg-gray-800 relative rounded-xl mx-auto max-w-sm">
       {message && <div className="px-6 py-2 text-gray-700 dark:text-gray-200">{message}</div>}
       <div className="grid gap-2 grid-cols-2 px-6 py-2">

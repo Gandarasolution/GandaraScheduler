@@ -90,7 +90,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Gestion des configurations">
+    <Modal isOpen={isOpen} onClose={onClose} title="Gestion des configurations" className="px-4 py-4">
       <div className={`flex gap-6 poppins w-full mx-auto transition-all duration-300 ${
         (isCreatingConfig || editingConfig) ? 'max-w-6xl flex-row' : 'max-w-2xl flex-col'
       }`}>

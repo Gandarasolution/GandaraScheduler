@@ -39,6 +39,10 @@ interface ModalProps {
     whithoutCloseButton?: boolean;
     /** Taille des coins arrondis (défaut: "2xl") */
     roundedSize?: string;
+    /** Classe CSS additionnelle pour le contenu */
+    classNameContent?: string;
+    /** Classe CSS additionnelle pour la modal */
+    className?: string;
 }
 
 /**
@@ -66,7 +70,9 @@ const Modal: React.FC<ModalProps> = ({
     isOverlayVisible = true, 
     title, 
     whithoutCloseButton = false, 
-    roundedSize = "2xl" 
+    roundedSize = "2xl",
+    classNameContent = "",
+    className = ""
 }) => {
     
     // ===== GESTION DES ÉVÉNEMENTS CLAVIER =====
@@ -97,7 +103,7 @@ const Modal: React.FC<ModalProps> = ({
                 <div className="fixed inset-0 bg-black bg-opacity-40 transition-opacity animate-fadeIn overlay" onClick={onClose} />
             )}
             {/* Modal content */}
-            <div className={`text-primary relative bg-bg-secondary rounded-${roundedSize} shadow-2xl  mx-4 p-0 animate-zoomIn border border-default z-10 modal-content`}>
+            <div className={`text-primary relative bg-bg-secondary rounded-${roundedSize} shadow-2xl  mx-4 p-0 animate-zoomIn border border-default z-10 modal-content ${className}`}>
                 <div className="flex justify-between items-center px-4 pt-3 pb-2 modal-header">
                     <h2 className="text-xl font-bold ">{title}</h2>
 
@@ -113,7 +119,7 @@ const Modal: React.FC<ModalProps> = ({
                         </button>
                     )}
                 </div>
-                <div className="px-4 py-4 max-h-[80vh] overflow-y-auto  modal-body rounded-2xl scrollbar-hide">
+                <div className={`modal-body rounded-2xl scrollbar-hide ${classNameContent}`}>
                     {children}
                 </div>
             </div>

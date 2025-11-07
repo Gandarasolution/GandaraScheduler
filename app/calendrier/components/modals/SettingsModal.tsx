@@ -20,6 +20,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       isOpen={isSettingsOpen}
       onClose={onClose}
       title="Paramètres"
+      className="px-4 py-4"
     >
       <div className="flex flex-col gap-6 poppins">
         {settings.map((cat: any, idx: number) => (

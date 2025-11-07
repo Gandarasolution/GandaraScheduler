@@ -2528,6 +2528,7 @@ export default function HomePage({
           }
           whithoutCloseButton={true}
           roundedSize="2xl"
+          classNameContent='px-4 py-4'
         >
           {!!repeatAppointmentData ? (
             <div 
@@ -2752,6 +2753,7 @@ export default function HomePage({
         
         {/* Modal de filtres des chantiers */}
         <FilterModal
+          title='Filtres avancés'
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           activeFilters={activeFilters}
@@ -2762,10 +2764,20 @@ export default function HomePage({
               viewType === 'chantier-table' ? 'chantier' : null,
               viewType === 'chantier-table' 
               ? { 
-                  code: { label: 'Code', type: 'checkbox' }, 
-                  etat: { label: 'État', type: 'checkbox' }, 
-                  chargeAffaire: { label: 'Chargé Aff.', type: 'checkbox' }, 
-                  chefChantier: { label: 'Chef Ch.', type: 'checkbox' }
+                  code: { label: 'Code', type: 'combobox' }, 
+                  etat: { 
+                    label: 'État', 
+                    type: 'badge',
+                    badgeColors: {
+                      'En cours': 'bg-green-100 text-green-800',
+                      'Planifié': 'bg-blue-100 text-blue-800',
+                      'Suspendu': 'bg-yellow-100 text-yellow-800',
+                      'Terminé': 'bg-gray-100 text-gray-800',
+                      'Annulé': 'bg-red-100 text-red-800'
+                    }
+                  }, 
+                  chargeAffaire: { label: 'Chargé Aff.', type: 'combobox' }, 
+                  chefChantier: { label: 'Chef Ch.', type: 'combobox' }
                 } 
               : { 
                   code: { label: 'Code', type: 'checkbox' }, 
