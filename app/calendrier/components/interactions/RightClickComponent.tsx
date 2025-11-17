@@ -19,7 +19,7 @@
 
 "use client";
 import { JSX, memo, useEffect, useCallback, useRef, useState } from "react";
-import { Appointment } from "../types";
+import { Appointment } from "../../types";
 
 /**
  * Interface définissant les propriétés du composant RightClickComponent

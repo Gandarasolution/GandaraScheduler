@@ -24,8 +24,6 @@ import { useDrag, useDragLayer } from 'react-dnd';
 import {Appointment, HalfDayInterval, Evenement } from '../../types';
 import { addDays, eachDayOfInterval, isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../../utils/constants';
-import { useSelectedAppointment } from '../../context/SelectedAppointmentContext';
-import { useSelectedCell } from '../../context/SelectedCellContext';
 
 /**
  * Interface définissant les propriétés du composant AppointmentItem

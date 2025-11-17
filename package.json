@@ -5,11 +5,13 @@
   "scripts": {
     "dev": "next dev -p 8080",
     "build": "next build",
+    "build:analyze": "cross-env ANALYZE=true next build",
+    "build:prod": "NODE_ENV=production next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "clean": "rimraf .next out"  
   },
   "dependencies": {
-    "@types/react-window": "^1.8.8",
     "bootstrap": "^5.3.7",
     "date-fns": "^4.1.0",
     "date-holidays": "^3.24.3",
@@ -18,11 +20,10 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.1.0",
-    "react-window": "^2.2.1",
-    "react-window-infinite-loader": "^2.0.0",
     "sass": "^1.89.2"
   },
   "devDependencies": {
+    "@types/react-window": "^1.8.8",
     "@tailwindcss/postcss": "^4.1.16",
     "@types/node": "^20",
     "@types/react": "^19",
