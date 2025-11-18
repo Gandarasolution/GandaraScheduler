@@ -2173,7 +2173,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
 
 
 
-export const imagesÉvénement: Image[] = [
+export const Images: Image[] = [
   { id: 1, name: 'Pinceau peinture', image: brushPaint.src },
   { id: 2, name: 'Compas', image: caliper.src },
   { id: 3, name: 'Robinet', image: faucet.src },
@@ -2217,7 +2217,7 @@ export const imagesÉvénement: Image[] = [
 //API
 export const getEvenements = (): Evenement[] => {
   return Evenements.map(event => {
-    const image = imagesÉvénement.find(img => img.id === event.image)?.image || null;
+    const image = Images.find(img => img.id === event.image)?.image || null;
     
 
 
@@ -2259,6 +2259,10 @@ export const getEmployees = (): Employee[] => {
 
 }
 
+
+export const getImages = (): Image[] => {
+  return Images;
+}
 
 
 

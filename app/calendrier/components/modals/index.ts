@@ -5,3 +5,4 @@ export { default as FilterModal } from './FilterModal';
 export { default as Notificationspanel } from './Notificationspanel';
 export { default as SearchOverlay } from './SearchOverlay';
 export { default as SettingsModal } from './SettingsModal';
+export { default as ImageSelectorContentModal } from './imageSelectorContentModal';

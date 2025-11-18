@@ -52,6 +52,7 @@ import {
   addHours,
 } from "date-fns";
 import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent} from "../types";
+import type { Image } from "../types";
 import { 
   CalendarGrid, 
   DataTableFrame, 
@@ -66,7 +67,9 @@ import {
   RightClickComponent,
   DraggableSource,
   ThemeSelector,
-  UserMenu
+  UserMenu,
+  ImageSelectorContentModal,
+  AppointmentItem
 } from '@/app/calendrier/components'
 
 
@@ -75,6 +78,7 @@ import {
   getEmployees,
   initialAppointments,
   getEvenements,
+  getImages
 } from "../../datasource";
 import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
 import { SelectedCellContext } from "../context/SelectedCellContext";
@@ -100,8 +104,6 @@ import { notificationService } from "../services";
 import LogoUrlN from "../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../image/LOGO_couleur_police_blanche.svg";
 import { ThemeType, useTheme } from '../utils/themeManager';
-import AppointmentItem from '../components/calendar/AppointmentItem';
-
 
 /**
  * Composant NoSSR pour éviter les problèmes d'hydratation
@@ -238,6 +240,22 @@ export default function HomePage({
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false); // État pour contrôler le menu déroulant
   const viewDropdownRef = useRef<HTMLDivElement>(null); // Ref pour le menu déroulant
   
+
+  //Sélecteur d'images
+  const Images = useRef<Image[]>(getImages());
+  const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  // Images disponibles selon le type
+  const [availableImages, setAvailableImages] = useState<Image[]>([{
+      id: 1,
+      image: LogoUrlN,
+      name: 'Logo Noir'
+  }])
+
+
+
   // États pour les filtres des chantiers
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({
@@ -985,6 +1003,105 @@ export default function HomePage({
       });
     });
   }, [isDisplayWeekend, selectedDate]);
+
+
+  const handleCloseImageModal = () => {
+      setIsImageSelectorOpen(false);
+      setSelectedItemId(null);
+      setUploadError(null);
+  };
+
+  const handleOpenImageModal = (itemId: number) => {
+      setSelectedItemId(itemId);
+      setAvailableImages(() => {
+        const event = events.current.find(ev => ev.id === itemId);
+        if (!event) return Images.current;
+        const index = Images.current.findIndex(img => img.image === event.image);
+        
+            let t;
+            if (index !== -1) {
+              t = Images.current.splice(index, 1)[0];
+            }
+        
+            if (t) {
+              Images.current.unshift(t);
+            }
+        
+            return Images.current;
+      });
+      setIsImageSelectorOpen(true);
+  }
+  
+    const handleImageSelect = (newImageSrc: string) => {    
+        // onSaveEvent({
+        //   ...formDataEventType,
+        //   image: newImageSrc
+        // })
+  
+        // setFormDataEventType(prev => ({ ...prev, image: newImageSrc }));
+        // // Logique pour mettre à jour l'image de l'élément
+        // setIsImageModalOpen(false);
+        // setSelectedItemId(null);
+    };
+  
+  
+    const handleImageUpload = async (file: File): Promise<string> => {
+      setIsUploading(true);
+      setUploadError(null);
+  
+      try {
+        if (file.size > 200 * 1024) {
+          throw new Error('Le fichier est trop volumineux. Taille maximum : 200 Ko');
+        }
+  
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        if (!allowedTypes.includes(file.type)) {
+          throw new Error('Format non supporté. Formats acceptés : JPG, PNG, GIF, WebP, SVG');
+        }
+  
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+  
+          img.onload = () => {
+            const { width, height } = img;
+            
+            if (width > 480 || height > 480) {
+              setUploadError('Image trop grande. Dimensions maximum : 480x480px');
+              setIsUploading(false);
+              reject(new Error('Image trop grande'));
+              return;
+            }
+  
+            canvas.width = width;
+            canvas.height = height;
+            ctx?.drawImage(img, 0, 0);
+            
+            const dataURL = canvas.toDataURL('image/png');
+            setIsUploading(false);
+            resolve(dataURL);
+          };
+  
+          img.onerror = () => {
+            setIsUploading(false);
+            reject(new Error('Impossible de charger l\'image'));
+          };
+  
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            img.src = e.target?.result as string;
+            setAvailableImages(prev => [...prev, { id: prev.length + 1, image: img.src, name: file.name }]);
+          };
+          reader.readAsDataURL(file);
+        });
+      } catch (error) {
+        setIsUploading(false);
+        setUploadError(error instanceof Error ? error.message : 'Erreur inconnue');
+        throw error;
+      }
+    };
+
 
 
   // Déplacement d'un rendez-vous (drag & drop ou resize) - Optimisé
@@ -1754,7 +1871,7 @@ export default function HomePage({
 
 
   const customRenderersFactory = useMemo(() =>  {
-    const imageRenderer = (value: any, item: any) => {
+    const imageRendererChantierAndPaie = (value: any, item: any) => {
       const chantierItem = item as ChantierEvent;
       return (
         <AppointmentItem
@@ -1829,9 +1946,24 @@ export default function HomePage({
       );
     };
 
+    const imageRendererEmployee = (value: any, item: any) => (
+      <>
+        <img
+          src={item.image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.nom.charAt(0)}`}
+          alt={item.nom + ' ' + item.prenom}
+          className={`cursor-pointer w-8 h-8 rounded-full border-1 shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'}`}
+          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.name.charAt(0)}`; }}
+          onClick={() => setIsImageSelectorOpen(true)}
+        />
+        {item.type === 'interim' && (
+          <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-interim border-2 border-white"></span>
+        )}
+      </>
+    )
+
     return {
       chantierTable: {
-        image: imageRenderer,
+        image: imageRendererChantierAndPaie,
         etat: (value: string) => {
           const statusColors: Record<string, string> = {
             'En cours': 'bg-green-100 text-green-800',
@@ -1854,7 +1986,7 @@ export default function HomePage({
         SP: (value: any, item: any) => importantRenderer(value, item, 'SP'),
       },
       paieTable: {
-        image: imageRenderer,
+        image: imageRendererChantierAndPaie,
         verrou: (value: boolean) => (          
           <div className="flex items-center justify-center">
             {value ? (
@@ -1875,21 +2007,7 @@ export default function HomePage({
         )
       },
       employeeTable: {
-        image : (value: any, item: any) => (
-          console.log(item),
-          
-          <>
-            <img
-              src={item.image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.nom.charAt(0)}`}
-              alt={item.nom + ' ' + item.prenom}
-              className={`w-8 h-8 rounded-full border-1 shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'}`}
-              onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.name.charAt(0)}`; }}
-            />
-            {item.type === 'interim' && (
-              <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-interim border-2 border-white"></span>
-            )}
-          </>
-        )
+        image : imageRendererEmployee
       }
     };
   }, [handleOpenEditModal]);
@@ -2819,7 +2937,6 @@ export default function HomePage({
               appointments={appointments.current}
               appointment={selectedAppointmentForm as Appointment}
               event={events.current.find(e => e.id === selectedAppointmentForm?.EventId) as Evenement}
-              events={events.current}
               initialEmployeeId={newAppointmentInfo?.employeeId || null}
               isReducedVersion={selectedAppointment?.id === 0}
               employees={employees.current}
@@ -2828,10 +2945,19 @@ export default function HomePage({
               nonWorkingDates={nonWorkingDates}
               onSave={handleSaveAppointment}
               onClose={() => setIsModalOpen(false)}
-              onSaveEvent={handleSaveEvent}
+              handleOpenImageModal={handleOpenImageModal}
             />
           )}
         </Modal>
+        <ImageSelectorContentModal
+          images={availableImages}
+          isOpen={isImageSelectorOpen}
+          onClose={handleCloseImageModal}
+          onImageSelect={handleImageSelect}
+          onImageUpload={handleImageUpload}
+          isUploading={isUploading}
+          uploadError={uploadError}
+        />
         <SettingsModal 
           onClose={() => setIsSettingsOpen(false)}
           settings={settings} 
