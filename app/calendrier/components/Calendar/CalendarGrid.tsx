@@ -59,7 +59,7 @@ interface CalendarGridProps {
   /** Interface mobile activée */
   isMobile: boolean;
   /** Inclure les week-ends dans l'affichage mobile */
-  includeWeekend: boolean;
+  isDisplayWeekend: boolean;
   /** Référence pour le scroll principal */
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   /** Gestionnaire d'événement scroll */
@@ -92,7 +92,7 @@ interface CalendarGridProps {
  * @param {number} props.selectedCalendarId - Identifiant du calendrier sélectionné
  * @param {Date[]} props.nonWorkingDates - Liste des jours non travaillés
  * @param {boolean} props.isMobile - Indique si l'affichage est mobile
- * @param {boolean} props.includeWeekend - Indique si les week-ends sont visibles
+ * @param {boolean} props.isDisplayWeekend - Indique si les week-ends sont visibles
  * @param {React.RefObject<HTMLDivElement>} props.mainScrollRef - Référence pour le scroll principal
  * @param {Function} props.onAppointmentMoved - Callback lors du déplacement d'un rendez-vous
  * @param {Function} props.handleScroll - Fonction de gestion du scroll
@@ -114,7 +114,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 //  selectedCalendarId,
   nonWorkingDates,
   isMobile,
-  includeWeekend,
+  isDisplayWeekend,
   mainScrollRef,
   handleScroll,
   calendarConfig,
@@ -836,7 +836,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                               isMobile={isMobile}
                               events={events}
                               nonWorkingDates={nonWorkingDates}
-                              includeWeekend={includeWeekend}
+                              isDisplayWeekend={isDisplayWeekend}
                               onAppointmentMoved={onAppointmentMoved}
                               onCellDoubleClick={onCellDoubleClick}
                               onAppointmentClick={onAppointmentDoubleClick}
@@ -885,7 +885,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     isMobile={isMobile}
                                     events={events}
                                     nonWorkingDates={nonWorkingDates}
-                                    includeWeekend={includeWeekend}
+                                    isDisplayWeekend={isDisplayWeekend}
                                     onAppointmentMoved={onAppointmentMoved}
                                     onCellDoubleClick={onCellDoubleClick}
                                     onAppointmentClick={onAppointmentDoubleClick}
@@ -923,6 +923,6 @@ export default memo(CalendarGrid, (prevProps, nextProps) => {
    //prevProps.selectedCalendarId === nextProps.selectedCalendarId &&
     prevProps.nonWorkingDates === nextProps.nonWorkingDates &&
     prevProps.isMobile === nextProps.isMobile &&
-    prevProps.includeWeekend === nextProps.includeWeekend
+    prevProps.isDisplayWeekend === nextProps.isDisplayWeekend
   );
 });

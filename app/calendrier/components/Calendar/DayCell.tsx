@@ -23,7 +23,7 @@ interface DayCellProps {
   RowHeight?: number; // Hauteur de la ligne pour l'employé, si nécessaire
   nonWorkingDates?: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
   isMobile: boolean; // Indique si l'affichage est en mode mobile
-  includeWeekend?: boolean; // Indique si les week-ends doivent être inclus dans la vue mobile
+  isDisplayWeekend?: boolean; // Indique si les week-ends doivent être inclus dans la vue mobile
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentClick: (appointment: Appointment) => void;
@@ -45,7 +45,7 @@ interface DayCellProps {
  * @param {number} props.RowHeight - Hauteur de la ligne (optionnelle).
  * @param {Date[]} props.nonWorkingDates - Liste des dates considérées comme non travaillées.
  * @param {boolean} props.isMobile - Indique si l'affichage est mobile.
- * @param {boolean} props.includeWeekend - Indique si les week-ends sont visibles.
+ * @param {boolean} props.isDisplayWeekend - Indique si les week-ends sont visibles.
  * @param {Function} props.onAppointmentMoved - Callback lors du déplacement d'un rendez-vous.
  * @param {Function} props.onCellDoubleClick - Callback lors d'un double-clic sur la cellule.
  * @param {Function} props.onAppointmentClick - Callback lors d'un clic sur un rendez-vous.
@@ -94,7 +94,7 @@ const DayCell: React.FC<DayCellProps> = ({
   RowHeight,
   nonWorkingDates,
   isMobile,
-  includeWeekend = false,
+  isDisplayWeekend = false,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentClick,
@@ -258,7 +258,7 @@ const DayCell: React.FC<DayCellProps> = ({
             isMobile={isMobile}
             nonWorkingDates={nonWorkingDates || []}
             isNonWorkingDay={isNonWorkingDay}
-            includeWeekend={includeWeekend}
+            isDisplayWeekend={isDisplayWeekend}
             onAppointmentMoved={onAppointmentMoved}
             onCellDoubleClick={() => onCellDoubleClick(intervalStart, employee.id, interval.name as 'morning' | 'afternoon')}
             onAppointmentDoubleClick={onAppointmentClick}

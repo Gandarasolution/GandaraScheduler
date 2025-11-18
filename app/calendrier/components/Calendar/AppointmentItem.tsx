@@ -19,11 +19,12 @@
  */
 
 "use client";
-import React, { useState, useRef, memo, useEffect, useCallback, use } from 'react';
+import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
 import {Appointment, HalfDayInterval, Evenement } from '../../types';
 import { addDays, eachDayOfInterval, isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../../utils/constants';
+import { log } from 'console';
 
 /**
  * Interface définissant les propriétés du composant AppointmentItem
@@ -37,7 +38,7 @@ interface AppointmentItemProps {
   /** Indique si l'interface est en mode mobile */
   isMobile: boolean;
   /** Inclure les week-ends dans le calcul de durée (optionnel) */
-  includeWeekend?: boolean;
+  isDisplayWeekend?: boolean;
   /** Type d'événement associé au rendez-vous */
   event: Evenement;
   /** Informations de l'employé assigné */
@@ -80,7 +81,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   isMobile,
   event,
   chargeeAffaire,
-  includeWeekend,
+  isDisplayWeekend,
   source = 'calendar',
   isSelected,
   onClick,
@@ -116,7 +117,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     const compare = (a: Date, b: Date) => forward ? a < b : a > b;
 
     while (compare(current, end)) {
-      if (includeWeekend || (!isWeekend(current))) {
+      if (isDisplayWeekend || (!isWeekend(current))) {
         count++;
       }
       // Avance/recul d'un intervalle
@@ -144,10 +145,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         }
       }
     }
-    return Math.max(1, count);
-  }, [includeWeekend, isFullDay]);
+    return forward ? Math.max(0, count) : -Math.max(0, count);
+  }, [isDisplayWeekend, isFullDay]);
 
-  const intervalCount = getIntervalCount(dragStart, dragEnd);
+  const intervalCount =getIntervalCount(dragStart, dragEnd);
   
   // Détection des petits rendez-vous (une seule case)
   const isSmallAppointment = intervalCount <= 1;
@@ -157,7 +158,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   // Largeur calculée du rendez-vous (responsive mobile/desktop)
   const calculatedWidth = isMobile 
     ? (intervalCount >= 2 && !isFullDay ? '200%' : '100%') 
-    : `${intervalCount * INTERVAL_WIDTH}px`;
+    : `${intervalCount * INTERVAL_WIDTH}px`; 
 
   // Drag & drop avec react-dnd
   const [{ isDragging }, drag] = useDrag({
@@ -179,8 +180,18 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const isAnyDragging = useDragLayer((monitor) => monitor.isDragging());
   
   // Décalage horizontal du bloc (en px)
-  const offsetIntervals = Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / INTERVAL_DURATION);
-  const offsetPx = offsetIntervals * INTERVAL_WIDTH;
+  const offsetIntervals = isDisplayWeekend 
+  ? Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / INTERVAL_DURATION)
+  : getIntervalCount(appointment.startDate, dragStart);
+
+  if (isResizingLeft || isResizingRight) {
+    //console.log('offsetIntervals', offsetIntervals);
+    //console.log(appointment.startDate, dragStart);
+    
+    
+  }
+const offsetPx = offsetIntervals * INTERVAL_WIDTH;
+
 
   // Capture la position du clic dans le bloc (en px)
   const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -225,7 +236,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         next = addDays(next, -1);
       }
       // Si on ne veut pas inclure les week-ends, saute samedi/dimanche
-      if (!includeWeekend) {
+      if (!isDisplayWeekend) {
         while (next.getDay() === 0 || next.getDay() === 6) {
           next = addDays(next, step);
         }
@@ -234,7 +245,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     }
     next.setHours(intervals[idx].startHour, 0, 0, 0);
     return next;
-  }, [includeWeekend]);
+  }, [isDisplayWeekend]);
 
   // Débute le redimensionnement (gauche ou droite)
   /**
@@ -277,14 +288,16 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
     if (isResizingLeft) {
       let newStartDate = addInterval(appointment.startDate, intervalsMoved, intervals);
-      if (newStartDate >= dragEndRef.current) {
-        newStartDate = addInterval(dragEndRef.current, -1, intervals);
+            
+      if (newStartDate > dragEndRef.current) {
+        newStartDate = addInterval(dragEndRef.current, 0, intervals);
       }
+
       setDragStartSafe(newStartDate);
     }
     if (isResizingRight) {
       let newEndDate = addInterval(appointment.endDate, intervalsMoved, intervals);
-      if (newEndDate <= dragStartRef.current) {
+      if (newEndDate < dragStartRef.current) {
         newEndDate = addInterval(dragStartRef.current, 1, intervals);
       }
       setDragEndSafe(newEndDate);
@@ -303,23 +316,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
    * @returns {void}
    */
   const handleMouseUp = useCallback(() => {
-    let newEndDate = dragEndRef.current;
-    if (!includeWeekend && (appointment.endDate > dragEndRef.current || appointment.startDate < dragStartRef.current)) {
-      const days = eachDayOfInterval({
-        start: dragStartRef.current,
-        end: addDays(dragEndRef.current, 1), // Inclut le dernier jour
-      });
-      // Nombre de jours qui sont un week-end (samedi ou dimanche)
-      const intervalsPerDay = isFullDay ? DAY_INTERVALS.length : HALF_DAY_INTERVALS.length;
-      const workedIntervals = (days.length) * intervalsPerDay;
-      newEndDate = addInterval(dragStartRef.current, workedIntervals, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS);      
-    }
-   
     if (isResizingRight) {
-      onResize && onResize(appointment.id, dragStartRef.current, newEndDate, 'right');
+      onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right');
     }
     if (isResizingLeft) {
-      onResize && onResize(appointment.id, dragStartRef.current, newEndDate, 'left');
+      onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'left');
     }
     
     setIsResizingLeft(false);
@@ -368,7 +369,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         
         // Calculer l'intervalle sous la souris
         const intervalIndex = Math.floor(mouseX / INTERVAL_WIDTH);
-        const totalIntervals = getIntervalCount(appointment.startDate, appointment.endDate);
+        const totalIntervals =getIntervalCount(appointment.startDate, appointment.endDate);
         const clampedIntervalIndex = Math.max(0, Math.min(intervalIndex, totalIntervals - 1));
         
         // Calculer la date correspondant à cet intervalle
@@ -392,7 +393,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             targetDate.setHours(intervals[0].startHour, 0, 0, 0);
             
             // Vérifier si on doit ignorer les week-ends
-            while (!includeWeekend && isWeekend(targetDate)) {
+            while (!isDisplayWeekend && isWeekend(targetDate)) {
               targetDate = addDays(targetDate, 1);
             }
           } else {

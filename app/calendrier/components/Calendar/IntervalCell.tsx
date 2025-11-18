@@ -54,7 +54,7 @@ interface IntervalCellProps {
   nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
   isNonWorkingDay: boolean; // Indique si la cellule représente un jour non travaillé
   isMobile: boolean; // Indique si l'affichage est en mode mobile
-  includeWeekend?: boolean; // Indique si les week-ends sont visibles.
+  isDisplayWeekend?: boolean; // Indique si les week-ends sont visibles.
   onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -96,7 +96,7 @@ interface DragItem {
  * @param {Date[]} props.nonWorkingDates - Liste des dates non travaillées
  * @param {boolean} props.isNonWorkingDay - Indique si la cellule est un jour non travaillé
  * @param {boolean} props.isMobile - Indique si l'affichage est mobile
- * @param {boolean} props.includeWeekend - Indique si les week-ends sont visibles.
+ * @param {boolean} props.isDisplayWeekend - Indique si les week-ends sont visibles.
  * @param {Function} props.onAppointmentMoved - Callback lors du déplacement d'un rendez-vous
  * @param {Function} props.onCellDoubleClick - Callback lors du double-clic sur la cellule
  * @param {Function} props.onAppointmentDoubleClick - Callback lors du double-clic sur un rendez-vous
@@ -118,7 +118,7 @@ interface DragItem {
  *   isFerie={false}
  *   isFullDay={false}
  *   RowHeight={40}
- *   includeWeekend={false}
+ *   isDisplayWeekend={false}
  *   nonWorkingDates={[]}
  *   isNonWorkingDay={false}
  *   isMobile={false}
@@ -161,7 +161,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   nonWorkingDates,
   isNonWorkingDay,
   isMobile,
-  includeWeekend,
+  isDisplayWeekend,
   onAppointmentMoved,
   onCellDoubleClick,
   onAppointmentDoubleClick,
@@ -310,7 +310,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
               chargeeAffaire={chargeeAffaire || ''}
               appointment={app}
               isFullDay={isFullDay}
-              includeWeekend={includeWeekend}
+              isDisplayWeekend={isDisplayWeekend}
               event={events.find(et => et.id === app.EventId) as Evenement}
               onDoubleClick={() => {
                 onAppointmentDoubleClick(app)

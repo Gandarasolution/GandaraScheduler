@@ -65,7 +65,8 @@ import {
   FilterModal,
   RightClickComponent,
   DraggableSource,
-  ThemeSelector
+  ThemeSelector,
+  UserMenu
 } from '@/app/calendrier/components'
 
 
@@ -2275,11 +2276,7 @@ export default function HomePage({
                     <div
                       className="p-4 transition relative"
                     >
-                      <img
-                        src={user.image}
-                        alt="Avatar"
-                        className="h-10 w-10 rounded-full object-cover"
-                      />
+                      <UserMenu user={user} />
                     </div>
                   </div>
                 </div>
@@ -2431,7 +2428,7 @@ export default function HomePage({
                         events={events.current}
                         //selectedCalendarId={selectedCalendarId}
                         isMobile={isMobile}
-                        includeWeekend={isDisplayWeekend}
+                        isDisplayWeekend={isDisplayWeekend}
                         nonWorkingDates={nonWorkingDates}
                         mainScrollRef={mainScrollRef}
                         handleScroll={handleScroll}
@@ -2520,7 +2517,7 @@ export default function HomePage({
               </SelectedAppointmentContext.Provider>
             </div>
           </div>
-        </div>
+        </div> 
         <ThemeSelector
           position='bottom-right'
           onThemeChange={onThemeChange}
