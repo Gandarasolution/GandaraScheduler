@@ -72,7 +72,7 @@ import {
 
 import {
   initialTeams,
-  initialEmployees,
+  getEmployees,
   initialAppointments,
   getEvenements,
 } from "../../datasource";
@@ -181,10 +181,10 @@ export default function HomePage({
     }
     return false; // Valeur par défaut
   });
-  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table'>(() => {
+  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table'>(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
       const savedView = window.localStorage.getItem('viewType');
-      if (savedView === 'calendar' || savedView === 'chantier-table' || savedView === 'paie-table') {
+      if (savedView === 'calendar' || savedView === 'chantier-table' || savedView === 'paie-table' || savedView === 'employee-table') {
         return savedView;
       }
     }
@@ -205,7 +205,7 @@ export default function HomePage({
   const [filteredEvent, setFilteredEvent] = useState<Evenement[]>(events.current);  
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
-  const employees = useRef<Employee[]>(initialEmployees);
+  const employees = useRef<Employee[]>(getEmployees());
   const [isLoading, setIsLoading] = useState(false);
   const isAutoScrolling = useRef(false);
   const isAddingLeft = useRef(false);
@@ -331,7 +331,7 @@ export default function HomePage({
       }
     }, 0);
   }, []);
-  const toggleSetViewType = useCallback((value: 'calendar' | 'chantier-table' | 'paie-table') => {
+  const toggleSetViewType = useCallback((value: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table') => {
     setViewType(value);
     // Sauvegarder dans localStorage de façon asynchrone après le rendu
     setTimeout(() => {
@@ -1849,6 +1849,7 @@ export default function HomePage({
             </div>
           );
         },
+        
         AP: (value: any, item: any) => importantRenderer(value, item, 'AP'),
         SP: (value: any, item: any) => importantRenderer(value, item, 'SP'),
       },
@@ -1871,6 +1872,23 @@ export default function HomePage({
           <div className="flex items-center justify-center">
             <span className={`w-3 h-3 rounded-full ${value ? 'bg-green-500' : 'bg-red-500'}`}></span>
           </div>
+        )
+      },
+      employeeTable: {
+        image : (value: any, item: any) => (
+          console.log(item),
+          
+          <>
+            <img
+              src={item.image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.nom.charAt(0)}`}
+              alt={item.nom + ' ' + item.prenom}
+              className={`w-8 h-8 rounded-full border-1 shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'}`}
+              onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.name.charAt(0)}`; }}
+            />
+            {item.type === 'interim' && (
+              <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-interim border-2 border-white"></span>
+            )}
+          </>
         )
       }
     };
@@ -1969,7 +1987,7 @@ export default function HomePage({
         },
         SP: (item: any) => {
           return calculateSP(item);
-        }
+        },
       },
       paieTable: {}
     }
@@ -2232,6 +2250,46 @@ export default function HomePage({
                                 </div>
                               )}
                             </button>
+
+                            <button
+                              className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${
+                                viewType === 'employee-table' 
+                                  ? 'bg-primary-lighter text-primary shadow-sm' 
+                                  : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'
+                              }`}
+                              onClick={() => {
+                                toggleSetViewType('employee-table');
+                                setIsViewDropdownOpen(false);
+                              }}
+                            >
+                              <div className={`p-2 rounded-xl transition-all duration-200 ${
+                                viewType === 'employee-table' 
+                                  ? 'bg-primary text-white' 
+                                  : 'group-hover:bg-primary group-hover:text-white'
+                              }`}>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="18"
+                                  height="18"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  {/* Groupe de 3 personnes */}
+                                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium">Liste des employées</div>
+                                <div className="text-xs text-primary mt-0.5">Gestion des employée</div>
+                              </div>
+                              {viewType === 'employee-table' && (
+                                <div className="p-1 rounded-full bg-primary">
+                                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                  </svg>
+                                </div>
+                              )}
+                            </button>
                           </div>
                           
                           {/* Pied du menu */}
@@ -2448,9 +2506,19 @@ export default function HomePage({
                     )
                   ) :  (
                     <DataTableFrame 
-                      items={viewType === 'chantier-table' 
-                        ? filteredEvent.filter(event => event.type === 'chantier') 
-                        : filteredEvent.filter(event => event.type !== 'chantier')
+                      items={
+                        viewType === 'chantier-table' ? filteredEvent.filter(event => event.type === 'chantier') 
+                        : viewType === 'paie-table' ? filteredEvent.filter(event => event.type !== 'chantier') 
+                        : employees.current.map(emp => ({
+                            id: emp.id,
+                            image: emp.image,
+                            code: emp.code,
+                            nom: emp.name,
+                            prenom: emp.firstName,
+                            type: emp.type,
+                            equipe: emp.group?.name || ''
+                        }))
+                        
                       } 
                       categoriesStructure={
                         viewType === 'chantier-table' ?
@@ -2484,7 +2552,7 @@ export default function HomePage({
                               { key: 'SP',  label: 'Solde P.', type:'string' }        // Solde Prév.
                             ]
                           }
-                        ] :
+                        ] : viewType === 'paie-table' ?
                         [
                           {
                             key: 'all',
@@ -2498,17 +2566,33 @@ export default function HomePage({
                               { key: 'category', label: 'Catégorie' }
                             ]
                           }
+                        ] : 
+                        [
+                          {
+                            key: 'all',
+                            label: '',
+                            attributes: [
+                              { key: 'image', label: 'Image', isFixed: true },
+                              { key: 'code', label: 'Code' },
+                              { key: 'nom', label: 'Nom' },
+                              { key: 'prenom', label: 'Prénom'}, 
+                              { key: 'equipe', label: 'Équipe' },
+                              { key: 'type', label: 'Type'}
+                            ]
+                          }
                         ]
                       }
                       computedFields={
                         viewType === 'chantier-table' 
                         ? customComputedFieldsFactory.chantierTable
-                        : customComputedFieldsFactory.paieTable
+                        : viewType === 'paie-table' ? customComputedFieldsFactory.paieTable
+                        : []
                       }
                       customRenderers={
                         viewType === 'chantier-table' 
                           ? customRenderersFactory.chantierTable
-                          : customRenderersFactory.paieTable 
+                          : viewType === 'paie-table' ? customRenderersFactory.paieTable
+                          : customRenderersFactory.employeeTable
                       }
                       showGroupHeaders={viewType === 'chantier-table'}
                     />

@@ -90,8 +90,8 @@ export function getDimensionItems(
       return employees.map(emp => ({
         id: emp.id,
         name: emp.name,
-        avatar: emp.avatar,
-        groupId: emp.groupId,
+        image: emp.image,
+        group: emp.group,
         data: emp
       }));
     
@@ -150,7 +150,7 @@ export function groupEmployeesByDimension(
     
     case 'group':
       employees.forEach(emp => {
-        const groupKey = emp.groupId ? emp.groupId.toString() : 'no-group';
+        const groupKey = emp.group ? emp.group.id.toString() : 'no-group';
         if (!result[groupKey]) result[groupKey] = [];
         result[groupKey].push(emp);
       });

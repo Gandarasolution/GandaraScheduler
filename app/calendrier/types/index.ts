@@ -32,10 +32,14 @@ export interface Employee {
   id: number;
   /** Nom complet de l'employé */
   name: string;
+  /** Prénom de l'employé */
+  firstName: string;
+  /** Code unique de l'employé */
+  code: string;
   /** URL de l'avatar de l'employé (optionnel) */
-  avatar?: string;
+  image?: string;
   /** ID de l'équipe à laquelle appartient l'employé (optionnel) */
-  groupId?: number;
+  group?: Groupe;
   /** Type de contrat de l'employé */
   type: 'employee' | 'interim' | 'chargeAffaire' | 'chefChantier';
   /** Pôle auquel appartient l'employé (Technique, Commercial, etc.) */

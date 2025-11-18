@@ -66,6 +66,7 @@ import iconesPrime from './calendrier/image/Icones/Paie/Prime.svg';
 import iconesHeurSup from './calendrier/image/Icones/Paie/HeuresSupplementaires.svg';
 import iconesCongesPayes from './calendrier/image/Icones/Paie/CongesPayes.svg';
 import iconesSalaire from './calendrier/image/Icones/Paie/Salaire.svg';
+import { get } from 'http';
 
 // ===== PALETTE DE COULEURS =====
 
@@ -122,63 +123,63 @@ const PA: poleActivite[] = [
  * - RH : 5 employés (recrutement, formation, gestion sociale)
  * - Statuts : CDI et Intérim pour flexibilité
  */
-export const initialEmployees: Employee[] = [
+const initialEmployees = [
     // ===== ÉQUIPE TECHNIQUE (15 employés) =====
     // Spécialisés dans les travaux de construction, rénovation et maintenance
-    { name: 'Grégory ANDRE', id: 1, groupId: 1, type: 'employee', avatar: 'https://i.pravatar.cc/40?img=1', pole: 'Technique'},
-    { name: 'Alexandre BARRET', id: 2, groupId: 1, type: 'employee', avatar: 'https://i.pravatar.cc/40?img=2', pole: 'Technique'},
-    { name: 'Eric MALIVERNAY', id: 7, groupId: 1, type: 'interim', pole: 'Technique'},
-    { name: 'Sophie MARTIN', id: 11, groupId: 1, type: 'employee', pole: 'Technique'},
-    { name: 'Antoine DUBOIS', id: 13, groupId: 1, type: 'interim', pole: 'Technique'},
-    { name: 'Marie LEROY', id: 14, groupId: 1, type: 'employee', pole: 'Technique'},
-    { name: 'Vincent MOREAU', id: 15, groupId: 1, type: 'employee', pole: 'Technique'},
-    { name: 'Céline GARCIA', id: 16, groupId: 1, type: 'interim', pole: 'Technique'},
+    { name: 'ANDRE', firstName: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 'https://i.pravatar.cc/40?img=1', pole: 'Technique', code: 'EMP-001'},
+    { name: 'BARRET', firstName: 'Alexandre', id: 2, groupId: 1, type: 'employee', image: 'https://i.pravatar.cc/40?img=2', pole: 'Technique', code: 'EMP-002'},
+    { name: 'MALIVERNAY', firstName: 'Eric', id: 7, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-007'},
+    { name: 'MARTIN', firstName: 'Sophie', id: 11, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-011'},
+    { name: 'DUBOIS', firstName: 'Antoine', id: 13, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-013'},
+    { name: 'LEROY', firstName: 'Marie', id: 14, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-014'},
+    { name: 'MOREAU', firstName: 'Vincent', id: 15, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-015'},
+    { name: 'GARCIA', firstName: 'Céline', id: 16, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-016'},
     
     // Équipe Commercial
-    { name: 'Lucas BOURKIN', id: 3, groupId: 2, type: 'interim', avatar: 'https://i.pravatar.cc/40?img=3', pole: 'Commercial'},
-    { name: 'Romain ZERR', id: 4, groupId: 2,  type: 'employee', pole: 'Commercial'},
-    { name: 'Lucas BERNARD', id: 8, groupId: 2,  type: 'employee', pole: 'Commercial'},
-    { name: 'Julien PETIT', id: 12, groupId: 2, type: 'interim', pole: 'Commercial'},
-    { name: 'Nathalie ROBERT', id: 17, groupId: 2, type: 'employee', pole: 'Commercial'},
-    { name: 'David RICHARD', id: 18, groupId: 2, type: 'employee', pole: 'Commercial'},
-    { name: 'Isabelle DURAND', id: 19, groupId: 2, type: 'interim', pole: 'Commercial'},
-    { name: 'Stéphane LEFEBVRE', id: 20, groupId: 2, type: 'employee', pole: 'Commercial'},
+    { name: 'BOURDIN', firstName: 'Lucas', id: 3, groupId: 2, type: 'interim', image: 'https://i.pravatar.cc/40?img=3', pole: 'Commercial', code: 'EMP-003'},
+    { name: 'ZERR', firstName: 'Romain', id: 4, groupId: 2,  type: 'employee', pole: 'Commercial' , code: 'EMP-004'},
+    { name: 'BERNARD', firstName: 'Lucas', id: 8, groupId: 2,  type: 'employee', pole: 'Commercial' , code: 'EMP-008'},
+    { name: 'PETIT', firstName: 'Julien', id: 12, groupId: 2, type: 'interim', pole: 'Commercial' , code: 'EMP-012'},
+    { name: 'ROBERT', firstName: 'Nathalie', id: 17, groupId: 2, type: 'employee', pole: 'Commercial' , code: 'EMP-017'},
+    { name: 'RICHARD', firstName: 'David', id: 18, groupId: 2, type: 'employee', pole: 'Commercial' , code: 'EMP-018'},
+    { name: 'DURAND', firstName: 'Isabelle', id: 19, groupId: 2, type: 'interim', pole: 'Commercial' , code: 'EMP-019'},
+    { name: 'LEFEBVRE', firstName: 'Stéphane', id: 20, groupId: 2, type: 'employee', pole: 'Commercial' , code: 'EMP-020'},
     
     // Équipe Administrative
-    { name: 'Fabrice DACHAUD', id: 5, groupId: 3, type: 'employee', pole: 'Administrative'},
-    { name: 'Sébastien GERMAIN', id: 6, groupId: 3, type: 'employee', pole: 'Administrative'},
-    { name: 'Caroline SIMON', id: 21, groupId: 3, type: 'employee', pole: 'Administrative'},
-    { name: 'Philippe MICHEL', id: 22, groupId: 3, type: 'interim', pole: 'Administrative'},
-    { name: 'Valérie LAURENT', id: 23, groupId: 3, type: 'employee', pole: 'Administrative'},
-    { name: 'Patrick LEFRANC', id: 24, groupId: 3, type: 'employee', pole: 'Administrative'},
+    { name: 'DACHAUD', firstName: 'Fabrice', id: 5, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-005' },
+    { name: 'GERMAIN', firstName: 'Sébastien', id: 6, groupId: 3, type: 'employee', pole: 'Administrative' , code: 'EMP-006'},
+    { name: 'SIMON', firstName: 'Caroline', id: 21, groupId: 3, type: 'employee', pole: 'Administrative' , code: 'EMP-021'},
+    { name: 'MICHEL', firstName: 'Philippe', id: 22, groupId: 3, type: 'interim', pole: 'Administrative' , code: 'EMP-022'},
+    { name: 'LAURENT', firstName: 'Valérie', id: 23, groupId: 3, type: 'employee', pole: 'Administrative' , code: 'EMP-023'},
+    { name: 'LEFRANC', firstName: 'Patrick', id: 24, groupId: 3, type: 'employee', pole: 'Administrative'   , code: 'EMP-024'},
     
     // Équipe RH
-    { name: 'Emma ROUSSEAU', id: 9, groupId: 4,  type: 'employee', pole: 'RH'},
-    { name: 'Paul VINCENT', id: 10, groupId: 4, type: 'interim', pole: 'RH'},
-    { name: 'Sandrine THOMAS', id: 25, groupId: 4, type: 'employee', pole: 'RH'},
-    { name: 'Christophe BONNET', id: 26, groupId: 4, type: 'employee', pole: 'RH'},
-    { name: 'Sylvie FRANCOIS', id: 27, groupId: 4, type: 'interim', pole: 'RH'},
+    { name: 'ROUSSEAU', firstName: 'Emma', id: 9, groupId: 4,  type: 'employee', pole: 'RH', code: 'EMP-009'},
+    { name: 'VINCENT', firstName: 'Paul', id: 10, groupId: 4, type: 'interim', pole: 'RH' , code: 'EMP-010'},
+    { name: 'THOMAS', firstName: 'Sandrine', id: 25, groupId: 4, type: 'employee', pole: 'RH' , code: 'EMP-025'},
+    { name: 'BONNET', firstName: 'Christophe', id: 26, groupId: 4, type: 'employee', pole: 'RH' , code: 'EMP-026'},
+    { name: 'FRANCOIS', firstName: 'Sylvie', id: 27, groupId: 4, type: 'interim', pole: 'RH' , code: 'EMP-027'},
     
     // Nouvelles équipes
-    { name: 'Marine GIRARD', id: 28, groupId: 5, type: 'employee', pole: 'Technique'},
-    { name: 'Pierre ANDRE', id: 29, groupId: 6, type: 'employee', pole: 'Commercial'},
-    { name: 'Sylvie NICOLAS', id: 30, groupId: 7, type: 'employee', pole: 'Administrative'},
-    { name: 'Thomas MOREL', id: 31, groupId: 8, type: 'employee', pole: 'Technique'},
-    { name: 'Julie FOURNIER', id: 32, groupId: 5, type: 'interim', pole: 'Technique'},
-    { name: 'Olivier MORETTI', id: 33, groupId: 6, type: 'employee', pole: 'Commercial'},
-    { name: 'Patricia ROUSSEL', id: 34, groupId: 7, type: 'employee', pole: 'Administrative'},
-    { name: 'Frédéric GERARD', id: 35, groupId: 8, type: 'interim', pole: 'Technique'},
+    { name: 'GIRARD', firstName: 'Marine', id: 28, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-028'},
+    { name: 'ANDRE', firstName: 'Pierre', id: 29, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-029'},
+    { name: 'NICOLAS', firstName: 'Sylvie', id: 30, groupId: 7, type: 'employee', pole: 'Administrative' , code: 'EMP-030'},
+    { name: 'MOREL', firstName: 'Thomas', id: 31, groupId: 8, type: 'employee', pole: 'Technique' , code: 'EMP-031'},
+    { name: 'FOURNIER', firstName: 'Julie', id: 32, groupId: 5, type: 'interim', pole: 'Technique' , code: 'EMP-032'},
+    { name: 'MORETTI', firstName: 'Olivier', id: 33, groupId: 6, type: 'employee', pole: 'Commercial' , code: 'EMP-033'},
+    { name: 'ROUSSEL', firstName: 'Patricia', id: 34, groupId: 7, type: 'employee', pole: 'Administrative' , code: 'EMP-034'},
+    { name: 'GERARD', firstName: 'Frédéric', id: 35, groupId: 8, type: 'interim', pole: 'Technique' , code: 'EMP-035'},
 
 
-    { name: 'Frédéric GERARD', id: 44, type: 'chargeAffaire'},
-    { name: 'Jean Dupont', id: 36, type: 'chefChantier'},
-    { name: 'Marie Dubois', id: 37, type: 'chargeAffaire'},
-    { name: 'Luc Moreau', id: 38, type: 'chefChantier'},
-    { name: 'Sophie Leroy', id: 39, type: 'chargeAffaire'},
-    { name: 'Marc Rousseau', id: 40, type: 'chefChantier'},
-    { name: 'Céline Garcia', id: 41, type: 'chargeAffaire'},
-    { name: 'Eric Malivernay', id: 42, type: 'chefChantier'},
-    { name: 'Sophie Martin', id: 43, type: 'chargeAffaire'},
+    { name: 'GERARD', firstName: 'Frédéric', id: 44, type: 'chargeAffaire', pole: 'Commercial', code: 'EMP-044'},
+    { name: 'DUPONT', firstName: 'Jean', id: 36, type: 'chefChantier', pole: 'Commercial' , code: 'EMP-036'},
+    { name: 'DUBOIS', firstName: 'Marie', id: 37, type: 'chargeAffaire', pole: 'Commercial', code: 'EMP-037' },
+    { name: 'MOREAU', firstName: 'Luc', id: 38, type: 'chefChantier', pole: 'Commercial' , code: 'EMP-038'},
+    { name: 'LEROY', firstName: 'Sophie', id: 39, type: 'chargeAffaire', pole: 'Commercial' , code: 'EMP-039'},
+    { name: 'ROUSSEAU', firstName: 'Marc', id: 40, type: 'chefChantier', pole: 'Commercial' , code: 'EMP-040'},
+    { name: 'GARCIA', firstName: 'Céline', id: 41, type: 'chargeAffaire', pole: 'Commercial' , code: 'EMP-041'},
+    { name: 'MALIVERNAY', firstName: 'Eric', id: 42, type: 'chefChantier', pole: 'Commercial' , code: 'EMP-042'},
+    { name: 'MARTIN', firstName: 'Sophie', id: 43, type: 'chargeAffaire', pole: 'Commercial' , code: 'EMP-043'},
 ];
 
 
@@ -2169,7 +2170,6 @@ function generateAppointments(employees: Employee[]): Appointment[] {
 }
 
 
-export const initialAppointments: Appointment[] = generateAppointments(initialEmployees);
 
 
 
@@ -2228,8 +2228,8 @@ export const getEvenements = (): Evenement[] => {
         ...event,
         ...attributs,
         image,
-        chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.name || '',
-        chefChantier : initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.name || '',
+        chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.firstName || '',
+        chefChantier : initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.firstName || '',
         poleActivite : PA.find(pa => pa.id === (event as any).attributs.poleActivite)?.name || ''
       } as Evenement;
     } else {
@@ -2242,6 +2242,24 @@ export const getEvenements = (): Evenement[] => {
 };
 
 
+export const getEmployees = (): Employee[] => {
+
+  return initialEmployees.map(emp => {
+    return { 
+      id: emp.id,
+      name: emp.name,
+      firstName: emp.firstName,
+      type: emp.type as "employee" | "interim" | "chargeAffaire" | "chefChantier",
+      pole: emp.pole,
+      image: emp.image,
+      code: emp.code,
+      group: initialTeams.find(group => group.id === emp.groupId) || undefined
+    }
+  });
+
+}
 
 
 
+
+export const initialAppointments: Appointment[] = generateAppointments(getEmployees());

@@ -587,9 +587,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       <div className="relative h-full w-full poppins"> {/* Enable vertical scrolling */}
         {/* Employee Header (fixed at top) */}
         <div className="mobile-employee-header sticky top-0 z-30 flex items-center justify-center">
-          {displayEmployee.avatar && (
+          {displayEmployee.image && (
             <img
-              src={displayEmployee.avatar}
+              src={displayEmployee.image}
               alt={displayEmployee.name}
               className="employee-avatar w-14 h-14 rounded-full mr-4"
               onError={(e) => { e.currentTarget.src = `https://placehold.co/56x56/cccccc/333333?text=${displayEmployee.name.charAt(0)}`; }}
@@ -760,7 +760,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       >
                         <div className="relative">
                           <img
-                            src={employee.avatar ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
+                            src={employee.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
                             alt={employee.name}
                             className={`w-8 h-8 rounded-full border-1 shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'}`}
                             onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`; }}
@@ -770,7 +770,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                           )}
                         </div>
                         <div className="flex flex-col">
-                          <span className="poppins text-[16px] font-inherit group-hover:font-semibold">{employee.name}</span>
+                          <span className="poppins text-[16px] font-inherit group-hover:font-semibold">{employee.name + ' ' + employee.firstName}</span>
                         </div>
                       </div>
                     );
