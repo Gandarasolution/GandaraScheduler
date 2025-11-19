@@ -50,6 +50,8 @@ export interface RepeatAppointmentParams {
   numberCount?: number;
   isFullDay: boolean;
   nonWorkingDates: Date[];
+  includeWeekend: boolean;
+  includeNonWorkingDays: boolean;
 }
 
 export interface MoveAppointmentParams {
@@ -84,6 +86,8 @@ export interface PasteAppointmentParams {
   targetCell: { employeeId: number; date: Date };
   isFullDay: boolean;
   nonWorkingDates: Date[];
+  includeWeekend: boolean;
+  includeNonWorkingDays: boolean;
 }
 
 export interface DragCreateParams {
@@ -98,9 +102,10 @@ export interface DragCreateParams {
 export interface SaveAppointmentParams {
   appointment: Appointment;
   eventUpdate: Evenement;
-  includeAllNonWorkingDays: boolean;
   isFullDay: boolean;
   nonWorkingDates: Date[];
+  includeNonWorkingDays: boolean;
+  includeWeekend: boolean;
 }
 
 /**
@@ -129,7 +134,7 @@ export const createAppointmentUtils = (): AppointmentUtils => {
   };
 
   const createRepeatedAppointments = (params: RepeatAppointmentParams): Appointment[] => {
-    const { appointment, repeatInterval, repeatCount, endDate, numberCount, isFullDay, nonWorkingDates } = params;
+    const { appointment, repeatInterval, repeatCount, endDate, numberCount, isFullDay, nonWorkingDates, includeWeekend, includeNonWorkingDays } = params;
     
     const startDateOriginal = appointment.startDate;
     const endDateOriginal = appointment.endDate;
@@ -159,8 +164,9 @@ export const createAppointmentUtils = (): AppointmentUtils => {
           newStartDate,
           newEndDate,
           isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-          false,
-          nonWorkingDates
+          includeNonWorkingDays,
+          includeWeekend,
+          nonWorkingDates,
         );
 
         days.forEach(day => {
@@ -192,7 +198,8 @@ export const createAppointmentUtils = (): AppointmentUtils => {
           newStartDate, 
           newEndDate,
           isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-          false,
+          includeNonWorkingDays,
+          includeWeekend,
           nonWorkingDates
         );
 
@@ -286,7 +293,7 @@ export const createAppointmentUtils = (): AppointmentUtils => {
   };
 
   const pasteAppointment = (params: PasteAppointmentParams): Appointment[] => {
-    const { clipboardAppointment, targetCell, isFullDay, nonWorkingDates } = params;
+    const { clipboardAppointment, targetCell, isFullDay, nonWorkingDates, includeWeekend, includeNonWorkingDays } = params;
     
     const startDate = clipboardAppointment.startDate;
     const endDate = clipboardAppointment.endDate;
@@ -303,7 +310,8 @@ export const createAppointmentUtils = (): AppointmentUtils => {
       newStartDate, 
       newEndDate,
       isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-      false,
+      includeNonWorkingDays,
+      includeWeekend,
       nonWorkingDates
     );
     
@@ -352,13 +360,14 @@ export const createAppointmentUtils = (): AppointmentUtils => {
   };
 
   const saveAppointment = (params: SaveAppointmentParams): Appointment[] => {
-    const { appointment, eventUpdate, includeAllNonWorkingDays, isFullDay, nonWorkingDates } = params;
+    const { appointment, eventUpdate, isFullDay, nonWorkingDates, includeWeekend, includeNonWorkingDays } = params;
     
     const days = getWorkedDayIntervals(
       appointment.startDate, 
       appointment.endDate,
       isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-      includeAllNonWorkingDays,
+      includeNonWorkingDays,
+      includeWeekend,
       nonWorkingDates
     );
     

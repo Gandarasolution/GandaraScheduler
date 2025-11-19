@@ -580,7 +580,9 @@ export default function HomePage({
       endDate,
       numberCount,
       isFullDay,
-      nonWorkingDates
+      nonWorkingDates,
+      includeWeekend,
+      includeNonWorkingDays: respectNonWorkingDays,
     });
 
     // Ajouter les nouveaux rendez-vous à la liste
@@ -588,7 +590,7 @@ export default function HomePage({
     handleResearch();
     notificationService.appointmentRepeated(newAppointments.length);
     setRepeatAppointmentData(null);
-  }, [handleResearch, selectedAppointment, isFullDay, nonWorkingDates, appointmentUtils]);
+  }, [handleResearch, selectedAppointment, isFullDay, nonWorkingDates, appointmentUtils, includeWeekend, respectNonWorkingDays]);
 
   // --- FONCTIONS D'HISTORIQUE POUR CTRL+Z ---
   const addToHistory = useCallback((action: HistoryAction) => {
@@ -753,7 +755,9 @@ export default function HomePage({
         clipboardAppointment: clipboardAppointment.current,
         targetCell: cell,
         isFullDay,
-        nonWorkingDates
+        nonWorkingDates,
+        includeWeekend,
+        includeNonWorkingDays: respectNonWorkingDays,
       });
 
       appointments.current = [...appointments.current, ...newAppointments];
@@ -762,7 +766,7 @@ export default function HomePage({
     } catch (error) {
       notificationService.error('Erreur', (error as Error).message);
     }
-  }, [appointmentUtils, isFullDay, nonWorkingDates, handleResearch]);
+  }, [appointmentUtils, isFullDay, nonWorkingDates, includeWeekend, respectNonWorkingDays, handleResearch]);
 
   // Fonctions ultra-optimisées pour ajouter des jours
   const addDaysToRight = useCallback(() => {

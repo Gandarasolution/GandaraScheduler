@@ -9,10 +9,11 @@
     "build:prod": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint",
-    "clean": "rimraf .next out"  
+    "clean": "rimraf .next out"
   },
   "dependencies": {
     "bootstrap": "^5.3.7",
+    "critters": "^0.0.23",
     "date-fns": "^4.1.0",
     "date-holidays": "^3.24.3",
     "next": "15.3.3",
@@ -23,11 +24,11 @@
     "sass": "^1.89.2"
   },
   "devDependencies": {
-    "@types/react-window": "^1.8.8",
     "@tailwindcss/postcss": "^4.1.16",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-window": "^1.8.8",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.16",
