@@ -2,9 +2,13 @@
 import React, { useState, memo, useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import { format, addDays, addHours } from 'date-fns';
-import AppointmentItem from './AppointmentItem';
-import InfoBubble from '../ui/InfoBubble';
-import { Appointment, Evenement } from '../../types';
+
+import { InfoBubble, AppointmentItem } from '@/app/calendrier/components/index';
+
+
+
+
+import { Appointment, Item } from '../../types';
 import {
   CELL_WIDTH, 
   CELL_HEIGHT, 
@@ -45,7 +49,7 @@ interface IntervalCellProps {
   intervalStart: Date;
   intervalEnd: Date;
   appointments: (Appointment & { top: number })[];
-  events: Evenement[];
+  events: Item[];
   isCellActive?: boolean;
   isWeekend: boolean;
   isFerie: boolean;
@@ -311,7 +315,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
               appointment={app}
               isFullDay={isFullDay}
               isDisplayWeekend={isDisplayWeekend}
-              event={events.find(et => et.id === app.EventId) as Evenement}
+              event={events.find(et => et.id === app.EventId) as Item}
               onDoubleClick={() => {
                 onAppointmentDoubleClick(app)
               }}

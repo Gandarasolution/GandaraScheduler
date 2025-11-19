@@ -74,11 +74,7 @@ export interface Calendar {
 }
 
 
-/**
- * Interface représentant un projet de chantier
- * @interface Chantier
- */
-interface BaseEvent {
+interface BaseItem {
   id: number;
   label: string;
   color: string;
@@ -90,7 +86,7 @@ interface BaseEvent {
   category?: string;
 }
 
-export interface ChantierEvent extends BaseEvent {
+export interface ChantierItem extends BaseItem {
   type: "chantier";
   identifiant: string;
   poleActivite: string;
@@ -110,21 +106,21 @@ export interface ChantierEvent extends BaseEvent {
 }
 
 // Interface commune pour les attributs partagés entre Absence et Autre
-interface CommonPaieAttributs extends BaseEvent {
+interface CommonPaieAttributs extends BaseItem {
   verrou: boolean;
   actif: boolean;
 }
 
-export interface AbsenceEvent extends CommonPaieAttributs {
+export interface AbsenceItem extends CommonPaieAttributs {
   type: "absence";
 }
 
-export interface AutreEvent extends CommonPaieAttributs {
+export interface AutreItem extends CommonPaieAttributs {
   type: "autre";
 }
 
-export type SocialEvent = AbsenceEvent | AutreEvent;
-export type Evenement = ChantierEvent | SocialEvent;
+export type SocialItem = AbsenceItem | AutreItem;
+export type Item = ChantierItem | SocialItem;
 
 export type Image = {
   id: number;

@@ -21,8 +21,8 @@
 "use client";
 import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
-import {Appointment, HalfDayInterval, Evenement } from '../../types';
-import { addDays, eachDayOfInterval, isWeekend } from 'date-fns';
+import {Appointment, HalfDayInterval, Item } from '../../types';
+import { addDays, isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../../utils/constants';
 import { log } from 'console';
 
@@ -40,7 +40,7 @@ interface AppointmentItemProps {
   /** Inclure les week-ends dans le calcul de durée (optionnel) */
   isDisplayWeekend?: boolean;
   /** Type d'événement associé au rendez-vous */
-  event: Evenement;
+  event: Item;
   /** Informations de l'employé assigné */
   chargeeAffaire: string ;
   /** Source d'appel du composant */

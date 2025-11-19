@@ -1,8 +1,8 @@
 "use client";
 import React, {memo, useMemo, useState}from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
-import IntervalCell from './IntervalCell';
-import { Appointment, HalfDayInterval, Evenement} from '../../types';
+import {IntervalCell} from '../index';
+import { Appointment, HalfDayInterval, Item} from '../../types';
 import { isHoliday } from '../../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
 import { CELL_HEIGHT, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { fr } from 'date-fns/locale';
@@ -16,7 +16,7 @@ interface DayCellProps {
   employee: { id: number; name: string };
   appointments: (Appointment & { top: number })[];
   intervals: HalfDayInterval[];
-  events: Evenement[];
+  events: Item[];
   isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
   isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
   isFullDay?: boolean; // Indique si la cellule représente une journée complète
@@ -116,7 +116,7 @@ const DayCell: React.FC<DayCellProps> = ({
     const hiddenCount = appointments.length - maxVisible;
     const isToday = isSameDay(day, new Date());
     // État local pour afficher la bulle d'info
-    const [tooltip, setTooltip] = useState<{anchor: HTMLElement | null, app: Appointment | null, et: Evenement | null} | null>(null);
+    const [tooltip, setTooltip] = useState<{anchor: HTMLElement | null, app: Appointment | null, et: Item | null} | null>(null);
     
     return (
       <div

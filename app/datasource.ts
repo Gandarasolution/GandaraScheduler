@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Employee, Groupe, Evenement, Image, poleActivite} from './calendrier/types/index';
+import { Appointment, Employee, Groupe, Item, Image, poleActivite, AbsenceItem} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -66,7 +66,6 @@ import iconesPrime from './calendrier/image/Icones/Paie/Prime.svg';
 import iconesHeurSup from './calendrier/image/Icones/Paie/HeuresSupplementaires.svg';
 import iconesCongesPayes from './calendrier/image/Icones/Paie/CongesPayes.svg';
 import iconesSalaire from './calendrier/image/Icones/Paie/Salaire.svg';
-import { get } from 'http';
 
 // ===== PALETTE DE COULEURS =====
 
@@ -126,8 +125,8 @@ const PA: poleActivite[] = [
 const initialEmployees = [
     // ===== ÉQUIPE TECHNIQUE (15 employés) =====
     // Spécialisés dans les travaux de construction, rénovation et maintenance
-    { name: 'ANDRE', firstName: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 'https://i.pravatar.cc/40?img=1', pole: 'Technique', code: 'EMP-001'},
-    { name: 'BARRET', firstName: 'Alexandre', id: 2, groupId: 1, type: 'employee', image: 'https://i.pravatar.cc/40?img=2', pole: 'Technique', code: 'EMP-002'},
+    { name: 'ANDRE', firstName: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 35, pole: 'Technique', code: 'EMP-001'},
+    { name: 'BARRET', firstName: 'Alexandre', id: 2, groupId: 1, type: 'employee', image: 36, pole: 'Technique', code: 'EMP-002'},
     { name: 'MALIVERNAY', firstName: 'Eric', id: 7, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-007'},
     { name: 'MARTIN', firstName: 'Sophie', id: 11, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-011'},
     { name: 'DUBOIS', firstName: 'Antoine', id: 13, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-013'},
@@ -136,7 +135,7 @@ const initialEmployees = [
     { name: 'GARCIA', firstName: 'Céline', id: 16, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-016'},
     
     // Équipe Commercial
-    { name: 'BOURDIN', firstName: 'Lucas', id: 3, groupId: 2, type: 'interim', image: 'https://i.pravatar.cc/40?img=3', pole: 'Commercial', code: 'EMP-003'},
+    { name: 'BOURDIN', firstName: 'Lucas', id: 3, groupId: 2, type: 'interim', image: 37, pole: 'Commercial', code: 'EMP-003'},
     { name: 'ZERR', firstName: 'Romain', id: 4, groupId: 2,  type: 'employee', pole: 'Commercial' , code: 'EMP-004'},
     { name: 'BERNARD', firstName: 'Lucas', id: 8, groupId: 2,  type: 'employee', pole: 'Commercial' , code: 'EMP-008'},
     { name: 'PETIT', firstName: 'Julien', id: 12, groupId: 2, type: 'interim', pole: 'Commercial' , code: 'EMP-012'},
@@ -2207,7 +2206,15 @@ export const Images: Image[] = [
   { id: 31, name: 'Prime', image: iconesPrime.src },
   { id: 32, name: 'Heures sup.', image: iconesHeurSup.src },
   { id: 33, name: 'Congés payés', image: iconesCongesPayes.src },
-  { id: 34, name: 'Salaire', image: iconesSalaire.src }
+  { id: 34, name: 'Salaire', image: iconesSalaire.src },
+  {id: 35, name : 'Andre Grégory', image: 'https://i.pravatar.cc/40?img=1'},
+  {id: 36, name : 'Barret Alexandre', image: 'https://i.pravatar.cc/40?img=2'},
+  {id: 37, name : 'Bourdin Lucas', image: 'https://i.pravatar.cc/40?img=3'},
+  {id: 38, name : 'Dubois Emma', image: 'https://i.pravatar.cc/40?img=4'},
+  {id: 39, name : 'Fournier Chloé', image: 'https://i.pravatar.cc/40?img=5'},
+  {id: 40, name : 'Garcia Louis', image: 'https://i.pravatar.cc/40?img=6'},
+  {id: 41, name : 'Lemoine Manon', image: 'https://i.pravatar.cc/40?img=7'},
+  {id: 42, name : 'Moreau Hugo', image: 'https://i.pravatar.cc/40?img=8'},
 ]
 
 
@@ -2215,7 +2222,7 @@ export const Images: Image[] = [
 
 
 //API
-export const getEvenements = (): Evenement[] => {
+export const getEvenements = (): Item[] => {
   return Evenements.map(event => {
     const image = Images.find(img => img.id === event.image)?.image || null;
     
@@ -2231,12 +2238,12 @@ export const getEvenements = (): Evenement[] => {
         chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.firstName || '',
         chefChantier : initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.firstName || '',
         poleActivite : PA.find(pa => pa.id === (event as any).attributs.poleActivite)?.name || ''
-      } as Evenement;
+      } as Item;
     } else {
       return {
         ...event,
         image
-      } as Evenement;
+      } as Item;
     }
   });
 };
@@ -2251,7 +2258,7 @@ export const getEmployees = (): Employee[] => {
       firstName: emp.firstName,
       type: emp.type as "employee" | "interim" | "chargeAffaire" | "chefChantier",
       pole: emp.pole,
-      image: emp.image,
+      image: Images.find(img => img.id === emp.image)?.image || undefined,
       code: emp.code,
       group: initialTeams.find(group => group.id === emp.groupId) || undefined
     }

@@ -12,7 +12,7 @@
  * @version 1.0.0
  */
 
-import { Appointment, Evenement, ChantierEvent, Employee, SocialEvent } from '../types';
+import { Appointment, Item, ChantierItem, Employee, SocialItem } from '../types';
 
 // Types pour la configuration des filtres
 export type FilterType = 'checkbox' | 'select' | 'radio' | 'search' | 'combobox' | 'badge';
@@ -41,20 +41,20 @@ export interface ActiveFilters {
 
 export interface SearchAndFilterUtils {
   applyFilters: (
-    chantiers: Evenement[],
+    chantiers: Item[],
     searchQuery: string,
     activeFilters: ActiveFilters,
-  ) => Evenement[];
+  ) => Item[];
   
   
   searchAppointments: (
     appointments: Appointment[],
-    events: Evenement[],
+    events: Item[],
     searchQuery: string
   ) => Appointment[];
 
   getFilterOptions: (  
-    events: Evenement[], 
+    events: Item[], 
     viewtype: 'chantier' | null, 
     keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }) => FilterConfig;
 
@@ -68,10 +68,10 @@ export interface SearchAndFilterUtils {
 export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
   
   const applyFilters = (
-    chantiers: Evenement[],
+    chantiers: Item[],
     searchQuery: string,
     activeFilters: ActiveFilters,
-  ): Evenement[] => {
+  ): Item[] => {
 
     let filtered = [...chantiers];
     
@@ -103,7 +103,7 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
 
   const searchAppointments = (
     appointments: Appointment[],
-    events: Evenement[],
+    events: Item[],
     searchQuery: string
   ): Appointment[] => {
     if (!searchQuery) {
@@ -132,13 +132,13 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
   };
 
   const getFilterOptions = (
-    events: Evenement[], 
+    events: Item[], 
     viewtype: 'chantier' | null, 
     keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }
   ): FilterConfig => {
     const eventsToProcess = viewtype === 'chantier'
-      ? events.filter(e => e.type === 'chantier') as ChantierEvent[]
-      : events.filter(e => e.type !== 'chantier') as SocialEvent[];
+      ? events.filter(e => e.type === 'chantier') as ChantierItem[]
+      : events.filter(e => e.type !== 'chantier') as SocialItem[];
     
     // Initialiser la structure avec label, type et options vides
     const result: FilterConfig = Object.entries(keyOfFilter).reduce((acc, [key, config]) => {

@@ -27,9 +27,10 @@ import {
   isWeekend,
   isToday,
 } from 'date-fns';
-import DayCell from './DayCell'; // Cellule individuelle du calendrier
-import TimelineFrame from './TimelineFrame'; // Cadre timeline réutilisable
-import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Evenement } from '../../types';
+import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Item } from '../../types';
+
+import { DayCell, TimelineFrame } from '../index';
+
 import { fr } from 'date-fns/locale';
 import {CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS} from '../../utils/constants'; // Constantes de style
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
@@ -45,7 +46,7 @@ interface CalendarGridProps {
   /** Liste de tous les rendez-vous */
   appointments: Appointment[];
   /** Type d'événement du rendez-vous */
-  events: Evenement[];
+  events: Item[];
   /** Groupes/équipes disponibles */
   initialTeams: Groupe[];
   /** Dates à afficher dans la timeline */

@@ -15,8 +15,8 @@
 
 "use client";
 // components/AppointmentForm.tsx
-import React, { useState, memo, useMemo } from 'react';
-import {Appointment, Employee, HalfDayInterval, Evenement, ChantierEvent } from '../../types';
+import React, { useState, memo, useMemo, useEffect } from 'react';
+import {Appointment, Employee, HalfDayInterval, Item } from '../../types';
 import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
 import { isHoliday, isWeekend } from '../../utils/dates';
 
@@ -32,7 +32,7 @@ interface AppointmentFormProps {
   /** Rendez-vous à éditer (null pour création) */
   appointment: Appointment;
   /** Événement associé au rendez-vous */
-  event: Evenement;
+  event: Item;
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
@@ -48,7 +48,7 @@ interface AppointmentFormProps {
   /** Callback appelé lors de la sauvegarde */
   onSave: (
     appointment: Appointment,
-    eventType: Evenement,
+    eventType: Item,
     includeAllNonWorkingDays: boolean
   ) => void;
   /** Callback appelé lors de la fermeture du formulaire */
@@ -110,10 +110,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(
       { ...appointment, startDate: appointment.startDate, endDate:  addMinutes(appointment.endDate, -1) }
   );
-  const [formDataEventType, setFormDataEventType] = useState<Evenement>(event);
+  const [formDataEventType, setFormDataEventType] = useState<Item>(event);
   const [dateValidationError, setDateValidationError] = useState(false);
  
 
+  useEffect(() => {
+    setFormDataEventType(event);
+  }, [event]);
 
 
   /**

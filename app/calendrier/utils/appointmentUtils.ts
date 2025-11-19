@@ -14,7 +14,7 @@
  */
 
 import { addDays, addWeeks, addMonths } from 'date-fns';
-import { Appointment, Evenement, Employee } from '../types';
+import { Appointment, Item } from '../types';
 import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay } from './dates';
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from './constants';
 
@@ -101,7 +101,7 @@ export interface DragCreateParams {
 
 export interface SaveAppointmentParams {
   appointment: Appointment;
-  eventUpdate: Evenement;
+  eventUpdate: Item;
   isFullDay: boolean;
   nonWorkingDates: Date[];
   includeNonWorkingDays: boolean;

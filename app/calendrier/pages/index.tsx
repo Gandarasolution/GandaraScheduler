@@ -37,7 +37,7 @@
 
 // Imports React, hooks, DnD, date-fns, types, composants, et données
 import '../styles/custom.scss';
-import React, { useState, useCallback, useRef, useEffect, JSX, useMemo, use} from "react";
+import React, { useState, useCallback, useRef, useEffect, JSX, useMemo} from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -51,7 +51,7 @@ import {
   isSameYear,
   addHours,
 } from "date-fns";
-import { Appointment, Employee, HistoryAction, Evenement, ChantierEvent} from "../types";
+import { Appointment, Employee, HistoryAction, Item, ChantierItem} from "../types";
 import type { Image } from "../types";
 import { 
   CalendarGrid, 
@@ -203,11 +203,12 @@ export default function HomePage({
   const [nonWorkingDates, setNonWorkingDates] = useState<Date[]>([]);
   const [dayInTimeline, setDayInTimeline] = useState<Date[]>([]);
   const mainScrollRef = useRef<HTMLDivElement>(null);
-  const events = useRef<Evenement[]>(getEvenements());
-  const [filteredEvent, setFilteredEvent] = useState<Evenement[]>(events.current);  
+  const events = useRef<Item[]>(getEvenements());
+  const [filteredEvent, setFilteredEvent] = useState<Item[]>(events.current);  
   const [searchInput, setSearchInput] = useState<string>('');
   const isLoadingMoreDays = useRef(false);
-  const employees = useRef<Employee[]>(getEmployees());
+  const employeesRef = useRef<Employee[]>(getEmployees());
+  const [employees, setEmployees] = useState<Employee[]>(employeesRef.current);
   const [isLoading, setIsLoading] = useState(false);
   const isAutoScrolling = useRef(false);
   const isAddingLeft = useRef(false);
@@ -285,7 +286,7 @@ export default function HomePage({
   }, [viewType]);
 
   // 🚀 Hook personnalisé pour la gestion des configurations du calendrier
-  const calendarConfig = useCalendarConfig({ employees });
+  const calendarConfig = useCalendarConfig({ employees: employeesRef });
 
   const history = useRef<HistoryAction[]>([]);
   const maxHistorySize = 50; // Limiter la taille de l'historique
@@ -455,8 +456,8 @@ export default function HomePage({
 
   // Appliquer les filtres aux employés et rendez-vous selon la configuration
   const filteredEmployeesForCalendar = useMemo(() => {
-    if (!currentCalendarConfig) return employees.current;
-    return applyFiltersToEmployees(employees.current.filter(emp => emp.type === 'employee' || emp.type === 'interim'), currentCalendarConfig.filters);
+    if (!currentCalendarConfig) return employeesRef.current;
+    return applyFiltersToEmployees(employeesRef.current.filter(emp => emp.type === 'employee' || emp.type === 'interim'), currentCalendarConfig.filters);
   }, [currentCalendarConfig?.filters]);
 
   const filteredAppointmentsForCalendar = useMemo(() => {
@@ -484,7 +485,7 @@ export default function HomePage({
     }
     
     // Puis appliquer les filtres de champs
-    return applyFiltersToAppointments(filtered, currentCalendarConfig.filters, employees.current);
+    return applyFiltersToAppointments(filtered, currentCalendarConfig.filters, employeesRef.current);
   }, [filteredAppointments, currentCalendarConfig?.filters, currentCalendarConfig?.selectedRdvTypes]);
 
 
@@ -538,6 +539,7 @@ export default function HomePage({
             );
             setFilteredAppointments(filteredApps);
           }
+          setFilteredEvent(events.current);
           break;
         
         case 'chantier-table':          
@@ -1008,106 +1010,6 @@ export default function HomePage({
     });
   }, [isDisplayWeekend, selectedDate]);
 
-
-  const handleCloseImageModal = () => {
-      setIsImageSelectorOpen(false);
-      setSelectedItemId(null);
-      setUploadError(null);
-  };
-
-  const handleOpenImageModal = (itemId: number) => {
-      setSelectedItemId(itemId);
-      setAvailableImages(() => {
-        const event = events.current.find(ev => ev.id === itemId);
-        if (!event) return Images.current;
-        const index = Images.current.findIndex(img => img.image === event.image);
-        
-            let t;
-            if (index !== -1) {
-              t = Images.current.splice(index, 1)[0];
-            }
-        
-            if (t) {
-              Images.current.unshift(t);
-            }
-        
-            return Images.current;
-      });
-      setIsImageSelectorOpen(true);
-  }
-  
-    const handleImageSelect = (newImageSrc: string) => {    
-        // onSaveEvent({
-        //   ...formDataEventType,
-        //   image: newImageSrc
-        // })
-  
-        // setFormDataEventType(prev => ({ ...prev, image: newImageSrc }));
-        // // Logique pour mettre à jour l'image de l'élément
-        // setIsImageModalOpen(false);
-        // setSelectedItemId(null);
-    };
-  
-  
-    const handleImageUpload = async (file: File): Promise<string> => {
-      setIsUploading(true);
-      setUploadError(null);
-  
-      try {
-        if (file.size > 200 * 1024) {
-          throw new Error('Le fichier est trop volumineux. Taille maximum : 200 Ko');
-        }
-  
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-        if (!allowedTypes.includes(file.type)) {
-          throw new Error('Format non supporté. Formats acceptés : JPG, PNG, GIF, WebP, SVG');
-        }
-  
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-  
-          img.onload = () => {
-            const { width, height } = img;
-            
-            if (width > 480 || height > 480) {
-              setUploadError('Image trop grande. Dimensions maximum : 480x480px');
-              setIsUploading(false);
-              reject(new Error('Image trop grande'));
-              return;
-            }
-  
-            canvas.width = width;
-            canvas.height = height;
-            ctx?.drawImage(img, 0, 0);
-            
-            const dataURL = canvas.toDataURL('image/png');
-            setIsUploading(false);
-            resolve(dataURL);
-          };
-  
-          img.onerror = () => {
-            setIsUploading(false);
-            reject(new Error('Impossible de charger l\'image'));
-          };
-  
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            img.src = e.target?.result as string;
-            setAvailableImages(prev => [...prev, { id: prev.length + 1, image: img.src, name: file.name }]);
-          };
-          reader.readAsDataURL(file);
-        });
-      } catch (error) {
-        setIsUploading(false);
-        setUploadError(error instanceof Error ? error.message : 'Erreur inconnue');
-        throw error;
-      }
-    };
-
-
-
   // Déplacement d'un rendez-vous (drag & drop ou resize) - Optimisé
   const moveAppointment = useCallback((id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true) => {
       // Early exit - Rendez-vous non trouvé 
@@ -1188,7 +1090,7 @@ export default function HomePage({
     },[onResize, createAppointment, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, includeWeekend, respectNonWorkingDays, nonWorkingDates, isDisplayWeekend, saveAppointmentState]);
 
 
-  const handleSaveEvent = useCallback((event: Evenement) => {    
+  const handleSaveEvent = useCallback((event: Item) => {    
     events.current = events.current.map(e =>
       e.id === event.id ? { ...e, ...event } : e
     );
@@ -1197,7 +1099,7 @@ export default function HomePage({
 
   // Gestion de la création et édition de rendez-vous
   const handleSaveAppointment = useCallback(
-    (appointment: Appointment, eventUpdate: Evenement, includeNonWorkingDays: boolean) => {
+    (appointment: Appointment, eventUpdate: Item, includeNonWorkingDays: boolean) => {
 
       events.current = events.current.map(e =>
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
@@ -1311,6 +1213,115 @@ export default function HomePage({
     setIsModalOpen(false);
     setSelectedAppointment(null);
   }, [handleResearch, saveAppointmentState]);
+
+
+   const handleCloseImageModal = () => {
+      setIsImageSelectorOpen(false);
+      setSelectedItemId(null);
+      setUploadError(null);
+      
+  };
+
+  const handleOpenImageModal = (itemId: number) => {
+      setSelectedItemId(itemId);
+      setAvailableImages(() => {
+        const event = events.current.find(ev => ev.id === itemId);
+        if (!event) return Images.current;
+        const index = Images.current.findIndex(img => img.image === event.image);
+        
+            let t;
+            if (index !== -1) {
+              t = Images.current.splice(index, 1)[0];
+            }
+        
+            if (t) {
+              Images.current.unshift(t);
+            }
+        
+            return Images.current;
+      });
+      setIsImageSelectorOpen(true);
+  }
+  
+    const handleImageSelectEvent = (newImageSrc: string) => {    
+      handleSaveEvent({
+        ...events.current.find(ev => ev.id === selectedItemId)!,
+        image: newImageSrc
+      });
+      // setFormDataEventType(prev => ({ ...prev, image: newImageSrc }));
+
+      // Logique pour mettre à jour l'image de l'élément
+      setIsImageSelectorOpen(false);
+      setSelectedItemId(null);
+    };
+  
+    const handleImageSelectEmployee = (newImageSrc: string) => { 
+      employeesRef.current = employeesRef.current.map(emp =>
+        emp.id === selectedItemId ? { ...emp, image: newImageSrc } : emp
+      );
+      setEmployees([...employeesRef.current]);
+
+      setIsImageSelectorOpen(false);
+      setSelectedItemId(null);
+    };
+  
+    const handleImageUpload = async (file: File): Promise<string> => {
+      setIsUploading(true);
+      setUploadError(null);
+  
+      try {
+        if (file.size > 200 * 1024) {
+          throw new Error('Le fichier est trop volumineux. Taille maximum : 200 Ko');
+        }
+  
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        if (!allowedTypes.includes(file.type)) {
+          throw new Error('Format non supporté. Formats acceptés : JPG, PNG, GIF, WebP, SVG');
+        }
+  
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+  
+          img.onload = () => {
+            const { width, height } = img;
+            
+            if (width > 480 || height > 480) {
+              setUploadError('Image trop grande. Dimensions maximum : 480x480px');
+              setIsUploading(false);
+              reject(new Error('Image trop grande'));
+              return;
+            }
+  
+            canvas.width = width;
+            canvas.height = height;
+            ctx?.drawImage(img, 0, 0);
+            
+            const dataURL = canvas.toDataURL('image/png');
+            setIsUploading(false);
+            resolve(dataURL);
+          };
+  
+          img.onerror = () => {
+            setIsUploading(false);
+            reject(new Error('Impossible de charger l\'image'));
+          };
+  
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            img.src = e.target?.result as string;
+            setAvailableImages(prev => [...prev, { id: prev.length + 1, image: img.src, name: file.name }]);
+          };
+          reader.readAsDataURL(file);
+        });
+      } catch (error) {
+        setIsUploading(false);
+        setUploadError(error instanceof Error ? error.message : 'Erreur inconnue');
+        throw error;
+      }
+    };
+
 
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
     setSelectedAppointmentForm(appointment);
@@ -1876,7 +1887,7 @@ export default function HomePage({
 
   const customRenderersFactory = useMemo(() =>  {
     const imageRendererChantierAndPaie = (value: any, item: any) => {
-      const chantierItem = item as ChantierEvent;
+      const chantierItem = item as ChantierItem;
       return (
         <AppointmentItem
           appointment={{
@@ -1957,7 +1968,7 @@ export default function HomePage({
           alt={item.nom + ' ' + item.prenom}
           className={`cursor-pointer w-8 h-8 rounded-full border-1 shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'}`}
           onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.name.charAt(0)}`; }}
-          onClick={() => setIsImageSelectorOpen(true)}
+          onClick={() => handleOpenImageModal(item.id)}
         />
         {item.type === 'interim' && (
           <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-interim border-2 border-white"></span>
@@ -2056,7 +2067,7 @@ export default function HomePage({
       return `${totalHours}h`;
     }
 
-    const calculateRPF = (chantier: ChantierEvent): string => {
+    const calculateRPF = (chantier: ChantierItem): string => {
       if (viewType !== 'chantier-table') return '0h';            
       const hrValue = parseFloat(chantier.HR.replace('h', '')) || 0;
       const dpfString = calculateDPF(chantier.id);
@@ -2066,7 +2077,7 @@ export default function HomePage({
       return `${totalRPF}h`;
     };
 
-    const calculateAP = (chantier: ChantierEvent): string => {
+    const calculateAP = (chantier: ChantierItem): string => {
     if (viewType !== 'chantier-table') return '0%';
 
     const tmValue = parseFloat(chantier.TM.replace('h', '')) || 0;
@@ -2079,7 +2090,7 @@ export default function HomePage({
     const percentage = Math.round((rpfValue / tmValue) * 100);
     return `${percentage}%`;
   };
-  const calculateSP = (chantier: ChantierEvent): string => {
+  const calculateSP = (chantier: ChantierItem): string => {
     if (viewType !== 'chantier-table') return '0h';
 
     const tmValue = parseFloat(chantier.TM.replace('h', '')) || 0;
@@ -2631,7 +2642,7 @@ export default function HomePage({
                       items={
                         viewType === 'chantier-table' ? filteredEvent.filter(event => event.type === 'chantier') 
                         : viewType === 'paie-table' ? filteredEvent.filter(event => event.type !== 'chantier') 
-                        : employees.current.map(emp => ({
+                        : employeesRef.current.map(emp => ({
                             id: emp.id,
                             image: emp.image,
                             code: emp.code,
@@ -2940,10 +2951,10 @@ export default function HomePage({
             <AppointmentForm
               appointments={appointments.current}
               appointment={selectedAppointmentForm as Appointment}
-              event={events.current.find(e => e.id === selectedAppointmentForm?.EventId) as Evenement}
+              event={filteredEvent.find(e => e.id === selectedAppointmentForm?.EventId) as Item}
               initialEmployeeId={newAppointmentInfo?.employeeId || null}
               isReducedVersion={selectedAppointment?.id === 0}
-              employees={employees.current}
+              employees={employeesRef.current}
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
               isFullDay={isFullDay}
               nonWorkingDates={nonWorkingDates}
@@ -2957,7 +2968,7 @@ export default function HomePage({
           images={availableImages}
           isOpen={isImageSelectorOpen}
           onClose={handleCloseImageModal}
-          onImageSelect={handleImageSelect}
+          onImageSelect={viewType === 'employee-table' ? handleImageSelectEmployee : handleImageSelectEvent}
           onImageUpload={handleImageUpload}
           isUploading={isUploading}
           uploadError={uploadError}
@@ -3079,7 +3090,7 @@ export default function HomePage({
                 employeeId: selectedCell.employeeId,
                 type: (event as any).type.toLowerCase() as "chantier" | "absence" | "autre",
               } as Appointment,
-              event as Evenement,
+              event as Item,
               false
             );
           } : undefined}
