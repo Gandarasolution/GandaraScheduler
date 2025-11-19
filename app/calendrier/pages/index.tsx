@@ -1255,17 +1255,34 @@ export default function HomePage({
       setSelectedItemId(null);
     };
   
-    const handleImageSelectEmployee = (newImageSrc: string) => { 
-      employeesRef.current = employeesRef.current.map(emp =>
-        emp.id === selectedItemId ? { ...emp, image: newImageSrc } : emp
-      );
-      setEmployees([...employeesRef.current]);
+  const handleImageSelectEmployee = (newImageSrc: string) => { 
+    employeesRef.current = employeesRef.current.map(emp =>
+      emp.id === selectedItemId ? { ...emp, image: newImageSrc } : emp
+    );
+    setEmployees([...employeesRef.current]);
 
-      setIsImageSelectorOpen(false);
-      setSelectedItemId(null);
-    };
+    setIsImageSelectorOpen(false);
+    setSelectedItemId(null);
+  };
+
+  // Fonction pour modifier l'équipe d'un employé
+  const handleEmployeeGroupChange = useCallback((employeeId: number, newGroupId: number | null) => {
+    const newGroup = newGroupId ? initialTeams.find(team => team.id === newGroupId) : undefined;
+    
+    employeesRef.current = employeesRef.current.map(emp =>
+      emp.id === employeeId ? { ...emp, group: newGroup } : emp
+    );
+    setEmployees([...employeesRef.current]);
+    
+    // Afficher une notification de succès
+    notifications.addNotification(
+      'success',
+      'Équipe modifiée',
+      `L'équipe de l'employé a été mise à jour${newGroup ? ` vers "${newGroup.name}"` : ''}`
+    );
+  }, [notifications]);    
   
-    const handleImageUpload = async (file: File): Promise<string> => {
+  const handleImageUpload = async (file: File): Promise<string> => {
       setIsUploading(true);
       setUploadError(null);
   
@@ -2022,10 +2039,44 @@ export default function HomePage({
         )
       },
       employeeTable: {
-        image : imageRendererEmployee
+        image : imageRendererEmployee,
+        equipe: (value: any, item: any) => (
+          <div className="flex items-center justify-start w-full h-full">
+            <select
+              value={employeesRef.current.find(emp => emp.id === item.id)?.group?.id || ''}
+              onChange={(e) => {
+                const newGroupId = e.target.value ? Number(e.target.value) : null;
+                handleEmployeeGroupChange(item.id, newGroupId);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full px-2 py-1 text-sm border border-default rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all cursor-pointer"
+            >
+              <option value="">Aucune équipe</option>
+              {initialTeams.map(team => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ),
+        type: (value: string) => {
+          const typeColors: Record<string, string> = {
+            'interim': 'bg-interim text-white',
+            'employee': 'bg-employee text-white',
+          };
+          const colorClass = typeColors[value] || 'bg-gray-100 text-gray-800';
+          return (
+            <div className="flex items-center justify-center w-full h-full">
+              <span className={`inline-flex w-[80px] h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+                {value.charAt(0).toUpperCase() + value.slice(1)}
+              </span>
+            </div>
+          );
+        }
       }
     };
-  }, [handleOpenEditModal]);
+  }, [handleOpenEditModal, handleEmployeeGroupChange]);
 
 
   const customComputedFieldsFactory = useMemo(() => {
@@ -2476,7 +2527,12 @@ export default function HomePage({
             <div className={`flex items-center justify-between w-full ${!isExpanded ? 'hidden' : 'h-[50px]'}`}>
                 <div className={`${viewType === 'calendar' ? 'ml-80' : 'ml-7'}`}>
                   <p className="text-5xl poppins text-primary">
-                    {viewType === 'calendar' ? 'Planning' : viewType === 'chantier-table' ? 'Liste des chantiers' : 'Rubrique Paie'}
+                    {
+                      viewType === 'calendar' ? 'Planning' 
+                      : viewType === 'chantier-table' ? 'Liste des chantiers' 
+                      : viewType === 'paie-table' ? 'Rubrique Paie' 
+                      : 'Liste des employées'
+                    }
                   </p>
                 </div>
                 <div className="flex flex-row items-center gap-4">

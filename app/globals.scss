@@ -33,8 +33,9 @@
 
   --calendar-indicator-filter: brightness(0) saturate(100%); // noir (texte clair)
 
-  --color-interim: #e6b11a;        // Jaune intermédiaire (non utilisé)
-  --color-employee: #4baea4;     // Turquoise (non utilisé)
+  // ── Couleurs par Type d'Employé ───────────────────────────────────────────
+  --color-interim: #e6b11a;           // Jaune pour intérimaires
+  --color-employee: #4baea4;          // Turquoise pour employés
 
 
   
@@ -84,6 +85,10 @@
   --bg-hover: #f3f7f8;                // Hover sur cellules calendrier
   --bg-active: #e7f4f2;               // Élément actif
   --bg-disabled: #f9f9f9;             // Élément désactivé
+  --bg-card: #ffffff;                 // Background cartes/modales
+  --bg-elevated: #fafafa;             // Background élevé (dropdown, popover)
+  --bg-overlay: rgba(0, 0, 0, 0.5);   // Overlay semi-transparent
+  --bg-subtle: #f8f9fa;               // Background subtil pour zones secondaires
   
   // ── Couleurs Spécifiques Calendrier ───────────────────────────────────────
   --calendar-weekend: #f6f6f6;        // Week-end
@@ -133,6 +138,12 @@
   --color-icon: #e4e4e7;           // Couleur des icônes (gris clair)
   --calendar-indicator-filter: invert(0.9) brightness(1.2); // gris très clair
 
+  // ── Couleurs par Type d'Employé (Mode Sombre) ─────────────────────────────
+  --color-interim: #fbbf24;           // Jaune plus clair pour intérimaires
+  --color-employee: #5eead4;          // Turquoise plus clair pour employés
+  --color-charge-affaire: #60a5fa;    // Bleu plus clair pour chargés d'affaire
+  --color-chef-chantier: #fb923c;     // Orange plus clair pour chefs de chantier
+
 
   --color-gray-200: #575757;
   --color-gray-400: #b8bcc2;
@@ -169,6 +180,10 @@
     --bg-hover: #2d2d30;
     --bg-active: #1a3d38;
     --bg-disabled: #27272a;
+    --bg-card: #1f1f23;                 // Background cartes/modales sombre
+    --bg-elevated: #2a2a2e;             // Background élevé sombre
+    --bg-overlay: rgba(0, 0, 0, 0.75);  // Overlay plus sombre
+    --bg-subtle: #202024;               // Background subtil sombre
     
     // ── Couleurs Spécifiques Calendrier (Mode Sombre) ─────────────────────
     --calendar-weekend: #1e293b;      // Bleu foncé
@@ -296,6 +311,12 @@ body {
 @utility bg-bg-primary { background-color: var(--color-bg-primary) !important; }
 @utility bg-bg-secondary { background-color: var(--color-bg-secondary) !important; }
 @utility bg-icon { color: var(--color-icon) !important; }
+
+/* ── Nouveaux Backgrounds ──────────────────────── */
+@utility bg-card { background-color: var(--bg-card) !important; }
+@utility bg-elevated { background-color: var(--bg-elevated) !important; }
+@utility bg-overlay { background-color: var(--bg-overlay) !important; }
+@utility bg-subtle { background-color: var(--bg-subtle) !important; }
 
 @utility bg-interim { background-color: var(--color-interim) !important; }
 @utility bg-employee { background-color: var(--color-employee) !important; }

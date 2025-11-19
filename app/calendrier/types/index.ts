@@ -41,7 +41,7 @@ export interface Employee {
   /** ID de l'équipe à laquelle appartient l'employé (optionnel) */
   group?: Groupe;
   /** Type de contrat de l'employé */
-  type: 'employee' | 'interim' | 'chargeAffaire' | 'chefChantier';
+  type: 'employee' | 'interim';
   /** Pôle auquel appartient l'employé (Technique, Commercial, etc.) */
   pole?: string;
 }

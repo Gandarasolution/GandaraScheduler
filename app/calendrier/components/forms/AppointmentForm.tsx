@@ -481,7 +481,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               >
                 {employees.map(employee => (
                   <option key={employee.id} value={employee.id}>
-                    {employee.name}
+                    {employee.firstName + ' ' + employee.name}
                   </option>
                 ))}
               </select>

@@ -170,15 +170,15 @@ const initialEmployees = [
     { name: 'GERARD', firstName: 'Frédéric', id: 35, groupId: 8, type: 'interim', pole: 'Technique' , code: 'EMP-035'},
 
 
-    { name: 'GERARD', firstName: 'Frédéric', id: 44, type: 'chargeAffaire', pole: 'Commercial', code: 'EMP-044'},
-    { name: 'DUPONT', firstName: 'Jean', id: 36, type: 'chefChantier', pole: 'Commercial' , code: 'EMP-036'},
-    { name: 'DUBOIS', firstName: 'Marie', id: 37, type: 'chargeAffaire', pole: 'Commercial', code: 'EMP-037' },
-    { name: 'MOREAU', firstName: 'Luc', id: 38, type: 'chefChantier', pole: 'Commercial' , code: 'EMP-038'},
-    { name: 'LEROY', firstName: 'Sophie', id: 39, type: 'chargeAffaire', pole: 'Commercial' , code: 'EMP-039'},
-    { name: 'ROUSSEAU', firstName: 'Marc', id: 40, type: 'chefChantier', pole: 'Commercial' , code: 'EMP-040'},
-    { name: 'GARCIA', firstName: 'Céline', id: 41, type: 'chargeAffaire', pole: 'Commercial' , code: 'EMP-041'},
-    { name: 'MALIVERNAY', firstName: 'Eric', id: 42, type: 'chefChantier', pole: 'Commercial' , code: 'EMP-042'},
-    { name: 'MARTIN', firstName: 'Sophie', id: 43, type: 'chargeAffaire', pole: 'Commercial' , code: 'EMP-043'},
+    { name: 'GERARD', firstName: 'Frédéric', id: 44, type: 'employee', pole: 'Commercial', code: 'EMP-044'},
+    { name: 'DUPONT', firstName: 'Jean', id: 36, type: 'employee', pole: 'Commercial' , code: 'EMP-036'},
+    { name: 'DUBOIS', firstName: 'Marie', id: 37, type: 'employee', pole: 'Commercial', code: 'EMP-037' },
+    { name: 'MOREAU', firstName: 'Luc', id: 38, type: 'employee', pole: 'Commercial' , code: 'EMP-038'},
+    { name: 'LEROY', firstName: 'Sophie', id: 39, type: 'employee', pole: 'Commercial' , code: 'EMP-039'},
+    { name: 'ROUSSEAU', firstName: 'Marc', id: 40, type: 'employee', pole: 'Commercial' , code: 'EMP-040'},
+    { name: 'GARCIA', firstName: 'Céline', id: 41, type: 'employee', pole: 'Commercial' , code: 'EMP-041'},
+    { name: 'MALIVERNAY', firstName: 'Eric', id: 42, type: 'employee', pole: 'Commercial' , code: 'EMP-042'},
+    { name: 'MARTIN', firstName: 'Sophie', id: 43, type: 'employee', pole: 'Commercial' , code: 'EMP-043'},
 ];
 
 
@@ -2256,7 +2256,7 @@ export const getEmployees = (): Employee[] => {
       id: emp.id,
       name: emp.name,
       firstName: emp.firstName,
-      type: emp.type as "employee" | "interim" | "chargeAffaire" | "chefChantier",
+      type: emp.type as "employee" | "interim",
       pole: emp.pole,
       image: Images.find(img => img.id === emp.image)?.image || undefined,
       code: emp.code,
