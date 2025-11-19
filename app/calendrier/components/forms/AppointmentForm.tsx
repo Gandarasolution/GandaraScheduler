@@ -111,7 +111,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       { ...appointment, startDate: appointment.startDate, endDate:  addMinutes(appointment.endDate, -1) }
   );
   const [formDataEventType, setFormDataEventType] = useState<Item>(event);
-  const [dateValidationError, setDateValidationError] = useState(false);
+  const [dateValidationError, setDateValidationError] = useState(false);  
  
 
   useEffect(() => {

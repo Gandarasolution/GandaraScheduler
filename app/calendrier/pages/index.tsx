@@ -1222,12 +1222,12 @@ export default function HomePage({
       
   };
 
-  const handleOpenImageModal = (itemId: number) => {
+  const handleOpenImageModal = (items :any, itemId: number) => {
       setSelectedItemId(itemId);
       setAvailableImages(() => {
-        const event = events.current.find(ev => ev.id === itemId);
-        if (!event) return Images.current;
-        const index = Images.current.findIndex(img => img.image === event.image);
+        const item = items.find((it: any) => it.id === itemId);
+        if (!item) return Images.current;
+        const index = Images.current.findIndex(img => img.image === item.image);
         
             let t;
             if (index !== -1) {
@@ -1341,7 +1341,9 @@ export default function HomePage({
 
 
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
-    setSelectedAppointmentForm(appointment);
+    setSelectedAppointmentForm(appointment);  
+    console.log(appointment);
+      
     setIsModalOpen(true);
   }, []);
   
@@ -1457,13 +1459,7 @@ export default function HomePage({
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
   // Gère le clic droit pour afficher le menu contextuel
-  const handleContextMenu = useCallback(
-  (
-    e: React.MouseEvent,
-    origin: 'cell' | 'appointment',
-    appointment?: Appointment | null,
-    cell?: { employeeId: number; date: Date }
-  ) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date } ) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -1613,6 +1609,45 @@ export default function HomePage({
       });
     }
   }, [handleDeleteAppointment, copyAppointmentToClipboard, pasteAppointment, handleOpenEditModal]);
+
+  const handleContexteMenuDataTableFrame = useCallback((item: any, e: React.MouseEvent) => {
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        item: [
+            {
+            label: "Modifier",
+            logo:
+              <svg height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
+                <g id="Layer_2" data-name="Layer 2">
+                  <path d="m3.05 21.77a1.22 1.22 0 0 1 -.88-.36 1.28 1.28 0 0 1 -.33-1.19l1.16-4.58a1.61 1.61 0 0 1 .46-.81l13.23-13.25a2.82 2.82 0 0 1 3.89 0l1.42 1.42a2.75 2.75 0 0 1 0 3.88l-13.25 13.25a1.77 1.77 0 0 1 -.81.46l-4.58 1.14a1.1 1.1 0 0 1 -.31.04zm15.58-19.5a1.22 1.22 0 0 0 -.88.37l-13.24 13.24a.37.37 0 0 0 -.07.12l-1 4.18 4.18-1.05a.24.24 0 0 0 .11-.06l13.2-13.25a1.24 1.24 0 0 0 0-1.76l-1.41-1.42a1.26 1.26 0 0 0 -.89-.37z"/><path d="m19.62 8.94a.74.74 0 0 1 -.53-.22l-4.24-4.24a.75.75 0 1 1 1.06-1.06l4.24 4.24a.75.75 0 0 1 0 1.06.74.74 0 0 1 -.53.22z"/>
+                </g>
+              </svg>
+              ,
+            action: () => {
+              console.log(viewType);
+              
+              if (viewType === 'employee-table') {
+                handleOpenImageModal(employeesRef.current, item.id);
+              }
+              else{
+                const newAppointment: Appointment = {
+                  id: 0,
+                  description: '',
+                  type: item.type,
+                  EventId: Number(item.id),
+                  startDate: new Date(),
+                  endDate: addHours(new Date(), 12),
+                  employeeId: 0,
+                }
+                handleOpenEditModal(newAppointment);
+              }
+            }
+          },
+        ]
+      });
+    }, []);
+
 
   useEffect(() => {
     const day = new Date();
@@ -1985,7 +2020,7 @@ export default function HomePage({
           alt={item.nom + ' ' + item.prenom}
           className={`cursor-pointer w-8 h-8 rounded-full border-1 shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'}`}
           onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.name.charAt(0)}`; }}
-          onClick={() => handleOpenImageModal(item.id)}
+          onClick={() => handleOpenImageModal(employeesRef.current, item.id)}
         />
         {item.type === 'interim' && (
           <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-interim border-2 border-white"></span>
@@ -2158,13 +2193,13 @@ export default function HomePage({
           return calculateDPF(item.id);
         },
         HR: (item: any) => {
-          return item.attributs?.HR || '0h';
+          return item?.HR || '0h';
         },
         RPF: (item: any) => {
           return calculateRPF(item);
         },
         SH: (item: any) => {
-          return item.attributs?.SH || '0h';
+          return item?.SH || '0h';
         },
         AP: (item: any) => {
           return calculateAP(item);
@@ -2720,8 +2755,8 @@ export default function HomePage({
                               { key: 'poleActivite',   label: 'Pôle', type:'string' },
                               { key: 'code',  label: 'Code', type:'string' },
                               { key: 'identifiant',  label: 'Identifiant', type:'string' },
-                              { key: 'libelle', subKey: 'attributs' , label: 'Libellé', type:'string' },
-                              { key: 'etat', subKey: 'attributs' , label: 'État', type:'string' },
+                              { key: 'libelle' , label: 'Libellé', type:'string' },
+                              { key: 'etat', label: 'État', type:'string' },
                               { key: 'chargeAffaire',  label: 'Chargé Aff.', type:'string' },
                               { key: 'chefChantier',  label: 'Chef Ch.', type:'string' },
                               { key: 'dateOS' , label: 'Date OS', type:'date' },
@@ -2784,6 +2819,9 @@ export default function HomePage({
                           : customRenderersFactory.employeeTable
                       }
                       showGroupHeaders={viewType === 'chantier-table'}
+                      onRightClick={(item, e) => {
+                        handleContexteMenuDataTableFrame(item, e)
+                      }}
                     />
                   )}
                 </SelectedCellContext.Provider>
@@ -3007,16 +3045,16 @@ export default function HomePage({
             <AppointmentForm
               appointments={appointments.current}
               appointment={selectedAppointmentForm as Appointment}
-              event={filteredEvent.find(e => e.id === selectedAppointmentForm?.EventId) as Item}
+              event={events.current.find(e => e.id === selectedAppointmentForm?.EventId) as Item}
               initialEmployeeId={newAppointmentInfo?.employeeId || null}
-              isReducedVersion={selectedAppointment?.id === 0}
+              isReducedVersion={selectedAppointmentForm?.id === 0}
               employees={employeesRef.current}
               HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
               isFullDay={isFullDay}
               nonWorkingDates={nonWorkingDates}
               onSave={handleSaveAppointment}
               onClose={() => setIsModalOpen(false)}
-              handleOpenImageModal={handleOpenImageModal}
+              handleOpenImageModal={(itemId) => handleOpenImageModal(events.current, itemId)}
             />
           )}
         </Modal>

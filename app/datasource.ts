@@ -194,26 +194,24 @@ const Evenements = [
       location: 'Vesoul',
       client: 'Ville de Vesoul',
       type: 'chantier',
-      attributs: {
-        poleActivite: 1,
-        // Informations Générales
-        code: 'CHT-001',
-        identifiant: 'VES-2024-001',
-        libelle: '1052 Logements Vesoul',
-        etat: 'En cours',
-        chargeAffaire: 36,
-        chefChantier: 40,
-        dateOS: '15/01/2024',
-        dateFin: '15/07/2025',
-        // Analyse Chantier
-        TM: '2500h',        // Temps Marché
-        HR: '1625h',        // Heures Réalisées (65% de 2500h)
-        SH: '875h',         // Solde Heure (2500h - 1625h)
-        DPF: '',        // Durée Planifiée Future
-        RPF: '',          // Réalisé - Planif Future
-        AP: '',          // Avancement prévisionnel
-        SP: ''           // Solde Prévisionnel
-      }
+      poleActivite: 1,
+      // Informations Générales
+      code: 'CHT-001',
+      identifiant: 'VES-2024-001',
+      libelle: '1052 Logements Vesoul',
+      etat: 'En cours',
+      chargeAffaire: 36,
+      chefChantier: 40,
+      dateOS: '15/01/2024',
+      dateFin: '15/07/2025',
+      // Analyse Chantier
+      TM: '2500h',        // Temps Marché
+      HR: '1625h',        // Heures Réalisées (65% de 2500h)
+      SH: '875h',         // Solde Heure (2500h - 1625h)
+      DPF: '',        // Durée Planifiée Future
+      RPF: '',          // Réalisé - Planif Future
+      AP: '',          // Avancement prévisionnel
+      SP: ''           // Solde Prévisionnel
     },
     {
       id: 2,
@@ -225,7 +223,7 @@ const Evenements = [
       location: 'Paris 15ème',
       client: 'SCI Jardins de Paris',
       type: 'chantier',
-      attributs: {
+     
         // Informations Générales
         poleActivite: 2,
         code: 'CHT-002',
@@ -244,7 +242,7 @@ const Evenements = [
         RPF: '',          // Réalisé - Planif Future
         AP: '',          // Avancement prévisionnel
         SP: ''           // Solde Prévisionnel
-      }
+  
     },
     {
       id: 3,
@@ -254,7 +252,7 @@ const Evenements = [
       borderColor: '#FFC300',
       textColor: '#000000',
       type: 'chantier',
-      attributs: {
+     
         // Informations Générales
         poleActivite: 2,
         code: 'CHT-003',
@@ -273,7 +271,7 @@ const Evenements = [
         RPF: '',          // Réalisé - Planif Future
         AP: '',          // Avancement prévisionnel
         SP: ''           // Solde Prévisionnel
-      }
+ 
     },
     // Chantiers existants avec données enrichies
     {
@@ -284,7 +282,7 @@ const Evenements = [
       borderColor: '#737373',
       textColor: '#FFFFFF',
       type: 'chantier',
-      attributs: {
+     
         poleActivite: 3,
         code: 'CHT-004',
         identifiant: 'HDV-2024-004',
@@ -301,7 +299,7 @@ const Evenements = [
         RPF: '',
         AP: '',
         SP: ''
-      }
+     
     },
     {
       id: 5,
@@ -311,7 +309,7 @@ const Evenements = [
       borderColor: '#FF9800',
       textColor: '#000000',
       type: 'chantier',
-      attributs: {
+     
         poleActivite: 3,
         code: 'CHT-005',
         identifiant: 'REN-2024-005',
@@ -328,7 +326,7 @@ const Evenements = [
         RPF: '',
         AP: '',
         SP: ''
-      }
+   
     },
     {
       id: 6,
@@ -338,7 +336,7 @@ const Evenements = [
       borderColor: '#689F38',
       textColor: '#FFFFFF',
       type: 'chantier',
-      attributs: {
+     
         poleActivite: 1,
         code: 'CHT-006',
         identifiant: 'LIL-2024-006',
@@ -355,7 +353,7 @@ const Evenements = [
         RPF: '',
         AP: '',
         SP: ''
-      }
+
     },
     {
       id: 7,
@@ -365,7 +363,7 @@ const Evenements = [
       borderColor: '#1976D2',
       textColor: '#000000',
       type: 'chantier',
-      attributs: {
+     
         poleActivite: 2,
         code: 'CHT-007',
         identifiant: 'VHU-2024-007',
@@ -382,7 +380,7 @@ const Evenements = [
         RPF: '',
         AP: '',
         SP: ''
-      }
+  
     },
     {
       id: 8,
@@ -392,7 +390,7 @@ const Evenements = [
       borderColor: '#C2185B',
       textColor: '#FFFFFF',
       type: 'chantier',
-      attributs: {
+     
         poleActivite: 1,
         code: 'CHT-008',
         identifiant: 'BEL-2024-008',
@@ -408,8 +406,7 @@ const Evenements = [
         DPF: '',
         RPF: '',
         AP: '',
-        SP: ''
-      }
+
     },
     {
       id: 9,
@@ -419,7 +416,7 @@ const Evenements = [
       borderColor: '#FFA000',
       textColor: '#000000',
       type: 'chantier',
-      attributs: {
+     
         poleActivite: 1,
         code: 'CHT-009',
         identifiant: 'TOU-2024-009',
@@ -436,7 +433,7 @@ const Evenements = [
         RPF: '',
         AP: '',
         SP: ''
-      }
+
     },
     {
       id: 10,
@@ -446,7 +443,7 @@ const Evenements = [
       borderColor: '#00838F',
       textColor: '#000000',
       type: 'chantier',
-      attributs: {
+     
         poleActivite: 1,
         code: 'CHT-010',
         identifiant: 'MAR-2024-010',
@@ -463,7 +460,7 @@ const Evenements = [
         RPF: '',
         AP: '',
         SP: ''
-      }
+ 
     },
     {
       id: 11,
@@ -473,7 +470,7 @@ const Evenements = [
       borderColor: '#7B1FA2',
       textColor: '#FFFFFF',
       type: 'chantier',
-      attributs: {
+     
         code: 'CHT-011',
         identifiant: 'BOR-2024-011',
         libelle: 'Centre Aquatique Bordeaux',
@@ -490,7 +487,6 @@ const Evenements = [
         RPF: '',
         AP: '',
         SP: ''
-      }
     },
     {
       id: 12,
@@ -500,7 +496,7 @@ const Evenements = [
       borderColor: '#689F38',
       textColor: '#000000',
       type: 'chantier',
-      attributs: {
+     
         code: 'CHT-012',
         identifiant: 'STR-2024-012',
         libelle: 'Rénovation Gare SNCF Strasbourg',
@@ -517,7 +513,6 @@ const Evenements = [
         RPF: '',
         AP: '',
         SP: ''
-      }
     },
     {
       id: 13,
@@ -527,7 +522,7 @@ const Evenements = [
       borderColor: '#D84315',
       textColor: '#000000',
       type: 'chantier',
-      attributs: {
+     
         code: 'CHT-013',
         identifiant: 'MTP-2024-013',
         libelle: 'Complexe Sportif Montpellier',
@@ -544,7 +539,6 @@ const Evenements = [
         RPF: '',
         AP: '',
         SP: ''
-      }
     },
     { 
       id: 14, 
@@ -694,7 +688,7 @@ const Evenements = [
     borderColor: '#388E3C',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-024',
       identifiant: 'NAN-2024-024',
@@ -711,7 +705,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 25,
@@ -721,7 +714,7 @@ const Evenements = [
     borderColor: '#1976D2',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-025',
       identifiant: 'LIL-2024-025',
@@ -738,7 +731,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+
   },
   {
     id: 26,
@@ -748,7 +741,7 @@ const Evenements = [
     borderColor: '#C2185B',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-026',
       identifiant: 'DIJ-2024-026',
@@ -765,7 +758,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+
   },
   {
     id: 27,
@@ -775,7 +768,7 @@ const Evenements = [
     borderColor: '#0097A7',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-027',
       identifiant: 'TOU-2024-027',
@@ -792,7 +785,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+
   },
   {
     id: 28,
@@ -802,7 +795,7 @@ const Evenements = [
     borderColor: '#7B1FA2',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-028',
       identifiant: 'LYO-2024-028',
@@ -819,7 +812,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+ 
   },
   {
     id: 29,
@@ -829,7 +822,7 @@ const Evenements = [
     borderColor: '#F57C00',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-029',
       identifiant: 'BRE-2024-029',
@@ -846,7 +839,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+    
   },
   {
     id: 30,
@@ -856,7 +849,7 @@ const Evenements = [
     borderColor: '#9E9D24',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-030',
       identifiant: 'NIC-2024-030',
@@ -873,7 +866,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+  
   },
   {
     id: 31,
@@ -883,7 +876,7 @@ const Evenements = [
     borderColor: '#0288D1',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-031',
       identifiant: 'BOR-2024-031',
@@ -900,7 +893,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+    
   },
   {
     id: 32,
@@ -910,7 +903,7 @@ const Evenements = [
     borderColor: '#558B2F',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-032',
       identifiant: 'REI-2024-032',
@@ -927,7 +920,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 33,
@@ -937,7 +929,7 @@ const Evenements = [
     borderColor: '#E64A19',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-033',
       identifiant: 'LEM-2024-033',
@@ -954,7 +946,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+    
   },
     {
     id: 34,
@@ -964,7 +956,7 @@ const Evenements = [
     borderColor: '#FFA000',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-034',
       identifiant: 'NAN-2024-034',
@@ -981,7 +973,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+    
   },
   {
     id: 35,
@@ -991,7 +983,7 @@ const Evenements = [
     borderColor: '#616161',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-035',
       identifiant: 'ROU-2024-035',
@@ -1008,7 +1000,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+    
   },
   {
     id: 36,
@@ -1018,7 +1010,7 @@ const Evenements = [
     borderColor: '#00796B',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-036',
       identifiant: 'MAR-2024-036',
@@ -1035,7 +1027,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+   
   },
   {
     id: 37,
@@ -1045,7 +1037,7 @@ const Evenements = [
     borderColor: '#6A1B9A',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-037',
       identifiant: 'CLE-2024-037',
@@ -1062,7 +1054,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+ 
   },
   {
     id: 38,
@@ -1072,7 +1064,7 @@ const Evenements = [
     borderColor: '#388E3C',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-038',
       identifiant: 'REN-2024-038',
@@ -1089,7 +1081,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+  
   },
   {
     id: 39,
@@ -1099,7 +1091,7 @@ const Evenements = [
     borderColor: '#0288D1',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-039',
       identifiant: 'STR-2024-039',
@@ -1116,7 +1108,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+ 
   },
   {
     id: 40,
@@ -1126,7 +1118,7 @@ const Evenements = [
     borderColor: '#C2185B',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-040',
       identifiant: 'CAE-2024-040',
@@ -1143,7 +1135,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+ 
   },
   {
     id: 41,
@@ -1153,7 +1145,7 @@ const Evenements = [
     borderColor: '#E64A19',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-041',
       identifiant: 'AVI-2024-041',
@@ -1170,7 +1162,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 42,
@@ -1180,7 +1171,7 @@ const Evenements = [
     borderColor: '#689F38',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-042',
       identifiant: 'ANN-2024-042',
@@ -1197,7 +1188,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 43,
@@ -1207,7 +1197,7 @@ const Evenements = [
     borderColor: '#7B1FA2',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-043',
       identifiant: 'NAN-2024-043',
@@ -1224,7 +1214,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
     {
     id: 44,
@@ -1234,7 +1223,7 @@ const Evenements = [
     borderColor: '#00838F',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-044',
       identifiant: 'LAR-2024-044',
@@ -1251,7 +1240,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 45,
@@ -1261,7 +1249,7 @@ const Evenements = [
     borderColor: '#C62828',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-045',
       identifiant: 'MET-2024-045',
@@ -1278,7 +1266,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 46,
@@ -1288,7 +1275,7 @@ const Evenements = [
     borderColor: '#2E7D32',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-046',
       identifiant: 'GRE-2024-046',
@@ -1305,7 +1292,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 47,
@@ -1315,7 +1301,7 @@ const Evenements = [
     borderColor: '#F57C00',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-047',
       identifiant: 'POI-2024-047',
@@ -1332,7 +1318,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 48,
@@ -1342,7 +1327,7 @@ const Evenements = [
     borderColor: '#1565C0',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-048',
       identifiant: 'TOU-2024-048',
@@ -1359,7 +1344,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 49,
@@ -1369,7 +1353,7 @@ const Evenements = [
     borderColor: '#8E24AA',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-049',
       identifiant: 'MON-2024-049',
@@ -1386,7 +1370,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 50,
@@ -1396,7 +1379,7 @@ const Evenements = [
     borderColor: '#00796B',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-050',
       identifiant: 'ORL-2024-050',
@@ -1413,7 +1396,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 51,
@@ -1423,7 +1405,7 @@ const Evenements = [
     borderColor: '#9E9D24',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-051',
       identifiant: 'BLO-2024-051',
@@ -1440,7 +1422,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+    
   },
   {
     id: 52,
@@ -1450,7 +1432,7 @@ const Evenements = [
     borderColor: '#F57F17',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-052',
       identifiant: 'PAR-2024-052',
@@ -1467,7 +1449,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+    
   },
   {
     id: 53,
@@ -1477,7 +1459,7 @@ const Evenements = [
     borderColor: '#1976D2',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-053',
       identifiant: 'ANG-2024-053',
@@ -1494,7 +1476,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
     {
     id: 54,
@@ -1504,7 +1485,7 @@ const Evenements = [
     borderColor: '#E64A19',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-054',
       identifiant: 'NIC-2024-054',
@@ -1521,7 +1502,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 55,
@@ -1531,7 +1511,7 @@ const Evenements = [
     borderColor: '#0097A7',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-055',
       identifiant: 'REN-2024-055',
@@ -1548,7 +1528,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 56,
@@ -1558,7 +1537,7 @@ const Evenements = [
     borderColor: '#689F38',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-056',
       identifiant: 'DIJ-2024-056',
@@ -1575,7 +1554,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+ 
   },
   {
     id: 57,
@@ -1585,7 +1564,7 @@ const Evenements = [
     borderColor: '#C2185B',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-057',
       identifiant: 'PER-2024-057',
@@ -1602,7 +1581,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+
   },
   {
     id: 58,
@@ -1612,7 +1591,7 @@ const Evenements = [
     borderColor: '#512DA8',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-058',
       identifiant: 'ROU-2024-058',
@@ -1629,7 +1608,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 59,
@@ -1639,7 +1617,7 @@ const Evenements = [
     borderColor: '#FB8C00',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-059',
       identifiant: 'CLE-2024-059',
@@ -1656,7 +1634,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 60,
@@ -1666,7 +1643,7 @@ const Evenements = [
     borderColor: '#00796B',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-060',
       identifiant: 'BOR-2024-060',
@@ -1683,7 +1660,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 61,
@@ -1693,7 +1669,7 @@ const Evenements = [
     borderColor: '#D32F2F',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-061',
       identifiant: 'LIL-2024-061',
@@ -1710,7 +1686,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 62,
@@ -1720,7 +1695,7 @@ const Evenements = [
     borderColor: '#388E3C',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-062',
       identifiant: 'NAN-2024-062',
@@ -1737,7 +1712,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 63,
@@ -1747,7 +1721,7 @@ const Evenements = [
     borderColor: '#3949AB',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-063',
       identifiant: 'AMI-2024-063',
@@ -1764,7 +1738,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
     {
     id: 64,
@@ -1774,24 +1747,22 @@ const Evenements = [
     borderColor: '#7B1FA2',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
-      poleActivite: 1,
-      code: 'CHT-064',
-      identifiant: 'AVI-2024-064',
-      libelle: 'Médiathèque Avignon',
-      etat: 'En cours',
-      chargeAffaire: 41,
-      chefChantier: 42,
-      dateOS: '01/03/2024',
-      dateFin: '01/10/2025',
-      TM: '4300h',
-      HR: '2150h',
-      SH: '2150h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
-    }
+    poleActivite: 1,
+    code: 'CHT-064',
+    identifiant: 'AVI-2024-064',
+    libelle: 'Médiathèque Avignon',
+    etat: 'En cours',
+    chargeAffaire: 41,
+    chefChantier: 42,
+    dateOS: '01/03/2024',
+    dateFin: '01/10/2025',
+    TM: '4300h',
+    HR: '2150h',
+    SH: '2150h',
+    DPF: '',
+    RPF: '',
+    AP: '',
+    SP: ''
   },
   {
     id: 65,
@@ -1801,24 +1772,22 @@ const Evenements = [
     borderColor: '#00838F',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
-      poleActivite: 1,
-      code: 'CHT-065',
-      identifiant: 'BRE-2024-065',
-      libelle: 'Résidence étudiante Brest',
-      etat: 'Planifié',
-      chargeAffaire: 36,
-      chefChantier: 40,
-      dateOS: '01/09/2024',
-      dateFin: '01/07/2026',
-      TM: '3900h',
-      HR: '0h',
-      SH: '3900h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
-    }
+    poleActivite: 1,
+    code: 'CHT-065',
+    identifiant: 'BRE-2024-065',
+    libelle: 'Résidence étudiante Brest',
+    etat: 'Planifié',
+    chargeAffaire: 36,
+    chefChantier: 40,
+    dateOS: '01/09/2024',
+    dateFin: '01/07/2026',
+    TM: '3900h',
+    HR: '0h',
+    SH: '3900h',
+    DPF: '',
+    RPF: '',
+    AP: '',
+    SP: ''
   },
   {
     id: 66,
@@ -1828,7 +1797,7 @@ const Evenements = [
     borderColor: '#F9A825',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-066',
       identifiant: 'TOU-2024-066',
@@ -1845,7 +1814,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 67,
@@ -1855,7 +1823,7 @@ const Evenements = [
     borderColor: '#0288D1',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-067',
       identifiant: 'TOU-2024-067',
@@ -1872,7 +1840,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 68,
@@ -1882,7 +1849,7 @@ const Evenements = [
     borderColor: '#5D4037',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-068',
       identifiant: 'REI-2024-068',
@@ -1899,7 +1866,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 69,
@@ -1909,7 +1875,7 @@ const Evenements = [
     borderColor: '#D84315',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-069',
       identifiant: 'LYO-2024-069',
@@ -1926,7 +1892,6 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
   },
   {
     id: 70,
@@ -1936,7 +1901,7 @@ const Evenements = [
     borderColor: '#2E7D32',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
+   
       poleActivite: 1,
       code: 'CHT-070',
       identifiant: 'TOU-2024-070',
@@ -1953,7 +1918,7 @@ const Evenements = [
       RPF: '',
       AP: '',
       SP: ''
-    }
+
   },
   {
     id: 71,
@@ -1963,24 +1928,22 @@ const Evenements = [
     borderColor: '#C62828',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
-      poleActivite: 1,
-      code: 'CHT-071',
-      identifiant: 'PAR-2024-071',
-      libelle: 'Bureaux Innovalia Paris',
-      etat: 'Terminé',
-      chargeAffaire: 36,
-      chefChantier: 42,
-      dateOS: '01/09/2023',
-      dateFin: '01/04/2024',
-      TM: '3500h',
-      HR: '3500h',
-      SH: '0h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
-    }
+    poleActivite: 1,
+    code: 'CHT-071',
+    identifiant: 'PAR-2024-071',
+    libelle: 'Bureaux Innovalia Paris',
+    etat: 'Terminé',
+    chargeAffaire: 36,
+    chefChantier: 42,
+    dateOS: '01/09/2023',
+    dateFin: '01/04/2024',
+    TM: '3500h',
+    HR: '3500h',
+    SH: '0h',
+    DPF: '',
+    RPF: '',
+    AP: '',
+    SP: ''
   },
   {
     id: 72,
@@ -1990,24 +1953,22 @@ const Evenements = [
     borderColor: '#00695C',
     textColor: '#FFFFFF',
     type: 'chantier',
-    attributs: {
-      poleActivite: 1,
-      code: 'CHT-072',
-      identifiant: 'LIL-2024-072',
-      libelle: 'Centre Logistique Lille',
-      etat: 'En cours',
-      chargeAffaire: 41,
-      chefChantier: 42,
-      dateOS: '01/01/2024',
-      dateFin: '01/09/2025',
-      TM: '6700h',
-      HR: '3350h',
-      SH: '3350h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
-    }
+    poleActivite: 1,
+    code: 'CHT-072',
+    identifiant: 'LIL-2024-072',
+    libelle: 'Centre Logistique Lille',
+    etat: 'En cours',
+    chargeAffaire: 41,
+    chefChantier: 42,
+    dateOS: '01/01/2024',
+    dateFin: '01/09/2025',
+    TM: '6700h',
+    HR: '3350h',
+    SH: '3350h',
+    DPF: '',
+    RPF: '',
+    AP: '',
+    SP: ''
   },
   {
     id: 73,
@@ -2017,24 +1978,22 @@ const Evenements = [
     borderColor: '#F57C00',
     textColor: '#000000',
     type: 'chantier',
-    attributs: {
-      poleActivite: 1,
-      code: 'CHT-073',
-      identifiant: 'MET-2024-073',
-      libelle: 'Résidence Les Tilleuls Metz',
-      etat: 'Planifié',
-      chargeAffaire: 36,
-      chefChantier: 40,
-      dateOS: '01/07/2024',
-      dateFin: '01/05/2026',
-      TM: '4600h',
-      HR: '0h',
-      SH: '4600h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
-    }
+    poleActivite: 1,
+    code: 'CHT-073',
+    identifiant: 'MET-2024-073',
+    libelle: 'Résidence Les Tilleuls Metz',
+    etat: 'Planifié',
+    chargeAffaire: 36,
+    chefChantier: 40,
+    dateOS: '01/07/2024',
+    dateFin: '01/05/2026',
+    TM: '4600h',
+    HR: '0h',
+    SH: '4600h',
+    DPF: '',
+    RPF: '',
+    AP: '',
+    SP: ''
   },
 ];
 
@@ -2224,20 +2183,15 @@ export const Images: Image[] = [
 //API
 export const getEvenements = (): Item[] => {
   return Evenements.map(event => {
-    const image = Images.find(img => img.id === event.image)?.image || null;
-    
-
-
-    const attributs = event.attributs || {};
+    const image = Images.find(img => img.id === event.image)?.image || null;    
 
     if(event.type === 'chantier' ){
       return {
         ...event,
-        ...attributs,
         image,
-        chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).attributs.chargeAffaire)?.firstName || '',
-        chefChantier : initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).attributs.chefChantier)?.firstName || '',
-        poleActivite : PA.find(pa => pa.id === (event as any).attributs.poleActivite)?.name || ''
+        chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).chargeAffaire)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).chargeAffaire)?.firstName || '',
+        chefChantier : initialEmployees.find(emp => emp.id === (event as any).chefChantier)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).chefChantier)?.firstName || '',
+        poleActivite : PA.find(pa => pa.id === (event as any).poleActivite)?.name || ''
       } as Item;
     } else {
       return {

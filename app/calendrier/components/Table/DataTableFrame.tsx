@@ -193,6 +193,8 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   customHeader?: React.ReactNode;
   /** Affiche la possibilité de cacher une colonne */
   showColumnVisibilityToggle?: boolean;
+  /** Callback lors du clic droit sur une ligne */
+  onRightClick?: (item: T, e: React.MouseEvent) => void;
   /** Callback lors du clic sur une ligne */
   onRowClick?: (item: T) => void;
   /** Callback lors du double-clic sur une cellule */
@@ -226,6 +228,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   withHeader = true,
   customHeader,
   onRowClick,
+  onRightClick,
   onCellDoubleClick,
   defaultSort,
 }: DataTableFrameProps<T>) => {
@@ -896,6 +899,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                     className=""
                     style={style}
                     onClick={() => onRowClick?.(item)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      onRightClick?.(item, e);
+                    }}
                   >
                     {allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
                       const columnIndex = attributeKeys.indexOf(attributeKey);
