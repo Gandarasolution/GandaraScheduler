@@ -35,6 +35,10 @@ export type FilterConfig = {
   [key: string]: FilterCategory;
 }
 
+export type FilterConfigWithActive = FilterConfig & {
+  activeFilters?: ActiveFilters;
+}
+
 export interface ActiveFilters {
   [key: string]: string[];
 }
