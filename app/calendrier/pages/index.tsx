@@ -26,7 +26,8 @@ import {
   AlertModal,
   SearchOverlay,
   CalendarHeader,
-  CalendarModals
+  CalendarModals,
+  DraggableSource
 } from '@/app/calendrier/components';
 
 // --- CUSTOM HOOKS ---
@@ -435,17 +436,23 @@ export default function HomePage({
           <SearchOverlay
             isOpen={viewState.isSearchOverlayOpen}
             onClose={() => viewState.setIsSearchOverlayOpen(false)}
-            searchInput={""}
-            setSearchInput={() => {}}
+            searchInput={viewState.searchInput}
+            setSearchInput={viewState.setSearchInput}
             items={dataLayer.filteredEvent}
             onItemAction={appointmentLogic.handleSearchItemAction}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
-              noInput: { title: "Rechercher", description: "Tapez pour rechercher..." },
-              noResults: { title: "Aucun résultat", description: "Rien trouvé." }
+              noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
+              noResults: { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
-            renderItem={(event) => (
-               <div className="p-2 border-b hover:bg-gray-50 cursor-pointer">{event.label}</div> 
+            renderItem={(event, index) => (
+              <DraggableSource
+                key={`${event.label}-${event.id}-${index}`}
+                id={event.id as number}
+                title={event.label}
+                type={(event as any).type as "Chantier" | "Absence" | "Autre"}
+                className="w-full"
+              />
             )}
             actionLabel="+"
             enableDragDetection={true}

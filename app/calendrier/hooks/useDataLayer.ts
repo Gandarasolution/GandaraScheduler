@@ -152,7 +152,7 @@ export const useDataLayer = ({ viewType, filters, calendarConfig }: DataLayerPro
     appointmentsRef,
     filteredEmployees,
     filteredAppointments,
-    filteredEvent,
+    filteredEvent, setFilteredEvent,
     initialTeams,
     getTableItems,
     getTableStructure,

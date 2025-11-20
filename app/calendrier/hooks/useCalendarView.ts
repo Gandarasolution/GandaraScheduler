@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { CalendarConfig } from '../types'; // Assumed type
 import { ActiveFilters } from '../utils/searchAndFilterUtils';
 import { useCalendarConfig } from './useCalendarConfig'; // Le hook existant
-import { ThemeType } from '../utils/themeManager';
 
 export const useCalendarView = (employeesRef: any) => {
   // --- Préférences persistantes (localStorage) ---
@@ -37,6 +36,8 @@ export const useCalendarView = (employeesRef: any) => {
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [nonWorkingDates, setNonWorkingDates] = useState<Date[]>([]);
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [eventSearchInput, setEventSearchInput] = useState<string>('');
 
   // --- Hook de configuration existant ---
   const calendarConfigHook = useCalendarConfig({ employees: employeesRef });
@@ -84,6 +85,8 @@ export const useCalendarView = (employeesRef: any) => {
     modalInfo, setModalInfo,
     nonWorkingDates, setNonWorkingDates,
     isNotificationsPanelOpen, setIsNotificationsPanelOpen,
+    searchInput, setSearchInput,
+    eventSearchInput, setEventSearchInput,
     
     // Config Calendar
     calendarConfigHook,
