@@ -122,9 +122,14 @@ export default function HomePage({
     deleteAction: appointmentLogic.handleDeleteAppointmentConfirm,
     openSearch: () => viewState.setIsSearchOverlayOpen(true),
     handleOpenEditModal: appointmentLogic.handleOpenEditModal,
-    handleRepeat: () => viewState.setModalInfo({ message: "Configuration de la répétition...", color: "blue" }),
-    handleExtend: () => appointmentLogic.setExtendData(new Date()),
-    handleDivide: (id) => appointmentLogic.handleDivideConfirm && appointmentLogic.handleDivideConfirm(),
+    handleRepeat: () => appointmentLogic.setRepeatData({
+      numberCount: 1,       // "Tous les 1..."
+      repeatCount: 1,       // "1 fois" (par défaut)
+      repeatInterval: 'day', // "...jours"
+      endDate: null,        // Pas de date de fin par défaut
+    }),
+    handleExtend: () => appointmentLogic.setExtendData(appointmentLogic.selectedAppointment?.endDate || new Date()),
+    handleDivide: (appointment) => appointmentLogic.handleDivideConfirm(appointment),
     
     // Constantes pour calculs d'interaction
     isFullDay: viewState.isFullDay,
@@ -315,7 +320,14 @@ export default function HomePage({
                         // Correction TS : Extraction de la propriété spécifique ou undefined
                         computedFields={currentComputedFields as any}
                         // Correction TS : Cast explicite pour satisfaire Record<string, ...>
-                        customRenderers={customRenderersFactory(viewState.viewType, dataLayer.employeesRef.current, interaction.handleOpenImageModal) as any}
+                        customRenderers={
+                          customRenderersFactory(
+                            viewState.viewType, 
+                            dataLayer.employeesRef.current, 
+                            interaction.handleOpenImageModal,
+                            appointmentLogic.setSelectedAppointment,
+                            appointmentLogic.handleOpenEditModal
+                          ) as any}
                         showGroupHeaders={viewState.viewType === 'chantier-table'}
                         onRightClick={interaction.handleDataTableContextMenu}
                       />
@@ -450,7 +462,7 @@ export default function HomePage({
             searchInput={viewState.searchInput}
             setSearchInput={viewState.setSearchInput}
             items={dataLayer.filteredEvent}
-            onItemAction={appointmentLogic.handleSearchItemAction}
+            onItemAction={appointmentLogic.selectedCell ? appointmentLogic.handleSearchItemAction : undefined}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
               noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },

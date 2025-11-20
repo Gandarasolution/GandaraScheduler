@@ -285,7 +285,7 @@ export const CalendarModals = ({
                 value={format(modalsState.extendData, "yyyy-MM-dd")}
                 min={modalsState.selectedAppointmentForm?.endDate ? format(modalsState.selectedAppointmentForm.endDate, "yyyy-MM-dd") : undefined}
                 onChange={(e) => {
-                  const date = new Date(e.target.value);
+                  const date = new Date(new Date(e.target.value).setHours(23, 59, 59, 999));
                   if (!isNaN(date.getTime())) handlers.setExtendData(date);
                 }}
               />

@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
-import { setHours, setMinutes, addHours } from "date-fns";
+import { setHours, setMinutes, addHours, eachDayOfInterval } from "date-fns";
 import { Appointment, HistoryAction, Item } from '../types';
 import { createAppointmentUtils } from '../utils/appointmentUtils';
 import { notificationService } from "../services";
-import { getWorkedDayIntervals } from "../utils/dates";
+import { getWorkedDayIntervals, isWeekend } from "../utils/dates";
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../utils/constants";
 
 // Type pour les données de répétition
@@ -219,14 +219,14 @@ export const useAppointmentLogic = ({
         const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
         
         // Note: On ne sauvegarde pas l'historique ici, on le fait à la fin pour grouper
-        onResize(appointment.id, mainStart, mainEnd, newEmployeeId, false);
+        onResize(appointment.id, mainStart, new Date(mainEnd.setHours(23,59,59,999)), newEmployeeId, false);
         
         // 2. Créer des nouveaux RDV pour les jours suivants (Split)
         for (let i = startIndex; i !== endIndex; i += step) {
           const day = days[i];
           const newApp = createAppointment(
             day.start, 
-            day.end, 
+            new Date(day.end.setHours(23,59,59,999)),
             newEmployeeId, 
             appointment.EventId,
             false, // Pas d'historique individuel
@@ -370,14 +370,30 @@ export const useAppointmentLogic = ({
     const originalAppointment = { ...appointmentToDivide };
     const { startDate, endDate, employeeId } = appointmentToDivide;
     
+    console.log('startDate', startDate);
+    console.log('endDate', endDate);
+
     // Calcul du milieu
-    const totalDuration = endDate.getTime() - startDate.getTime();
+    let totalDuration = (endDate.getTime() - startDate.getTime()) + 1;
     const timeInterval = timelineState.isFullDay 
       ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour 
       : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
     
+      
+    const allDates = eachDayOfInterval({ start: startDate, end: endDate });
+
+    let compteur = 0;
+    allDates.forEach(date => {
+      if (isWeekend(date) && !timelineState.isDisplayWeekend && !timelineState.includeWeekend) {
+          compteur++;
+      } 
+    });
+
+    totalDuration -= (timelineState.isFullDay ? compteur : compteur * 2) * (timeInterval * 60 * 60 * 1000);
+
     const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000));
     const splitDate = new Date(startDate.getTime() + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000)));
+  
 
     // 1. Redimensionner l'original
     onResize(id, startDate, splitDate, employeeId as number, false);
@@ -406,12 +422,12 @@ export const useAppointmentLogic = ({
     setSelectedAppointment(null);
   }, [appointmentsRef, timelineState, onResize, saveAppointmentState, onUpdate]);
 
-  const handleDivideConfirm = useCallback(() => {
+  const handleDivideConfirm = useCallback((appointment: Appointment) => {
       setAlertState({
           isVisible: true,
           title: "Êtes-vous sûr de vouloir diviser ce rendez-vous ?",
           onConfirm: () => {
-              handleDivideAppointment(selectedAppointment?.id);
+              handleDivideAppointment(appointment.id);
               setAlertState(prev => ({ ...prev, isVisible: false }));
           }
       });

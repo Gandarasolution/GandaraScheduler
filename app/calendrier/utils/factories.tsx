@@ -4,23 +4,15 @@ import { Appointment, Employee, ChantierItem } from "../types";
 import { HOURS_PER_DAY } from "./constants";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
 
-// --- TYPES & INTERFACES ---
 
-type RendererFactoryParams = {
-  viewType: string;
-  employees: Employee[];
-  onImageClick: (items: any, id: number) => void;
-  // Paramètres optionnels pour restaurer la fonctionnalité complète du tableau employés
-  initialTeams?: any[]; 
-  onTeamChange?: (empId: number, groupId: number | null) => void;
-};
-
-// --- FACTORY DES RENDERERS (AFFICHAGE DES CELLULES) ---
+// --- FACTORY DES RENDERERS (AFFICHAGE DES CELLULES DES TABLEAUX ) ---
 
 export const customRenderersFactory = (
   viewType: string, 
   employees: Employee[], 
   onImageClick: (items: any, id: number) => void,
+  setSelectedAppointment: (appointment: Appointment) => void,
+  handleOpenEditModal: (appointment: Appointment) => void,
   // Ces deux derniers arguments sont optionnels pour la compatibilité, 
   // mais nécessaires pour le sélecteur d'équipe dans le tableau employé
   initialTeams: any[] = [],
@@ -31,7 +23,6 @@ export const customRenderersFactory = (
   const imageRendererChantierAndPaie = (value: any, item: any) => {
     const chantierItem = item as ChantierItem;
     return (
-      <div className="w-full h-full min-w-[200px]">
         <AppointmentItem
           appointment={{
             id: 0,
@@ -48,10 +39,21 @@ export const customRenderersFactory = (
           event={chantierItem}
           chargeeAffaire=''
           source='demo'
-          // Empêcher l'interaction complète ici pour éviter les conflits
-          onDoubleClick={() => {}} 
+          className='cursor-pointer'
+          onDoubleClick={() => {
+            const newAppointment: Appointment = {
+              id: 0,
+              description: '',
+              type: chantierItem.type,
+              EventId: Number(chantierItem.id),
+              startDate: new Date(),
+              endDate: addHours(new Date(), 12),
+              employeeId: 0,
+            }
+            setSelectedAppointment(newAppointment);
+            handleOpenEditModal(newAppointment);
+          }} 
         />
-      </div>
     );
   };
 

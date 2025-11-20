@@ -24,7 +24,6 @@ import { useDrag, useDragLayer } from 'react-dnd';
 import {Appointment, HalfDayInterval, Item } from '../../types';
 import { addDays, isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../../utils/constants';
-import { log } from 'console';
 
 /**
  * Interface définissant les propriétés du composant AppointmentItem
@@ -39,6 +38,8 @@ interface AppointmentItemProps {
   isMobile: boolean;
   /** Inclure les week-ends dans le calcul de durée (optionnel) */
   isDisplayWeekend?: boolean;
+  /** ClassName */
+  className?: string;
   /** Type d'événement associé au rendez-vous */
   event: Item;
   /** Informations de l'employé assigné */
@@ -84,6 +85,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   isDisplayWeekend,
   source = 'calendar',
   isSelected,
+  className,
   onClick,
   onDoubleClick,
   onResize,
@@ -423,6 +425,7 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
         hover:shadow-xl
+        ${className || ''}
       `}
       title={event.label}
       style={{
