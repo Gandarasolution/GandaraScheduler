@@ -12,7 +12,7 @@
 "use client";
 
 import '../styles/custom.scss';
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, use } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
@@ -220,10 +220,11 @@ export default function HomePage({
 
   // Init: Centrage sur la date lors du changement de vue
   useEffect(() => {
-    if (viewState.viewType === 'calendar') {
+    if (viewState.viewType === 'calendar' && timeline.isScrollReady) {
+      // Appeler goToDate de manière asynchrone
       timeline.goToDate(viewState.selectedDate);
     }
-  }, [viewState.viewType]);
+  }, [viewState.viewType, timeline.isScrollReady]);
 
 
   // --- RENDU VISUEL ---
@@ -231,6 +232,15 @@ export default function HomePage({
   return (
     <NoSSR>
       <DndProvider backend={HTML5Backend}>
+        {/* Overlay de loading pendant le centrage initial */}
+        {viewState.viewType === 'calendar' && timeline.isLoading && (
+          <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-gray-600">Chargement du calendrier...</p>
+            </div>
+          </div>
+        )}
         <div className="h-screen flex flex-col overflow-hidden bg-bg-primary poppins">
           
           {/* HEADER : Navigation et Contrôles */}
@@ -246,7 +256,7 @@ export default function HomePage({
 
           {/* CORPS PRINCIPAL : Grille ou Tableaux */}
           <div className="flex-1 flex min-h-0">
-            <div className={`flex flex-grow rounded-2xl border-gray-200 ${!viewState.isMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
+            <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!viewState.isMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
               <div className={`flex-grow rounded-lg w-full h-full pb-4 ${dataLayer.isLoading ? "pointer-events-none opacity-60" : ""}`}>
                 
                 {/* Injection des contextes pour les composants enfants */}
@@ -292,6 +302,7 @@ export default function HomePage({
                           onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
                           onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
                           handleContextMenu={interaction.handleContextMenu}
+                          onScrollElementMounted={timeline.onScrollElementMounted}
                         />
                       ) : (
                         <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>

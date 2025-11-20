@@ -13,7 +13,7 @@ interface InteractionProps {
   copyAppointment: (app: Appointment) => void;
   pasteAppointment: (cell?: { employeeId: number; date: Date } | null) => void;
   undoAction: () => void;
-  deleteAction: () => void;
+  deleteAction: (appointment?: Appointment) => void;
   
   // Actions UI & Modales
   openSearch: () => void;
@@ -78,7 +78,7 @@ export const useInteraction = ({
           items.push({ 
             label: "Supprimer", 
             logo: <svg id="Layer_1" enableBackground="new 0 0 512 512" height="24" viewBox="0 0 512 512" width="24" xmlns="http://www.w3.org/2000/svg"><g><path d="m479.867 111.4c0-25.99-21.145-47.134-47.135-47.134h-81.398v-9.101c0-30.417-24.748-55.165-55.168-55.165h-80.332c-30.42 0-55.168 24.748-55.168 55.166v9.101h-81.4c-25.989 0-47.133 21.144-47.133 47.134 0 20.745 13.478 38.39 32.133 44.671v300.761c0 30.419 24.748 55.167 55.167 55.167h273.133c30.419 0 55.166-24.748 55.166-55.167v-300.761c18.657-6.281 32.135-23.926 32.135-44.672zm-289.201-56.234c0-13.876 11.291-25.166 25.168-25.166h80.332c13.878 0 25.168 11.29 25.168 25.166v9.101h-130.668zm201.9 426.834h-273.132c-13.877 0-25.167-11.29-25.167-25.167v-298.3h323.466v298.3c-.001 13.877-11.29 25.167-25.167 25.167zm40.166-353.467h-353.466c-9.447 0-17.133-7.686-17.133-17.133 0-9.448 7.686-17.134 17.133-17.134h353.466c9.448 0 17.135 7.686 17.135 17.134s-7.686 17.133-17.135 17.133z"/><path d="m167.633 192.8c-8.284 0-15 6.716-15 15v224.934c0 8.284 6.716 15 15 15s15-6.716 15-15v-224.934c0-8.284-6.716-15-15-15z"/><path d="m256 192.8c-8.284 0-15 6.716-15 15v224.934c0 8.284 6.716 15 15 15s15-6.716 15-15v-224.934c0-8.284-6.716-15-15-15z"/><path d="m344.367 192.8c-8.284 0-15 6.716-15 15v224.934c0 8.284 6.716 15 15 15s15-6.716 15-15v-224.934c0-8.284-6.716-15-15-15z"/></g></svg>,
-            action: deleteAction 
+            action: () => deleteAction(appointment)
           });
           
           // Item: Copier
@@ -184,7 +184,7 @@ export const useInteraction = ({
                   break;
           }
       } else if ((e.key === 'Delete' || e.key === 'rubout') && selectedAppointment) {
-          deleteAction();
+          deleteAction(selectedAppointment);
       }
   }, [selectedAppointment, selectedCell, copyAppointment, pasteAppointment, undoAction, deleteAction, openSearch]);
 

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { CalendarConfig } from '../types'; // Assumed type
 import { ActiveFilters } from '../utils/searchAndFilterUtils';
 import { useCalendarConfig } from './useCalendarConfig'; // Le hook existant
+import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../utils/constants';
 
 export const useCalendarView = (employeesRef: any) => {
   // --- Préférences persistantes (localStorage) ---
@@ -97,7 +98,7 @@ export const useCalendarView = (employeesRef: any) => {
     // Helpers pour constants
     constants: {
         // Ces valeurs peuvent être calculées ici ou importées
-        intervals: isFullDay ? /* DAY_INTERVALS */ [] : /* HALF_DAY_INTERVALS */ []
+        intervals: isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS
     }
   };
 };

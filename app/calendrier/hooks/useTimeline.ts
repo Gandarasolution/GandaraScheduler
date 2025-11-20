@@ -11,7 +11,12 @@ interface UseTimelineProps {
 export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTimelineProps) => {
   const [days, setDays] = useState<Date[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isScrollReady, setIsScrollReady] = useState(false);
   const mainScrollRef = useRef<HTMLDivElement>(null);
+  
+  // **NOUVEAU**: Queue de navigation en attente
+  const pendingNavigationRef = useRef<Date | null>(null);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Refs pour le scroll performance
   const isProcessingInfiniteScroll = useRef(false);
@@ -62,7 +67,6 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
       });
 
       const combined = direction === 'right' ? [...prevDays, ...newDays] : [...newDays, ...prevDays];
-      // Garder seulement la taille de la fenêtre pour la performance DOM
       return direction === 'right' ? combined.slice(-WINDOW_SIZE) : combined.slice(0, WINDOW_SIZE);
     });
   }, [isDisplayWeekend]);
@@ -84,7 +88,6 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
             const el = mainScrollRef.current;
             if (!el) return;
 
-            // Logique de détection des bords
             const { scrollLeft, scrollWidth, clientWidth } = el;
             const scrollableWidth = scrollWidth - clientWidth;
             const percentage = (scrollLeft / scrollableWidth) * 100;
@@ -104,12 +107,17 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
       throttledScrollHandler.current?.();
   }, []);
 
-  // --- Navigation Date ---
-  const goToDate = useCallback((date: Date) => {
-    const scrollElement = mainScrollRef.current;
-    if (!scrollElement) return;
-    
-    setIsLoading(true);
+  // --- **NOUVELLE FONCTION**: Exécution de la navigation vers une date ---
+  const executeGoToDate = useCallback((date: Date): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const scrollElement = mainScrollRef.current;
+      
+      if (!scrollElement) {
+        resolve(false);
+        return;
+      }
+      
+      setIsLoading(true);
     
     // Calcul fenêtre initiale
     const halfWindow = Math.floor(WINDOW_SIZE / 2);
@@ -122,7 +130,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
         if (isDisplayWeekend || !isWeekend(curr)) newTimeline.push(curr);
         curr = addDays(curr, 1);
     }
-    
+
     setDays(newTimeline);
 
     // Centrage visuel
@@ -140,13 +148,67 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
                     isAutoScrolling.current = false;
                     isInfiniteScrollEnabled.current = true;
                     setIsLoading(false);
+                    resolve(true);
                 }, 800);
             } else {
                  setIsLoading(false);
+                 resolve(true);
             }
         });
     });
+    });
   }, [isDisplayWeekend]);
+
+  // --- **FONCTION PUBLIQUE**: Navigation avec retry automatique ---
+  const goToDate = useCallback(async (date: Date) => {
+    
+    // Annuler tout retry en cours
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    
+    // Tentative immédiate
+    const success = await executeGoToDate(date);
+    
+    if (!success) {
+      // Stocker la date pour retry
+      pendingNavigationRef.current = date;
+      
+      // Retry avec timeout croissant (100ms, 200ms, 400ms max)
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      const retry = async () => {
+        attempts++;
+        
+        if (pendingNavigationRef.current && attempts <= maxAttempts) {
+          const retrySuccess = await executeGoToDate(pendingNavigationRef.current);
+          
+          if (retrySuccess) {
+            pendingNavigationRef.current = null;
+          } else {
+            const delay = Math.min(100 * Math.pow(2, attempts - 1), 400);
+            retryTimeoutRef.current = setTimeout(retry, delay);
+          }
+        } else if (attempts > maxAttempts) {
+          pendingNavigationRef.current = null;
+          setIsLoading(false);
+        }
+      };
+      
+      retryTimeoutRef.current = setTimeout(retry, 100);
+    }
+  }, [executeGoToDate]);
+
+  // --- **NETTOYAGE**: Annuler les retries au démontage ---
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // --- Gestion Clavier Scroll ---
   const handleKeyboardScroll = useCallback((e: KeyboardEvent) => {
@@ -171,6 +233,11 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
       }
   }, []);
 
+  // Callback pour notifier que l'élément de scroll est monté
+  const onScrollElementMounted = useCallback(() => {
+    setIsScrollReady(true);
+  }, []);
+
   return {
     days,
     setDays,
@@ -178,6 +245,8 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     handleScroll,
     goToDate,
     isLoading,
+    isScrollReady,
+    onScrollElementMounted,
     handleKeyboardScroll,
     handleKeyboardScrollStop
   };

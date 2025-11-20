@@ -216,7 +216,7 @@ const DayCell: React.FC<DayCellProps> = ({
       </div>
     );
   }
-
+  
   // Desktop : rendu classique
   return (
     <div 
@@ -236,6 +236,7 @@ const DayCell: React.FC<DayCellProps> = ({
         minHeight: CELL_HEIGHT,
       }}
     >
+      
       {/* Le numéro du jour est maintenant géré par l'en-tête global dans CalendarGrid */}
       {intervals.map((interval) => {
         const intervalStart = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.startHour), 0), 0), 0);

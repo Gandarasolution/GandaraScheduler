@@ -337,17 +337,20 @@ export const useAppointmentLogic = ({
 
   // --- ACTIONS UTILISATEUR (Delete, Divide, Repeat, Extend) ---
 
-  const handleDeleteAppointmentConfirm = useCallback(() => {
+  const handleDeleteAppointmentConfirm = useCallback((appointmentToDelete?: Appointment) => {
+    // Utiliser le paramètre ou le state
+    const appointment = appointmentToDelete || selectedAppointment;
+    const id = appointment?.id;
+    
+    if (!id) return;
+
     setAlertState({
       isVisible: true,
       title: "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?",
       onConfirm: () => {
-        const id = selectedAppointment?.id;
-        if (!id) return;
-
-        const appointmentToDelete = appointmentsRef.current.find(app => app.id === id);
-        if (appointmentToDelete) {
-          saveAppointmentState(appointmentToDelete, 'delete');
+        const appointmentInRef = appointmentsRef.current.find(app => app.id === id);
+        if (appointmentInRef) {
+          saveAppointmentState(appointmentInRef, 'delete');
         }
         
         appointmentsRef.current = appointmentsRef.current.filter((app) => app.id !== id);
