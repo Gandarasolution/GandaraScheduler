@@ -32,7 +32,7 @@ interface AppointmentFormProps {
   /** Rendez-vous à éditer (null pour création) */
   appointment: Appointment;
   /** Événement associé au rendez-vous */
-  event: Item;
+  item: Item;
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
@@ -90,7 +90,7 @@ interface AppointmentFormProps {
 const AppointmentForm: React.FC<AppointmentFormProps> = ({
   appointments,
   appointment,
-  event,
+  item,
   employees,
   HALF_DAY_INTERVALS,
   isFullDay,
@@ -110,13 +110,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(
       { ...appointment, startDate: appointment.startDate, endDate:  addMinutes(appointment.endDate, -1) }
   );
-  const [formDataEventType, setFormDataEventType] = useState<Item>(event);
+  const [formDataEventType, setFormDataEventType] = useState<Item>(item);
   const [dateValidationError, setDateValidationError] = useState(false);  
  
 
   useEffect(() => {
-    setFormDataEventType(event);
-  }, [event]);
+    setFormDataEventType(item);
+  }, [item]);
 
 
   /**

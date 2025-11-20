@@ -17,6 +17,7 @@ interface ImageData {
 interface ImageSelectorContentProps {
   isOpen: boolean;
   images: ImageData[];
+  actualImage: ImageData['image'] | null;
   onImageSelect: (src: string) => void;
   onClose: () => void;
   onImageUpload: (file: File) => Promise<string>;
@@ -30,6 +31,7 @@ interface ImageSelectorContentProps {
 const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
   images,
   isOpen,
+  actualImage,
   onImageSelect,
   onClose,
   onImageUpload,
@@ -45,12 +47,23 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
 
   // Filtrer les images selon le terme de recherche
   const filteredImages = useMemo(() => {
-    if (!searchTerm.trim()) return images;
+     let result = searchTerm.trim() 
+      ? images.filter(image => 
+          image.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : images;
     
-    return images.filter(image => 
-      image.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [images, searchTerm]);
+    // **PLACER L'IMAGE ACTUELLE EN PREMIER**
+    if (actualImage) {
+      result = [...result].sort((a, b) => {
+        if (a.image === actualImage) return -1; // a en premier
+        if (b.image === actualImage) return 1;  // b en premier
+        return 0; // Garde l'ordre original
+      });
+    }
+    
+    return result;
+  }, [images, searchTerm, actualImage]);
 
     // Pagination
     const totalPages = Math.ceil(filteredImages.length / itemsPerPage);
@@ -237,7 +250,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                   >
                     <div 
                       className={`border-2 rounded-lg p-2 hover:border-primary hover:shadow-md transition-all relative ${
-                        index === 0 && currentPage === 1
+                        index === 0 && currentPage === 1 && actualImage !== null
                           ? 'border-primary shadow-lg bg-primary-ultra-light' 
                           : 'border-gray-200 hover:border-primary'
                       }`}

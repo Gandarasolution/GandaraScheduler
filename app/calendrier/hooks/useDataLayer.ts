@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Appointment, Employee, Item, CalendarConfig } from '../types';
+import { Appointment, Employee, Item, CalendarConfig, Image } from '../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../utils/searchAndFilterUtils';
 import { 
   getEmployees, 
   initialAppointments, 
   getEvenements, 
-  initialTeams 
+  initialTeams, 
+  getImages
 } from "../../datasource";
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
 
@@ -20,12 +21,14 @@ export const useDataLayer = ({ viewType, filters, calendarConfig }: DataLayerPro
   
   // Données Sources (Refs pour éviter re-renders inutiles sur grosses données)
   const employeesRef = useRef<Employee[]>(getEmployees());
-  const eventsRef = useRef<Item[]>(getEvenements());
+  const itemsRef = useRef<Item[]>(getEvenements());
   const appointmentsRef = useRef<Appointment[]>(initialAppointments);
   
   // Données Filtrées (State pour l'UI)
-  const [filteredEvent, setFilteredEvent] = useState<Item[]>(eventsRef.current);
+  const [filteredEvent, setFilteredEvent] = useState<Item[]>(itemsRef.current);
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
+  const [availableImages, setAvailableImages] = useState<Image[]>(getImages());
+
 
   // Instanciation Utils
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -145,17 +148,39 @@ export const useDataLayer = ({ viewType, filters, calendarConfig }: DataLayerPro
   // --- Trigger de refresh ---
   const refreshData = () => setAppointmentsVersion(prev => prev + 1);
 
+  const addImage = (newImage: Image) => {
+    setAvailableImages([...availableImages, newImage]); // Ajout au début
+  };
+
+  const updateEventImage = (id: number, newImageUrl: string) => {
+    itemsRef.current = itemsRef.current.map(e => 
+      e.id === id ? { ...e, image: newImageUrl } : e
+    );
+    refreshData(); // Force le re-render
+  };
+
+  const updateEmployeeImage = (id: number, newImageUrl: string) => {
+    employeesRef.current = employeesRef.current.map(emp => 
+      emp.id === id ? { ...emp, image: newImageUrl } : emp
+    );
+    refreshData();
+  };
+
   return {
     isLoading,
     employeesRef,
-    eventsRef,
+    itemsRef,
     appointmentsRef,
     filteredEmployees,
     filteredAppointments,
     filteredEvent, setFilteredEvent,
+    availableImages,
     initialTeams,
     getTableItems,
     getTableStructure,
-    refreshData
+    refreshData,
+    addImage,
+    updateEventImage,
+    updateEmployeeImage
   };
 };

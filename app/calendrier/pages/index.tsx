@@ -48,6 +48,7 @@ import { SelectedCellContext } from "../context/SelectedCellContext";
 import { getEmployees, getImages } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
+import { da } from 'date-fns/locale';
 
 /**
  * Composant wrapper pour éviter les erreurs d'hydratation Next.js
@@ -99,7 +100,7 @@ export default function HomePage({
   const appointmentLogic = useAppointmentLogic({
     appointmentsRef: dataLayer.appointmentsRef,
     employeesRef: dataLayer.employeesRef,
-    eventsRef: dataLayer.eventsRef,
+    eventsRef: dataLayer.itemsRef,
     timelineState: { 
       isFullDay: viewState.isFullDay, 
       isDisplayWeekend: viewState.isDisplayWeekend,
@@ -135,7 +136,8 @@ export default function HomePage({
     isFullDay: viewState.isFullDay,
     DAY_INTERVALS: viewState.constants.intervals,
     HALF_DAY_INTERVALS: viewState.constants.intervals,
-    viewType: viewState.viewType
+    viewType: viewState.viewType,
+    addImage: dataLayer.addImage
   });
 
   // --- CONFIGURATION DES FILTRES (Pour FilterModal) ---
@@ -170,7 +172,7 @@ export default function HomePage({
   const filterConfig = useMemo(() => {
       // Génération des options de filtre basées sur les données actuelles
       const baseConfig = searchUtils.getFilterOptions(
-        dataLayer.eventsRef.current, 
+        dataLayer.itemsRef.current, 
         viewState.viewType === 'chantier-table' ? 'chantier' : null,
         keyOfFilter
       );
@@ -180,7 +182,7 @@ export default function HomePage({
         ...baseConfig,
         activeFilters: viewState.activeFilters
       };
-  }, [searchUtils, dataLayer.eventsRef.current, viewState.viewType, keyOfFilter, viewState.activeFilters]);
+  }, [searchUtils, dataLayer.itemsRef.current, viewState.viewType, keyOfFilter, viewState.activeFilters]);
 
 
   // --- PREPARATION DES TABLEAUX (Correction TS) ---
@@ -282,7 +284,7 @@ export default function HomePage({
                           employees={dataLayer.filteredEmployees}
                           appointments={dataLayer.filteredAppointments}
                           initialTeams={dataLayer.initialTeams}
-                          events={dataLayer.eventsRef.current}
+                          events={dataLayer.itemsRef.current}
                           
                           /* État Temporel */
                           dayInTimeline={timeline.days}
@@ -376,9 +378,27 @@ export default function HomePage({
               
               // Images
               closeImageModal: interaction.handleCloseImageModal,
-              handleImageSelect: (src) => { /* Logique d'image */ },
+              handleImageSelect: (newImageUrl) => {
+                const id = interaction.selectedItem?.id || null;
+                if (id === null) return;
+
+                // Logique de décision basée sur la vue active
+                if (viewState.viewType === 'employee-table') {
+                    dataLayer.updateEmployeeImage(id, newImageUrl);
+                } else {
+                    interaction.setSelectedItem(prev => {
+                        if (prev) {
+                            return { ...prev, image: newImageUrl };
+                        }
+                        return prev;
+                    });
+                }
+                
+                // Fermer la modale via l'interaction
+                interaction.handleCloseImageModal();
+              },
               handleImageUpload: interaction.handleImageUpload,
-              openImageModalForEvent: interaction.handleOpenImageModal,
+              openImageModalForEvent: (itemId: number) => interaction.handleOpenImageModal(dataLayer.itemsRef.current.find(e => e.id === itemId)!),
 
               // Settings & Config
               closeSettings: () => viewState.setIsSettingsOpen(false),
@@ -408,13 +428,17 @@ export default function HomePage({
               },
               setEditingConfig: viewState.calendarConfigHook.setEditingConfig,
               setIsCreatingConfig: viewState.calendarConfigHook.setIsCreatingConfig,
+
+              // Correction : Setter pour l'item sélectionné
+              setSelectedItem: interaction.setSelectedItem,
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,
-              events: dataLayer.eventsRef.current,
+              items: dataLayer.itemsRef.current,
               employees: dataLayer.employeesRef.current,
+              selectedItem: interaction.selectedItem,
               // Correction : Passer les images disponibles
-              availableImages: availableImagesRef.current, 
+              availableImages: dataLayer.availableImages, 
               // Correction : Passer la config de filtre calculée
               filterConfig: filterConfig, 
               isUploading: interaction.isUploading,

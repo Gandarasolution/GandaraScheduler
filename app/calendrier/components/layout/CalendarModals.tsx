@@ -8,7 +8,7 @@ import {
   ConfigurationModal, 
   FilterModal 
 } from '@/app/calendrier/components';
-import { Appointment, Item, Employee, CalendarConfig } from '../../types';
+import { Appointment, Item, Employee, CalendarConfig, Image } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/useAppointmentLogic';
 
@@ -59,12 +59,15 @@ interface CalendarModalsProps {
     // Configuration Editing State (from hook)
     setEditingConfig: (config: any) => void;
     setIsCreatingConfig: (val: boolean) => void;
+
+    setSelectedItem: (item: Item | null) => void;
   };
   data: {
     appointments: Appointment[];
-    events: Item[];
+    items: Item[];
     employees: Employee[];
-    availableImages: any[];
+    selectedItem: Item | null;
+    availableImages: Image[];
     filterConfig: any; // Options pour le filtre
     isUploading: boolean;
     uploadError: string | null;
@@ -312,7 +315,7 @@ export const CalendarModals = ({
           <AppointmentForm
             appointments={data.appointments}
             appointment={modalsState.selectedAppointmentForm as Appointment}
-            event={data.events.find(e => e.id === modalsState.selectedAppointmentForm?.EventId) as Item}
+            item={data.items.find(e => e.id === modalsState.selectedAppointmentForm?.EventId) as Item}
             isReducedVersion={modalsState.selectedAppointmentForm?.id === 0}
             employees={data.employees}
             HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
@@ -328,6 +331,7 @@ export const CalendarModals = ({
       {/* --- SELECTEUR D'IMAGES --- */}
       <ImageSelectorContentModal
         images={data.availableImages}
+        actualImage={modalsState.selectedAppointmentForm ? data.items.find(e => e.id === modalsState.selectedAppointmentForm?.EventId)?.image || null : null}
         isOpen={modalsState.isImageSelectorOpen}
         onClose={handlers.closeImageModal}
         onImageSelect={handlers.handleImageSelect}
