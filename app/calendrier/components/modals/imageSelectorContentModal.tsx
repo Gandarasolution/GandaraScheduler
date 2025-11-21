@@ -37,29 +37,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
   const itemsPerPage = 8;
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-
-  // console.log(actualImage);
-  // console.log(images);
   
-  useEffect(() => {
-    images.forEach(img => {
-      // console.log('img', img);
-      // console.log('actualImage', actualImage);
-      // console.log(img.image === actualImage);
-      console.log(typeof img.image);
-      console.log(typeof actualImage);
-      
-      
-      
-      
-      
-      if (img.id === actualImage?.id) {
-        console.log('Image actuelle trouvée:', img);
-      }
-    });
-  },[isOpen]);
-  
-
   // Filtrer les images selon le terme de recherche
   const filteredImages = useMemo(() => {
      let result = searchTerm.trim() 
