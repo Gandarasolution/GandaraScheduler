@@ -82,7 +82,7 @@ const Modal: React.FC<ModalProps> = ({
      * Ajoute et nettoie automatiquement l'event listener
      */
     useEffect(() => {
-        const handleEscape = (event: KeyboardEvent) => {
+        const handleEscape = (event: KeyboardEvent) => {            
             if (event.key === 'Escape') {
                 onClose();
             }

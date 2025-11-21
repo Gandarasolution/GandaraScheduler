@@ -20,7 +20,7 @@
  */
 
 "use client";
-import React, {useState, useMemo, memo, useCallback, useRef, useEffect}from 'react';
+import React, {useState, useMemo, memo, useCallback, useRef, useEffect, use}from 'react';
 import {
   format,
   isSameDay,
@@ -75,6 +75,7 @@ interface CalendarGridProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
+  onScrollElementMounted?: () => void; // Callback pour notifier que l'élément de scroll est monté
 }
 
 /**
@@ -126,9 +127,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
+  onScrollElementMounted,
 }) => {
 
-  
+
+
   // État pour gérer les éléments de dimension ouverts (affichés)
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
@@ -144,6 +147,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const dimensionItems = useMemo(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
   }, [calendarConfig.dimension, employees, initialTeams]);
+  
 
   // Appliquer les filtres aux employés selon la configuration
   const filteredEmployees = useMemo(() => {
@@ -182,6 +186,13 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   useEffect(() => {
     setOpenItems(dimensionItems.map(item => item.id));
   }, [dimensionItems]);
+
+  // Notifier le parent que la grille est montée et la ref assignée
+  useEffect(() => {
+    if (mainScrollRef?.current && onScrollElementMounted) {
+      onScrollElementMounted();
+    }
+  }, [mainScrollRef, onScrollElementMounted]);
 
   // Fonction commune pour gérer le surlignement (hover normal et pendant drag)
   const updateHighlight = useCallback((clientX: number, clientY: number, tableElement: HTMLTableElement) => {
@@ -580,7 +591,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       mainScrollRef.current.scrollTop = columnEmployeeRef.current.scrollTop;
     }
   }, []);
-  
+
   
   if (isMobile) {
     const displayEmployee = employees[0];
@@ -590,7 +601,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         <div className="mobile-employee-header sticky top-0 z-30 flex items-center justify-center">
           {displayEmployee.image && (
             <img
-              src={displayEmployee.image}
+              src={displayEmployee.image?.image}
               alt={displayEmployee.name}
               className="employee-avatar w-14 h-14 rounded-full mr-4"
               onError={(e) => { e.currentTarget.src = `https://placehold.co/56x56/cccccc/333333?text=${displayEmployee.name.charAt(0)}`; }}
@@ -761,7 +772,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       >
                         <div className="relative">
                           <img
-                            src={employee.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
+                            src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
                             alt={employee.name}
                             className={`w-8 h-8 rounded-full border-1 shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'}`}
                             onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`; }}
@@ -854,8 +865,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     // Lignes des employés si la dimension est ouverte
                     if (isOpen) {
                       itemEmployees.forEach((employee, empIdx) => {
-                        const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
-                        
+                        const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;                        
+
                         rows.push(
                           <tr 
                             key={`employee-row-${employee.id}`} 

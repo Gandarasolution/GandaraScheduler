@@ -159,21 +159,6 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
     return unsubscribe;
   }, [dragDropManager, enableDragDetection]);
 
-  // Gestion de la touche Escape
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen && !isDragging) {
-        onClose();
-        setSearchInput('');
-      }
-    }
-
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [onClose, setSearchInput, isOpen, isDragging]);
-
   // États vides par défaut
   const defaultEmptyStates = {
     noInput: emptyStateConfig?.noInput || {
@@ -241,6 +226,13 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault(); // Empêche le comportement par défaut si nécessaire
+                  onClose();
+                  setSearchInput('');
+                }
+              }}
             />
           </div>
         </div>

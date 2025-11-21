@@ -36,8 +36,10 @@ export function applyFiltersToEmployees(employees: Employee[], filters: Filter[]
 export function applyFiltersToAppointments(
   appointments: Appointment[], 
   filters: Filter[], 
+  searchQuery: string,
   employees: Employee[]
 ): Appointment[] {
+  
   // Optimisation: Créer une Map pour O(1) lookup des employés
   const employeeMap = new Map<number, Employee>();
   employees.forEach(emp => employeeMap.set(emp.id, emp));
@@ -45,6 +47,18 @@ export function applyFiltersToAppointments(
   return appointments.filter(appointment => {
     // Trouver l'employé associé au rendez-vous avec O(1) lookup
     const employee = employeeMap.get(Number(appointment.employeeId));
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const appointmentMatches = 
+        String(appointment.description).toLowerCase().includes(query) ||
+        String(appointment.type).toLowerCase().includes(query);
+      const employeeMatches = employee ? String(employee.name).toLowerCase().includes(query) : false;
+
+      if (!appointmentMatches && !employeeMatches) {
+        return false;
+      }
+    }
     
     return filters.every(filter => {
       switch (filter.type) {

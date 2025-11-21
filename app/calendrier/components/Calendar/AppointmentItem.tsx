@@ -24,7 +24,6 @@ import { useDrag, useDragLayer } from 'react-dnd';
 import {Appointment, HalfDayInterval, Item } from '../../types';
 import { addDays, isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../../utils/constants';
-import { log } from 'console';
 
 /**
  * Interface définissant les propriétés du composant AppointmentItem
@@ -39,6 +38,8 @@ interface AppointmentItemProps {
   isMobile: boolean;
   /** Inclure les week-ends dans le calcul de durée (optionnel) */
   isDisplayWeekend?: boolean;
+  /** ClassName */
+  className?: string;
   /** Type d'événement associé au rendez-vous */
   event: Item;
   /** Informations de l'employé assigné */
@@ -84,6 +85,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   isDisplayWeekend,
   source = 'calendar',
   isSelected,
+  className,
   onClick,
   onDoubleClick,
   onResize,
@@ -100,6 +102,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
   
+  // useEffect(() => {
+  //   if (appointment.id === 24) {
+  //     console.log(appointment);
+  //   }
+  // }, [appointment]);
+
 
   // Largeur d'un intervalle selon le type de rendez-vous
   const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
@@ -423,6 +431,7 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
         hover:shadow-xl
+        ${className || ''}
       `}
       title={event.label}
       style={{
@@ -457,7 +466,7 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
       {/* Image éventuelle */}
       {event.image ? (
         <img
-          src={event.image}
+          src={event.image.image}
           alt="Icône"
           className="w-8 h-8 object-cover"
         />
@@ -475,14 +484,36 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
         >
           {event.label}
         </span>
-        <span 
-          className="appointment-subtext text-xs truncate max-w-full transition-colors duration-200"
-          style={{ 
-            color: isHovered ? `${appointmentColor}` : `${appointmentTextColor || '#FFFFFF'}`
-          }}
-        >
-          {chargeeAffaire}
-        </span>
+        
+        {/* Ligne du bas : Chargé d'affaire + Tag */}
+        <div className="flex items-center gap-2 text-xs truncate max-w-full">
+          <span 
+            className="truncate transition-colors duration-200"
+            style={{ 
+              color: isHovered ? `${appointmentColor}` : `${appointmentTextColor || '#FFFFFF'}`
+            }}
+          >
+            {chargeeAffaire}
+          </span>
+          
+          {/* Affichage du tag si présent */}
+          {appointment.tag && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
+              style={{
+                backgroundColor: isHovered ? `${appointmentColor}20` : `${appointmentTextColor}20`,
+                color: isHovered ? appointmentColor : appointmentTextColor,
+                border: `1px solid ${isHovered ? appointmentColor : appointmentTextColor}40`
+              }}
+              title={`Tag: ${appointment.tag.name}`}
+            >
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+              </svg>
+              <span className="text-[10px]">{appointment.tag.name}</span>
+            </span>
+          )}
+        </div>
       </div>
     
 

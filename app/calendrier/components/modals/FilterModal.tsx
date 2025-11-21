@@ -1,14 +1,13 @@
-import { memo, useState } from "react";
+import { memo, use, useEffect, useState } from "react";
 import Modal from "./Modal";
-import { FilterCategory, FilterConfig, ActiveFilters } from "../../utils/searchAndFilterUtils";
+import { FilterCategory, FilterConfigWithActive, ActiveFilters } from "../../utils/searchAndFilterUtils";
 import { Combobox } from "../ui/Combobox";
 
 type FilterModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (filters: ActiveFilters) => void;
-  filterConfig: FilterConfig;
-  activeFilters: ActiveFilters;
+  filterConfig: FilterConfigWithActive;
   onClearAll: () => void;
   title?: string;
 };
@@ -18,12 +17,14 @@ const FilterModal: React.FC<FilterModalProps> = ({
   onClose,
   onSubmit,
   filterConfig,
-  activeFilters: initialActiveFilters,
   onClearAll,
   title
 }) => {
+    
 
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>(initialActiveFilters);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>(
+    filterConfig.activeFilters  || {}
+  );
 
 
   const toggleFilter = (categoryKey: string, value: string) => {
@@ -155,6 +156,10 @@ const FilterModal: React.FC<FilterModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    setActiveFilters(filterConfig.activeFilters || {});
+  }, [filterConfig.activeFilters]);
+
   return (
     <Modal 
       isOpen={isOpen} 
@@ -168,10 +173,17 @@ const FilterModal: React.FC<FilterModalProps> = ({
     >
       <div className="flex flex-col gap-6 poppins text-primary py-4">
         {/* Rendu dynamique des filtres */}
-        {Object.entries(filterConfig).map(([key, category]) => (
+        {Object.entries(filterConfig)
+          .filter(([key]) => key !== 'activeFilters') // Exclure la propriété activeFilters
+          .map(([key, category]) => {
+            // Type guard pour assurer que category est bien FilterCategory
+            if (typeof category !== 'object' || !('label' in category)) return null;
+            const filterCategory = category as FilterCategory;
+            
+            return (
           <div key={key} className="space-y-3">
             <div className="flex items-center justify-between w-full">
-              <h3 className="font-semibold">{category.label}</h3>
+              <h3 className="font-semibold">{filterCategory.label}</h3>
               <button 
                 onClick={() => {
                   setActiveFilters(prev => ({
@@ -187,9 +199,10 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 </svg>
               </button>
             </div>
-            {renderFilterInput(key, category)}
+            {renderFilterInput(key, filterCategory)}
           </div>
-        ))}
+            );
+          })}
       </div>
       <div className="py-4 flex items-center justify-between">
         <button

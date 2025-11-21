@@ -1,25 +1,18 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, use, useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
+import { Image } from "../../types";
 
-/**
- * Interface pour les données d'image
- */
-interface ImageData {
-  id: number;
-  image: string;
-  name: string;
-  category?: string;
-}
 
 /**
  * Props pour le composant ImageSelectorContent
  */
 interface ImageSelectorContentProps {
   isOpen: boolean;
-  images: ImageData[];
-  onImageSelect: (src: string) => void;
+  images: Image[];
+  actualImage: Image | null;
+  onImageSelect: (image: Image) => void;
   onClose: () => void;
-  onImageUpload: (file: File) => Promise<string>;
+  onImageUpload: (file: File) => Promise<Image>;
   isUploading: boolean;
   uploadError: string | null;
 }
@@ -30,6 +23,7 @@ interface ImageSelectorContentProps {
 const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
   images,
   isOpen,
+  actualImage,
   onImageSelect,
   onClose,
   onImageUpload,
@@ -42,15 +36,27 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const itemsPerPage = 8;
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  
+  
   // Filtrer les images selon le terme de recherche
   const filteredImages = useMemo(() => {
-    if (!searchTerm.trim()) return images;
+     let result = searchTerm.trim() 
+      ? images.filter(image => 
+          image.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : images;
     
-    return images.filter(image => 
-      image.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [images, searchTerm]);
+    // **PLACER L'IMAGE ACTUELLE EN PREMIER**
+    if (actualImage) {
+      result = [...result].sort((a, b) => {
+        if (a.id === actualImage?.id) return -1; // a en premier
+        if (b.id === actualImage?.id) return 1;  // b en premier
+        return 0; // Garde l'ordre original
+      });
+    }
+    
+    return result;
+  }, [images, searchTerm, actualImage]);
 
     // Pagination
     const totalPages = Math.ceil(filteredImages.length / itemsPerPage);
@@ -232,12 +238,12 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                 {paginatedImages.map((image, index) => (
                   <div
                     key={index}
-                    onClick={() => onImageSelect(image.image)}
+                    onClick={() => onImageSelect(image)}
                     className="cursor-pointer group relative"
                   >
                     <div 
                       className={`border-2 rounded-lg p-2 hover:border-primary hover:shadow-md transition-all relative ${
-                        index === 0 && currentPage === 1
+                        index === 0 && currentPage === 1 && actualImage !== null
                           ? 'border-primary shadow-lg bg-primary-ultra-light' 
                           : 'border-gray-200 hover:border-primary'
                       }`}
@@ -284,7 +290,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
               {paginatedImages.map((image, index) => (
                 <div
                   key={index}
-                  onClick={() => onImageSelect(image.image)}
+                  onClick={() => onImageSelect(image)}
                   className={`flex items-center p-3 border-2 rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all group relative ${
                     index === 0 
                       ? 'border-primary shadow-md bg-primary-ultra-light' 

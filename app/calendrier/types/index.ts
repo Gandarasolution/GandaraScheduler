@@ -37,7 +37,7 @@ export interface Employee {
   /** Code unique de l'employé */
   code: string;
   /** URL de l'avatar de l'employé (optionnel) */
-  image?: string;
+  image?: Image;
   /** ID de l'équipe à laquelle appartient l'employé (optionnel) */
   group?: Groupe;
   /** Type de contrat de l'employé */
@@ -73,6 +73,11 @@ export interface Calendar {
   color?: string;
 }
 
+export interface Tags {
+  id: number;
+  name: string;
+}
+
 
 interface BaseItem {
   id: number;
@@ -81,8 +86,9 @@ interface BaseItem {
   borderColor: string;
   textColor: string;
   code: string;
-  image?: string;
+  image?: Image;
   defaultDescription?: string;
+  tags?: Tags[];
   category?: string;
 }
 
@@ -148,7 +154,8 @@ export interface Appointment{
   type: 'chantier' | 'absence' | 'autre';
   /** ID de l'événement auquel ce RDV est lié */
   EventId: number;
- 
+  /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
+  tag?: Tags;
 }
 
 
