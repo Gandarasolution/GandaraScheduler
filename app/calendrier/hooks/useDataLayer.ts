@@ -67,6 +67,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     // Logique de filtrage combinée (Types RDV + Filtres champs)
     let filtered = appointmentsRef.current;
     
+    
     // Filtre par type de RDV
     if (calendarConfig.selectedRdvTypes?.length > 0) {
          const allTypes = ['Chantier', 'Absence', 'Autre'];
@@ -78,8 +79,14 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
              });
          }
     }
-    return applyFiltersToAppointments(filtered, calendarConfig.filters, globalEmployeesRef.current);
-  }, [calendarConfig, appointmentsVersion]); // Dépend de la version pour rafraichir
+    return applyFiltersToAppointments(filtered, calendarConfig.filters, searchQuery, globalEmployeesRef.current);
+  }, [calendarConfig, searchQuery, appointmentsVersion]); // Dépend de la version pour rafraichir
+
+
+  // useEffect(() => {
+  //   console.log(filteredAppointments);
+  // }, [filteredAppointments]);
+    
 
   // --- Filtrage Secondaire (Tableaux) ---
   // Cette fonction prépare les données pour DataTableFrame

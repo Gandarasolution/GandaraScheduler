@@ -20,7 +20,7 @@
  */
 
 "use client";
-import React, {useState, useMemo, memo, useCallback, useRef, useEffect}from 'react';
+import React, {useState, useMemo, memo, useCallback, useRef, useEffect, use}from 'react';
 import {
   format,
   isSameDay,
@@ -130,7 +130,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onScrollElementMounted,
 }) => {
 
-  
+
+
   // État pour gérer les éléments de dimension ouverts (affichés)
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
   const columnEmployeeRef = useRef<HTMLDivElement>(null);

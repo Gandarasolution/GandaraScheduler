@@ -16,7 +16,7 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect } from 'react';
-import {Appointment, Employee, HalfDayInterval, Item } from '../../types';
+import {Appointment, Employee, HalfDayInterval, Item, Tags } from '../../types';
 import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
 import { isHoliday, isWeekend } from '../../utils/dates';
 
@@ -108,12 +108,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    * Initialisé avec les données existantes ou des valeurs par défaut
    */
   const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(appointment);
-  const [formDataEventType, setFormDataEventType] = useState<Item>(item);
+  const [formDataItemType, setFormDataItemType] = useState<Item>(item);
   const [dateValidationError, setDateValidationError] = useState(false);  
  
 
   useEffect(() => {
-    setFormDataEventType(item);
+    setFormDataItemType(prev => ({ ...prev, image: item.image }));
   }, [item]);
 
 
@@ -146,6 +146,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const [includeAllNonWorkingDays, setIncludeAllNonWorkingDays] = useState(
     isAppointmentSplitByNotWorkingDay
   );
+
+  /**
+   * États pour la gestion des étiquettes (version réduite uniquement)
+   */
+  const [newTag, setNewTag] = useState<Tags>({id: 0, name: ''});
 
   /**
    * Gère les changements des champs texte, textarea et select du formulaire.
@@ -206,9 +211,36 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       return;
     }
 
-
     setDateValidationError(false);
-    onSave(formDataAppointment as Appointment, formDataEventType, includeAllNonWorkingDays);
+    
+    onSave(formDataAppointment, formDataItemType, includeAllNonWorkingDays);
+  };
+
+  /**
+   * Gestion des étiquettes
+   */
+  const handleAddTag = () => {
+    if (newTag.name.trim() && !formDataItemType.tags?.some(tag => tag.name === newTag.name.trim())) {
+      setFormDataItemType(prev => ({
+        ...prev,
+        tags: prev.tags ? [...prev.tags, { id: Date.now(), name: newTag.name.trim() }] : [{ id: Date.now(), name: newTag.name.trim() }]
+      }));
+      setNewTag({id: 0, name: ''});
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: number) => {
+    setFormDataItemType(prev => ({
+      ...prev,
+      tags: prev.tags ? prev.tags.filter(tag => tag.id !== tagToRemove) : []
+    }));
+  };
+
+  const handleTagKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
   };
 
   
@@ -217,7 +249,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   // Rendu du formulaire
   return (
     <>
-      <div className={`flex ${isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} gap-4 rounded-xl poppins transition-all duration-300`}>
+      <div className={`flex ${isReducedVersion ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} gap-4 rounded-xl poppins transition-all duration-300`}>
         {/* Section principale du formulaire */}
         <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-full max-w-[380px] min-w-[320px]`}>
           {/* Flèche d'expansion */}
@@ -246,13 +278,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               {/* Container pour l'image et le bouton de modification */}
               <div className="relative group">
                 <img 
-                  src={formDataEventType.image?.image} 
+                  src={formDataItemType.image?.image} 
                   alt="Icône" 
                   className="w-12 h-12 rounded border border-default object-cover" 
                 />
                 <button
                   type="button"
-                  onClick={() => handleOpenImageModal(formDataEventType.id)}
+                  onClick={() => handleOpenImageModal(formDataItemType.id)}
                   className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
                   title="Modifier l'image"
                 >
@@ -268,14 +300,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   <label 
                     htmlFor="color-fond"
                     className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataEventType.color || '#1E40AF' }}
+                    style={{ backgroundColor: formDataItemType.color || '#1E40AF' }}
                     title="Couleur de fond"
                   />
                   <input
                     id="color-fond"
                     type="color"
-                    value={formDataEventType.color || '#1E40AF'}
-                    onChange={(e) => setFormDataEventType(prev => ({ ...prev, color: e.target.value }))}
+                    value={formDataItemType.color || '#1E40AF'}
+                    onChange={(e) => setFormDataItemType(prev => ({ ...prev, color: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de fond"
                   />
@@ -288,14 +320,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                  <label 
                     htmlFor="color-bordure"
                     className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataEventType.borderColor || '#1E40AF' }}
+                    style={{ backgroundColor: formDataItemType.borderColor || '#1E40AF' }}
                     title="Couleur de bordure"
                   />
                   <input
                     id="color-bordure"
                     type="color"
-                    value={formDataEventType.borderColor || '#1E40AF'}
-                    onChange={(e) => setFormDataEventType(prev => ({ ...prev, borderColor: e.target.value }))}
+                    value={formDataItemType.borderColor || '#1E40AF'}
+                    onChange={(e) => setFormDataItemType(prev => ({ ...prev, borderColor: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de bordure"
                   />
@@ -309,14 +341,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   <label 
                     htmlFor="color-texte"
                     className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataEventType.textColor || '#FFFFFF' }}
+                    style={{ backgroundColor: formDataItemType.textColor || '#FFFFFF' }}
                     title="Couleur de texte"
                   />
                   <input
                     id="color-texte"
                     type="color"
-                    value={formDataEventType.textColor || '#FFFFFF'}
-                    onChange={(e) => setFormDataEventType(prev => ({ ...prev, textColor: e.target.value }))}
+                    value={formDataItemType.textColor || '#FFFFFF'}
+                    onChange={(e) => setFormDataItemType(prev => ({ ...prev, textColor: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de texte"
                   />
@@ -338,12 +370,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 startDate: new Date(),
                 endDate: new Date(addDays(new Date(), 3)),
               }}
-              event={formDataEventType}
+              event={formDataItemType}
               isFullDay={isFullDay}
               source='demo'
               isMobile={false}
               isDisplayWeekend={false}
-              chargeeAffaire={formDataEventType && formDataEventType.type === 'chantier' ? formDataEventType.chargeAffaire : ''}
+              chargeeAffaire={formDataItemType && formDataItemType.type === 'chantier' ? formDataItemType.chargeAffaire : ''}
               onDoubleClick={() => {}}
               onResize={() => {}}
               handleContextMenu={() => {}}
@@ -505,6 +537,63 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           </div>
         </form>
 
+        {/* Section étiquettes - Version réduite uniquement */}
+        {isReducedVersion && (
+          <div className="w-full lg:w-[280px] p-4 flex flex-col gap-4 border-l border-light">
+            <h3 className="text-sm font-semibold text-primary">Étiquettes</h3>
+            
+            {/* Input pour ajouter une étiquette */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newTag.name}
+                onChange={(e) => setNewTag({id: 0, name: e.target.value})}
+                onKeyPress={handleTagKeyPress}
+                placeholder="Nouvelle étiquette..."
+                className="flex-1 px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                maxLength={20}
+              />
+              <button
+                type="button"
+                onClick={handleAddTag}
+                disabled={!newTag.name.trim()}
+                className="px-3 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Ajouter l'étiquette"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Liste des étiquettes */}
+            <div className="flex flex-wrap gap-2 min-h-[60px] max-h-[200px] overflow-y-auto">
+              {formDataItemType.tags?.length === 0 ? (
+                <span className="text-xs text-gray-400 italic">Aucune étiquette</span>
+              ) : (
+                formDataItemType.tags?.map((tag, index) => (
+                  <div
+                    key={index}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-primary-ultra-light text-primary rounded-full text-xs group hover:bg-red-50 hover:text-red-600 transition-colors"
+                  >
+                    <span>{tag.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag.id)}
+                      className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors"
+                      title="Supprimer l'étiquette"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Section extensible - Options avancées */}
         {isExpanded && (
           <div className="w-full lg:w-[530px] p-4 flex flex-col gap-1 animate-in slide-in-from-right text-primary duration-300 lg:border-l border-light mt-4 lg:mt-0">
@@ -536,6 +625,45 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 placeholder="Ajoutez des annotations..."
                 className="w-full h-24 p-3 border border-default rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-color text-sm"
               />
+            </div>
+
+            {/* Sélecteur d'étiquette - Version étendue uniquement */}
+            <div className="flex flex-col gap-4 mt-6">
+              <label className="text-sm font-medium">Étiquette associée</label>
+              <select
+                value={formDataAppointment.tag?.id || ''}
+                onChange={(e) => setFormDataAppointment(prev => ({
+                  ...prev,
+                  tag: e.target.value ? formDataItemType.tags?.find(tag => tag.id === Number(e.target.value)) || undefined : undefined
+                }))}
+                className="w-full p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-bg-secondary"
+              >
+                <option value="">Aucune étiquette</option>
+                {formDataItemType.tags?.map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    {tag.name}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Aperçu de l'étiquette sélectionnée */}
+              {formDataAppointment.tag && formDataItemType.tags && (
+                <div className="flex items-center gap-2 p-3 bg-primary-ultra-light rounded-xl">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-primary">
+                    <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+                  </svg>
+                  <span className="text-sm text-primary font-medium">
+                    {formDataAppointment.tag.name}
+                  </span>
+                </div>
+              )}
+              
+              {/* Message si aucune étiquette disponible */}
+              {(!formDataItemType.tags || formDataItemType.tags.length === 0) && (
+                <div className="text-xs text-gray-400 italic p-2 bg-gray-50 rounded-lg">
+                  Aucune étiquette disponible. Ajoutez des étiquettes à cet événement en mode réduit.
+                </div>
+              )}
             </div>
           </div>
         )}

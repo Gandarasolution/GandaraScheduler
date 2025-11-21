@@ -73,6 +73,11 @@ export interface Calendar {
   color?: string;
 }
 
+export interface Tags {
+  id: number;
+  name: string;
+}
+
 
 interface BaseItem {
   id: number;
@@ -83,6 +88,7 @@ interface BaseItem {
   code: string;
   image?: Image;
   defaultDescription?: string;
+  tags?: Tags[];
   category?: string;
 }
 
@@ -148,7 +154,8 @@ export interface Appointment{
   type: 'chantier' | 'absence' | 'autre';
   /** ID de l'événement auquel ce RDV est lié */
   EventId: number;
- 
+  /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
+  tag?: Tags;
 }
 
 

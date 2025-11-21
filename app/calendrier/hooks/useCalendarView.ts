@@ -65,6 +65,10 @@ export const useCalendarView = (employeesRef: any) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    setSearchInput('');
+  }, [viewType]);
+
   return {
     // États
     isDisplayWeekend, setIsDisplayWeekend: (v: boolean) => toggleSet('isDisplayWeekend', setIsDisplayWeekend, v),

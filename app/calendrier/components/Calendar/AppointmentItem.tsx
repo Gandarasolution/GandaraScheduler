@@ -102,6 +102,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
   
+  // useEffect(() => {
+  //   if (appointment.id === 24) {
+  //     console.log(appointment);
+  //   }
+  // }, [appointment]);
+
 
   // Largeur d'un intervalle selon le type de rendez-vous
   const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
@@ -478,14 +484,36 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
         >
           {event.label}
         </span>
-        <span 
-          className="appointment-subtext text-xs truncate max-w-full transition-colors duration-200"
-          style={{ 
-            color: isHovered ? `${appointmentColor}` : `${appointmentTextColor || '#FFFFFF'}`
-          }}
-        >
-          {chargeeAffaire}
-        </span>
+        
+        {/* Ligne du bas : Chargé d'affaire + Tag */}
+        <div className="flex items-center gap-2 text-xs truncate max-w-full">
+          <span 
+            className="truncate transition-colors duration-200"
+            style={{ 
+              color: isHovered ? `${appointmentColor}` : `${appointmentTextColor || '#FFFFFF'}`
+            }}
+          >
+            {chargeeAffaire}
+          </span>
+          
+          {/* Affichage du tag si présent */}
+          {appointment.tag && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
+              style={{
+                backgroundColor: isHovered ? `${appointmentColor}20` : `${appointmentTextColor}20`,
+                color: isHovered ? appointmentColor : appointmentTextColor,
+                border: `1px solid ${isHovered ? appointmentColor : appointmentTextColor}40`
+              }}
+              title={`Tag: ${appointment.tag.name}`}
+            >
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+              </svg>
+              <span className="text-[10px]">{appointment.tag.name}</span>
+            </span>
+          )}
+        </div>
       </div>
     
 

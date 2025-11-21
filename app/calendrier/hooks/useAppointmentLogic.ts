@@ -263,6 +263,9 @@ export const useAppointmentLogic = ({
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
       );      
 
+      console.log('appointment', appointment);
+      
+
       const days = getWorkedDayIntervals(
         appointment.startDate, 
         appointment.endDate,
@@ -301,13 +304,10 @@ export const useAppointmentLogic = ({
           appointmentsRef.current = appointmentsRef.current.map(app => {
             if (app.id === appointment.id) {
               return {
-                ...app,
-                description: appointment.description || app.description,
+                ...app,           
+                ...appointment,   
                 startDate: days[0].start,
-                endDate: days[0].end,
-                employeeId: appointment.employeeId,
-                type: appointment.type,
-                EventId: appointment.EventId,
+                endDate: days[0].end
               };   
             }
             return app;
