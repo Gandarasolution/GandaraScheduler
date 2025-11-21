@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { 
   Modal, 
@@ -38,9 +38,9 @@ interface CalendarModalsProps {
     
     // Image Handlers
     closeImageModal: () => void;
-    handleImageSelect: (src: string) => void;
-    handleImageUpload: (file: File) => Promise<string>;
-    openImageModalForEvent: (itemId: number) => void;
+    handleImageSelect: (image: Image) => void;
+    handleImageUpload: (file: File) => Promise<Image>;
+    openImageModalForEvent: (id: number) => void;
 
     // Settings & Config Handlers
     closeSettings: () => void;
@@ -67,6 +67,7 @@ interface CalendarModalsProps {
     items: Item[];
     employees: Employee[];
     selectedItem: Item | null;
+    selectedEmployee: Employee | null;
     availableImages: Image[];
     filterConfig: any; // Options pour le filtre
     isUploading: boolean;
@@ -91,6 +92,7 @@ interface CalendarModalsProps {
     HALF_DAY_INTERVALS: any[];
     isFullDay: boolean;
     isDisplayWeekend: boolean;
+    viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table';
   };
 }
 
@@ -129,7 +131,7 @@ export const CalendarModals = ({
         }
       ]
     }
-  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates]);
+  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates]);  
 
   // Titre dynamique de la modale principale
   const getMainModalTitle = () => {
@@ -315,7 +317,7 @@ export const CalendarModals = ({
           <AppointmentForm
             appointments={data.appointments}
             appointment={modalsState.selectedAppointmentForm as Appointment}
-            item={data.items.find(e => e.id === modalsState.selectedAppointmentForm?.EventId) as Item}
+            item={data.selectedItem!}
             isReducedVersion={modalsState.selectedAppointmentForm?.id === 0}
             employees={data.employees}
             HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
@@ -331,7 +333,7 @@ export const CalendarModals = ({
       {/* --- SELECTEUR D'IMAGES --- */}
       <ImageSelectorContentModal
         images={data.availableImages}
-        actualImage={modalsState.selectedAppointmentForm ? data.items.find(e => e.id === modalsState.selectedAppointmentForm?.EventId)?.image || null : null}
+        actualImage={config.viewType === 'employee-table' ? data.selectedEmployee?.image! : data.selectedItem?.image!}
         isOpen={modalsState.isImageSelectorOpen}
         onClose={handlers.closeImageModal}
         onImageSelect={handlers.handleImageSelect}
@@ -370,7 +372,6 @@ export const CalendarModals = ({
         isOpen={modalsState.isFilterModalOpen}
         onSubmit={handlers.submitFilters}
         onClose={handlers.closeFilterModal}
-        activeFilters={data.filterConfig ? data.filterConfig.activeFilters : { empty: [] }}
         filterConfig={data.filterConfig}
         onClearAll={handlers.clearFilters}
       />

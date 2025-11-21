@@ -11,21 +11,21 @@ import {
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
 
 interface DataLayerProps {
-  viewType: string;
+  viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table';
+  searchQuery: string;
   filters: ActiveFilters;
   calendarConfig: CalendarConfig | null;
+  globalEmployeesRef: React.RefObject<Employee[]>;
 }
 
-export const useDataLayer = ({ viewType, filters, calendarConfig }: DataLayerProps) => {
+export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, globalEmployeesRef }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   
   // Données Sources (Refs pour éviter re-renders inutiles sur grosses données)
-  const employeesRef = useRef<Employee[]>(getEmployees());
   const itemsRef = useRef<Item[]>(getEvenements());
   const appointmentsRef = useRef<Appointment[]>(initialAppointments);
   
   // Données Filtrées (State pour l'UI)
-  const [filteredEvent, setFilteredEvent] = useState<Item[]>(itemsRef.current);
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
   const [availableImages, setAvailableImages] = useState<Image[]>(getImages());
 
@@ -35,12 +35,32 @@ export const useDataLayer = ({ viewType, filters, calendarConfig }: DataLayerPro
 
   // --- Filtrage Principal (Calendrier) ---
   const filteredEmployees = useMemo(() => {
-    if (!calendarConfig) return employeesRef.current;
-    return applyFiltersToEmployees(
-        employeesRef.current.filter(emp => emp.type === 'employee' || emp.type === 'interim'), 
+    if (!calendarConfig || viewType === 'chantier-table' || viewType === 'paie-table') return globalEmployeesRef.current;
+
+    if (viewType === 'calendar') {
+      return applyFiltersToEmployees(
+        globalEmployeesRef.current.filter(emp => emp.type === 'employee' || emp.type === 'interim'), 
         calendarConfig.filters
+      );
+    }
+
+    return searchUtils.applyFiltersToEmployees(
+      globalEmployeesRef.current,
+      searchQuery,
+      filters
     );
-  }, [calendarConfig]);
+
+   
+  }, [calendarConfig, searchQuery, appointmentsVersion]);
+
+  const filteredItems = useMemo(() => {
+    if (!calendarConfig) return itemsRef.current;
+    return searchUtils.applyFiltersToItem(
+      itemsRef.current,
+      searchQuery,
+      filters
+    );
+  }, [calendarConfig, searchQuery, filters, searchUtils, appointmentsVersion]);
 
   const filteredAppointments = useMemo(() => {
     if (!calendarConfig) return appointmentsRef.current;
@@ -58,15 +78,15 @@ export const useDataLayer = ({ viewType, filters, calendarConfig }: DataLayerPro
              });
          }
     }
-    return applyFiltersToAppointments(filtered, calendarConfig.filters, employeesRef.current);
+    return applyFiltersToAppointments(filtered, calendarConfig.filters, globalEmployeesRef.current);
   }, [calendarConfig, appointmentsVersion]); // Dépend de la version pour rafraichir
 
   // --- Filtrage Secondaire (Tableaux) ---
   // Cette fonction prépare les données pour DataTableFrame
   const getTableItems = () => {
-     if (viewType === 'chantier-table') return filteredEvent.filter(e => e.type === 'chantier');
-     if (viewType === 'paie-table') return filteredEvent.filter(e => e.type !== 'chantier');
-     return employeesRef.current.map(emp => ({
+     if (viewType === 'chantier-table') return filteredItems.filter(e => e.type === 'chantier');
+     if (viewType === 'paie-table') return filteredItems.filter(e => e.type !== 'chantier');
+     return filteredEmployees.map(emp => ({
         id: emp.id,
         image: emp.image,
         code: emp.code,
@@ -150,32 +170,41 @@ export const useDataLayer = ({ viewType, filters, calendarConfig }: DataLayerPro
 
   const addImage = (newImage: Image) => {
     setAvailableImages([...availableImages, newImage]); // Ajout au début
+    return newImage;
   };
 
-  const updateEventImage = (id: number, newImageUrl: string) => {
+  const updateEventImage = (id: number, newImage: Image) => {
     itemsRef.current = itemsRef.current.map(e => 
-      e.id === id ? { ...e, image: newImageUrl } : e
+      e.id === id ? { ...e, image: newImage } : e
     );
     refreshData(); // Force le re-render
   };
 
-  const updateEmployeeImage = (id: number, newImageUrl: string) => {
-    employeesRef.current = employeesRef.current.map(emp => 
-      emp.id === id ? { ...emp, image: newImageUrl } : emp
+  const updateEmployeeImage = (id: number, newImage: Image) => {
+    globalEmployeesRef.current = globalEmployeesRef.current.map(emp => 
+      emp.id === id ? { ...emp, image: newImage } : emp
     );
     refreshData();
   };
 
+  const updateEmployeeGroup = (empId: number, groupId: number | null) => {
+    globalEmployeesRef.current = globalEmployeesRef.current.map(emp => 
+      emp.id === empId ? { ...emp, group: initialTeams.find(team => team.id === groupId) || undefined } : emp
+    );
+    refreshData();
+  };
+
+
   return {
     isLoading,
-    employeesRef,
     itemsRef,
     appointmentsRef,
     filteredEmployees,
     filteredAppointments,
-    filteredEvent, setFilteredEvent,
+    filteredItems,
     availableImages,
     initialTeams,
+    updateEmployeeGroup,
     getTableItems,
     getTableStructure,
     refreshData,

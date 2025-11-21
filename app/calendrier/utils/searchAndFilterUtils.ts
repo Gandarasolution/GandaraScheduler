@@ -44,11 +44,17 @@ export interface ActiveFilters {
 }
 
 export interface SearchAndFilterUtils {
-  applyFilters: (
+  applyFiltersToItem: (
     chantiers: Item[],
     searchQuery: string,
     activeFilters: ActiveFilters,
   ) => Item[];
+
+  applyFiltersToEmployees: (
+    employees: Employee[],
+    searchQuery: string,
+    activeFilters: ActiveFilters,
+  ) => Employee[];
   
   
   searchAppointments: (
@@ -61,8 +67,6 @@ export interface SearchAndFilterUtils {
     events: Item[], 
     viewtype: 'chantier' | null, 
     keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }) => FilterConfig;
-
-  createEmptyFilters: () => ActiveFilters;
 }
 
 /**
@@ -71,13 +75,13 @@ export interface SearchAndFilterUtils {
  */
 export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
   
-  const applyFilters = (
-    chantiers: Item[],
+  const applyFiltersToItem = (
+    items: Item[],
     searchQuery: string,
     activeFilters: ActiveFilters,
   ): Item[] => {
 
-    let filtered = [...chantiers];
+    let filtered = [...items];
     
     // Appliquer le filtre de recherche si présent
     if (searchQuery) {
@@ -100,6 +104,37 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
       if (selectedOptions.length === 0) continue; // Ignorer si aucune option sélectionnée
       filtered = filtered.filter(chantier => 
         selectedOptions.includes((chantier as any)[categoryKey])
+      );
+    }
+    return filtered;
+  };
+
+  const applyFiltersToEmployees = (
+    employees: Employee[],
+    searchQuery: string,
+    activeFilters: ActiveFilters,
+  ): Employee[] => {
+    let filtered = [...employees];
+    
+    // Appliquer le filtre de recherche si présent
+    if (searchQuery) {
+      const lowercasedQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(employee => {
+        for (const key in employee) {
+          if ((employee as any)[key] === undefined) continue;
+          if (typeof (employee as any)[key] !== 'string') continue;
+          if ((employee as any)[key].toLowerCase().includes(lowercasedQuery)) {
+            return true;
+          }
+        }
+        return false;
+      });
+    }
+    for (const categoryKey in activeFilters) {
+      const selectedOptions = activeFilters[categoryKey];
+      if (selectedOptions.length === 0) continue;
+      filtered = filtered.filter(employee => 
+        selectedOptions.includes((employee as any)[categoryKey])
       );
     }
     return filtered;
@@ -173,19 +208,13 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
     return result;
   };
 
-  const createEmptyFilters = (): ActiveFilters => ({
-    etat: [],
-    chargeAffaire: [],
-    chefChantier: []
-  });
-
   
 
   return {
-    applyFilters,
+    applyFiltersToItem,
+    applyFiltersToEmployees,
     searchAppointments,
-    getFilterOptions,
-    createEmptyFilters,
+    getFilterOptions  
   };
 };
 

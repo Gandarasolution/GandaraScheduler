@@ -48,7 +48,6 @@ import { SelectedCellContext } from "../context/SelectedCellContext";
 import { getEmployees, getImages } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
-import { da } from 'date-fns/locale';
 
 /**
  * Composant wrapper pour éviter les erreurs d'hydratation Next.js
@@ -77,7 +76,6 @@ export default function HomePage({
 
   // Refs de données statiques
   const globalEmployeesRef = useRef(getEmployees());
-  const availableImagesRef = useRef(getImages()); // Images pour le sélecteur
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
   const viewState = useCalendarView(globalEmployeesRef);
@@ -85,8 +83,10 @@ export default function HomePage({
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
     viewType: viewState.viewType, 
+    searchQuery: viewState.searchInput,
     filters: viewState.activeFilters,
-    calendarConfig: viewState.currentCalendarConfig
+    calendarConfig: viewState.currentCalendarConfig,
+    globalEmployeesRef
   });
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
@@ -99,7 +99,7 @@ export default function HomePage({
   // 5. LOGIQUE MÉTIER (CRUD, Règles de gestion, Historique)
   const appointmentLogic = useAppointmentLogic({
     appointmentsRef: dataLayer.appointmentsRef,
-    employeesRef: dataLayer.employeesRef,
+    employeesRef: globalEmployeesRef,
     eventsRef: dataLayer.itemsRef,
     timelineState: { 
       isFullDay: viewState.isFullDay, 
@@ -117,6 +117,7 @@ export default function HomePage({
     setSelectedAppointment: appointmentLogic.setSelectedAppointment,
     selectedCell: appointmentLogic.selectedCell,
     setSelectedCell: appointmentLogic.setSelectedCell,
+    setSelectedEmployee: appointmentLogic.setSelectedEmployee,
     copyAppointment: appointmentLogic.copyAppointmentToClipboard,
     pasteAppointment: appointmentLogic.pasteAppointment,
     undoAction: appointmentLogic.undoLastAction,
@@ -183,6 +184,7 @@ export default function HomePage({
         activeFilters: viewState.activeFilters
       };
   }, [searchUtils, dataLayer.itemsRef.current, viewState.viewType, keyOfFilter, viewState.activeFilters]);
+      
 
 
   // --- PREPARATION DES TABLEAUX (Correction TS) ---
@@ -325,10 +327,12 @@ export default function HomePage({
                         customRenderers={
                           customRenderersFactory(
                             viewState.viewType, 
-                            dataLayer.employeesRef.current, 
+                            globalEmployeesRef.current, 
                             interaction.handleOpenImageModal,
                             appointmentLogic.setSelectedAppointment,
-                            appointmentLogic.handleOpenEditModal
+                            appointmentLogic.handleOpenEditModal,
+                            dataLayer.initialTeams,
+                            dataLayer.updateEmployeeGroup
                           ) as any}
                         showGroupHeaders={viewState.viewType === 'chantier-table'}
                         onRightClick={interaction.handleDataTableContextMenu}
@@ -379,26 +383,28 @@ export default function HomePage({
               // Images
               closeImageModal: interaction.handleCloseImageModal,
               handleImageSelect: (newImageUrl) => {
-                const id = interaction.selectedItem?.id || null;
-                if (id === null) return;
+                
 
                 // Logique de décision basée sur la vue active
                 if (viewState.viewType === 'employee-table') {
+                    const id = appointmentLogic.selectedEmployee?.id || null;
+                    if (id === null) return;                    
                     dataLayer.updateEmployeeImage(id, newImageUrl);
                 } else {
-                    interaction.setSelectedItem(prev => {
+                    const id = appointmentLogic.selectedItem?.id || null;
+                    if (id === null) return;
+                    appointmentLogic.setSelectedItem(prev => {
                         if (prev) {
                             return { ...prev, image: newImageUrl };
                         }
                         return prev;
                     });
                 }
-                
                 // Fermer la modale via l'interaction
                 interaction.handleCloseImageModal();
               },
               handleImageUpload: interaction.handleImageUpload,
-              openImageModalForEvent: (itemId: number) => interaction.handleOpenImageModal(dataLayer.itemsRef.current.find(e => e.id === itemId)!),
+              openImageModalForEvent: () => interaction.handleOpenImageModal(),
 
               // Settings & Config
               closeSettings: () => viewState.setIsSettingsOpen(false),
@@ -430,13 +436,14 @@ export default function HomePage({
               setIsCreatingConfig: viewState.calendarConfigHook.setIsCreatingConfig,
 
               // Correction : Setter pour l'item sélectionné
-              setSelectedItem: interaction.setSelectedItem,
+              setSelectedItem: appointmentLogic.setSelectedItem,
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,
               items: dataLayer.itemsRef.current,
-              employees: dataLayer.employeesRef.current,
-              selectedItem: interaction.selectedItem,
+              employees: globalEmployeesRef.current,
+              selectedItem: appointmentLogic.selectedItem,
+              selectedEmployee: appointmentLogic.selectedEmployee,
               // Correction : Passer les images disponibles
               availableImages: dataLayer.availableImages, 
               // Correction : Passer la config de filtre calculée
@@ -459,6 +466,7 @@ export default function HomePage({
               HALF_DAY_INTERVALS: viewState.constants.intervals,
               isFullDay: viewState.isFullDay,
               isDisplayWeekend: viewState.isDisplayWeekend,
+              viewType: viewState.viewType,
             }}
           />
 
@@ -485,7 +493,7 @@ export default function HomePage({
             onClose={() => viewState.setIsSearchOverlayOpen(false)}
             searchInput={viewState.searchInput}
             setSearchInput={viewState.setSearchInput}
-            items={dataLayer.filteredEvent}
+            items={dataLayer.filteredItems}
             onItemAction={appointmentLogic.selectedCell ? appointmentLogic.handleSearchItemAction : undefined}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{

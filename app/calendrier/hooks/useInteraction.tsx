@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Appointment, Item, type Image } from '../types';
+import { Appointment, Employee, Item, type Image } from '../types';
 
 // Interface complète des props
 interface InteractionProps {
@@ -7,6 +7,7 @@ interface InteractionProps {
   setSelectedAppointment: (app: Appointment | null) => void;
   selectedCell: { employeeId: number; date: Date } | null;
   setSelectedCell: (cell: { employeeId: number; date: Date } | null) => void;
+  setSelectedEmployee: (employee: Employee | null) => void;
   
   // Actions provenant de useAppointmentLogic
   copyAppointment: (app: Appointment) => void;
@@ -29,12 +30,12 @@ interface InteractionProps {
   HALF_DAY_INTERVALS: { startHour: number; endHour: number }[];
 
   viewType: string;
-  addImage: (newImage: Image) => void;
+  addImage: (newImage: Image) => Image;
 }
 
 export const useInteraction = ({
     selectedAppointment, setSelectedAppointment,
-    selectedCell, setSelectedCell,
+    selectedCell, setSelectedCell, setSelectedEmployee,
     copyAppointment, pasteAppointment,
     undoAction, deleteAction, openSearch,
     handleOpenEditModal,
@@ -49,7 +50,7 @@ export const useInteraction = ({
   
   // États pour le sélecteur d'image
   const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -222,18 +223,17 @@ export const useInteraction = ({
   
   // --- GESTION IMAGE MODAL ---
 
-  const handleOpenImageModal = useCallback((item: Item) => {
-      setSelectedItem(item);
+  const handleOpenImageModal = useCallback((employee?: Employee) => {
+      setSelectedEmployee(employee!);
       setIsImageSelectorOpen(true);
   }, []);
 
   const handleCloseImageModal = useCallback(() => {
       setIsImageSelectorOpen(false);
-      setSelectedItem(null);
       setUploadError(null);
   }, []);
 
-  const handleImageUpload = async (file: File): Promise<string> => {
+  const handleImageUpload = async (file: File): Promise<Image> => {
       setIsUploading(true);
       setUploadError(null);
   
@@ -267,8 +267,12 @@ export const useInteraction = ({
             ctx?.drawImage(img, 0, 0);
             
             const dataURL = canvas.toDataURL('image/png');
+
+            const newImageId = Date.now();
+            const result = addImage({ id: newImageId, image: dataURL, name: file.name });
+        
             setIsUploading(false);
-            resolve(dataURL);
+            resolve(result);
           };
   
           img.onerror = () => {
@@ -279,7 +283,6 @@ export const useInteraction = ({
           const reader = new FileReader();
           reader.onload = (e) => {
             img.src = e.target?.result as string;
-            addImage({ id: Date.now(), image: img.src, name: file.name });
           };
           reader.readAsDataURL(file);
         });
@@ -302,7 +305,6 @@ export const useInteraction = ({
       
       // Image Selector
       isImageSelectorOpen,
-      selectedItem, setSelectedItem,
       isUploading,
       uploadError,
       handleOpenImageModal,

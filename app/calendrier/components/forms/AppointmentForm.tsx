@@ -107,9 +107,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    * État principal du formulaire contenant toutes les données du rendez-vous
    * Initialisé avec les données existantes ou des valeurs par défaut
    */
-  const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(
-      { ...appointment, startDate: appointment.startDate, endDate:  addMinutes(appointment.endDate, -1) }
-  );
+  const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(appointment);
   const [formDataEventType, setFormDataEventType] = useState<Item>(item);
   const [dateValidationError, setDateValidationError] = useState(false);  
  
@@ -248,7 +246,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               {/* Container pour l'image et le bouton de modification */}
               <div className="relative group">
                 <img 
-                  src={formDataEventType.image} 
+                  src={formDataEventType.image?.image} 
                   alt="Icône" 
                   className="w-12 h-12 rounded border border-default object-cover" 
                 />

@@ -1,8 +1,9 @@
 import React from 'react';
 import { addHours } from "date-fns";
-import { Appointment, Employee, ChantierItem } from "../types";
+import { Appointment, Employee, ChantierItem, Groupe } from "../types";
 import { HOURS_PER_DAY } from "./constants";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
+import { Group } from 'next/dist/shared/lib/router/utils/route-regex';
 
 
 // --- FACTORY DES RENDERERS (AFFICHAGE DES CELLULES DES TABLEAUX ) ---
@@ -10,13 +11,13 @@ import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous q
 export const customRenderersFactory = (
   viewType: string, 
   employees: Employee[], 
-  onImageClick: (items: any, id: number) => void,
+  onImageClick: (employee: Employee) => void,
   setSelectedAppointment: (appointment: Appointment) => void,
   handleOpenEditModal: (appointment: Appointment) => void,
   // Ces deux derniers arguments sont optionnels pour la compatibilité, 
   // mais nécessaires pour le sélecteur d'équipe dans le tableau employé
-  initialTeams: any[] = [],
-  onTeamChange?: (empId: number, groupId: number | null) => void
+  initialTeams: Groupe[],
+  onTeamChange: (empId: number, groupId: number | null) => void
 ) => {
 
   // 1. Renderer pour les images de Chantiers / Paie (Affiche un mini AppointmentItem)
@@ -102,13 +103,13 @@ export const customRenderersFactory = (
   const imageRendererEmployee = (value: any, item: any) => (
     <div className="relative inline-block">
       <img
-        src={item.image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`}
+        src={item.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`}
         alt={item.nom + ' ' + item.prenom}
         className={`cursor-pointer w-8 h-8 rounded-full border-1 shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'}`}
         onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`; }}
         onClick={(e) => {
             e.stopPropagation();
-            onImageClick(employees, item.id);
+            onImageClick(employees.find(emp => emp.id === item.id)!);
         }}
       />
       {item.type === 'interim' && (
@@ -171,7 +172,7 @@ export const customRenderersFactory = (
   // Default: Employee Table
   return {
     image: imageRendererEmployee,
-    equipe: (value: any, item: any) => (
+    equipe: (value: any, item: any) => (  
       <div className="flex items-center justify-start w-full h-full">
         {/* Selecteur d'équipe */}
         <select

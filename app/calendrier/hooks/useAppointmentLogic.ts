@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import { setHours, setMinutes, addHours, eachDayOfInterval } from "date-fns";
-import { Appointment, HistoryAction, Item } from '../types';
+import { Appointment, Employee, HistoryAction, Item } from '../types';
 import { createAppointmentUtils } from '../utils/appointmentUtils';
 import { notificationService } from "../services";
 import { getWorkedDayIntervals, isWeekend } from "../utils/dates";
@@ -50,6 +50,9 @@ export const useAppointmentLogic = ({
   const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: Date } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  
   
   // États pour les actions complexes
   const [repeatData, setRepeatData] = useState<RepeatData | null>(null);
@@ -551,6 +554,7 @@ export const useAppointmentLogic = ({
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
     setSelectedAppointmentForm(appointment);
     setSelectedAppointment(appointment);
+    setSelectedItem(eventsRef.current.find(e => e.id === appointment.EventId) || null);
     setIsModalOpen(true);
   }, []);
 
@@ -564,6 +568,8 @@ export const useAppointmentLogic = ({
     extendData, setExtendData,
     alertState, setAlertState,
     newAppointmentInfo, setNewAppointmentInfo,
+    selectedItem, setSelectedItem,
+    selectedEmployee, setSelectedEmployee,
     clipboardAppointment: clipboardAppointment.current,
     
     // Méthodes principales

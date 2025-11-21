@@ -1,26 +1,18 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, use, useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
+import { Image } from "../../types";
 
-/**
- * Interface pour les données d'image
- */
-interface ImageData {
-  id: number;
-  image: string;
-  name: string;
-  category?: string;
-}
 
 /**
  * Props pour le composant ImageSelectorContent
  */
 interface ImageSelectorContentProps {
   isOpen: boolean;
-  images: ImageData[];
-  actualImage: ImageData['image'] | null;
-  onImageSelect: (src: string) => void;
+  images: Image[];
+  actualImage: Image | null;
+  onImageSelect: (image: Image) => void;
   onClose: () => void;
-  onImageUpload: (file: File) => Promise<string>;
+  onImageUpload: (file: File) => Promise<Image>;
   isUploading: boolean;
   uploadError: string | null;
 }
@@ -44,6 +36,29 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const itemsPerPage = 8;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+
+  // console.log(actualImage);
+  // console.log(images);
+  
+  useEffect(() => {
+    images.forEach(img => {
+      // console.log('img', img);
+      // console.log('actualImage', actualImage);
+      // console.log(img.image === actualImage);
+      console.log(typeof img.image);
+      console.log(typeof actualImage);
+      
+      
+      
+      
+      
+      if (img.id === actualImage?.id) {
+        console.log('Image actuelle trouvée:', img);
+      }
+    });
+  },[isOpen]);
+  
 
   // Filtrer les images selon le terme de recherche
   const filteredImages = useMemo(() => {
@@ -56,8 +71,8 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
     // **PLACER L'IMAGE ACTUELLE EN PREMIER**
     if (actualImage) {
       result = [...result].sort((a, b) => {
-        if (a.image === actualImage) return -1; // a en premier
-        if (b.image === actualImage) return 1;  // b en premier
+        if (a.id === actualImage?.id) return -1; // a en premier
+        if (b.id === actualImage?.id) return 1;  // b en premier
         return 0; // Garde l'ordre original
       });
     }
@@ -245,7 +260,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                 {paginatedImages.map((image, index) => (
                   <div
                     key={index}
-                    onClick={() => onImageSelect(image.image)}
+                    onClick={() => onImageSelect(image)}
                     className="cursor-pointer group relative"
                   >
                     <div 
@@ -297,7 +312,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
               {paginatedImages.map((image, index) => (
                 <div
                   key={index}
-                  onClick={() => onImageSelect(image.image)}
+                  onClick={() => onImageSelect(image)}
                   className={`flex items-center p-3 border-2 rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all group relative ${
                     index === 0 
                       ? 'border-primary shadow-md bg-primary-ultra-light' 

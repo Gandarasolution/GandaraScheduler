@@ -600,7 +600,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         <div className="mobile-employee-header sticky top-0 z-30 flex items-center justify-center">
           {displayEmployee.image && (
             <img
-              src={displayEmployee.image}
+              src={displayEmployee.image?.image}
               alt={displayEmployee.name}
               className="employee-avatar w-14 h-14 rounded-full mr-4"
               onError={(e) => { e.currentTarget.src = `https://placehold.co/56x56/cccccc/333333?text=${displayEmployee.name.charAt(0)}`; }}
@@ -771,7 +771,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       >
                         <div className="relative">
                           <img
-                            src={employee.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
+                            src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
                             alt={employee.name}
                             className={`w-8 h-8 rounded-full border-1 shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'}`}
                             onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`; }}

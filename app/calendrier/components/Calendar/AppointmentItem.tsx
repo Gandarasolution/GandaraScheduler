@@ -460,7 +460,7 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
       {/* Image éventuelle */}
       {event.image ? (
         <img
-          src={event.image}
+          src={event.image.image}
           alt="Icône"
           className="w-8 h-8 object-cover"
         />

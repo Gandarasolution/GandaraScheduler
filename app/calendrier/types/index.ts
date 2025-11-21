@@ -37,7 +37,7 @@ export interface Employee {
   /** Code unique de l'employé */
   code: string;
   /** URL de l'avatar de l'employé (optionnel) */
-  image?: string;
+  image?: Image;
   /** ID de l'équipe à laquelle appartient l'employé (optionnel) */
   group?: Groupe;
   /** Type de contrat de l'employé */
@@ -81,7 +81,7 @@ interface BaseItem {
   borderColor: string;
   textColor: string;
   code: string;
-  image?: string;
+  image?: Image;
   defaultDescription?: string;
   category?: string;
 }

@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, use, useEffect, useState } from "react";
 import Modal from "./Modal";
 import { FilterCategory, FilterConfigWithActive, ActiveFilters } from "../../utils/searchAndFilterUtils";
 import { Combobox } from "../ui/Combobox";
@@ -8,7 +8,6 @@ type FilterModalProps = {
   onClose: () => void;
   onSubmit: (filters: ActiveFilters) => void;
   filterConfig: FilterConfigWithActive;
-  activeFilters: ActiveFilters;
   onClearAll: () => void;
   title?: string;
 };
@@ -18,13 +17,13 @@ const FilterModal: React.FC<FilterModalProps> = ({
   onClose,
   onSubmit,
   filterConfig,
-  activeFilters: initialActiveFilters,
   onClearAll,
   title
 }) => {
+    
 
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>(
-    filterConfig.activeFilters || initialActiveFilters || {}
+    filterConfig.activeFilters  || {}
   );
 
 
@@ -156,6 +155,10 @@ const FilterModal: React.FC<FilterModalProps> = ({
         return null;
     }
   };
+
+  useEffect(() => {
+    setActiveFilters(filterConfig.activeFilters || {});
+  }, [filterConfig.activeFilters]);
 
   return (
     <Modal 

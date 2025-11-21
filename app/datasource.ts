@@ -2183,7 +2183,7 @@ export const Images: Image[] = [
 //API
 export const getEvenements = (): Item[] => {
   return Evenements.map(event => {
-    const image = Images.find(img => img.id === event.image)?.image || null;    
+    const image = Images.find(img => img.id === event.image) || null;    
 
     if(event.type === 'chantier' ){
       return {
@@ -2212,7 +2212,7 @@ export const getEmployees = (): Employee[] => {
       firstName: emp.firstName,
       type: emp.type as "employee" | "interim",
       pole: emp.pole,
-      image: Images.find(img => img.id === emp.image)?.image || undefined,
+      image: Images.find(img => img.id === emp.image) || undefined,
       code: emp.code,
       group: initialTeams.find(group => group.id === emp.groupId) || undefined
     }
