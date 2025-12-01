@@ -102,11 +102,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
   
-  // useEffect(() => {
-  //   if (appointment.id === 24) {
-  //     console.log(appointment);
-  //   }
-  // }, [appointment]);
+  useEffect(() => {
+    if (appointment.id === 1) {
+      console.log(appointment);
+    }
+  }, [appointment]);
 
 
   // Largeur d'un intervalle selon le type de rendez-vous
@@ -290,10 +290,10 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
     e.preventDefault();
     if (!isResizingLeft && !isResizingRight) return;
 
-    const currentDx = e.clientX - initialX.current + (INTERVAL_WIDTH / 2);
+    const currentDx = (e.clientX - initialX.current) + INTERVAL_WIDTH ;
     let intervalsMoved = Math.round(currentDx / INTERVAL_WIDTH);
     const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-
+    
     if (isResizingLeft) {
       let newStartDate = addInterval(appointment.startDate, intervalsMoved, intervals);
             
@@ -307,6 +307,7 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
       let newEndDate = addInterval(appointment.endDate, intervalsMoved, intervals);
       if (newEndDate < dragStartRef.current) {
         newEndDate = addInterval(dragStartRef.current, 1, intervals);
+        
       }
       setDragEndSafe(newEndDate);
     }
@@ -325,9 +326,11 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
    */
   const handleMouseUp = useCallback(() => {
     if (isResizingRight) {
+      
       onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right');
     }
     if (isResizingLeft) {
+
       onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'left');
     }
     

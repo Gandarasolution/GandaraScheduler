@@ -156,9 +156,12 @@ export const getWorkedDayIntervals = (
       if (safety > maxIterations) throw new Error("Boucle infinie détectée dans getWorkedDayIntervals (recherche fin)");
     }
 
+
+    const newEnd = day.getHours() === 0 ? addHours(day, -1).setMinutes(59, 59, 999) : day;
+
     intervals.push({
       start: intervalStart,
-      end: day < end ? new Date(day) : new Date(end),
+      end: newEnd < end ? new Date(newEnd) : new Date(end),
     });
   }
 
