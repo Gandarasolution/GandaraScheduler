@@ -200,15 +200,19 @@ export const useAppointmentLogic = ({
 
       // Calcul des intervalles (Jours/Demi-journées)
       const intervalType = timelineState.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+      
+
       const days = getWorkedDayIntervals(
-        newStartDate, 
-        newEndDate,
+        new Date(newStartDate), 
+        new Date(newEndDate),
         intervalType,
         timelineState.respectNonWorkingDays || !timelineState.isDisplayWeekend,
         timelineState.includeWeekend || !timelineState.isDisplayWeekend,
         timelineState.nonWorkingDates
       );    
-          
+      
+      
+
       if (days.length === 0) return;
       
       const previousAppointment = saveToHistory ? { ...appointment } : undefined;
@@ -222,14 +226,14 @@ export const useAppointmentLogic = ({
         const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
         
         // Note: On ne sauvegarde pas l'historique ici, on le fait à la fin pour grouper
-        onResize(appointment.id, mainStart, new Date(mainEnd.setHours(23,59,59,999)), newEmployeeId, false);
+        onResize(appointment.id, mainStart, new Date(mainEnd), newEmployeeId, false);
         
         // 2. Créer des nouveaux RDV pour les jours suivants (Split)
         for (let i = startIndex; i !== endIndex; i += step) {
           const day = days[i];
           const newApp = createAppointment(
             day.start, 
-            new Date(day.end.setHours(23,59,59,999)),
+            new Date(day.end),
             newEmployeeId, 
             appointment.EventId,
             false, // Pas d'historique individuel
