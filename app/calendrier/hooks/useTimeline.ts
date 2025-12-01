@@ -238,6 +238,33 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     setIsScrollReady(true);
   }, []);
 
+  useEffect(() => {
+    if(viewType !== 'calendar') return;
+    // Optimisation : pré-calculer les constantes une seule fois
+    const date = selectedDate;
+    const halfWindow = Math.floor(WINDOW_SIZE / 2);
+    const startDate = addDays(date, -halfWindow);
+    const endDate = addDays(date, halfWindow);
+
+    // Optimisation : construction directe selon includeWeekend
+    let newTimeline: Date[];
+
+    if (isDisplayWeekend) {
+      newTimeline = eachDayOfInterval({ start: startDate, end: endDate });
+    } else {
+      newTimeline = [];
+      let currentDate = startDate;
+      while (currentDate <= endDate) {
+        if (!isWeekend(currentDate)) {
+          newTimeline.push(currentDate);
+        }
+        currentDate = addDays(currentDate, 1);
+      }
+    }
+
+    setDays(newTimeline);
+  }, [isDisplayWeekend]);
+
   return {
     days,
     setDays,

@@ -592,6 +592,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     }
   }, []);
 
+  useEffect(() => {
+    console.log(isDisplayWeekend);
+  }, [isDisplayWeekend]);
+
   
   if (isMobile) {
     const displayEmployee = employees[0];
