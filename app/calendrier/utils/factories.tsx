@@ -163,7 +163,7 @@ export const customRenderersFactory = (
       ),
       actif: (value: boolean) => (
         <div className="flex items-center justify-center">
-          <span className={`w-3 h-3 rounded-full ${value ? 'bg-green-500' : 'bg-red-500'}`}></span>
+          <span className={`w-3 h-3 rounded-full ${value ? 'bg-green-600' : 'bg-red-600'}`}></span>
         </div>
       )
     };

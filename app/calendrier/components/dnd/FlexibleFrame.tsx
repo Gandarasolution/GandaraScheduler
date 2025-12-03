@@ -239,17 +239,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
     >
       {/* Rendu de tous les niveaux d'en-têtes */}
       {headers.map((headerLevel: HeaderLevel, index: number) => renderHeader(headerLevel, index))}
-
-      {/* Zone de contenu */}
-      <div
-        className="relative"
-        style={{
-          gridTemplateColumns,
-          display: 'grid',
-        }}
-      >
-        {children}
-      </div>
+      {children}
     </div>
   );
 
