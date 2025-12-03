@@ -450,9 +450,9 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     const isSameColumn = columnKey === columnHoveredKey;
 
     if (isSameRow && isCurrentColumnBeforeHovered) {
-      return 'bg-primary-ultra-light';
+      return 'bg-cell-hover';
     } else if (isSameColumn && isCurrentRowBeforeHovered) {
-      return 'bg-primary-ultra-light';
+      return 'bg-cell-hover';
     }
     
     return 'bg-transparent';
@@ -733,7 +733,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                   </div>
                 </div>
               ),
-              className: 'col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-primary-ultra-light border-b max-h-[49px]'
+              className: 'col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-header-table border-b max-h-[49px]'
             })),
             show: true,
             minHeight: '40px',
@@ -807,7 +807,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                     
                     return (
                       <div
-                        className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-primary-ultra-light hover:bg-gray-50 transition-colors relative group"
+                        className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-header-table transition-colors relative group"
                         style={{
                           width: `${calculateColumnWidths[index]}px`,
                           height: '56px',
@@ -939,7 +939,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
 
                     // Cellule standard
                     const cellClasses = isExactHoveredCell 
-                      ? 'bg-primary-ultra-light' 
+                      ? 'bg-cell-hover' 
                       : getCellPositionClasses(item.id, attributeKey, columnIndex);
                     
                     return (
