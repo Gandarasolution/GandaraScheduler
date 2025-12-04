@@ -101,12 +101,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const dragStartRef = useRef<Date>(appointment.startDate);
   const dragEndRef = useRef<Date>(appointment.endDate);
   const initialX = useRef(0);
-  
-  useEffect(() => {
-    if (appointment.id === 1) {
-      console.log(appointment);
-    }
-  }, [appointment]);
 
 
   // Largeur d'un intervalle selon le type de rendez-vous
@@ -156,7 +150,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     return forward ? Math.max(0, count) : -Math.max(0, count);
   }, [isDisplayWeekend, isFullDay]);
 
-  const intervalCount =getIntervalCount(dragStart, dragEnd);
+  const intervalCount = getIntervalCount(dragStart, dragEnd);
   
   // Détection des petits rendez-vous (une seule case)
   const isSmallAppointment = intervalCount <= 1;
@@ -466,6 +460,26 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
         />
       )}
 
+      
+        {/* Affichage du tag si présent */}
+          {appointment.tag && intervalCount >=2 && (
+            <div className='absolute -top-3 left-3 z-30'>
+              <div
+                className="inline-flex items-center gap-1.5 px-2 py-1 bg-white rounded-md shadow-sm border border-gray-200 transform -translate-y-1"
+                title={`Tag: ${appointment.tag.name}`}
+              >
+                <div 
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
+                  style={{ backgroundColor: appointmentColor }} 
+                />
+                <span className="text-[10px] font-semibold text-gray-700 truncate max-w-[80px] leading-none">
+                  {appointment.tag.name}
+                </span>
+              </div>
+            </div>
+          )}
+
+
       {/* Image éventuelle */}
       {event.image ? (
         <img
@@ -499,26 +513,10 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
             {chargeeAffaire}
           </span>
           
-          {/* Affichage du tag si présent */}
-          {appointment.tag && (
-            <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
-              style={{
-                backgroundColor: isHovered ? `${appointmentColor}20` : `${appointmentTextColor}20`,
-                color: isHovered ? appointmentColor : appointmentTextColor,
-                border: `1px solid ${isHovered ? appointmentColor : appointmentTextColor}40`
-              }}
-              title={`Tag: ${appointment.tag.name}`}
-            >
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
-              </svg>
-              <span className="text-[10px]">{appointment.tag.name}</span>
-            </span>
-          )}
         </div>
       </div>
     
+
 
       {/* Handle de redimensionnement à droite */}
       {source === 'calendar' && (

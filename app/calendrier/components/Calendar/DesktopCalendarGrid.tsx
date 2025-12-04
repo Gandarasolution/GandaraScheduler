@@ -32,6 +32,7 @@ interface DesktopCalendarGridProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  updateHighlightedEmployeeRow: (employeeId: number | null) => void;
 }
 
 const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
@@ -60,6 +61,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
+  updateHighlightedEmployeeRow,
 }) => {
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
 
@@ -108,6 +110,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     </svg>
   );
 
+
+  
   return (
     <div className="relative flex h-full flex-row calendar-grid">
       <div
@@ -189,6 +193,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                       className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer hover:bg-primary-ultra-light employee-row-item"
                       style={{ height: employeeRowHeight, alignItems: 'center' }}
                       data-employee-id={employee.id}
+                      onMouseOver={() => updateHighlightedEmployeeRow(employee.id)}
                     >
                       <div className="relative">
                         <img

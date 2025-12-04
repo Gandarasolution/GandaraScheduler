@@ -48,7 +48,7 @@ interface CalendarGridProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
-  onScrollElementMounted?: () => void;
+  onScrollElementMounted?: () => void; 
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -89,7 +89,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     tableRef, 
     handleMouseOver, 
     handleMouseOut, 
-    handleScrollY 
+    handleScrollY,
+    updateHighlightedEmployeeRow 
   } = useCalendarInteractions({
     dayInTimeline,
     mainScrollRef,
@@ -150,6 +151,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       onAppointmentDoubleClick={onAppointmentDoubleClick}
       onExternalDragDrop={onExternalDragDrop}
       handleContextMenu={handleContextMenu}
+      updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
     />
   );
 };

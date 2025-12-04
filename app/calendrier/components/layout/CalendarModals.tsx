@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { 
   Modal, 
@@ -102,6 +102,7 @@ export const CalendarModals = ({
   data, 
   config 
 }: CalendarModalsProps) => {
+  const [isFormDirty, setIsFormDirty] = useState(false);
 
   // Reconstitution de la structure des paramètres pour SettingsModal
   const settings = useMemo(() => [
@@ -152,11 +153,14 @@ export const CalendarModals = ({
           handlers.closeModal();
           handlers.setRepeatData(null);
           handlers.setExtendData(null);
+          setIsFormDirty(false);
         }}
         title={getMainModalTitle()}
         whithoutCloseButton={true}
         roundedSize="2xl"
         classNameContent='px-4 py-4'
+        confirmCloseOnOverlay={true}
+        hasUnsavedChanges={isFormDirty}
       >
         {/* CAS 1: Répétition */}
         {!!modalsState.repeatData ? (
@@ -326,6 +330,7 @@ export const CalendarModals = ({
             onSave={handlers.saveAppointment}
             onClose={() => handlers.closeModal()}
             handleOpenImageModal={handlers.openImageModalForEvent}
+            onDirtyChange={setIsFormDirty}
           />
         )}
       </Modal>

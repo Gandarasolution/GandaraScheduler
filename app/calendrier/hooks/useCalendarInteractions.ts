@@ -72,6 +72,22 @@ export const useCalendarInteractions = ({
     });
   }, [dayInTimeline]);
 
+  const updateHighlightedEmployeeRow = (employeeId: number | null) => {
+      const columnEmployeeElement = columnEmployeeRef.current;
+      const tableElement = tableRef.current;
+      if (!columnEmployeeElement || !tableElement) return;
+  
+      const rows = tableElement.querySelectorAll('.calendar-row');    
+      rows.forEach(row => {      
+        if (Number(row.getAttribute('data-employee-id')) === employeeId) {              
+          row.setAttribute('data-hover-row', 'true');
+        } else {
+          row.removeAttribute('data-hover-row');
+        }
+      });
+  };
+  
+
   const handleMouseOver = useCallback((e: React.MouseEvent<HTMLElement> ) => {
     const target = e.target as HTMLElement;
     const cell = target.closest('.calendar-cell') as HTMLElement;
@@ -157,6 +173,7 @@ export const useCalendarInteractions = ({
 
   return {
     tableRef,
+    updateHighlightedEmployeeRow,
     handleMouseOver,
     handleMouseOut,
     handleScrollY

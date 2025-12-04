@@ -507,7 +507,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
    * 6. S'adapte automatiquement aux changements de taille de fenêtre
    */
   const calculateColumnWidths = useMemo(() => {
-    const MIN_WIDTH = 63;
+    const MIN_WIDTH = 60;
     const MAX_WIDTH = 450;
     const HIDDEN_COLUMN_WIDTH = 20; // Largeur fine pour colonnes cachées
     const PADDING = 20; // Padding supplémentaire pour l'espacement

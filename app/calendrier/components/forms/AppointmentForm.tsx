@@ -55,6 +55,8 @@ interface AppointmentFormProps {
   onClose: () => void;
   /** Callback appelé lors de la sauvegarde de l'événement */
   handleOpenImageModal: (itemId: number) => void;
+  /** Callback pour notifier si le formulaire a des modifications non enregistrées */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 
@@ -98,7 +100,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   isReducedVersion,
   onSave,
   onClose,
-  handleOpenImageModal
+  handleOpenImageModal,
+  onDirtyChange,
 }) => {
   
   // ===== ÉTATS LOCAUX =====
@@ -137,7 +140,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   /**
    * État pour contrôler l'expansion du panel d'options avancées
    */
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(isReducedVersion ? false : true);
 
   /**
    * État unifié pour la gestion de tous les jours non travaillés
@@ -151,6 +154,36 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    * États pour la gestion des étiquettes (version réduite uniquement)
    */
   const [newTag, setNewTag] = useState<Tags>({id: 0, name: ''});
+
+  /**
+   * Détection des changements non sauvegardés
+   */
+  useEffect(() => {
+    if (!onDirtyChange) return;
+
+    // Comparaison simple pour détecter les changements
+    // Note: Pour une comparaison plus robuste, on pourrait utiliser lodash.isEqual
+    // ou une comparaison champ par champ spécifique
+    
+    // On ignore certaines propriétés qui peuvent changer sans impacter la "saleté" du formulaire
+    // comme l'ordre des clés ou des références d'objets identiques
+    
+    const isAppDirty = JSON.stringify({
+      ...formDataAppointment,
+      // Normalisation des dates pour éviter les faux positifs dus aux millisecondes
+      startDate: formDataAppointment.startDate.getTime(),
+      endDate: formDataAppointment.endDate.getTime()
+    }) !== JSON.stringify({
+      ...appointment,
+      startDate: appointment.startDate.getTime(),
+      endDate: appointment.endDate.getTime()
+    });
+
+    const isItemDirty = JSON.stringify(formDataItemType) !== JSON.stringify(item);
+    const isIncludeDirty = includeAllNonWorkingDays !== isAppointmentSplitByNotWorkingDay;
+
+    onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
+  }, [formDataAppointment, formDataItemType, includeAllNonWorkingDays, appointment, item, isAppointmentSplitByNotWorkingDay, onDirtyChange]);
 
   /**
    * Gère les changements des champs texte, textarea et select du formulaire.
@@ -361,7 +394,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           </div>
 
           {/* Aperçu du rendez-vous - Repositionné sous les couleurs */}
-          <div className="relative flex items-center w-full h-full">
+          <div className='relative'>
             <AppointmentItem
               appointment={{
                 ...formDataAppointment,
@@ -381,7 +414,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               handleContextMenu={() => {}}
             />
           </div>
-
         
 
           {!isReducedVersion && (
@@ -511,7 +543,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               >
                 {employees.map(employee => (
                   <option key={employee.id} value={employee.id}>
-                    {employee.firstName + ' ' + employee.name}
+                    {employee.name + ' ' + employee.firstName}
                   </option>
                 ))}
               </select>
