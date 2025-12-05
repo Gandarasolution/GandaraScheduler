@@ -31,6 +31,8 @@ interface InteractionProps {
 
   viewType: string;
   addImage: (newImage: Image) => Image;
+
+  setIsViewDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const useInteraction = ({
@@ -42,7 +44,8 @@ export const useInteraction = ({
     handleRepeat, handleExtend, handleDivide,
     isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS,
     viewType,
-    addImage
+    addImage,
+    setIsViewDropdownOpen
 }: InteractionProps) => {
 
   // --- ÉTATS LOCAUX ---
@@ -184,11 +187,15 @@ export const useInteraction = ({
                   setIsImageSelectorOpen(false);
                   openSearch();
                   break;
+              case 'q':
+                  e.preventDefault();
+                  setIsViewDropdownOpen(prev => !prev);
+                  break;
           }
       } else if ((e.key === 'Delete' || e.key === 'rubout') && selectedAppointment) {
           deleteAction(selectedAppointment);
       }
-  }, [selectedAppointment, selectedCell, copyAppointment, pasteAppointment, undoAction, deleteAction, openSearch]);
+  }, [selectedAppointment, selectedCell, copyAppointment, pasteAppointment, undoAction, deleteAction, openSearch, setIsViewDropdownOpen]);
 
   // --- GESTION CLIC DROIT TABLEAUX (DataTableFrame) ---
   

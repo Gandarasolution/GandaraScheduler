@@ -138,7 +138,10 @@ export default function HomePage({
     DAY_INTERVALS: viewState.constants.intervals,
     HALF_DAY_INTERVALS: viewState.constants.intervals,
     viewType: viewState.viewType,
-    addImage: dataLayer.addImage
+    addImage: dataLayer.addImage,
+
+    setIsViewDropdownOpen: viewState.setIsViewDropdownOpen
+
   });
 
   // --- CONFIGURATION DES FILTRES (Pour FilterModal) ---

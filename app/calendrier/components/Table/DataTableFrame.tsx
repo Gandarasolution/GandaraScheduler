@@ -722,7 +722,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
         }}
         headers={[
           // Niveau 1: Groupes (si fournis)
-          ...(groups && showGroupHeaders ? [{
+          ...(items.length === 0 ? [] : groups && showGroupHeaders ? [{
             items: groups.map(g => ({
               span: g.span,
               key: g.key,
@@ -740,7 +740,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
             containerClassName: 'bg-bg-secondary border-ultra-light',
           }] : []),
           // Niveau 2: En-têtes de colonnes (si withHeader=true)
-          ...(withHeader ? [{
+          ...(items.length === 0 ? [] : withHeader ? [{
             items: customHeader ? 
               // Si customHeader fourni, l'utiliser
               attributeLabels.map((label, index) => ({
@@ -886,94 +886,102 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
           }] : [])
         ]}
       >
-        <div className="flex flex-col w-full min-w-max"> 
-          {sortedItems
-            .filter(item => !!item)
-            .map((item, rowIndex) => {
-              const itemByCategories = getValuesByCategory(item);
-              const allValues = itemByCategories.flatMap(cat => cat.values);
-              
-              return (
-                <div 
-                  key={`row-${item.id}`} 
-                  // Application de la grille sur la ligne
-                  className="grid transition-colors border-b border-default"
-                  style={{
-                    ...style,
-                    gridTemplateColumns: gridTemplateColumns 
-                  }}
-                  onClick={() => onRowClick?.(item)}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    onRightClick?.(item, e);
-                  }}
-                >
-                  {allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
-                    const columnIndex = attributeKeys.indexOf(attributeKey);
-                    const isExactHoveredCell = itemHoveredId === item.id && columnHoveredKey === attributeKey;
-                    
-                    // Configuration attribut...
-                    const attributeConfig = categoriesStructure
-                      .flatMap(cat => cat.attributes)
-                      .find(attr => attr.key === attributeKey);
-                    
-                    // Gestion colonne cachée
-                    if (attributeConfig?.type === 'hidden-column') {
-                      const nextAttributeConfig = valueIndex < attributeKeys.length - 1
-                          ? categoriesStructure.flatMap(cat => cat.attributes).find(attr => attr.key === attributeKeys[valueIndex + 1])
-                          : null;
-                      const isNextHidden = nextAttributeConfig?.type === 'hidden-column';
+        {items.length === 0 ? (
+          <div className="w-full h-full flex items-center justify-center text-gray-500">
+            Aucun élément à afficher.
+          </div>
+        ) : 
+        (
+          <div className="flex flex-col w-full min-w-max"> 
+            {sortedItems
+              .filter(item => !!item)
+              .map((item, rowIndex) => {
+                const itemByCategories = getValuesByCategory(item);
+                const allValues = itemByCategories.flatMap(cat => cat.values);
+                
+                return (
+                  <div 
+                    key={`row-${item.id}`} 
+                    // Application de la grille sur la ligne
+                    className="grid transition-colors border-b border-default"
+                    style={{
+                      ...style,
+                      gridTemplateColumns: gridTemplateColumns 
+                    }}
+                    onClick={() => onRowClick?.(item)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      onRightClick?.(item, e);
+                    }}
+                  >
+                    {allValues.map(({ attributeKey, attributeLabel, value }, valueIndex) => {
+                      const columnIndex = attributeKeys.indexOf(attributeKey);
+                      const isExactHoveredCell = itemHoveredId === item.id && columnHoveredKey === attributeKey;
+                      
+                      // Configuration attribut...
+                      const attributeConfig = categoriesStructure
+                        .flatMap(cat => cat.attributes)
+                        .find(attr => attr.key === attributeKey);
+                      
+                      // Gestion colonne cachée
+                      if (attributeConfig?.type === 'hidden-column') {
+                        const nextAttributeConfig = valueIndex < attributeKeys.length - 1
+                            ? categoriesStructure.flatMap(cat => cat.attributes).find(attr => attr.key === attributeKeys[valueIndex + 1])
+                            : null;
+                        const isNextHidden = nextAttributeConfig?.type === 'hidden-column';
 
+                        return (
+                          <div // Remplacé <td> par <div>
+                            key={`${item.id}-${attributeKey}`}
+                            className="bg-gradient-to-r from-gray-50 to-gray-100"
+                            style={{
+                              height: `${heightCell}px`,
+                              borderRight: isNextHidden ? '1px dashed #e5e7eb' : '1px solid #e5e7eb',
+                              // ...
+                            }}
+                          />
+                        );
+                      }
+
+                      // Cellule standard
+                      const cellClasses = isExactHoveredCell 
+                        ? 'bg-cell-hover' 
+                        : getCellPositionClasses(item.id, attributeKey, columnIndex);
+                      
                       return (
                         <div // Remplacé <td> par <div>
                           key={`${item.id}-${attributeKey}`}
-                          className="bg-gradient-to-r from-gray-50 to-gray-100"
+                          className={`border-r border-default overflow-hidden text-sm transition-colors text-primary flex items-center ${cellClasses}`}
+                          title={`${attributeLabel}: ${value || '-'}`}
                           style={{
                             height: `${heightCell}px`,
-                            borderRight: isNextHidden ? '1px dashed #e5e7eb' : '1px solid #e5e7eb',
-                            // ...
+                            padding: `${cellPadding}px`,
+                            whiteSpace: 'nowrap'
                           }}
-                        />
-                      );
-                    }
-
-                    // Cellule standard
-                    const cellClasses = isExactHoveredCell 
-                      ? 'bg-cell-hover' 
-                      : getCellPositionClasses(item.id, attributeKey, columnIndex);
-                    
-                    return (
-                      <div // Remplacé <td> par <div>
-                        key={`${item.id}-${attributeKey}`}
-                        className={`border-r border-default overflow-hidden text-sm transition-colors text-primary flex items-center ${cellClasses}`}
-                        title={`${attributeLabel}: ${value || '-'}`}
-                        style={{
-                          height: `${heightCell}px`,
-                          padding: `${cellPadding}px`,
-                          whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={() => {
-                          setItemHoveredId(item.id);
-                          setColumnHoveredKey(attributeKey);
-                        }}
-                        onMouseLeave={() => {
-                          setItemHoveredId(null);
-                          setColumnHoveredKey(null);
-                        }}
-                        onDoubleClick={() => onCellDoubleClick?.(item, attributeKey, value)}
-                      >
-                        {/* Le contenu doit prendre toute la largeur pour l'alignement */}
-                        <div className="w-full">
-                          {renderAttributeValue(value, attributeKey, item)}
+                          onMouseEnter={() => {
+                            setItemHoveredId(item.id);
+                            setColumnHoveredKey(attributeKey);
+                          }}
+                          onMouseLeave={() => {
+                            setItemHoveredId(null);
+                            setColumnHoveredKey(null);
+                          }}
+                          onDoubleClick={() => onCellDoubleClick?.(item, attributeKey, value)}
+                        >
+                          {/* Le contenu doit prendre toute la largeur pour l'alignement */}
+                          <div className="w-full">
+                            {renderAttributeValue(value, attributeKey, item)}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })
-          }
-        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })
+            }
+          </div>
+        )}
+       
       </FlexibleFrame>
     </div>
   );

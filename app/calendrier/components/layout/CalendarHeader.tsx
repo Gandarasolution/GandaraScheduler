@@ -30,7 +30,10 @@ export const CalendarHeader = ({
     isNotificationsPanelOpen, setIsNotificationsPanelOpen,
     isSearchOverlayOpen, setIsSearchOverlayOpen,
     isFilterModalOpen, setIsFilterModalOpen,
+    isViewDropdownOpen, setIsViewDropdownOpen,
+    viewDropdownRef,
     calendarConfigHook, // Pour ouvrir la modale de config calendrier
+    
     
     // Toggles d'affichage
     isDisplayWeekend, setIsDisplayWeekend,
@@ -40,29 +43,6 @@ export const CalendarHeader = ({
     selectedDate, setSelectedDate
   } = viewState;
 
-  // État local pour le menu déroulant des vues
-  const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
-  const viewDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Fermer le dropdown quand on clique à l'extérieur
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isViewDropdownOpen && viewDropdownRef.current) {
-        const target = event.target as HTMLElement;
-        if (!viewDropdownRef.current.contains(target)) {
-          setIsViewDropdownOpen(false);
-        }
-      }
-    };
-
-    if (isViewDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isViewDropdownOpen]);
 
   return (
     <div className="flex flex-col items-center pr-9">

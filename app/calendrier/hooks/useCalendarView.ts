@@ -44,6 +44,11 @@ export const useCalendarView = (employeesRef: any) => {
   const calendarConfigHook = useCalendarConfig({ employees: employeesRef });
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
 
+   // État local pour le menu déroulant des vues
+  const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
+  const viewDropdownRef = useRef<HTMLDivElement>(null);
+
+
   // --- Setters avec persistence ---
   const toggleSet = (key: string, setter: React.Dispatch<React.SetStateAction<boolean>>, value: boolean) => {
     setter(value);
@@ -69,6 +74,26 @@ export const useCalendarView = (employeesRef: any) => {
     setSearchInput('');
   }, [viewType]);
 
+  // Fermer le dropdown quand on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isViewDropdownOpen && viewDropdownRef.current) {
+        const target = event.target as HTMLElement;
+        if (!viewDropdownRef.current.contains(target)) {
+          setIsViewDropdownOpen(false);
+        }
+      }
+    };
+
+    if (isViewDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isViewDropdownOpen]);
+
   return {
     // États
     isDisplayWeekend, setIsDisplayWeekend: (v: boolean) => toggleSet('isDisplayWeekend', setIsDisplayWeekend, v),
@@ -80,6 +105,8 @@ export const useCalendarView = (employeesRef: any) => {
         setViewType(v);
         setTimeout(() => localStorage.setItem('viewType', v), 0);
     },
+    isViewDropdownOpen, setIsViewDropdownOpen,
+    viewDropdownRef,
     
     isMobile,
     isSettingsOpen, setIsSettingsOpen,

@@ -186,12 +186,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   ? Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / INTERVAL_DURATION)
   : getIntervalCount(appointment.startDate, dragStart);
 
-  if (isResizingLeft || isResizingRight) {
-    //console.log('offsetIntervals', offsetIntervals);
-    //console.log(appointment.startDate, dragStart);
-    
-    
-  }
 const offsetPx = offsetIntervals * INTERVAL_WIDTH;
 
 
@@ -421,7 +415,7 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
       onMouseLeave={() => setIsHovered(false)}
       className={`
         appointment-item rounded-xl text-sm shadow-md
-        flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
+        flex flex-shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-ellipsis
         transition-all z-20 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${source === 'calendar' && isSelected ? 'ring-3 ring-color' : ''}
@@ -461,23 +455,27 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
       )}
 
       
-        {/* Affichage du tag si présent */}
-          {appointment.tag && intervalCount >=2 && (
-            <div className='absolute -top-3 left-3 z-30'>
-              <div
-                className="inline-flex items-center gap-1.5 px-2 py-1 bg-white rounded-md shadow-sm border border-gray-200 transform -translate-y-1"
-                title={`Tag: ${appointment.tag.name}`}
+        {/* Affichage du tag - Style Onglet Dépliant Coloré */}
+        {appointment.tag && (
+          <div className="absolute right-0 top-2 z-30">
+            <div 
+              className={`flex items-center shadow-md overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${isHovered && !isResizingRight ? 'max-w-[200px]' : 'max-w-[10px]'}`}
+              style={{
+                backgroundColor: isHovered ? appointmentColor : 'white',
+                borderRadius: '6px 0 0 6px',
+                height: '22px'
+              }}
+              title={`Tag: ${appointment.tag.name}`}
+            >
+              <span 
+                className={`pl-3 pr-2 text-[10px] font-bold uppercase whitespace-nowrap transition-all duration-300 ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
+                style={{ color: appointmentTextColor }}
               >
-                <div 
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0" 
-                  style={{ backgroundColor: appointmentColor }} 
-                />
-                <span className="text-[10px] font-semibold text-gray-700 truncate max-w-[80px] leading-none">
-                  {appointment.tag.name}
-                </span>
-              </div>
+                {appointment.tag.name}
+              </span>
             </div>
-          )}
+          </div>
+        )}
 
 
       {/* Image éventuelle */}
@@ -491,10 +489,10 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
         <div className="w-8 h-8 flex items-center justify-center rounded-full">
         </div>
       )}
-      <div className='flex flex-col min-w-0'>
+      <div className='flex flex-col min-w-0 flex-1'>
         {/* Titre du rendez-vous */}
         <span 
-          className="appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200"
+          className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 ${appointment.tag ? 'pr-5' : ''}`}
           style={{ 
             color: isHovered ? appointmentColor : `${appointmentTextColor || '#FFFFFF'}`
           }}

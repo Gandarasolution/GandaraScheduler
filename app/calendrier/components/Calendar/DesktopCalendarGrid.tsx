@@ -3,7 +3,7 @@ import { format, isSameDay, isWeekend } from 'date-fns';
 import { Appointment, Employee, Groupe, CalendarConfig, Item, HalfDayInterval } from '../../types';
 import { DayCell, TimelineFrame } from './index';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
-import { CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS } from '../../utils/constants';
+import { CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS, GROUP_HEADER_PADDING_Y, GROUP_CONTENT_PADDING_BOTTOM, GROUP_HEADER_HEIGHT } from '../../utils/constants';
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
 
 interface DesktopCalendarGridProps {
@@ -166,7 +166,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
               style={{ marginBottom: MARGIN_BETWEEN_TEAMS }}
             >
               <button
-                className="flex justify-between items-center w-full px-4 py-2 rounded-t-2xl  focus:outline-none cursor-pointer"
+                className="flex justify-between items-center w-full px-4 rounded-t-2xl focus:outline-none cursor-pointer"
+                style={{ paddingTop: GROUP_HEADER_PADDING_Y, paddingBottom: GROUP_HEADER_PADDING_Y }}
                 onClick={() => toggleItem(item.id)}
                 type="button"
               >
@@ -184,7 +185,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 </div>
                 <CustomArrow isOpen={isOpen} />
               </button>
-              <div className={`flex flex-col px-4 pb-2 transition-all duration-200 ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div 
+                className={`flex flex-col px-4 transition-all duration-200 ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}
+                style={{ paddingBottom: isOpen ? GROUP_CONTENT_PADDING_BOTTOM : 0 }}
+              >
                 {isOpen && itemEmployees.map((employee) => {
                   const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
                   return (
@@ -248,6 +252,24 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
               
               const rows = [];
               
+              // Calcul de la hauteur de la ligne inactive (header de groupe)
+              // Elle doit inclure la hauteur du header + l'espace laissé par le groupe précédent (margin + padding)
+              const prevItem = idx > 0 ? dimensionItems[idx - 1] : null;
+              const isPrevOpen = prevItem ? openItems.includes(prevItem.id) : false;
+              
+              // Hauteur de base du header
+              let inactiveRowHeight = GROUP_HEADER_HEIGHT;
+              
+              
+              // Si ce n'est pas le premier groupe, on ajoute l'espace du groupe précédent
+              if (idx > 0) {
+                inactiveRowHeight += MARGIN_BETWEEN_TEAMS;
+                if (isPrevOpen) {
+                  inactiveRowHeight += GROUP_CONTENT_PADDING_BOTTOM;
+                }
+              }
+              
+
               rows.push(
                 <tr key={`inactive-row-${item.id}`} className="calendar-row inactive-row">
                   {dayInTimeline.map((day) => (
@@ -256,7 +278,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                       className="calendar-cell p-0"
                       style={{ 
                         width: `${CELL_WIDTH}px`,
-                        height: `${idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 10}px`
+                        height: `${inactiveRowHeight}px`
                       }}
                     >
                       <DayCell
@@ -265,7 +287,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                         appointments={[]}
                         intervals={HALF_DAY_INTERVALS}
                         isFullDay={isFullDay}
-                        RowHeight={idx === 0 ? CELL_HEIGHT : CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + 10}
+                        RowHeight={inactiveRowHeight}
                         isMobile={false}
                         events={events}
                         nonWorkingDates={nonWorkingDates}

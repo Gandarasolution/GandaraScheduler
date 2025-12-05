@@ -30,6 +30,18 @@ export const CELL_HEIGHT = 40;
 /** Marge entre les groupes d'employés (en pixels) */
 export const MARGIN_BETWEEN_TEAMS = 20;
 
+/** Padding vertical du header de groupe (en pixels) */
+export const GROUP_HEADER_PADDING_Y = 8;
+
+/** Padding bas du contenu de groupe (en pixels) */
+export const GROUP_CONTENT_PADDING_BOTTOM = 8;
+
+/** Hauteur du contenu du header (texte/icone) */
+export const GROUP_HEADER_CONTENT_HEIGHT = 24;
+
+/** Hauteur totale du header de groupe */
+export const GROUP_HEADER_HEIGHT = GROUP_HEADER_CONTENT_HEIGHT + (GROUP_HEADER_PADDING_Y * 2);
+
 // ===== INTERVALLES HORAIRES =====
 
 /**
