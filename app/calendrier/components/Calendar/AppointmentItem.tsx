@@ -24,6 +24,7 @@ import { useDrag, useDragLayer } from 'react-dnd';
 import {Appointment, HalfDayInterval, Item } from '../../types';
 import { addDays, isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../../utils/constants';
+import AppointmentTag from './AppointmentTag';
 
 /**
  * Interface définissant les propriétés du composant AppointmentItem
@@ -457,24 +458,13 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
       
         {/* Affichage du tag - Style Onglet Dépliant Coloré */}
         {appointment.tag && (
-          <div className="absolute right-0 top-2 z-30">
-            <div 
-              className={`flex items-center shadow-md overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${isHovered && !isResizingRight ? 'max-w-[200px]' : 'max-w-[10px]'}`}
-              style={{
-                backgroundColor: isHovered ? appointmentColor : 'white',
-                borderRadius: '6px 0 0 6px',
-                height: '22px'
-              }}
-              title={`Tag: ${appointment.tag.name}`}
-            >
-              <span 
-                className={`pl-3 pr-2 text-[10px] font-bold uppercase whitespace-nowrap transition-all duration-300 ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
-                style={{ color: appointmentTextColor }}
-              >
-                {appointment.tag.name}
-              </span>
-            </div>
-          </div>
+          <AppointmentTag 
+            tagName={appointment.tag.name}
+            color={appointmentColor}
+            textColor={appointmentTextColor}
+            isHovered={isHovered}
+            isResizing={isResizingRight}
+          />
         )}
 
 

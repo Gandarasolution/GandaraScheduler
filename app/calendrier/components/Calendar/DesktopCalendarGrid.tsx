@@ -1,7 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, memo } from 'react';
 import { format, isSameDay, isWeekend } from 'date-fns';
 import { Appointment, Employee, Groupe, CalendarConfig, Item, HalfDayInterval } from '../../types';
 import { DayCell, TimelineFrame } from './index';
+import EmployeeRow from './EmployeeRow';
+import GroupRow from './GroupRow';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
 import { 
   CELL_WIDTH, 
@@ -88,6 +90,48 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const employeesByDimension = useMemo(() => {
     return groupEmployeesByDimension(filteredEmployees, calendarConfig.dimension, initialTeams);
   }, [filteredEmployees, calendarConfig.dimension, initialTeams]);
+
+  // Flatten the data structure for easier rendering and potential virtualization
+  const flatRows = useMemo(() => {
+    const rows: Array<{ type: 'group' | 'employee', id: string | number, data: any, height: number }> = [];
+    
+    dimensionItems.forEach((item, idx) => {
+      // Calculate group header height
+      let inactiveRowHeight = EMPLOYEE_GROUP_HEADER_HEIGHT;
+      
+      if (idx > 0) {
+        const prevItem = dimensionItems[idx - 1];
+        const isPrevOpen = openItems.includes(prevItem.id);
+        
+        inactiveRowHeight += MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2;
+        if (isPrevOpen) {
+          inactiveRowHeight += EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM;
+        }
+      }
+      
+      rows.push({
+        type: 'group',
+        id: item.id,
+        data: item,
+        height: inactiveRowHeight
+      });
+      
+      if (openItems.includes(item.id)) {
+        const itemEmployees = employeesByDimension[item.id] || [];
+        itemEmployees.forEach(employee => {
+          const height = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
+          rows.push({
+            type: 'employee',
+            id: employee.id,
+            data: employee,
+            height: height
+          });
+        });
+      }
+    });
+    
+    return rows;
+  }, [dimensionItems, openItems, employeesByDimension, employeeHeights]);
 
   const selectOptions: SelectOptionWithImage[] = useMemo(() => {
     return availableConfigs.map(config => ({
@@ -253,6 +297,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       >
         <table 
           ref={tableRef}
+          role="grid"
+          aria-label="Calendrier des employés"
           className="calendar-table bg-bg-secondary relative"
           style={{
             width: `${dayInTimeline.length * CELL_WIDTH}px`,
@@ -263,127 +309,47 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           onMouseOut={handleMouseOut}
         >
           <tbody>
-            {dimensionItems.map((item, idx) => {
-              const isOpen = openItems.includes(item.id);
-              const itemEmployees = employeesByDimension[item.id] || [];
-              
-              if (itemEmployees.length === 0) return null;
-              
-              const rows = [];
-              
-              // Calcul de la hauteur de la ligne inactive (header de groupe)
-              // Elle doit inclure la hauteur du header + l'espace laissé par le groupe précédent (margin + padding)
-              const prevItem = idx > 0 ? dimensionItems[idx - 1] : null;
-              const isPrevOpen = prevItem ? openItems.includes(prevItem.id) : false;
-              
-              // Haute par défaut de la ligne inactive (header de groupe ou groupe fermée)
-              // On prend par défaut la hauteur du header du groupe
-              let inactiveRowHeight = EMPLOYEE_GROUP_HEADER_HEIGHT;
-              
-              
-              // Si ce n'est pas le premier groupe, on ajoute l'espace du groupe précédent
-              if (idx > 0) {
-                // On ajoute la marge entre les groupes + la bordure du container basse du groupe précédent + la bordure haute du groupe courant
-                inactiveRowHeight += MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2;
-                if (isPrevOpen) {
-                  // Si le groupe précédent est ouvert, on ajoute le padding bas du contenu
-                  inactiveRowHeight += EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM;
-                }
+            {flatRows.map((row) => {
+              if (row.type === 'group') {
+                return (
+                  <GroupRow
+                    key={`group-${row.id}`}
+                    itemId={row.id}
+                    dayInTimeline={dayInTimeline}
+                    rowHeight={row.height}
+                    HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+                    isFullDay={isFullDay}
+                    events={events}
+                    nonWorkingDates={nonWorkingDates}
+                    isDisplayWeekend={isDisplayWeekend}
+                    onAppointmentMoved={onAppointmentMoved}
+                    onCellDoubleClick={onCellDoubleClick}
+                    onAppointmentDoubleClick={onAppointmentDoubleClick}
+                    onExternalDragDrop={onExternalDragDrop}
+                    handleContextMenu={handleContextMenu}
+                  />
+                );
+              } else {
+                return (
+                  <EmployeeRow
+                    key={`employee-${row.id}`}
+                    employee={row.data}
+                    dayInTimeline={dayInTimeline}
+                    appointments={appointmentsWithTop}
+                    rowHeight={row.height}
+                    HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+                    isFullDay={isFullDay}
+                    events={events}
+                    nonWorkingDates={nonWorkingDates}
+                    isDisplayWeekend={isDisplayWeekend}
+                    onAppointmentMoved={onAppointmentMoved}
+                    onCellDoubleClick={onCellDoubleClick}
+                    onAppointmentDoubleClick={onAppointmentDoubleClick}
+                    onExternalDragDrop={onExternalDragDrop}
+                    handleContextMenu={handleContextMenu}
+                  />
+                );
               }
-              
-
-              rows.push(
-                <tr 
-                  id={`row-group-${item.id}`}
-                  key={`inactive-row-${item.id}`} 
-                  className="calendar-row inactive-row"
-                  data-item-id={`inactive-${item.id}`}
-                >
-                  {dayInTimeline.map((day) => (
-                    <td 
-                      key={`inactive-${item.id}-${format(day, 'yyyy-MM-dd')}`}
-                      className="calendar-cell p-0"
-                      style={{ 
-                        width: `${CELL_WIDTH}px`,
-                        height: `${inactiveRowHeight}px`
-                      }}
-                    >
-                      <DayCell
-                        day={day}
-                        employee={{ id: 0, name: 'Inactive' }}
-                        appointments={[]}
-                        intervals={HALF_DAY_INTERVALS}
-                        isFullDay={isFullDay}
-                        RowHeight={inactiveRowHeight}
-                        isMobile={false}
-                        events={events}
-                        nonWorkingDates={nonWorkingDates}
-                        isDisplayWeekend={isDisplayWeekend}
-                        onAppointmentMoved={onAppointmentMoved}
-                        onCellDoubleClick={onCellDoubleClick}
-                        onAppointmentClick={onAppointmentDoubleClick}
-                        onExternalDragDrop={onExternalDragDrop}
-                        isWeekend={isWeekend(day)}
-                        handleContextMenu={handleContextMenu}
-                        isCellActive={false}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              );
-              
-              if (isOpen) {
-                itemEmployees.forEach((employee) => {
-                  const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;                        
-
-                  rows.push(
-                    <tr 
-                      id={`row-employee-${employee.id}`}
-                      key={`employee-row-${employee.id}`} 
-                      className="calendar-row employee-row" 
-                      data-employee-id={employee.id}
-                    >
-                      {dayInTimeline.map((day) => {
-                        const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
-                          isSameDay(app.startDate, day) && app.employeeId === employee.id
-                        );
-                        
-                        return (
-                          <td 
-                            key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
-                            className="calendar-cell p-0"
-                            style={{ 
-                              width: `${CELL_WIDTH}px`,
-                              height: `${employeeRowHeight}px`
-                            }}
-                          >
-                            <DayCell
-                              day={day}
-                              employee={{ id: employee.id, name: employee.name }}
-                              appointments={dayEmployeeAppointments}
-                              intervals={HALF_DAY_INTERVALS}
-                              isFullDay={isFullDay}
-                              RowHeight={employeeRowHeight}
-                              isMobile={false}
-                              events={events}
-                              nonWorkingDates={nonWorkingDates}
-                              isDisplayWeekend={isDisplayWeekend}
-                              onAppointmentMoved={onAppointmentMoved}
-                              onCellDoubleClick={onCellDoubleClick}
-                              onAppointmentClick={onAppointmentDoubleClick}
-                              onExternalDragDrop={onExternalDragDrop}
-                              isWeekend={isWeekend(day)}
-                              handleContextMenu={handleContextMenu}
-                            />
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                });
-              }
-              
-              return rows;
             })}
           </tbody>
         </table>
@@ -392,4 +358,4 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   );
 };
 
-export default DesktopCalendarGrid;
+export default memo(DesktopCalendarGrid);
