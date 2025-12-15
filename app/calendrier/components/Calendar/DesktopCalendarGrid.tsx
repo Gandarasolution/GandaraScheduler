@@ -3,7 +3,18 @@ import { format, isSameDay, isWeekend } from 'date-fns';
 import { Appointment, Employee, Groupe, CalendarConfig, Item, HalfDayInterval } from '../../types';
 import { DayCell, TimelineFrame } from './index';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
-import { CELL_WIDTH, CELL_HEIGHT, MARGIN_BETWEEN_TEAMS, GROUP_HEADER_PADDING_Y, GROUP_CONTENT_PADDING_BOTTOM, GROUP_HEADER_HEIGHT } from '../../utils/constants';
+import { 
+  CELL_WIDTH, 
+  CELL_HEIGHT, 
+  MARGIN_BETWEEN_TEAMS, 
+  EMPLOYEE_GROUP_HEADER_PADDING_Y, 
+  EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM, 
+  EMPLOYEE_GROUP_HEADER_HEIGHT, 
+  TIMELINE_HEADERITEMS_CELL_HEIGHT, 
+  TIMELINE_HEADERGROUPS_CELL_HEIGHT, 
+  CONTAINER_PADDING, 
+  EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE, 
+} from '../../utils/constants';
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
 
 interface DesktopCalendarGridProps {
@@ -64,6 +75,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   updateHighlightedEmployeeRow,
 }) => {
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
+  
 
   const dimensionItems = useMemo(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
@@ -120,7 +132,12 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         onScroll={handleScrollY}
         ref={columnEmployeeRef}
       >
-        <div className="h-[112px] sticky top-0 z-10 flex items-center bg-bg-primary justify-center pb-2 flex-shrink-0">
+        <div 
+          className={`sticky top-0 z-10 flex items-center bg-bg-primary justify-center flex-shrink-0`}
+          style={{
+            height: TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING
+          }}
+        >
           <div className="custom-select-wrapper relative inline-block w-full">
             <CustomSelectWithImage
               options={selectOptions}
@@ -162,12 +179,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           return (
             <div
               key={item.id}
-              className="rounded-4xl bg-white border border-default bg-bg-secondary text-primary"
-              style={{ marginBottom: MARGIN_BETWEEN_TEAMS }}
+              className="rounded-4xl bg-white border-default bg-bg-secondary text-primary"
+              style={{ 
+                marginBottom: MARGIN_BETWEEN_TEAMS, borderWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE 
+              }}
             >
               <button
                 className="flex justify-between items-center w-full px-4 rounded-t-2xl focus:outline-none cursor-pointer"
-                style={{ paddingTop: GROUP_HEADER_PADDING_Y, paddingBottom: GROUP_HEADER_PADDING_Y }}
+                style={{ paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y, paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y }}
                 onClick={() => toggleItem(item.id)}
                 type="button"
               >
@@ -187,7 +206,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
               </button>
               <div 
                 className={`flex flex-col px-4 transition-all duration-200 ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}
-                style={{ paddingBottom: isOpen ? GROUP_CONTENT_PADDING_BOTTOM : 0 }}
+                style={{ paddingBottom: isOpen ? EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM : 0 }}
               >
                 {isOpen && itemEmployees.map((employee) => {
                   const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
@@ -257,21 +276,29 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
               const prevItem = idx > 0 ? dimensionItems[idx - 1] : null;
               const isPrevOpen = prevItem ? openItems.includes(prevItem.id) : false;
               
-              // Hauteur de base du header
-              let inactiveRowHeight = GROUP_HEADER_HEIGHT;
+              // Haute par défaut de la ligne inactive (header de groupe ou groupe fermée)
+              // On prend par défaut la hauteur du header du groupe
+              let inactiveRowHeight = EMPLOYEE_GROUP_HEADER_HEIGHT;
               
               
               // Si ce n'est pas le premier groupe, on ajoute l'espace du groupe précédent
               if (idx > 0) {
-                inactiveRowHeight += MARGIN_BETWEEN_TEAMS;
+                // On ajoute la marge entre les groupes + la bordure du container basse du groupe précédent + la bordure haute du groupe courant
+                inactiveRowHeight += MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2;
                 if (isPrevOpen) {
-                  inactiveRowHeight += GROUP_CONTENT_PADDING_BOTTOM;
+                  // Si le groupe précédent est ouvert, on ajoute le padding bas du contenu
+                  inactiveRowHeight += EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM;
                 }
               }
               
 
               rows.push(
-                <tr key={`inactive-row-${item.id}`} className="calendar-row inactive-row">
+                <tr 
+                  id={`row-group-${item.id}`}
+                  key={`inactive-row-${item.id}`} 
+                  className="calendar-row inactive-row"
+                  data-item-id={`inactive-${item.id}`}
+                >
                   {dayInTimeline.map((day) => (
                     <td 
                       key={`inactive-${item.id}-${format(day, 'yyyy-MM-dd')}`}
@@ -311,6 +338,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
                   rows.push(
                     <tr 
+                      id={`row-employee-${employee.id}`}
                       key={`employee-row-${employee.id}`} 
                       className="calendar-row employee-row" 
                       data-employee-id={employee.id}

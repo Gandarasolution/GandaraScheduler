@@ -56,6 +56,8 @@ interface HeaderLevel {
   stickyTop?: number | string;
   /** Hauteur minimale */
   minHeight?: number | string;
+  /** Hauteur maximale */
+  maxHeight?: number | string;
   /** Classes CSS pour le conteneur du niveau */
   containerClassName?: string;
   /** Classes CSS pour chaque item du niveau */

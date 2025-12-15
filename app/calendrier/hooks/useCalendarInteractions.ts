@@ -14,7 +14,7 @@ export const useCalendarInteractions = ({
 }: UseCalendarInteractionsParams) => {
   
   const lastHoveredCol = useRef<number>(-1);
-  const lastHoveredEmployee = useRef<string | null>(null);
+  const lastHoveredRowId = useRef<string | null>(null);
   const isDragging = useRef(false);
   const isSyncingScroll = useRef(false);
   const tableRef = useRef<HTMLTableElement | null>(null);
@@ -27,17 +27,17 @@ export const useCalendarInteractions = ({
     const colIndex = Math.floor(mouseX / CELL_WIDTH);
     
     const elementAtPoint = document.elementFromPoint(clientX, clientY) as HTMLElement;
-    const cell = elementAtPoint?.closest('.calendar-cell') as HTMLElement;
+    const cell = elementAtPoint?.closest('.calendar-cell') as HTMLElement ;
     
-    const row = cell?.closest('.calendar-row[data-employee-id]') as HTMLElement;    
-    const employeeId = row ? row.getAttribute('data-employee-id') : null;
+    const row = cell?.closest('.calendar-row') as HTMLElement;
+    const rowId = row ? row.id : null;
     
-    if (colIndex === lastHoveredCol.current && employeeId === lastHoveredEmployee.current) {
+    if (colIndex === lastHoveredCol.current && rowId === lastHoveredRowId.current) {
       return;
     }
     
     lastHoveredCol.current = colIndex;
-    lastHoveredEmployee.current = employeeId;
+    lastHoveredRowId.current = rowId;
     
     requestAnimationFrame(() => {
       if (colIndex >= 0 && colIndex < dayInTimeline.length) {
@@ -47,11 +47,11 @@ export const useCalendarInteractions = ({
         rowsToUpdate.forEach(r => (r as HTMLElement).removeAttribute('data-hover-row'));
         
         const rows = tableElement.querySelectorAll('.calendar-row');
-        rows.forEach(row => {
-          if (row.getAttribute('data-employee-id') === employeeId) {            
-            row.setAttribute('data-hover-row', 'true');
+        rows.forEach(r => {
+          if (r.id === rowId) {                        
+            r.setAttribute('data-hover-row', 'true');
           }
-          const cellInCol = row.children[colIndex] as HTMLElement;
+          const cellInCol = r.children[colIndex] as HTMLElement;
           if (cellInCol) {
             cellInCol.setAttribute('data-hover-col', 'true');
           }
@@ -61,7 +61,8 @@ export const useCalendarInteractions = ({
       const employeesToUpdate = document.querySelectorAll('[data-hover="true"]');
       employeesToUpdate.forEach(emp => (emp as HTMLElement).removeAttribute('data-hover'));
       
-      if (employeeId) {
+      if (rowId && rowId.startsWith('row-employee-')) {
+        const employeeId = rowId.replace('row-employee-', '');
         const employeeElement = document.querySelector(
           `.employee-row-item[data-employee-id="${employeeId}"]`
         ) as HTMLElement;
@@ -73,13 +74,12 @@ export const useCalendarInteractions = ({
   }, [dayInTimeline]);
 
   const updateHighlightedEmployeeRow = (employeeId: number | null) => {
-      const columnEmployeeElement = columnEmployeeRef.current;
       const tableElement = tableRef.current;
-      if (!columnEmployeeElement || !tableElement) return;
+      if (!tableElement) return;
   
       const rows = tableElement.querySelectorAll('.calendar-row');    
       rows.forEach(row => {      
-        if (Number(row.getAttribute('data-employee-id')) === employeeId) {              
+        if (row.id === `row-employee-${employeeId}`) {              
           row.setAttribute('data-hover-row', 'true');
         } else {
           row.removeAttribute('data-hover-row');
@@ -138,7 +138,7 @@ export const useCalendarInteractions = ({
         (emp as HTMLElement).removeAttribute('data-hover');
       });
       lastHoveredCol.current = -1;
-      lastHoveredEmployee.current = null;
+      lastHoveredRowId.current = null;
     };
 
     document.addEventListener('dragover', handleDragOver);

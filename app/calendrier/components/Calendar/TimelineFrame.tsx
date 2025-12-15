@@ -17,7 +17,7 @@
 import React, { useMemo, ReactNode, memo } from 'react';
 import { format, isToday, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CELL_WIDTH } from '../../utils/constants';
+import { CELL_WIDTH, TIMELINE_HEADERGROUPS_CELL_HEIGHT, TIMELINE_HEADERITEMS_CELL_HEIGHT } from '../../utils/constants';
 import FlexibleFrame from '../dnd/FlexibleFrame';
 
 /**
@@ -227,10 +227,14 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
                 </div>
               </div>
             ),
-            className: ' col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-bg-secondary border-b max-h-[49px] '
+            style: {
+              maxHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
+              minHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
+            },
+            className: `col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-bg-secondary border-b`
           })),
           show: true,
-          minHeight: '40px',
+          minHeight: TIMELINE_HEADERGROUPS_CELL_HEIGHT,
           containerClassName: 'bg-bg-secondary border-ultra-light',
         }] : []),
         // Niveau 2: Items (Jours)
@@ -312,10 +316,13 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
                 </div>
               );
             },
-            className: 'h-full',
+            style: {
+              maxHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
+              minHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
+            },
           })),
           show: true,
-          minHeight: '56px',
+          minHeight: TIMELINE_HEADERITEMS_CELL_HEIGHT,
           containerClassName: 'bg-bg-secondary border-ultra-light',
         }] : [])
       ]}
