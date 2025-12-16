@@ -84,7 +84,7 @@ export const useCalendarInteractions = ({
     });
   }, [dayInTimeline]);
 
-  const updateHighlightedEmployeeRow = (employeeId: number | null) => {
+  const updateHighlightedEmployeeRow = useCallback((employeeId: number | null) => {
       const tableElement = tableRef.current;
       if (!tableElement) return;
   
@@ -96,7 +96,7 @@ export const useCalendarInteractions = ({
           row.removeAttribute('data-hover-row');
         }
       });
-  };
+  }, []);
   
 
   const handleMouseOver = useCallback((e: React.MouseEvent<HTMLElement> ) => {

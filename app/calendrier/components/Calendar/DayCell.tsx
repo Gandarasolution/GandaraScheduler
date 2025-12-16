@@ -4,7 +4,7 @@ import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } 
 import {IntervalCell} from '../index';
 import { Appointment, HalfDayInterval, Item} from '../../types';
 import { isHoliday } from '../../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
-import { CELL_HEIGHT, HALF_DAY_INTERVALS } from '../../utils/constants';
+import { CELL_HEIGHT, CELL_WIDTH, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { fr } from 'date-fns/locale';
 
 /**
@@ -214,7 +214,7 @@ const DayCell: React.FC<DayCellProps> = ({
   return (
     <div 
       className={`
-        snap-center day-cell flex flex-row border-default
+        calendar-cell p-0 snap-center day-cell flex flex-row border-default
         ${
           isWeekend ? 'WEEKEND' :
           isFerie ? 'FERIE' :
@@ -224,8 +224,11 @@ const DayCell: React.FC<DayCellProps> = ({
       `}
       key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
       id={format(day, 'yyyy-MM-dd')}
+      role="gridcell"
       style={{ 
-        height: 'auto',
+        width: `${CELL_WIDTH}px`,
+        minWidth: `${CELL_WIDTH}px`,
+        height: RowHeight ? `${RowHeight}px` : 'auto',
         minHeight: CELL_HEIGHT,
       }}
     >
@@ -254,7 +257,7 @@ const DayCell: React.FC<DayCellProps> = ({
             isNonWorkingDay={isNonWorkingDay}
             isDisplayWeekend={isDisplayWeekend}
             onAppointmentMoved={onAppointmentMoved}
-            onCellDoubleClick={() => onCellDoubleClick(intervalStart, employee.id, interval.name as 'morning' | 'afternoon')}
+            onCellDoubleClick={onCellDoubleClick}
             onAppointmentDoubleClick={onAppointmentClick}
             onExternalDragDrop={onExternalDragDrop}
             isCellActive={isCellActive}

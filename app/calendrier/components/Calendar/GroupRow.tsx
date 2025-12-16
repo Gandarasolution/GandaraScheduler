@@ -61,17 +61,8 @@ const GroupRow: React.FC<GroupRowProps> = ({
         />
       )}
       {dayInTimeline.map((day) => (
-        <div 
-          key={`inactive-${itemId}-${format(day, 'yyyy-MM-dd')}`}
-          className="calendar-cell p-0"
-          style={{ 
-            width: `${CELL_WIDTH}px`,
-            height: `${rowHeight}px`,
-            minWidth: `${CELL_WIDTH}px`
-          }}
-          role="gridcell"
-        >
           <DayCell
+            key={`inactive-${itemId}-${format(day, 'yyyy-MM-dd')}`}
             day={day}
             employee={{ id: 0, name: 'Inactive' }}
             appointments={[]}
@@ -90,7 +81,6 @@ const GroupRow: React.FC<GroupRowProps> = ({
             handleContextMenu={handleContextMenu}
             isCellActive={false}
           />
-        </div>
       ))}
     </div>
   );

@@ -240,8 +240,8 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     // Optimisation : pré-calculer les constantes une seule fois
     const date = selectedDate;
     const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = addDays(date, -halfWindow);
-    const endDate = addDays(date, halfWindow);
+    const startDate = days[0] || addDays(date, -halfWindow);
+    const endDate = days[days.length -1] || addDays(date, halfWindow);
 
     // Optimisation : construction directe selon includeWeekend
     let newTimeline: Date[];

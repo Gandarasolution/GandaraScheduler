@@ -149,7 +149,20 @@ interface DragItem {
  */
 
 
-const IntervalCell: React.FC<IntervalCellProps> = ({
+// Props du composant IntervalCellView (UI pure)
+interface IntervalCellViewProps extends IntervalCellProps {
+  isSelected: boolean;
+  selectedAppointmentId: number | undefined;
+  onSelectCell: (cell: { date: Date; employeeId: number } | null) => void;
+  onSelectAppointment: (appointment: Appointment | null) => void;
+}
+
+/**
+ * Composant IntervalCellView (Composant de présentation pur)
+ * Gère le rendu, le drag & drop et les interactions locales.
+ * Ne consomme PAS de contexte directement pour éviter les re-renders inutiles.
+ */
+const IntervalCellView: React.FC<IntervalCellViewProps> = memo(({
   date,
   employee = { id: 0, name: '' },
   intervalName,
@@ -170,16 +183,16 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   onCellDoubleClick,
   onAppointmentDoubleClick,
   onExternalDragDrop,
-  handleContextMenu
+  handleContextMenu,
+  isSelected,
+  selectedAppointmentId,
+  onSelectCell,
+  onSelectAppointment
 }) => {
   // État pour la bulle d'info (affichée au clic)
-  // Utilisation de useRef pour la bulle d'info (meilleure perf, pas de re-render inutile)
   const [showInfoBubble, setShowInfoBubble] = useState(false);
   const [bubbleContent, setBubbleContent] = useState('');
   const bubblePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
-  const { selectedCell, setSelectedCell } = useSelectedCell();
-  const isSelected = selectedCell?.date.getTime() === intervalStart.getTime() && selectedCell?.employeeId === employee.id;
   const cellRef = useRef<HTMLDivElement>(null);
 
   // Gestion du drop (drag & drop)
@@ -251,8 +264,8 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
   const handleCellClick = (event: React.MouseEvent<HTMLDivElement>) => {
     event.stopPropagation();
     if (!isCellActive || isWeekend || !employee.id) return;
-    setSelectedCell({ date: intervalStart, employeeId: employee.id });
-    setSelectedAppointment(null);
+    onSelectCell({ date: intervalStart, employeeId: employee.id });
+    onSelectAppointment(null);
     setBubbleContent(`Créneau du ${format(date, 'dd/MM')} ${!isFullDay ? (intervalName === 'morning' ? '- Matin' : '- Après-midi') : ''}`);
     setShowInfoBubble(true);
     const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -265,7 +278,7 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
 
   // Double-clic pour créer un rendez-vous
   const handleCellDoubleClick = () => {    
-    onCellDoubleClick(date, employee.id, isFullDay ? 'day' : intervalName);
+    onCellDoubleClick(intervalStart, employee.id, isFullDay ? 'day' : intervalName);
   };
 
    const setRefs = (node: HTMLDivElement | null) => {
@@ -326,11 +339,11 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
               isMobile={isMobile}
                onClick={() => {
               if (!isMobile) {
-                setSelectedAppointment(app);
-                setSelectedCell(null);
+                onSelectAppointment(app);
+                onSelectCell(null);
               }
             }}
-            isSelected={selectedAppointment?.id === app.id}
+            isSelected={selectedAppointmentId === app.id}
             />
           )
         })}
@@ -343,6 +356,29 @@ const IntervalCell: React.FC<IntervalCellProps> = ({
         />
       )}
     </div>
+  );
+});
+
+/**
+ * Composant IntervalCell (Container)
+ * Connecte le composant de présentation au contexte global.
+ */
+const IntervalCell: React.FC<IntervalCellProps> = (props) => {
+  const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
+  const { selectedCell, setSelectedCell } = useSelectedCell();
+  
+  // Calcul des états dérivés pour éviter de passer tout le contexte
+  const isSelected = selectedCell?.date.getTime() === props.intervalStart.getTime() && 
+                     selectedCell?.employeeId === props.employee.id;
+  
+  return (
+    <IntervalCellView
+      {...props}
+      isSelected={isSelected}
+      selectedAppointmentId={selectedAppointment?.id}
+      onSelectCell={setSelectedCell}
+      onSelectAppointment={setSelectedAppointment}
+    />
   );
 };
 

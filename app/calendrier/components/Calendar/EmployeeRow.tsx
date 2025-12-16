@@ -79,17 +79,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         }
         
         return (
-          <div 
-            key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
-            className="calendar-cell p-0"
-            style={{ 
-              width: `${CELL_WIDTH}px`,
-              height: `${rowHeight}px`,
-              minWidth: `${CELL_WIDTH}px`
-            }}
-            role="gridcell"
-          >
             <DayCell
+              key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
               day={day}
               employee={{ id: employee.id, name: employee.name }}
               appointments={dayEmployeeAppointments}
@@ -107,7 +98,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               isWeekend={isWeekend(day)}
               handleContextMenu={handleContextMenu}
             />
-          </div>
         );
       })}
     </div>

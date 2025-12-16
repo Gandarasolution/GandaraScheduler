@@ -377,9 +377,6 @@ export const useAppointmentLogic = ({
     const originalAppointment = { ...appointmentToDivide };
     const { startDate, endDate, employeeId } = appointmentToDivide;
     
-    console.log('startDate', startDate);
-    console.log('endDate', endDate);
-
     // Calcul du milieu
     let totalDuration = (endDate.getTime() - startDate.getTime()) + 1;
     const timeInterval = timelineState.isFullDay 

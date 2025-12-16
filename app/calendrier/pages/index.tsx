@@ -12,7 +12,7 @@
 "use client";
 
 import '../styles/custom.scss';
-import React, { useEffect, useRef, useMemo, use } from "react";
+import React, { useEffect, useRef, useMemo, use, useCallback } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
@@ -143,6 +143,10 @@ export default function HomePage({
     setIsViewDropdownOpen: viewState.setIsViewDropdownOpen
 
   });
+
+  const handleCellDoubleClick = useCallback(() => {
+    viewState.setIsSearchOverlayOpen(true);
+  }, [viewState.setIsSearchOverlayOpen]);
 
   // --- CONFIGURATION DES FILTRES (Pour FilterModal) ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -310,7 +314,7 @@ export default function HomePage({
                           
                           /* Actions & Events */
                           onAppointmentMoved={appointmentLogic.moveAppointment}
-                          onCellDoubleClick={() => viewState.setIsSearchOverlayOpen(true)}
+                          onCellDoubleClick={handleCellDoubleClick}
                           onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
                           onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
                           handleContextMenu={interaction.handleContextMenu}

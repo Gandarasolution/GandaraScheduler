@@ -270,6 +270,13 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
               <div 
                 className={`flex flex-col px-4 transition-all duration-200 ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}
                 style={{ paddingBottom: isOpen ? EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM : 0 }}
+                onMouseOver={(e) => {
+                  const target = (e.target as HTMLElement).closest('[data-employee-id]');
+                  if (target) {
+                    const id = target.getAttribute('data-employee-id');
+                    if (id) updateHighlightedEmployeeRow(parseInt(id));
+                  }
+                }}
               >
                 {isOpen && itemEmployees.map((employee) => {
                   const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
@@ -279,7 +286,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                       className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer hover:bg-primary-ultra-light employee-row-item"
                       style={{ height: employeeRowHeight, alignItems: 'center' }}
                       data-employee-id={employee.id}
-                      onMouseOver={() => updateHighlightedEmployeeRow(employee.id)}
                     >
                       <div className="relative">
                         <img
@@ -324,52 +330,46 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           ref={tableRef}
         >
           {flatRows.map((row) => {
-            return (
-              <div
+            return row.type === 'group' ? (
+              <GroupRow
                 key={row.id}
-                style={{
-                  width: '100%',
-                  height: `${row.height}px`,
-                }}
-              >
-                {row.type === 'group' ? (
-                  <GroupRow
-                    itemId={row.id}
-                    dayInTimeline={dayInTimeline}
-                    rowHeight={row.height}
-                    HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
-                    isFullDay={isFullDay}
-                    events={events}
-                    nonWorkingDates={nonWorkingDates}
-                    isDisplayWeekend={isDisplayWeekend}
-                    onAppointmentMoved={onAppointmentMoved}
-                    onCellDoubleClick={onCellDoubleClick}
-                    onAppointmentDoubleClick={onAppointmentDoubleClick}
-                    onExternalDragDrop={onExternalDragDrop}
-                    handleContextMenu={handleContextMenu}
-                    todayIndex={todayIndex}
-                  />
-                ) : (
-                  <EmployeeRow
-                    employee={row.data}
-                    dayInTimeline={dayInTimeline}
-                    appointments={appointmentsWithTop}
-                    appointmentsByDay={appointmentsByEmployeeAndDay}
-                    rowHeight={row.height}
-                    HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
-                    isFullDay={isFullDay}
-                    events={events}
-                    nonWorkingDates={nonWorkingDates}
-                    isDisplayWeekend={isDisplayWeekend}
-                    onAppointmentMoved={onAppointmentMoved}
-                    onCellDoubleClick={onCellDoubleClick}
-                    onAppointmentDoubleClick={onAppointmentDoubleClick}
-                    onExternalDragDrop={onExternalDragDrop}
-                    handleContextMenu={handleContextMenu}
-                    todayIndex={todayIndex}
-                  />
-                )}
-              </div>
+                style={{ width: '100%' }}
+                itemId={row.id}
+                dayInTimeline={dayInTimeline}
+                rowHeight={row.height}
+                HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+                isFullDay={isFullDay}
+                events={events}
+                nonWorkingDates={nonWorkingDates}
+                isDisplayWeekend={isDisplayWeekend}
+                onAppointmentMoved={onAppointmentMoved}
+                onCellDoubleClick={onCellDoubleClick}
+                onAppointmentDoubleClick={onAppointmentDoubleClick}
+                onExternalDragDrop={onExternalDragDrop}
+                handleContextMenu={handleContextMenu}
+                todayIndex={todayIndex}
+              />
+            ) : (
+              <EmployeeRow
+                key={row.id}
+                style={{ width: '100%' }}
+                employee={row.data}
+                dayInTimeline={dayInTimeline}
+                appointments={appointmentsWithTop}
+                appointmentsByDay={appointmentsByEmployeeAndDay}
+                rowHeight={row.height}
+                HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+                isFullDay={isFullDay}
+                events={events}
+                nonWorkingDates={nonWorkingDates}
+                isDisplayWeekend={isDisplayWeekend}
+                onAppointmentMoved={onAppointmentMoved}
+                onCellDoubleClick={onCellDoubleClick}
+                onAppointmentDoubleClick={onAppointmentDoubleClick}
+                onExternalDragDrop={onExternalDragDrop}
+                handleContextMenu={handleContextMenu}
+                todayIndex={todayIndex}
+              />
             );
           })}
         </div>
