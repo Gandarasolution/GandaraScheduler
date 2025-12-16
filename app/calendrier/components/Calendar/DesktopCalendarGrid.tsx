@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, memo } from 'react';
-import { format, isSameDay, isWeekend } from 'date-fns';
 import { Appointment, Employee, Groupe, CalendarConfig, Item, HalfDayInterval } from '../../types';
-import { DayCell, TimelineFrame } from './index';
+import { TimelineFrame } from './index';
 import EmployeeRow from './EmployeeRow';
 import GroupRow from './GroupRow';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
@@ -18,6 +17,8 @@ import {
   EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE, 
 } from '../../utils/constants';
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
+import { format } from 'date-fns';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface DesktopCalendarGridProps {
   employees: Employee[];
@@ -78,7 +79,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 }) => {
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
   
-
   const dimensionItems = useMemo(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
   }, [calendarConfig.dimension, employees, initialTeams]);
@@ -91,7 +91,24 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return groupEmployeesByDimension(filteredEmployees, calendarConfig.dimension, initialTeams);
   }, [filteredEmployees, calendarConfig.dimension, initialTeams]);
 
-  // Flatten the data structure for easier rendering and potential virtualization
+  // Optimisation : Pré-calculer les rendez-vous par employé et par jour
+  const appointmentsByEmployeeAndDay = useMemo(() => {
+    const map = new Map<string, (Appointment & { top: number })[]>();
+    
+    appointmentsWithTop.forEach(app => {
+      const dateKey = format(app.startDate, 'yyyy-MM-dd');
+      const key = `${app.employeeId}-${dateKey}`;
+      
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)?.push(app);
+    });
+    
+    return map;
+  }, [appointmentsWithTop]);
+
+  // Flatten the data structure for virtualization
   const flatRows = useMemo(() => {
     const rows: Array<{ type: 'group' | 'employee', id: string | number, data: any, height: number }> = [];
     
@@ -133,6 +150,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return rows;
   }, [dimensionItems, openItems, employeesByDimension, employeeHeights]);
 
+  // Virtualizer setup
+  const rowVirtualizer = useVirtualizer({
+    count: flatRows.length,
+    getScrollElement: () => mainScrollRef.current,
+    estimateSize: (index) => flatRows[index].height,
+    overscan: 5,
+  });
+
   const selectOptions: SelectOptionWithImage[] = useMemo(() => {
     return availableConfigs.map(config => ({
       id: config.id,
@@ -166,10 +191,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     </svg>
   );
 
-
-  
   return (
-    <div className="relative flex h-full flex-row calendar-grid">
+    <div className="relative flex h-full flex-row calendar-grid" data-testid="calendar-grid">
       <div
         className="min-w-80 max-w-80 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
         style={{ scrollbarGutter: 'stable' }}
@@ -295,25 +318,33 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         showTodayLine={true}
         todayLineColor="#ffcdde"
       >
-        <table 
-          ref={tableRef}
-          role="grid"
-          aria-label="Calendrier des employés"
+        <div 
           className="calendar-table bg-bg-secondary relative"
           style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
             width: `${dayInTimeline.length * CELL_WIDTH}px`,
-            tableLayout: 'fixed',
-            borderCollapse: 'collapse'
+            position: 'relative',
           }}
           onMouseOver={handleMouseOver}
           onMouseOut={handleMouseOut}
+          ref={tableRef}
         >
-          <tbody>
-            {flatRows.map((row) => {
-              if (row.type === 'group') {
-                return (
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const row = flatRows[virtualRow.index];
+            return (
+              <div
+                key={virtualRow.key}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                {row.type === 'group' ? (
                   <GroupRow
-                    key={`group-${row.id}`}
                     itemId={row.id}
                     dayInTimeline={dayInTimeline}
                     rowHeight={row.height}
@@ -328,14 +359,12 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                     onExternalDragDrop={onExternalDragDrop}
                     handleContextMenu={handleContextMenu}
                   />
-                );
-              } else {
-                return (
+                ) : (
                   <EmployeeRow
-                    key={`employee-${row.id}`}
                     employee={row.data}
                     dayInTimeline={dayInTimeline}
                     appointments={appointmentsWithTop}
+                    appointmentsByDay={appointmentsByEmployeeAndDay}
                     rowHeight={row.height}
                     HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
                     isFullDay={isFullDay}
@@ -348,11 +377,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                     onExternalDragDrop={onExternalDragDrop}
                     handleContextMenu={handleContextMenu}
                   />
-                );
-              }
-            })}
-          </tbody>
-        </table>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </TimelineFrame>
     </div>
   );

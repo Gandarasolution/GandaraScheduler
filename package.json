@@ -13,6 +13,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.13",
     "bootstrap": "^5.3.7",
     "critters": "^0.0.23",
     "date-fns": "^4.1.0",

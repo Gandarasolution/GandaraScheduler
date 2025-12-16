@@ -18,6 +18,7 @@ interface GroupRowProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  style?: React.CSSProperties;
 }
 
 const GroupRow: React.FC<GroupRowProps> = ({
@@ -34,21 +35,28 @@ const GroupRow: React.FC<GroupRowProps> = ({
   onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
+  style,
 }) => {
   return (
-    <tr 
+    <div 
       id={`row-group-${itemId}`}
-      className="calendar-row inactive-row"
+      className="calendar-row inactive-row flex"
       data-item-id={`inactive-${itemId}`}
       role="row"
+      style={{
+        ...style,
+        height: rowHeight,
+        width: 'fit-content'
+      }}
     >
       {dayInTimeline.map((day) => (
-        <td 
+        <div 
           key={`inactive-${itemId}-${format(day, 'yyyy-MM-dd')}`}
           className="calendar-cell p-0"
           style={{ 
             width: `${CELL_WIDTH}px`,
-            height: `${rowHeight}px`
+            height: `${rowHeight}px`,
+            minWidth: `${CELL_WIDTH}px`
           }}
           role="gridcell"
         >
@@ -71,9 +79,9 @@ const GroupRow: React.FC<GroupRowProps> = ({
             handleContextMenu={handleContextMenu}
             isCellActive={false}
           />
-        </td>
+        </div>
       ))}
-    </tr>
+    </div>
   );
 };
 

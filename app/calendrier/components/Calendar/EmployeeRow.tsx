@@ -8,6 +8,7 @@ interface EmployeeRowProps {
   employee: Employee;
   dayInTimeline: Date[];
   appointments: (Appointment & { top: number })[];
+  appointmentsByDay?: Map<string, (Appointment & { top: number })[]>;
   rowHeight: number;
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
@@ -19,12 +20,14 @@ interface EmployeeRowProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  style?: React.CSSProperties;
 }
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
   employee,
   dayInTimeline,
   appointments,
+  appointmentsByDay,
   rowHeight,
   HALF_DAY_INTERVALS,
   isFullDay,
@@ -36,26 +39,42 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
+  style,
 }) => {
   return (
-    <tr 
+    <div 
       id={`row-employee-${employee.id}`}
-      className="calendar-row employee-row" 
+      className="calendar-row employee-row flex" 
       data-employee-id={employee.id}
       role="row"
+      style={{
+        ...style,
+        height: rowHeight,
+        width: 'fit-content'
+      }}
     >
       {dayInTimeline.map((day) => {
-        const dayEmployeeAppointments = appointments.filter((app) =>
-          isSameDay(app.startDate, day) && app.employeeId === employee.id
-        );
+        let dayEmployeeAppointments: (Appointment & { top: number })[] = [];
+        
+        if (appointmentsByDay) {
+          const dateKey = format(day, 'yyyy-MM-dd');
+          const key = `${employee.id}-${dateKey}`;
+          dayEmployeeAppointments = appointmentsByDay.get(key) || [];
+        } else {
+          // Fallback si la map n'est pas fournie (pour compatibilité)
+          dayEmployeeAppointments = appointments.filter((app) =>
+            isSameDay(app.startDate, day) && app.employeeId === employee.id
+          );
+        }
         
         return (
-          <td 
+          <div 
             key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
             className="calendar-cell p-0"
             style={{ 
               width: `${CELL_WIDTH}px`,
-              height: `${rowHeight}px`
+              height: `${rowHeight}px`,
+              minWidth: `${CELL_WIDTH}px`
             }}
             role="gridcell"
           >
@@ -77,10 +96,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               isWeekend={isWeekend(day)}
               handleContextMenu={handleContextMenu}
             />
-          </td>
+          </div>
         );
       })}
-    </tr>
+    </div>
   );
 };
 

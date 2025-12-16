@@ -56,18 +56,15 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
         if (scrollElement && scrollElement.isConnected) {
           if (direction === 'left') {
              scrollElement.scrollLeft = previousScrollLeft + (newDays.length * CELL_WIDTH);
-          } else {
-             const removedFromLeft = prevDays.length + newDays.length - WINDOW_SIZE;
-             if (removedFromLeft > 0) {
-                scrollElement.scrollLeft = previousScrollLeft - (removedFromLeft * CELL_WIDTH);
-             }
           }
+          // Pas d'ajustement nécessaire pour la droite car on n'enlève plus d'éléments
         }
         setTimeout(() => { isProcessingInfiniteScroll.current = false; }, 100);
       });
 
+      // On accumule les jours sans les supprimer (plus de slice)
       const combined = direction === 'right' ? [...prevDays, ...newDays] : [...newDays, ...prevDays];
-      return direction === 'right' ? combined.slice(-WINDOW_SIZE) : combined.slice(0, WINDOW_SIZE);
+      return combined;
     });
   }, [isDisplayWeekend]);
 

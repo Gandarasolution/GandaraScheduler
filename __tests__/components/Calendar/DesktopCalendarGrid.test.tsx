@@ -6,13 +6,13 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Employee } from '@/app/calendrier/types';
 
 // Mock des composants enfants pour simplifier le test
-jest.mock('../../app/calendrier/components/Calendar/DayCell', () => {
+jest.mock('../../../app/calendrier/components/Calendar/DayCell', () => {
   return function MockDayCell({ day, employee }: any) {
     return <div data-testid="day-cell">{day.toISOString()} - {employee.name}</div>;
   };
 });
 
-jest.mock('../../app/calendrier/components/Calendar/TimelineFrame', () => {
+jest.mock('../../../app/calendrier/components/Calendar/TimelineFrame', () => {
   return function MockTimelineFrame({ children }: any) {
     return <div data-testid="timeline-frame">{children}</div>;
   };
@@ -67,7 +67,7 @@ describe('DesktopCalendarGrid', () => {
         <DesktopCalendarGrid {...defaultProps} />
       </DndProvider>
     );
-    expect(screen.getByTestId('timeline-frame')).toBeInTheDocument();
+    expect(screen.getByTestId('calendar-grid')).toBeInTheDocument();
   });
 
   it('displays employee names in the left column', () => {

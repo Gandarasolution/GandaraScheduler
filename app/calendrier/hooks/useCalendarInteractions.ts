@@ -119,7 +119,12 @@ export const useCalendarInteractions = ({
 
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
+      console.log(!tableRef.current);
+      
       if (!isDragging.current || !tableRef.current) return;
+
+      console.log('ca passe');
+      
       updateHighlight(e.clientX, e.clientY, tableRef.current);
     };
 

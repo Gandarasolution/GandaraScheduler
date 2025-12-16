@@ -95,7 +95,7 @@ export const colors: string[] = [
 export const DAYS_TO_ADD = 30;
 export const THRESHOLD_MAX = 80;
 export const THRESHOLD_MIN = 20;
-export const WINDOW_SIZE = 100;
+export const WINDOW_SIZE = 300;
 
 // ===== CALCULS MÉTIER =====
 
