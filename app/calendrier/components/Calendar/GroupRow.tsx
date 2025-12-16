@@ -1,8 +1,9 @@
 import React, { memo } from 'react';
-import { format, isWeekend } from 'date-fns';
+import { format, isWeekend, isSameDay } from 'date-fns';
 import { HalfDayInterval, Item, Appointment } from '../../types';
 import { DayCell } from './index';
 import { CELL_WIDTH } from '../../utils/constants';
+import { getRowId } from '../../utils/domIds';
 
 interface GroupRowProps {
   itemId: string | number;
@@ -19,6 +20,7 @@ interface GroupRowProps {
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
   style?: React.CSSProperties;
+  todayIndex: number;
 }
 
 const GroupRow: React.FC<GroupRowProps> = ({
@@ -36,19 +38,28 @@ const GroupRow: React.FC<GroupRowProps> = ({
   onExternalDragDrop,
   handleContextMenu,
   style,
+  todayIndex,
 }) => {
   return (
     <div 
-      id={`row-group-${itemId}`}
-      className="calendar-row inactive-row flex"
+      id={getRowId('group', itemId)}
+      className="calendar-row inactive-row flex w-fit relative"
       data-item-id={`inactive-${itemId}`}
       role="row"
       style={{
         ...style,
         height: rowHeight,
-        width: 'fit-content'
       }}
     >
+      {todayIndex >= 0 && (
+        <div
+          className="absolute top-0 bottom-0 w-0.5 z-10 pointer-events-none calendar-today"
+          style={{
+            left: `${(todayIndex * CELL_WIDTH + CELL_WIDTH / 2) - 2}px`,
+            backgroundColor: '#ffcdde'
+          }}
+        />
+      )}
       {dayInTimeline.map((day) => (
         <div 
           key={`inactive-${itemId}-${format(day, 'yyyy-MM-dd')}`}

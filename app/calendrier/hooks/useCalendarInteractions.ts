@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { CELL_WIDTH } from '../utils/constants';
+import { getRowId, parseRowId } from '../utils/domIds';
 
 interface UseCalendarInteractionsParams {
   dayInTimeline: Date[];
@@ -18,28 +19,36 @@ export const useCalendarInteractions = ({
   const isDragging = useRef(false);
   const isSyncingScroll = useRef(false);
   const tableRef = useRef<HTMLTableElement | null>(null);
+  const rafId = useRef<number | null>(null);
 
   const updateHighlight = useCallback((clientX: number, clientY: number, tableElement: HTMLTableElement) => {
     if (!tableElement) return;
     
-    const tableRect = tableElement.getBoundingClientRect();
-    const mouseX = clientX - tableRect.left;
-    const colIndex = Math.floor(mouseX / CELL_WIDTH);
-    
-    const elementAtPoint = document.elementFromPoint(clientX, clientY) as HTMLElement;
-    const cell = elementAtPoint?.closest('.calendar-cell') as HTMLElement ;
-    
-    const row = cell?.closest('.calendar-row') as HTMLElement;
-    const rowId = row ? row.id : null;
-    
-    if (colIndex === lastHoveredCol.current && rowId === lastHoveredRowId.current) {
+    // Throttle using requestAnimationFrame
+    if (rafId.current) {
       return;
     }
-    
-    lastHoveredCol.current = colIndex;
-    lastHoveredRowId.current = rowId;
-    
-    requestAnimationFrame(() => {
+
+    rafId.current = requestAnimationFrame(() => {
+      rafId.current = null;
+
+      const tableRect = tableElement.getBoundingClientRect();
+      const mouseX = clientX - tableRect.left;
+      const colIndex = Math.floor(mouseX / CELL_WIDTH);
+      
+      const elementAtPoint = document.elementFromPoint(clientX, clientY) as HTMLElement;
+      const cell = elementAtPoint?.closest('.calendar-cell') as HTMLElement ;
+      
+      const row = cell?.closest('.calendar-row') as HTMLElement;
+      const rowId = row ? row.id : null;
+      
+      if (colIndex === lastHoveredCol.current && rowId === lastHoveredRowId.current) {
+        return;
+      }
+      
+      lastHoveredCol.current = colIndex;
+      lastHoveredRowId.current = rowId;
+      
       if (colIndex >= 0 && colIndex < dayInTimeline.length) {
         const cellsToUpdate = tableElement.querySelectorAll('[data-hover-col="true"]');
         cellsToUpdate.forEach(c => (c as HTMLElement).removeAttribute('data-hover-col'));
@@ -61,13 +70,15 @@ export const useCalendarInteractions = ({
       const employeesToUpdate = document.querySelectorAll('[data-hover="true"]');
       employeesToUpdate.forEach(emp => (emp as HTMLElement).removeAttribute('data-hover'));
       
-      if (rowId && rowId.startsWith('row-employee-')) {
-        const employeeId = rowId.replace('row-employee-', '');
-        const employeeElement = document.querySelector(
-          `.employee-row-item[data-employee-id="${employeeId}"]`
-        ) as HTMLElement;
-        if (employeeElement) {
-          employeeElement.setAttribute('data-hover', 'true');
+      if (rowId) {
+        const parsed = parseRowId(rowId);
+        if (parsed && parsed.type === 'employee') {
+          const employeeElement = document.querySelector(
+            `.employee-row-item[data-employee-id="${parsed.id}"]`
+          ) as HTMLElement;
+          if (employeeElement) {
+            employeeElement.setAttribute('data-hover', 'true');
+          }
         }
       }
     });
@@ -79,7 +90,7 @@ export const useCalendarInteractions = ({
   
       const rows = tableElement.querySelectorAll('.calendar-row');    
       rows.forEach(row => {      
-        if (row.id === `row-employee-${employeeId}`) {              
+        if (row.id === getRowId('employee', employeeId || 0)) {              
           row.setAttribute('data-hover-row', 'true');
         } else {
           row.removeAttribute('data-hover-row');
@@ -156,6 +167,7 @@ export const useCalendarInteractions = ({
       document.removeEventListener('dragstart', handleDragStart);
       document.removeEventListener('dragend', handleDragEnd);
       document.removeEventListener('drop', handleDragEnd);
+      if (rafId.current) cancelAnimationFrame(rafId.current);
     };
   }, [updateHighlight]);
 

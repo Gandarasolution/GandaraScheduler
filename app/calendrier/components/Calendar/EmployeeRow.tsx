@@ -3,6 +3,7 @@ import { format, isSameDay, isWeekend } from 'date-fns';
 import { Employee, Appointment, HalfDayInterval, Item } from '../../types';
 import { DayCell } from './index';
 import { CELL_WIDTH } from '../../utils/constants';
+import { getRowId } from '../../utils/domIds';
 
 interface EmployeeRowProps {
   employee: Employee;
@@ -21,6 +22,7 @@ interface EmployeeRowProps {
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
   style?: React.CSSProperties;
+  todayIndex: number;
 }
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
@@ -40,19 +42,28 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   onExternalDragDrop,
   handleContextMenu,
   style,
+  todayIndex,
 }) => {
   return (
     <div 
-      id={`row-employee-${employee.id}`}
-      className="calendar-row employee-row flex" 
+      id={getRowId('employee', employee.id)}
+      className="calendar-row employee-row flex w-fit relative" 
       data-employee-id={employee.id}
       role="row"
       style={{
         ...style,
         height: rowHeight,
-        width: 'fit-content'
       }}
     >
+      {todayIndex >= 0 && (
+        <div
+          className="absolute top-0 bottom-0 w-0.5 z-10 pointer-events-none calendar-today"
+          style={{
+            left: `${(todayIndex * CELL_WIDTH + CELL_WIDTH / 2) - 2}px`,
+            backgroundColor: '#ffcdde'
+          }}
+        />
+      )}
       {dayInTimeline.map((day) => {
         let dayEmployeeAppointments: (Appointment & { top: number })[] = [];
         

@@ -178,17 +178,10 @@ const DayCell: React.FC<DayCellProps> = ({
         {/* Info-bulle personnalisée */}
         {tooltip && tooltip.app && (
           <div
+            className="absolute z-[100] min-w-[200px] bg-white border border-gray-200 rounded-xl shadow-lg p-3.5"
             style={{
-              position: 'absolute',
               top: tooltip.anchor?.offsetTop ? tooltip.anchor.offsetTop + 28 : 40,
               left: tooltip.anchor?.offsetLeft ?? 0,
-              zIndex: 100,
-              minWidth: 200,
-              background: 'white',
-              border: '1px solid #ddd',
-              borderRadius: 12,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-              padding: 14,
               animation: 'fadeIn 0.2s',
             }}
             onClick={e => e.stopPropagation()}

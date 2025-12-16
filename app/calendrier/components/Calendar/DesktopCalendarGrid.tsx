@@ -17,8 +17,7 @@ import {
   EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE, 
 } from '../../utils/constants';
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
-import { format } from 'date-fns';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { format, isSameDay } from 'date-fns';
 
 interface DesktopCalendarGridProps {
   employees: Employee[];
@@ -91,6 +90,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return groupEmployeesByDimension(filteredEmployees, calendarConfig.dimension, initialTeams);
   }, [filteredEmployees, calendarConfig.dimension, initialTeams]);
 
+  const todayIndex = useMemo(() => {
+    return dayInTimeline.findIndex(day => isSameDay(day, new Date()));
+  }, [dayInTimeline]);
+
   // Optimisation : Pré-calculer les rendez-vous par employé et par jour
   const appointmentsByEmployeeAndDay = useMemo(() => {
     const map = new Map<string, (Appointment & { top: number })[]>();
@@ -150,13 +153,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return rows;
   }, [dimensionItems, openItems, employeesByDimension, employeeHeights]);
 
-  // Virtualizer setup
-  const rowVirtualizer = useVirtualizer({
-    count: flatRows.length,
-    getScrollElement: () => mainScrollRef.current,
-    estimateSize: (index) => flatRows[index].height,
-    overscan: 5,
-  });
 
   const selectOptions: SelectOptionWithImage[] = useMemo(() => {
     return availableConfigs.map(config => ({
@@ -315,13 +311,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           handleScroll();
           handleScrollY(e);              
         }}
-        showTodayLine={true}
         todayLineColor="#ffcdde"
       >
         <div 
           className="calendar-table bg-bg-secondary relative"
           style={{
-            height: `${rowVirtualizer.getTotalSize()}px`,
             width: `${dayInTimeline.length * CELL_WIDTH}px`,
             position: 'relative',
           }}
@@ -329,18 +323,13 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           onMouseOut={handleMouseOut}
           ref={tableRef}
         >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const row = flatRows[virtualRow.index];
+          {flatRows.map((row) => {
             return (
               <div
-                key={virtualRow.key}
+                key={row.id}
                 style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
                   width: '100%',
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start}px)`,
+                  height: `${row.height}px`,
                 }}
               >
                 {row.type === 'group' ? (
@@ -358,6 +347,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                     onAppointmentDoubleClick={onAppointmentDoubleClick}
                     onExternalDragDrop={onExternalDragDrop}
                     handleContextMenu={handleContextMenu}
+                    todayIndex={todayIndex}
                   />
                 ) : (
                   <EmployeeRow
@@ -376,6 +366,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                     onAppointmentDoubleClick={onAppointmentDoubleClick}
                     onExternalDragDrop={onExternalDragDrop}
                     handleContextMenu={handleContextMenu}
+                    todayIndex={todayIndex}
                   />
                 )}
               </div>

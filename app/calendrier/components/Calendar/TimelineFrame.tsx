@@ -44,8 +44,6 @@ interface TimelineFrameProps {
   className?: string;
   /** Style inline pour le conteneur principal */
   style?: React.CSSProperties;
-  /** Afficher la ligne de la date actuelle */
-  showTodayLine?: boolean;
   /** Couleur de la ligne de la date actuelle */
   todayLineColor?: string;
   /** Afficher les en-têtes de groupes (défaut: true) */
@@ -76,7 +74,6 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   children,
   className = '',
   style,
-  showTodayLine = true,
   todayLineColor = '#ffcdde',
   showGroupHeaders = true,
   showItemHeaders = true,
@@ -188,16 +185,6 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
     return dayInTimeline.map(day => format(day, 'd', { locale: fr }));
   }, [dayInTimeline, customDayLabels, columns]);
 
-
-  /**
-   * Trouve l'index du jour courant dans la timeline
-   */
-  const todayIndex = useMemo(() => {
-    if (!dayInTimeline || !showTodayLine) return -1;
-    return dayInTimeline.findIndex(day => 
-      format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-    );
-  }, [dayInTimeline, showTodayLine]);
 
   return (
     <FlexibleFrame
@@ -328,16 +315,6 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
       ]}
     >
       {children}
-      
-      {/* Ligne verticale pour aujourd'hui */}
-      {showTodayLine && todayIndex >= 0 && (
-        <div
-          className="absolute top-0 bottom-0 w-0.5 z-10 pointer-events-none calendar-today"
-          style={{
-            left: `${(todayIndex * CELL_WIDTH + CELL_WIDTH / 2) - 2}px`,
-          }}
-        />
-      )}
     </FlexibleFrame>
   );
 };

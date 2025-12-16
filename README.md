@@ -2,27 +2,35 @@
 
 ## 📋 Description
 
-Une application de gestion d'agenda timeline développée avec Next.js et React. Cette application permet de planifier et visualiser les rendez-vous, chantiers, absences et autres événements pour les employés d'une entreprise sous forme de timeline interactive.
+Une application de gestion d'agenda timeline haute performance développée avec Next.js et React. Cette application permet de planifier et visualiser les rendez-vous, chantiers, absences et autres événements pour les employés d'une entreprise sous forme de timeline interactive.
+
+Elle intègre des fonctionnalités avancées comme la virtualisation pour gérer de grands volumes de données, le drag & drop fluide, et une interface responsive.
 
 ## ✨ Fonctionnalités
+
+### 🚀 Performance & Optimisation
+- **Virtualisation** : Utilisation de `@tanstack/react-virtual` pour un rendu fluide même avec des centaines d'employés et des périodes étendues (300+ jours).
+- **Scroll Infini** : Chargement dynamique des jours lors du défilement horizontal.
+- **Memoization** : Optimisation des rendus React pour minimiser la latence.
 
 ### 🎨 Gestion des rendez-vous
 - **Création de rendez-vous** avec formulaire avancé
 - **Système de couleurs** personnalisables (fond, bordure, texte)
 - **Types de rendez-vous** : Chantiers, Absences, Autres
 - **Durées flexibles** adaptées au type d'événement
+- **Drag & Drop** : Déplacement intuitif des rendez-vous avec surlignement en temps réel de la cellule cible.
 
 ### 👥 Gestion des équipes
 - **Différents pôles**
 - **Types de contrats** : CDI et Intérim
 - **Avatars** et informations détaillées
+- **Filtrage** par équipe, type, employé
 
 ### 📅 Interface timeline
 - **Vue calendrier** avec grille par jours
-- **Drag & Drop** pour déplacer les rendez-vous
-- **Filtrage** par équipe, type, employé
 - **Navigation** intuitive dans le temps
-- **Responsive design** adaptatif
+- **Responsive design** adaptatif (Mobile & Desktop)
+- **Zoom** et configuration de l'affichage
 
 ### 🎛️ Paramètres avancés
 - **Panel d'options** extensible
@@ -30,10 +38,16 @@ Une application de gestion d'agenda timeline développée avec Next.js et React.
 - **Couleurs personnalisées** avec palette
 - **Icônes** catégorisées (28 icônes disponibles)
 
-### 📊 Données d'échantillon
-- **20 projets de chantiers** variés
-- **12 types d'absences** différents
-- **15 autres événements** (réunions, formations, etc.)
+## 🛠️ Technologies utilisées
+
+- **Framework** : Next.js 16 (App Router)
+- **Language** : TypeScript
+- **Styling** : Tailwind CSS, SCSS, Bootstrap
+- **State Management** : React Context, React Hooks
+- **Drag & Drop** : React DnD
+- **Virtualisation** : @tanstack/react-virtual
+- **Dates** : date-fns, date-holidays
+- **Testing** : Jest, React Testing Library
 
 ## 🚀 Installation
 
@@ -55,16 +69,14 @@ npm install
 npm run dev
 ```
 
-Ouvrir [http://localhost:3000](http://localhost:3000) dans votre navigateur.
+Ouvrir [http://localhost:8080](http://localhost:8080) dans votre navigateur (port configuré dans `package.json`).
 
-## 🛠️ Technologies utilisées
+### Tests
 
-- **Framework** : Next.js 15 (App Router)
-- **Language** : TypeScript
-- **Styling** : CSS modules + SCSS
-- **State Management** : React Context
-- **Icons** : Images personnalisées
-- **Fonts** : Geist (optimisé Vercel)
+```bash
+# Lancer les tests unitaires
+npm test
+```
 
 ## 📁 Structure du projet
 
@@ -72,19 +84,18 @@ Ouvrir [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 app/
 ├── calendrier/           # Module principal du calendrier
 │   ├── components/       # Composants UI
-│   │   ├── AppointmentForm.tsx    # Formulaire de création/édition
-│   │   ├── AppointmentItem.tsx    # Affichage d'un RDV
-│   │   ├── CalendarGrid.tsx       # Grille du calendrier
-│   │   ├── DayCell.tsx            # Cellule d'un jour
-│   │   ├── Modal.tsx              # Modal générique
-│   │   └── ...
-│   ├── context/          # Contexts React
-│   ├── pages/           # Pages du calendrier
-│   ├── types/           # Types TypeScript
-│   └── utils/           # Utilitaires et constantes
-├── datasource.ts        # Données d'échantillon
-├── globals.css          # Styles globaux
-└── layout.tsx          # Layout principal
+│   │   ├── Calendar/     # Composants spécifiques au calendrier (Grid, Row, Cell...)
+│   │   ├── dnd/          # Composants liés au Drag & Drop
+│   │   ├── forms/        # Formulaires
+│   │   ├── modals/       # Modales de configuration
+│   │   └── ui/           # Composants UI génériques
+│   ├── context/          # Contexts React (Selection, etc.)
+│   ├── hooks/            # Hooks personnalisés (Logique métier, Scroll, Interactions)
+│   ├── types/            # Types TypeScript
+│   └── utils/            # Utilitaires et constantes
+├── datasource.ts         # Données d'échantillon
+├── globals.scss          # Styles globaux
+└── layout.tsx            # Layout principal
 ```
 
 ## 🎨 Personnalisation
@@ -97,25 +108,3 @@ app/
 - **Chantiers** : Projets de construction (3-12 jours)
 - **Absences** : Congés, maladie, formation (1-5 jours)  
 - **Autres** : Réunions, déplacements, maintenance (1-3 jours)
-
-### Équipes et employés
-Configuration flexible des équipes et employés dans `datasource.ts`
-
-## 🔧 Développement
-
-### Scripts disponibles
-```bash
-npm run dev          # Serveur de développement
-npm run build        # Build de production
-npm run start        # Serveur de production
-npm run lint         # Linting TypeScript/ESLint
-```
-
-### Ajout de nouvelles fonctionnalités
-1. Créer les composants dans `app/calendrier/components/`
-2. Définir les types dans `app/calendrier/types/`
-3. Ajouter les données dans `datasource.ts` si nécessaire
-
-
-
-**Développé avec ❤️ pour la gestion d'équipes et de projets**
