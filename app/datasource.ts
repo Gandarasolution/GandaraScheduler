@@ -205,13 +205,13 @@ const Evenements = [
       dateOS: '15/01/2024',
       dateFin: '15/07/2025',
       // Analyse Chantier
-      TM: '2500h',        // Temps Marché
-      HR: '1625h',        // Heures Réalisées (65% de 2500h)
-      SH: '875h',         // Solde Heure (2500h - 1625h)
-      DPF: '',        // Durée Planifiée Future
-      RPF: '',          // Réalisé - Planif Future
-      AP: '',          // Avancement prévisionnel
-      SP: ''           // Solde Prévisionnel
+      TM: 2500,        // Temps Marché
+      HR: 1625,        // Heures Réalisées (65% de 2500h)
+      SH: 875,         // Solde Heure (2500h - 1625h)
+      DPF: 0,        // Durée Planifiée Future
+      RPF: 0,          // Réalisé - Planif Future
+      AP: 0,          // Avancement prévisionnel
+      SP: 0           // Solde Prévisionnel
     },
     {
       id: 2,
@@ -235,13 +235,13 @@ const Evenements = [
         dateOS: '01/03/2024',
         dateFin: '01/03/2026',
         // Analyse Chantier
-        TM: '5800h',        // Temps Marché
-        HR: '580h',         // Heures Réalisées (10% de 5800h)
-        SH: '5220h',        // Solde Heure (5800h - 580h)
-        DPF: '',       // Durée Planifiée Future
-        RPF: '',          // Réalisé - Planif Future
-        AP: '',          // Avancement prévisionnel
-        SP: ''           // Solde Prévisionnel
+        TM: 5800,        // Temps Marché
+        HR: 580,         // Heures Réalisées (10% de 5800h)
+        SH: 5220,        // Solde Heure (5800h - 580h)
+        DPF: 0,       // Durée Planifiée Future
+        RPF: 0,          // Réalisé - Planif Future
+        AP: 0,          // Avancement prévisionnel
+        SP: 0           // Solde Prévisionnel
   
     },
     {
@@ -264,13 +264,13 @@ const Evenements = [
         dateOS: '10/09/2023',
         dateFin: '10/12/2024',
         // Analyse Chantier
-        TM: '3200h',        // Temps Marché
-        HR: '1280h',        // Heures Réalisées (40% de 3200h)
-        SH: '1920h',        // Solde Heure (3200h - 1280h)
-        DPF: '',       // Durée Planifiée Future
-        RPF: '',          // Réalisé - Planif Future
-        AP: '',          // Avancement prévisionnel
-        SP: ''           // Solde Prévisionnel
+        TM: 3200,        // Temps Marché
+        HR: 1280,        // Heures Réalisées (40% de 3200h)
+        SH: 1920,        // Solde Heure (3200h - 1280h)
+        DPF: 0,       // Durée Planifiée Future
+        RPF: 0,          // Réalisé - Planif Future
+        AP: 0,          // Avancement prévisionnel
+        SP: 0           // Solde Prévisionnel
  
     },
     // Chantiers existants avec données enrichies
@@ -292,13 +292,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '05/02/2024',
         dateFin: '05/11/2024',
-        TM: '1800h',
-        HR: '1350h',
-        SH: '450h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 1800,
+        HR: 1350,
+        SH: 450,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
      
     },
     {
@@ -319,13 +319,13 @@ const Evenements = [
         chefChantier: 38,
         dateOS: '15/04/2024',
         dateFin: '15/12/2025',
-        TM: '8500h',
-        HR: '425h',
-        SH: '8075h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 8500,
+        HR: 425,
+        SH: 8075,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
    
     },
     {
@@ -346,13 +346,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '01/01/2024',
         dateFin: '01/08/2025',
-        TM: '4200h',
-        HR: '2310h',
-        SH: '1890h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 4200,
+        HR: 2310,
+        SH: 1890,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
 
     },
     {
@@ -373,13 +373,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '01/06/2023',
         dateFin: '01/02/2024',
-        TM: '2100h',
-        HR: '2100h',
-        SH: '0h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 2100,
+        HR: 2100,
+        SH: 0,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
   
     },
     {
@@ -400,13 +400,12 @@ const Evenements = [
         chefChantier: 40,
         dateOS: '01/05/2024',
         dateFin: '01/10/2025',
-        TM: '6800h',
-        HR: '1700h',
-        SH: '5100h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-
+        TM: 6800,
+        HR: 1700,
+        SH: 5100,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
     },
     {
       id: 9,
@@ -426,13 +425,13 @@ const Evenements = [
         chefChantier: 40,
         dateOS: '01/03/2024',
         dateFin: '01/01/2025',
-        TM: '3500h',
-        HR: '525h',
-        SH: '2975h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 3500,
+        HR: 525,
+        SH: 2975,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
 
     },
     {
@@ -453,13 +452,13 @@ const Evenements = [
         chefChantier: 38,
         dateOS: '01/06/2024',
         dateFin: '01/12/2025',
-        TM: '4100h',
-        HR: '0h',
-        SH: '4100h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 4100,
+        HR: 0,
+        SH: 4100,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
  
     },
     {
@@ -480,13 +479,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '01/02/2024',
         dateFin: '01/01/2025',
-        TM: '3800h',
-        HR: '2280h',
-        SH: '1520h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 3800,
+        HR: 2280,
+        SH: 1520,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
     },
     {
       id: 12,
@@ -506,13 +505,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '15/03/2024',
         dateFin: '15/09/2024',
-        TM: '2200h',
-        HR: '1980h',
-        SH: '220h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 2200,
+        HR: 1980,
+        SH: 220,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
     },
     {
       id: 13,
@@ -532,13 +531,13 @@ const Evenements = [
         chefChantier: 38,
         dateOS: '01/08/2024',
         dateFin: '01/06/2025',
-        TM: '4500h',
-        HR: '0h',
-        SH: '4500h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 4500,
+        HR: 0,
+        SH: 4500,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
     },
     { 
       id: 14, 
@@ -698,13 +697,13 @@ const Evenements = [
       chefChantier: 38,
       dateOS: '01/03/2024',
       dateFin: '01/11/2025',
-      TM: '3400h',
-      HR: '1360h',
-      SH: '2040h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3400,
+      HR: 1360,
+      SH: 2040,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 25,
@@ -724,14 +723,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/06/2024',
       dateFin: '15/09/2025',
-      TM: '5200h',
-      HR: '0h',
-      SH: '5200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
-
+      TM: 5200,
+      HR: 0,
+      SH: 5200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 26,
@@ -751,13 +749,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/02/2024',
       dateFin: '01/03/2026',
-      TM: '7600h',
-      HR: '3800h',
-      SH: '3800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 7600,
+      HR: 3800,
+      SH: 3800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
 
   },
   {
@@ -778,13 +776,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/09/2024',
       dateFin: '01/06/2026',
-      TM: '4100h',
-      HR: '0h',
-      SH: '4100h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4100,
+      HR: 0,
+      SH: 4100,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
 
   },
   {
@@ -805,13 +803,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '15/03/2024',
       dateFin: '15/07/2025',
-      TM: '6200h',
-      HR: '3720h',
-      SH: '2480h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6200,
+      HR: 3720,
+      SH: 2480,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -832,13 +830,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/05/2024',
       dateFin: '01/11/2025',
-      TM: '4500h',
-      HR: '2250h',
-      SH: '2250h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4500,
+      HR: 2250,
+      SH: 2250,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -859,13 +857,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/10/2024',
       dateFin: '01/07/2026',
-      TM: '5300h',
-      HR: '0h',
-      SH: '5300h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5300,
+      HR: 0,
+      SH: 5300,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   
   },
   {
@@ -886,13 +884,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/04/2024',
       dateFin: '01/10/2025',
-      TM: '4000h',
-      HR: '1800h',
-      SH: '2200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4000,
+      HR: 1800,
+      SH: 2200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -913,13 +911,13 @@ const Evenements = [
       chefChantier: 38,
       dateOS: '01/02/2023',
       dateFin: '01/05/2024',
-      TM: '3100h',
-      HR: '3100h',
-      SH: '0h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3100,
+      HR: 3100,
+      SH: 0,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 33,
@@ -939,13 +937,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/01/2024',
       dateFin: '15/06/2025',
-      TM: '5400h',
-      HR: '2700h',
-      SH: '2700h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5400,
+      HR: 2700,
+      SH: 2700,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
     {
@@ -966,13 +964,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/02/2025',
-      TM: '2800h',
-      HR: '1820h',
-      SH: '980h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 2800,
+      HR: 1820,
+      SH: 980,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -993,13 +991,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/09/2024',
       dateFin: '01/06/2026',
-      TM: '3900h',
-      HR: '0h',
-      SH: '3900h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3900,
+      HR: 0,
+      SH: 3900,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -1020,13 +1018,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '15/03/2024',
       dateFin: '15/12/2025',
-      TM: '5800h',
-      HR: '2320h',
-      SH: '3480h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5800,
+      HR: 2320,
+      SH: 3480,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
    
   },
   {
@@ -1047,13 +1045,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/10/2024',
       dateFin: '01/06/2026',
-      TM: '4600h',
-      HR: '0h',
-      SH: '4600h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4600,
+      HR: 0,
+      SH: 4600,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -1074,13 +1072,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/02/2025',
-      TM: '2900h',
-      HR: '2100h',
-      SH: '800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 2900,
+      HR: 2100,
+      SH: 800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   
   },
   {
@@ -1101,13 +1099,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/08/2024',
       dateFin: '01/04/2026',
-      TM: '6300h',
-      HR: '0h',
-      SH: '6300h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6300,
+      HR: 0,
+      SH: 6300,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -1128,13 +1126,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/02/2024',
       dateFin: '01/12/2025',
-      TM: '3100h',
-      HR: '1550h',
-      SH: '1550h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3100,
+      HR: 1550,
+      SH: 1550,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -1155,13 +1153,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/05/2024',
       dateFin: '15/02/2026',
-      TM: '3800h',
-      HR: '0h',
-      SH: '3800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3800,
+      HR: 0,
+      SH: 3800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 42,
@@ -1181,13 +1179,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/01/2024',
       dateFin: '01/10/2025',
-      TM: '4800h',
-      HR: '1920h',
-      SH: '2880h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4800,
+      HR: 1920,
+      SH: 2880,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 43,
@@ -1207,13 +1205,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '15/02/2024',
       dateFin: '15/08/2025',
-      TM: '7200h',
-      HR: '3600h',
-      SH: '3600h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 7200,
+      HR: 3600,
+      SH: 3600,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
     {
     id: 44,
@@ -1233,13 +1231,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/09/2024',
       dateFin: '01/05/2026',
-      TM: '4200h',
-      HR: '0h',
-      SH: '4200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4200,
+      HR: 0,
+      SH: 4200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 45,
@@ -1259,13 +1257,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/11/2025',
-      TM: '6900h',
-      HR: '3100h',
-      SH: '3800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6900,
+      HR: 3100,
+      SH: 3800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 46,
@@ -1285,13 +1283,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/12/2025',
-      TM: '5700h',
-      HR: '2600h',
-      SH: '3100h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5700,
+      HR: 2600,
+      SH: 3100,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 47,
@@ -1311,13 +1309,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/06/2024',
       dateFin: '01/03/2026',
-      TM: '3900h',
-      HR: '0h',
-      SH: '3900h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3900,
+      HR: 0,
+      SH: 3900,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 48,
@@ -1337,13 +1335,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/02/2024',
       dateFin: '15/08/2025',
-      TM: '5100h',
-      HR: '2550h',
-      SH: '2550h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5100,
+      HR: 2550,
+      SH: 2550,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 49,
@@ -1363,13 +1361,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/07/2024',
       dateFin: '01/04/2026',
-      TM: '4800h',
-      HR: '0h',
-      SH: '4800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4800,
+      HR: 0,
+      SH: 4800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 50,
@@ -1389,13 +1387,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/10/2025',
-      TM: '3600h',
-      HR: '1800h',
-      SH: '1800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3600,
+      HR: 1800,
+      SH: 1800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 51,
@@ -1415,13 +1413,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/01/2024',
       dateFin: '01/12/2025',
-      TM: '4400h',
-      HR: '3080h',
-      SH: '1320h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4400,
+      HR: 3080,
+      SH: 1320,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -1442,13 +1440,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/01/2023',
       dateFin: '01/04/2024',
-      TM: '3800h',
-      HR: '3800h',
-      SH: '0h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3800,
+      HR: 3800,
+      SH: 0,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -1469,13 +1467,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/09/2024',
       dateFin: '01/05/2026',
-      TM: '5000h',
-      HR: '0h',
-      SH: '5000h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5000,
+      HR: 0,
+      SH: 5000,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
     {
     id: 54,
@@ -1495,13 +1493,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/09/2025',
-      TM: '6400h',
-      HR: '3200h',
-      SH: '3200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6400,
+      HR: 3200,
+      SH: 3200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 55,
@@ -1521,12 +1519,12 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/07/2024',
       dateFin: '01/05/2026',
-      TM: '7200h',
-      HR: '0h',
-      SH: '7200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
+      TM: 7200,
+      HR: 0,
+      SH: 7200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
       SP: ''
   },
   {
@@ -1547,13 +1545,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/02/2024',
       dateFin: '15/12/2025',
-      TM: '5300h',
-      HR: '2120h',
-      SH: '3180h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5300,
+      HR: 2120,
+      SH: 3180,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -1574,13 +1572,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/06/2024',
       dateFin: '01/02/2026',
-      TM: '3800h',
-      HR: '0h',
-      SH: '3800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3800,
+      HR: 0,
+      SH: 3800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
 
   },
   {
@@ -1601,13 +1599,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/09/2025',
-      TM: '4700h',
-      HR: '2350h',
-      SH: '2350h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4700,
+      HR: 2350,
+      SH: 2350,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 59,
@@ -1627,13 +1625,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/05/2024',
       dateFin: '01/03/2026',
-      TM: '3900h',
-      HR: '0h',
-      SH: '3900h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3900,
+      HR: 0,
+      SH: 3900,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 60,
@@ -1653,13 +1651,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/02/2024',
       dateFin: '01/10/2025',
-      TM: '3500h',
-      HR: '1750h',
-      SH: '1750h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3500,
+      HR: 1750,
+      SH: 1750,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 61,
@@ -1679,13 +1677,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/12/2025',
-      TM: '7100h',
-      HR: '3550h',
-      SH: '3550h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 7100,
+      HR: 3550,
+      SH: 3550,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 62,
@@ -1705,13 +1703,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/08/2024',
       dateFin: '01/06/2026',
-      TM: '4100h',
-      HR: '0h',
-      SH: '4100h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4100,
+      HR: 0,
+      SH: 4100,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 63,
@@ -1731,13 +1729,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/10/2025',
-      TM: '6400h',
-      HR: '3200h',
-      SH: '3200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6400,
+      HR: 3200,
+      SH: 3200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
     {
     id: 64,
@@ -1756,13 +1754,13 @@ const Evenements = [
     chefChantier: 42,
     dateOS: '01/03/2024',
     dateFin: '01/10/2025',
-    TM: '4300h',
-    HR: '2150h',
-    SH: '2150h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 4300,
+    HR: 2150,
+    SH: 2150,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
   {
     id: 65,
@@ -1781,13 +1779,13 @@ const Evenements = [
     chefChantier: 40,
     dateOS: '01/09/2024',
     dateFin: '01/07/2026',
-    TM: '3900h',
-    HR: '0h',
-    SH: '3900h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 3900,
+    HR: 0,
+    SH: 3900,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
   {
     id: 66,
@@ -1807,13 +1805,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/02/2024',
       dateFin: '15/09/2025',
-      TM: '6200h',
-      HR: '3720h',
-      SH: '2480h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6200,
+      HR: 3720,
+      SH: 2480,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 67,
@@ -1833,13 +1831,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/08/2024',
       dateFin: '01/04/2026',
-      TM: '3100h',
-      HR: '0h',
-      SH: '3100h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3100,
+      HR: 0,
+      SH: 3100,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 68,
@@ -1859,13 +1857,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/12/2025',
-      TM: '4800h',
-      HR: '1920h',
-      SH: '2880h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4800,
+      HR: 1920,
+      SH: 2880,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 69,
@@ -1885,13 +1883,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/06/2024',
       dateFin: '01/06/2026',
-      TM: '5200h',
-      HR: '0h',
-      SH: '5200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5200,
+      HR: 0,
+      SH: 5200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 70,
@@ -1911,14 +1909,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/11/2025',
-      TM: '6100h',
-      HR: '3050h',
-      SH: '3050h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
-
+      TM: 6100,
+      HR: 3050,
+      SH: 3050,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 71,
@@ -1937,13 +1934,13 @@ const Evenements = [
     chefChantier: 42,
     dateOS: '01/09/2023',
     dateFin: '01/04/2024',
-    TM: '3500h',
-    HR: '3500h',
-    SH: '0h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 3500,
+    HR: 3500,
+    SH: 0,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
   {
     id: 72,
@@ -1962,13 +1959,13 @@ const Evenements = [
     chefChantier: 42,
     dateOS: '01/01/2024',
     dateFin: '01/09/2025',
-    TM: '6700h',
-    HR: '3350h',
-    SH: '3350h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 6700,
+    HR: 3350,
+    SH: 3350,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
   {
     id: 73,
@@ -1987,14 +1984,264 @@ const Evenements = [
     chefChantier: 40,
     dateOS: '01/07/2024',
     dateFin: '01/05/2026',
-    TM: '4600h',
-    HR: '0h',
-    SH: '4600h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 4600,
+    HR: 0,
+    SH: 4600,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
+  {
+    id: 74,
+    label: 'Rénovation Gare Saint-Lazare',
+    image: 26,
+    color: '#3F51B5',
+    borderColor: '#283593',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-074',
+    identifiant: 'PAR-2024-074',
+    libelle: 'Rénovation Gare Saint-Lazare',
+    etat: 'En cours',
+    chargeAffaire: 36,
+    chefChantier: 40,
+    dateOS: '01/02/2024',
+    dateFin: '01/12/2025',
+    TM: 8000,
+    HR: 3200,
+    SH: 4800,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 75,
+    label: 'Construction Piscine Olympique',
+    image: 26,
+    color: '#03A9F4',
+    borderColor: '#0277BD',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-075',
+    identifiant: 'LYO-2024-075',
+    libelle: 'Construction Piscine Olympique',
+    etat: 'Planifié',
+    chargeAffaire: 37,
+    chefChantier: 38,
+    dateOS: '01/06/2024',
+    dateFin: '01/06/2026',
+    TM: 12000,
+    HR: 0,
+    SH: 12000,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 76,
+    label: 'Aménagement Bureaux La Défense',
+    image: 26,
+    color: '#607D8B',
+    borderColor: '#455A64',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 2,
+    code: 'CHT-076',
+    identifiant: 'DEF-2024-076',
+    libelle: 'Aménagement Bureaux La Défense',
+    etat: 'En cours',
+    chargeAffaire: 39,
+    chefChantier: 42,
+    dateOS: '15/01/2024',
+    dateFin: '15/09/2024',
+    TM: 4500,
+    HR: 2250,
+    SH: 2250,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 77,
+    label: 'Réfection Toiture École Jules Ferry',
+    image: 26,
+    color: '#795548',
+    borderColor: '#4E342E',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-077',
+    identifiant: 'NAN-2024-077',
+    libelle: 'Réfection Toiture École Jules Ferry',
+    etat: 'Terminé',
+    chargeAffaire: 41,
+    chefChantier: 40,
+    dateOS: '01/09/2023',
+    dateFin: '01/03/2024',
+    TM: 1800,
+    HR: 1800,
+    SH: 0,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 78,
+    label: 'Installation Fibre Optique Quartier Nord',
+    image: 26,
+    color: '#9C27B0',
+    borderColor: '#7B1FA2',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 3,
+    code: 'CHT-078',
+    identifiant: 'MAR-2024-078',
+    libelle: 'Installation Fibre Optique Quartier Nord',
+    etat: 'En cours',
+    chargeAffaire: 36,
+    chefChantier: 38,
+    dateOS: '01/04/2024',
+    dateFin: '01/10/2024',
+    TM: 2500,
+    HR: 1000,
+    SH: 1500,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 79,
+    label: 'Construction Parking Souterrain Centre-Ville',
+    image: 26,
+    color: '#424242',
+    borderColor: '#212121',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-079',
+    identifiant: 'BOR-2024-079',
+    libelle: 'Construction Parking Souterrain Centre-Ville',
+    etat: 'En cours',
+    chargeAffaire: 37,
+    chefChantier: 42,
+    dateOS: '01/02/2024',
+    dateFin: '01/02/2025',
+    TM: 5600,
+    HR: 2000,
+    SH: 3600,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 80,
+    label: 'Restauration Château de Versailles (Aile Nord)',
+    image: 26,
+    color: '#D4AF37',
+    borderColor: '#B8860B',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-080',
+    identifiant: 'VER-2024-080',
+    libelle: 'Restauration Château de Versailles (Aile Nord)',
+    etat: 'Planifié',
+    chargeAffaire: 39,
+    chefChantier: 40,
+    dateOS: '01/09/2024',
+    dateFin: '01/09/2026',
+    TM: 15000,
+    HR: 0,
+    SH: 15000,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 81,
+    label: 'Construction Hôpital Privé de l\'Ouest',
+    image: 26,
+    color: '#E91E63',
+    borderColor: '#C2185B',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-081',
+    identifiant: 'REN-2024-081',
+    libelle: 'Construction Hôpital Privé de l\'Ouest',
+    etat: 'En cours',
+    chargeAffaire: 41,
+    chefChantier: 38,
+    dateOS: '01/01/2024',
+    dateFin: '01/06/2025',
+    TM: 9500,
+    HR: 3500,
+    SH: 6000,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 82,
+    label: 'Aménagement Parc Urbain Les Érables',
+    image: 26,
+    color: '#8BC34A',
+    borderColor: '#689F38',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 2,
+    code: 'CHT-082',
+    identifiant: 'STR-2024-082',
+    libelle: 'Aménagement Parc Urbain Les Érables',
+    etat: 'En cours',
+    chargeAffaire: 36,
+    chefChantier: 42,
+    dateOS: '01/03/2024',
+    dateFin: '01/11/2024',
+    TM: 3200,
+    HR: 1600,
+    SH: 1600,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 83,
+    label: 'Rénovation Théâtre Municipal',
+    image: 26,
+    color: '#673AB7',
+    borderColor: '#512DA8',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-083',
+    identifiant: 'NIC-2024-083',
+    libelle: 'Rénovation Théâtre Municipal',
+    etat: 'Planifié',
+    chargeAffaire: 37,
+    chefChantier: 40,
+    dateOS: '01/10/2024',
+    dateFin: '01/10/2025',
+    TM: 4800,
+    HR: 0,
+    SH: 4800,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  }
 ];
 
 
@@ -2033,8 +2280,8 @@ function generateAppointments(employees: Employee[]): Appointment[] {
   employees.forEach((employee) => {
     const employeeAppointments: { start: Date; end: Date }[] = [];
     
-    // Chaque employé aura 2 à 4 rendez-vous
-    const numberOfAppointments = Math.floor(Math.random() * 3) + 2;
+    // Chaque employé aura 10 à 30 rendez-vous
+    const numberOfAppointments = Math.floor(Math.random() * 20) + 10;
     
     for (let i = 0; i < numberOfAppointments; i++) {
       let attempts = 0;
@@ -2046,8 +2293,8 @@ function generateAppointments(employees: Employee[]): Appointment[] {
       let selectedEvent = null;
       let description = '';
       
-      // Essayer de trouver un créneau libre jusqu'à 100 tentatives
-      while (!isValid && attempts < 100) {
+      // Essayer de trouver un créneau libre jusqu'à 200 tentatives
+      while (!isValid && attempts < 200) {
         attempts++;
         
         // Choisir le type d'événement
@@ -2084,8 +2331,8 @@ function generateAppointments(employees: Employee[]): Appointment[] {
           description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
         }
         
-        // Générer date de début aléatoire (dans les 60 prochains jours)
-        startDate = getRandomWeekDate(baseDate, 60);
+        // Générer date de début aléatoire (dans les 90 prochains jours)
+        startDate = getRandomWeekDate(baseDate, 90);
         startDate.setHours(0, 0, 0, 0);
         
         // Calculer date de fin

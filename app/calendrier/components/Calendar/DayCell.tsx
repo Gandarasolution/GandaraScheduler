@@ -29,6 +29,10 @@ interface DayCellProps {
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
+  selectedCell?: { employeeId: number; date: Date } | null;
+  selectedAppointmentId?: number | undefined;
+  onSelectCell?: (cell: { employeeId: number; date: Date } | null) => void;
+  onSelectAppointment?: (appointment: Appointment | null) => void;
 }
 
 /**
@@ -100,6 +104,10 @@ const DayCell: React.FC<DayCellProps> = ({
   onAppointmentClick,
   onExternalDragDrop,
   handleContextMenu,
+  selectedCell,
+  selectedAppointmentId,
+  onSelectCell,
+  onSelectAppointment,
 }) => {
   
   // Calcul du style de la cellule selon férié/week-end/jour normal
@@ -264,6 +272,10 @@ const DayCell: React.FC<DayCellProps> = ({
             isWeekend={isWeekend}
             isFerie={isFerie}
             handleContextMenu={handleContextMenu}
+            isSelected={selectedCell?.employeeId === employee.id && selectedCell?.date.getTime() === intervalStart.getTime()}
+            selectedAppointmentId={selectedAppointmentId}
+            onSelectCell={onSelectCell || (() => {})}
+            onSelectAppointment={onSelectAppointment || (() => {})}
           />
         );
       })}

@@ -19,6 +19,10 @@ interface MobileCalendarGridProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  selectedCell?: { employeeId: number; date: Date } | null;
+  selectedAppointmentId?: number | undefined;
+  onSelectCell?: (cell: { employeeId: number; date: Date } | null) => void;
+  onSelectAppointment?: (appointment: Appointment | null) => void;
 }
 
 const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
@@ -35,6 +39,10 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
   onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
+  selectedCell,
+  selectedAppointmentId,
+  onSelectCell,
+  onSelectAppointment,
 }) => {
   const displayEmployee = employees[0];
 
@@ -96,6 +104,10 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
                   isWeekend={isWeekend(day)}
                   handleContextMenu={handleContextMenu}
                   isCellActive={true}
+                  selectedCell={selectedCell}
+                  selectedAppointmentId={selectedAppointmentId}
+                  onSelectCell={onSelectCell}
+                  onSelectAppointment={onSelectAppointment}
                 />
               </div>
             </div>

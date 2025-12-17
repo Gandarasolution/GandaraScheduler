@@ -49,6 +49,10 @@ interface CalendarGridProps {
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
   onScrollElementMounted?: () => void; 
+  selectedCell: { employeeId: number; date: Date } | null;
+  selectedAppointmentId: number | undefined;
+  onSelectCell: (cell: { employeeId: number; date: Date } | null) => void;
+  onSelectAppointment: (appointment: Appointment | null) => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -73,6 +77,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onExternalDragDrop,
   handleContextMenu,
   onScrollElementMounted,
+  selectedCell,
+  selectedAppointmentId,
+  onSelectCell,
+  onSelectAppointment,
 }) => {
 
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
@@ -120,6 +128,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         onAppointmentDoubleClick={onAppointmentDoubleClick}
         onExternalDragDrop={onExternalDragDrop}
         handleContextMenu={handleContextMenu}
+        selectedCell={selectedCell}
+        selectedAppointmentId={selectedAppointmentId}
+        onSelectCell={onSelectCell}
+        onSelectAppointment={onSelectAppointment}
       />
     );
   }
@@ -152,6 +164,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       onExternalDragDrop={onExternalDragDrop}
       handleContextMenu={handleContextMenu}
       updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
+      selectedCell={selectedCell}
+      selectedAppointmentId={selectedAppointmentId}
+      onSelectCell={onSelectCell}
+      onSelectAppointment={onSelectAppointment}
     />
   );
 };
@@ -166,6 +182,8 @@ export default memo(CalendarGrid, (prevProps, nextProps) => {
     prevProps.isFullDay === nextProps.isFullDay &&
     prevProps.nonWorkingDates === nextProps.nonWorkingDates &&
     prevProps.isMobile === nextProps.isMobile &&
-    prevProps.isDisplayWeekend === nextProps.isDisplayWeekend
+    prevProps.isDisplayWeekend === nextProps.isDisplayWeekend &&
+    prevProps.selectedCell === nextProps.selectedCell &&
+    prevProps.selectedAppointmentId === nextProps.selectedAppointmentId
   );
 });

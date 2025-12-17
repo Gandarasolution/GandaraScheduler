@@ -46,6 +46,10 @@ interface DesktopCalendarGridProps {
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
   updateHighlightedEmployeeRow: (employeeId: number | null) => void;
+  selectedCell: { employeeId: number; date: Date } | null;
+  selectedAppointmentId: number | undefined;
+  onSelectCell: (cell: { employeeId: number; date: Date } | null) => void;
+  onSelectAppointment: (appointment: Appointment | null) => void;
 }
 
 const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
@@ -75,6 +79,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   onExternalDragDrop,
   handleContextMenu,
   updateHighlightedEmployeeRow,
+  selectedCell,
+  selectedAppointmentId,
+  onSelectCell,
+  onSelectAppointment,
 }) => {
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
   
@@ -369,6 +377,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 onExternalDragDrop={onExternalDragDrop}
                 handleContextMenu={handleContextMenu}
                 todayIndex={todayIndex}
+                selectedCell={selectedCell}
+                selectedAppointmentId={selectedAppointmentId}
+                onSelectCell={onSelectCell}
+                onSelectAppointment={onSelectAppointment}
               />
             );
           })}

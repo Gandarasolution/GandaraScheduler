@@ -263,7 +263,7 @@ export async function fileToFullQualityDataURL(
     
     const reader = new FileReader();
     reader.onload = (e) => {
-      img.src = e.target?.result as string;
+      img.src = base64ToBlobUrl(e.target?.result as string);
     };
     reader.readAsDataURL(file);
   });
@@ -324,3 +324,33 @@ export async function validateImageFile(
     reader.readAsDataURL(file);
   });
 }
+
+
+// Convertit une chaîne Base64 en Blob URL (très léger en mémoire JS)
+export const base64ToBlobUrl = (base64: string, contentType: string = 'image/png'): string => {
+  // Si c'est déjà une URL, on ne touche à rien
+  if (!base64 || base64.startsWith('http') || base64.startsWith('blob:')) return base64;
+
+  // Nettoyage du préfixe "data:image/png;base64," si présent
+  const base64Data = base64.split(',')[1] || base64;
+  
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: contentType });
+  
+  // Crée une URL unique (ex: blob:http://localhost:3000/550e8400-e29b...)
+  return URL.createObjectURL(blob);
+};
+
+// IMPORTANT : Il faut libérer la mémoire quand l'image n'est plus utilisée
+export const revokeBlobUrl = (url: string) => {
+  if (url && url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
+};

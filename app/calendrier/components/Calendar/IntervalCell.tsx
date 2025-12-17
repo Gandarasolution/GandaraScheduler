@@ -17,8 +17,6 @@ import {
   
 } from '../../utils/constants';
 import { getNextWorkedDay } from '../../utils/dates';
-import { useSelectedCell } from '../../context/SelectedCellContext';
-import { useSelectedAppointment } from '../../context/SelectedAppointmentContext';
 
 /**
  * IntervalCell
@@ -64,6 +62,10 @@ interface IntervalCellProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  isSelected: boolean;
+  selectedAppointmentId: number | undefined;
+  onSelectCell: (cell: { date: Date; employeeId: number } | null) => void;
+  onSelectAppointment: (appointment: Appointment | null) => void;
 }
 
 // Type pour le drag & drop
@@ -149,20 +151,11 @@ interface DragItem {
  */
 
 
-// Props du composant IntervalCellView (UI pure)
-interface IntervalCellViewProps extends IntervalCellProps {
-  isSelected: boolean;
-  selectedAppointmentId: number | undefined;
-  onSelectCell: (cell: { date: Date; employeeId: number } | null) => void;
-  onSelectAppointment: (appointment: Appointment | null) => void;
-}
-
 /**
- * Composant IntervalCellView (Composant de présentation pur)
+ * Composant IntervalCell
  * Gère le rendu, le drag & drop et les interactions locales.
- * Ne consomme PAS de contexte directement pour éviter les re-renders inutiles.
  */
-const IntervalCellView: React.FC<IntervalCellViewProps> = memo(({
+const IntervalCell: React.FC<IntervalCellProps> = memo(({
   date,
   employee = { id: 0, name: '' },
   intervalName,
@@ -359,27 +352,5 @@ const IntervalCellView: React.FC<IntervalCellViewProps> = memo(({
   );
 });
 
-/**
- * Composant IntervalCell (Container)
- * Connecte le composant de présentation au contexte global.
- */
-const IntervalCell: React.FC<IntervalCellProps> = (props) => {
-  const { selectedAppointment, setSelectedAppointment } = useSelectedAppointment();
-  const { selectedCell, setSelectedCell } = useSelectedCell();
-  
-  // Calcul des états dérivés pour éviter de passer tout le contexte
-  const isSelected = selectedCell?.date.getTime() === props.intervalStart.getTime() && 
-                     selectedCell?.employeeId === props.employee.id;
-  
-  return (
-    <IntervalCellView
-      {...props}
-      isSelected={isSelected}
-      selectedAppointmentId={selectedAppointment?.id}
-      onSelectCell={setSelectedCell}
-      onSelectAppointment={setSelectedAppointment}
-    />
-  );
-};
 
 export default memo(IntervalCell);

@@ -102,13 +102,13 @@ export interface ChantierItem extends BaseItem {
   chefChantier: string;
   dateOS: string;
   dateFin: string;
-  TM: string;
-  HR: string;
-  SH: string;
-  DPF: string;
-  RPF: string;
-  AP: string;
-  SP: string;
+  TM: number;
+  HR: number;
+  SH: number;
+  DPF: number;
+  RPF: number;
+  AP: number;
+  SP: number;
 }
 
 // Interface commune pour les attributs partagés entre Absence et Autre

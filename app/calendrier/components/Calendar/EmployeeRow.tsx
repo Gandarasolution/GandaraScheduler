@@ -23,6 +23,10 @@ interface EmployeeRowProps {
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
   style?: React.CSSProperties;
   todayIndex: number;
+  selectedCell: { employeeId: number; date: Date } | null;
+  selectedAppointmentId: number | undefined;
+  onSelectCell: (cell: { employeeId: number; date: Date } | null) => void;
+  onSelectAppointment: (appointment: Appointment | null) => void;
 }
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
@@ -43,6 +47,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   handleContextMenu,
   style,
   todayIndex,
+  selectedCell,
+  selectedAppointmentId,
+  onSelectCell,
+  onSelectAppointment,
 }) => {
   return (
     <div 
@@ -97,6 +105,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               onExternalDragDrop={onExternalDragDrop}
               isWeekend={isWeekend(day)}
               handleContextMenu={handleContextMenu}
+              selectedCell={selectedCell}
+              selectedAppointmentId={selectedAppointmentId}
+              onSelectCell={onSelectCell}
+              onSelectAppointment={onSelectAppointment}
             />
         );
       })}
@@ -104,4 +116,43 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   );
 };
 
-export default memo(EmployeeRow);
+export default memo(EmployeeRow, (prev, next) => {
+  if (prev.employee.id !== next.employee.id ||
+      prev.dayInTimeline !== next.dayInTimeline ||
+      prev.appointments !== next.appointments ||
+      prev.appointmentsByDay !== next.appointmentsByDay ||
+      prev.rowHeight !== next.rowHeight ||
+      prev.HALF_DAY_INTERVALS !== next.HALF_DAY_INTERVALS ||
+      prev.isFullDay !== next.isFullDay ||
+      prev.events !== next.events ||
+      prev.nonWorkingDates !== next.nonWorkingDates ||
+      prev.isDisplayWeekend !== next.isDisplayWeekend ||
+      prev.todayIndex !== next.todayIndex
+  ) {
+    return false;
+  }
+
+  // Optimization for selectedCell
+  const wasSelected = prev.selectedCell?.employeeId === prev.employee.id;
+  const isSelected = next.selectedCell?.employeeId === next.employee.id;
+
+  if (wasSelected !== isSelected) return false; // Selection state changed for this row
+  if (wasSelected && isSelected) {
+     if (prev.selectedCell?.date.getTime() !== next.selectedCell?.date.getTime()) return false; // Selected date changed within this row
+  }
+
+  // Optimization for selectedAppointmentId
+  if (prev.selectedAppointmentId !== next.selectedAppointmentId) {
+     // If appointment selection changed, we ideally check if the appointment is in this row.
+     // For now, to be safe and simple, we can re-render. 
+     // Or we can try to be smart.
+     // If we return false here, ALL rows re-render on appointment click.
+     // This is what happens currently anyway (via context).
+     // But we want to avoid it if possible.
+     // Let's assume for now we re-render all rows on appointment selection change.
+     // It's less frequent than cell selection (maybe?).
+     return false;
+  }
+
+  return true;
+});

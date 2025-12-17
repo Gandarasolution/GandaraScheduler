@@ -9,9 +9,11 @@ Elle intègre des fonctionnalités avancées comme la virtualisation pour gérer
 ## ✨ Fonctionnalités
 
 ### 🚀 Performance & Optimisation
-- **Virtualisation** : Utilisation de `@tanstack/react-virtual` pour un rendu fluide même avec des centaines d'employés et des périodes étendues (300+ jours).
 - **Scroll Infini** : Chargement dynamique des jours lors du défilement horizontal.
-- **Memoization** : Optimisation des rendus React pour minimiser la latence.
+- **Memoization Avancée** : Utilisation intensive de `React.memo`, `useCallback` et `useMemo` pour éviter les re-renders inutiles.
+- **Optimisation du Context** : Séparation des composants conteneurs et de présentation (`IntervalCell`) pour isoler les mises à jour de contexte (sélection) et éviter de re-rendre toute la grille.
+- **DOM Flattening** : Structure HTML aplatie au maximum (suppression des wrappers inutiles dans `EmployeeRow`, `GroupRow`, `DayCell`) pour réduire la complexité du DOM et améliorer la fluidité du navigateur.
+- **Event Delegation** : Gestion optimisée des événements (survol, clics) pour réduire la création de fonctions et l'impact mémoire.
 
 ### 🎨 Gestion des rendez-vous
 - **Création de rendez-vous** avec formulaire avancé
@@ -45,7 +47,6 @@ Elle intègre des fonctionnalités avancées comme la virtualisation pour gérer
 - **Styling** : Tailwind CSS, SCSS, Bootstrap
 - **State Management** : React Context, React Hooks
 - **Drag & Drop** : React DnD
-- **Virtualisation** : @tanstack/react-virtual
 - **Dates** : date-fns, date-holidays
 - **Testing** : Jest, React Testing Library
 

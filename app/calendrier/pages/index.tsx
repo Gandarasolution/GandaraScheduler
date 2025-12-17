@@ -97,17 +97,19 @@ export default function HomePage({
   });
 
   // 5. LOGIQUE MÉTIER (CRUD, Règles de gestion, Historique)
+  const timelineState = useMemo(() => ({
+    isFullDay: viewState.isFullDay, 
+    isDisplayWeekend: viewState.isDisplayWeekend,
+    includeWeekend: viewState.includeWeekend,
+    respectNonWorkingDays: viewState.respectNonWorkingDays,
+    nonWorkingDates: viewState.nonWorkingDates
+  }), [viewState.isFullDay, viewState.isDisplayWeekend, viewState.includeWeekend, viewState.respectNonWorkingDays, viewState.nonWorkingDates]);
+
   const appointmentLogic = useAppointmentLogic({
     appointmentsRef: dataLayer.appointmentsRef,
     employeesRef: globalEmployeesRef,
     eventsRef: dataLayer.itemsRef,
-    timelineState: { 
-      isFullDay: viewState.isFullDay, 
-      isDisplayWeekend: viewState.isDisplayWeekend,
-      includeWeekend: viewState.includeWeekend,
-      respectNonWorkingDays: viewState.respectNonWorkingDays,
-      nonWorkingDates: viewState.nonWorkingDates
-    },
+    timelineState,
     onUpdate: dataLayer.refreshData // Callback pour rafraichir l'UI après modification des Refs
   });
 
@@ -147,6 +149,16 @@ export default function HomePage({
   const handleCellDoubleClick = useCallback(() => {
     viewState.setIsSearchOverlayOpen(true);
   }, [viewState.setIsSearchOverlayOpen]);
+
+  const selectedAppointmentContextValue = useMemo(() => ({
+    selectedAppointment: appointmentLogic.selectedAppointment,
+    setSelectedAppointment: appointmentLogic.setSelectedAppointment
+  }), [appointmentLogic.selectedAppointment, appointmentLogic.setSelectedAppointment]);
+
+  const selectedCellContextValue = useMemo(() => ({
+    selectedCell: appointmentLogic.selectedCell,
+    setSelectedCell: appointmentLogic.setSelectedCell
+  }), [appointmentLogic.selectedCell, appointmentLogic.setSelectedCell]);
 
   // --- CONFIGURATION DES FILTRES (Pour FilterModal) ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -276,14 +288,8 @@ export default function HomePage({
               <div className={`flex-grow rounded-lg w-full h-full pb-4 ${dataLayer.isLoading ? "pointer-events-none opacity-60" : ""}`}>
                 
                 {/* Injection des contextes pour les composants enfants */}
-                <SelectedAppointmentContext.Provider value={{ 
-                  selectedAppointment: appointmentLogic.selectedAppointment, 
-                  setSelectedAppointment: appointmentLogic.setSelectedAppointment
-                }}>
-                  <SelectedCellContext.Provider value={{ 
-                    selectedCell: appointmentLogic.selectedCell, 
-                    setSelectedCell: appointmentLogic.setSelectedCell 
-                  }}>
+                <SelectedAppointmentContext.Provider value={selectedAppointmentContextValue}>
+                  <SelectedCellContext.Provider value={selectedCellContextValue}>
                     
                     {viewState.viewType === 'calendar' ? (
                       /* VUE PLANNING */
@@ -319,6 +325,12 @@ export default function HomePage({
                           onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
                           handleContextMenu={interaction.handleContextMenu}
                           onScrollElementMounted={timeline.onScrollElementMounted}
+                          
+                          /* Sélection Optimisée */
+                          selectedCell={appointmentLogic.selectedCell}
+                          selectedAppointmentId={appointmentLogic.selectedAppointment?.id}
+                          onSelectCell={appointmentLogic.setSelectedCell}
+                          onSelectAppointment={appointmentLogic.setSelectedAppointment}
                         />
                       ) : (
                         <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>
@@ -328,9 +340,7 @@ export default function HomePage({
                       <DataTableFrame 
                         items={dataLayer.getTableItems()} 
                         categoriesStructure={dataLayer.getTableStructure() || []}
-                        // Correction TS : Extraction de la propriété spécifique ou undefined
                         computedFields={currentComputedFields as any}
-                        // Correction TS : Cast explicite pour satisfaire Record<string, ...>
                         customRenderers={
                           customRenderersFactory(
                             viewState.viewType, 

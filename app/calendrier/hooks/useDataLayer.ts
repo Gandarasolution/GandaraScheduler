@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Appointment, Employee, Item, CalendarConfig, Image } from '../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../utils/searchAndFilterUtils';
 import { 
@@ -105,23 +105,20 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
   };
 
     const getTableStructure = () => {
-        // Ici tu peux retourner les structures de colonnes définies dans le fichier original
-        // Je simplifie pour l'exemple, mais copie le tableau `categoriesStructure` ici
-
         if (viewType === 'chantier-table') 
             return [
                 {
                     key: 'IG',
                     label: 'Informations Générales', 
                     attributes: [
-                        { key: 'image', label: 'Image', isFixed: true },
-                        { key: 'poleActivite',   label: 'Pôle', type:'string' },
-                        { key: 'code',  label: 'Code', type:'string' },
-                        { key: 'identifiant',  label: 'Identifiant', type:'string' },
-                        { key: 'libelle' , label: 'Libellé', type:'string' },
+                        { key: 'image', label: '', isFixed: true, sortable: false },
+                        { key: 'poleActivite',   label: 'Pôle', type:'string', width:120 },
+                        { key: 'code',  label: 'Code', type:'string', width:85 },
+                        { key: 'identifiant',  label: 'Identifiant', type:'string', width:125 },
+                        { key: 'libelle' , label: 'Libellé', type:'string', width:280 },
                         { key: 'etat', label: 'État', type:'string' },
-                        { key: 'chargeAffaire',  label: 'Chargé Aff.', type:'string' },
-                        { key: 'chefChantier',  label: 'Chef Ch.', type:'string' },
+                        { key: 'chargeAffaire',  label: 'Chargé d\'Affaires', type:'string' },
+                        { key: 'chefChantier',  label: 'Chef de Chantier', type:'string' },
                         { key: 'dateOS' , label: 'Date OS', type:'date' },
                         { key: 'dateFin', label: 'Date Fin', type:'date' }
                     ]
@@ -130,12 +127,12 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
                     key: 'analyse',
                     label: 'Analyse Chantier',
                     attributes: [
-                        { key: 'TM',  label: 'T. Marché', type:'string' },      // Temps Marché
-                        { key: 'HR',  label: 'H. Réal.', type:'string' },       // Heures Réalisées
-                        { key: 'SH',  label: 'Solde H.', type:'string' },       // Solde Heure
-                        { key: 'DPF',  label: 'D. Planif.', type:'string' },    // Durée Planifiée
-                        { key: 'RPF',  label: 'Réal. + Fut.', type:'string' },  // Réalisé + Future
-                        { key: 'AP',  label: 'Avanc. %', type:'string' },       // Avancement Prév.
+                        { key: 'TM',  label: 'Temps Marché', type:'string', width:80},      // Temps Marché
+                        { key: 'HR',  label: 'Heures Réalisées', type:'string' , width:90},       // Heures Réalisées
+                        { key: 'SH',  label: 'Solde Heures', type:'string', width:80 },       // Solde Heure
+                        { key: 'DPF',  label: 'Durée Planifiée', type:'string', width:85 },    // Durée Planifiée
+                        { key: 'RPF',  label: 'Réalisé + Futur', type:'string', width:80 },  // Réalisé + Future
+                        { key: 'AP',  label: 'Avancement Prévisionnel', type:'string', width:110 },       // Avancement Prév.
                         { key: 'SP',  label: 'Solde P.', type:'string' }        // Solde Prév.
                     ]
                 }
@@ -147,7 +144,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
                 label: '', 
                 attributes: [
                     { key: 'verrou', label: 'Verrou' },
-                    { key: 'image', label: 'Image', isFixed: true },
+                    { key: 'image', label: '', isFixed: true, sortable: false },
                     { key: 'code', label: 'Code' },
                     { key: 'label', label: 'Libellé' },
                     { key: 'actif', label: 'ACTF' },
@@ -161,7 +158,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
                 key: 'all',
                 label: '',
                 attributes: [
-                    { key: 'image', label: 'Image', isFixed: true },
+                    { key: 'image', label: '', isFixed: true, sortable: false },
                     { key: 'code', label: 'Code' },
                     { key: 'nom', label: 'Nom' },
                     { key: 'prenom', label: 'Prénom'}, 
@@ -173,7 +170,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     };
 
   // --- Trigger de refresh ---
-  const refreshData = () => setAppointmentsVersion(prev => prev + 1);
+  const refreshData = useCallback(() => setAppointmentsVersion(prev => prev + 1), []);
 
   const addImage = (newImage: Image) => {
     setAvailableImages([...availableImages, newImage]); // Ajout au début

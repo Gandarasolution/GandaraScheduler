@@ -34,7 +34,7 @@ export const useCalendarInteractions = ({
 
       const tableRect = tableElement.getBoundingClientRect();
       const mouseX = clientX - tableRect.left;
-      const colIndex = Math.floor(mouseX / CELL_WIDTH);
+      const colIndex = Math.floor(mouseX / CELL_WIDTH) + 1;
       
       const elementAtPoint = document.elementFromPoint(clientX, clientY) as HTMLElement;
       const cell = elementAtPoint?.closest('.calendar-cell') as HTMLElement ;
