@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, memo, useRef } from 'react';
-import { useDrop } from 'react-dnd';
-import { format, addDays, addHours } from 'date-fns';
+import { format } from 'date-fns';
 
 import { InfoBubble, AppointmentItem } from '@/app/calendrier/components/index';
 
@@ -10,20 +9,14 @@ import { InfoBubble, AppointmentItem } from '@/app/calendrier/components/index';
 
 import { Appointment, Item } from '../../types';
 import {
-  CELL_WIDTH, 
-  CELL_HEIGHT, 
-  DAY_INTERVALS, 
-  HALF_DAY_INTERVALS,
-  DAY_MS,
-  HOUR_MS,
-  
+  CELL_WIDTH,
+  CELL_HEIGHT,
 } from '../../utils/constants';
-import { getNextWorkedDay } from '../../utils/dates';
 
 /**
  * IntervalCell
  * Représente une demi-journée (matin/après-midi) pour un employé à une date donnée.
- * Gère le drag & drop, l'affichage des rendez-vous, les interactions et le style selon le contexte.
+ * Gère l'affichage des rendez-vous, les interactions et le style selon le contexte.
  *
  * Props :
  * - date : Date de la cellule
@@ -82,19 +75,6 @@ interface IntervalCellProps {
   onSelectAppointment: (appointment: (Appointment & { startTs?: number; endTs?: number }) | null) => void;
 }
 
-// Type pour le drag & drop
-interface DragItem {
-  id: number;
-  type: 'appointment';
-  title?: string;
-  sourceType?: 'external';
-  startDate: number;
-  endDate: number;
-  imageUrl: string;
-  typeEvent: 'Chantier' | 'Absence' | 'Autre';
-  dragOffset?: number;
-}
-
 /**
  * Composant IntervalCell
  * 
@@ -127,15 +107,13 @@ interface DragItem {
  * 
  * 
  * @remarks
- * - Utilise react-dnd pour le drag & drop.
  * - Affiche une bulle d'information temporaire au clic.
  * - Permet la création de rendez-vous par double-clic.
  * - Gère les jours non travaillés, week-ends et jours fériés.
  * 
  * @ligne
  * // Gestion de l'état local pour la bulle d'info et sa position
- * // Utilisation de useDrop pour gérer le drag & drop sur la cellule
- * // Calcul du style de fond selon l'état de drop et d'activité
+ * // Calcul du style de fond selon l'état d'activité
  * // Gestion du clic sur la cellule pour afficher la bulle d'info
  * // Gestion du double-clic pour créer un rendez-vous
  * // Rendu JSX de la cellule, des rendez-vous et de la bulle d'info
@@ -144,7 +122,7 @@ interface DragItem {
 
 /**
  * Composant IntervalCell
- * Gère le rendu, le drag & drop et les interactions locales.
+ * Gère le rendu et les interactions locales.
  */
 const IntervalCell: React.FC<IntervalCellProps> = memo(({
   dateTs,
@@ -174,7 +152,6 @@ const IntervalCell: React.FC<IntervalCellProps> = memo(({
   onSelectAppointment
 }) => {
   const intervalStart = intervalStartTs;
-  const intervalEnd = intervalEndTs;
   const date = dateTs;
   // État pour la bulle d'info (affichée au clic)
   const [showInfoBubble, setShowInfoBubble] = useState(false);
@@ -182,66 +159,6 @@ const IntervalCell: React.FC<IntervalCellProps> = memo(({
   const bubblePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const cellRef = useRef<HTMLDivElement>(null);
 
-  // Gestion du drop (drag & drop)
-  const [{ isOver, canDrop }, drop] = useDrop({
-    accept: ['appointment', 'external-item'],
-    drop: (item: DragItem, monitor) => {
-      if (!isCellActive) {
-        console.warn('Cell is not active, cannot drop item');
-        return;
-      }
-
-      let targetDate = intervalStart;
-      let targetInterval = intervalName;
-      // Si on a dragOffset et width, on centre l'event sur la cellule cible
-      if (item.dragOffset !== undefined) {
-        // Largeur d'une cellule (en px)
-        const intervalWidth = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
-        // Décalage en nombre de cellules (arrondi)
-        const cellOffset = Math.ceil(-item.dragOffset / intervalWidth); // +1 pour centrer sur la cellule
-                
-
-        targetDate = isFullDay 
-        ? intervalStart + cellOffset * DAY_MS
-        : intervalStart + cellOffset * (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * HOUR_MS;
-              
-        // Décale la date cible
-        targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);
-      }
-
-      
-      // Si la cellule est un week-end ou férié, on place sur le prochain jour ouvré
-      if (isWeekend || isFerie || isNonWorkingDay ) {        
-        targetDate = getNextWorkedDay(date, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);
-        targetInterval = 'morning'; // Par défaut, matin du prochain jour ouvré
-      }
-      
-      if (item.sourceType === 'external') {        
-        // Création d'un rendez-vous depuis une source externe
-        onExternalDragDrop(
-          item.title || 'Nouveau rendez-vous', 
-          targetDate, 
-          targetInterval, 
-          employee.id,
-          item.imageUrl,
-          item.typeEvent
-        );
-      } else {
-        // Déplacement d'un rendez-vous existant
-        const diff = item.endDate - item.startDate; // Durée du rendez-vous
-        const newDate = targetDate + diff;        
-        onAppointmentMoved(item.id, targetDate, newDate, employee.id);
-      }
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-      canDrop: monitor.canDrop(),
-    }),
-  });
-
-  
-
-  
   // Affiche une bulle d'info au clic sur la cellule
   const handleCellClick = (event: React.MouseEvent<HTMLDivElement>) => {
     event.stopPropagation();
@@ -263,32 +180,23 @@ const IntervalCell: React.FC<IntervalCellProps> = memo(({
     onCellDoubleClick(intervalStart, employee.id, isFullDay ? 'day' : intervalName);
   };
 
-   const setRefs = (node: HTMLDivElement | null) => {
-    // Assigner à ta ref personnelle
+  const setRefs = (node: HTMLDivElement | null) => {
     cellRef.current = node;
-    
-    // Assigner à la ref de react-dnd (drop)
-    if (isCellActive && node) {
-      drop(node);
-    }
   };
 
   return (
     <div
       ref={setRefs}
       onClick={handleCellClick}
-      onDoubleClick={() =>{  
+      onDoubleClick={() => {
         if (isCellActive && !!employee.id) handleCellDoubleClick();
       }}
       className={`
-        relative flex-1 border-r
-        ${!isCellActive && canDrop ? 'cursor-not-allowed' : ''} border-light
-        ${canDrop ? 'cursor-pointer' : ''}
+        relative flex-1 border-r border-light
         flex flex-row items-start gap-1
         ${isSelected ? 'bg-blue-200' : ''}
         interval-cell
-        `
-      }
+      `}
       style={{
         width: !isMobile ? CELL_WIDTH / 2 : undefined,
         height: Math.max(CELL_HEIGHT, RowHeight ?? CELL_HEIGHT),

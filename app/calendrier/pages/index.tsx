@@ -41,8 +41,6 @@ import { useNotifications } from "../hooks";
 
 // --- CONTEXTES & SERVICES ---
 import { notificationService } from "../services";
-import { SelectedAppointmentContext } from "../context/SelectedAppointmentContext";
-import { SelectedCellContext } from "../context/SelectedCellContext";
 
 // --- UTILITAIRES ---
 import { getEmployees, getImages } from "../../datasource"; // Ajout de getImages
