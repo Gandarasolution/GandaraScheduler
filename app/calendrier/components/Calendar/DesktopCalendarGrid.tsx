@@ -37,7 +37,7 @@ interface DesktopCalendarGridProps {
   handleScroll: () => void;
   handleScrollY: (e: React.UIEvent<HTMLDivElement>) => void;
   columnEmployeeRef: React.RefObject<HTMLDivElement | null>;
-  tableRef: React.RefObject<HTMLTableElement | null>;
+  tableRef: React.RefObject<HTMLDivElement | null>;
   handleMouseOver: (e: React.MouseEvent<HTMLElement>) => void;
   handleMouseOut: (e: React.MouseEvent<HTMLElement>) => void;
   onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
