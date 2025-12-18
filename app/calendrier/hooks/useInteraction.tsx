@@ -5,13 +5,13 @@ import { Appointment, Employee, Item, type Image } from '../types';
 interface InteractionProps {
   selectedAppointment: Appointment | null;
   setSelectedAppointment: (app: Appointment | null) => void;
-  selectedCell: { employeeId: number; date: Date } | null;
-  setSelectedCell: (cell: { employeeId: number; date: Date } | null) => void;
+  selectedCell: { employeeId: number; date: number } | null;
+  setSelectedCell: (cell: { employeeId: number; date: number } | null) => void;
   setSelectedEmployee: (employee: Employee | null) => void;
   
   // Actions provenant de useAppointmentLogic
   copyAppointment: (app: Appointment) => void;
-  pasteAppointment: (cell?: { employeeId: number; date: Date } | null) => void;
+  pasteAppointment: (cell?: { employeeId: number; date: number } | null) => void;
   undoAction: () => void;
   deleteAction: (appointment?: Appointment) => void;
   
@@ -61,7 +61,7 @@ export const useInteraction = ({
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -108,7 +108,7 @@ export const useInteraction = ({
         });
 
         // Item: Diviser (Conditionnel)
-        const duration = appointment.endDate.getTime() - appointment.startDate.getTime();
+        const duration = appointment.endDate - appointment.startDate;
         const intervalDuration = isFullDay 
           ? (DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 3600000 
           : (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * 3600000;
@@ -216,8 +216,8 @@ export const useInteraction = ({
                  description: '',
                  type: item.type,
                  EventId: Number(item.id),
-                 startDate: new Date(),
-                 endDate: new Date(),
+                 startDate: Date.now(),
+                 endDate: Date.now(),
                  employeeId: 0
              };
              handleOpenEditModal(mockApp);

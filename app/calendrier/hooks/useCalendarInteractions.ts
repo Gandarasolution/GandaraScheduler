@@ -3,7 +3,7 @@ import { CELL_WIDTH } from '../utils/constants';
 import { getRowId, parseRowId } from '../utils/domIds';
 
 interface UseCalendarInteractionsParams {
-  dayInTimeline: Date[];
+  dayInTimeline: number[];
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   columnEmployeeRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -18,10 +18,10 @@ export const useCalendarInteractions = ({
   const lastHoveredRowId = useRef<string | null>(null);
   const isDragging = useRef(false);
   const isSyncingScroll = useRef(false);
-  const tableRef = useRef<HTMLTableElement | null>(null);
+  const tableRef = useRef<HTMLDivElement | null>(null);
   const rafId = useRef<number | null>(null);
 
-  const updateHighlight = useCallback((clientX: number, clientY: number, tableElement: HTMLTableElement) => {
+  const updateHighlight = useCallback((clientX: number, clientY: number, tableElement: HTMLElement) => {
     if (!tableElement) return;
     
     // Throttle using requestAnimationFrame
@@ -105,7 +105,7 @@ export const useCalendarInteractions = ({
     
     if (!cell || !cell.classList.contains('calendar-cell')) return;
     
-    const table = e.currentTarget as HTMLTableElement;
+    const table = e.currentTarget as HTMLElement;
     if (!table) return;
     
     updateHighlight(e.clientX, e.clientY, table);
@@ -115,7 +115,7 @@ export const useCalendarInteractions = ({
     const relatedTarget = e.relatedTarget as HTMLElement;
     
     if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
-      const table = e.currentTarget as HTMLTableElement;
+      const table = e.currentTarget as HTMLElement;
       if (table) {
         table.querySelectorAll('[data-hover-col="true"]').forEach(c => {
           (c as HTMLElement).removeAttribute('data-hover-col');
@@ -130,12 +130,8 @@ export const useCalendarInteractions = ({
 
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
-      console.log(!tableRef.current);
-      
       if (!isDragging.current || !tableRef.current) return;
 
-      console.log('ca passe');
-      
       updateHighlight(e.clientX, e.clientY, tableRef.current);
     };
 

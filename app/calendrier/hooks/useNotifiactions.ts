@@ -19,7 +19,7 @@ export interface Notification {
   type: 'success' | 'error' | 'warning' | 'info';
   title: string;
   message: string;
-  timestamp: Date;
+  timestamp: number;
   isRead: boolean;
 }
 
@@ -49,7 +49,7 @@ export const useNotifications = (): NotificationsState => {
       type,
       title,
       message,
-      timestamp: new Date(),
+      timestamp: Date.now(),
       isRead: false
     };
     

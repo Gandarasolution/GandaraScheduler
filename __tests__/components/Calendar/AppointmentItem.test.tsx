@@ -8,8 +8,8 @@ import { Appointment, Item } from '@/app/calendrier/types';
 // Mock des props
 const mockAppointment: Appointment & { top: number } = {
   id: 1,
-  startDate: new Date(2023, 10, 15, 8, 0),
-  endDate: new Date(2023, 10, 15, 12, 0),
+  startDate: new Date(2023, 10, 15, 8, 0).getTime(),
+  endDate: new Date(2023, 10, 15, 12, 0).getTime(),
   employeeId: 1,
   tag: {    id:0, name: 'Urgent' },
   description: '',

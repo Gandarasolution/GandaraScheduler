@@ -24,7 +24,7 @@ describe('DayCell', () => {
     { name: 'afternoon', startHour: 13, endHour: 17 },
   ];
   const defaultProps = {
-    day: mockDate,
+    dayTs: mockDate.getTime(),
     employee: mockEmployee,
     appointments: [],
     intervals: mockIntervals,

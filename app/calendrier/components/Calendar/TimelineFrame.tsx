@@ -19,6 +19,7 @@ import { format, isToday, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CELL_WIDTH, TIMELINE_HEADERGROUPS_CELL_HEIGHT, TIMELINE_HEADERITEMS_CELL_HEIGHT } from '../../utils/constants';
 import FlexibleFrame from '../dnd/FlexibleFrame';
+import { getWeekNumber } from '../../utils/dates';
 
 /**
  * Interface définissant les propriétés du composant TimelineFrame
@@ -26,7 +27,7 @@ import FlexibleFrame from '../dnd/FlexibleFrame';
  */
 interface TimelineFrameProps {
   /** Liste des dates à afficher dans la timeline (optionnel pour mode custom) */
-  dayInTimeline?: Date[];
+  dayInTimeline?: number[];
   /** Configuration des colonnes pour mode custom */
   columns?: {
     /** Labels pour les groupes/catégories */
@@ -83,18 +84,6 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   useAutoCells = false
 }) => {
 
-  /**
-   * Calcule le numéro de semaine pour un jour donné
-   * @param d - Date à analyser
-   * @returns Numéro de la semaine
-   */
-  const getWeekNumber = (d: Date): number => {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  };
 
   /**
    * Calcule les groupes et leur portée pour l'en-tête
@@ -273,7 +262,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
                   }}
                 >
                   {/* Affiche le numéro de semaine en début de semaine */}
-                  {day.getDay() === 1 && (
+                  {new Date(day).getDay() === 1 && (
                     <span
                       className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
                       style={{

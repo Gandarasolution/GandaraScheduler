@@ -15,7 +15,7 @@
 
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { Appointment, Item } from '../types';
-import { getNextWorkedDay, getWorkedDayIntervals, isWorkedDay } from './dates';
+import { getIntervals, getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, snapToHour } from './dates';
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from './constants';
 
 export interface AppointmentUtils {
@@ -34,8 +34,8 @@ export interface AppointmentUtils {
 }
 
 export interface CreateAppointmentParams {
-  startDate: Date;
-  endDate: Date;
+  startDate: number;
+  endDate: number;
   employeeId: number;
   eventId: number;
   type: 'chantier' | 'absence' | 'autre';
@@ -46,28 +46,28 @@ export interface RepeatAppointmentParams {
   appointment: Appointment;
   repeatInterval: 'day' | 'week' | 'month';
   repeatCount?: number;
-  endDate?: Date;
+  endDate?: number;
   numberCount?: number;
   isFullDay: boolean;
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
   includeWeekend: boolean;
   includeNonWorkingDays: boolean;
 }
 
 export interface MoveAppointmentParams {
   appointment: Appointment;
-  newStartDate: Date;
-  newEndDate: Date;
+  newStartDate: number;
+  newEndDate: number;
   newEmployeeId: number;
   isFullDay: boolean;
   includeWeekend: boolean;
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
 }
 
 export interface ResizeAppointmentParams {
   appointment: Appointment;
-  newStartDate: Date;
-  newEndDate: Date;
+  newStartDate: number;
+  newEndDate: number;
   newEmployeeId?: number;
 }
 
@@ -83,16 +83,16 @@ export interface ExtendAppointmentParams {
 
 export interface PasteAppointmentParams {
   clipboardAppointment: Appointment;
-  targetCell: { employeeId: number; date: Date };
+  targetCell: { employeeId: number; date: number };
   isFullDay: boolean;
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
   includeWeekend: boolean;
   includeNonWorkingDays: boolean;
 }
 
 export interface DragCreateParams {
   title: string;
-  date: Date;
+  date: number;
   intervalName: 'morning' | 'afternoon' | 'day';
   employeeId: number;
   imageUrl: string;
@@ -103,7 +103,7 @@ export interface SaveAppointmentParams {
   appointment: Appointment;
   eventUpdate: Item;
   isFullDay: boolean;
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
   includeNonWorkingDays: boolean;
   includeWeekend: boolean;
 }
@@ -138,12 +138,12 @@ export const createAppointmentUtils = (): AppointmentUtils => {
     
     const startDateOriginal = appointment.startDate;
     const endDateOriginal = appointment.endDate;
-    const diff = endDateOriginal.getTime() - startDateOriginal.getTime();
+    const diff = endDateOriginal - startDateOriginal;
     const newAppointments: Appointment[] = [];
     
-    let currentStartDate = repeatInterval === 'day' ? addDays(startDateOriginal, numberCount || 0) 
-      : repeatInterval === 'week' ? addWeeks(startDateOriginal, numberCount || 0) 
-      : addMonths(startDateOriginal, numberCount || 0);
+    let currentStartDate = repeatInterval === 'day' ? addDays(startDateOriginal, numberCount || 0).getTime() 
+      : repeatInterval === 'week' ? addWeeks(startDateOriginal, numberCount || 0).getTime()
+      : addMonths(startDateOriginal, numberCount || 0).getTime();
 
     currentStartDate = getNextWorkedDay(
       currentStartDate, 
@@ -154,11 +154,11 @@ export const createAppointmentUtils = (): AppointmentUtils => {
     if (repeatCount) {
       for (let i = 0; i < repeatCount; i++) {
         const newStartDate = getNextWorkedDay(
-          new Date(currentStartDate.getTime()),
+          currentStartDate,
           isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
           nonWorkingDates
         );
-        const newEndDate = new Date(newStartDate.getTime() + diff);
+        const newEndDate = newStartDate + diff;
 
         const days = getWorkedDayIntervals(
           newStartDate,
@@ -181,19 +181,18 @@ export const createAppointmentUtils = (): AppointmentUtils => {
           });
         });
 
-        currentStartDate = repeatInterval === 'day' ? addDays(newStartDate, numberCount || 1)
-          : repeatInterval === 'week' ? addWeeks(newStartDate, numberCount || 1) 
-          : addMonths(newStartDate, numberCount || 1);
+        currentStartDate = repeatInterval === 'day' ? addDays(newStartDate, numberCount || 1).getTime()
+          : repeatInterval === 'week' ? addWeeks(newStartDate, numberCount || 1).getTime() 
+          : addMonths(newStartDate, numberCount || 1).getTime();
       }
     } else if (endDate) {
       while (currentStartDate <= endDate) {
         const newStartDate = getNextWorkedDay(
-          new Date(currentStartDate.getTime()), 
+          currentStartDate, 
           isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
           nonWorkingDates
         );
-        const newEndDate = new Date(newStartDate.getTime() + diff);
-
+        const newEndDate = newStartDate + diff;
         const days = getWorkedDayIntervals(
           newStartDate, 
           newEndDate,
@@ -215,9 +214,9 @@ export const createAppointmentUtils = (): AppointmentUtils => {
           });
         });
 
-        currentStartDate = repeatInterval === 'day' ? addDays(newStartDate, numberCount || 1)
-          : repeatInterval === 'week' ? addWeeks(newStartDate, numberCount || 1)
-          : addMonths(newStartDate, numberCount || 1);
+        currentStartDate = repeatInterval === 'day' ? addDays(newStartDate, numberCount || 1).getTime()
+          : repeatInterval === 'week' ? addWeeks(newStartDate, numberCount || 1).getTime()
+          : addMonths(newStartDate, numberCount || 1).getTime();
       }
     }
 
@@ -237,34 +236,35 @@ export const createAppointmentUtils = (): AppointmentUtils => {
 
   const divideAppointment = (params: DivideAppointmentParams): Appointment[] => {
     const { appointment, isFullDay } = params;
+
+    const nbIntervals = getIntervals(
+      appointment.startDate,
+      appointment.endDate,
+      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+      isFullDay,
+    );
     
     if (isFullDay) {
-      // Division en journée : créer matin et après-midi
-      const morningEnd = new Date(appointment.startDate);
-      morningEnd.setHours(12, 0, 0, 0);
-      
-      const afternoonStart = new Date(appointment.startDate);
-      afternoonStart.setHours(13, 0, 0, 0);
-      
+      const firstAppointmentEnd = appointment.startDate + ((DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 60 * 60 * 1000 - 1) * nbIntervals;
+      const secondAppointmentStart = firstAppointmentEnd + 1;
+
       return [
         {
           ...appointment,
           id: idGenerator(),
-          endDate: morningEnd,
+          endDate: firstAppointmentEnd,
           description: `${appointment.description} (Matin)`
         },
         {
           ...appointment,
           id: idGenerator(),
-          startDate: afternoonStart,
+          startDate: secondAppointmentStart,
           description: `${appointment.description} (Après-midi)`
         }
       ];
     } else {
       // Division en demi-journée : créer deux créneaux
-      const middleTime = new Date(
-        (appointment.startDate.getTime() + appointment.endDate.getTime()) / 2
-      );
+      const middleTime = appointment.startDate + appointment.endDate / 2;
       
       return [
         {
@@ -297,10 +297,10 @@ export const createAppointmentUtils = (): AppointmentUtils => {
     
     const startDate = clipboardAppointment.startDate;
     const endDate = clipboardAppointment.endDate;
-    const diff = endDate.getTime() - startDate.getTime();
+    const diff = endDate - startDate;
     
-    const newStartDate = new Date(targetCell.date.getTime());
-    const newEndDate = new Date(newStartDate.getTime() + diff);
+    const newStartDate = targetCell.date;
+    const newEndDate = newStartDate + diff;
     
     if (!isWorkedDay(newStartDate, nonWorkingDates)) {
       throw new Error('Les dates sélectionnées ne sont pas des jours travaillés.');
@@ -328,31 +328,25 @@ export const createAppointmentUtils = (): AppointmentUtils => {
     const { title, date, intervalName, employeeId, imageUrl, typeEvent } = params;
     
     // Calculer les heures selon l'intervalle
-    let startDate: Date;
-    let endDate: Date;
+    let startDate: number;
+    let endDate: number;
     
     if (intervalName === 'morning') {
-      startDate = new Date(date);
-      startDate.setHours(8, 0, 0, 0);
-      endDate = new Date(date);
-      endDate.setHours(12, 0, 0, 0);
+      startDate = snapToHour(date, HALF_DAY_INTERVALS[0].startHour, 0);
+      endDate = snapToHour(date, HALF_DAY_INTERVALS[0].endHour - 1, 59, 59, 999);
     } else if (intervalName === 'afternoon') {
-      startDate = new Date(date);
-      startDate.setHours(13, 0, 0, 0);
-      endDate = new Date(date);
-      endDate.setHours(17, 0, 0, 0);
+      startDate = snapToHour(date, HALF_DAY_INTERVALS[1].startHour, 0);
+      endDate = snapToHour(date, HALF_DAY_INTERVALS[1].endHour - 1, 59, 59, 999);
     } else { // day
-      startDate = new Date(date);
-      startDate.setHours(8, 0, 0, 0);
-      endDate = new Date(date);
-      endDate.setHours(17, 0, 0, 0);
+      startDate = snapToHour(date, DAY_INTERVALS[0].startHour, 0);
+      endDate = snapToHour(date, DAY_INTERVALS[0].endHour - 1, 59, 59, 999);
     }
     
     return {
       id: idGenerator(),
       description: title,
-      startDate,
-      endDate,
+      startDate: startDate,
+      endDate: endDate,
       employeeId,
       type: typeEvent.toLowerCase() as 'chantier' | 'absence' | 'autre',
       EventId: 1, // Sera mis à jour selon l'événement sélectionné

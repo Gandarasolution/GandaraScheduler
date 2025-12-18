@@ -3,7 +3,7 @@ import { setHours, setMinutes, addHours, eachDayOfInterval } from "date-fns";
 import { Appointment, Employee, HistoryAction, Item } from '../types';
 import { createAppointmentUtils } from '../utils/appointmentUtils';
 import { notificationService } from "../services";
-import { getWorkedDayIntervals, isWeekend } from "../utils/dates";
+import { getWorkedDayIntervals, isWeekend, snapToHour } from "../utils/dates";
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../utils/constants";
 
 // Type pour les données de répétition
@@ -11,7 +11,7 @@ export type RepeatData = {
   numberCount: number;
   repeatCount: number | null;
   repeatInterval: "day" | "week" | "month";
-  endDate: Date | null;
+  endDate: number | null;
 };
 
 interface LogicProps {
@@ -23,7 +23,7 @@ interface LogicProps {
     isDisplayWeekend: boolean;
     includeWeekend: boolean;
     respectNonWorkingDays: boolean;
-    nonWorkingDates: Date[];
+    nonWorkingDates: number[];
   };
   onUpdate: () => void; // Callback pour forcer le rafraîchissement de l'UI
 }
@@ -47,16 +47,16 @@ export const useAppointmentLogic = ({
   // --- États UI nécessaires à la logique ---
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedAppointmentForm, setSelectedAppointmentForm] = useState<Appointment | null>(null);
-  const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: Date } | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: number } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number } | null>(null);
+  const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: number; employeeId: number } | null>(null);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   
   
   // États pour les actions complexes
   const [repeatData, setRepeatData] = useState<RepeatData | null>(null);
-  const [extendData, setExtendData] = useState<Date | null>(null);
+  const [extendData, setExtendData] = useState<number | null>(null);
   
   // État de l'alerte de confirmation
   const [alertState, setAlertState] = useState<{
@@ -152,7 +152,7 @@ export const useAppointmentLogic = ({
   // --- FONCTIONS CRUD INTERNES ---
 
   // Resize interne (mise à jour simple)
-  const onResize = useCallback((id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number, saveToHistory: boolean = true) => {     
+  const onResize = useCallback((id: number, newStartDate: number, newEndDate: number, newEmployeeId?: number, saveToHistory: boolean = true) => {     
       const appointmentToResize = appointmentsRef.current.find(app => app.id === id);
       
       if (appointmentToResize && saveToHistory) {
@@ -169,7 +169,7 @@ export const useAppointmentLogic = ({
 
   // Création unitaire d'un RDV
   const createAppointment = useCallback((
-    startDate: Date, endDate: Date, employeeId: number, eventId: number, 
+    startDate: number, endDate: number, employeeId: number, eventId: number, 
     saveToHistory: boolean = true, type: 'chantier' | 'absence' | 'autre', description?: string
   ) => {
       const id = ++idCounter.current;
@@ -194,7 +194,7 @@ export const useAppointmentLogic = ({
 
   // --- LOGIQUE MÉTIER COMPLEXE (Move, Split, Save) ---
 
-  const moveAppointment = useCallback((id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true) => {
+  const moveAppointment = useCallback((id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true) => {
       const appointment = appointmentsRef.current.find((app) => app.id === id);
       if (!appointment) return;
 
@@ -203,8 +203,8 @@ export const useAppointmentLogic = ({
       
 
       const days = getWorkedDayIntervals(
-        new Date(newStartDate), 
-        new Date(newEndDate),
+        newStartDate, 
+        newEndDate,
         intervalType,
         timelineState.respectNonWorkingDays || !timelineState.isDisplayWeekend,
         timelineState.includeWeekend || !timelineState.isDisplayWeekend,
@@ -226,14 +226,14 @@ export const useAppointmentLogic = ({
         const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
         
         // Note: On ne sauvegarde pas l'historique ici, on le fait à la fin pour grouper
-        onResize(appointment.id, mainStart, new Date(mainEnd), newEmployeeId, false);
+        onResize(appointment.id, mainStart, mainEnd, newEmployeeId, false);
         
         // 2. Créer des nouveaux RDV pour les jours suivants (Split)
         for (let i = startIndex; i !== endIndex; i += step) {
           const day = days[i];
           const newApp = createAppointment(
             day.start, 
-            new Date(day.end),
+            day.end,
             newEmployeeId, 
             appointment.EventId,
             false, // Pas d'historique individuel
@@ -378,7 +378,7 @@ export const useAppointmentLogic = ({
     const { startDate, endDate, employeeId } = appointmentToDivide;
     
     // Calcul du milieu
-    let totalDuration = (endDate.getTime() - startDate.getTime()) + 1;
+    let totalDuration = (endDate - startDate) + 1;
     const timeInterval = timelineState.isFullDay 
       ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour 
       : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
@@ -388,7 +388,7 @@ export const useAppointmentLogic = ({
 
     let compteur = 0;
     allDates.forEach(date => {
-      if (isWeekend(date) && !timelineState.isDisplayWeekend && !timelineState.includeWeekend) {
+      if (isWeekend(date.getTime()) && !timelineState.isDisplayWeekend && !timelineState.includeWeekend) {
           compteur++;
       } 
     });
@@ -396,7 +396,7 @@ export const useAppointmentLogic = ({
     totalDuration -= (timelineState.isFullDay ? compteur : compteur * 2) * (timeInterval * 60 * 60 * 1000);
 
     const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000));
-    const splitDate = new Date(startDate.getTime() + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000)));
+    const splitDate = startDate + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000));
   
 
     // 1. Redimensionner l'original
@@ -468,7 +468,7 @@ export const useAppointmentLogic = ({
       selectedAppointment.startDate, 
       extendData, 
       selectedAppointment.employeeId as number,
-      selectedAppointment.endDate.getTime() < extendData.getTime() ? 'right' : 'left'
+      selectedAppointment.endDate < extendData ? 'right' : 'left'
     );
 
     setExtendData(null);
@@ -477,12 +477,12 @@ export const useAppointmentLogic = ({
   // --- INTERACTION EXTERNE (Drag & Drop, Search) ---
 
   const createAppointmentFromDrag = useCallback(
-    (title: string, date: Date, intervalName: "morning" | "afternoon" | "day", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
+    (title: string, date: number, intervalName: "morning" | "afternoon" | "day", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
       const startHour = intervalName === "day" ? DAY_INTERVALS[0].startHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[1].startHour;
       const endHour = intervalName === "day" ? DAY_INTERVALS[0].endHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].endHour : HALF_DAY_INTERVALS[1].endHour;
 
-      const startDate = setHours(setMinutes(new Date(date), 0), startHour);
-      const endDate = setHours(setMinutes(new Date(date), 0), endHour);
+      const startDate =  snapToHour(date, startHour, 0)
+      const endDate = snapToHour(date, endHour, 59, 59 , 999);
 
       let eventTypeId = eventsRef.current.find(e => e.label === title)?.id;
       if (!eventTypeId) {
@@ -508,8 +508,8 @@ export const useAppointmentLogic = ({
       handleSaveAppointment(
         {
           description: event.label,
-          startDate: new Date(selectedCell.date),
-          endDate: new Date((timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).setMinutes(59, 59)),
+          startDate: selectedCell.date,
+          endDate: (timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).setMinutes(59, 59),
           employeeId: selectedCell.employeeId,
           type: (event as any).type.toLowerCase() as "chantier" | "absence" | "autre",
         } as Appointment,
@@ -529,7 +529,7 @@ export const useAppointmentLogic = ({
     return null;
   }, [appointmentUtils]);
 
-  const pasteAppointment = useCallback((targetCell?: { employeeId: number; date: Date } | null) => {
+  const pasteAppointment = useCallback((targetCell?: { employeeId: number; date: number } | null) => {
     const cell = targetCell || selectedCell;
     if (!clipboardAppointment.current || !cell) return;
 

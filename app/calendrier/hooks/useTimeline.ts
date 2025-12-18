@@ -1,21 +1,22 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { addDays, eachDayOfInterval, format, isWeekend } from 'date-fns';
+import { addDays, format, isWeekend } from 'date-fns';
 import { CELL_WIDTH, WINDOW_SIZE, DAYS_TO_ADD } from '../utils/constants';
+import { eachDayOfInterval } from '../utils/dates';
 
 interface UseTimelineProps {
   isDisplayWeekend: boolean;
-  selectedDate: Date;
+  selectedDate: number;
   viewType: string;
 }
 
 export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTimelineProps) => {
-  const [days, setDays] = useState<Date[]>([]);
+  const [days, setDays] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isScrollReady, setIsScrollReady] = useState(false);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   
   // **NOUVEAU**: Queue de navigation en attente
-  const pendingNavigationRef = useRef<Date | null>(null);
+  const pendingNavigationRef = useRef<number | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Refs pour le scroll performance
@@ -38,17 +39,17 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     setDays((prevDays) => {
       if (prevDays.length === 0) return prevDays;
 
-      let newDays: Date[] = [];
+      let newDays: number[] = [];
       const referenceDate = direction === 'right' ? prevDays[prevDays.length - 1] : prevDays[0];
       const modifier = direction === 'right' ? 1 : -1;
 
       // Génération optimisée des jours
-      let currentDate = addDays(referenceDate, modifier);
+      let currentDate = referenceDate + modifier * 86400000; // +1 jour en ms
       while (newDays.length < DAYS_TO_ADD) {
         if (isDisplayWeekend || !isWeekend(currentDate)) {
              direction === 'right' ? newDays.push(currentDate) : newDays.unshift(currentDate);
         }
-        currentDate = addDays(currentDate, modifier);
+        currentDate = currentDate + modifier * 86400000;
       }
 
       // Ajustement du scroll après rendu
@@ -105,7 +106,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   }, []);
 
   // --- **NOUVELLE FONCTION**: Exécution de la navigation vers une date ---
-  const executeGoToDate = useCallback((date: Date): Promise<boolean> => {
+  const executeGoToDate = useCallback((date: number): Promise<boolean> => {
     return new Promise((resolve) => {
       const scrollElement = mainScrollRef.current;
       
@@ -118,14 +119,14 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     
     // Calcul fenêtre initiale
     const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = addDays(date, -halfWindow);
-    const endDate = addDays(date, halfWindow);
+    const startDate = date - halfWindow * 86400000;
+    const endDate = date + halfWindow * 86400000;
     
-    let newTimeline: Date[] = [];
+    let newTimeline: number[] = [];
     let curr = startDate;
     while (curr <= endDate) {
         if (isDisplayWeekend || !isWeekend(curr)) newTimeline.push(curr);
-        curr = addDays(curr, 1);
+        curr = curr + 86400000;
     }
 
     setDays(newTimeline);
@@ -157,7 +158,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   }, [isDisplayWeekend]);
 
   // --- **FONCTION PUBLIQUE**: Navigation avec retry automatique ---
-  const goToDate = useCallback(async (date: Date) => {
+  const goToDate = useCallback(async (date: number) => {
     
     // Annuler tout retry en cours
     if (retryTimeoutRef.current) {
@@ -240,11 +241,11 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     // Optimisation : pré-calculer les constantes une seule fois
     const date = selectedDate;
     const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = days[0] || addDays(date, -halfWindow);
-    const endDate = days[days.length -1] || addDays(date, halfWindow);
+    const startDate = days[0] || date - halfWindow * 86400000;
+    const endDate = days[days.length -1] || date + halfWindow * 86400000;
 
     // Optimisation : construction directe selon includeWeekend
-    let newTimeline: Date[];
+    let newTimeline: number[];
 
     if (isDisplayWeekend) {
       newTimeline = eachDayOfInterval({ start: startDate, end: endDate });
@@ -255,7 +256,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
         if (!isWeekend(currentDate)) {
           newTimeline.push(currentDate);
         }
-        currentDate = addDays(currentDate, 1);
+        currentDate = currentDate + 86400000;
       }
     }
 

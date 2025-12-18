@@ -23,8 +23,9 @@ import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
 import {Appointment, HalfDayInterval, Item } from '../../types';
 import { addDays, isWeekend } from 'date-fns';
-import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS } from '../../utils/constants';
+import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS, HOUR_MS } from '../../utils/constants';
 import AppointmentTag from './AppointmentTag';
+import { getHour, snapToHour } from '../../utils/dates';
 
 /**
  * Interface définissant les propriétés du composant AppointmentItem
@@ -32,7 +33,7 @@ import AppointmentTag from './AppointmentTag';
  */
 interface AppointmentItemProps {
   /** Rendez-vous à afficher avec position verticale */
-  appointment: Appointment & { top: number };
+  appointment: Appointment & { top: number; startTs?: number; endTs?: number };
   /** Indique si l'affichage est en mode journée complète */
   isFullDay: boolean;
   /** Indique si l'interface est en mode mobile */
@@ -54,9 +55,9 @@ interface AppointmentItemProps {
   /** Callback appelé lors du double-clic */
   onDoubleClick?: () => void;
   /** Callback appelé lors du redimensionnement */
-  onResize?: (id: number, newStart: Date, newEnd: Date, resizeDirection: 'left' | 'right') => void;
+  onResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right') => void;
   /** Callback appelé lors du clic droit (menu contextuel) */
-  handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
 }
 
 /**
@@ -95,13 +96,16 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   // États pour le redimensionnement et le drag & drop
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
-  const [dragStart, setDragStart] = useState<Date>(appointment.startDate);
-  const [dragEnd, setDragEnd] = useState<Date>(appointment.endDate);
+  const [dragStart, setDragStart] = useState<number>(appointment.startTs ?? appointment.startDate);
+  const [dragEnd, setDragEnd] = useState<number>(appointment.endTs ?? appointment.endDate);
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isHovered, setIsHovered] = useState(false);
-  const dragStartRef = useRef<Date>(appointment.startDate);
-  const dragEndRef = useRef<Date>(appointment.endDate);
+  const dragStartRef = useRef<number>(appointment.startTs ?? appointment.startDate);
+  const dragEndRef = useRef<number>(appointment.endTs ?? appointment.endDate);
   const initialX = useRef(0);
+
+  const startDate = React.useMemo(() => appointment.startTs ?? appointment.startDate, [appointment.startTs, appointment.startDate]);
+  const endDate = React.useMemo(() => appointment.endTs ?? appointment.endDate, [appointment.endTs, appointment.endDate]);
 
 
   // Largeur d'un intervalle selon le type de rendez-vous
@@ -111,45 +115,66 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     ? (DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 60 * 60 * 1000 
     : (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * 60 * 60 * 1000;
     
-  // Calcule le nombre d'intervalles (matin/après-midi) entre deux dates, en sautant les week-ends si besoin
-  const getIntervalCount = useCallback((start: Date, end: Date) => {
+
+  // Calculer le nombre d'intervalles (matin/après-midi)
+  const getIntervalCount = useCallback((start: number, end: number) => {
     const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
     let count = 0;
-    let current = new Date(start);
+    
+    // On travaille sur des copies primitives (nombres)
+    let currentTs = start;
     const forward = end >= start;
-    const compare = (a: Date, b: Date) => forward ? a < b : a > b;
+    
+    // --- Helpers Mathématiques (définis à l'intérieur pour closure) ---
 
-    while (compare(current, end)) {
-      if (isDisplayWeekend || (!isWeekend(current))) {
+    
+
+    // --- Boucle Principale ---
+
+    // Condition mathématique pure (start < end ou inversement)
+    while (forward ? currentTs < end : currentTs > end) {
+      
+      // 1. Comptage (si ce n'est pas un weekend ou si on affiche les weekends)
+      if (isDisplayWeekend || !isWeekend(currentTs)) {
         count++;
       }
-      // Avance/recul d'un intervalle
-      let idx = intervals.findIndex(interval =>
-        current.getHours() >= interval.startHour && current.getHours() < interval.endHour
+
+      // 2. Trouver l'index de l'intervalle actuel
+      const currentHour = getHour(currentTs);
+      let idx = intervals.findIndex(interval => 
+        currentHour >= interval.startHour && currentHour < interval.endHour
       );
       if (idx === -1) idx = 0;
+
+      // 3. Navigation
       if (forward) {
         idx++;
         if (idx >= intervals.length) {
+          // Passage au jour suivant (index 0)
           idx = 0;
-          current = addDays(current, 1);
-          current.setHours(intervals[idx].startHour, 0, 0, 0);
+          // Equivalent: addDays(1) + setHours(...)
+          // On ajoute 24h et on fixe l'heure au début du premier intervalle
+          currentTs = snapToHour(currentTs + DAY_MS, intervals[idx].startHour);
         } else {
-          current.setHours(intervals[idx].startHour, 0, 0, 0);
+          // Même jour, intervalle suivant
+          currentTs = snapToHour(currentTs, intervals[idx].startHour);
         }
       } else {
         idx--;
         if (idx < 0) {
+          // Passage au jour précédent (dernier index)
           idx = intervals.length - 1;
-          current = addDays(current, -1);
-          current.setHours(intervals[idx].startHour, 0, 0, 0);
+          // Equivalent: addDays(-1) + setHours(...)
+          currentTs = snapToHour(currentTs - DAY_MS, intervals[idx].startHour);
         } else {
-          current.setHours(intervals[idx].startHour, 0, 0, 0);
+          // Même jour, intervalle précédent
+          currentTs = snapToHour(currentTs, intervals[idx].startHour);
         }
       }
     }
+
     return forward ? Math.max(0, count) : -Math.max(0, count);
-  }, [isDisplayWeekend, isFullDay]);
+  }, [isDisplayWeekend, isFullDay]); // Dépendances réduites
 
   const intervalCount = getIntervalCount(dragStart, dragEnd);
   
@@ -169,8 +194,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     item: () => ({
       id: appointment.id,
       type: 'appointment',
-      startDate: appointment.startDate,
-      endDate: appointment.endDate,
+      startDate: startDate,
+      endDate: endDate,
       dragOffset,
     }),
     canDrag: () => !isResizingLeft && !isResizingRight,
@@ -184,8 +209,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   
   // Décalage horizontal du bloc (en px)
   const offsetIntervals = isDisplayWeekend 
-  ? Math.floor((dragStart.getTime() - appointment.startDate.getTime()) / INTERVAL_DURATION)
-  : getIntervalCount(appointment.startDate, dragStart);
+    ? Math.floor((dragStart - startDate) / INTERVAL_DURATION)
+    : getIntervalCount(startDate, dragStart);
 
 const offsetPx = offsetIntervals * INTERVAL_WIDTH;
 
@@ -197,12 +222,12 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
   }, []);
 
   // Met à jour la date de début lors du resize
-  const setDragStartSafe = useCallback((date: Date) => {
+  const setDragStartSafe = useCallback((date: number) => {
     dragStartRef.current = date;
     setDragStart(date);
   }, []);
   // Met à jour la date de fin lors du resize
-  const setDragEndSafe = useCallback((date: Date) => {
+  const setDragEndSafe = useCallback((date: number) => {
     dragEndRef.current = date;
     setDragEnd(date);
   }, []);
@@ -215,33 +240,52 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
    * @returns Nouvelle date positionnée au début de l'intervalle cible
    */
   // Ajoute ou retire n intervalles en sautant les week-ends si besoin
-  const addInterval = useCallback((date: Date, n: number, intervals: HalfDayInterval[]): Date => {
-    let next = new Date(date);
-    let idx = intervals.findIndex(interval =>
-      next.getHours() >= interval.startHour && next.getHours() < interval.endHour
-    );
-    if (idx === -1) idx = 0;
-    let step = n >= 0 ? 1 : -1;
-    let remaining = Math.abs(n);
-    while (remaining > 0) {
-      idx += step;
-      if (idx >= intervals.length) {
-        idx = 0;
-        next = addDays(next, 1);
-      } else if (idx < 0) {
-        idx = intervals.length - 1;
-        next = addDays(next, -1);
+  const addInterval = useCallback((date: number, n: number, intervals: HalfDayInterval[]): number => {      
+
+      let currentTs = date;
+
+      // --- Logique Principale ---
+
+      // 1. Trouver l'index de départ
+      let currentHour = getHour(currentTs);
+      let idx = intervals.findIndex(interval => 
+          currentHour >= interval.startHour && currentHour < interval.endHour
+      );
+      if (idx === -1) idx = 0;
+
+      const step = n >= 0 ? 1 : -1;
+      let remaining = Math.abs(n);
+
+      // 2. Boucle de déplacement
+      while (remaining > 0) {
+          idx += step;
+
+          // Gestion du dépassement de journée
+          if (idx >= intervals.length) {
+              idx = 0;
+              currentTs += DAY_MS; // + 1 jour
+          } else if (idx < 0) {
+              idx = intervals.length - 1;
+              currentTs -= DAY_MS; // - 1 jour
+          }
+
+          // Sauter les week-ends si nécessaire
+          if (!isDisplayWeekend) {
+              // Tant qu'on est sur un weekend, on avance/recule d'un jour
+              while (isWeekend(currentTs)) {
+                  currentTs += (step * DAY_MS);
+              }
+          }
+          remaining--;
       }
-      // Si on ne veut pas inclure les week-ends, saute samedi/dimanche
-      if (!isDisplayWeekend) {
-        while (next.getDay() === 0 || next.getDay() === 6) {
-          next = addDays(next, step);
-        }
-      }
-      remaining--;
-    }
-    next.setHours(intervals[idx].startHour, 0, 0, 0);
-    return next;
+
+      // 3. Finalisation : On "snap" l'heure exacte du début de l'intervalle trouvé
+      // On revient à minuit pile (UTC)
+      const midnight = currentTs - (currentTs % DAY_MS);
+      
+      // On ajoute les heures de l'intervalle cible
+      return midnight + (intervals[idx].startHour * HOUR_MS);
+
   }, [isDisplayWeekend]);
 
   // Débute le redimensionnement (gauche ou droite)
@@ -255,11 +299,11 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
   const handleMouseDown = useCallback((e: React.MouseEvent, handleType: 'left' | 'right') => {
     e.stopPropagation();
     initialX.current = e.clientX;
-    setDragStart(appointment.startDate);
-    setDragEnd(appointment.endDate);
+    setDragStart(startDate);
+    setDragEnd(endDate);
     if (handleType === 'left') setIsResizingLeft(true);
     else setIsResizingRight(true);
-  }, [appointment.startDate, appointment.endDate]);
+  }, [startDate, endDate]);
 
   /**
    * Gère les mouvements de la souris lors du redimensionnement d'un rendez-vous.
@@ -284,7 +328,7 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
     const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
     
     if (isResizingLeft) {
-      let newStartDate = addInterval(appointment.startDate, intervalsMoved, intervals);
+      let newStartDate = addInterval(startDate, intervalsMoved, intervals);
             
       if (newStartDate > dragEndRef.current) {
         newStartDate = addInterval(dragEndRef.current, 0, intervals);
@@ -293,14 +337,14 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
       setDragStartSafe(newStartDate);
     }
     if (isResizingRight) {
-      let newEndDate = addInterval(appointment.endDate, intervalsMoved, intervals);
+      let newEndDate = addInterval(endDate, intervalsMoved, intervals);
       if (newEndDate < dragStartRef.current) {
         newEndDate = addInterval(dragStartRef.current, 1, intervals);
         
       }
       setDragEndSafe(newEndDate);
     }
-  }, [isResizingLeft, isResizingRight, appointment.startDate, appointment.endDate, addInterval, setDragStartSafe, setDragEndSafe]);
+  }, [isResizingLeft, isResizingRight, startDate, endDate, addInterval, setDragStartSafe, setDragEndSafe]);
 
 
   /**
@@ -342,9 +386,9 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
 
   // Met à jour les dates de drag si les props changent
   useEffect(() => {
-    setDragStartSafe(appointment.startDate);
-    setDragEndSafe(appointment.endDate);
-  }, [appointment.startDate, appointment.endDate, setDragStartSafe, setDragEndSafe]);
+    setDragStartSafe(startDate);
+    setDragEndSafe(endDate);
+  }, [startDate, endDate, setDragStartSafe, setDragEndSafe]);
   
   const appointmentColor = event.color || '#1E40AF';
   const appointmentBorderColor = event.borderColor || '#1E40AF';
@@ -369,19 +413,19 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
         
         // Calculer l'intervalle sous la souris
         const intervalIndex = Math.floor(mouseX / INTERVAL_WIDTH);
-        const totalIntervals =getIntervalCount(appointment.startDate, appointment.endDate);
+        const totalIntervals =getIntervalCount(startDate, endDate);
         const clampedIntervalIndex = Math.max(0, Math.min(intervalIndex, totalIntervals - 1));
         
         // Calculer la date correspondant à cet intervalle
         const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-        let targetDate = new Date(appointment.startDate);
+        let targetDate = startDate;
         let currentIntervalCount = 0;
         
         // Parcourir les intervalles depuis le début du RDV jusqu'à celui sous la souris
         while (currentIntervalCount < clampedIntervalIndex) {
           // Trouver l'intervalle actuel
           let currentIntervalIdx = intervals.findIndex(interval =>
-            targetDate.getHours() >= interval.startHour && targetDate.getHours() < interval.endHour
+            getHour(targetDate) >= interval.startHour && getHour(targetDate) < interval.endHour
           );
           if (currentIntervalIdx === -1) currentIntervalIdx = 0;
           
@@ -389,16 +433,16 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
           currentIntervalIdx++;
           if (currentIntervalIdx >= intervals.length) {
             // Passer au jour suivant
-            targetDate = addDays(targetDate, 1);
-            targetDate.setHours(intervals[0].startHour, 0, 0, 0);
+            targetDate = targetDate + DAY_MS;
+            snapToHour(targetDate, intervals[0].startHour, 0, 0, 0);
             
             // Vérifier si on doit ignorer les week-ends
             while (!isDisplayWeekend && isWeekend(targetDate)) {
-              targetDate = addDays(targetDate, 1);
+              targetDate = targetDate + DAY_MS;
             }
           } else {
             // Rester sur le même jour, changer l'heure
-            targetDate.setHours(intervals[currentIntervalIdx].startHour, 0, 0, 0);
+            snapToHour(targetDate, intervals[currentIntervalIdx].startHour, 0, 0, 0);
           }
           currentIntervalCount++;
         }
@@ -406,7 +450,7 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
         // Créer l'objet cellule correspondant à la position sous la souris
         const cellUnderMouse = {
           employeeId: appointment.employeeId as number,
-          date: new Date(targetDate)
+          date: targetDate
         };
         
         handleContextMenu && handleContextMenu(e, 'appointment', appointment, cellUnderMouse);

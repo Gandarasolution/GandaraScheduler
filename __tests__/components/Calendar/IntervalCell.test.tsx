@@ -1,8 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import IntervalCell from '@/app/calendrier/components/Calendar/IntervalCell';
-import { SelectedCellContext } from '@/app/calendrier/context/SelectedCellContext';
-import { SelectedAppointmentContext } from '@/app/calendrier/context/SelectedAppointmentContext';
 
 // Mock dependencies
 jest.mock('react-dnd', () => ({
@@ -22,11 +20,11 @@ describe('IntervalCell', () => {
   const mockDate = new Date(2023, 10, 15);
   const mockEmployee = { id: 1, name: 'John Doe' };
   const defaultProps = {
-    date: mockDate,
+    dateTs: mockDate.getTime(),
     employee: mockEmployee,
     intervalName: 'morning' as const,
-    intervalStart: new Date(2023, 10, 15, 8, 0),
-    intervalEnd: new Date(2023, 10, 15, 12, 0),
+    intervalStartTs: new Date(2023, 10, 15, 8, 0).getTime(),
+    intervalEndTs: new Date(2023, 10, 15, 12, 0).getTime(),
     appointments: [],
     events: [],
     isCellActive: true,
@@ -41,19 +39,14 @@ describe('IntervalCell', () => {
     onAppointmentDoubleClick: jest.fn(),
     onExternalDragDrop: jest.fn(),
     handleContextMenu: jest.fn(),
+    isSelected: false,
+    selectedAppointmentId: undefined,
+    onSelectCell: jest.fn(),
+    onSelectAppointment: jest.fn(),
   };
 
-  const mockSetSelectedCell = jest.fn();
-  const mockSetSelectedAppointment = jest.fn();
-
   const renderWithContext = (props = {}) => {
-    return render(
-      <SelectedCellContext.Provider value={{ selectedCell: null, setSelectedCell: mockSetSelectedCell }}>
-        <SelectedAppointmentContext.Provider value={{ selectedAppointment: null, setSelectedAppointment: mockSetSelectedAppointment }}>
-          <IntervalCell {...defaultProps} {...props} />
-        </SelectedAppointmentContext.Provider>
-      </SelectedCellContext.Provider>
-    );
+    return render(<IntervalCell {...defaultProps} {...props} />);
   };
 
   beforeEach(() => {
@@ -68,18 +61,18 @@ describe('IntervalCell', () => {
   it('handles click to select cell', () => {
     const { container } = renderWithContext();
     fireEvent.click(container.firstChild as Element);
-    expect(mockSetSelectedCell).toHaveBeenCalledWith({
-      date: defaultProps.intervalStart,
+    expect(defaultProps.onSelectCell).toHaveBeenCalledWith({
+      date: defaultProps.intervalStartTs,
       employeeId: mockEmployee.id,
     });
-    expect(mockSetSelectedAppointment).toHaveBeenCalledWith(null);
+    expect(defaultProps.onSelectAppointment).toHaveBeenCalledWith(null);
   });
 
   it('handles double click', () => {
     const { container } = renderWithContext();
     fireEvent.doubleClick(container.firstChild as Element);
     expect(defaultProps.onCellDoubleClick).toHaveBeenCalledWith(
-      defaultProps.date,
+      defaultProps.dateTs,
       mockEmployee.id,
       'morning'
     );

@@ -10,7 +10,7 @@ interface CalendarHeaderProps {
   user: any;
   viewState: any; // Type retourné par useCalendarView
   notifications: any; // Type retourné par useNotifications
-  onNavigateDate: (date: Date) => void;
+  onNavigateDate: (date: number) => void;
 }
 
 export const CalendarHeader = ({ 
@@ -283,8 +283,8 @@ export const CalendarHeader = ({
                 className="date-input border w-38 border-default rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-color transition bg-bg-secondary text-base text-primary"
                 value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
                 onChange={(e) => {
-                  const date = new Date(e.target.value);
-                  if (isNaN(date.getTime())) return;
+                  const date = new Date(e.target.value).getTime();
+                  if (isNaN(date)) return;
                   setSelectedDate(date);
                   onNavigateDate(date);
                 }}

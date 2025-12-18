@@ -1,9 +1,9 @@
 "use client";
-import React, {memo, useMemo, useState}from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
-import {IntervalCell} from '../index';
-import { Appointment, HalfDayInterval, Item} from '../../types';
-import { isHoliday } from '../../utils/dates'; // Assurez-vous d'avoir une fonction isHoliday pour vérifier les jours fériés
+import { IntervalCell } from '../index';
+import { Appointment, HalfDayInterval, Item } from '../../types';
+import { getHour, isHoliday } from '../../utils/dates';
 import { CELL_HEIGHT, CELL_WIDTH, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { fr } from 'date-fns/locale';
 
@@ -12,27 +12,39 @@ import { fr } from 'date-fns/locale';
  * Représente une cellule de jour pour un employé (ou une équipe) dans la grille du calendrier.
  */
 interface DayCellProps {
-  day: Date;
+  dayTs: number;
   employee: { id: number; name: string };
-  appointments: (Appointment & { top: number })[];
+  appointments: (Appointment & { top: number; startTs?: number; endTs?: number })[];
   intervals: HalfDayInterval[];
   events: Item[];
-  isCellActive?: boolean; // Pour gérer l'état actif de la cellule si nécessaire
-  isWeekend: boolean; // Pour appliquer des styles de week-end si besoin
-  isFullDay?: boolean; // Indique si la cellule représente une journée complète
-  RowHeight?: number; // Hauteur de la ligne pour l'employé, si nécessaire
-  nonWorkingDates?: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
-  isMobile: boolean; // Indique si l'affichage est en mode mobile
-  isDisplayWeekend?: boolean; // Indique si les week-ends doivent être inclus dans la vue mobile
-  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
-  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
-  onAppointmentClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void; // Fonction pour gérer le clic droit
-  selectedCell?: { employeeId: number; date: Date } | null;
+  isCellActive?: boolean;
+  isWeekend: boolean;
+  isFullDay?: boolean;
+  RowHeight?: number;
+  nonWorkingDates?: number[];
+  isMobile: boolean;
+  isDisplayWeekend?: boolean;
+  onAppointmentMoved: (id: number, newStartTs: number, newEndTs: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
+  onCellDoubleClick: (dateTs: number, employeeId: number, intervalName: 'morning' | 'afternoon' | 'day') => void;
+  onAppointmentClick: (appointment: Appointment & { startTs?: number; endTs?: number }) => void;
+  onExternalDragDrop: (
+    title: string,
+    dateTs: number,
+    intervalName: 'morning' | 'afternoon',
+    employeeId: number,
+    imageUrl: string,
+    typeEvent: 'Chantier' | 'Absence' | 'Autre'
+  ) => void;
+  handleContextMenu?: (
+    e: React.MouseEvent,
+    origin: 'cell' | 'appointment',
+    appointment?: (Appointment & { startTs?: number; endTs?: number }) | null,
+    cell?: { employeeId: number; date: number }
+  ) => void;
+  selectedCell?: { employeeId: number; date: number } | null;
   selectedAppointmentId?: number | undefined;
-  onSelectCell?: (cell: { employeeId: number; date: Date } | null) => void;
-  onSelectAppointment?: (appointment: Appointment | null) => void;
+  onSelectCell?: (cell: { employeeId: number; date: number } | null) => void;
+  onSelectAppointment?: (appointment: (Appointment & { startTs?: number; endTs?: number }) | null) => void;
 }
 
 /**
@@ -65,29 +77,9 @@ interface DayCellProps {
  * - Les rendez-vous sont filtrés différemment selon le mode mobile ou non.
  * - La hauteur minimale de la cellule est définie par `CELL_HEIGHT`.
  *
- * @example
- * ```tsx
- * <DayCell
- *   day={new Date()}
- *   employee={{ id: "123", name: "John Doe" }}
- *   appointments={appointments}
- *   intervals={intervals}
- *   isWeekend={false}
- *   isFullDay={false}
- *   RowHeight={50}
- *   nonWorkingDates={[new Date()]}
- *   isMobile={false}
- *   includeWeekend={false}
- *   onAppointmentMoved={handleMove}
- *   onCellDoubleClick={handleDoubleClick}
- *   onAppointmentClick={handleClick}
- *   onExternalDragDrop={handleDrop}
- *   handleContextMenu={handleContextMenu}
- * />
- * ```
  */
 const DayCell: React.FC<DayCellProps> = ({
-  day,
+  dayTs,
   employee,
   appointments = [],
   intervals = [],
@@ -109,23 +101,32 @@ const DayCell: React.FC<DayCellProps> = ({
   onSelectCell,
   onSelectAppointment,
 }) => {
-  
-  // Calcul du style de la cellule selon férié/week-end/jour normal
+  const day = useMemo(() => dayTs, [dayTs]);
+  const [tooltip, setTooltip] = useState<{
+    anchor: HTMLElement | null;
+    app: (Appointment & { startTs?: number; endTs?: number }) | null;
+    et: Item | null;
+  } | null>(null);
+
   const isFerie = useMemo(() => isHoliday(day), [day]);
-  const isNonWorkingDay = useMemo(() => 
-    nonWorkingDates?.some(date => isSameDay(date, day)) ?? false, [nonWorkingDates, day]
+  const isNonWorkingDay = useMemo(() => nonWorkingDates?.some((date) => isSameDay(date, day)) ?? false, [nonWorkingDates, day]);
+
+  const normalizedAppointments = useMemo(
+    () =>
+      appointments.map((app) => ({
+        ...app,
+        startTs: app.startTs ?? app.startDate,
+        endTs: app.endTs ?? app.endDate,
+      })),
+    [appointments]
   );
-  
-  // Affichage mobile compact et lecture seule
+
   if (isMobile) {
-    // On affiche tous les rendez-vous du jour sous forme de pastilles colorées
-    const maxVisible = 3; // Nombre max de pastilles affichées
-    const visibleAppointments = appointments.slice(0, maxVisible);
-    const hiddenCount = appointments.length - maxVisible;
-    const isToday = isSameDay(day, new Date());
-    // État local pour afficher la bulle d'info
-    const [tooltip, setTooltip] = useState<{anchor: HTMLElement | null, app: Appointment | null, et: Item | null} | null>(null);
-    
+    const maxVisible = 3;
+    const visibleAppointments = normalizedAppointments.slice(0, maxVisible);
+    const hiddenCount = normalizedAppointments.length - maxVisible;
+    const isToday = isSameDay(day, Date.now());
+
     return (
       <div
         className={`snap-center day-cell flex flex-col items-start border-gray-200 px-2 py-1 bg-white 
@@ -136,23 +137,21 @@ const DayCell: React.FC<DayCellProps> = ({
         `}
         key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
         id={format(day, 'yyyy-MM-dd')}
-        style={{ 
-          minHeight: CELL_HEIGHT, 
-          borderRadius: 12, 
-          margin: 4, 
-          position: 'relative' ,
+        style={{
+          minHeight: CELL_HEIGHT,
+          borderRadius: 12,
+          margin: 4,
+          position: 'relative',
           transition: 'box-shadow 0.2s, background 0.2s',
         }}
       >
-        {/* En-tête du jour */}
         <div className="flex items-center gap-2 mb-1">
           <span className="font-bold text-base">{format(day, 'd')}</span>
           <span className="text-xs text-gray-500">{format(day, 'EEE', { locale: fr })}</span>
           {isToday && <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">Aujourd’hui</span>}
         </div>
-        {/* Pastilles rendez-vous */}
         <div className="flex flex-row flex-wrap gap-1">
-          {visibleAppointments.map((app, idx) => (
+          {visibleAppointments.map((app) => (
             <span
               key={app.id}
               className={`
@@ -162,28 +161,21 @@ const DayCell: React.FC<DayCellProps> = ({
                 hover:bg-blue-200 hover:text-blue-900 active:scale-95
                 flex items-center gap-1
               `}
-              title={events.find(et => et.id === app.EventId)?.label}
-              style={{cursor: 'pointer'}}
-              onClick={e => {
+              title={events.find((et) => et.id === app.EventId)?.label}
+              style={{ cursor: 'pointer' }}
+              onClick={(e) => {
                 e.stopPropagation();
-                setTooltip({anchor: e.currentTarget, app, et: events.find(et => et.id === app.EventId) || null});
+                setTooltip({ anchor: e.currentTarget, app, et: events.find((et) => et.id === app.EventId) || null });
               }}
             >
-              {
-                (() => {
-                  const et = events.find(et => et.id === app.EventId);
-                  return et?.label
-                    ? (et.label.length > 12 ? et.label.slice(0, 12) + '…' : et.label)
-                    : '';
-                })()
-              }
+              {(() => {
+                const et = events.find((et) => et.id === app.EventId);
+                return et?.label ? (et.label.length > 12 ? et.label.slice(0, 12) + '…' : et.label) : '';
+              })()}
             </span>
           ))}
-          {hiddenCount > 0 && (
-            <span className="rounded-full bg-gray-300 text-gray-700 px-2 py-0.5 text-xs font-semibold">+{hiddenCount}</span>
-          )}
+          {hiddenCount > 0 && <span className="rounded-full bg-gray-300 text-gray-700 px-2 py-0.5 text-xs font-semibold">+{hiddenCount}</span>}
         </div>
-        {/* Info-bulle personnalisée */}
         {tooltip && tooltip.app && (
           <div
             className="absolute z-[100] min-w-[200px] bg-white border border-gray-200 rounded-xl shadow-lg p-3.5"
@@ -192,70 +184,62 @@ const DayCell: React.FC<DayCellProps> = ({
               left: tooltip.anchor?.offsetLeft ?? 0,
               animation: 'fadeIn 0.2s',
             }}
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="font-bold text-sm mb-1">{tooltip?.et?.label}</div>
             {tooltip.app.description && <div className="text-xs mb-1">{tooltip.app.description}</div>}
             <div className="text-xs text-gray-500">
-              {
-                tooltip.app.startDate.getHours() === HALF_DAY_INTERVALS[0].startHour && tooltip.app.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
-                  ? 'Matin'
-                  : tooltip.app.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour && tooltip.app.endDate.getHours() === HALF_DAY_INTERVALS[1].endHour
-                    ? 'Après-midi'
-                    : 'Journée complète'
-              }
+              {(() => {
+                const startTs = tooltip.app.startTs ?? tooltip.app.startDate;
+                const endTs = tooltip.app.endTs ?? tooltip.app.endDate;
+
+                const startH = getHour(startTs);
+                const endH = getHour(endTs);
+
+                // Comparaisons directes de nombres
+                if (startH === HALF_DAY_INTERVALS[0].startHour && endH === HALF_DAY_INTERVALS[0].endHour) return 'Matin';
+                if (startH === HALF_DAY_INTERVALS[1].startHour && endH === HALF_DAY_INTERVALS[1].endHour) return 'Après-midi';
+                return 'Journée complète';
+              })()}
             </div>
-            <button
-              className="mt-2 text-xs text-blue-600 underline"
-              onClick={() => setTooltip(null)}
-            >
+            <button className="mt-2 text-xs text-blue-600 underline" onClick={() => setTooltip(null)}>
               Fermer
             </button>
-
           </div>
         )}
       </div>
     );
   }
-  
-  // Desktop : rendu classique
+
   return (
-    <div 
+    <div
       className={`
         calendar-cell p-0 snap-center day-cell flex flex-row border-default
-        ${
-          isWeekend ? 'WEEKEND' :
-          isFerie ? 'FERIE' :
-          isNonWorkingDay ? 'NON-WORKING' : ''
-            
-        }
+        ${isWeekend ? 'WEEKEND' : isFerie ? 'FERIE' : isNonWorkingDay ? 'NON-WORKING' : ''}
       `}
       key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
       id={format(day, 'yyyy-MM-dd')}
       role="gridcell"
-      style={{ 
+      style={{
         width: `${CELL_WIDTH}px`,
         minWidth: `${CELL_WIDTH}px`,
         height: RowHeight ? `${RowHeight}px` : 'auto',
         minHeight: CELL_HEIGHT,
       }}
     >
-      
-      {/* Le numéro du jour est maintenant géré par l'en-tête global dans CalendarGrid */}
       {intervals.map((interval) => {
-        const intervalStart = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.startHour), 0), 0), 0);
-        const intervalEnd = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.endHour), 0), 0), 0);
-        const intervalAppointments = appointments.filter((app) =>
-          app.startDate >= intervalStart && app.startDate < intervalEnd
-        );
+        const intervalStart = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.startHour), 0), 0), 0).getTime();
+        const intervalEnd = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.endHour), 0), 0), 0).getTime();
+        const intervalAppointments = normalizedAppointments.filter((app) => (app.startTs ?? app.startDate) >= intervalStart && (app.startTs ?? app.startDate) < intervalEnd);
+
         return (
           <IntervalCell
             key={`${format(day, 'yyyy-MM-dd')}-${interval.name}-${employee.id}`}
-            date={day}
+            dateTs={dayTs}
             employee={employee}
             intervalName={interval.name as 'morning' | 'afternoon'}
-            intervalStart={intervalStart}
-            intervalEnd={intervalEnd}
+            intervalStartTs={intervalStart}
+            intervalEndTs={intervalEnd}
             appointments={intervalAppointments}
             events={events}
             isFullDay={isFullDay ?? false}
@@ -272,7 +256,7 @@ const DayCell: React.FC<DayCellProps> = ({
             isWeekend={isWeekend}
             isFerie={isFerie}
             handleContextMenu={handleContextMenu}
-            isSelected={selectedCell?.employeeId === employee.id && selectedCell?.date.getTime() === intervalStart.getTime()}
+            isSelected={selectedCell?.employeeId === employee.id && selectedCell?.date === intervalStart}
             selectedAppointmentId={selectedAppointmentId}
             onSelectCell={onSelectCell || (() => {})}
             onSelectAppointment={onSelectAppointment || (() => {})}

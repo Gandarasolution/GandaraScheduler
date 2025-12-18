@@ -14,6 +14,8 @@ import {
   CELL_HEIGHT, 
   DAY_INTERVALS, 
   HALF_DAY_INTERVALS,
+  DAY_MS,
+  HOUR_MS,
   
 } from '../../utils/constants';
 import { getNextWorkedDay } from '../../utils/dates';
@@ -41,31 +43,43 @@ import { getNextWorkedDay } from '../../utils/dates';
 
 // Props du composant IntervalCell
 interface IntervalCellProps {
-  date: Date;
+  dateTs: number;
   employee: { id: number; name: string };
   intervalName: 'morning' | 'afternoon';
-  intervalStart: Date;
-  intervalEnd: Date;
-  appointments: (Appointment & { top: number })[];
+  intervalStartTs: number;
+  intervalEndTs: number;
+  appointments: (Appointment & { top: number; startTs?: number; endTs?: number })[];
   events: Item[];
   isCellActive?: boolean;
   isWeekend: boolean;
   isFerie: boolean;
-  isFullDay: boolean; // Indique si la cellule représente une journée complète
-  RowHeight?: number; // Hauteur de la ligne pour l'employé, si nécessaire
-  nonWorkingDates: Date[]; // Dates non travaillées (week-ends, fériés, etc.)
-  isNonWorkingDay: boolean; // Indique si la cellule représente un jour non travaillé
-  isMobile: boolean; // Indique si l'affichage est en mode mobile
-  isDisplayWeekend?: boolean; // Indique si les week-ends sont visibles.
-  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
-  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
-  onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  isFullDay: boolean;
+  RowHeight?: number;
+  nonWorkingDates: number[];
+  isNonWorkingDay: boolean;
+  isMobile: boolean;
+  isDisplayWeekend?: boolean;
+  onAppointmentMoved: (id: number, newStartTs: number, newEndTs: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
+  onCellDoubleClick: (dateTs: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
+  onAppointmentDoubleClick: (appointment: Appointment & { startTs?: number; endTs?: number }) => void;
+  onExternalDragDrop: (
+    title: string,
+    dateTs: number,
+    intervalName: 'morning' | 'afternoon',
+    employeeId: number,
+    imageUrl: string,
+    typeEvent: 'Chantier' | 'Absence' | 'Autre'
+  ) => void;
+  handleContextMenu?: (
+    e: React.MouseEvent,
+    origin: 'cell' | 'appointment',
+    appointment?: (Appointment & { startTs?: number; endTs?: number }) | null,
+    cell?: { employeeId: number; date: number }
+  ) => void;
   isSelected: boolean;
   selectedAppointmentId: number | undefined;
-  onSelectCell: (cell: { date: Date; employeeId: number } | null) => void;
-  onSelectAppointment: (appointment: Appointment | null) => void;
+  onSelectCell: (cell: { date: number; employeeId: number } | null) => void;
+  onSelectAppointment: (appointment: (Appointment & { startTs?: number; endTs?: number }) | null) => void;
 }
 
 // Type pour le drag & drop
@@ -74,8 +88,8 @@ interface DragItem {
   type: 'appointment';
   title?: string;
   sourceType?: 'external';
-  startDate: Date;
-  endDate: Date;
+  startDate: number;
+  endDate: number;
   imageUrl: string;
   typeEvent: 'Chantier' | 'Absence' | 'Autre';
   dragOffset?: number;
@@ -111,29 +125,6 @@ interface DragItem {
  * 
  * @returns {JSX.Element} Cellule d'intervalle horaire avec gestion des rendez-vous et interactions utilisateur
  * 
- * @example
- * <IntervalCell
- *   date={new Date()}
- *   employee={{ id: 1, name: 'John Doe' }}
- *   intervalName="morning"
- *   intervalStart={new Date()}
- *   intervalEnd={new Date()}
- *   appointments={[]}
- *   isCellActive={true}
- *   isWeekend={false}
- *   isFerie={false}
- *   isFullDay={false}
- *   RowHeight={40}
- *   isDisplayWeekend={false}
- *   nonWorkingDates={[]}
- *   isNonWorkingDay={false}
- *   isMobile={false}
- *   onAppointmentMoved={...}
- *   onCellDoubleClick={...}
- *   onAppointmentDoubleClick={...}
- *   onExternalDragDrop={...}
- *   handleContextMenu={...}
- * />
  * 
  * @remarks
  * - Utilise react-dnd pour le drag & drop.
@@ -156,11 +147,11 @@ interface DragItem {
  * Gère le rendu, le drag & drop et les interactions locales.
  */
 const IntervalCell: React.FC<IntervalCellProps> = memo(({
-  date,
+  dateTs,
   employee = { id: 0, name: '' },
   intervalName,
-  intervalStart,
-  intervalEnd,
+  intervalStartTs,
+  intervalEndTs,
   appointments = [],
   isCellActive = true,
   isWeekend,
@@ -182,6 +173,9 @@ const IntervalCell: React.FC<IntervalCellProps> = memo(({
   onSelectCell,
   onSelectAppointment
 }) => {
+  const intervalStart = intervalStartTs;
+  const intervalEnd = intervalEndTs;
+  const date = dateTs;
   // État pour la bulle d'info (affichée au clic)
   const [showInfoBubble, setShowInfoBubble] = useState(false);
   const [bubbleContent, setBubbleContent] = useState('');
@@ -205,16 +199,11 @@ const IntervalCell: React.FC<IntervalCellProps> = memo(({
         const intervalWidth = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
         // Décalage en nombre de cellules (arrondi)
         const cellOffset = Math.ceil(-item.dragOffset / intervalWidth); // +1 pour centrer sur la cellule
-        
-        console.log('cellOffset', cellOffset);
-        
+                
 
         targetDate = isFullDay 
-        ? addDays(intervalStart, cellOffset) 
-        : addHours(
-          intervalStart, 
-          cellOffset * HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour
-        );
+        ? intervalStart + cellOffset * DAY_MS
+        : intervalStart + cellOffset * (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * HOUR_MS;
               
         // Décale la date cible
         targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);
@@ -239,8 +228,8 @@ const IntervalCell: React.FC<IntervalCellProps> = memo(({
         );
       } else {
         // Déplacement d'un rendez-vous existant
-        const diff = item.endDate.getTime() - item.startDate.getTime(); // Durée du rendez-vous
-        const newDate = new Date(targetDate.getTime() + diff);        
+        const diff = item.endDate - item.startDate; // Durée du rendez-vous
+        const newDate = targetDate + diff;        
         onAppointmentMoved(item.id, targetDate, newDate, employee.id);
       }
     },
@@ -314,29 +303,34 @@ const IntervalCell: React.FC<IntervalCellProps> = memo(({
         {isCellActive && appointments.map((app) => {
           const event = events.find(et => et.id === app.EventId);
           const chargeeAffaire = event && event.type === 'chantier' ? event.chargeAffaire : '';          
+          const normalized = {
+            ...app,
+            startTs: app.startTs ?? app.startDate,
+            endTs: app.endTs ?? app.endDate,
+          };
           return (
             <AppointmentItem
               key={app.id}
               chargeeAffaire={chargeeAffaire || ''}
-              appointment={app}
+              appointment={normalized}
               isFullDay={isFullDay}
               isDisplayWeekend={isDisplayWeekend}
-              event={events.find(et => et.id === app.EventId) as Item}
+              event={event as Item}
               onDoubleClick={() => {
-                onAppointmentDoubleClick(app)
+                onAppointmentDoubleClick(normalized)
               }}
               onResize={(id, newStartDate, newEndDate, resizeDirection) => {
                 onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection);
               }}
               handleContextMenu={handleContextMenu ?? (() => {})}
               isMobile={isMobile}
-               onClick={() => {
-              if (!isMobile) {
-                onSelectAppointment(app);
-                onSelectCell(null);
-              }
-            }}
-            isSelected={selectedAppointmentId === app.id}
+              onClick={() => {
+                if (!isMobile) {
+                  onSelectAppointment(normalized);
+                  onSelectCell(null);
+                }
+              }}
+              isSelected={selectedAppointmentId === app.id}
             />
           )
         })}

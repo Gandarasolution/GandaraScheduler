@@ -81,8 +81,8 @@ export function applyFiltersToAppointments(
           return Array.isArray(filter.value) && filter.value.includes(getAppointmentProperty(appointment, filter.field));
         case 'date_range':
           if (filter.field === 'startDate' || filter.field === 'endDate') {
-            const date = new Date(getAppointmentProperty(appointment, filter.field));
-            const [start, end] = filter.value as [Date, Date];
+            const date = getAppointmentProperty(appointment, filter.field);
+            const [start, end] = filter.value as [number, number];
             return date >= start && date <= end;
           }
           return true;

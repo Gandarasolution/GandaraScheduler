@@ -145,11 +145,11 @@ export interface Appointment{
   /** Description spécifique du rendez-vous */
   description: string;
   /** Date et heure de début du rendez-vous */
-  startDate: Date;
+  startDate: number;
   /** Date et heure de fin du rendez-vous */
-  endDate: Date;
+  endDate: number;
   /** ID de l'employé assigné au rendez-vous */
-  employeeId: number | string;
+  employeeId: number;
   /** Type de rendez-vous */
   type: 'chantier' | 'absence' | 'autre';
   /** ID de l'événement auquel ce RDV est lié */

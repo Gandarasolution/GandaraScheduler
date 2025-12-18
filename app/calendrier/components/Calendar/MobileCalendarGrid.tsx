@@ -4,24 +4,25 @@ import { fr } from 'date-fns/locale';
 import { Appointment, Employee, HalfDayInterval, Item } from '../../types';
 import { DayCell } from './index';
 import { CELL_HEIGHT } from '../../utils/constants';
+import { snapToHour } from '../../utils/dates';
 
 interface MobileCalendarGridProps {
   employees: Employee[];
-  appointmentsWithTop: (Appointment & { top: number; _dayKey?: number })[];
+  appointmentsWithTop: (Appointment & { top: number; _dayKey?: number; startTs?: number; endTs?: number })[];
   employeeHeights: { employeeId: number; dayKey?: number; height: number }[];
-  dayInTimeline: Date[];
+  dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
   events: Item[];
-  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
-  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
+  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
+  onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
-  selectedCell?: { employeeId: number; date: Date } | null;
+  onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
+  selectedCell?: { employeeId: number; date: number } | null;
   selectedAppointmentId?: number | undefined;
-  onSelectCell?: (cell: { employeeId: number; date: Date } | null) => void;
+  onSelectCell?: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment?: (appointment: Appointment | null) => void;
 }
 
@@ -64,15 +65,15 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
 
       <div className="flex flex-col w-full">
         {dayInTimeline.map((day) => {
-          const dayStart = new Date(day);
-          dayStart.setHours(0, 0, 0, 0);
+          const dayStart = day;
+          snapToHour(dayStart, 0, 0, 0, 0);
           
           const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
             app.employeeId === displayEmployee.id &&
-            app._dayKey === dayStart.getTime()
+            app._dayKey === dayStart
           );
 
-          const rowHeight = employeeHeights.find(e => e.employeeId === displayEmployee.id && e.dayKey === dayStart.getTime())?.height ?? CELL_HEIGHT;
+          const rowHeight = employeeHeights.find(e => e.employeeId === displayEmployee.id && e.dayKey === dayStart)?.height ?? CELL_HEIGHT;
           
           return (
             <div key={`day-section-${format(day, 'yyyy-MM-dd')}`} className="border-b border-gray-200">
@@ -80,7 +81,7 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
                 className={`
                   mobile-day-header flex flex-col items-center justify-center
                   ${isWeekend(day) ? 'weekend' : ''}
-                  ${isSameDay(day, new Date()) ? 'today' : ''}
+                  ${isSameDay(day, Date.now()) ? 'today' : ''}
                 `}
               >
                 <span className="day-title">{format(day, 'EEEE d MMMM', { locale: fr })}</span>
@@ -88,7 +89,7 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
 
               <div className={`mobile-day-cell ${isWeekend(day) ? 'weekend' : ''}`}>
                 <DayCell
-                  day={day}
+                  dayTs={day}
                   employee={displayEmployee}
                   appointments={dayEmployeeAppointments}
                   intervals={HALF_DAY_INTERVALS}
@@ -97,16 +98,27 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
                   isMobile={true}
                   events={events}
                   RowHeight={dayEmployeeAppointments.length > 0 ? rowHeight : CELL_HEIGHT}
-                  onAppointmentMoved={onAppointmentMoved}
-                  onCellDoubleClick={onCellDoubleClick}
+                  onAppointmentMoved={(id, start, end, empId, direction) =>
+                    onAppointmentMoved(id, start, end, empId, direction)
+                  }
+                  onCellDoubleClick={(ts, empId, intervalName) => onCellDoubleClick(ts, empId, intervalName)}
                   onAppointmentClick={onAppointmentDoubleClick}
-                  onExternalDragDrop={onExternalDragDrop}
+                  onExternalDragDrop={(title, ts, intervalName, empId, imageUrl, typeEvent) =>
+                    onExternalDragDrop(title, ts, intervalName, empId, imageUrl, typeEvent)
+                  }
                   isWeekend={isWeekend(day)}
-                  handleContextMenu={handleContextMenu}
+                  handleContextMenu={(e, origin, appointment, cell) =>
+                    handleContextMenu(
+                      e,
+                      origin,
+                      appointment ? { ...appointment, startDate:appointment.startDate, endDate: appointment.endDate } : null,
+                      cell ? { employeeId: cell.employeeId, date: cell.date } : undefined
+                    )
+                  }
                   isCellActive={true}
-                  selectedCell={selectedCell}
+                  selectedCell={selectedCell ? { employeeId: selectedCell.employeeId, date: selectedCell.date } : null}
                   selectedAppointmentId={selectedAppointmentId}
-                  onSelectCell={onSelectCell}
+                  onSelectCell={(cell) => onSelectCell && onSelectCell(cell)}
                   onSelectAppointment={onSelectAppointment}
                 />
               </div>

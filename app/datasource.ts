@@ -179,6 +179,73 @@ const initialEmployees = [
     { name: 'GARCIA', firstName: 'Céline', id: 41, type: 'employee', pole: 'Commercial' , code: 'EMP-041'},
     { name: 'MALIVERNAY', firstName: 'Eric', id: 42, type: 'employee', pole: 'Commercial' , code: 'EMP-042'},
     { name: 'MARTIN', firstName: 'Sophie', id: 43, type: 'employee', pole: 'Commercial' , code: 'EMP-043'},
+
+    { name: 'FAURE', firstName: 'Julien', id: 45, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-045' },
+    { name: 'BLANC', firstName: 'Benoît', id: 46, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-046' },
+    { name: 'PONT', firstName: 'Aurélie', id: 47, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-047' },
+    { name: 'GUERIN', firstName: 'Lucas', id: 48, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-048' },
+    { name: 'MULLER', firstName: 'Kevin', id: 49, groupId: 5, type: 'interim', pole: 'Technique', code: 'EMP-049' },
+    { name: 'SCHMITT', firstName: 'Sarah', id: 50, groupId: 8, type: 'employee', pole: 'Technique', code: 'EMP-050' },
+    { name: 'LEMAIRE', firstName: 'Thomas', id: 51, groupId: 8, type: 'employee', pole: 'Technique', code: 'EMP-051' },
+    { name: 'ROBIN', firstName: 'Emma', id: 52, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-052' },
+    { name: 'PICARD', firstName: 'Nicolas', id: 53, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-053' },
+    { name: 'RIVIERE', firstName: 'Laura', id: 54, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-054' },
+    { name: 'MARCHAND', firstName: 'Antoine', id: 55, groupId: 2, type: 'interim', pole: 'Commercial', code: 'EMP-055' },
+    { name: 'DUPUIS', firstName: 'Chloé', id: 56, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-056' },
+    { name: 'LAMBERT', firstName: 'Juliette', id: 57, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-057' },
+    { name: 'CLEMENT', firstName: 'Julien', id: 58, groupId: 4, type: 'employee', pole: 'RH', code: 'EMP-058' },
+    { name: 'GUILLAUME', firstName: 'Sophie', id: 59, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-059' },
+    { name: 'LEDUC', firstName: 'Mathieu', id: 60, groupId: 4, type: 'employee', pole: 'RH', code: 'EMP-060' },
+    { name: 'FERNANDEZ', firstName: 'Isabelle', id: 61, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-061' },
+    { name: 'MARTINEZ', firstName: 'Sébastien', id: 62, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-062' },
+    { name: 'DAVID', firstName: 'Céline', id: 63, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-063' },
+    { name: 'JACQUET', firstName: 'Vincent', id: 64, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-064' },
+    { name: 'LOPEZ', firstName: 'Amélie', id: 65, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-065' },
+    { name: 'FOUCAULT', firstName: 'Cédric', id: 66, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-066' },
+    { name: 'MARTY', firstName: 'Aline', id: 67, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-067' },
+    { name: 'LEBLANC', firstName: 'Bruno', id: 68, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-068' },
+    { name: 'GARNIER', firstName: 'Catherine', id: 69, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-069' },
+    { name: 'CARTER', firstName: 'David', id: 70, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-070' },
+    { name: 'WILLIAMS', firstName: 'Laura', id: 71, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-071' },
+    { name: 'JONES', firstName: 'Kevin', id: 72, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-072' },
+    { name: 'BROWN', firstName: 'Sophie', id: 73, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-073' },
+    { name: 'DAVIS', firstName: 'Thomas', id: 74, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-074' },
+    { name: 'MILLER', firstName: 'Emma', id: 75, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-075' },
+    { name: 'WILSON', firstName: 'Lucas', id: 76, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-076' },
+    { name: 'MOORE', firstName: 'Chloé', id: 77, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-077' },
+    { name: 'TAYLOR', firstName: 'Antoine', id: 78, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-078' },
+    { name: 'ANDERSON', firstName: 'Julie', id: 79, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-079' },
+    { name: 'THOMAS', firstName: 'Nicolas', id: 80, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-080' },
+    { name: 'JACKSON', firstName: 'Isabelle', id: 81, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-081' },
+    { name: 'WHITE', firstName: 'David', id: 82, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-082' },
+    { name: 'HARRIS', firstName: 'Sophie', id: 83, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-083' },
+    { name: 'SANCHEZ', firstName: 'Julien', id: 84, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-084' },
+    { name: 'CLARK', firstName: 'Emma', id: 85, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-085' },
+    { name: 'RAMIREZ', firstName: 'Lucas', id: 86, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-086' },
+    { name: 'LEWIS', firstName: 'Laura', id: 87, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-087' },
+    { name: 'ROBINSON', firstName: 'Kevin', id: 88, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-088' },
+    { name: 'WALKER', firstName: 'Sophie', id: 89, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-089' },
+    { name: 'YOUNG', firstName: 'Thomas', id: 90, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-090' },
+    { id: 91, name: 'HERNANDEZ', firstName: 'Chloé', type: 'employee', pole: 'Commercial', code: 'EMP-091' },
+    { id: 92, name: 'KING', firstName: 'Antoine', type: 'employee', pole: 'Commercial', code: 'EMP-092' },
+    { id: 93, name: 'WRIGHT', firstName: 'Julie', type: 'employee', pole: 'Commercial', code: 'EMP-093' },
+    { id: 94, name: 'LOPEZ', firstName: 'Nicolas', type: 'employee', pole: 'Commercial', code: 'EMP-094' },
+    { id: 95, name: 'HILL', firstName: 'Isabelle', type: 'employee', pole: 'Commercial', code: 'EMP-095' },
+    { id: 96, name: 'SCOTT', firstName: 'David', type: 'employee', pole: 'Commercial', code: 'EMP-096' },
+    { id: 97, name: 'GREEN', firstName: 'Sophie', type: 'employee', pole: 'Commercial', code: 'EMP-097' },
+    { id: 98, name: 'ADAMS', firstName: 'Julien', type: 'employee', pole: 'Commercial', code: 'EMP-098' },
+    { id: 99, name: 'BAKER', firstName: 'Emma', type: 'employee', pole: 'Commercial', code: 'EMP-099' },
+    { id: 100, name: 'GONZALEZ', firstName: 'Lucas', type: 'employee', pole: 'Commercial', code: 'EMP-100' },
+    { name: 'LEE', firstName: 'Laura', id: 101, type: 'employee', pole: 'Commercial', code: 'EMP-101' },
+    { name: 'HARRISON', firstName: 'Kevin', id: 102, type: 'employee', pole: 'Commercial', code: 'EMP-102' },
+    { name: 'SULLIVAN', firstName: 'Sophie', id: 103, type: 'employee', pole: 'Commercial', code: 'EMP-103' },
+    { name: 'MURPHY', firstName: 'Antoine', id: 104, type: 'employee', pole: 'Commercial', code: 'EMP-104' },
+    { name: 'COOK', firstName: 'Julie', id: 105, type: 'employee', pole: 'Commercial', code: 'EMP-105' },
+    { name: 'ROGERS', firstName: 'Nicolas', id: 106, type: 'employee', pole: 'Commercial', code: 'EMP-106' },
+    { name: 'REED', firstName: 'Isabelle', id: 107, type: 'employee', pole: 'Commercial', code: 'EMP-107' },
+    { name: 'COOPER', firstName: 'David', id: 108, type: 'employee', pole: 'Commercial', code: 'EMP-108' },
+    { name: 'MORGAN', firstName: 'Sophie', id: 109, type: 'employee', pole: 'Commercial', code: 'EMP-109' },
+    { name: 'BELL', firstName: 'Julien', id: 110, type: 'employee', pole: 'Commercial', code: 'EMP-110' }
 ];
 
 
@@ -2254,113 +2321,135 @@ const Evenements = [
  * @param employees - Liste des employés à planifier
  * @returns Tableau de rendez-vous générés
  */
+// Constante globale : une journée en millisecondes
+const ONE_DAY_MS = 86400000;
 function generateAppointments(employees: Employee[]): Appointment[] {
   const appointments: Appointment[] = [];
   let appointmentId = 1;
-  const baseDate = new Date();
-  
 
-  // Fonction utilitaire pour obtenir une date de semaine aléatoire
-  const getRandomWeekDate = (baseDate: Date, maxDays: number): Date => {
-    let randomDate: Date;
-    do {
-      const randomDays = Math.floor(Math.random() * maxDays);
-      randomDate = new Date(baseDate);
-      randomDate.setDate(baseDate.getDate() + randomDays);
-    } while (randomDate.getDay() === 0 || randomDate.getDay() === 6); // Éviter week-ends
-    return randomDate;
+  // Point de départ : Maintenant, ramené à minuit pile (UTC) par calcul mathématique
+  // (timestamp - le reste de la division par un jour)
+  const now = Date.now();
+  const baseTimestamp = now - (now % ONE_DAY_MS);
+
+  // --- Helpers Mathématiques (Zéro Date Object) ---
+
+  // Vérifie si un timestamp tombe un Samedi (6) ou Dimanche (0)
+  // Le 01/01/1970 (Epoch) était un Jeudi (4).
+  const isWeekend = (ts: number): boolean => {
+    const daysSinceEpoch = Math.floor(ts / ONE_DAY_MS);
+    const dayOfWeek = (daysSinceEpoch + 4) % 7;
+    return dayOfWeek === 0 || dayOfWeek === 6;
   };
 
-  // Fonction pour vérifier si deux périodes se chevauchent
-  const isOverlapping = (start1: Date, end1: Date, start2: Date, end2: Date): boolean => {
+  // Chevauchement purement numérique
+  const isOverlapping = (start1: number, end1: number, start2: number, end2: number): boolean => {
     return !(end1 < start2 || start1 > end2);
   };
 
-  // Générer des rendez-vous pour chaque employé
+  // --- Génération ---
+
   employees.forEach((employee) => {
-    const employeeAppointments: { start: Date; end: Date }[] = [];
+    // Stockage léger : tableau d'objets simples { start: number, end: number }
+    const employeeAppointments: { start: number; end: number }[] = [];
     
-    // Chaque employé aura 10 à 30 rendez-vous
     const numberOfAppointments = Math.floor(Math.random() * 20) + 10;
     
     for (let i = 0; i < numberOfAppointments; i++) {
       let attempts = 0;
       let isValid = false;
-      let startDate: Date = new Date();
-      let endDate: Date = new Date();
-      let duration: number = 1;
+      
+      // Initialisation à 0
+      let startTs = 0;
+      let endTs = 0;
+      
+      let duration = 1; // en jours
       let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
       let selectedEvent = null;
       let description = '';
       
-      // Essayer de trouver un créneau libre jusqu'à 200 tentatives
       while (!isValid && attempts < 200) {
         attempts++;
         
-        // Choisir le type d'événement
+        // --- 1. Logique métier (choix du type) ---
+        // (Inchangée, sauf qu'on prépare la durée)
         const rand = Math.random();
-        if (rand < 0.6) { // 60% chantiers
+        
+        // NOTE: Je suppose que 'Evenements' est disponible dans votre scope comme avant
+        if (rand < 0.6) { // Chantier
           appointmentType = 'chantier';
-          while (!selectedEvent) {
-            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'chantier') {
-              selectedEvent = null;
-            }
-          }
-          duration = Math.floor(Math.random() * 3) + 3; // 3 à 5 jours
+          do {
+             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
+          } while (selectedEvent?.type !== 'chantier');
+          
+          duration = Math.floor(Math.random() * 3) + 3; // 3-5 jours
           description = `Chantier de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-        } else if (rand < 0.8) { // 20% absences
+          
+        } else if (rand < 0.8) { // Absence
           appointmentType = 'absence';
-          while (!selectedEvent) {
+          do {
             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'absence') {
-              selectedEvent = null;
-            }
-          }
-          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
+          } while (selectedEvent?.type !== 'absence');
+          
+          duration = Math.floor(Math.random() * 2) + 1; // 1-2 jours
           description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-        } else { // 20% autres
+          
+        } else { // Autre
           appointmentType = 'autre';
-          while (!selectedEvent) {
+          do {
             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'autre') {
-              selectedEvent = null;
-            }
-          }
-          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
+          } while (selectedEvent?.type !== 'autre');
+          
+          duration = Math.floor(Math.random() * 2) + 1; // 1-2 jours
           description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
         }
         
-        // Générer date de début aléatoire (dans les 90 prochains jours)
-        startDate = getRandomWeekDate(baseDate, 90);
-        startDate.setHours(0, 0, 0, 0);
+        // --- 2. Calcul des Dates (Maths uniquement) ---
         
-        // Calculer date de fin
-        endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + duration - 1);
-        endDate.setHours(23, 59, 59, 999);
+        // Choisir un nombre de jours aléatoire entre 0 et 90
+        let randomDaysToAdd = Math.floor(Math.random() * 90);
         
-        // Ajuster si ça tombe sur un week-end
-        while (endDate.getDay() === 0 || endDate.getDay() === 6) {
-          endDate.setDate(endDate.getDate() - 1);
+        // Calcul du Start : Base + (Jours * MS)
+        // C'est déjà aligné sur minuit car baseTimestamp l'est
+        startTs = baseTimestamp + (randomDaysToAdd * ONE_DAY_MS);
+        
+        // Si le début tombe un week-end, on décale
+        while (isWeekend(startTs)) {
+             startTs += ONE_DAY_MS;
         }
-        
-        // Vérifier qu'il n'y a pas de chevauchement avec les rendez-vous existants de cet employé
+
+        // Calcul du End : Start + (Durée * MS) - 1ms (pour finir à 23:59:59.999 théorique)
+        // On fait (duration - 1) jours pleins + le reste de la journée courante
+        // Ou plus simplement : Start + duration * 24h - 1ms
+        endTs = startTs + (duration * ONE_DAY_MS) - 1;
+
+        // Ajustement fin de chantier si week-end (on recule d'un jour)
+        // Note: Votre logique originale faisait endDate.setDate(endDate.getDate() - 1)
+        while (isWeekend(endTs)) {
+             endTs -= ONE_DAY_MS;
+        }
+
+        // Vérification de cohérence (au cas où le recul rendrait la fin antérieure au début)
+        if (endTs < startTs) {
+            isValid = false;
+            continue; 
+        }
+
+        // --- 3. Vérification des collisions ---
         isValid = !employeeAppointments.some(existing => 
-          isOverlapping(startDate, endDate, existing.start, existing.end)
+          isOverlapping(startTs, endTs, existing.start, existing.end)
         );
       }
       
-      // Si on a trouvé un créneau valide, créer le rendez-vous
       if (isValid) {
-        employeeAppointments.push({ start: new Date(startDate), end: new Date(endDate) });
+        // On stocke les timestamp bruts
+        employeeAppointments.push({ start: startTs, end: endTs });
         
-        // Créer l'appointment avec les bonnes propriétés selon le type
         const newAppointment: Appointment = {
           id: appointmentId++,
           description: description,
-          startDate: startDate,
-          endDate: endDate,
+          startDate: startTs, // Number direct
+          endDate: endTs,     // Number direct
           employeeId: employee.id,
           type: appointmentType,
           EventId: selectedEvent?.id as number
@@ -2373,7 +2462,6 @@ function generateAppointments(employees: Employee[]): Appointment[] {
   
   return appointments;
 }
-
 
 
 

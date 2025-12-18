@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { format, isWeekend, isSameDay } from 'date-fns';
+import { format, isWeekend } from 'date-fns';
 import { HalfDayInterval, Item, Appointment } from '../../types';
 import { DayCell } from './index';
 import { CELL_WIDTH } from '../../utils/constants';
@@ -7,18 +7,18 @@ import { getRowId } from '../../utils/domIds';
 
 interface GroupRowProps {
   itemId: string | number;
-  dayInTimeline: Date[];
+  dayInTimeline: number[];
   rowHeight: number;
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   events: Item[];
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
   isDisplayWeekend: boolean;
-  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
-  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
+  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
+  onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   style?: React.CSSProperties;
   todayIndex: number;
 }
@@ -63,7 +63,7 @@ const GroupRow: React.FC<GroupRowProps> = ({
       {dayInTimeline.map((day) => (
           <DayCell
             key={`inactive-${itemId}-${format(day, 'yyyy-MM-dd')}`}
-            day={day}
+            dayTs={day}
             employee={{ id: 0, name: 'Inactive' }}
             appointments={[]}
             intervals={HALF_DAY_INTERVALS}
@@ -73,12 +73,23 @@ const GroupRow: React.FC<GroupRowProps> = ({
             events={events}
             nonWorkingDates={nonWorkingDates}
             isDisplayWeekend={isDisplayWeekend}
-            onAppointmentMoved={onAppointmentMoved}
-            onCellDoubleClick={onCellDoubleClick}
+            onAppointmentMoved={(id, start, end, employeeId, direction) =>
+              onAppointmentMoved(id, start, end, employeeId, direction)
+            }
+            onCellDoubleClick={(ts, empId, intervalName) => onCellDoubleClick(ts, empId, intervalName)}
             onAppointmentClick={onAppointmentDoubleClick}
-            onExternalDragDrop={onExternalDragDrop}
+            onExternalDragDrop={(title, ts, intervalName, empId, imageUrl, typeEvent) =>
+              onExternalDragDrop(title, ts, intervalName, empId, imageUrl, typeEvent)
+            }
             isWeekend={isWeekend(day)}
-            handleContextMenu={handleContextMenu}
+            handleContextMenu={(e, origin, appointment, cell) =>
+              handleContextMenu(
+                e,
+                origin,
+                appointment ? { ...appointment, startDate: appointment.startDate, endDate: appointment.endDate } : null,
+                cell ? { employeeId: cell.employeeId, date: cell.date } : undefined
+              )
+            }
             isCellActive={false}
           />
       ))}

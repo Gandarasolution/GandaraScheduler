@@ -3,6 +3,7 @@ import { addHours } from "date-fns";
 import { Appointment, Employee, ChantierItem, Groupe } from "../types";
 import { HOURS_PER_DAY } from "./constants";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
+import { snapToHour } from './dates';
 
 
 // --- FACTORY DES RENDERERS (AFFICHAGE DES CELLULES DES TABLEAUX ) ---
@@ -33,8 +34,8 @@ export const customRenderersFactory = (
             description: '',
             type: chantierItem.type,
             EventId: Number(chantierItem.id),
-            startDate: new Date(),
-            endDate: addHours(new Date(), 12),
+            startDate: Date.now(),
+            endDate: snapToHour(Date.now(), 12),
             employeeId: 0,
             top: 0,
           }}
@@ -50,8 +51,8 @@ export const customRenderersFactory = (
               description: '',
               type: chantierItem.type,
               EventId: Number(chantierItem.id),
-              startDate: new Date(),
-              endDate: addHours(new Date(), 12),
+              startDate: Date.now(),
+              endDate: snapToHour(Date.now(), 12),
               employeeId: 0,
             }
             setSelectedAppointment(newAppointment);
@@ -238,8 +239,7 @@ export const customComputedFieldsFactory = (
 
   // Calcul de la Durée Planifiée (DPF)
   const calculateDPF = (chantierId: number): string => {
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0);
+    const currentDate = snapToHour(Date.now(), 0, 0, 0, 0);
 
     const relevantAppointments = appointments.filter(appointment => {
       if (appointment.type !== 'chantier' || appointment.EventId !== chantierId) {
@@ -258,7 +258,7 @@ export const customComputedFieldsFactory = (
       const endDate = appointment.endDate;
       
       // Approximation simple (à affiner avec hoursPerDay si besoin)
-      const timeDiff = endDate.getTime() - startDate.getTime();
+      const timeDiff = endDate - startDate;
       const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + (timeDiff > 0 ? 0 : 1); // +1 pour inclure le jour même si nécessaire
       
       // Utilisation de la constante globale HOURS_PER_DAY

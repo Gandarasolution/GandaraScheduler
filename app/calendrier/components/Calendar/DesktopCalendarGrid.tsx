@@ -23,7 +23,7 @@ interface DesktopCalendarGridProps {
   employees: Employee[];
   appointmentsWithTop: (Appointment & { top: number })[];
   employeeHeights: { employeeId: number; height: number }[];
-  dayInTimeline: Date[];
+  dayInTimeline: number[];
   initialTeams: Groupe[];
   calendarConfig: CalendarConfig;
   onCalendarConfigChange: (config: CalendarConfig) => void;
@@ -31,7 +31,7 @@ interface DesktopCalendarGridProps {
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   events: Item[];
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
   isDisplayWeekend: boolean;
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   handleScroll: () => void;
@@ -40,15 +40,15 @@ interface DesktopCalendarGridProps {
   tableRef: React.RefObject<HTMLTableElement | null>;
   handleMouseOver: (e: React.MouseEvent<HTMLElement>) => void;
   handleMouseOut: (e: React.MouseEvent<HTMLElement>) => void;
-  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
-  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
+  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
+  onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   updateHighlightedEmployeeRow: (employeeId: number | null) => void;
-  selectedCell: { employeeId: number; date: Date } | null;
+  selectedCell: { employeeId: number; date: number } | null;
   selectedAppointmentId: number | undefined;
-  onSelectCell: (cell: { employeeId: number; date: Date } | null) => void;
+  onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
 }
 
@@ -99,7 +99,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [filteredEmployees, calendarConfig.dimension, initialTeams]);
 
   const todayIndex = useMemo(() => {
-    return dayInTimeline.findIndex(day => isSameDay(day, new Date()));
+    return dayInTimeline.findIndex(day => isSameDay(day, Date.now()));
   }, [dayInTimeline]);
 
   // Optimisation : Pré-calculer les rendez-vous par employé et par jour

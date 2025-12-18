@@ -16,6 +16,9 @@
 
 import { HalfDayInterval } from "../types";
 
+export const HOUR_MS = 3600000;
+export const DAY_MS = 86400000;
+
 // ===== DIMENSIONS DE LA GRILLE =====
 
 /** Largeur de la colonne des noms d'employés (en pixels) */

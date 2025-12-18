@@ -17,8 +17,8 @@
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect } from 'react';
 import {Appointment, Employee, HalfDayInterval, Item, Tags } from '../../types';
-import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
-import { isHoliday, isWeekend } from '../../utils/dates';
+import { format, setHours, startOfDay, setSeconds, setMinutes, addDays, isSameDay, isSameYear, isSameMonth } from 'date-fns';
+import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 
 import { AppointmentItem } from '../index';
 
@@ -42,7 +42,7 @@ interface AppointmentFormProps {
   /** Indique si le rendez-vous occupe une journée complète */
   isFullDay: boolean;
   /** Liste des dates non-travaillées (week-ends, fériés) */
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
   /** Version réduite du formulaire (moins de champs) */
   isReducedVersion?: boolean;
   /** Callback appelé lors de la sauvegarde */
@@ -130,9 +130,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     const days = eachDayOfInterval({ start: app.startDate, end: app.endDate });
     return days.some((date) =>
       (nonWorkingDates.some(nd => 
-        nd.getDay() === date.getDay()
-        && nd.getMonth() === date.getMonth()
-        && nd.getFullYear() === date.getFullYear()
+        isSameDay(nd, date)
+        && isSameMonth(nd, date)
+        && isSameYear(nd, date)
       ) || isHoliday(date) || isWeekend(date)) // Vérifie jours non travaillés, fériés ou week-ends
     );
   }, [appointments, formDataAppointment.id, nonWorkingDates]);
@@ -171,12 +171,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     const isAppDirty = JSON.stringify({
       ...formDataAppointment,
       // Normalisation des dates pour éviter les faux positifs dus aux millisecondes
-      startDate: formDataAppointment.startDate.getTime(),
-      endDate: formDataAppointment.endDate.getTime()
+      startDate: formDataAppointment.startDate,
+      endDate: formDataAppointment.endDate
     }) !== JSON.stringify({
       ...appointment,
-      startDate: appointment.startDate.getTime(),
-      endDate: appointment.endDate.getTime()
+      startDate: appointment.startDate,
+      endDate: appointment.endDate
     });
 
     const isItemDirty = JSON.stringify(formDataItemType) !== JSON.stringify(item);
@@ -215,17 +215,28 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
     const { name, value } = e.target;
     if (!value) return;    
-    const datePart = parseISO(value);
-    let newDate: Date;
+    
+    const baseDate = new Date(value); 
 
-    if (name === 'startDate') {
-      
-        newDate = setHours(setMinutes(datePart, (formDataAppointment.startDate || new Date()).getMinutes()), (formDataAppointment.startDate || new Date()).getHours());
-        setFormDataAppointment(prev => ({ ...prev, startDate: newDate }));
-    } else if (name === 'endDate') {
-        newDate = setHours(setMinutes(datePart, (formDataAppointment.endDate || new Date()).getMinutes()), (formDataAppointment.endDate || new Date()).getHours());
-        setFormDataAppointment(prev => ({ ...prev, endDate: newDate }));
-    }
+    // 2. On récupère l'heure actuelle stockée dans le state (ou l'heure courante si vide)
+    // formDataAppointment[name] est supposé être un timestamp (number)
+    const currentTimestamp = formDataAppointment[name as 'startDate' | 'endDate'] || Date.now();
+    const timeSource = new Date(currentTimestamp);
+
+    // 3. FUSION : On applique l'heure conservée sur la nouvelle date
+    // setHours prend (heures, minutes, secondes, ms)
+    baseDate.setHours(
+        timeSource.getHours(), 
+        timeSource.getMinutes(), 
+        0, 
+        0
+    );
+
+    // 4. On met à jour le state avec un TIMESTAMP (nombre)
+    setFormDataAppointment(prev => ({ 
+        ...prev, 
+        [name]: baseDate.getTime() 
+    }));
   };
 
 
@@ -400,8 +411,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 ...formDataAppointment,
                 id: formDataAppointment.id || 0,
                 top: 0,
-                startDate: new Date(),
-                endDate: new Date(addDays(new Date(), 3)),
+                startDate: Date.now(),
+                endDate: Date.now() + 86400000 * 3, // +3 jours
               }}
               event={formDataItemType}
               isFullDay={isFullDay}
@@ -439,8 +450,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                         id="intervalNameStart"
                         name="intervalName"
                         value={
-                          formDataAppointment.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
-                          && formDataAppointment.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
+                          new Date(formDataAppointment.startDate).getHours() >= HALF_DAY_INTERVALS[0].startHour 
+                          && new Date(formDataAppointment.startDate).getHours() < HALF_DAY_INTERVALS[0].endHour
                           ? 'morning' : 'afternoon'
                         }
                         onChange={e => {
@@ -449,7 +460,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                             : HALF_DAY_INTERVALS[1].startHour;
                           setFormDataAppointment(prev => ({
                             ...prev,
-                            startDate: setHours(startOfDay(prev.startDate), newHour),
+                            startDate: startOfDay(prev.startDate).setHours(newHour),
                           }));
                         }}
                         className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
@@ -458,7 +469,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                         <option value="afternoon"
                           disabled={
                             format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
-                            formDataAppointment.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
+                            new Date(formDataAppointment.endDate).getHours() === HALF_DAY_INTERVALS[0].endHour
                           }
                         >Après-midi</option>
                       </select>
@@ -486,23 +497,35 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                           id="intervalNameEnd"
                           name="intervalName"
                           value={
-                            formDataAppointment.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
+                            new Date(formDataAppointment.endDate).getHours() <= HALF_DAY_INTERVALS[0].endHour
                               ? 'morning'
                               : 'afternoon'
                           }
                           onChange={e => {
                             const isAfternoon = e.target.value === 'afternoon';
+
                             setFormDataAppointment(prev => {
-                              const endDateDay = new Date(format(prev.endDate, 'yyyy-MM-dd') + 'T00:00:00');
+                              const targetDate = new Date(prev.endDate);
                               let newEndDate;
+                              
                               if (isAfternoon) {
-                                newEndDate = setHours(setMinutes(setSeconds(endDateDay, 59), 59), HALF_DAY_INTERVALS[1].endHour - 1);
-                              } else {
-                                newEndDate = setHours(setMinutes(setSeconds(endDateDay, 0), 0), HALF_DAY_INTERVALS[0].endHour);
+                                targetDate.setHours(
+                                                HALF_DAY_INTERVALS[1].endHour - 1, 
+                                                59, 
+                                                59, 
+                                                999
+                                            );                              
+                                } else {
+                                  newEndDate = targetDate.setHours(
+                                    HALF_DAY_INTERVALS[0].endHour, 
+                                    0, 
+                                    0,
+                                    0
+                                  );
                               }
                               return {
                                 ...prev,
-                                endDate: newEndDate,
+                                endDate: targetDate.getTime(),
                               };
                             });
                           }}
@@ -512,7 +535,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                             value="morning"
                             disabled={
                               format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
-                              formDataAppointment.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
+                              new Date(formDataAppointment.startDate).getHours() === HALF_DAY_INTERVALS[1].startHour
                             }
                           >Matin</option>
                           <option value="afternoon">Après-midi</option>

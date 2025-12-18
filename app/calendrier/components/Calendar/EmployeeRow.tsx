@@ -7,25 +7,25 @@ import { getRowId } from '../../utils/domIds';
 
 interface EmployeeRowProps {
   employee: Employee;
-  dayInTimeline: Date[];
-  appointments: (Appointment & { top: number })[];
+  dayInTimeline: number[];
+  appointments: (Appointment & { top: number; startTs?: number; endTs?: number })[];
   appointmentsByDay?: Map<string, (Appointment & { top: number })[]>;
   rowHeight: number;
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   events: Item[];
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
   isDisplayWeekend: boolean;
-  onAppointmentMoved: (id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
-  onCellDoubleClick: (date: Date, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
+  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
+  onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: Date, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => void;
+  onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   style?: React.CSSProperties;
   todayIndex: number;
-  selectedCell: { employeeId: number; date: Date } | null;
+  selectedCell: { employeeId: number; date: number } | null;
   selectedAppointmentId: number | undefined;
-  onSelectCell: (cell: { employeeId: number; date: Date } | null) => void;
+  onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
 }
 
@@ -80,7 +80,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           const key = `${employee.id}-${dateKey}`;
           dayEmployeeAppointments = appointmentsByDay.get(key) || [];
         } else {
-          // Fallback si la map n'est pas fournie (pour compatibilité)
           dayEmployeeAppointments = appointments.filter((app) =>
             isSameDay(app.startDate, day) && app.employeeId === employee.id
           );
@@ -89,7 +88,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         return (
             <DayCell
               key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
-              day={day}
+              dayTs={day}
               employee={{ id: employee.id, name: employee.name }}
               appointments={dayEmployeeAppointments}
               intervals={HALF_DAY_INTERVALS}
@@ -99,15 +98,26 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               events={events}
               nonWorkingDates={nonWorkingDates}
               isDisplayWeekend={isDisplayWeekend}
-              onAppointmentMoved={onAppointmentMoved}
-              onCellDoubleClick={onCellDoubleClick}
+              onAppointmentMoved={(id, start, end, employeeId, direction) =>
+                onAppointmentMoved(id, start, end, employeeId, direction)
+              }
+              onCellDoubleClick={(ts, empId, intervalName) => onCellDoubleClick(ts, empId, intervalName)}
               onAppointmentClick={onAppointmentDoubleClick}
-              onExternalDragDrop={onExternalDragDrop}
+              onExternalDragDrop={(title, ts, intervalName, empId, imageUrl, typeEvent) =>
+                onExternalDragDrop(title, ts, intervalName, empId, imageUrl, typeEvent)
+              }
               isWeekend={isWeekend(day)}
-              handleContextMenu={handleContextMenu}
-              selectedCell={selectedCell}
+              handleContextMenu={(e, origin, appointment, cell) =>
+                handleContextMenu(
+                  e,
+                  origin,
+                  appointment ? { ...appointment, startDate: appointment.startDate, endDate: appointment.endDate } : null,
+                  cell ? { employeeId: cell.employeeId, date: cell.date } : undefined
+                )
+              }
+              selectedCell={selectedCell ? { employeeId: selectedCell.employeeId, date: selectedCell.date } : null}
               selectedAppointmentId={selectedAppointmentId}
-              onSelectCell={onSelectCell}
+              onSelectCell={(cell) => onSelectCell(cell ? { employeeId: cell.employeeId, date: cell.date } : null)}
               onSelectAppointment={onSelectAppointment}
             />
         );
@@ -138,7 +148,7 @@ export default memo(EmployeeRow, (prev, next) => {
 
   if (wasSelected !== isSelected) return false; // Selection state changed for this row
   if (wasSelected && isSelected) {
-     if (prev.selectedCell?.date.getTime() !== next.selectedCell?.date.getTime()) return false; // Selected date changed within this row
+     if (prev.selectedCell?.date !== next.selectedCell?.date) return false; // Selected date changed within this row
   }
 
   // Optimization for selectedAppointmentId

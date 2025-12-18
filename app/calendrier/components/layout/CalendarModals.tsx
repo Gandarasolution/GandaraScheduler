@@ -20,7 +20,7 @@ interface CalendarModalsProps {
     isImageSelectorOpen: boolean;
     isConfigModalOpen: boolean;
     repeatData: RepeatData | null;
-    extendData: Date | null;
+    extendData: number | null;
     modalInfo: { message: string, color: string } | null;
     selectedAppointmentForm: Appointment | null;
   };
@@ -33,7 +33,7 @@ interface CalendarModalsProps {
     handleRepeat: () => void;
     
     // Extend Handlers
-    setExtendData: (date: Date | null) => void;
+    setExtendData: (date: number | null) => void;
     handleExtend: () => void;
     
     // Image Handlers
@@ -85,8 +85,8 @@ interface CalendarModalsProps {
     setIncludeWeekend: (v: boolean) => void;
     respectNonWorkingDays: boolean;
     setRespectNonWorkingDays: (v: boolean) => void;
-    nonWorkingDates: Date[];
-    setNonWorkingDates: (dates: Date[]) => void;
+    nonWorkingDates: number[];
+    setNonWorkingDates: (dates: number[]) => void;
     
     // Constants
     HALF_DAY_INTERVALS: any[];
@@ -247,7 +247,7 @@ export const CalendarModals = ({
                     value="endDate"
                     checked={modalsState.repeatData.endDate !== null && modalsState.repeatData.repeatCount === null}
                     onChange={() => {                        
-                      handlers.setRepeatData({ ...modalsState.repeatData!, repeatCount: null, endDate: new Date() });
+                      handlers.setRepeatData({ ...modalsState.repeatData!, repeatCount: null, endDate: Date.now() });
                     }}
                   />
                   <span className="ml-1">{'Fin répétition'}</span>
@@ -259,7 +259,7 @@ export const CalendarModals = ({
                   min={modalsState.selectedAppointmentForm?.endDate ? format(modalsState.selectedAppointmentForm.endDate, "yyyy-MM-dd") : undefined}
                   onChange={e => {
                     const value = e.target.value;
-                    const endDate = value ? new Date(value) : null;
+                    const endDate = value ? new Date(value).getTime() : null;
                     handlers.setRepeatData({ ...modalsState.repeatData!, endDate, repeatCount: null });
                   }}
                 />
@@ -294,8 +294,8 @@ export const CalendarModals = ({
                 value={format(modalsState.extendData, "yyyy-MM-dd")}
                 min={modalsState.selectedAppointmentForm?.endDate ? format(modalsState.selectedAppointmentForm.endDate, "yyyy-MM-dd") : undefined}
                 onChange={(e) => {
-                  const date = new Date(new Date(e.target.value).setHours(23, 59, 59, 999));
-                  if (!isNaN(date.getTime())) handlers.setExtendData(date);
+                  const date = new Date(e.target.value).setHours(23, 59, 59, 999);
+                  if (!isNaN(date)) handlers.setExtendData(date);
                 }}
               />
             </div>

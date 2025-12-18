@@ -10,7 +10,7 @@ type NotificationsPanelProps = {
     type: 'success' | 'error' | 'warning' | 'info';
     title: string;
     message: string;
-    timestamp: Date;
+    timestamp: number;
     isRead: boolean;
   }>;
   onMarkAsRead: (id: string) => void;
@@ -64,20 +64,6 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
           </div>
         );
     }
-  };
-
-  const formatTimestamp = (timestamp: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'À l\'instant';
-    if (minutes < 60) return `Il y a ${minutes} min`;
-    if (hours < 24) return `Il y a ${hours}h`;
-    if (days < 7) return `Il y a ${days}j`;
-    return format(timestamp, 'dd/MM/yyyy HH:mm');
   };
 
   return (
@@ -175,7 +161,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                         {notification.message}
                       </p>
                       <p className="text-xs text-gray-400">
-                        {formatTimestamp(notification.timestamp)}
+                        {notification.timestamp.toLocaleString()}
                       </p>
                     </div>
                   </div>
