@@ -1,7 +1,4 @@
 import React, { memo } from 'react';
-import { format, isWeekend } from 'date-fns';
-import { HalfDayInterval, Item, Appointment } from '../../types';
-import { DayCell } from './index';
 import { CELL_WIDTH } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 
@@ -9,37 +6,21 @@ interface GroupRowProps {
   itemId: string | number;
   dayInTimeline: number[];
   rowHeight: number;
-  HALF_DAY_INTERVALS: HalfDayInterval[];
-  isFullDay: boolean;
-  events: Item[];
-  nonWorkingDates: number[];
-  isDisplayWeekend: boolean;
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
-  onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
-  onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   style?: React.CSSProperties;
   todayIndex: number;
+  isFullDay: boolean;
 }
 
 const GroupRow: React.FC<GroupRowProps> = ({
   itemId,
   dayInTimeline,
   rowHeight,
-  HALF_DAY_INTERVALS,
-  isFullDay,
-  events,
-  nonWorkingDates,
-  isDisplayWeekend,
-  onAppointmentMoved,
-  onCellDoubleClick,
-  onAppointmentDoubleClick,
-  onExternalDragDrop,
-  handleContextMenu,
   style,
   todayIndex,
+  isFullDay,
 }) => {
+  const rowWidth = dayInTimeline.length * CELL_WIDTH;
+
   return (
     <div 
       id={getRowId('group', itemId)}
@@ -49,6 +30,15 @@ const GroupRow: React.FC<GroupRowProps> = ({
       style={{
         ...style,
         height: rowHeight,
+        width: rowWidth,
+        backgroundColor: 'transparent',
+        backgroundImage: `repeating-linear-gradient(
+          to right,
+          rgba(229,231,235,0.9) 0px,
+          rgba(229,231,235,0.9) 1px,
+          transparent 1px,
+          transparent ${isFullDay ? CELL_WIDTH : CELL_WIDTH / 2}px
+        )`
       }}
     >
       {todayIndex >= 0 && (
@@ -60,39 +50,6 @@ const GroupRow: React.FC<GroupRowProps> = ({
           }}
         />
       )}
-      {dayInTimeline.map((day) => (
-          <DayCell
-            key={`inactive-${itemId}-${format(day, 'yyyy-MM-dd')}`}
-            dayTs={day}
-            employee={{ id: 0, name: 'Inactive' }}
-            appointments={[]}
-            intervals={HALF_DAY_INTERVALS}
-            isFullDay={isFullDay}
-            RowHeight={rowHeight}
-            isMobile={false}
-            events={events}
-            nonWorkingDates={nonWorkingDates}
-            isDisplayWeekend={isDisplayWeekend}
-            onAppointmentMoved={(id, start, end, employeeId, direction) =>
-              onAppointmentMoved(id, start, end, employeeId, direction)
-            }
-            onCellDoubleClick={(ts, empId, intervalName) => onCellDoubleClick(ts, empId, intervalName)}
-            onAppointmentClick={onAppointmentDoubleClick}
-            onExternalDragDrop={(title, ts, intervalName, empId, imageUrl, typeEvent) =>
-              onExternalDragDrop(title, ts, intervalName, empId, imageUrl, typeEvent)
-            }
-            isWeekend={isWeekend(day)}
-            handleContextMenu={(e, origin, appointment, cell) =>
-              handleContextMenu(
-                e,
-                origin,
-                appointment ? { ...appointment, startDate: appointment.startDate, endDate: appointment.endDate } : null,
-                cell ? { employeeId: cell.employeeId, date: cell.date } : undefined
-              )
-            }
-            isCellActive={false}
-          />
-      ))}
     </div>
   );
 };

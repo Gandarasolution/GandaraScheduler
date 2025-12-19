@@ -22,10 +22,10 @@
 import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
 import {Appointment, HalfDayInterval, Item } from '../../types';
-import { addDays, isWeekend } from 'date-fns';
+import { isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS, HOUR_MS } from '../../utils/constants';
 import AppointmentTag from './AppointmentTag';
-import { getHour, snapToHour } from '../../utils/dates';
+import { countWeekends, getHour, snapToHour } from '../../utils/dates';
 
 /**
  * Interface définissant les propriétés du composant AppointmentItem
@@ -33,15 +33,23 @@ import { getHour, snapToHour } from '../../utils/dates';
  */
 interface AppointmentItemProps {
   /** Rendez-vous à afficher avec position verticale */
-  appointment: Appointment & { top: number; startTs?: number; endTs?: number };
+  appointment: Appointment & { top: number};
   /** Indique si l'affichage est en mode journée complète */
   isFullDay: boolean;
   /** Indique si l'interface est en mode mobile */
   isMobile: boolean;
   /** Inclure les week-ends dans le calcul de durée (optionnel) */
   isDisplayWeekend?: boolean;
+  /** Date de début de la timeline pour le calcul de position */
+  timelineStart: number;
   /** ClassName */
   className?: string;
+  /** Position absolue forcée en pixels (optionnel) */
+  absoluteLeft?: number;
+  /** Largeur forcée en pixels (optionnel) */
+  absoluteWidth?: number;
+  /** Décalage vertical forcé en pixels (optionnel) */
+  absoluteTop?: number;
   /** Type d'événement associé au rendez-vous */
   event: Item;
   /** Informations de l'employé assigné */
@@ -85,9 +93,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   event,
   chargeeAffaire,
   isDisplayWeekend,
+  timelineStart,
   source = 'calendar',
   isSelected,
   className,
+  absoluteLeft,
+  absoluteWidth,
+  absoluteTop,
   onClick,
   onDoubleClick,
   onResize,
@@ -96,16 +108,18 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   // États pour le redimensionnement et le drag & drop
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
-  const [dragStart, setDragStart] = useState<number>(appointment.startTs ?? appointment.startDate);
-  const [dragEnd, setDragEnd] = useState<number>(appointment.endTs ?? appointment.endDate);
+  const [dragStart, setDragStart] = useState<number>(appointment.startDate);
+  const [dragEnd, setDragEnd] = useState<number>(appointment.endDate);
+
+  
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isHovered, setIsHovered] = useState(false);
-  const dragStartRef = useRef<number>(appointment.startTs ?? appointment.startDate);
-  const dragEndRef = useRef<number>(appointment.endTs ?? appointment.endDate);
+  const dragStartRef = useRef<number>(appointment.startDate);
+  const dragEndRef = useRef<number>(appointment.endDate);
   const initialX = useRef(0);
 
-  const startDate = React.useMemo(() => appointment.startTs ?? appointment.startDate, [appointment.startTs, appointment.startDate]);
-  const endDate = React.useMemo(() => appointment.endTs ?? appointment.endDate, [appointment.endTs, appointment.endDate]);
+  const startDate = React.useMemo(() => appointment.startDate, [appointment.startDate]);
+  const endDate = React.useMemo(() => appointment.endDate, [appointment.endDate]);
 
 
   // Largeur d'un intervalle selon le type de rendez-vous
@@ -125,10 +139,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     let currentTs = start;
     const forward = end >= start;
     
-    // --- Helpers Mathématiques (définis à l'intérieur pour closure) ---
-
-    
-
     // --- Boucle Principale ---
 
     // Condition mathématique pure (start < end ou inversement)
@@ -183,11 +193,22 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const appointmentWidthPx = intervalCount * INTERVAL_WIDTH;
   const hasSpaceForBothHandles = appointmentWidthPx >= 60; // Minimum 60px pour avoir les deux handles
 
-  // Largeur calculée du rendez-vous (responsive mobile/desktop)
-  const calculatedWidth = isMobile 
-    ? (intervalCount >= 2 && !isFullDay ? '200%' : '100%') 
-    : `${intervalCount * INTERVAL_WIDTH}px`; 
 
+  // Décalage horizontal du bloc (en px)
+  const offsetIntervals = isDisplayWeekend 
+    ? Math.floor((dragStart - startDate) / INTERVAL_DURATION)
+    : getIntervalCount(startDate, dragStart);
+  const [computedWidth, setComputedWidth] = useState<string>(
+    absoluteWidth !== undefined 
+    ? `${absoluteWidth}px` 
+    : isMobile 
+      ? (intervalCount >= 2 && !isFullDay ? '200%' : '100%') 
+      : `${intervalCount * INTERVAL_WIDTH}px`
+  );
+  const [computedLeft, setComputedLeft] = useState<number>(absoluteLeft !== undefined ? absoluteLeft : offsetIntervals * INTERVAL_WIDTH);
+
+
+  
   // Drag & drop avec react-dnd
   const [{ isDragging }, drag] = useDrag({
     type: 'appointment',
@@ -206,13 +227,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   // Savoir si un élément est en train d'être déplacé
   const isAnyDragging = useDragLayer((monitor) => monitor.isDragging());
-  
-  // Décalage horizontal du bloc (en px)
-  const offsetIntervals = isDisplayWeekend 
-    ? Math.floor((dragStart - startDate) / INTERVAL_DURATION)
-    : getIntervalCount(startDate, dragStart);
-
-const offsetPx = offsetIntervals * INTERVAL_WIDTH;
+  const computedTop = absoluteTop !== undefined
+    ? `${absoluteTop}px`
+    : `${(appointment.top * CELL_HEIGHT) + (2 * appointment.top)}px`;
 
 
   // Capture la position du clic dans le bloc (en px)
@@ -389,6 +406,46 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
     setDragStartSafe(startDate);
     setDragEndSafe(endDate);
   }, [startDate, endDate, setDragStartSafe, setDragEndSafe]);
+
+  useEffect(() => {
+    // 1. CALCUL DE LA LARGEUR (Ça c'est bon, sauf l'arrondi)
+    const durationMs = dragEndRef.current - dragStartRef.current;
+    
+    // Astuce DST : On arrondit pour éviter les jours de 23h/25h
+    const durationDays = Math.round(durationMs / DAY_MS); 
+    
+    let weekendsInDuration = 0;
+    if (!isDisplayWeekend) {
+      weekendsInDuration = countWeekends(dragStartRef.current, dragEndRef.current);
+    }
+    
+    // On s'assure d'avoir au moins un petit bout visible
+    const visualDurationDays = Math.max(0.1, durationDays - weekendsInDuration);
+    setComputedWidth((visualDurationDays * CELL_WIDTH) + 'px');
+
+    // 2. CALCUL DE LA POSITION (C'est ici qu'on change)
+    if (isResizingLeft) {
+      // "timelineStart" doit être la date du tout début de ta grille (colonne 0)
+      // Ne pas utiliser l'ancienne start date du RDV, mais bien le référentiel global
+      const startFromTimelineOrigin = dragStartRef.current - timelineStart;
+      
+      const daysFromOrigin = Math.round(startFromTimelineOrigin / DAY_MS);
+      
+      let weekendsToRemove = 0;
+      if (!isDisplayWeekend) {
+        weekendsToRemove = countWeekends(timelineStart, dragStartRef.current);
+      }
+      
+      const visualDaysOffset = daysFromOrigin - weekendsToRemove;
+      
+      const newLeftPixel = Math.max(0, visualDaysOffset * CELL_WIDTH);
+      
+      
+      setComputedLeft(newLeftPixel);
+    }
+    
+  }, [absoluteWidth, isMobile, intervalCount, isFullDay, INTERVAL_WIDTH, isResizingLeft, timelineStart]); 
+  // N'oublie pas d'ajouter timelineStart et isResizingLeft aux dépendances
   
   const appointmentColor = event.color || '#1E40AF';
   const appointmentBorderColor = event.borderColor || '#1E40AF';
@@ -471,13 +528,13 @@ const offsetPx = offsetIntervals * INTERVAL_WIDTH;
       `}
       title={event.label}
       style={{
-        width: source === 'demo' ? '100%' : calculatedWidth,
+        width: source === 'demo' ? '100%' : computedWidth,
         height: `${CELL_HEIGHT + 4}px`,
         minWidth: `${INTERVAL_WIDTH}px`,
         pointerEvents: isDragging ? 'none' : 'auto',
-        left: `${offsetPx}px`,
+        left: `${computedLeft}px`,
         willChange: 'width, left',
-        top: `${(appointment.top * CELL_HEIGHT) + (2 * appointment.top)}px`,
+        top: computedTop,
         backgroundColor: isHovered ? 'white' : appointmentColor,
         border: `2px solid ${appointmentBorderColor}`,
         transition: 'all 0.2s ease-in-out',

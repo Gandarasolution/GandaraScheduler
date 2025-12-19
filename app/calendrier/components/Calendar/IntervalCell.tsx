@@ -41,7 +41,7 @@ interface IntervalCellProps {
   intervalName: 'morning' | 'afternoon';
   intervalStartTs: number;
   intervalEndTs: number;
-  appointments: (Appointment & { top: number; startTs?: number; endTs?: number })[];
+  appointments: (Appointment & { top: number;})[];
   events: Item[];
   isCellActive?: boolean;
   isWeekend: boolean;
@@ -54,7 +54,7 @@ interface IntervalCellProps {
   isDisplayWeekend?: boolean;
   onAppointmentMoved: (id: number, newStartTs: number, newEndTs: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (dateTs: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
-  onAppointmentDoubleClick: (appointment: Appointment & { startTs?: number; endTs?: number }) => void;
+  onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (
     title: string,
     dateTs: number,
@@ -66,13 +66,13 @@ interface IntervalCellProps {
   handleContextMenu?: (
     e: React.MouseEvent,
     origin: 'cell' | 'appointment',
-    appointment?: (Appointment & { startTs?: number; endTs?: number }) | null,
+    appointment?: (Appointment) | null,
     cell?: { employeeId: number; date: number }
   ) => void;
   isSelected: boolean;
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { date: number; employeeId: number } | null) => void;
-  onSelectAppointment: (appointment: (Appointment & { startTs?: number; endTs?: number }) | null) => void;
+  onSelectAppointment: (appointment: (Appointment) | null) => void;
 }
 
 /**
@@ -213,8 +213,8 @@ const IntervalCell: React.FC<IntervalCellProps> = memo(({
           const chargeeAffaire = event && event.type === 'chantier' ? event.chargeAffaire : '';          
           const normalized = {
             ...app,
-            startTs: app.startTs ?? app.startDate,
-            endTs: app.endTs ?? app.endDate,
+            startDate: app.startDate,
+            endDate: app.endDate,
           };
           return (
             <AppointmentItem

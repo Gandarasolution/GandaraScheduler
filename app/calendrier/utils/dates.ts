@@ -222,4 +222,29 @@ export const getWeekNumber = (d: number): number => {
 export const snapToHour = (ts: number, targetHour: number, targetMinute: number = 0, targetSecond: number = 0, targetMillisecond: number = 0) => {
       const midnight = ts - (ts % DAY_MS); // On retire le reste pour revenir à 00:00
       return midnight + (targetHour * HOUR_MS) + (targetMinute * 60 * 1000) + (targetSecond * 1000) + targetMillisecond;
-    };
+};
+
+/**
+ *  Compte le nombre de jours de week-end dans un intervalle de dates
+ * @param startDate Date de début de l'intervalle
+ * @param endDate Date de fin de l'intervalle
+ * @returns Nombre de jours de week-end
+ */
+export const countWeekends = (startDate: number, endDate: number) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  let count = 0;
+  const curDate = new Date(start);
+
+  // Note : Cette boucle while peut être optimisée mathématiquement pour O(1) 
+  // si tu as des milliers d'années, mais pour quelques mois c'est ultra rapide.
+  while (curDate < end) {
+    const dayOfWeek = curDate.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) { // 0 = Dimanche, 6 = Samedi
+      count++;
+    }
+    curDate.setDate(curDate.getDate() + 1);
+  }
+  return count;
+};

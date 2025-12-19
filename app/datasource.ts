@@ -2321,135 +2321,113 @@ const Evenements = [
  * @param employees - Liste des employés à planifier
  * @returns Tableau de rendez-vous générés
  */
-// Constante globale : une journée en millisecondes
-const ONE_DAY_MS = 86400000;
 function generateAppointments(employees: Employee[]): Appointment[] {
   const appointments: Appointment[] = [];
   let appointmentId = 1;
+  const baseDate = new Date();
+  
 
-  // Point de départ : Maintenant, ramené à minuit pile (UTC) par calcul mathématique
-  // (timestamp - le reste de la division par un jour)
-  const now = Date.now();
-  const baseTimestamp = now - (now % ONE_DAY_MS);
-
-  // --- Helpers Mathématiques (Zéro Date Object) ---
-
-  // Vérifie si un timestamp tombe un Samedi (6) ou Dimanche (0)
-  // Le 01/01/1970 (Epoch) était un Jeudi (4).
-  const isWeekend = (ts: number): boolean => {
-    const daysSinceEpoch = Math.floor(ts / ONE_DAY_MS);
-    const dayOfWeek = (daysSinceEpoch + 4) % 7;
-    return dayOfWeek === 0 || dayOfWeek === 6;
+  // Fonction utilitaire pour obtenir une date de semaine aléatoire
+  const getRandomWeekDate = (baseDate: Date, maxDays: number): Date => {
+    let randomDate: Date;
+    do {
+      const randomDays = Math.floor(Math.random() * maxDays);
+      randomDate = new Date(baseDate);
+      randomDate.setDate(baseDate.getDate() + randomDays);
+    } while (randomDate.getDay() === 0 || randomDate.getDay() === 6); // Éviter week-ends
+    return randomDate;
   };
 
-  // Chevauchement purement numérique
-  const isOverlapping = (start1: number, end1: number, start2: number, end2: number): boolean => {
+  // Fonction pour vérifier si deux périodes se chevauchent
+  const isOverlapping = (start1: Date, end1: Date, start2: Date, end2: Date): boolean => {
     return !(end1 < start2 || start1 > end2);
   };
 
-  // --- Génération ---
-
+  // Générer des rendez-vous pour chaque employé
   employees.forEach((employee) => {
-    // Stockage léger : tableau d'objets simples { start: number, end: number }
-    const employeeAppointments: { start: number; end: number }[] = [];
+    const employeeAppointments: { start: Date; end: Date }[] = [];
     
-    const numberOfAppointments = Math.floor(Math.random() * 20) + 10;
+    // Chaque employé aura 2 à 4 rendez-vous
+    const numberOfAppointments = Math.floor(Math.random() * 3) + 2;
     
     for (let i = 0; i < numberOfAppointments; i++) {
       let attempts = 0;
       let isValid = false;
-      
-      // Initialisation à 0
-      let startTs = 0;
-      let endTs = 0;
-      
-      let duration = 1; // en jours
+      let startDate: Date = new Date();
+      let endDate: Date = new Date();
+      let duration: number = 1;
       let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
       let selectedEvent = null;
       let description = '';
       
-      while (!isValid && attempts < 200) {
+      // Essayer de trouver un créneau libre jusqu'à 100 tentatives
+      while (!isValid && attempts < 100) {
         attempts++;
         
-        // --- 1. Logique métier (choix du type) ---
-        // (Inchangée, sauf qu'on prépare la durée)
+        // Choisir le type d'événement
         const rand = Math.random();
-        
-        // NOTE: Je suppose que 'Evenements' est disponible dans votre scope comme avant
-        if (rand < 0.6) { // Chantier
+        if (rand < 0.6) { // 60% chantiers
           appointmentType = 'chantier';
-          do {
-             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-          } while (selectedEvent?.type !== 'chantier');
-          
-          duration = Math.floor(Math.random() * 3) + 3; // 3-5 jours
+          while (!selectedEvent) {
+            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
+            if (selectedEvent.type !== 'chantier') {
+              selectedEvent = null;
+            }
+          }
+          duration = Math.floor(Math.random() * 3) + 3; // 3 à 5 jours
           description = `Chantier de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-          
-        } else if (rand < 0.8) { // Absence
+        } else if (rand < 0.8) { // 20% absences
           appointmentType = 'absence';
-          do {
+          while (!selectedEvent) {
             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-          } while (selectedEvent?.type !== 'absence');
-          
-          duration = Math.floor(Math.random() * 2) + 1; // 1-2 jours
+            if (selectedEvent.type !== 'absence') {
+              selectedEvent = null;
+            }
+          }
+          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
           description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-          
-        } else { // Autre
+        } else { // 20% autres
           appointmentType = 'autre';
-          do {
+          while (!selectedEvent) {
             selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-          } while (selectedEvent?.type !== 'autre');
-          
-          duration = Math.floor(Math.random() * 2) + 1; // 1-2 jours
+            if (selectedEvent.type !== 'autre') {
+              selectedEvent = null;
+            }
+          }
+          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
           description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
         }
         
-        // --- 2. Calcul des Dates (Maths uniquement) ---
+        // Générer date de début aléatoire (dans les 60 prochains jours)
+        startDate = getRandomWeekDate(baseDate, 60);
+        startDate.setHours(0, 0, 0, 0);
         
-        // Choisir un nombre de jours aléatoire entre 0 et 90
-        let randomDaysToAdd = Math.floor(Math.random() * 90);
+        // Calculer date de fin
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + duration - 1);
+        endDate.setHours(23, 59, 59, 999);
         
-        // Calcul du Start : Base + (Jours * MS)
-        // C'est déjà aligné sur minuit car baseTimestamp l'est
-        startTs = baseTimestamp + (randomDaysToAdd * ONE_DAY_MS);
+        // Ajuster si ça tombe sur un week-end
+        while (endDate.getDay() === 0 || endDate.getDay() === 6) {
+          endDate.setDate(endDate.getDate() - 1);
+        }
         
-        // Si le début tombe un week-end, on décale
-        while (isWeekend(startTs)) {
-             startTs += ONE_DAY_MS;
-        }
-
-        // Calcul du End : Start + (Durée * MS) - 1ms (pour finir à 23:59:59.999 théorique)
-        // On fait (duration - 1) jours pleins + le reste de la journée courante
-        // Ou plus simplement : Start + duration * 24h - 1ms
-        endTs = startTs + (duration * ONE_DAY_MS) - 1;
-
-        // Ajustement fin de chantier si week-end (on recule d'un jour)
-        // Note: Votre logique originale faisait endDate.setDate(endDate.getDate() - 1)
-        while (isWeekend(endTs)) {
-             endTs -= ONE_DAY_MS;
-        }
-
-        // Vérification de cohérence (au cas où le recul rendrait la fin antérieure au début)
-        if (endTs < startTs) {
-            isValid = false;
-            continue; 
-        }
-
-        // --- 3. Vérification des collisions ---
+        // Vérifier qu'il n'y a pas de chevauchement avec les rendez-vous existants de cet employé
         isValid = !employeeAppointments.some(existing => 
-          isOverlapping(startTs, endTs, existing.start, existing.end)
+          isOverlapping(startDate, endDate, existing.start, existing.end)
         );
       }
       
+      // Si on a trouvé un créneau valide, créer le rendez-vous
       if (isValid) {
-        // On stocke les timestamp bruts
-        employeeAppointments.push({ start: startTs, end: endTs });
+        employeeAppointments.push({ start: new Date(startDate), end: new Date(endDate) });
         
+        // Créer l'appointment avec les bonnes propriétés selon le type
         const newAppointment: Appointment = {
           id: appointmentId++,
           description: description,
-          startDate: startTs, // Number direct
-          endDate: endTs,     // Number direct
+          startDate: startDate.getTime(),
+          endDate: endDate.getTime(),
           employeeId: employee.id,
           type: appointmentType,
           EventId: selectedEvent?.id as number

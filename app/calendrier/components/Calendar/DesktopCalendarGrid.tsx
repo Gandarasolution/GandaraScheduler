@@ -22,6 +22,7 @@ import {
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
 import { format, isSameDay, isWeekend } from 'date-fns';
 import { getNextWorkedDay, isHoliday } from '../../utils/dates';
+import { getRowId } from '../../utils/domIds';
 
 interface DesktopCalendarGridProps {
   employees: Employee[];
@@ -54,6 +55,7 @@ interface DesktopCalendarGridProps {
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
+  hoverColumnLeft: number | null;
 }
 
 interface DragItem {
@@ -99,8 +101,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   selectedAppointmentId,
   onSelectCell,
   onSelectAppointment,
+  hoverColumnLeft,
 }) => {
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
+  const [viewport, setViewport] = useState<{ top: number; height: number }>({ top: 0, height: 0 });
   
   const dimensionItems = useMemo(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
@@ -182,9 +186,58 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return flatRows.map((row) => {
       const start = offset;
       offset += row.height;
-      return { ...row, start, end: offset };
+      const domId = row.type === 'employee' ? getRowId('employee', row.id as number) : getRowId('group', row.id as string);
+      return { ...row, start, end: offset, domId };
     });
   }, [flatRows]);
+
+  const totalContentHeight = useMemo(() => {
+    return rowBoundaries.length ? rowBoundaries[rowBoundaries.length - 1].end : 0;
+  }, [rowBoundaries]);
+
+  useEffect(() => {
+    const node = mainScrollRef.current;
+    if (!node) return;
+
+    const handleViewport = () => {
+      setViewport({ top: node.scrollTop, height: node.clientHeight });
+    };
+
+    handleViewport();
+    node.addEventListener('scroll', handleViewport, { passive: true });
+    return () => node.removeEventListener('scroll', handleViewport);
+  }, [mainScrollRef]);
+
+  const headerHeight = TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
+  const contentViewportTop = Math.max(0, viewport.top - headerHeight);
+  const contentViewportHeight = Math.max(0, viewport.height - headerHeight);
+  const contentViewportBottom = contentViewportTop + contentViewportHeight;
+  const OVERSCAN_PX = 400;
+
+  const visibleRangeStart = useMemo(() => {
+    const target = contentViewportTop - OVERSCAN_PX;
+    for (let i = 0; i < rowBoundaries.length; i++) {
+      if (rowBoundaries[i].end >= target) return i;
+    }
+    return 0;
+  }, [contentViewportTop, rowBoundaries]);
+
+  const visibleRangeEnd = useMemo(() => {
+    const target = contentViewportBottom + OVERSCAN_PX;
+    for (let i = rowBoundaries.length - 1; i >= 0; i--) {
+      if (rowBoundaries[i].start <= target) return i;
+    }
+    return rowBoundaries.length - 1;
+  }, [contentViewportBottom, rowBoundaries]);
+
+  const visibleRows = useMemo(() => {
+    if (!rowBoundaries.length) return [];
+    const start = Math.max(0, visibleRangeStart);
+    const end = Math.min(rowBoundaries.length - 1, visibleRangeEnd);
+    if (start > end) return [];
+    return rowBoundaries.slice(start, end + 1);
+  }, [rowBoundaries, visibleRangeEnd, visibleRangeStart]);
+
 
   const [, dropRef] = useDrop(() => ({
     accept: ['appointment', 'external-item'],
@@ -195,7 +248,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       if (!clientOffset) return;
 
       const tableRect = tableRef.current.getBoundingClientRect();
-      const relativeX = clientOffset.x - tableRect.left;
+      const relativeX = clientOffset.x - tableRect.left ;
       const relativeY = clientOffset.y - tableRect.top;
 
       const totalHeight = rowBoundaries[rowBoundaries.length - 1]?.end ?? 0;
@@ -429,41 +482,50 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           style={{
             width: `${dayInTimeline.length * CELL_WIDTH}px`,
             position: 'relative',
+            height: totalContentHeight
           }}
-          onMouseOver={handleMouseOver}
+          onMouseMove={handleMouseOver}
           onMouseOut={handleMouseOut}
           ref={setTableRef}
         >
-          {flatRows.map((row) => {
+          {hoverColumnLeft !== null && (
+            <>
+              <div
+                className="pointer-events-none absolute top-0 bottom-0 bg-cell-hover z-10"
+                style={{ left: hoverColumnLeft, width: CELL_WIDTH, marginLeft: -0 }}
+              />
+            </>
+          )}
+          {visibleRows.map((row) => {
+            const commonProps = {
+              style: {
+                width: '100%',
+                position: 'absolute' as const,
+                top: row.start,
+                height: row.height,
+                left: 0,
+                right: 0,
+              },
+            };
+
             return row.type === 'group' ? (
               <GroupRow
                 key={row.id}
-                style={{ width: '100%' }}
+                {...commonProps}
                 itemId={row.id}
                 dayInTimeline={dayInTimeline}
                 rowHeight={row.height}
-                HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
-                isFullDay={isFullDay}
-                events={events}
-                nonWorkingDates={nonWorkingDates}
-                isDisplayWeekend={isDisplayWeekend}
-                onAppointmentMoved={onAppointmentMoved}
-                onCellDoubleClick={onCellDoubleClick}
-                onAppointmentDoubleClick={onAppointmentDoubleClick}
-                onExternalDragDrop={onExternalDragDrop}
-                handleContextMenu={handleContextMenu}
                 todayIndex={todayIndex}
+                isFullDay={isFullDay}
               />
             ) : (
               <EmployeeRow
                 key={row.id}
-                style={{ width: '100%' }}
+                {...commonProps}
                 employee={row.data}
                 dayInTimeline={dayInTimeline}
                 appointments={appointmentsWithTop}
-                appointmentsByDay={appointmentsByEmployeeAndDay}
                 rowHeight={row.height}
-                HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
                 isFullDay={isFullDay}
                 events={events}
                 nonWorkingDates={nonWorkingDates}

@@ -14,7 +14,7 @@ import { fr } from 'date-fns/locale';
 interface DayCellProps {
   dayTs: number;
   employee: { id: number; name: string };
-  appointments: (Appointment & { top: number; startTs?: number; endTs?: number })[];
+  appointments: (Appointment & { top: number})[];
   intervals: HalfDayInterval[];
   events: Item[];
   isCellActive?: boolean;
@@ -26,7 +26,7 @@ interface DayCellProps {
   isDisplayWeekend?: boolean;
   onAppointmentMoved: (id: number, newStartTs: number, newEndTs: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (dateTs: number, employeeId: number, intervalName: 'morning' | 'afternoon' | 'day') => void;
-  onAppointmentClick: (appointment: Appointment & { startTs?: number; endTs?: number }) => void;
+  onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (
     title: string,
     dateTs: number,
@@ -38,13 +38,13 @@ interface DayCellProps {
   handleContextMenu?: (
     e: React.MouseEvent,
     origin: 'cell' | 'appointment',
-    appointment?: (Appointment & { startTs?: number; endTs?: number }) | null,
+    appointment?: (Appointment) | null,
     cell?: { employeeId: number; date: number }
   ) => void;
   selectedCell?: { employeeId: number; date: number } | null;
   selectedAppointmentId?: number | undefined;
   onSelectCell?: (cell: { employeeId: number; date: number } | null) => void;
-  onSelectAppointment?: (appointment: (Appointment & { startTs?: number; endTs?: number }) | null) => void;
+  onSelectAppointment?: (appointment: (Appointment) | null) => void;
 }
 
 /**
@@ -104,7 +104,7 @@ const DayCell: React.FC<DayCellProps> = ({
   const day = useMemo(() => dayTs, [dayTs]);
   const [tooltip, setTooltip] = useState<{
     anchor: HTMLElement | null;
-    app: (Appointment & { startTs?: number; endTs?: number }) | null;
+    app: Appointment | null;
     et: Item | null;
   } | null>(null);
 
@@ -115,8 +115,8 @@ const DayCell: React.FC<DayCellProps> = ({
     () =>
       appointments.map((app) => ({
         ...app,
-        startTs: app.startTs ?? app.startDate,
-        endTs: app.endTs ?? app.endDate,
+        startDate: app.startDate,
+        endDate: app.endDate,
       })),
     [appointments]
   );
@@ -190,12 +190,11 @@ const DayCell: React.FC<DayCellProps> = ({
             {tooltip.app.description && <div className="text-xs mb-1">{tooltip.app.description}</div>}
             <div className="text-xs text-gray-500">
               {(() => {
-                const startTs = tooltip.app.startTs ?? tooltip.app.startDate;
-                const endTs = tooltip.app.endTs ?? tooltip.app.endDate;
+                const startDate = tooltip.app.startDate;
+                const endDate = tooltip.app.endDate;
 
-                const startH = getHour(startTs);
-                const endH = getHour(endTs);
-
+                const startH = getHour(startDate);
+                const endH = getHour(endDate);
                 // Comparaisons directes de nombres
                 if (startH === HALF_DAY_INTERVALS[0].startHour && endH === HALF_DAY_INTERVALS[0].endHour) return 'Matin';
                 if (startH === HALF_DAY_INTERVALS[1].startHour && endH === HALF_DAY_INTERVALS[1].endHour) return 'Après-midi';
@@ -230,7 +229,7 @@ const DayCell: React.FC<DayCellProps> = ({
       {intervals.map((interval) => {
         const intervalStart = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.startHour), 0), 0), 0).getTime();
         const intervalEnd = setMilliseconds(setSeconds(setMinutes(setHours(day, interval.endHour), 0), 0), 0).getTime();
-        const intervalAppointments = normalizedAppointments.filter((app) => (app.startTs ?? app.startDate) >= intervalStart && (app.startTs ?? app.startDate) < intervalEnd);
+        const intervalAppointments = normalizedAppointments.filter((app) => app.startDate >= intervalStart && app.startDate < intervalEnd);
 
         return (
           <IntervalCell

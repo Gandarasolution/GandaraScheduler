@@ -20,12 +20,13 @@
  */
 
 "use client";
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Item } from '../../types';
 import { useCalendarLayout } from '../../hooks/useCalendarLayout';
 import { useCalendarInteractions } from '../../hooks/useCalendarInteractions';
 import MobileCalendarGrid from './MobileCalendarGrid';
 import DesktopCalendarGrid from './DesktopCalendarGrid';
+import { CELL_WIDTH } from '../../utils/constants';
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -84,6 +85,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 }) => {
 
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
+  const [hoverColumnLeft, setHoverColumnLeft] = useState<number | null>(null);
+  const hasAutoScrolled = useRef(false);
 
   // Use custom hooks for logic
   const { employeeHeights, appointmentsWithTop } = useCalendarLayout({
@@ -95,14 +98,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   const { 
     tableRef, 
-    handleMouseOver, 
+    handleMouseMove, 
     handleMouseOut, 
     handleScrollY,
     updateHighlightedEmployeeRow 
   } = useCalendarInteractions({
     dayInTimeline,
     mainScrollRef,
-    columnEmployeeRef
+    columnEmployeeRef,
+    onHoverMove: ({ colLeft }) => {
+      setHoverColumnLeft(colLeft >= 0 ? colLeft : null);    }
   });
 
   // Notify parent when mounted
@@ -111,6 +116,23 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       onScrollElementMounted();
     }
   }, [mainScrollRef, onScrollElementMounted]);
+
+  // Scroll horizontally to today on initial render (desktop only)
+  useEffect(() => {
+    if (isMobile) return;
+    if (hasAutoScrolled.current) return;
+    const scroller = mainScrollRef.current;
+    if (!scroller) return;
+
+    const todayIdx = dayInTimeline.findIndex((d) => {
+      const now = new Date();
+      return new Date(d).setHours(0, 0, 0, 0) === now.setHours(0, 0, 0, 0);
+    });
+    if (todayIdx < 0) return;
+
+    scroller.scrollLeft = Math.max(0, todayIdx * CELL_WIDTH - scroller.clientWidth / 2 + CELL_WIDTH / 2);
+    hasAutoScrolled.current = true;
+  }, [dayInTimeline, isMobile, mainScrollRef]);
 
   if (isMobile) {
     return (
@@ -156,7 +178,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       handleScrollY={handleScrollY}
       columnEmployeeRef={columnEmployeeRef}
       tableRef={tableRef}
-      handleMouseOver={handleMouseOver}
+      handleMouseOver={handleMouseMove}
       handleMouseOut={handleMouseOut}
       onAppointmentMoved={onAppointmentMoved}
       onCellDoubleClick={onCellDoubleClick}
@@ -168,6 +190,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       selectedAppointmentId={selectedAppointmentId}
       onSelectCell={onSelectCell}
       onSelectAppointment={onSelectAppointment}
+      hoverColumnLeft={hoverColumnLeft}
     />
   );
 };

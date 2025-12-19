@@ -1,17 +1,15 @@
-import React, { memo } from 'react';
-import { format, isSameDay, isWeekend } from 'date-fns';
-import { Employee, Appointment, HalfDayInterval, Item } from '../../types';
-import { DayCell } from './index';
-import { CELL_WIDTH } from '../../utils/constants';
+import React, { memo, useMemo } from 'react';
+import { Employee, Appointment, Item } from '../../types';
+import { CELL_WIDTH, DAY_MS } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
+import { AppointmentItem } from './index';
+import { countWeekends } from '../../utils/dates';
 
 interface EmployeeRowProps {
   employee: Employee;
   dayInTimeline: number[];
-  appointments: (Appointment & { top: number; startTs?: number; endTs?: number })[];
-  appointmentsByDay?: Map<string, (Appointment & { top: number })[]>;
+  appointments: (Appointment & { top: number})[];
   rowHeight: number;
-  HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   events: Item[];
   nonWorkingDates: number[];
@@ -33,9 +31,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   employee,
   dayInTimeline,
   appointments,
-  appointmentsByDay,
   rowHeight,
-  HALF_DAY_INTERVALS,
   isFullDay,
   events,
   nonWorkingDates,
@@ -52,6 +48,63 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   onSelectCell,
   onSelectAppointment,
 }) => {
+  const timelineStart = useMemo(() => dayInTimeline[0], [dayInTimeline]);
+  const timelineEnd = useMemo(() => (dayInTimeline[dayInTimeline.length - 1] ?? 0) + DAY_MS, [dayInTimeline]);
+  const pixelsPerMs = CELL_WIDTH / DAY_MS;
+  const rowWidth = dayInTimeline.length * CELL_WIDTH;
+
+  const positionedAppointments = useMemo(() => {
+    return appointments
+      .filter((app) => {
+        if (app.employeeId !== employee.id) return false;
+        const start = app.startDate;
+        const end = app.endDate;
+        return end > timelineStart && start < timelineEnd;
+      })
+      .map((app) => {
+        const start = app.startDate;
+        const end = app.endDate;
+
+        //Calcul du nombre de jours TOTAL (réels) depuis le début de la timeline
+        const msDiffStart = Math.max(0, start - timelineStart);
+        const totalDaysDiff = msDiffStart / DAY_MS;
+
+        //Combien de ces jours étaient des weekends ? (Si isDisplayWeekend est false)
+        let weekendsToRemove = 0;
+        if (!isDisplayWeekend) {
+          weekendsToRemove = countWeekends(timelineStart, start);
+        }
+
+        // Nombre de "Jours Visuels" (Jours réels - Weekends)
+        const visualDaysOffset = totalDaysDiff - weekendsToRemove;
+
+        // POSITION FINALE (Left)
+        // On multiplie par la largeur d'une cellule (ex: 100px) plutôt que par ms
+        // car on raisonne maintenant en "colonnes"
+        const left = visualDaysOffset * CELL_WIDTH;
+
+
+        const durationMs = end - start;
+        const durationDays = durationMs / DAY_MS;
+
+        let weekendsInDuration = 0;
+        if (!isDisplayWeekend) {
+          weekendsInDuration = countWeekends(start, end);
+        }
+        const visualDurationDays = Math.max(0.1, durationDays - weekendsInDuration);
+        const width = visualDurationDays * CELL_WIDTH;        
+        const topPx = (app.top * 52) + (2 * app.top);
+
+
+        return { ...app, left, width, topPx } as Appointment & {
+          top: number;
+          left: number;
+          width: number;
+          topPx: number;
+        };
+      });
+  }, [appointments, employee.id, pixelsPerMs, timelineEnd, timelineStart]);
+
   return (
     <div 
       id={getRowId('employee', employee.id)}
@@ -61,6 +114,16 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       style={{
         ...style,
         height: rowHeight,
+        width: rowWidth,
+        overflow: 'hidden',
+        backgroundColor: 'transparent',
+        backgroundImage: `repeating-linear-gradient(
+          to right,
+          rgba(229,231,235,0.9) 0px,
+          rgba(229,231,235,0.9) 1px,
+          transparent 1px,
+          transparent ${isFullDay ? CELL_WIDTH : CELL_WIDTH / 2}px
+        )`
       }}
     >
       {todayIndex >= 0 && (
@@ -72,54 +135,36 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           }}
         />
       )}
-      {dayInTimeline.map((day) => {
-        let dayEmployeeAppointments: (Appointment & { top: number })[] = [];
-        
-        if (appointmentsByDay) {
-          const dateKey = format(day, 'yyyy-MM-dd');
-          const key = `${employee.id}-${dateKey}`;
-          dayEmployeeAppointments = appointmentsByDay.get(key) || [];
-        } else {
-          dayEmployeeAppointments = appointments.filter((app) =>
-            isSameDay(app.startDate, day) && app.employeeId === employee.id
-          );
-        }
-        
+      {positionedAppointments.map((app) => {
+        const event = events.find((et) => et.id === app.EventId) as Item | undefined;
         return (
-            <DayCell
-              key={`${format(day, 'yyyy-MM-dd')}-${employee.id}`}
-              dayTs={day}
-              employee={{ id: employee.id, name: employee.name }}
-              appointments={dayEmployeeAppointments}
-              intervals={HALF_DAY_INTERVALS}
-              isFullDay={isFullDay}
-              RowHeight={rowHeight}
-              isMobile={false}
-              events={events}
-              nonWorkingDates={nonWorkingDates}
-              isDisplayWeekend={isDisplayWeekend}
-              onAppointmentMoved={(id, start, end, employeeId, direction) =>
-                onAppointmentMoved(id, start, end, employeeId, direction)
-              }
-              onCellDoubleClick={(ts, empId, intervalName) => onCellDoubleClick(ts, empId, intervalName)}
-              onAppointmentClick={onAppointmentDoubleClick}
-              onExternalDragDrop={(title, ts, intervalName, empId, imageUrl, typeEvent) =>
-                onExternalDragDrop(title, ts, intervalName, empId, imageUrl, typeEvent)
-              }
-              isWeekend={isWeekend(day)}
-              handleContextMenu={(e, origin, appointment, cell) =>
-                handleContextMenu(
-                  e,
-                  origin,
-                  appointment ? { ...appointment, startDate: appointment.startDate, endDate: appointment.endDate } : null,
-                  cell ? { employeeId: cell.employeeId, date: cell.date } : undefined
-                )
-              }
-              selectedCell={selectedCell ? { employeeId: selectedCell.employeeId, date: selectedCell.date } : null}
-              selectedAppointmentId={selectedAppointmentId}
-              onSelectCell={(cell) => onSelectCell(cell ? { employeeId: cell.employeeId, date: cell.date } : null)}
-              onSelectAppointment={onSelectAppointment}
-            />
+          <AppointmentItem
+            key={app.id}
+            appointment={app as Appointment & { top: number;}}
+            isFullDay={isFullDay}
+            isMobile={false}
+            isDisplayWeekend={isDisplayWeekend}
+            event={event as Item}
+            timelineStart={timelineStart}
+            chargeeAffaire={(event && event.type === 'chantier' ? event.chargeAffaire : '') || ''}
+            absoluteLeft={app.left}
+            absoluteWidth={app.width}
+            absoluteTop={app.topPx}
+            onResize={(id, newStartDate, newEndDate, resizeDirection) =>
+              onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection)
+            }
+            handleContextMenu={(e, origin) =>
+              handleContextMenu(
+                e,
+                origin,
+                { ...app, startDate: app.startDate, endDate: app.endDate },
+                { employeeId: app.employeeId as number, date: app.startDate }
+              )
+            }
+            onDoubleClick={() => onAppointmentDoubleClick(app)}
+            onClick={() => onSelectAppointment(app)}
+            isSelected={selectedAppointmentId === app.id}
+          />
         );
       })}
     </div>
@@ -130,9 +175,7 @@ export default memo(EmployeeRow, (prev, next) => {
   if (prev.employee.id !== next.employee.id ||
       prev.dayInTimeline !== next.dayInTimeline ||
       prev.appointments !== next.appointments ||
-      prev.appointmentsByDay !== next.appointmentsByDay ||
       prev.rowHeight !== next.rowHeight ||
-      prev.HALF_DAY_INTERVALS !== next.HALF_DAY_INTERVALS ||
       prev.isFullDay !== next.isFullDay ||
       prev.events !== next.events ||
       prev.nonWorkingDates !== next.nonWorkingDates ||

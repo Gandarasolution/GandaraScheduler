@@ -8,7 +8,7 @@ import { snapToHour } from '../../utils/dates';
 
 interface MobileCalendarGridProps {
   employees: Employee[];
-  appointmentsWithTop: (Appointment & { top: number; _dayKey?: number; startTs?: number; endTs?: number })[];
+  appointmentsWithTop: (Appointment & { top: number; _dayKey?: number;})[];
   employeeHeights: { employeeId: number; dayKey?: number; height: number }[];
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];

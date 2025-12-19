@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { addDays, format, isWeekend } from 'date-fns';
 import { CELL_WIDTH, WINDOW_SIZE, DAYS_TO_ADD } from '../utils/constants';
-import { eachDayOfInterval } from '../utils/dates';
+import { eachDayOfInterval, snapToHour } from '../utils/dates';
 
 interface UseTimelineProps {
   isDisplayWeekend: boolean;
@@ -119,8 +119,8 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     
     // Calcul fenêtre initiale
     const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = date - halfWindow * 86400000;
-    const endDate = date + halfWindow * 86400000;
+    const startDate = snapToHour(date - halfWindow * 86400000, 0, 0, 0, 0);
+    const endDate = snapToHour(date + halfWindow * 86400000, 0, 0, 0, 0);
     
     let newTimeline: number[] = [];
     let curr = startDate;
@@ -149,6 +149,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
                     resolve(true);
                 }, 800);
             } else {
+                 isInfiniteScrollEnabled.current = true;
                  setIsLoading(false);
                  resolve(true);
             }
@@ -156,6 +157,12 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     });
     });
   }, [isDisplayWeekend]);
+
+  useEffect(() => {
+    if (days.length > 0 && mainScrollRef.current) {
+      isInfiniteScrollEnabled.current = true;
+    }
+  }, [days]);
 
   // --- **FONCTION PUBLIQUE**: Navigation avec retry automatique ---
   const goToDate = useCallback(async (date: number) => {
@@ -210,26 +217,27 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
 
   // --- Gestion Clavier Scroll ---
   const handleKeyboardScroll = useCallback((e: KeyboardEvent) => {
-      if (!mainScrollRef.current || !isInfiniteScrollEnabled.current) return;
+    const scroller = mainScrollRef.current;
+    if (!scroller || !isInfiniteScrollEnabled.current) return;
       
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-          e.preventDefault();
-          const direction = e.key === 'ArrowRight' ? 1 : -1;
-          mainScrollRef.current.scrollLeft += (100 * direction);
-          
-          if (!isArrowKeyPressed.current) {
-              isArrowKeyPressed.current = true;
-              arrowKeyDirection.current = direction === 1 ? 'right' : 'left';
-              throttledScrollHandler.current?.();
-          }
-      }
+    if (e.defaultPrevented) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
+
+    const step = CELL_WIDTH * (e.shiftKey ? 20 : 1);
+
+    if (e.key === 'ArrowLeft') {
+      scroller.scrollLeft = Math.max(0, scroller.scrollLeft - step);
+      e.preventDefault();
+    } else if (e.key === 'ArrowRight') {
+      const max = scroller.scrollWidth - scroller.clientWidth;
+      scroller.scrollLeft = Math.min(max, scroller.scrollLeft + step);
+      e.preventDefault();
+    }
   }, []);
 
-  const handleKeyboardScrollStop = useCallback((e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-          isArrowKeyPressed.current = false;
-      }
-  }, []);
+  
 
   // Callback pour notifier que l'élément de scroll est monté
   const onScrollElementMounted = useCallback(() => {
@@ -241,8 +249,8 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     // Optimisation : pré-calculer les constantes une seule fois
     const date = selectedDate;
     const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = days[0] || date - halfWindow * 86400000;
-    const endDate = days[days.length -1] || date + halfWindow * 86400000;
+    const startDate = snapToHour(days[0] || date - halfWindow * 86400000, 0, 0, 0, 0);
+    const endDate = snapToHour(days[days.length -1] || date + halfWindow * 86400000, 0, 0, 0, 0);
 
     // Optimisation : construction directe selon includeWeekend
     let newTimeline: number[];
@@ -273,6 +281,5 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     isScrollReady,
     onScrollElementMounted,
     handleKeyboardScroll,
-    handleKeyboardScrollStop
   };
 };

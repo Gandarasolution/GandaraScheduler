@@ -225,22 +225,21 @@ export default function HomePage({
   // Init: Raccourcis Clavier Globaux
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
+
+
       interaction.handleGlobalKeyboard(e);
       if (viewState.viewType === 'calendar') {
         timeline.handleKeyboardScroll(e);
       }
-      if (e.ctrlKey && e.key === 'q') {
-        e.preventDefault();
-        // Logique supplémentaire si nécessaire
-      }
     };
-    const handleKeyUp = (e: KeyboardEvent) => timeline.handleKeyboardScrollStop(e);
 
     window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
     };
   }, [interaction, timeline, viewState.viewType]);
 

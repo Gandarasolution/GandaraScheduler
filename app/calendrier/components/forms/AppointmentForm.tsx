@@ -120,6 +120,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   }, [item]);
 
 
+  console.log(new Date(formDataAppointment.endDate).getHours() <= HALF_DAY_INTERVALS[0].endHour);
+  console.log((new Date(formDataAppointment.endDate)))
+  console.log(new Date(formDataAppointment.startDate));
+  
+  
+
   /**
    * Vérifie si le rendez-vous actuel chevauche des jours non-travaillés
    * Utilisé pour déterminer l'état initial de la checkbox
@@ -469,7 +475,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                         <option value="afternoon"
                           disabled={
                             format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
-                            new Date(formDataAppointment.endDate).getHours() === HALF_DAY_INTERVALS[0].endHour
+                            new Date(formDataAppointment.endDate).getHours() === HALF_DAY_INTERVALS[0].endHour - 1
                           }
                         >Après-midi</option>
                       </select>
@@ -506,23 +512,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
                             setFormDataAppointment(prev => {
                               const targetDate = new Date(prev.endDate);
-                              let newEndDate;
-                              
-                              if (isAfternoon) {
-                                targetDate.setHours(
-                                                HALF_DAY_INTERVALS[1].endHour - 1, 
-                                                59, 
-                                                59, 
-                                                999
-                                            );                              
-                                } else {
-                                  newEndDate = targetDate.setHours(
-                                    HALF_DAY_INTERVALS[0].endHour, 
-                                    0, 
-                                    0,
-                                    0
-                                  );
-                              }
+                              targetDate.setHours(
+                                isAfternoon ? HALF_DAY_INTERVALS[1].endHour - 1 : HALF_DAY_INTERVALS[0].endHour - 1 ,
+                                59 ,
+                                59 ,
+                                999
+                              );
                               return {
                                 ...prev,
                                 endDate: targetDate.getTime(),
