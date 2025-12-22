@@ -17,7 +17,7 @@ jest.mock('../../../app/calendrier/utils/dates', () => ({
 }));
 
 describe('DayCell', () => {
-  const mockDate = (2023, 10, 15); // Nov 15 2023
+  const mockDate = new Date(2023, 10, 15); // Nov 15 2023
   const mockEmployee = { id: 1, name: 'John Doe' };
   const mockIntervals: HalfDayInterval[] = [
     { name: 'morning', startHour: 8, endHour: 12 },

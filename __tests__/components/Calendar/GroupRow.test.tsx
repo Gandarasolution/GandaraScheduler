@@ -12,8 +12,8 @@ jest.mock('@/app/calendrier/components/Calendar/DayCell', () => {
 
 describe('GroupRow', () => {
   const mockDayInTimeline = [
-    new Date('2023-01-01T00:00:00.000Z'),
-    new Date('2023-01-02T00:00:00.000Z'),
+    new Date('2023-01-01T00:00:00.000Z').getTime(),
+    new Date('2023-01-02T00:00:00.000Z').getTime(),
   ];
 
   const mockHalfDayIntervals: HalfDayInterval[] = [
@@ -29,15 +29,8 @@ describe('GroupRow', () => {
     rowHeight: 50,
     HALF_DAY_INTERVALS: mockHalfDayIntervals,
     isFullDay: false,
-    events: mockEvents,
-    nonWorkingDates: mockNonWorkingDates,
-    isDisplayWeekend: true,
-    onAppointmentMoved: jest.fn(),
-    onCellDoubleClick: jest.fn(),
-    onAppointmentDoubleClick: jest.fn(),
-    onExternalDragDrop: jest.fn(),
-    handleContextMenu: jest.fn(),
     todayIndex: -1,
+
   };
 
   it('renders correctly', () => {

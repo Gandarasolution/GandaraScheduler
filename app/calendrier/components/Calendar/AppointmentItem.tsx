@@ -41,7 +41,7 @@ interface AppointmentItemProps {
   /** Inclure les week-ends dans le calcul de durée (optionnel) */
   isDisplayWeekend?: boolean;
   /** Date de début de la timeline pour le calcul de position */
-  timelineStart: number;
+  timelineStart?: number;
   /** ClassName */
   className?: string;
   /** Position absolue forcée en pixels (optionnel) */
@@ -93,7 +93,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   event,
   chargeeAffaire,
   isDisplayWeekend,
-  timelineStart,
+  timelineStart = 0,
   source = 'calendar',
   isSelected,
   className,

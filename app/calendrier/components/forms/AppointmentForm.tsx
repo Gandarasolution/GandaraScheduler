@@ -118,12 +118,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   useEffect(() => {
     setFormDataItemType(prev => ({ ...prev, image: item.image }));
   }, [item]);
-
-
-  console.log(new Date(formDataAppointment.endDate).getHours() <= HALF_DAY_INTERVALS[0].endHour);
-  console.log((new Date(formDataAppointment.endDate)))
-  console.log(new Date(formDataAppointment.startDate));
-  
   
 
   /**

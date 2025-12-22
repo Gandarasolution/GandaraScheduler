@@ -22,8 +22,8 @@ describe('EmployeeRow', () => {
   };
 
   const mockDayInTimeline = [
-    new Date('2023-01-01T00:00:00.000Z'),
-    new Date('2023-01-02T00:00:00.000Z'),
+    new Date('2023-01-01T00:00:00.000Z').getTime(),
+    new Date('2023-01-02T00:00:00.000Z').getTime(),
   ];
 
   const mockAppointments: (Appointment & { top: number })[] = [];
@@ -32,7 +32,7 @@ describe('EmployeeRow', () => {
     { name: 'afternoon', startHour: 13, endHour: 17 },
   ];
   const mockEvents: Item[] = [];
-  const mockNonWorkingDates: Date[] = [];
+  const mockNonWorkingDates: number[] = [];
 
   const defaultProps = {
     employee: mockEmployee,
@@ -44,6 +44,10 @@ describe('EmployeeRow', () => {
     events: mockEvents,
     nonWorkingDates: mockNonWorkingDates,
     isDisplayWeekend: true,
+    selectedCell: null,
+    selectedAppointmentId: undefined,
+    onSelectCell: jest.fn(),
+    onSelectAppointment: jest.fn(),
     onAppointmentMoved: jest.fn(),
     onCellDoubleClick: jest.fn(),
     onAppointmentDoubleClick: jest.fn(),
