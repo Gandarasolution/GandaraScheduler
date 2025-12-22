@@ -211,7 +211,6 @@ export const useAppointmentLogic = ({
         timelineState.nonWorkingDates
       );  
       
-      console.log("days", new Date(days[0].start), new Date(days[0].end));
       
       
       
@@ -527,7 +526,7 @@ export const useAppointmentLogic = ({
 
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
     if (app) {
-      clipboardAppointment.current = appointmentUtils.copyAppointment(app);
+      clipboardAppointment.current = app;
       notificationService.info('Rendez-vous copié', 'Le rendez-vous a été copié dans le presse-papier');
       return clipboardAppointment.current;
     } 

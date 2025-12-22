@@ -275,13 +275,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       const step = n >= 0 ? 1 : -1;
       let remaining = Math.abs(n);
 
-      console.log('remaining', remaining);
       
 
       // 2. Boucle de déplacement
       while (remaining > 0) {
           idx += step;
-          console.log("idx", idx);
           
           // Gestion du dépassement de journée
           if (idx > 0 ) {

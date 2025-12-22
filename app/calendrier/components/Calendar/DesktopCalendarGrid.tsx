@@ -276,7 +276,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       if (!targetRow || targetRow.type !== 'employee') return;
 
       const targetDayTs = dayInTimeline[dayIndex];
-      console.log('targetDayTs', new Date(targetDayTs));
       
       const intervalConfig = HALF_DAY_INTERVALS[intervalInDay] ?? HALF_DAY_INTERVALS[0];
       let targetDate = targetDayTs + intervalConfig.startHour * HOUR_MS;
@@ -305,8 +304,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
       const duration = item.endDate - item.startDate;
       const newEnd = targetDate + duration;
-      console.log('targetDate', new Date(targetDate));
-      console.log('newEnd', new Date(newEnd));
       
       
 

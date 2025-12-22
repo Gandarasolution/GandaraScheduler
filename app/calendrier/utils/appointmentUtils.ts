@@ -22,11 +22,7 @@ export interface AppointmentUtils {
   idGenerator: () => number;
   createAppointment: (params: CreateAppointmentParams) => Appointment;
   createRepeatedAppointments: (params: RepeatAppointmentParams) => Appointment[];
-  moveAppointment: (params: MoveAppointmentParams) => void;
-  resizeAppointment: (params: ResizeAppointmentParams) => void;
   divideAppointment: (params: DivideAppointmentParams) => Appointment[];
-  extendAppointment: (params: ExtendAppointmentParams) => void;
-  copyAppointment: (appointment: Appointment) => Appointment;
   pasteAppointment: (params: PasteAppointmentParams) => Appointment[];
   createAppointmentFromDrag: (params: DragCreateParams) => Appointment;
   saveAppointment: (params: SaveAppointmentParams) => Appointment[];
@@ -223,16 +219,6 @@ export const createAppointmentUtils = (): AppointmentUtils => {
     return newAppointments;
   };
 
-  const moveAppointment = (params: MoveAppointmentParams): void => {
-    // Cette fonction sera implémentée selon les besoins spécifiques
-    // Elle devra modifier l'appointment en place ou retourner un nouveau appointment
-    console.log('Move appointment:', params);
-  };
-
-  const resizeAppointment = (params: ResizeAppointmentParams): void => {
-    // Cette fonction sera implémentée selon les besoins spécifiques
-    console.log('Resize appointment:', params);
-  };
 
   const divideAppointment = (params: DivideAppointmentParams): Appointment[] => {
     const { appointment, isFullDay } = params;
@@ -283,14 +269,8 @@ export const createAppointmentUtils = (): AppointmentUtils => {
     }
   };
 
-  const extendAppointment = (params: ExtendAppointmentParams): void => {
-    // Cette fonction sera implémentée selon les besoins spécifiques
-    console.log('Extend appointment:', params);
-  };
 
-  const copyAppointment = (appointment: Appointment): Appointment => {
-    return { ...appointment };
-  };
+
 
   const pasteAppointment = (params: PasteAppointmentParams): Appointment[] => {
     const { clipboardAppointment, targetCell, isFullDay, nonWorkingDates, includeWeekend, includeNonWorkingDays } = params;
@@ -398,11 +378,7 @@ export const createAppointmentUtils = (): AppointmentUtils => {
     idGenerator,
     createAppointment,
     createRepeatedAppointments,
-    moveAppointment,
-    resizeAppointment,
     divideAppointment,
-    extendAppointment,
-    copyAppointment,
     pasteAppointment,
     createAppointmentFromDrag,
     saveAppointment,
