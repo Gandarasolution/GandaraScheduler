@@ -33,7 +33,7 @@ export const useCalendarView = (employeesRef: any) => {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({ empty: [] });
-  const [selectedDate, setSelectedDate] = useState<number>(Date.now());
+  const [selectedDate, setSelectedDate] = useState<number>(new Date().setHours(0,0,0,0));
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [nonWorkingDates, setNonWorkingDates] = useState<number[]>([]);
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);

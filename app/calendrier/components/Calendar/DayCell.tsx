@@ -3,7 +3,7 @@ import React, { memo, useMemo, useState } from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
 import { IntervalCell } from '../index';
 import { Appointment, HalfDayInterval, Item } from '../../types';
-import { getHour, isHoliday } from '../../utils/dates';
+import { isHoliday } from '../../utils/dates';
 import { CELL_HEIGHT, CELL_WIDTH, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { fr } from 'date-fns/locale';
 
@@ -193,8 +193,8 @@ const DayCell: React.FC<DayCellProps> = ({
                 const startDate = tooltip.app.startDate;
                 const endDate = tooltip.app.endDate;
 
-                const startH = getHour(startDate);
-                const endH = getHour(endDate);
+                const startH = new Date(startDate).getHours();
+                const endH = new Date(endDate).getHours();
                 // Comparaisons directes de nombres
                 if (startH === HALF_DAY_INTERVALS[0].startHour && endH === HALF_DAY_INTERVALS[0].endHour) return 'Matin';
                 if (startH === HALF_DAY_INTERVALS[1].startHour && endH === HALF_DAY_INTERVALS[1].endHour) return 'Après-midi';

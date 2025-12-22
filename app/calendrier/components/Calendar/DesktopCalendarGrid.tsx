@@ -120,7 +120,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   const todayIndex = useMemo(() => {
     return dayInTimeline.findIndex(day => isSameDay(day, Date.now()));
-  }, [dayInTimeline]);
+  }, [dayInTimeline]);  
+
 
   // Optimisation : Pré-calculer les rendez-vous par employé et par jour
   const appointmentsByEmployeeAndDay = useMemo(() => {
@@ -275,6 +276,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       if (!targetRow || targetRow.type !== 'employee') return;
 
       const targetDayTs = dayInTimeline[dayIndex];
+      console.log('targetDayTs', new Date(targetDayTs));
+      
       const intervalConfig = HALF_DAY_INTERVALS[intervalInDay] ?? HALF_DAY_INTERVALS[0];
       let targetDate = targetDayTs + intervalConfig.startHour * HOUR_MS;
       let targetInterval: 'morning' | 'afternoon' = intervalConfig.name as 'morning' | 'afternoon';
@@ -302,6 +305,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
       const duration = item.endDate - item.startDate;
       const newEnd = targetDate + duration;
+      console.log('targetDate', new Date(targetDate));
+      console.log('newEnd', new Date(newEnd));
+      
+      
+
       onAppointmentMoved(item.id, targetDate, newEnd, Number(targetRow.id));
     },
   }), [DAY_INTERVALS, HALF_DAY_INTERVALS, dayInTimeline, getNextWorkedDay, isFullDay, nonWorkingDates, onAppointmentMoved, onExternalDragDrop, rowBoundaries]);

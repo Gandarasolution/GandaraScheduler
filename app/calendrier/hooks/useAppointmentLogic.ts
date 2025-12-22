@@ -209,7 +209,10 @@ export const useAppointmentLogic = ({
         timelineState.respectNonWorkingDays || !timelineState.isDisplayWeekend,
         timelineState.includeWeekend || !timelineState.isDisplayWeekend,
         timelineState.nonWorkingDates
-      );    
+      );  
+      
+      console.log("days", new Date(days[0].start), new Date(days[0].end));
+      
       
       
 
@@ -224,6 +227,8 @@ export const useAppointmentLogic = ({
         const mainDay = days[mainIndex];
         const mainStart = resizeDirection === 'left' ? mainDay.start : newStartDate;
         const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
+        
+        console.log('mainEnd', new Date(mainEnd));
         
         // Note: On ne sauvegarde pas l'historique ici, on le fait à la fin pour grouper
         onResize(appointment.id, mainStart, mainEnd, newEmployeeId, false);

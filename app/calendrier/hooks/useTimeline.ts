@@ -21,12 +21,8 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   
   // Refs pour le scroll performance
   const isProcessingInfiniteScroll = useRef(false);
-  const lastScrollCheck = useRef(0);
-  const lastScrollTop = useRef(0);
   const isInfiniteScrollEnabled = useRef(false);
   const isAutoScrolling = useRef(false);
-  const isArrowKeyPressed = useRef(false);
-  const arrowKeyDirection = useRef<'left' | 'right' | null>(null);
   const throttledScrollHandler = useRef<(() => void) | null>(null);
 
   // --- Logique d'ajout de jours ---
@@ -119,8 +115,8 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     
     // Calcul fenêtre initiale
     const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = snapToHour(date - halfWindow * 86400000, 0, 0, 0, 0);
-    const endDate = snapToHour(date + halfWindow * 86400000, 0, 0, 0, 0);
+    const startDate = date - halfWindow * 86400000;
+    const endDate = date + halfWindow * 86400000;
     
     let newTimeline: number[] = [];
     let curr = startDate;
@@ -172,7 +168,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
     }
-    
+
     // Tentative immédiate
     const success = await executeGoToDate(date);
     
@@ -247,10 +243,11 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   useEffect(() => {
     if(viewType !== 'calendar') return;
     // Optimisation : pré-calculer les constantes une seule fois
-    const date = selectedDate;
+    
+    const date = selectedDate;        
     const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = snapToHour(days[0] || date - halfWindow * 86400000, 0, 0, 0, 0);
-    const endDate = snapToHour(days[days.length -1] || date + halfWindow * 86400000, 0, 0, 0, 0);
+    const startDate = days[0] || date - halfWindow * 86400000;
+    const endDate = days[days.length -1] || date + halfWindow * 86400000;
 
     // Optimisation : construction directe selon includeWeekend
     let newTimeline: number[];

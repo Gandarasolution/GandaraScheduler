@@ -134,6 +134,8 @@ export const getWorkedDayIntervals = (
 
   let safety = 0;
   const maxIterations = 10000;
+  console.log('day & end', new Date(day), new Date(end));
+  
   while (day < end) {
     // Cherche le prochain jour à inclure
     while (day < end && !isIncluded(day)) {
@@ -146,6 +148,9 @@ export const getWorkedDayIntervals = (
     // Début de l'intervalle
     const intervalStart = day;
 
+    //console.log("intervalStart", new Date(intervalStart));
+    
+
     // Cherche la fin de l'intervalle continu à inclure
     while (
       day < end &&
@@ -156,14 +161,23 @@ export const getWorkedDayIntervals = (
       if (safety > maxIterations) throw new Error("Boucle infinie détectée dans getWorkedDayIntervals (recherche fin)");
     }
 
+    console.log("day after loop", new Date(day));
+    
+
 
     const newEnd = new Date(day).getHours() === 0 ? addHours(day, -1).setMinutes(59, 59, 999) : day;
+
+    console.log('newEnd', new Date(newEnd));
+    
 
     intervals.push({
       start: intervalStart,
       end: newEnd < end ? newEnd : end,
     });
   }
+
+  console.log("result", intervals.map(i => ({ start: new Date(i.start), end: new Date(i.end) })));
+  
 
   return intervals;
 };
@@ -194,15 +208,12 @@ export const eachDayOfInterval = (interval: { start: number; end: number }): num
   let current = interval.start;
   while (current <= interval.end) {
     dates.push(current);
-    current = current + 86400000; // Ajouter un jour en millisecondes
+    current = current + 86400000; // Ajouter un jour en millisecondes    
   }
   return dates;
 }
 
 
-export const getHour = (ts: number) => Math.floor((ts % DAY_MS) / HOUR_MS);
-export const getMinute = (ts: number) => Math.floor((ts % HOUR_MS) / (60 * 1000));
-export const getSecond = (ts: number) => Math.floor((ts % (60 * 1000)) / 1000);
 
 /**
  * Calcule le numéro de semaine pour un jour donné

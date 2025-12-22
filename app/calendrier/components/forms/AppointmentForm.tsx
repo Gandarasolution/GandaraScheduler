@@ -287,6 +287,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
   };
 
+  console.log(new Date(appointment.endDate));
   
   
 

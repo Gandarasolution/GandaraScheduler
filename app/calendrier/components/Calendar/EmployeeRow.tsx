@@ -4,6 +4,7 @@ import { CELL_WIDTH, DAY_MS } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
 import { countWeekends } from '../../utils/dates';
+import { is } from 'date-fns/locale';
 
 interface EmployeeRowProps {
   employee: Employee;
@@ -54,6 +55,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
 
   const positionedAppointments = useMemo(() => {
+    
     return appointments
       .filter((app) => {
         if (app.employeeId !== employee.id) return false;
@@ -83,7 +85,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         // car on raisonne maintenant en "colonnes"
         const left = visualDaysOffset * CELL_WIDTH;
 
-
         const durationMs = end - start;
         const durationDays = durationMs / DAY_MS;
 
@@ -103,7 +104,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           topPx: number;
         };
       });
-  }, [appointments, employee.id, pixelsPerMs, timelineEnd, timelineStart]);
+  }, [appointments, employee.id, pixelsPerMs, timelineEnd, timelineStart, isDisplayWeekend]);
 
   return (
     <div 
@@ -115,7 +116,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         ...style,
         height: rowHeight,
         width: rowWidth,
-        overflow: 'hidden',
         backgroundColor: 'transparent',
         backgroundImage: `repeating-linear-gradient(
           to right,
@@ -150,8 +150,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
             absoluteLeft={app.left}
             absoluteWidth={app.width}
             absoluteTop={app.topPx}
-            onResize={(id, newStartDate, newEndDate, resizeDirection) =>
-              onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection)
+            onResize={(id, newStartDate, newEndDate, resizeDirection) =>{              
+              onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection)}
             }
             handleContextMenu={(e, origin) =>
               handleContextMenu(

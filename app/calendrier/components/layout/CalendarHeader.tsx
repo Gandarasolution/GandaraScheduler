@@ -283,7 +283,7 @@ export const CalendarHeader = ({
                 className="date-input border w-38 border-default rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-color transition bg-bg-secondary text-base text-primary"
                 value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
                 onChange={(e) => {
-                  const date = new Date(e.target.value).getTime();
+                  const date = new Date(e.target.value).setHours(0,0,0,0);
                   if (isNaN(date)) return;
                   setSelectedDate(date);
                   onNavigateDate(date);

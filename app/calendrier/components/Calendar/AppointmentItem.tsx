@@ -19,13 +19,13 @@
  */
 
 "use client";
-import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
+import React, { useState, useRef, memo, useEffect, useCallback, useMemo } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
 import {Appointment, HalfDayInterval, Item } from '../../types';
 import { isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS, HOUR_MS } from '../../utils/constants';
 import AppointmentTag from './AppointmentTag';
-import { countWeekends, getHour, snapToHour } from '../../utils/dates';
+import { countWeekends, snapToHour } from '../../utils/dates';
 
 /**
  * Interface définissant les propriétés du composant AppointmentItem
@@ -150,7 +150,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       }
 
       // 2. Trouver l'index de l'intervalle actuel
-      const currentHour = getHour(currentTs);
+      const currentHour = new Date(currentTs).getHours();
       let idx = intervals.findIndex(interval => 
         currentHour >= interval.startHour && currentHour < interval.endHour
       );
@@ -198,6 +198,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const offsetIntervals = isDisplayWeekend 
     ? Math.floor((dragStart - startDate) / INTERVAL_DURATION)
     : getIntervalCount(startDate, dragStart);
+
   const [computedWidth, setComputedWidth] = useState<string>(
     absoluteWidth !== undefined 
     ? `${absoluteWidth}px` 
@@ -243,6 +244,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     dragStartRef.current = date;
     setDragStart(date);
   }, []);
+
   // Met à jour la date de fin lors du resize
   const setDragEndSafe = useCallback((date: number) => {
     dragEndRef.current = date;
@@ -264,7 +266,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       // --- Logique Principale ---
 
       // 1. Trouver l'index de départ
-      let currentHour = getHour(currentTs);
+      let currentHour = new Date(currentTs).getHours();
       let idx = intervals.findIndex(interval => 
           currentHour >= interval.startHour && currentHour < interval.endHour
       );
@@ -273,35 +275,34 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       const step = n >= 0 ? 1 : -1;
       let remaining = Math.abs(n);
 
+      console.log('remaining', remaining);
+      
+
       // 2. Boucle de déplacement
       while (remaining > 0) {
           idx += step;
-
+          console.log("idx", idx);
+          
           // Gestion du dépassement de journée
-          if (idx >= intervals.length) {
+          if (idx > 0 ) {
               idx = 0;
-              currentTs += DAY_MS; // + 1 jour
-          } else if (idx < 0) {
+              currentTs += isFullDay ? DAY_MS : DAY_MS/2; // + 1 jour
+          } else if (idx <= 0) {
               idx = intervals.length - 1;
-              currentTs -= DAY_MS; // - 1 jour
+              currentTs -= isFullDay ? DAY_MS : DAY_MS/2; // - 1 jour
           }
 
           // Sauter les week-ends si nécessaire
           if (!isDisplayWeekend) {
-              // Tant qu'on est sur un weekend, on avance/recule d'un jour
+              // Tant qu'on  est sur un weekend, on avance/recule d'un jour
               while (isWeekend(currentTs)) {
-                  currentTs += (step * DAY_MS);
+                  currentTs += (step * (isFullDay ? DAY_MS : DAY_MS/2));
               }
           }
           remaining--;
       }
-
-      // 3. Finalisation : On "snap" l'heure exacte du début de l'intervalle trouvé
-      // On revient à minuit pile (UTC)
-      const midnight = currentTs - (currentTs % DAY_MS);
       
-      // On ajoute les heures de l'intervalle cible
-      return midnight + (intervals[idx].startHour * HOUR_MS);
+      return currentTs;
 
   }, [isDisplayWeekend]);
 
@@ -340,11 +341,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     e.preventDefault();
     if (!isResizingLeft && !isResizingRight) return;
 
-    const currentDx = (e.clientX - initialX.current) + INTERVAL_WIDTH ;
+    const currentDx = (e.clientX - initialX.current) ;
     let intervalsMoved = Math.round(currentDx / INTERVAL_WIDTH);
     const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-    
+
+
     if (isResizingLeft) {
+
       let newStartDate = addInterval(startDate, intervalsMoved, intervals);
             
       if (newStartDate > dragEndRef.current) {
@@ -354,13 +357,20 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       setDragStartSafe(newStartDate);
     }
     if (isResizingRight) {
+      
+
       let newEndDate = addInterval(endDate, intervalsMoved, intervals);
+      console.log('newEndDate', new Date(newEndDate));
+      
+      
       if (newEndDate < dragStartRef.current) {
         newEndDate = addInterval(dragStartRef.current, 1, intervals);
-        
       }
-      setDragEndSafe(newEndDate);
-    }
+
+      console.log('newEndDate after', new Date(newEndDate));
+      
+      setDragEndSafe(new Date(newEndDate).setHours(new Date(newEndDate).getHours() - 1, 59, 59, 999));
+    }    
   }, [isResizingLeft, isResizingRight, startDate, endDate, addInterval, setDragStartSafe, setDragEndSafe]);
 
 
@@ -379,14 +389,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       
       onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right');
     }
-    if (isResizingLeft) {
-
+    if (isResizingLeft) {      
       onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'left');
     }
     
     setIsResizingLeft(false);
     setIsResizingRight(false);
   }, [isResizingLeft, isResizingRight, onResize, appointment.id]);
+
 
   
   // Ajoute/retire les listeners lors du redimensionnement
@@ -410,10 +420,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   useEffect(() => {
     // 1. CALCUL DE LA LARGEUR (Ça c'est bon, sauf l'arrondi)
     const durationMs = dragEndRef.current - dragStartRef.current;
-    
     // Astuce DST : On arrondit pour éviter les jours de 23h/25h
-    const durationDays = Math.round(durationMs / DAY_MS); 
-    
+    const durationDays = Math.round(durationMs / (isFullDay ? DAY_MS : DAY_MS / 2)); 
+
+
     let weekendsInDuration = 0;
     if (!isDisplayWeekend) {
       weekendsInDuration = countWeekends(dragStartRef.current, dragEndRef.current);
@@ -421,7 +431,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     
     // On s'assure d'avoir au moins un petit bout visible
     const visualDurationDays = Math.max(0.1, durationDays - weekendsInDuration);
-    setComputedWidth((visualDurationDays * CELL_WIDTH) + 'px');
+    setComputedWidth((visualDurationDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2)) + 'px');
 
     // 2. CALCUL DE LA POSITION (C'est ici qu'on change)
     if (isResizingLeft) {
@@ -429,7 +439,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       // Ne pas utiliser l'ancienne start date du RDV, mais bien le référentiel global
       const startFromTimelineOrigin = dragStartRef.current - timelineStart;
       
-      const daysFromOrigin = Math.round(startFromTimelineOrigin / DAY_MS);
+      const daysFromOrigin = Math.round(startFromTimelineOrigin / (isFullDay ? DAY_MS : (DAY_MS / 2)));
       
       let weekendsToRemove = 0;
       if (!isDisplayWeekend) {
@@ -438,18 +448,45 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       
       const visualDaysOffset = daysFromOrigin - weekendsToRemove;
       
-      const newLeftPixel = Math.max(0, visualDaysOffset * CELL_WIDTH);
+      const newLeftPixel = Math.max(0, visualDaysOffset * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2));
       
       
       setComputedLeft(newLeftPixel);
     }
     
-  }, [absoluteWidth, isMobile, intervalCount, isFullDay, INTERVAL_WIDTH, isResizingLeft, timelineStart]); 
-  // N'oublie pas d'ajouter timelineStart et isResizingLeft aux dépendances
+  }, [absoluteWidth, isMobile, intervalCount, INTERVAL_WIDTH, isResizingLeft, timelineStart]); 
+  
+  useEffect(() => {
+    // Si on est en train de redimensionner à gauche manuellement, 
+    // on IGNORE la synchronisation avec absoluteLeft ou offsetIntervals
+    if (isResizingLeft) return; 
+
+    if (absoluteLeft !== undefined) {
+      setComputedLeft(absoluteLeft);
+    } else {
+      setComputedLeft(offsetIntervals * INTERVAL_WIDTH);
+    }
+  }, [absoluteLeft, offsetIntervals, isResizingLeft, INTERVAL_WIDTH]); // isResizingLeft ajouté aux dépendances
+  
+  // --- Styles ---
   
   const appointmentColor = event.color || '#1E40AF';
   const appointmentBorderColor = event.borderColor || '#1E40AF';
   const appointmentTextColor = event.textColor || '#FFFFFF';
+
+  // Optimisation du style pour éviter les recalculs inutiles
+  const containerStyle = useMemo(() => ({
+    width: source === 'demo' ? '100%' : computedWidth,
+    height: `${CELL_HEIGHT + 4}px`,
+    minWidth: `${INTERVAL_WIDTH}px`,
+    pointerEvents: isDragging ? 'none' as const : 'auto' as const,
+    left: `${computedLeft}px`,
+    willChange: 'width, left',
+    top: computedTop,
+    backgroundColor: isHovered ? 'white' : appointmentColor,
+    border: `2px solid ${appointmentBorderColor}`,
+    transition: 'all 0.2s ease-in-out', // Désactiver transition pendant drag pour fluidité
+  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isResizingLeft, isResizingRight]);
 
   return (
     <div
@@ -482,7 +519,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         while (currentIntervalCount < clampedIntervalIndex) {
           // Trouver l'intervalle actuel
           let currentIntervalIdx = intervals.findIndex(interval =>
-            getHour(targetDate) >= interval.startHour && getHour(targetDate) < interval.endHour
+             new Date(targetDate).getHours() >= interval.startHour && new Date(targetDate).getHours() < interval.endHour
           );
           if (currentIntervalIdx === -1) currentIntervalIdx = 0;
           
@@ -527,18 +564,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         ${className || ''}
       `}
       title={event.label}
-      style={{
-        width: source === 'demo' ? '100%' : computedWidth,
-        height: `${CELL_HEIGHT + 4}px`,
-        minWidth: `${INTERVAL_WIDTH}px`,
-        pointerEvents: isDragging ? 'none' : 'auto',
-        left: `${computedLeft}px`,
-        willChange: 'width, left',
-        top: computedTop,
-        backgroundColor: isHovered ? 'white' : appointmentColor,
-        border: `2px solid ${appointmentBorderColor}`,
-        transition: 'all 0.2s ease-in-out',
-      }}
+      style={containerStyle}
     >
       {/* Handle de redimensionnement à gauche */}
       {source === 'calendar' && (

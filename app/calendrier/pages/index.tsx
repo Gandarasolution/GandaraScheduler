@@ -43,7 +43,7 @@ import { useNotifications } from "../hooks";
 import { notificationService } from "../services";
 
 // --- UTILITAIRES ---
-import { getEmployees, getImages } from "../../datasource"; // Ajout de getImages
+import { getEmployees } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
 
@@ -246,7 +246,7 @@ export default function HomePage({
   // Init: Centrage sur la date lors du changement de vue
   useEffect(() => {
     if (viewState.viewType === 'calendar' && timeline.isScrollReady) {
-      // Appeler goToDate de manière asynchrone
+      // Appeler goToDate de manière asynchrone      
       timeline.goToDate(viewState.selectedDate);
     }
   }, [viewState.viewType, timeline.isScrollReady]);
