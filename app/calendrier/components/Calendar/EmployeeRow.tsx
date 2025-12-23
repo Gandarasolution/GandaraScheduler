@@ -4,7 +4,6 @@ import { CELL_WIDTH, DAY_MS } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
 import { countWeekends } from '../../utils/dates';
-import { is } from 'date-fns/locale';
 
 interface EmployeeRowProps {
   employee: Employee;

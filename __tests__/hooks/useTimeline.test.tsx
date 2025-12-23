@@ -3,7 +3,7 @@ import { useTimeline } from '@/app/calendrier/hooks/useTimeline';
 import { addDays, format } from 'date-fns';
 
 describe('useTimeline', () => {
-  const mockDate = new Date(2023, 10, 15);
+  const mockDate = Date.now();
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -46,7 +46,7 @@ describe('useTimeline', () => {
         expect(result.current.days.length).toBeGreaterThan(0);
     });
 
-    const newDate = addDays(mockDate, 30);
+    const newDate = mockDate + 10 * 86400000;
 
     // Mock scroll element
     const mockScrollElement = {

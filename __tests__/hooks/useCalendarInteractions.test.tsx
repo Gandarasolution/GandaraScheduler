@@ -4,12 +4,12 @@ import { useCalendarInteractions } from '@/app/calendrier/hooks/useCalendarInter
 describe('useCalendarInteractions', () => {
   let mainScrollRef: any;
   let columnEmployeeRef: any;
-  let dayInTimeline: Date[];
+  let dayInTimeline: number[];
 
   beforeEach(() => {
     mainScrollRef = { current: document.createElement('div') };
     columnEmployeeRef = { current: document.createElement('div') };
-    dayInTimeline = [new Date(), new Date()];
+    dayInTimeline = [Date.now(),  Date.now() + 86400000];
     
     // Mock requestAnimationFrame
     jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: any) => cb());
@@ -29,7 +29,7 @@ describe('useCalendarInteractions', () => {
     );
 
     expect(result.current.tableRef).toBeDefined();
-    expect(result.current.handleMouseOver).toBeDefined();
+    expect(result.current.handleMouseMove).toBeDefined();
     expect(result.current.handleMouseOut).toBeDefined();
     expect(result.current.handleScrollY).toBeDefined();
   });

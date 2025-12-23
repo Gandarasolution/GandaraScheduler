@@ -25,7 +25,7 @@ import {Appointment, HalfDayInterval, Item } from '../../types';
 import { isWeekend } from 'date-fns';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS, HOUR_MS } from '../../utils/constants';
 import AppointmentTag from './AppointmentTag';
-import { countWeekends, snapToHour } from '../../utils/dates';
+import { countWeekends } from '../../utils/dates';
 
 /**
  * Interface définissant les propriétés du composant AppointmentItem
@@ -162,12 +162,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         if (idx >= intervals.length) {
           // Passage au jour suivant (index 0)
           idx = 0;
-          // Equivalent: addDays(1) + setHours(...)
-          // On ajoute 24h et on fixe l'heure au début du premier intervalle
-          currentTs = snapToHour(currentTs + DAY_MS, intervals[idx].startHour);
+          currentTs = new Date(currentTs + DAY_MS).setHours(intervals[idx].startHour, 0, 0, 0);
         } else {
           // Même jour, intervalle suivant
-          currentTs = snapToHour(currentTs, intervals[idx].startHour);
+          currentTs = new Date(currentTs).setHours(intervals[idx].startHour, 0, 0, 0);
         }
       } else {
         idx--;
@@ -175,10 +173,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           // Passage au jour précédent (dernier index)
           idx = intervals.length - 1;
           // Equivalent: addDays(-1) + setHours(...)
-          currentTs = snapToHour(currentTs - DAY_MS, intervals[idx].startHour);
+          currentTs = new Date(currentTs - DAY_MS).setHours(intervals[idx].startHour, 0, 0, 0);
         } else {
           // Même jour, intervalle précédent
-          currentTs = snapToHour(currentTs, intervals[idx].startHour);
+          currentTs = new Date(currentTs).setHours(intervals[idx].startHour, 0, 0, 0);
         }
       }
     }
@@ -468,9 +466,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   
   // --- Styles ---
   
-  const appointmentColor = event.color || '#1E40AF';
-  const appointmentBorderColor = event.borderColor || '#1E40AF';
-  const appointmentTextColor = event.textColor || '#FFFFFF';
+  const appointmentColor = event?.color || '#1E40AF';
+  const appointmentBorderColor = event?.borderColor || '#1E40AF';
+  const appointmentTextColor = event?.textColor || '#FFFFFF';
 
   // Optimisation du style pour éviter les recalculs inutiles
   const containerStyle = useMemo(() => ({
@@ -525,16 +523,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           currentIntervalIdx++;
           if (currentIntervalIdx >= intervals.length) {
             // Passer au jour suivant
-            targetDate = targetDate + DAY_MS;
-            snapToHour(targetDate, intervals[0].startHour, 0, 0, 0);
+            targetDate = new Date(targetDate + DAY_MS).setHours(intervals[0].startHour, 0, 0, 0);
             
             // Vérifier si on doit ignorer les week-ends
             while (!isDisplayWeekend && isWeekend(targetDate)) {
               targetDate = targetDate + DAY_MS;
             }
           } else {
-            // Rester sur le même jour, changer l'heure
-            snapToHour(targetDate, intervals[currentIntervalIdx].startHour, 0, 0, 0);
+            targetDate = new Date(targetDate).setHours(intervals[currentIntervalIdx].startHour, 0, 0, 0);
           }
           currentIntervalCount++;
         }
@@ -561,7 +557,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         hover:shadow-xl
         ${className || ''}
       `}
-      title={event.label}
+      title={event?.label}
       style={containerStyle}
     >
       {/* Handle de redimensionnement à gauche */}
@@ -584,7 +580,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         {/* Affichage du tag - Style Onglet Dépliant Coloré */}
         {appointment.tag && (
           <AppointmentTag 
-            tagName={appointment.tag.name}
+            tagName={appointment?.tag.name}
             color={appointmentColor}
             textColor={appointmentTextColor}
             isHovered={isHovered}
@@ -594,9 +590,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
 
       {/* Image éventuelle */}
-      {event.image ? (
+      {event?.image ? (
         <img
-          src={event.image.image}
+          src={event?.image.image}
           alt="Icône"
           className="w-8 h-8 object-cover"
         />
@@ -607,12 +603,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       <div className='flex flex-col min-w-0 flex-1'>
         {/* Titre du rendez-vous */}
         <span 
-          className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 ${appointment.tag ? 'pr-5' : ''}`}
+          className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 ${appointment?.tag ? 'pr-5' : ''}`}
           style={{ 
             color: isHovered ? appointmentColor : `${appointmentTextColor || '#FFFFFF'}`
           }}
         >
-          {event.label}
+          {event?.label}
         </span>
         
         {/* Ligne du bas : Chargé d'affaire + Tag */}

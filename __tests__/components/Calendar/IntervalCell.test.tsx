@@ -71,8 +71,9 @@ describe('IntervalCell', () => {
   it('handles double click', () => {
     const { container } = renderWithContext();
     fireEvent.doubleClick(container.firstChild as Element);
+    
     expect(defaultProps.onCellDoubleClick).toHaveBeenCalledWith(
-      defaultProps.dateTs,
+      defaultProps.intervalStartTs,
       mockEmployee.id,
       'morning'
     );
