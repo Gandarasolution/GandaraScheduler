@@ -11,7 +11,7 @@ import {
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
 
 interface DataLayerProps {
-  viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table';
+  viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table';
   searchQuery: string;
   filters: ActiveFilters;
   calendarConfig: CalendarConfig | null;
@@ -93,6 +93,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
   const getTableItems = () => {
      if (viewType === 'chantier-table') return filteredItems.filter(e => e.type === 'chantier');
      if (viewType === 'paie-table') return filteredItems.filter(e => e.type !== 'chantier');
+      if (viewType === 'manual-event-table') return filteredItems.filter(e => e.category === 'manual');
      return filteredEmployees.map(emp => ({
         id: emp.id,
         image: emp.image,
@@ -152,6 +153,18 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
                 ]
                 }
             ]
+        if (viewType === 'manual-event-table') 
+          return [
+            {
+            key: 'all',
+            label: 'Événements manuels',
+            attributes: [
+              { key: 'image', label: '', isFixed: true, sortable: false },
+              { key: 'label', label: 'Description', type:'string' },
+              { key: 'actif', label: 'Actif', type:'boolean' }
+            ]
+            }
+          ]
         if (viewType === 'employee-table') 
             return [
                 {
@@ -198,6 +211,35 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     refreshData();
   };
 
+  const addManualEvent = (payload: { code: string; label: string; description: string; image?: Image; color: string; borderColor: string; textColor: string; actif: boolean; type: 'chantier' | 'autre'; }) => {
+    const newId = Date.now();
+    const newItem: Item = {
+      id: newId,
+      label: payload.label,
+      defaultDescription: payload.description,
+      color: payload.color,
+      borderColor: payload.borderColor,
+      textColor: payload.textColor,
+      code: payload.code,
+      image: payload.image,
+      type: payload.type,
+      verrou: false,
+      actif: payload.actif,
+      category: 'manual'
+    } as Item;
+
+    itemsRef.current = [newItem, ...itemsRef.current];
+    refreshData();
+    return newItem;
+  };
+
+  const toggleManualEvent = (id: number) => {
+    itemsRef.current = itemsRef.current.map(e =>
+      e.id === id ? ({ ...e, actif: !(e as any).actif }) : e
+    );
+    refreshData();
+  };
+
 
   return {
     isLoading,
@@ -209,6 +251,8 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     availableImages,
     initialTeams,
     updateEmployeeGroup,
+    addManualEvent,
+    toggleManualEvent,
     getTableItems,
     getTableStructure,
     refreshData,

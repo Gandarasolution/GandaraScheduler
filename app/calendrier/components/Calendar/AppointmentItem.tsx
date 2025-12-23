@@ -356,14 +356,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       
 
       let newEndDate = addInterval(endDate, intervalsMoved, intervals);
-      console.log('newEndDate', new Date(newEndDate));
+      //console.log('newEndDate', new Date(newEndDate));
       
       
       if (newEndDate < dragStartRef.current) {
         newEndDate = addInterval(dragStartRef.current, 1, intervals);
       }
 
-      console.log('newEndDate after', new Date(newEndDate));
+      //console.log('newEndDate after', new Date(newEndDate));
       
       setDragEndSafe(new Date(newEndDate).setHours(new Date(newEndDate).getHours() - 1, 59, 59, 999));
     }    
@@ -417,16 +417,16 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     // 1. CALCUL DE LA LARGEUR (Ça c'est bon, sauf l'arrondi)
     const durationMs = dragEndRef.current - dragStartRef.current;
     // Astuce DST : On arrondit pour éviter les jours de 23h/25h
-    const durationDays = Math.round(durationMs / (isFullDay ? DAY_MS : DAY_MS / 2)); 
+    const durationInterval = Math.round(durationMs / (isFullDay ? DAY_MS : DAY_MS / 2)); 
+    
 
-
-    let weekendsInDuration = 0;
+    let NbDayWeekends = 0;
     if (!isDisplayWeekend) {
-      weekendsInDuration = countWeekends(dragStartRef.current, dragEndRef.current);
+      NbDayWeekends = countWeekends(dragStartRef.current, dragEndRef.current);
     }
     
     // On s'assure d'avoir au moins un petit bout visible
-    const visualDurationDays = Math.max(0.1, durationDays - weekendsInDuration);
+    const visualDurationDays = Math.max(0.1, durationInterval - (NbDayWeekends * (isFullDay ? 1 : 2)));
     setComputedWidth((visualDurationDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2)) + 'px');
 
     // 2. CALCUL DE LA POSITION (C'est ici qu'on change)

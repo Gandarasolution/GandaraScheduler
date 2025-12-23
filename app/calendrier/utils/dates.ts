@@ -123,9 +123,7 @@ export const getWorkedDayIntervals = (
   const intervals: { start: number; end: number }[] = [];
   let day = start;
 
-  const isIncluded = (date: number) => {
-    // 1. Gestion des Week-ends
-    // Si on ne doit PAS inclure les week-ends ET que c'est un week-end -> EXCLURE
+  const isIncluded = (date: number) => {    
     if (!includeWeekends && isWeekend(date)) {
         return false;
     }

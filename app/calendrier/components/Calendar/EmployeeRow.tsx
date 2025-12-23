@@ -1,9 +1,10 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Employee, Appointment, Item } from '../../types';
-import { CELL_WIDTH, DAY_MS } from '../../utils/constants';
+import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
 import { countWeekends } from '../../utils/dates';
+import { isSameDay } from 'date-fns';
 
 interface EmployeeRowProps {
   employee: Employee;
@@ -105,12 +106,60 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       });
   }, [appointments, employee.id, pixelsPerMs, timelineEnd, timelineStart, isDisplayWeekend]);
 
+  const selectionOverlay = useMemo(() => {
+    if (!selectedCell || selectedCell.employeeId !== employee.id) return null;
+
+    const dayIndex = dayInTimeline.findIndex((day) => isSameDay(day, selectedCell.date));
+    if (dayIndex === -1) return null;
+
+    const intervalWidth = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
+    const startHour = new Date(selectedCell.date).getHours();
+    const intervalIndex = isFullDay
+      ? 0
+      : startHour >= HALF_DAY_INTERVALS[1].startHour
+        ? 1
+        : 0;
+
+    return {
+      left: dayIndex * CELL_WIDTH + intervalIndex * intervalWidth,
+      width: intervalWidth,
+    };
+  }, [dayInTimeline, employee.id, isFullDay, selectedCell]);
+
+  const handleRowClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dayInTimeline.length) return;
+
+    const target = e.target as HTMLElement;
+    if (target.closest('.appointment-item')) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relativeX = e.clientX - rect.left;
+    if (relativeX < 0) return;
+
+    const dayIndex = Math.floor(relativeX / CELL_WIDTH);
+    if (dayIndex < 0 || dayIndex >= dayInTimeline.length) return;
+
+    const intervalWidth = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
+    const offsetInDay = relativeX - dayIndex * CELL_WIDTH;
+    const rawIntervalIndex = Math.floor(offsetInDay / intervalWidth);
+    const clampedIndex = isFullDay
+      ? Math.min(Math.max(rawIntervalIndex, 0), DAY_INTERVALS.length - 1)
+      : Math.min(Math.max(rawIntervalIndex, 0), HALF_DAY_INTERVALS.length - 1);
+
+    const intervalConfig = isFullDay ? DAY_INTERVALS[clampedIndex] : HALF_DAY_INTERVALS[clampedIndex];
+    const selectedDate = dayInTimeline[dayIndex] + (intervalConfig?.startHour ?? 0) * HOUR_MS;
+
+    onSelectCell({ employeeId: employee.id, date: selectedDate });
+    onSelectAppointment(null);
+  }, [dayInTimeline, employee.id, isFullDay, onSelectAppointment, onSelectCell]);
+
   return (
     <div 
       id={getRowId('employee', employee.id)}
       className="calendar-row employee-row flex w-fit relative" 
       data-employee-id={employee.id}
       role="row"
+      onClick={handleRowClick}
       style={{
         ...style,
         height: rowHeight,
@@ -125,6 +174,15 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         )`
       }}
     >
+      {selectionOverlay && (
+        <div
+          className="absolute top-0 bottom-0 pointer-events-none rounded-md bg-primary/20 border border-primary/40 z-30"
+          style={{
+            left: selectionOverlay.left,
+            width: selectionOverlay.width,
+          }}
+        />
+      )}
       {todayIndex >= 0 && (
         <div
           className="absolute top-0 bottom-0 w-0.5 z-10 pointer-events-none calendar-today"

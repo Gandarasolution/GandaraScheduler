@@ -92,7 +92,7 @@ interface CalendarModalsProps {
     HALF_DAY_INTERVALS: any[];
     isFullDay: boolean;
     isDisplayWeekend: boolean;
-    viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table';
+    viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table';
   };
 }
 

@@ -6,3 +6,4 @@ export * from './Table';
 export * from './dnd';
 export * from './interactions';
 export * from './layout';
+export * from './ManualEvents';

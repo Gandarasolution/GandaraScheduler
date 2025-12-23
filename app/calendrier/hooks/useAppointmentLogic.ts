@@ -215,12 +215,17 @@ export const useAppointmentLogic = ({
       // Calcul des intervalles (Jours/Demi-journées)
       const intervalType = state.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
       
+      console.log(state.isDisplayWeekend);
+      console.log(state.includeWeekend);
+      
+      
+
       const days = getWorkedDayIntervals(
         newStartDate, 
         newEndDate,
         intervalType,
         state.respectNonWorkingDays,
-        state.isDisplayWeekend && state.includeWeekend,
+        (state.isDisplayWeekend && state.includeWeekend) || !state.isDisplayWeekend,
         state.nonWorkingDates
       );  
 
@@ -277,10 +282,7 @@ export const useAppointmentLogic = ({
       // Mise à jour des métadonnées de l'événement global
       eventsRef.current = eventsRef.current.map(e =>
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
-      );      
-
-      console.log('appointment', appointment);
-      
+      );            
 
       const days = getWorkedDayIntervals(
         appointment.startDate, 

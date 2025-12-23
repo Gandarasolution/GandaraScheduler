@@ -27,7 +27,8 @@ import {
   SearchOverlay,
   CalendarHeader,
   CalendarModals,
-  DraggableSource
+  DraggableSource,
+  ManualEventsManager
 } from '@/app/calendrier/components';
 
 // --- CUSTOM HOOKS ---
@@ -317,6 +318,16 @@ export default function HomePage({
                   ) : (
                     <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>
                   )
+                ) : viewState.viewType === 'manual-event-table' ? (
+                  <ManualEventsManager
+                    events={dataLayer.filteredItems}
+                    images={dataLayer.availableImages}
+                    onCreate={(payload) => dataLayer.addManualEvent(payload)}
+                    onToggleActive={(id) => dataLayer.toggleManualEvent(id)}
+                    onImageUpload={interaction.handleImageUpload}
+                    isUploading={interaction.isUploading}
+                    uploadError={interaction.uploadError}
+                  />
                 ) : (
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
                   <DataTableFrame 

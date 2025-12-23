@@ -19,7 +19,7 @@ export const useCalendarView = (employeesRef: any) => {
   const [isFullDay, setIsFullDay] = useState(() => getStoredBool('isFullDay', false));
   const [respectNonWorkingDays, setRespectNonWorkingDays] = useState(() => getStoredBool('respectNonWorkingDays', false));
   
-  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table'>(() => {
+  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
       const saved = window.localStorage.getItem('viewType');
       return (saved as any) || 'calendar';
