@@ -316,6 +316,62 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     dropRef(node);
   }, [dropRef, tableRef]);
 
+  const handleGridContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tableRef.current || !rowBoundaries.length || !dayInTimeline.length) return;
+
+    const tableRect = tableRef.current.getBoundingClientRect();
+    const relativeX = e.clientX - tableRect.left;
+    const relativeY = e.clientY - tableRect.top;
+
+    if (relativeX < 0 || relativeY < 0 || relativeY > totalContentHeight) return;
+
+    const dayIndex = Math.floor(relativeX / CELL_WIDTH);
+    if (dayIndex < 0 || dayIndex >= dayInTimeline.length) return;
+
+    const targetRow = rowBoundaries.find((row) => relativeY >= row.start && relativeY < row.end);
+    if (!targetRow || targetRow.type !== 'employee') return;
+
+    const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+    const intervalWidth = CELL_WIDTH / Math.max(1, intervals.length);
+    const offsetInDay = relativeX - dayIndex * CELL_WIDTH;
+    const intervalIndex = Math.min(
+      intervals.length - 1,
+      Math.max(0, Math.floor(offsetInDay / intervalWidth))
+    );
+    const intervalStartHour = intervals[intervalIndex]?.startHour ?? 0;
+    const targetDate = dayInTimeline[dayIndex] + intervalStartHour * HOUR_MS;
+
+    handleContextMenu(e, 'cell', null, { employeeId: Number(targetRow.id), date: targetDate });
+  }, [HALF_DAY_INTERVALS, DAY_INTERVALS, CELL_WIDTH, HOUR_MS, dayInTimeline, handleContextMenu, isFullDay, rowBoundaries, tableRef, totalContentHeight]);
+
+  const { holidayColumns, weekendColumns, nonWorkingColumns } = useMemo(() => {
+    const holidays: { left: number; key: number }[] = [];
+    const weekends: { left: number; key: number }[] = [];
+    const nonWorking: { left: number; key: number }[] = [];
+
+    dayInTimeline.forEach((day, index) => {
+      const left = index * CELL_WIDTH;
+      const isFerie = isHoliday(day);
+      const isWk = isWeekend(day);
+      const isNonWorking = nonWorkingDates.some((d) => isSameDay(d, day));
+
+      if (isFerie) {
+        holidays.push({ left, key: day });
+        return; // priorité au férié, pas besoin d'ajouter d'autres surcouches
+      }
+
+      if (isWk) {
+        weekends.push({ left, key: day });
+      }
+
+      if (isNonWorking) {
+        nonWorking.push({ left, key: day });
+      }
+    });
+
+    return { holidayColumns: holidays, weekendColumns: weekends, nonWorkingColumns: nonWorking };
+  }, [dayInTimeline, nonWorkingDates]);
+
 
   const selectOptions: SelectOptionWithImage[] = useMemo(() => {
     return availableConfigs.map(config => ({
@@ -491,8 +547,30 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           }}
           onMouseMove={handleMouseOver}
           onMouseOut={handleMouseOut}
+          onContextMenu={handleGridContextMenu}
           ref={setTableRef}
         >
+            {weekendColumns.map((col) => (
+              <div
+                key={`weekend-${col.key}`}
+                className="pointer-events-none absolute top-0 bottom-0 WEEKEND"
+                style={{ left: col.left, width: CELL_WIDTH}}
+              />
+            ))}
+            {nonWorkingColumns.map((col) => (
+              <div
+                key={`nonworking-${col.key}`}
+                className="pointer-events-none absolute top-0 bottom-0 NON-WORKING"
+                style={{ left: col.left, width: CELL_WIDTH}}
+              />
+            ))}
+          {holidayColumns.map((col) => (
+            <div
+              key={col.key}
+              className="pointer-events-none absolute top-0 bottom-0 FERIE"
+              style={{ left: col.left, width: CELL_WIDTH}}
+            />
+          ))}
           {hoverColumnLeft !== null && (
             <>
               <div

@@ -28,15 +28,12 @@ export const isHoliday = (date: number): boolean => {
 };
 
 /**
- * Vérifie si une date est un jour travaillé (ni week-end, ni férié)
+ * Vérifie si une date est un jour travaillé
  * @param date Date à tester
  * @returns true si travaillé, false sinon
  */
 export const isWorkedDay = (date: number, nonWorkingDates: number[]): boolean => {  
-  const day = new Date(date).getDay();
-  return day !== 0 
-    && day !== 6 
-    && !isHoliday(date) 
+  return !isHoliday(date) 
     && !nonWorkingDates.some(d => isSameDay(d, date));
 };
 
@@ -127,14 +124,27 @@ export const getWorkedDayIntervals = (
   let day = start;
 
   const isIncluded = (date: number) => {
-    if (includeNonWorkingDays && (isHoliday(date) || nonWorkingDates.some(d => isSameDay(d, date)))) return true;
-    if (includeWeekends && isWeekend(date)) return true;
-    return isWorkedDay(date, nonWorkingDates);
+    // 1. Gestion des Week-ends
+    // Si on ne doit PAS inclure les week-ends ET que c'est un week-end -> EXCLURE
+    if (!includeWeekends && isWeekend(date)) {
+        return false;
+    }
+
+    // 2. Gestion des jours fériés et jours non travaillés spécifiques
+    const isCustomNonWorking = nonWorkingDates.some(d => isSameDay(d, date));
+    const isPublicHoliday = isHoliday(date);
+
+    // Si on ne doit PAS inclure les jours chômés ET que c'en est un -> EXCLURE
+    if (!includeNonWorkingDays && (isCustomNonWorking || isPublicHoliday)) {
+        return false;
+    }
+
+    // 3. Sinon, c'est inclus
+    return true;
   };
 
   let safety = 0;
   const maxIterations = 10000;
-  console.log('day & end', new Date(day), new Date(end));
   
   while (day < end) {
     // Cherche le prochain jour à inclure
@@ -148,7 +158,6 @@ export const getWorkedDayIntervals = (
     // Début de l'intervalle
     const intervalStart = day;
 
-    //console.log("intervalStart", new Date(intervalStart));
     
 
     // Cherche la fin de l'intervalle continu à inclure
@@ -161,13 +170,9 @@ export const getWorkedDayIntervals = (
       if (safety > maxIterations) throw new Error("Boucle infinie détectée dans getWorkedDayIntervals (recherche fin)");
     }
 
-    console.log("day after loop", new Date(day));
-    
-
 
     const newEnd = new Date(day).getHours() === 0 ? addHours(day, -1).setMinutes(59, 59, 999) : day;
 
-    console.log('newEnd', new Date(newEnd));
     
 
     intervals.push({
@@ -175,8 +180,6 @@ export const getWorkedDayIntervals = (
       end: newEnd < end ? newEnd : end,
     });
   }
-
-  console.log("result", intervals.map(i => ({ start: new Date(i.start), end: new Date(i.end) })));
   
 
   return intervals;

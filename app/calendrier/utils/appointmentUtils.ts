@@ -281,11 +281,7 @@ export const createAppointmentUtils = (): AppointmentUtils => {
     
     const newStartDate = targetCell.date;
     const newEndDate = newStartDate + diff;
-    
-    if (!isWorkedDay(newStartDate, nonWorkingDates)) {
-      throw new Error('Les dates sélectionnées ne sont pas des jours travaillés.');
-    }
-    
+  
     const days = getWorkedDayIntervals(
       newStartDate, 
       newEndDate,

@@ -195,18 +195,4 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   );
 };
 
-export default memo(CalendarGrid, (prevProps, nextProps) => {
-  return (
-    prevProps.employees === nextProps.employees &&
-    prevProps.appointments === nextProps.appointments &&
-    prevProps.initialTeams === nextProps.initialTeams &&
-    prevProps.dayInTimeline === nextProps.dayInTimeline &&
-    prevProps.HALF_DAY_INTERVALS === nextProps.HALF_DAY_INTERVALS &&
-    prevProps.isFullDay === nextProps.isFullDay &&
-    prevProps.nonWorkingDates === nextProps.nonWorkingDates &&
-    prevProps.isMobile === nextProps.isMobile &&
-    prevProps.isDisplayWeekend === nextProps.isDisplayWeekend &&
-    prevProps.selectedCell === nextProps.selectedCell &&
-    prevProps.selectedAppointmentId === nextProps.selectedAppointmentId
-  );
-});
+export default memo(CalendarGrid);

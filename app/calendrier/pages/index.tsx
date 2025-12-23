@@ -148,16 +148,6 @@ export default function HomePage({
     viewState.setIsSearchOverlayOpen(true);
   }, [viewState.setIsSearchOverlayOpen]);
 
-  const selectedAppointmentContextValue = useMemo(() => ({
-    selectedAppointment: appointmentLogic.selectedAppointment,
-    setSelectedAppointment: appointmentLogic.setSelectedAppointment
-  }), [appointmentLogic.selectedAppointment, appointmentLogic.setSelectedAppointment]);
-
-  const selectedCellContextValue = useMemo(() => ({
-    selectedCell: appointmentLogic.selectedCell,
-    setSelectedCell: appointmentLogic.setSelectedCell
-  }), [appointmentLogic.selectedCell, appointmentLogic.setSelectedCell]);
-
   // --- CONFIGURATION DES FILTRES (Pour FilterModal) ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
   
@@ -226,10 +216,8 @@ export default function HomePage({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
-
 
       interaction.handleGlobalKeyboard(e);
       if (viewState.viewType === 'calendar') {

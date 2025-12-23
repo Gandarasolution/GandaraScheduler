@@ -20,6 +20,7 @@ import { fr } from 'date-fns/locale';
 import { CELL_WIDTH, TIMELINE_HEADERGROUPS_CELL_HEIGHT, TIMELINE_HEADERITEMS_CELL_HEIGHT } from '../../utils/constants';
 import FlexibleFrame from '../dnd/FlexibleFrame';
 import { getWeekNumber } from '../../utils/dates';
+import { isHoliday } from '../../utils/dates';
 
 /**
  * Interface définissant les propriétés du composant TimelineFrame
@@ -245,13 +246,14 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
               }
               
               const day = dayInTimeline[index];
+              const holiday = isHoliday(day);
               const weekNumber = getWeekNumber(day);
               
               return (
                 <div
                   className={`
                     flex flex-col justify-end border-b border-r border-default text-center text-sm font-semibold text-primary p-1
-                    ${(isToday(day) && 'calendar-today') || (isWeekend(day) ? 'calendar-weekend' : 'bg-bg-secondary')}
+                    ${(isToday(day) && 'calendar-today') || (holiday ? 'FERIE' : (isWeekend(day) ? 'calendar-weekend' : 'bg-bg-secondary'))}
                     relative
                     day-cell
                   `}

@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
-import { setHours, setMinutes, addHours, eachDayOfInterval } from "date-fns";
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { addHours, eachDayOfInterval } from "date-fns";
 import { Appointment, Employee, HistoryAction, Item } from '../types';
 import { createAppointmentUtils } from '../utils/appointmentUtils';
 import { notificationService } from "../services";
@@ -43,6 +43,11 @@ export const useAppointmentLogic = ({
   const idCounter = useRef(10000);
   const clipboardAppointment = useRef<Appointment | null>(null);
   const timestampCounter = useRef(1000);
+  const timelineStateRef = useRef(timelineState);
+
+  useEffect(() => {
+    timelineStateRef.current = timelineState;
+  }, [timelineState]);
 
   // --- États UI nécessaires à la logique ---
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -71,6 +76,13 @@ export const useAppointmentLogic = ({
 
   // --- GESTION DE L'HISTORIQUE (UNDO) ---
 
+  /**
+   * Sauvegarde l'état actuel d'un rendez-vous dans l'historique
+   * @param appointment Rendez-vous à sauvegarder
+   * @param type Type d'action ('create', 'update', 'delete', 'move', 'resize_split')
+   * @param previousAppointment État précédent du rendez-vous (pour 'update', 'move', 'resize_split')
+   * @param createdAppointments Rendez-vous créés (pour 'resize_split')
+   */
   const saveAppointmentState = useCallback((
     appointment: Appointment | null, 
     type: 'create' | 'update' | 'delete' | 'move' | 'resize_split', 
@@ -198,22 +210,19 @@ export const useAppointmentLogic = ({
       const appointment = appointmentsRef.current.find((app) => app.id === id);
       if (!appointment) return;
 
-      // Calcul des intervalles (Jours/Demi-journées)
-      const intervalType = timelineState.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-      
+      const state = timelineStateRef.current;
 
+      // Calcul des intervalles (Jours/Demi-journées)
+      const intervalType = state.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+      
       const days = getWorkedDayIntervals(
         newStartDate, 
         newEndDate,
         intervalType,
-        timelineState.respectNonWorkingDays || !timelineState.isDisplayWeekend,
-        timelineState.includeWeekend || !timelineState.isDisplayWeekend,
-        timelineState.nonWorkingDates
+        state.respectNonWorkingDays,
+        state.isDisplayWeekend && state.includeWeekend,
+        state.nonWorkingDates
       );  
-      
-      
-      
-      
 
       if (days.length === 0) return;
       
@@ -227,7 +236,6 @@ export const useAppointmentLogic = ({
         const mainStart = resizeDirection === 'left' ? mainDay.start : newStartDate;
         const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
         
-        console.log('mainEnd', new Date(mainEnd));
         
         // Note: On ne sauvegarde pas l'historique ici, on le fait à la fin pour grouper
         onResize(appointment.id, mainStart, mainEnd, newEmployeeId, false);
@@ -261,8 +269,8 @@ export const useAppointmentLogic = ({
           saveAppointmentState(updatedAppointment, actionType, previousAppointment, createdAppointments);
         }
       }
-      onUpdate();
-  }, [appointmentsRef, timelineState, onResize, createAppointment, saveAppointmentState, onUpdate]);
+        onUpdate();
+      }, [appointmentsRef, onResize, createAppointment, saveAppointmentState, onUpdate ]);
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
   const handleSaveAppointment = useCallback((appointment: Appointment, eventUpdate: Item, includeNonWorkingDays: boolean) => {
@@ -547,9 +555,12 @@ export const useAppointmentLogic = ({
         includeNonWorkingDays: timelineState.respectNonWorkingDays,
       });
 
+      newAppointments.forEach(app => {
+        saveAppointmentState(app, 'create');
+      });
       appointmentsRef.current = [...appointmentsRef.current, ...newAppointments];
       onUpdate();
-      notificationService.appointmentCreated(newAppointments.length);
+      notificationService.appointmentCreated(1);
     } catch (error) {
       notificationService.error('Erreur', (error as Error).message);
     }
