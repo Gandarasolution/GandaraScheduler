@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { addDays, format, isWeekend } from 'date-fns';
-import { CELL_WIDTH, WINDOW_SIZE, DAYS_TO_ADD } from '../utils/constants';
-import { eachDayOfInterval, snapToHour } from '../utils/dates';
+import { format, isWeekend } from 'date-fns';
+import { CELL_WIDTH, WINDOW_SIZE, DAYS_TO_ADD, DAY_MS } from '../utils/constants';
 
 interface UseTimelineProps {
   isDisplayWeekend: boolean;
@@ -25,6 +24,21 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   const isAutoScrolling = useRef(false);
   const throttledScrollHandler = useRef<(() => void) | null>(null);
 
+  const buildWindow = useCallback((centerDate: number) => {
+    const startDate = centerDate - Math.floor(WINDOW_SIZE / 2) * DAY_MS;
+    const windowDays: number[] = [];
+    let cursor = startDate;
+
+    while (windowDays.length < WINDOW_SIZE) {
+      if (isDisplayWeekend || !isWeekend(cursor)) {
+        windowDays.push(cursor);
+      }
+      cursor += DAY_MS;
+    }
+
+    return windowDays;
+  }, [isDisplayWeekend]);
+
   // --- Logique d'ajout de jours ---
   const addDaysToTimeline = useCallback((direction: 'left' | 'right') => {
     const scrollElement = mainScrollRef.current;
@@ -40,27 +54,39 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
       const modifier = direction === 'right' ? 1 : -1;
 
       // Génération optimisée des jours
-      let currentDate = referenceDate + modifier * 86400000; // +1 jour en ms
+      let currentDate = referenceDate + modifier * DAY_MS;
       while (newDays.length < DAYS_TO_ADD) {
         if (isDisplayWeekend || !isWeekend(currentDate)) {
              direction === 'right' ? newDays.push(currentDate) : newDays.unshift(currentDate);
         }
-        currentDate = currentDate + modifier * 86400000;
+        currentDate = currentDate + modifier * DAY_MS;
       }
+
+      let combined = direction === 'right' ? [...prevDays, ...newDays] : [...newDays, ...prevDays];
+      let removedLeft = 0;
+      let removedRight = 0;
+
+      if (combined.length > WINDOW_SIZE) {
+        const overflow = combined.length - WINDOW_SIZE;
+        if (direction === 'right') {
+          removedLeft = overflow;
+          combined = combined.slice(overflow);
+        } else {
+          removedRight = overflow;
+          combined = combined.slice(0, combined.length - overflow);
+        }
+      }
+
+      const netLeftShift = direction === 'left' ? Math.max(newDays.length - removedRight, 0) : -removedLeft;
 
       // Ajustement du scroll après rendu
       queueMicrotask(() => {
-        if (scrollElement && scrollElement.isConnected) {
-          if (direction === 'left') {
-             scrollElement.scrollLeft = previousScrollLeft + (newDays.length * CELL_WIDTH);
-          }
-          // Pas d'ajustement nécessaire pour la droite car on n'enlève plus d'éléments
+        if (scrollElement && scrollElement.isConnected && netLeftShift !== 0) {
+          scrollElement.scrollLeft = previousScrollLeft + (netLeftShift * CELL_WIDTH);
         }
         setTimeout(() => { isProcessingInfiniteScroll.current = false; }, 100);
       });
 
-      // On accumule les jours sans les supprimer (plus de slice)
-      const combined = direction === 'right' ? [...prevDays, ...newDays] : [...newDays, ...prevDays];
       return combined;
     });
   }, [isDisplayWeekend]);
@@ -114,16 +140,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
       setIsLoading(true);
     
     // Calcul fenêtre initiale
-    const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = date - halfWindow * 86400000;
-    const endDate = date + halfWindow * 86400000;
-    
-    let newTimeline: number[] = [];
-    let curr = startDate;
-    while (curr <= endDate) {
-        if (isDisplayWeekend || !isWeekend(curr)) newTimeline.push(curr);
-        curr = curr + 86400000;
-    }
+    const newTimeline = buildWindow(date);
 
     setDays(newTimeline);
 
@@ -152,7 +169,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
         });
     });
     });
-  }, [isDisplayWeekend]);
+  }, [isDisplayWeekend, buildWindow]);
 
   useEffect(() => {
     if (days.length > 0 && mainScrollRef.current) {
@@ -231,6 +248,9 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
       scroller.scrollLeft = Math.min(max, scroller.scrollLeft + step);
       e.preventDefault();
     }
+
+    // Déclenche manuellement le handler infini pour les scrolls clavier maintenus
+    throttledScrollHandler.current?.();
   }, []);
 
   
@@ -245,28 +265,10 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     // Optimisation : pré-calculer les constantes une seule fois
     
     const date = selectedDate;        
-    const halfWindow = Math.floor(WINDOW_SIZE / 2);
-    const startDate = days[0] || date - halfWindow * 86400000;
-    const endDate = days[days.length -1] || date + halfWindow * 86400000;
-
-    // Optimisation : construction directe selon includeWeekend
-    let newTimeline: number[];
-
-    if (isDisplayWeekend) {
-      newTimeline = eachDayOfInterval({ start: startDate, end: endDate });
-    } else {
-      newTimeline = [];
-      let currentDate = startDate;
-      while (currentDate <= endDate) {
-        if (!isWeekend(currentDate)) {
-          newTimeline.push(currentDate);
-        }
-        currentDate = currentDate + 86400000;
-      }
-    }
+    const newTimeline = buildWindow(date);
 
     setDays(newTimeline);
-  }, [isDisplayWeekend]);
+  }, [isDisplayWeekend, buildWindow, selectedDate]);
 
   return {
     days,

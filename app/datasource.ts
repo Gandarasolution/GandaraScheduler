@@ -122,7 +122,7 @@ const PA: poleActivite[] = [
  * - RH : 5 employés (recrutement, formation, gestion sociale)
  * - Statuts : CDI et Intérim pour flexibilité
  */
-const initialEmployees = [
+const initialEmployeesBase = [
     // ===== ÉQUIPE TECHNIQUE (15 employés) =====
     // Spécialisés dans les travaux de construction, rénovation et maintenance
     { name: 'ANDRE', firstName: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 35, pole: 'Technique', code: 'EMP-001'},
@@ -245,7 +245,33 @@ const initialEmployees = [
     { name: 'REED', firstName: 'Isabelle', id: 107, type: 'employee', pole: 'Commercial', code: 'EMP-107' },
     { name: 'COOPER', firstName: 'David', id: 108, type: 'employee', pole: 'Commercial', code: 'EMP-108' },
     { name: 'MORGAN', firstName: 'Sophie', id: 109, type: 'employee', pole: 'Commercial', code: 'EMP-109' },
-    { name: 'BELL', firstName: 'Julien', id: 110, type: 'employee', pole: 'Commercial', code: 'EMP-110' }
+    { name: 'BELL', firstName: 'Julien', id: 110, type: 'employee', pole: 'Commercial', code: 'EMP-110' },
+    { name: 'MURRAY', firstName: 'Emma', id: 111, type: 'employee', pole: 'Commercial', code: 'EMP-111' },
+    { name: 'BAILEY', firstName: 'Lucas', id: 112, type: 'employee', pole: 'Commercial', code: 'EMP-112' },
+];
+
+const generatedEmployees = Array.from({ length: 200 }, (_, idx) => {
+  const id = 113 + idx;
+  const poleOrder = ['Technique', 'Commercial', 'Administrative', 'RH'];
+  const pole = poleOrder[idx % poleOrder.length];
+  const group = initialTeams[idx % initialTeams.length];
+  const isInterim = idx % 5 === 0;
+
+  return {
+    id,
+    name: `EMP${id}`,
+    firstName: `Auto${id}`,
+    code: `EMP-${String(id).padStart(3, '0')}`,
+    pole,
+    type: isInterim ? 'interim' : 'employee',
+    groupId: group?.id,
+    image: 35 + (idx % 5),
+  };
+});
+
+const initialEmployees = [
+  ...initialEmployeesBase,
+  ...generatedEmployees,
 ];
 
 const EventCategory: BaseItemCategory[] = [
@@ -2336,119 +2362,117 @@ function generateAppointments(employees: Employee[]): Appointment[] {
   const appointments: Appointment[] = [];
   let appointmentId = 1;
   const baseDate = new Date();
-  
 
-  // Fonction utilitaire pour obtenir une date de semaine aléatoire
-  const getRandomWeekDate = (baseDate: Date, maxDays: number): Date => {
-    let randomDate: Date;
-    do {
-      const randomDays = Math.floor(Math.random() * maxDays);
-      randomDate = new Date(baseDate);
-      randomDate.setDate(baseDate.getDate() + randomDays);
-    } while (randomDate.getDay() === 0 || randomDate.getDay() === 6); // Éviter week-ends
-    return randomDate;
-  };
+  // Ancre au lundi de la semaine courante puis étend 6 mois avant/après (~52 semaines)
+  const baseMonday = new Date(baseDate);
+  const day = baseMonday.getDay();
+  const diffToMonday = (day + 6) % 7; // 0->6, 1->0 ...
+  baseMonday.setDate(baseMonday.getDate() - diffToMonday);
+  baseMonday.setHours(0, 0, 0, 0);
 
-  // Fonction pour vérifier si deux périodes se chevauchent
+  const weeksBefore = 26;
+  const weeksAfter = 26;
+  const startMonday = new Date(baseMonday);
+  startMonday.setDate(startMonday.getDate() - weeksBefore * 7);
+
+  const weeksToGenerate = weeksBefore + weeksAfter + 1; // couvre l'année centrée sur aujourd'hui
+
   const isOverlapping = (start1: Date, end1: Date, start2: Date, end2: Date): boolean => {
     return !(end1 < start2 || start1 > end2);
   };
 
-  // Générer des rendez-vous pour chaque employé
   employees.forEach((employee) => {
     const employeeAppointments: { start: Date; end: Date }[] = [];
-    
-    // Chaque employé aura 2 à 4 rendez-vous
-    const numberOfAppointments = Math.floor(Math.random() * 3) + 2;
-    
-    for (let i = 0; i < numberOfAppointments; i++) {
-      let attempts = 0;
-      let isValid = false;
-      let startDate: Date = new Date();
-      let endDate: Date = new Date();
-      let duration: number = 1;
-      let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
-      let selectedEvent = null;
-      let description = '';
-      
-      // Essayer de trouver un créneau libre jusqu'à 100 tentatives
-      while (!isValid && attempts < 100) {
-        attempts++;
-        
-        // Choisir le type d'événement
-        const rand = Math.random();
-        if (rand < 0.6) { // 60% chantiers
-          appointmentType = 'chantier';
-          while (!selectedEvent) {
-            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'chantier') {
-              selectedEvent = null;
-            }
-          }
-          duration = Math.floor(Math.random() * 3) + 3; // 3 à 5 jours
-          description = `Chantier de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-        } else if (rand < 0.8) { // 20% absences
-          appointmentType = 'absence';
-          while (!selectedEvent) {
-            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'absence') {
-              selectedEvent = null;
-            }
-          }
-          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
-          description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-        } else { // 20% autres
-          appointmentType = 'autre';
-          while (!selectedEvent) {
-            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'autre') {
-              selectedEvent = null;
-            }
-          }
-          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
-          description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-        }
-        
-        // Générer date de début aléatoire (dans les 60 prochains jours)
-        startDate = getRandomWeekDate(baseDate, 60);
-        startDate.setHours(0, 0, 0, 0);
-        
-        // Calculer date de fin
-        endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + duration - 1);
-        endDate.setHours(23, 59, 59, 999);
-        
-        // Ajuster si ça tombe sur un week-end
-        while (endDate.getDay() === 0 || endDate.getDay() === 6) {
-          endDate.setDate(endDate.getDate() - 1);
-        }
-        
-        // Vérifier qu'il n'y a pas de chevauchement avec les rendez-vous existants de cet employé
-        isValid = !employeeAppointments.some(existing => 
-          isOverlapping(startDate, endDate, existing.start, existing.end)
-        );
-      }
-      
-      // Si on a trouvé un créneau valide, créer le rendez-vous
-      if (isValid) {
-        employeeAppointments.push({ start: new Date(startDate), end: new Date(endDate) });
-        
-        // Créer l'appointment avec les bonnes propriétés selon le type
-        const newAppointment: Appointment = {
-          id: appointmentId++,
-          description: description,
-          startDate: startDate.getTime(),
-          endDate: endDate.getTime(),
-          employeeId: employee.id,
-          type: appointmentType,
-          EventId: selectedEvent?.id as number
-        };
 
-        appointments.push(newAppointment);
+    for (let week = 0; week < weeksToGenerate; week++) {
+      const weeklyQuota = Math.floor(Math.random() * 3); // 0,1,2 rdv max
+      const isFullWeek = weeklyQuota === 1; // Si un seul RDV, on occupe la semaine
+
+      for (let slot = 0; slot < weeklyQuota; slot++) {
+        let attempts = 0;
+        let isValid = false;
+        let startDate: Date = new Date();
+        let endDate: Date = new Date();
+        let duration: number = isFullWeek ? 5 : 1;
+        let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
+        let selectedEvent = null;
+        let description = '';
+
+        while (!isValid && attempts < 50) {
+          attempts++;
+
+          // Choisir le type d'événement (mêmes pondérations)
+          const rand = Math.random();
+          if (rand < 0.6) {
+            appointmentType = 'chantier';
+            while (!selectedEvent) {
+              selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
+              if (selectedEvent.type !== 'chantier') selectedEvent = null;
+            }
+            duration = isFullWeek ? 5 : (Math.floor(Math.random() * 2) + 1); // 1-2 jours ou semaine entière
+            description = `Chantier de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
+          } else if (rand < 0.8) {
+            appointmentType = 'absence';
+            while (!selectedEvent) {
+              selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
+              if (selectedEvent.type !== 'absence') selectedEvent = null;
+            }
+            duration = isFullWeek ? 5 : (Math.floor(Math.random() * 2) + 1);
+            description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
+          } else {
+            appointmentType = 'autre';
+            while (!selectedEvent) {
+              selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
+              if (selectedEvent.type !== 'autre') selectedEvent = null;
+            }
+            duration = isFullWeek ? 5 : (Math.floor(Math.random() * 2) + 1);
+            description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
+          }
+
+          // Jour de début aléatoire entre lundi et vendredi
+          const dayOffset = isFullWeek ? 0 : Math.floor(Math.random() * 5); // 0-4, semaine pleine démarre lundi
+          startDate = new Date(startMonday);
+          startDate.setDate(startMonday.getDate() + week * 7 + dayOffset);
+          startDate.setHours(0, 0, 0, 0);
+
+          // Calcul de fin en restant dans la semaine (vendredi max)
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + duration - 1);
+          if (endDate.getDay() === 6) { // samedi
+            endDate.setDate(endDate.getDate() - 1);
+          } else if (endDate.getDay() === 0) { // dimanche, recule à vendredi
+            endDate.setDate(endDate.getDate() - 2);
+          }
+          endDate.setHours(23, 59, 59, 999);
+
+          // Double sécurité: aucun week-end
+          if (startDate.getDay() === 0 || startDate.getDay() === 6) continue;
+          if (endDate.getDay() === 0 || endDate.getDay() === 6) continue;
+
+          isValid = !employeeAppointments.some(existing =>
+            isOverlapping(startDate, endDate, existing.start, existing.end)
+          );
+        }
+
+        if (isValid) {
+          employeeAppointments.push({ start: new Date(startDate), end: new Date(endDate) });
+
+          const newAppointment: Appointment = {
+            id: appointmentId++,
+            description,
+            startDate: startDate.getTime(),
+            endDate: endDate.getTime(),
+            employeeId: employee.id,
+            type: appointmentType,
+            EventId: (selectedEvent as any)?.id as number
+          };
+
+          appointments.push(newAppointment);
+        }
       }
     }
   });
-  
+
   return appointments;
 }
 
