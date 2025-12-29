@@ -82,10 +82,11 @@ export default function HomePage({
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
     viewType: viewState.viewType, 
-    searchQuery: viewState.searchInput,
+    searchQuery: viewState.searchInput || viewState.dimensionSearchInput,
     filters: viewState.activeFilters,
     calendarConfig: viewState.currentCalendarConfig,
-    globalEmployeesRef
+    globalEmployeesRef,
+    isSearchOverlayOpen: viewState.isSearchOverlayOpen
   });
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
@@ -324,6 +325,7 @@ export default function HomePage({
                     images={dataLayer.availableImages}
                     onCreate={(payload) => dataLayer.addManualEvent(payload)}
                     onToggleActive={(id) => dataLayer.toggleManualEvent(id)}
+                    onDelete={(id) => dataLayer.deleteManualEvent(id)}
                     onImageUpload={interaction.handleImageUpload}
                     isUploading={interaction.isUploading}
                     uploadError={interaction.uploadError}
@@ -498,8 +500,8 @@ export default function HomePage({
           <SearchOverlay
             isOpen={viewState.isSearchOverlayOpen}
             onClose={() => viewState.setIsSearchOverlayOpen(false)}
-            searchInput={viewState.searchInput}
-            setSearchInput={viewState.setSearchInput}
+            searchInput={viewState.dimensionSearchInput}
+            setSearchInput={viewState.setDimensionsSearchInput}
             items={dataLayer.filteredItems}
             onItemAction={appointmentLogic.selectedCell ? appointmentLogic.handleSearchItemAction : undefined}
             placeholder="Rechercher un événement..."

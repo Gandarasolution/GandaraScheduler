@@ -1,7 +1,8 @@
 "use client";
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ImageSelectorContentModal } from '../modals';
 import { Image, Item } from '../../types';
+import { getEventCategories } from '@/app/datasource';
 
 interface ManualEventInput {
   code: string;
@@ -12,7 +13,8 @@ interface ManualEventInput {
   borderColor: string;
   textColor: string;
   actif: boolean;
-  type: 'chantier' | 'autre';
+  type: 'autre';
+  category: string;
 }
 
 interface ManualEventsManagerProps {
@@ -20,6 +22,7 @@ interface ManualEventsManagerProps {
   images: Image[];
   onCreate: (payload: ManualEventInput) => void;
   onToggleActive: (id: number) => void;
+  onDelete: (id: number) => void;
   onImageUpload: (file: File) => Promise<Image>;
   isUploading: boolean;
   uploadError: string | null;
@@ -34,6 +37,7 @@ const defaultForm: ManualEventInput = {
   textColor: '#0f172a',
   actif: true,
   type: 'autre',
+  category: '',
 };
 
 const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
@@ -41,32 +45,57 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
   images,
   onCreate,
   onToggleActive,
+  onDelete,
   onImageUpload,
   isUploading,
   uploadError,
 }) => {
   const [form, setForm] = useState<ManualEventInput>(defaultForm);
-  const [errors, setErrors] = useState<{ code?: string; label?: string; description?: string }>({});
+  const [errors, setErrors] = useState<{ code?: string; label?: string; description?: string; category?: string }>({});
   const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
 
   const handleChange = <K extends keyof ManualEventInput>(key: K, value: ManualEventInput[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const categoryOptions = useMemo(() => {
+    const cat = getEventCategories();
+    const categories = new Set(cat.map(c => c.name));
+    if (categories.size === 0) categories.add('Autre');
+    return Array.from(categories);
+  }, [events]);
+
+  useEffect(() => {
+    if (!form.category && categoryOptions.length > 0) {
+      setForm((prev) => ({ ...prev, category: categoryOptions[0] }));
+    }
+
+    if (form.category && categoryOptions.length > 0 && !categoryOptions.includes(form.category)) {
+      setForm((prev) => ({ ...prev, category: categoryOptions[0] }));
+    }
+  }, [form.category, categoryOptions]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const nextErrors: { code?: string; label?: string; description?: string } = {};
+    const nextErrors: { code?: string; label?: string; description?: string; category?: string } = {};
     if (!form.code.trim()) nextErrors.code = 'Code requis';
     if (!form.label.trim()) nextErrors.label = 'Libellé requis';
     if (!form.description.trim()) nextErrors.description = 'Description requise';
+    if (!form.category.trim()) nextErrors.category = 'Catégorie requise';
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
     onCreate(form);
-    setForm({ ...defaultForm, color: form.color, borderColor: form.borderColor, textColor: form.textColor });
+    setForm({
+      ...defaultForm,
+      color: form.color,
+      borderColor: form.borderColor,
+      textColor: form.textColor,
+      category: form.category || categoryOptions[0] || defaultForm.category,
+    });
   };
 
-  const rows = useMemo(() => events.filter((e) => e.category === 'manual'), [events]);
+  const rows = useMemo(() => events.filter((e) => e.isManual), [events]);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -107,17 +136,18 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm text-secondary">Type d'événement</label>
+            <label className="text-sm text-secondary">Catégorie</label>
             <select
               className="rounded-xl border border-default px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-              value={form.type}
-              onChange={(e) => handleChange('type', e.target.value as ManualEventInput['type'])}
+              value={form.category}
+              onChange={(e) => handleChange('category', e.target.value)}
             >
-              <option value="chantier">Chantier</option>
-              <option value="autre">Rubrique sociale</option>
+              {categoryOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
             </select>
+            {errors.category && <span className="text-xs text-red-600">{errors.category}</span>}
           </div>
-
           <div className="flex flex-col gap-2">
             <label className="text-sm text-secondary">Image (optionnel)</label>
             <div className="flex items-center gap-3">
@@ -216,6 +246,7 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
                 <th className="px-4 py-3 w-20">Image</th>
                 <th className="px-4 py-3">Description</th>
                 <th className="px-4 py-3 w-28 text-center">Actif</th>
+                <th className="px-4 py-3 w-24 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -251,11 +282,19 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
                       {(event as any).actif ? 'Actif' : 'Inactif'}
                     </button>
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      className="px-3 py-2 rounded-full text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200"
+                      onClick={() => onDelete(event.id)}
+                    >
+                      <svg id="Layer_1" enableBackground="new 0 0 512 512" height="24" viewBox="0 0 512 512" width="24" xmlns="http://www.w3.org/2000/svg"><g><path d="m479.867 111.4c0-25.99-21.145-47.134-47.135-47.134h-81.398v-9.101c0-30.417-24.748-55.165-55.168-55.165h-80.332c-30.42 0-55.168 24.748-55.168 55.166v9.101h-81.4c-25.989 0-47.133 21.144-47.133 47.134 0 20.745 13.478 38.39 32.133 44.671v300.761c0 30.419 24.748 55.167 55.167 55.167h273.133c30.419 0 55.166-24.748 55.166-55.167v-300.761c18.657-6.281 32.135-23.926 32.135-44.672zm-289.201-56.234c0-13.876 11.291-25.166 25.168-25.166h80.332c13.878 0 25.168 11.29 25.168 25.166v9.101h-130.668zm201.9 426.834h-273.132c-13.877 0-25.167-11.29-25.167-25.167v-298.3h323.466v298.3c-.001 13.877-11.29 25.167-25.167 25.167zm40.166-353.467h-353.466c-9.447 0-17.133-7.686-17.133-17.133 0-9.448 7.686-17.134 17.133-17.134h353.466c9.448 0 17.135 7.686 17.135 17.134s-7.686 17.133-17.135 17.133z"/><path d="m167.633 192.8c-8.284 0-15 6.716-15 15v224.934c0 8.284 6.716 15 15 15s15-6.716 15-15v-224.934c0-8.284-6.716-15-15-15z"/><path d="m256 192.8c-8.284 0-15 6.716-15 15v224.934c0 8.284 6.716 15 15 15s15-6.716 15-15v-224.934c0-8.284-6.716-15-15-15z"/><path d="m344.367 192.8c-8.284 0-15 6.716-15 15v224.934c0 8.284 6.716 15 15 15s15-6.716 15-15v-224.934c0-8.284-6.716-15-15-15z"/></g></svg>
+                    </button>
+                  </td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td className="px-4 py-6 text-center text-secondary" colSpan={3}>
+                  <td className="px-4 py-6 text-center text-secondary" colSpan={4}>
                     Aucun événement manuel pour le moment.
                   </td>
                 </tr>

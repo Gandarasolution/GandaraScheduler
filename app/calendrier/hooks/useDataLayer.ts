@@ -16,9 +16,11 @@ interface DataLayerProps {
   filters: ActiveFilters;
   calendarConfig: CalendarConfig | null;
   globalEmployeesRef: React.RefObject<Employee[]>;
+  
+  isSearchOverlayOpen: boolean;
 }
 
-export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, globalEmployeesRef }: DataLayerProps) => {
+export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, globalEmployeesRef, isSearchOverlayOpen }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   
   // Données Sources (Refs pour éviter re-renders inutiles sur grosses données)
@@ -63,7 +65,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
   }, [calendarConfig, searchQuery, filters, searchUtils, appointmentsVersion]);
 
   const filteredAppointments = useMemo(() => {
-    if (!calendarConfig) return appointmentsRef.current;
+    if (!calendarConfig || isSearchOverlayOpen) return appointmentsRef.current;
     // Logique de filtrage combinée (Types RDV + Filtres champs)
     let filtered = appointmentsRef.current;
     
@@ -93,7 +95,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
   const getTableItems = () => {
      if (viewType === 'chantier-table') return filteredItems.filter(e => e.type === 'chantier');
      if (viewType === 'paie-table') return filteredItems.filter(e => e.type !== 'chantier');
-      if (viewType === 'manual-event-table') return filteredItems.filter(e => e.category === 'manual');
+      if (viewType === 'manual-event-table') return filteredItems.filter(e => e.isManual);
      return filteredEmployees.map(emp => ({
         id: emp.id,
         image: emp.image,
@@ -211,7 +213,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     refreshData();
   };
 
-  const addManualEvent = (payload: { code: string; label: string; description: string; image?: Image; color: string; borderColor: string; textColor: string; actif: boolean; type: 'chantier' | 'autre'; }) => {
+  const addManualEvent = (payload: { code: string; label: string; description: string; image?: Image; color: string; borderColor: string; textColor: string; actif: boolean; type: 'autre'; category: string; }) => {
     const newId = Date.now();
     const newItem: Item = {
       id: newId,
@@ -225,12 +227,25 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
       type: payload.type,
       verrou: false,
       actif: payload.actif,
-      category: 'manual'
+      category: payload.category,
+      isManual: true
     } as Item;
 
     itemsRef.current = [newItem, ...itemsRef.current];
     refreshData();
     return newItem;
+  };
+
+  const updateManualEventCategory = (id: number, category: string) => {
+    itemsRef.current = itemsRef.current.map(e =>
+      (e.id === id && e.isManual) ? ({ ...e, category, isManual: true }) : e
+    );
+    refreshData();
+  };
+
+  const deleteManualEvent = (id: number) => {
+    itemsRef.current = itemsRef.current.filter(e => !(e.id === id && e.isManual));
+    refreshData();
   };
 
   const toggleManualEvent = (id: number) => {
@@ -253,6 +268,8 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     updateEmployeeGroup,
     addManualEvent,
     toggleManualEvent,
+    updateManualEventCategory,
+    deleteManualEvent,
     getTableItems,
     getTableStructure,
     refreshData,

@@ -38,7 +38,7 @@ export const useCalendarView = (employeesRef: any) => {
   const [nonWorkingDates, setNonWorkingDates] = useState<number[]>([]);
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
   const [searchInput, setSearchInput] = useState<string>('');
-  const [eventSearchInput, setEventSearchInput] = useState<string>('');
+  const [dimensionSearchInput, setDimensionsSearchInput] = useState<string>('');
 
   // --- Hook de configuration existant ---
   const calendarConfigHook = useCalendarConfig({ employees: employeesRef });
@@ -118,7 +118,7 @@ export const useCalendarView = (employeesRef: any) => {
     nonWorkingDates, setNonWorkingDates,
     isNotificationsPanelOpen, setIsNotificationsPanelOpen,
     searchInput, setSearchInput,
-    eventSearchInput, setEventSearchInput,
+    dimensionSearchInput, setDimensionsSearchInput,
     
     // Config Calendar
     calendarConfigHook,

@@ -78,6 +78,10 @@ export interface Tags {
   name: string;
 }
 
+export interface BaseItemCategory{
+  id: number;
+  name: string;
+}
 
 interface BaseItem {
   id: number;
@@ -89,7 +93,7 @@ interface BaseItem {
   image?: Image;
   defaultDescription?: string;
   tags?: Tags[];
-  category?: string;
+  isManual?: boolean;
 }
 
 export interface ChantierItem extends BaseItem {
@@ -115,6 +119,8 @@ export interface ChantierItem extends BaseItem {
 interface CommonPaieAttributs extends BaseItem {
   verrou: boolean;
   actif: boolean;
+  category: BaseItemCategory["name"];
+
 }
 
 export interface AbsenceItem extends CommonPaieAttributs {

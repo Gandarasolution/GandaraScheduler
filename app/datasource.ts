@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Employee, Groupe, Item, Image, poleActivite, AbsenceItem} from './calendrier/types/index';
+import { Appointment, Employee, Groupe, Item, Image, poleActivite, BaseItemCategory} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -248,6 +248,17 @@ const initialEmployees = [
     { name: 'BELL', firstName: 'Julien', id: 110, type: 'employee', pole: 'Commercial', code: 'EMP-110' }
 ];
 
+const EventCategory: BaseItemCategory[] = [
+    { id: 1, name: 'Congés' },
+    { id: 2, name: 'Maladie' },
+    { id: 3, name: 'Formation' },
+    { id: 4, name: 'RTT' },
+    { id: 5, name: 'Réunion' },
+    { id: 6, name: 'Commercial' },
+    { id: 7, name: 'Technique' },
+    { id: 8, name: 'Administratif' },
+    { id: 9, name: 'Sécurité' },
+];
 
 const Evenements = [
     // Nouveaux événements
@@ -615,7 +626,7 @@ const Evenements = [
       borderColor: '#16A34A',
       textColor: '#FFFFFF',
       defaultDescription: 'Congés payés',
-      category: 'Congés',
+      category: 1,
       verrou: true,
       code: 'CP-2024',
       actif: false,
@@ -629,7 +640,7 @@ const Evenements = [
       borderColor: '#DC2626',
       textColor: '#FFFFFF',
       defaultDescription: 'Arrêt maladie',
-      category: 'Maladie',
+      category: 2,
       verrou: false,
       code: 'AM-2024',
       actif: true,
@@ -643,7 +654,7 @@ const Evenements = [
       borderColor: '#2563EB',
       textColor: '#FFFFFF',
       defaultDescription: 'Formation professionnelle',
-      category: 'Formation',
+      category: 3,
       verrou: false,
       code: 'FOR-2024',
       actif: true,
@@ -657,7 +668,7 @@ const Evenements = [
       borderColor: '#7C3AED',
       textColor: '#FFFFFF',
       defaultDescription: 'Réduction du temps de travail',
-      category: 'RTT',
+      category: 4,
       verrou: false,
       code: 'RTT-2024',
       actif: false,
@@ -671,7 +682,7 @@ const Evenements = [
       borderColor: '#D97706',
       textColor: '#FFFFFF',
       defaultDescription: 'Congé sans solde',
-      category: 'Congés',
+      category: 1,
       verrou: true,
       code: 'CSS-2024',
       actif: true,
@@ -685,7 +696,7 @@ const Evenements = [
       borderColor: '#0891B2',
       textColor: '#FFFFFF',
       defaultDescription: 'Réunion d\'équipe',
-      category: 'Réunion',
+      category: 5,
       verrou: false,
       code: 'REU-2024',
       actif: true,
@@ -699,7 +710,7 @@ const Evenements = [
       borderColor: '#DB2777',
       textColor: '#FFFFFF',
       defaultDescription: 'Rendez-vous avec le client',
-      category: 'Commercial',
+      category: 6,
       verrou: false,
       code: 'RDC-2024',
       actif: true,
@@ -713,7 +724,7 @@ const Evenements = [
       type: 'autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Visite technique sur site',
-      category: 'Technique',
+      category: 7,
       verrou: false,
       code: 'VTS-2024',
       actif: true,
@@ -727,7 +738,7 @@ const Evenements = [
       type: 'autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Réunion sécurité',
-      category: 'Sécurité',
+      category: 9,
       verrou: false,
       code: 'RES-2024',
       actif: true,
@@ -741,7 +752,7 @@ const Evenements = [
       type: 'autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Formation technique',
-      category: 'Formation',
+      category: 1,
       verrou: false,
       code: 'FT-2024',
       actif: true,
@@ -2509,12 +2520,16 @@ export const getEvenements = (): Item[] => {
     } else {
       return {
         ...event,
+        category: event.type === 'absence' ? EventCategory.find(cat => cat.id === (event as any).category)?.name || null : null,
         image
       } as Item;
     }
   });
 };
 
+export const getEventCategories = (): BaseItemCategory[] => {
+  return EventCategory;
+}
 
 export const getEmployees = (): Employee[] => {
 
