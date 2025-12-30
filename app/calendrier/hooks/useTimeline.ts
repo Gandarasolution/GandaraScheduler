@@ -25,18 +25,39 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   const throttledScrollHandler = useRef<(() => void) | null>(null);
 
   const buildWindow = useCallback((centerDate: number) => {
-    const startDate = centerDate - Math.floor(WINDOW_SIZE / 2) * DAY_MS;
-    const windowDays: number[] = [];
-    let cursor = startDate;
+    const shouldInclude = (ts: number) => isDisplayWeekend || !isWeekend(ts);
 
-    while (windowDays.length < WINDOW_SIZE) {
-      if (isDisplayWeekend || !isWeekend(cursor)) {
-        windowDays.push(cursor);
+    const left: number[] = [];
+    const right: number[] = [];
+    const includeCenter = shouldInclude(centerDate);
+
+    // Nombre de jours à placer de part et d'autre de la date cible
+    const leftTarget = Math.floor(WINDOW_SIZE / 2);
+    const rightTarget = WINDOW_SIZE - leftTarget - (includeCenter ? 1 : 0);
+
+    // Collecte des jours à gauche (ordre inverse pour garder l'ordre chronologique ensuite)
+    let cursor = centerDate - DAY_MS;
+    while (left.length < leftTarget) {
+      if (shouldInclude(cursor)) {
+        left.push(cursor);
+      }
+      cursor -= DAY_MS;
+    }
+
+    // Collecte des jours à droite
+    cursor = centerDate + DAY_MS;
+    while (right.length < rightTarget) {
+      if (shouldInclude(cursor)) {
+        right.push(cursor);
       }
       cursor += DAY_MS;
     }
 
-    return windowDays;
+    return [
+      ...left.reverse(),
+      ...(includeCenter ? [centerDate] : []),
+      ...right,
+    ];
   }, [isDisplayWeekend]);
 
   // --- Logique d'ajout de jours ---
