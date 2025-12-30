@@ -300,7 +300,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       
       return currentTs;
 
-  }, [isDisplayWeekend]);
+  }, [isDisplayWeekend, isFullDay]);
 
   // Débute le redimensionnement (gauche ou droite)
   /**
@@ -336,6 +336,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     e.preventDefault();
     if (!isResizingLeft && !isResizingRight) return;
+    
 
     const currentDx = (e.clientX - initialX.current) ;
     let intervalsMoved = Math.round(currentDx / INTERVAL_WIDTH);
@@ -367,7 +368,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       
       setDragEndSafe(new Date(newEndDate).setHours(new Date(newEndDate).getHours() - 1, 59, 59, 999));
     }    
-  }, [isResizingLeft, isResizingRight, startDate, endDate, addInterval, setDragStartSafe, setDragEndSafe]);
+  }, [isResizingLeft, isResizingRight, startDate, endDate, isFullDay, addInterval, setDragStartSafe, setDragEndSafe]);
 
 
   /**
@@ -416,6 +417,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   useEffect(() => {
     // 1. CALCUL DE LA LARGEUR (Ça c'est bon, sauf l'arrondi)
     const durationMs = dragEndRef.current - dragStartRef.current;
+
     // Astuce DST : On arrondit pour éviter les jours de 23h/25h
     const durationInterval = Math.round(durationMs / (isFullDay ? DAY_MS : DAY_MS / 2)); 
     
@@ -435,22 +437,31 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       // Ne pas utiliser l'ancienne start date du RDV, mais bien le référentiel global
       const startFromTimelineOrigin = dragStartRef.current - timelineStart;
       
-      const daysFromOrigin = Math.round(startFromTimelineOrigin / (isFullDay ? DAY_MS : (DAY_MS / 2)));
+      
+      const intervalFromOrigin = Math.round(startFromTimelineOrigin / (isFullDay ? DAY_MS : (DAY_MS / 2)));
       
       let weekendsToRemove = 0;
       if (!isDisplayWeekend) {
         weekendsToRemove = countWeekends(timelineStart, dragStartRef.current);
       }
+
+      //console.log('weekendsToRemove', weekendsToRemove);
       
-      const visualDaysOffset = daysFromOrigin - weekendsToRemove;
       
-      const newLeftPixel = Math.max(0, visualDaysOffset * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2));
+      const visualInstervalsOffset = intervalFromOrigin - (weekendsToRemove * (isFullDay ? 1 : 2));
+
+      // console.log('intervalFromOrigin', intervalFromOrigin);
+      // console.log('visualInstervalsOffset', visualInstervalsOffset);
+      
+      
+      
+      const newLeftPixel = Math.max(0, visualInstervalsOffset * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2));
       
       
       setComputedLeft(newLeftPixel);
     }
     
-  }, [absoluteWidth, isMobile, intervalCount, INTERVAL_WIDTH, isResizingLeft, timelineStart]); 
+  }, [absoluteWidth, isMobile, intervalCount, INTERVAL_WIDTH, isResizingLeft, timelineStart, isFullDay]); 
   
   useEffect(() => {
     // Si on est en train de redimensionner à gauche manuellement, 
