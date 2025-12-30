@@ -92,36 +92,36 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   }, [isDisplayWeekend]);
 
   // --- Gestionnaire de Scroll Throttlé ---
-  // if (!throttledScrollHandler.current) {
-  //   let rafId: number | null = null;
-  //   let lastProcessTime = 0;
+  if (!throttledScrollHandler.current) {
+    let rafId: number | null = null;
+    let lastProcessTime = 0;
 
-  //   throttledScrollHandler.current = () => {
-  //       if (rafId || isProcessingInfiniteScroll.current || !isInfiniteScrollEnabled.current || isAutoScrolling.current) return;
+    throttledScrollHandler.current = () => {
+        if (rafId || isProcessingInfiniteScroll.current || !isInfiniteScrollEnabled.current || isAutoScrolling.current) return;
         
-  //       const now = performance.now();
-  //       if (now - lastProcessTime < 16) return;
+        const now = performance.now();
+        if (now - lastProcessTime < 16) return;
 
-  //       rafId = requestAnimationFrame(() => {
-  //           rafId = null;
-  //           lastProcessTime = performance.now();
-  //           const el = mainScrollRef.current;
-  //           if (!el) return;
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+            lastProcessTime = performance.now();
+            const el = mainScrollRef.current;
+            if (!el) return;
 
-  //           const { scrollLeft, scrollWidth, clientWidth } = el;
-  //           const scrollableWidth = scrollWidth - clientWidth;
-  //           const percentage = (scrollLeft / scrollableWidth) * 100;
+            const { scrollLeft, scrollWidth, clientWidth } = el;
+            const scrollableWidth = scrollWidth - clientWidth;
+            const percentage = (scrollLeft / scrollableWidth) * 100;
 
-  //           if (percentage >= 85) {
-  //               isProcessingInfiniteScroll.current = true;
-  //               addDaysToTimeline('right');
-  //           } else if (percentage <= 15) {
-  //               isProcessingInfiniteScroll.current = true;
-  //               addDaysToTimeline('left');
-  //           }
-  //       });
-  //   };
-  // }
+            if (percentage >= 85) {
+                isProcessingInfiniteScroll.current = true;
+                addDaysToTimeline('right');
+            } else if (percentage <= 15) {
+                isProcessingInfiniteScroll.current = true;
+                addDaysToTimeline('left');
+            }
+        });
+    };
+  }
 
   const handleScroll = useCallback(() => {
       throttledScrollHandler.current?.();
