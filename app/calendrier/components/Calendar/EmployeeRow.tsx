@@ -1,6 +1,6 @@
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Employee, Appointment, Item } from '../../types';
-import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS } from '../../utils/constants';
+import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
 import { countWeekends } from '../../utils/dates';
@@ -26,6 +26,9 @@ interface EmployeeRowProps {
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
+  isOverlapExpanded: boolean;
+  onExpandOverlaps: () => void;
+  onCollapseOverlaps: () => void;
 }
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
@@ -48,14 +51,17 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   selectedAppointmentId,
   onSelectCell,
   onSelectAppointment,
+  isOverlapExpanded,
+  onExpandOverlaps,
+  onCollapseOverlaps,
 }) => {
+  const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
   const timelineStart = useMemo(() => dayInTimeline[0], [dayInTimeline]);
   const timelineEnd = useMemo(() => (dayInTimeline[dayInTimeline.length - 1] ?? 0) + DAY_MS, [dayInTimeline]);
   const pixelsPerMs = CELL_WIDTH / DAY_MS;
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
 
   const positionedAppointments = useMemo(() => {
-    
     return appointments
       .filter((app) => {
         if (app.employeeId !== employee.id) return false;
@@ -94,7 +100,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         }
         const visualDurationDays = Math.max(0.1, durationDays - weekendsInDuration);
         const width = visualDurationDays * CELL_WIDTH;        
-        const topPx = (app.top * 52) + (2 * app.top);
+        const topPx = (app.top * CELL_HEIGHT) + (2 * app.top);
 
 
         return { ...app, left, width, topPx } as Appointment & {
@@ -105,6 +111,35 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         };
       });
   }, [appointments, employee.id, pixelsPerMs, timelineEnd, timelineStart, isDisplayWeekend]);
+
+  // Regroupe les rendez-vous qui se chevauchent pour n'afficher que le premier par défaut.
+  const overlappingGroups = useMemo(() => {
+    if (!positionedAppointments.length) return [] as { key: number; apps: (Appointment & { top: number; left: number; width: number; topPx: number; })[] }[];
+
+    const sorted = [...positionedAppointments].sort((a, b) => a.startDate - b.startDate);
+    const groups: Array<{ key: number; apps: (typeof positionedAppointments)[number][]; end: number }> = [];
+
+    for (const app of sorted) {
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && app.startDate < lastGroup.end) {
+        lastGroup.apps.push(app);
+        lastGroup.end = Math.max(lastGroup.end, app.endDate);
+      } else {
+        groups.push({ key: app.id, apps: [app], end: app.endDate });
+      }
+    }
+
+    return groups.map(({ key, apps }) => ({ key, apps }));
+  }, [positionedAppointments]);
+  const hasExpandedGroup = useMemo(() => overlappingGroups.some((g) => expandedGroups[g.key]), [overlappingGroups, expandedGroups]);
+
+  useEffect(() => {
+    if (hasExpandedGroup && !isOverlapExpanded) {
+      onExpandOverlaps();
+    } else if (!hasExpandedGroup && isOverlapExpanded) {
+      onCollapseOverlaps();
+    }
+  }, [hasExpandedGroup, isOverlapExpanded, onCollapseOverlaps, onExpandOverlaps]);
 
   const selectionOverlay = useMemo(() => {
     if (!selectedCell || selectedCell.employeeId !== employee.id) return null;
@@ -192,36 +227,81 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           }}
         />
       )}
-      {positionedAppointments.map((app) => {
-        const event = events.find((et) => et.id === app.EventId) as Item | undefined;
+      {overlappingGroups.map((group) => {
+        const isExpanded = expandedGroups[group.key] === true;
+        const visibleAppointments = isExpanded ? group.apps : [group.apps[0]];
+        const hiddenCount = group.apps.length - visibleAppointments.length;
+
         return (
-          <AppointmentItem
-            key={app.id}
-            appointment={app as Appointment & { top: number;}}
-            isFullDay={isFullDay}
-            isMobile={false}
-            isDisplayWeekend={isDisplayWeekend}
-            event={event as Item}
-            timelineStart={timelineStart}
-            chargeeAffaire={(event && event.type === 'chantier' ? event.chargeAffaire : '') || ''}
-            absoluteLeft={app.left}
-            absoluteWidth={app.width}
-            absoluteTop={app.topPx}
-            onResize={(id, newStartDate, newEndDate, resizeDirection) =>{              
-              onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection)}
-            }
-            handleContextMenu={(e, origin) =>
-              handleContextMenu(
-                e,
-                origin,
-                { ...app, startDate: app.startDate, endDate: app.endDate },
-                { employeeId: app.employeeId as number, date: app.startDate }
-              )
-            }
-            onDoubleClick={() => onAppointmentDoubleClick(app)}
-            onClick={() => onSelectAppointment(app)}
-            isSelected={selectedAppointmentId === app.id}
-          />
+          <React.Fragment key={group.key}>
+            {visibleAppointments.map((app) => {
+              const event = events.find((et) => et.id === app.EventId) as Item | undefined;
+              return (
+                <AppointmentItem
+                  key={app.id}
+                  appointment={app as Appointment & { top: number;}}
+                  isFullDay={isFullDay}
+                  isMobile={false}
+                  isDisplayWeekend={isDisplayWeekend}
+                  event={event as Item}
+                  timelineStart={timelineStart}
+                  chargeeAffaire={(event && event.type === 'chantier' ? event.chargeAffaire : '') || ''}
+                  absoluteLeft={app.left}
+                  absoluteWidth={app.width}
+                  absoluteTop={app.topPx}
+                  onResize={(id, newStartDate, newEndDate, resizeDirection) =>{              
+                    onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection)}
+                  }
+                  handleContextMenu={(e, origin) =>
+                    handleContextMenu(
+                      e,
+                      origin,
+                      { ...app, startDate: app.startDate, endDate: app.endDate },
+                      { employeeId: app.employeeId as number, date: app.startDate }
+                    )
+                  }
+                  onDoubleClick={() => onAppointmentDoubleClick(app)}
+                  onClick={() => onSelectAppointment(app)}
+                  isSelected={selectedAppointmentId === app.id}
+                />
+              );
+            })}
+
+            {hiddenCount > 0 && !isExpanded && (
+              <button
+                type="button"
+                className="absolute z-30 text-[11px] font-semibold rounded-full px-2 py-0.5 shadow-sm border border-gray-200 bg-white/85 text-gray-700 flex items-center gap-1 transition-transform hover:-translate-y-0.5 hover:shadow-md"
+                style={{
+                  left: (group.apps[0].left + group.apps[0].width) - 24,
+                  top: group.apps[0].topPx + 6,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedGroups((prev) => ({ ...prev, [group.key]: true }));
+                }}
+              >
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-400" aria-hidden="true" />
+                +{hiddenCount}
+              </button>
+            )}
+
+            {isExpanded && group.apps.length > 1 && (
+              <button
+                type="button"
+                className="absolute z-30 text-[11px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
+                style={{
+                  left: (group.apps[0].left + group.apps[0].width) - 36,
+                  top: group.apps[0].topPx - 12,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedGroups((prev) => ({ ...prev, [group.key]: false }));
+                }}
+              >
+                Masquer
+              </button>
+            )}
+          </React.Fragment>
         );
       })}
     </div>
@@ -237,7 +317,8 @@ export default memo(EmployeeRow, (prev, next) => {
       prev.events !== next.events ||
       prev.nonWorkingDates !== next.nonWorkingDates ||
       prev.isDisplayWeekend !== next.isDisplayWeekend ||
-      prev.todayIndex !== next.todayIndex
+      prev.todayIndex !== next.todayIndex ||
+      prev.isOverlapExpanded !== next.isOverlapExpanded
   ) {
     return false;
   }

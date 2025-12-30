@@ -104,6 +104,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   hoverColumnLeft,
 }) => {
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
+  const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [viewport, setViewport] = useState<{ top: number; height: number }>({ top: 0, height: 0 });
   
   const dimensionItems = useMemo(() => {
@@ -121,24 +122,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const todayIndex = useMemo(() => {
     return dayInTimeline.findIndex(day => isSameDay(day, Date.now()));
   }, [dayInTimeline]);  
-
-
-  // Optimisation : Pré-calculer les rendez-vous par employé et par jour
-  const appointmentsByEmployeeAndDay = useMemo(() => {
-    const map = new Map<string, (Appointment & { top: number })[]>();
-    
-    appointmentsWithTop.forEach(app => {
-      const dateKey = format(app.startDate, 'yyyy-MM-dd');
-      const key = `${app.employeeId}-${dateKey}`;
-      
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key)?.push(app);
-    });
-    
-    return map;
-  }, [appointmentsWithTop]);
 
   // Flatten the data structure for virtualization
   const flatRows = useMemo(() => {
@@ -168,19 +151,23 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       if (openItems.includes(item.id)) {
         const itemEmployees = employeesByDimension[item.id] || [];
         itemEmployees.forEach(employee => {
-          const height = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
+          const baseHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
+          const adjustedHeight = expandedOverlapRows[employee.id]
+            ? baseHeight
+            : Math.min(baseHeight, CELL_HEIGHT + 12);
+
           rows.push({
             type: 'employee',
             id: employee.id,
             data: employee,
-            height: height
+            height: adjustedHeight
           });
         });
       }
     });
     
     return rows;
-  }, [dimensionItems, openItems, employeesByDimension, employeeHeights]);
+  }, [dimensionItems, openItems, employeesByDimension, employeeHeights, expandedOverlapRows]);
 
   const rowBoundaries = useMemo(() => {
     let offset = 0;
@@ -381,6 +368,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     }));
   }, [availableConfigs]);
 
+  
   useEffect(() => {
     setOpenItems(dimensionItems.map(item => item.id));
   }, [dimensionItems]);
@@ -498,7 +486,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 }}
               >
                 {isOpen && itemEmployees.map((employee) => {
-                  const employeeRowHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
+                  const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.id);
+                  const employeeRowHeight = rows.find(e => e.id === employee.id)?.height ?? CELL_HEIGHT;
                   return (
                     <div
                       key={employee.id}
@@ -623,6 +612,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 selectedAppointmentId={selectedAppointmentId}
                 onSelectCell={onSelectCell}
                 onSelectAppointment={onSelectAppointment}
+                isOverlapExpanded={!!expandedOverlapRows[row.id as number]}
+                onExpandOverlaps={() => setExpandedOverlapRows((prev) => ({ ...prev, [row.id as number]: true }))}
+                onCollapseOverlaps={() => setExpandedOverlapRows((prev) => ({ ...prev, [row.id as number]: false }))}
               />
             );
           })}

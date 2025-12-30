@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { Appointment, Employee } from '../types';
-import { CELL_HEIGHT } from '../utils/constants';
+import { CELL_HEIGHT, DAY_MS } from '../utils/constants';
 
 interface UseCalendarLayoutParams {
   employees: Employee[];
@@ -41,9 +41,6 @@ export const useCalendarLayout = ({
     if (isMobile) {
       const heights: { employeeId: number; dayKey: number; height: number }[] = [];
 
-      // Constante : nombre de millisecondes dans un jour
-      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
       employees.forEach(employee => {
           
       
@@ -53,7 +50,7 @@ export const useCalendarLayout = ({
           dayInTimeline.forEach(dayTimestamp => {
               // 'dayTimestamp' est supposé être le timestamp à 00:00:00
               
-              const startOfNextDay = dayTimestamp + ONE_DAY_MS;
+              const startOfNextDay = dayTimestamp + DAY_MS;
 
               // On filtre uniquement sur les nombres
               const employeeAppointmentsForDay = employeeAllAppointments.filter(
@@ -111,7 +108,7 @@ export const useCalendarLayout = ({
         }
 
         const calculatedHeight = maxOverallOverlap === 0
-            ? CELL_HEIGHT
+            ? CELL_HEIGHT + 12
             : (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + 10;
 
         return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
@@ -127,15 +124,13 @@ export const useCalendarLayout = ({
 
     employees.forEach(emp => {
       if (isMobile) {
-        const ONE_DAY_MS = 86400000;
 
-       
         const empAppointments = appointments.filter(app => app.employeeId === emp.id);
 
         dayInTimeline.forEach(day => {
             
             const dayStartTs = day; 
-            const dayEndTs = dayStartTs + ONE_DAY_MS;
+            const dayEndTs = dayStartTs + DAY_MS;
 
             // 2. Filtrage et Tri numérique
             const dayAppointments = empAppointments

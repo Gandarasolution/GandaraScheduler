@@ -21,9 +21,6 @@ export const DAY_MS = 86400000;
 
 // ===== DIMENSIONS DE LA GRILLE =====
 
-/** Largeur de la colonne des noms d'employés (en pixels) */
-export const EMPLOYEE_COLUMN_WIDTH = 150;
-
 /** Largeur d'une cellule de jour dans la grille (en pixels) */
 export const CELL_WIDTH = 45;
 

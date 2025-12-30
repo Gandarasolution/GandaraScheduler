@@ -484,7 +484,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   // Optimisation du style pour éviter les recalculs inutiles
   const containerStyle = useMemo(() => ({
     width: source === 'demo' ? '100%' : computedWidth,
-    height: `${CELL_HEIGHT + 4}px`,
+    height: `${CELL_HEIGHT}px`,
     minWidth: `${INTERVAL_WIDTH}px`,
     pointerEvents: isDragging ? 'none' as const : 'auto' as const,
     left: `${computedLeft}px`,
