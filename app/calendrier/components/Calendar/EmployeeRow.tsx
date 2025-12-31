@@ -131,6 +131,21 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
     return groups.map(({ key, apps }) => ({ key, apps }));
   }, [positionedAppointments]);
+
+  const getCollapsedVisibleAppointments = useCallback((apps: (typeof positionedAppointments)[number][]) => {
+    // Keep non-overlapping appointments visible when a chain contains gaps.
+    const visible: typeof apps = [];
+    let lastEnd = Number.NEGATIVE_INFINITY;
+
+    apps.forEach((app) => {
+      if (app.startDate >= lastEnd) {
+        visible.push(app);
+        lastEnd = app.endDate;
+      }
+    });
+
+    return visible;
+  }, []);
   const hasExpandedGroup = useMemo(() => overlappingGroups.some((g) => expandedGroups[g.key]), [overlappingGroups, expandedGroups]);
 
   useEffect(() => {
@@ -229,7 +244,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       )}
       {overlappingGroups.map((group) => {
         const isExpanded = expandedGroups[group.key] === true;
-        const visibleAppointments = isExpanded ? group.apps : [group.apps[0]];
+        const visibleAppointments = isExpanded ? group.apps : getCollapsedVisibleAppointments(group.apps);
         const hiddenCount = group.apps.length - visibleAppointments.length;
 
         return (
@@ -313,6 +328,7 @@ export default memo(EmployeeRow, (prev, next) => {
       prev.dayInTimeline !== next.dayInTimeline ||
       prev.appointments !== next.appointments ||
       prev.rowHeight !== next.rowHeight ||
+      prev.style?.top !== next.style?.top ||
       prev.isFullDay !== next.isFullDay ||
       prev.events !== next.events ||
       prev.nonWorkingDates !== next.nonWorkingDates ||
