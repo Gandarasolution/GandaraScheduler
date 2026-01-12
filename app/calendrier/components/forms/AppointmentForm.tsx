@@ -214,22 +214,26 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
 
     const { name, value } = e.target;
-    if (!value) return;    
-    
-    const baseDate = new Date(value); 
+    if (!value) return;
+
+    const baseDate = new Date(value);
+    const baseTs = baseDate.getTime();
+    if (Number.isNaN(baseTs)) return; // Ignore invalid input to avoid propagating NaN
 
     // 2. On récupère l'heure actuelle stockée dans le state (ou l'heure courante si vide)
     // formDataAppointment[name] est supposé être un timestamp (number)
     const currentTimestamp = formDataAppointment[name as 'startDate' | 'endDate'] || Date.now();
     const timeSource = new Date(currentTimestamp);
+    const timeSourceTs = timeSource.getTime();
+    const safeTimeSource = Number.isNaN(timeSourceTs) ? new Date() : timeSource;
 
     // 3. FUSION : On applique l'heure conservée sur la nouvelle date
     // setHours prend (heures, minutes, secondes, ms)
     baseDate.setHours(
-        timeSource.getHours(), 
-        timeSource.getMinutes(), 
-        0, 
-        0
+      safeTimeSource.getHours(), 
+      safeTimeSource.getMinutes(), 
+      0, 
+      0
     );
 
     // 4. On met à jour le state avec un TIMESTAMP (nombre)

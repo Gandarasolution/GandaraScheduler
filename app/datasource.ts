@@ -2361,113 +2361,136 @@ const Evenements = [
 function generateAppointments(employees: Employee[]): Appointment[] {
   const appointments: Appointment[] = [];
   let appointmentId = 1;
+  
+  // 1. Calcul stable du Lundi de départ (Reset heures pour éviter effets de bord)
   const baseDate = new Date();
-
-  // Ancre au lundi de la semaine courante puis étend 6 mois avant/après (~52 semaines)
+  baseDate.setHours(0, 0, 0, 0); 
+  
+  const day = baseDate.getDay();
+  const diffToMonday = (day + 6) % 7; 
   const baseMonday = new Date(baseDate);
-  const day = baseMonday.getDay();
-  const diffToMonday = (day + 6) % 7; // 0->6, 1->0 ...
-  baseMonday.setDate(baseMonday.getDate() - diffToMonday);
-  baseMonday.setHours(0, 0, 0, 0);
+  baseMonday.setDate(baseDate.getDate() - diffToMonday);
 
-  const weeksBefore = 26;
-  const weeksAfter = 26;
+  const weeksBefore = 200;
+  const weeksAfter = 200;
   const startMonday = new Date(baseMonday);
-  startMonday.setDate(startMonday.getDate() - weeksBefore * 7);
+  startMonday.setDate(baseMonday.getDate() - (weeksBefore * 7));
 
-  const weeksToGenerate = weeksBefore + weeksAfter + 1; // couvre l'année centrée sur aujourd'hui
+  const weeksToGenerate = weeksBefore + weeksAfter + 1;
 
-  const isOverlapping = (start1: Date, end1: Date, start2: Date, end2: Date): boolean => {
+  // Pré-calculer les timestamps des lundis pour éviter new Date() dans les boucles
+  const weekMondays: number[] = [];
+  for(let i=0; i < weeksToGenerate; i++) {
+     const d = new Date(startMonday);
+     d.setDate(startMonday.getDate() + (i * 7));
+     weekMondays.push(d.getTime());
+  }
+
+  const isOverlapping = (start1: number, end1: number, start2: number, end2: number): boolean => {
     return !(end1 < start2 || start1 > end2);
   };
 
   employees.forEach((employee) => {
-    const employeeAppointments: { start: Date; end: Date }[] = [];
+    // Stocker en timestamp (number) est plus léger que { start: Date, end: Date }
+    const employeeAppointments: { start: number; end: number }[] = [];
 
     for (let week = 0; week < weeksToGenerate; week++) {
-      const weeklyQuota = Math.floor(Math.random() * 3); // 0,1,2 rdv max
-      const isFullWeek = weeklyQuota === 1; // Si un seul RDV, on occupe la semaine
+      const weeklyQuota = Math.floor(Math.random() * 3);
+      if (weeklyQuota === 0) continue; // Optimisation: skip direct
+
+      const isFullWeek = weeklyQuota === 1;
+      const currentMondayTs = weekMondays[week];
 
       for (let slot = 0; slot < weeklyQuota; slot++) {
         let attempts = 0;
         let isValid = false;
-        let startDate: Date = new Date();
-        let endDate: Date = new Date();
-        let duration: number = isFullWeek ? 5 : 1;
-        let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
-        let selectedEvent = null;
+        
+        // Variables pour le résultat final
+        let finalStartTs = 0;
+        let finalEndTs = 0;
         let description = '';
+        let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
+        let selectedEventId = 0;
 
         while (!isValid && attempts < 50) {
           attempts++;
 
-          // Choisir le type d'événement (mêmes pondérations)
+          // --- LOGIQUE METIER ---
           const rand = Math.random();
-          if (rand < 0.6) {
-            appointmentType = 'chantier';
-            while (!selectedEvent) {
-              selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-              if (selectedEvent.type !== 'chantier') selectedEvent = null;
-            }
-            duration = isFullWeek ? 5 : (Math.floor(Math.random() * 2) + 1); // 1-2 jours ou semaine entière
-            description = `Chantier de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-          } else if (rand < 0.8) {
-            appointmentType = 'absence';
-            while (!selectedEvent) {
-              selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-              if (selectedEvent.type !== 'absence') selectedEvent = null;
-            }
-            duration = isFullWeek ? 5 : (Math.floor(Math.random() * 2) + 1);
-            description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-          } else {
-            appointmentType = 'autre';
-            while (!selectedEvent) {
-              selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-              if (selectedEvent.type !== 'autre') selectedEvent = null;
-            }
-            duration = isFullWeek ? 5 : (Math.floor(Math.random() * 2) + 1);
-            description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-          }
+          let typeTarget = 'chantier';
+          if (rand >= 0.6 && rand < 0.8) typeTarget = 'absence';
+          else if (rand >= 0.8) typeTarget = 'autre';
 
-          // Jour de début aléatoire entre lundi et vendredi
-          const dayOffset = isFullWeek ? 0 : Math.floor(Math.random() * 5); // 0-4, semaine pleine démarre lundi
-          startDate = new Date(startMonday);
-          startDate.setDate(startMonday.getDate() + week * 7 + dayOffset);
-          startDate.setHours(0, 0, 0, 0);
+          // Sécurité pour éviter la boucle infinie si Evenements est vide
+          const candidates = Evenements.filter(e => e.type === typeTarget);
+          const selectedEvent = candidates.length > 0 
+            ? candidates[Math.floor(Math.random() * candidates.length)] 
+            : Evenements[0]; // Fallback
 
-          // Calcul de fin en restant dans la semaine (vendredi max)
-          endDate = new Date(startDate);
-          endDate.setDate(startDate.getDate() + duration - 1);
-          if (endDate.getDay() === 6) { // samedi
-            endDate.setDate(endDate.getDate() - 1);
-          } else if (endDate.getDay() === 0) { // dimanche, recule à vendredi
-            endDate.setDate(endDate.getDate() - 2);
-          }
-          endDate.setHours(23, 59, 59, 999);
+          appointmentType = typeTarget as any;
+          selectedEventId = selectedEvent?.id || 0;
+          
+          let duration = isFullWeek ? 5 : (Math.floor(Math.random() * 2) + 1);
+          description = `${selectedEvent?.label || 'Event'} (${duration}j)`;
 
-          // Double sécurité: aucun week-end
-          if (startDate.getDay() === 0 || startDate.getDay() === 6) continue;
-          if (endDate.getDay() === 0 || endDate.getDay() === 6) continue;
+          // --- CALCUL DATES (Optimisé) ---
+          const dayOffset = isFullWeek ? 0 : Math.floor(Math.random() * 5); // 0..4 (Lun..Ven)
+          
+          // On crée une Date juste pour calculer le jour précis (gestion DST)
+          const tempStart = new Date(currentMondayTs);
+          tempStart.setDate(tempStart.getDate() + dayOffset);
+          tempStart.setHours(0, 0, 0, 0);
+          
+          const tempEnd = new Date(tempStart);
+          tempEnd.setDate(tempStart.getDate() + duration - 1);
+          
+          // Gestion Week-end (Recul)
+          const endDay = tempEnd.getDay();
+          if (endDay === 6) tempEnd.setDate(tempEnd.getDate() - 1); // Sam -> Ven
+          else if (endDay === 0) tempEnd.setDate(tempEnd.getDate() - 2); // Dim -> Ven
+          
+          tempEnd.setHours(23, 59, 59, 999);
 
-          isValid = !employeeAppointments.some(existing =>
-            isOverlapping(startDate, endDate, existing.start, existing.end)
+          const startTs = tempStart.getTime();
+          const endTs = tempEnd.getTime();
+
+          // --- VALIDATION STRICTE (Anti-Crash Luxon) ---
+          
+          // 1. Vérifier NaN
+          if (isNaN(startTs) || isNaN(endTs)) continue;
+          
+          // 2. Vérifier cohérence temporelle
+          if (startTs > endTs) continue;
+
+          // 3. Vérifier Week-end (Start)
+          const startDay = tempStart.getDay();
+          if (startDay === 0 || startDay === 6) continue;
+
+          // 4. Vérifier Chevauchement
+          const overlap = employeeAppointments.some(existing => 
+            isOverlapping(startTs, endTs, existing.start, existing.end)
           );
+
+          if (!overlap) {
+            isValid = true;
+            finalStartTs = startTs;
+            finalEndTs = endTs;
+          }
         }
 
         if (isValid) {
-          employeeAppointments.push({ start: new Date(startDate), end: new Date(endDate) });
+          // On pousse des nombres, pas des objets Date
+          employeeAppointments.push({ start: finalStartTs, end: finalEndTs });
 
-          const newAppointment: Appointment = {
+          appointments.push({
             id: appointmentId++,
             description,
-            startDate: startDate.getTime(),
-            endDate: endDate.getTime(),
+            startDate: finalStartTs, // C'est garanti valide et nombre
+            endDate: finalEndTs,     // C'est garanti valide et nombre
             employeeId: employee.id,
             type: appointmentType,
-            EventId: (selectedEvent as any)?.id as number
-          };
-
-          appointments.push(newAppointment);
+            EventId: selectedEventId
+          });
         }
       }
     }
@@ -2528,6 +2551,7 @@ export const Images: Image[] = [
 
 
 
+
 //API
 export const getEvenements = (): Item[] => {
   return Evenements.map(event => {
@@ -2577,6 +2601,12 @@ export const getImages = (): Image[] => {
   return Images;
 }
 
+export const getAppointments = (startDate: number, endDate: number): Appointment[] => {
+  return initialAppointments.filter(appointment => 
+    (appointment.startDate <= endDate) && (appointment.endDate >= startDate)
+  );
+}
 
 
-export const initialAppointments: Appointment[] = generateAppointments(getEmployees());
+
+const initialAppointments: Appointment[] = generateAppointments(getEmployees());

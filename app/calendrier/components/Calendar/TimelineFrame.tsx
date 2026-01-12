@@ -259,7 +259,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
                   `}
                   style={{ 
                     width: `${CELL_WIDTH}px`,
-                    height: '100%',
+                    height: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
                     minWidth: `${CELL_WIDTH}px`
                   }}
                 >

@@ -37,7 +37,7 @@ const GroupRow: React.FC<GroupRowProps> = ({
           rgba(229,231,235,0.9) 0px,
           rgba(229,231,235,0.9) 1px,
           transparent 1px,
-          transparent ${isFullDay ? CELL_WIDTH : CELL_WIDTH / 2}px
+          transparent ${isFullDay ? CELL_WIDTH  : CELL_WIDTH / 2}px
         )`
       }}
     >

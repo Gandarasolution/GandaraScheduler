@@ -40,7 +40,6 @@ interface CalendarGridProps {
   isMobile: boolean;
   isDisplayWeekend: boolean;
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
-  handleScroll: () => void;
   calendarConfig: CalendarConfig;
   onCalendarConfigChange: (config: CalendarConfig) => void;
   availableConfigs: CalendarConfig[];
@@ -49,11 +48,11 @@ interface CalendarGridProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
-  onScrollElementMounted?: () => void; 
   selectedCell: { employeeId: number; date: number } | null;
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number) => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -68,7 +67,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   isMobile,
   isDisplayWeekend,
   mainScrollRef,
-  handleScroll,
   calendarConfig,
   onCalendarConfigChange,
   availableConfigs,
@@ -77,11 +75,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
-  onScrollElementMounted,
   selectedCell,
   selectedAppointmentId,
   onSelectCell,
   onSelectAppointment,
+  onLoadAppointmentsInRange
 }) => {
 
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
@@ -110,13 +108,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       setHoverColumnLeft(colLeft >= 0 ? colLeft : null);    }
   });
 
-  // Notify parent when mounted
-  useEffect(() => {
-    if (mainScrollRef?.current && onScrollElementMounted) {
-      onScrollElementMounted();
-    }
-  }, [mainScrollRef, onScrollElementMounted]);
-
+ 
   // Scroll horizontally to today on initial render (desktop only)
   useEffect(() => {
     if (isMobile) return;
@@ -130,7 +122,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     });
     if (todayIdx < 0) return;
 
-    scroller.scrollLeft = Math.max(0, todayIdx * CELL_WIDTH - scroller.clientWidth / 2 + CELL_WIDTH / 2);
+    scroller.scrollLeft = Math.max(0, todayIdx * CELL_WIDTH);
     hasAutoScrolled.current = true;
   }, [dayInTimeline, isMobile, mainScrollRef]);
 
@@ -174,7 +166,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       nonWorkingDates={nonWorkingDates}
       isDisplayWeekend={isDisplayWeekend}
       mainScrollRef={mainScrollRef}
-      handleScroll={handleScroll}
       handleScrollY={handleScrollY}
       columnEmployeeRef={columnEmployeeRef}
       tableRef={tableRef}
@@ -191,6 +182,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       onSelectCell={onSelectCell}
       onSelectAppointment={onSelectAppointment}
       hoverColumnLeft={hoverColumnLeft}
+      onLoadAppointmentsInRange={onLoadAppointmentsInRange}
+      
     />
   );
 };

@@ -15,6 +15,8 @@ interface EmployeeRowProps {
   events: Item[];
   nonWorkingDates: number[];
   isDisplayWeekend: boolean;
+  visibleWindowStart: number;
+  visibleWindowEnd: number;
   onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
   onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
@@ -38,6 +40,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   rowHeight,
   isFullDay,
   events,
+  visibleWindowEnd,
+  visibleWindowStart,
   nonWorkingDates,
   isDisplayWeekend,
   onAppointmentMoved,
@@ -65,9 +69,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     return appointments
       .filter((app) => {
         if (app.employeeId !== employee.id) return false;
-        const start = app.startDate;
-        const end = app.endDate;
-        return end > timelineStart && start < timelineEnd;
+        // VIRTUALISATION HORIZONTALE :
+        // On ne garde que les RDV qui intersectent la fenêtre visible (+ overscan)
+        // Au lieu de vérifier par rapport à toute la timeline.
+        return app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd;
       })
       .map((app) => {
         const start = app.startDate;
@@ -110,7 +115,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           topPx: number;
         };
       });
-  }, [appointments, employee.id, pixelsPerMs, timelineEnd, timelineStart, isDisplayWeekend]);
+  }, [appointments, employee.id, pixelsPerMs, timelineEnd, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart]);
 
   // Regroupe les rendez-vous qui se chevauchent pour n'afficher que le premier par défaut.
   const overlappingGroups = useMemo(() => {
@@ -334,7 +339,9 @@ export default memo(EmployeeRow, (prev, next) => {
       prev.nonWorkingDates !== next.nonWorkingDates ||
       prev.isDisplayWeekend !== next.isDisplayWeekend ||
       prev.todayIndex !== next.todayIndex ||
-      prev.isOverlapExpanded !== next.isOverlapExpanded
+      prev.isOverlapExpanded !== next.isOverlapExpanded ||
+      prev.visibleWindowStart !== next.visibleWindowStart ||
+      prev.visibleWindowEnd !== next.visibleWindowEnd
   ) {
     return false;
   }
@@ -346,19 +353,6 @@ export default memo(EmployeeRow, (prev, next) => {
   if (wasSelected !== isSelected) return false; // Selection state changed for this row
   if (wasSelected && isSelected) {
      if (prev.selectedCell?.date !== next.selectedCell?.date) return false; // Selected date changed within this row
-  }
-
-  // Optimization for selectedAppointmentId
-  if (prev.selectedAppointmentId !== next.selectedAppointmentId) {
-     // If appointment selection changed, we ideally check if the appointment is in this row.
-     // For now, to be safe and simple, we can re-render. 
-     // Or we can try to be smart.
-     // If we return false here, ALL rows re-render on appointment click.
-     // This is what happens currently anyway (via context).
-     // But we want to avoid it if possible.
-     // Let's assume for now we re-render all rows on appointment selection change.
-     // It's less frequent than cell selection (maybe?).
-     return false;
   }
 
   return true;

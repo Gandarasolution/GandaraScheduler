@@ -92,12 +92,15 @@ export const colors: string[] = [
   "bg-teal-400",
 ];
 
-export const DAYS_TO_ADD = 30;
-export const THRESHOLD_MAX = 80;
-export const THRESHOLD_MIN = 20;
-export const WINDOW_SIZE = 90;
+
+export const WINDOW_SIZE = 1460;
 
 // ===== CALCULS MÉTIER =====
 
 /** Nombre d'heures par jour de travail (facilement modifiable) */
 export const HOURS_PER_DAY = 8;
+
+
+// ===== AUTRES CONSTANTES =====
+export const INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE = 4;
+export const INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER = 24;

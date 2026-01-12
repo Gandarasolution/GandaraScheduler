@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { format, isSameDay, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Appointment, Employee, HalfDayInterval, Item } from '../../types';
@@ -45,6 +45,12 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
   onSelectCell,
   onSelectAppointment,
 }) => {
+  const [todayTs, setTodayTs] = useState<number | null>(null);
+
+  useEffect(() => {
+    setTodayTs(Date.now());
+  }, []);
+
   const displayEmployee = employees[0];
 
   if (!displayEmployee) return null;
@@ -74,14 +80,16 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
           );
 
           const rowHeight = employeeHeights.find(e => e.employeeId === displayEmployee.id && e.dayKey === dayStart)?.height ?? CELL_HEIGHT;
-          
+
+          const isToday = todayTs ? isSameDay(day, todayTs) : false;
+
           return (
             <div key={`day-section-${format(day, 'yyyy-MM-dd')}`} className="border-b border-gray-200">
               <div
                 className={`
                   mobile-day-header flex flex-col items-center justify-center
                   ${isWeekend(day) ? 'weekend' : ''}
-                  ${isSameDay(day, Date.now()) ? 'today' : ''}
+                  ${isToday ? 'today' : ''}
                 `}
               >
                 <span className="day-title">{format(day, 'EEEE d MMMM', { locale: fr })}</span>

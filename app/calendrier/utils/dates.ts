@@ -18,6 +18,7 @@ const holidaySet = new Set(holidays.map(h => format(new Date(h.date), "yyyy-MM-d
  * @returns true si férié, false sinon
  */
 export const isHoliday = (date: number): boolean => {  
+  if (!Number.isFinite(date)) return false;
   try {
     const dateStr = format(date, "yyyy-MM-dd"); // Format ISO standard
     return holidaySet.has(dateStr);
@@ -33,6 +34,7 @@ export const isHoliday = (date: number): boolean => {
  * @returns true si travaillé, false sinon
  */
 export const isWorkedDay = (date: number, nonWorkingDates: number[]): boolean => {  
+  if (!Number.isFinite(date)) return false;
   return !isHoliday(date) 
     && !nonWorkingDates.some(d => isSameDay(d, date));
 };
@@ -43,6 +45,7 @@ export const isWorkedDay = (date: number, nonWorkingDates: number[]): boolean =>
  * @returns true si week-end, false sinon
  */
 export const isWeekend = (date: number): boolean => {
+  if (!Number.isFinite(date)) return false;
   const day = new Date(date).getDay();
   return day === 0 || day === 6;
 };
@@ -54,6 +57,7 @@ export const isWeekend = (date: number): boolean => {
  * @returns Date du prochain repos
  */
 export const getNextRestDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: number[]): number => {
+  if (!Number.isFinite(date)) return date;
   let next = new Date(date);
   while (isWorkedDay(next.getTime(), nonWorkingDates)) {
     next = addHours(next, HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour);
@@ -69,6 +73,7 @@ export const getNextRestDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval
  * @returns Date du prochain jour travaillé
  */
 export const getNextWorkedDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: number[]): number => {
+  if (!Number.isFinite(date)) return date;
   let next = date;
   let safety = 0;
   const maxIterations = 1000;
@@ -90,6 +95,7 @@ export const getNextWorkedDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterv
  * @returns Date du jour travaillé précédent
  */
 export const getBeforeWorkedDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: number[]): number => {
+  if (!Number.isFinite(date)) return date;
   let previous = date;
   let safety = 0;
   const maxIterations = 1000;
@@ -120,6 +126,7 @@ export const getWorkedDayIntervals = (
   includeWeekends: boolean,
   nonWorkingDates: number[],
 ): { start: number; end: number }[] => {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) return [];
   const intervals: { start: number; end: number }[] = [];
   let day = start;
 
@@ -192,6 +199,8 @@ export const getIntervals = (
   isFullDay: boolean,
 ): number => {
 
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+
   if(isFullDay){
     const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
     return totalDays;
@@ -205,6 +214,7 @@ export const getIntervals = (
 
 
 export const eachDayOfInterval = (interval: { start: number; end: number }): number[] => {
+  if (!Number.isFinite(interval.start) || !Number.isFinite(interval.end)) return [];
   const dates: number[] = [];
   let current = interval.start;
   while (current <= interval.end) {
@@ -222,6 +232,7 @@ export const eachDayOfInterval = (interval: { start: number; end: number }): num
  * @returns Numéro de la semaine
  */
 export const getWeekNumber = (d: number): number => {
+  if (!Number.isFinite(d)) return 0;
   const date = new Date(d);
   const dayNum = date.getUTCDay() || 7;
   date.setUTCDate(date.getUTCDate() + 4 - dayNum);
@@ -243,6 +254,7 @@ export const snapToHour = (ts: number, targetHour: number, targetMinute: number 
  * @returns Nombre de jours de week-end
  */
 export const countWeekends = (startDate: number, endDate: number) => {
+  if (!Number.isFinite(startDate) || !Number.isFinite(endDate) || endDate <= startDate) return 0;
   const start = new Date(startDate);
   const end = new Date(endDate);
   

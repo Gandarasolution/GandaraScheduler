@@ -259,8 +259,9 @@ export const CalendarModals = ({
                   min={modalsState.selectedAppointmentForm?.endDate ? format(modalsState.selectedAppointmentForm.endDate, "yyyy-MM-dd") : undefined}
                   onChange={e => {
                     const value = e.target.value;
-                    const endDate = value ? new Date(value).getTime() : null;
-                    handlers.setRepeatData({ ...modalsState.repeatData!, endDate, repeatCount: null });
+                    const parsed = value ? new Date(value).getTime() : null;
+                    if (parsed !== null && Number.isNaN(parsed)) return; // Ignore invalid dates
+                    handlers.setRepeatData({ ...modalsState.repeatData!, endDate: parsed, repeatCount: null });
                   }}
                 />
               </div>
@@ -295,7 +296,9 @@ export const CalendarModals = ({
                 min={modalsState.selectedAppointmentForm?.endDate ? format(modalsState.selectedAppointmentForm.endDate, "yyyy-MM-dd") : undefined}
                 onChange={(e) => {
                   const date = new Date(e.target.value).setHours(23, 59, 59, 999);
-                  if (!isNaN(date)) handlers.setExtendData(date);
+                  if (!isNaN(date)) {
+                    handlers.setExtendData(date);
+                  }
                 }}
               />
             </div>

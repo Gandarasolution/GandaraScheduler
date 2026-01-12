@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, memo, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, memo, useCallback, useRef } from 'react';
 import { useDrop } from 'react-dnd';
 import { Appointment, Employee, Groupe, CalendarConfig, Item, HalfDayInterval } from '../../types';
 import { TimelineFrame } from './index';
@@ -18,11 +18,14 @@ import {
   EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
   HOUR_MS,
   DAY_INTERVALS,
+  INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE,
+  INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER,
 } from '../../utils/constants';
 import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
-import { format, isSameDay, isWeekend } from 'date-fns';
+import { isSameDay, isWeekend } from 'date-fns';
 import { getNextWorkedDay, isHoliday } from '../../utils/dates';
 import { getRowId } from '../../utils/domIds';
+import { useScrollbarGrab } from '../../hooks/useScrollbarGrab';
 
 interface DesktopCalendarGridProps {
   employees: Employee[];
@@ -39,7 +42,6 @@ interface DesktopCalendarGridProps {
   nonWorkingDates: number[];
   isDisplayWeekend: boolean;
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
-  handleScroll: () => void;
   handleScrollY: (e: React.UIEvent<HTMLDivElement>) => void;
   columnEmployeeRef: React.RefObject<HTMLDivElement | null>;
   tableRef: React.RefObject<HTMLDivElement | null>;
@@ -56,6 +58,7 @@ interface DesktopCalendarGridProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   hoverColumnLeft: number | null;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number) => void;
 }
 
 interface DragItem {
@@ -85,7 +88,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   nonWorkingDates,
   isDisplayWeekend,
   mainScrollRef,
-  handleScroll,
   handleScrollY,
   columnEmployeeRef,
   tableRef,
@@ -102,11 +104,20 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   onSelectCell,
   onSelectAppointment,
   hoverColumnLeft,
+  onLoadAppointmentsInRange
 }) => {
   const [openItems, setOpenItems] = useState<(string | number)[]>([]);
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
-  const [viewport, setViewport] = useState<{ top: number; height: number }>({ top: 0, height: 0 });
-  
+  const [todayTs, setTodayTs] = useState<number | null>(null);
+  const [viewport, setViewport] = useState<{ top: number; height: number; left: number; width: number }>({ 
+      top: 0, 
+      height: 0, 
+      left: 0, 
+      width: 0 
+  });
+
+  const isUserGrabbingScrollbar = useScrollbarGrab(mainScrollRef as React.RefObject<HTMLElement>);
+
   const dimensionItems = useMemo(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
   }, [calendarConfig.dimension, employees, initialTeams]);
@@ -118,10 +129,12 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const employeesByDimension = useMemo(() => {
     return groupEmployeesByDimension(filteredEmployees, calendarConfig.dimension, initialTeams);
   }, [filteredEmployees, calendarConfig.dimension, initialTeams]);
+  
 
   const todayIndex = useMemo(() => {
-    return dayInTimeline.findIndex(day => isSameDay(day, Date.now()));
-  }, [dayInTimeline]);  
+    if (!todayTs) return -1;
+    return dayInTimeline.findIndex(day => isSameDay(day, todayTs));
+  }, [dayInTimeline, todayTs]);  
 
   // Flatten the data structure for virtualization
   const flatRows = useMemo(() => {
@@ -183,27 +196,18 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return rowBoundaries.length ? rowBoundaries[rowBoundaries.length - 1].end : 0;
   }, [rowBoundaries]);
 
-  useEffect(() => {
-    const node = mainScrollRef.current;
-    if (!node) return;
 
-    const handleViewport = () => {
-      setViewport({ top: node.scrollTop, height: node.clientHeight });
-    };
 
-    handleViewport();
-    node.addEventListener('scroll', handleViewport, { passive: true });
-    return () => node.removeEventListener('scroll', handleViewport);
-  }, [mainScrollRef]);
-
+  //Virtualization calcules 
   const headerHeight = TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
   const contentViewportTop = Math.max(0, viewport.top - headerHeight);
   const contentViewportHeight = Math.max(0, viewport.height - headerHeight);
   const contentViewportBottom = contentViewportTop + contentViewportHeight;
-  const OVERSCAN_PX = 400;
+  const OVERSCAN_Y = 400;
+  const OVERSCAN_X = 400;
 
   const visibleRangeStart = useMemo(() => {
-    const target = contentViewportTop - OVERSCAN_PX;
+    const target = contentViewportTop - OVERSCAN_Y;
     for (let i = 0; i < rowBoundaries.length; i++) {
       if (rowBoundaries[i].end >= target) return i;
     }
@@ -211,7 +215,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [contentViewportTop, rowBoundaries]);
 
   const visibleRangeEnd = useMemo(() => {
-    const target = contentViewportBottom + OVERSCAN_PX;
+    const target = contentViewportBottom + OVERSCAN_Y;
     for (let i = rowBoundaries.length - 1; i >= 0; i--) {
       if (rowBoundaries[i].start <= target) return i;
     }
@@ -227,6 +231,33 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [rowBoundaries, visibleRangeEnd, visibleRangeStart]);
 
 
+  const { visibleWindowStart, visibleWindowEnd } = useMemo(() => {
+    if (!dayInTimeline.length) return { visibleWindowStart: 0, visibleWindowEnd: 0 };
+    
+    // Pixel de début et de fin avec overscan
+    const startPx = Math.max(0, viewport.left - OVERSCAN_X);
+    const endPx = viewport.left + viewport.width + OVERSCAN_X;
+
+    // Convertir les pixels en index de tableau
+    const startIndex = Math.floor(startPx / CELL_WIDTH);
+    const endIndex = Math.ceil(endPx / CELL_WIDTH);
+
+    // Récupérer les timestamps correspondants
+    // On s'assure de rester dans les bornes du tableau
+    const safeStartIndex = Math.max(0, Math.min(startIndex, dayInTimeline.length - 1));
+    const safeEndIndex = Math.max(0, Math.min(endIndex, dayInTimeline.length - 1));
+
+    const startTs = dayInTimeline[safeStartIndex];
+    // Pour la fin, on ajoute 24h pour être sûr d'inclure les RDV qui dépassent la journée
+    const endTs = dayInTimeline[safeEndIndex] + (24 * 60 * 60 * 1000); 
+
+    return { visibleWindowStart: startTs, visibleWindowEnd: endTs };
+  }, [dayInTimeline, viewport.left, viewport.width]);
+
+  const visibleWindowStartInitial = useRef(0);
+  const visibleWindowEndInitial = useRef(0);
+
+// Drag and Drop logic
   const [, dropRef] = useDrop(() => ({
     accept: ['appointment', 'external-item'],
     drop: (item: DragItem, monitor) => {
@@ -368,10 +399,26 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     }));
   }, [availableConfigs]);
 
-  
-  useEffect(() => {
-    setOpenItems(dimensionItems.map(item => item.id));
-  }, [dimensionItems]);
+  const appointmentsByEmployee = useMemo(() => {
+    const map: Record<number, (Appointment & { top: number })[]> = {};
+
+    // 1. Initialiser les tableaux (optionnel, mais plus propre)
+    employees.forEach(emp => map[emp.id] = []);
+
+    // 2. Remplir les tableaux (Complexité O(N) - Une seule passe)
+    appointmentsWithTop.forEach(app => {
+      // Sécurité si l'employé existe
+      if (!map[app.employeeId]) map[app.employeeId] = [];
+      
+      // OPTIMISATION ULTIME : On peut déjà filtrer ici ce qui est hors écran
+      // si on veut soulager les enfants (optionnel mais recommandé)
+      if (app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd) {
+        map[app.employeeId].push(app);
+      }
+    });
+
+    return map;
+  }, [appointmentsWithTop, employees, visibleWindowStart, visibleWindowEnd]);
 
   const toggleItem = (itemId: string | number) => {
     setOpenItems(open =>
@@ -393,6 +440,94 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
     </svg>
   );
+
+  
+  useEffect(() => {
+    setTodayTs(Date.now());
+  }, []);
+
+  useEffect(() => {
+    const node = mainScrollRef.current;
+    if (!node) return;
+
+    let rafId: number | null = null;
+
+    const handleViewport = () => {
+      // Si une frame est déjà prévue, on annule la précédente (throttle naturel)
+      if (rafId) cancelAnimationFrame(rafId);
+
+      rafId = requestAnimationFrame(() => {
+        setViewport({
+          top: node.scrollTop,
+          height: node.clientHeight,
+          left: node.scrollLeft,
+          width: node.clientWidth
+        });
+      });
+    };
+
+    handleViewport();
+    node.addEventListener('scroll', handleViewport, { passive: true });
+    return () => node.removeEventListener('scroll', handleViewport);
+  }, [mainScrollRef]);
+
+  useEffect(() => {
+    setOpenItems(dimensionItems.map(item => item.id));
+  }, [dimensionItems]);
+
+  // Chargement des nouveux RDV lors du scroll horizontal
+  useEffect(() => {
+    if (visibleWindowStartInitial.current === 0 || visibleWindowEndInitial.current === 0) {
+        visibleWindowStartInitial.current = visibleWindowStart;
+        visibleWindowEndInitial.current = visibleWindowEnd;
+        return; // On attend que les refs soient calées
+    }
+
+    if (isUserGrabbingScrollbar) return;
+
+    // console.log(visibleWindowStart < visibleWindowStartInitial.current - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE - 2) * 7 * 24 * 60 * 60 * 1000 );
+    // console.log(visibleWindowEnd > visibleWindowEndInitial.current + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER - 2) * 7 * 24 * 60 * 60 * 1000);
+    console.log(visibleWindowEnd);
+    console.log(visibleWindowEndInitial.current );
+    
+    
+    
+    // Calcul des constantes en ms pour la lisibilité
+    const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+    // Seuil de déclenchement (ex: 2 semaines avant la fin des données connues)
+    const THRESHOLD_BEFORE = (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE - 2) * MS_PER_WEEK;
+    const THRESHOLD_AFTER = (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER - 2) * MS_PER_WEEK;
+
+    // Calcul des bornes de chargement (ce qu'on va demander à l'API)
+    // ex: On charge 4 semaines avant/après
+    const LOAD_BUFFER_BEFORE = INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * MS_PER_WEEK;
+    const LOAD_BUFFER_AFTER = INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * MS_PER_WEEK;
+
+    // --- LOGIQUE DE DÉTECTION ---
+
+    const isOutOfBoundLeft = visibleWindowStart < (visibleWindowStartInitial.current - THRESHOLD_BEFORE);
+    const isOutOfBoundRight = visibleWindowEnd > (visibleWindowEndInitial.current + THRESHOLD_AFTER);
+
+    if (isOutOfBoundLeft || isOutOfBoundRight) {
+      
+      // 1. Calculer les nouvelles bornes à charger
+      // On se base sur la vue actuelle (visibleWindow) +/- le gros buffer de chargement
+      const newLoadStart = visibleWindowStart - LOAD_BUFFER_BEFORE;
+      const newLoadEnd = visibleWindowEnd + LOAD_BUFFER_AFTER;
+
+      // 2. Charger les données
+      onLoadAppointmentsInRange(newLoadStart, newLoadEnd);
+
+      // 3. IMPORTANT : Mettre à jour les Refs pour repousser la "frontière"
+      // Si on ne fait pas ça, au prochain render, isOutOfBound sera encore true !
+      
+      // On ne met à jour que le côté qui a déclenché le chargement (ou les deux)
+      if (isOutOfBoundLeft) visibleWindowStartInitial.current = newLoadStart;
+      if (isOutOfBoundRight) visibleWindowEndInitial.current = newLoadEnd;
+    }
+
+
+  }, [visibleWindowStart, visibleWindowEnd, onLoadAppointmentsInRange, isUserGrabbingScrollbar]);
 
   return (
     <div className="relative flex h-full flex-row calendar-grid" data-testid="calendar-grid">
@@ -522,11 +657,21 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         dayInTimeline={dayInTimeline}
         mainScrollRef={mainScrollRef}
         onScroll={(e) => {
-          handleScroll();
           handleScrollY(e);              
         }}
         todayLineColor="#ffcdde"
       >
+        {isUserGrabbingScrollbar && (
+          <div 
+            className="absolute top-0 left-0 bg-black opacity-30 pointer-events-none z-20" 
+            style={{
+              width:`${dayInTimeline.length * CELL_WIDTH}px`,
+              height: totalContentHeight,
+              top: TIMELINE_HEADERGROUPS_CELL_HEIGHT + TIMELINE_HEADERITEMS_CELL_HEIGHT
+            }}
+          />
+        )}
+        
         <div 
           className="calendar-table bg-bg-secondary relative"
           style={{
@@ -546,14 +691,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 style={{ left: col.left, width: CELL_WIDTH}}
               />
             ))}
-            {nonWorkingColumns.map((col) => (
+            {nonWorkingColumns.filter(col => col.left + CELL_WIDTH >= viewport.left - OVERSCAN_X && col.left <= viewport.left + viewport.width + OVERSCAN_X).map((col) => (
               <div
                 key={`nonworking-${col.key}`}
                 className="pointer-events-none absolute top-0 bottom-0 NON-WORKING"
                 style={{ left: col.left, width: CELL_WIDTH}}
               />
             ))}
-          {holidayColumns.map((col) => (
+          {holidayColumns.filter(col => col.left + CELL_WIDTH >= viewport.left - OVERSCAN_X && col.left <= viewport.left + viewport.width + OVERSCAN_X).map((col) => (
             <div
               key={col.key}
               className="pointer-events-none absolute top-0 bottom-0 FERIE"
@@ -596,10 +741,12 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 {...commonProps}
                 employee={row.data}
                 dayInTimeline={dayInTimeline}
-                appointments={appointmentsWithTop}
+                appointments={isUserGrabbingScrollbar ? [] : (appointmentsByEmployee[row.id as number] || [])}
                 rowHeight={row.height}
                 isFullDay={isFullDay}
                 events={events}
+                visibleWindowStart={visibleWindowStart}
+                visibleWindowEnd={visibleWindowEnd}
                 nonWorkingDates={nonWorkingDates}
                 isDisplayWeekend={isDisplayWeekend}
                 onAppointmentMoved={onAppointmentMoved}

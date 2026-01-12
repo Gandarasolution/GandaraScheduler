@@ -59,7 +59,7 @@ describe('useTimeline', () => {
     } as unknown as HTMLDivElement;
 
     // Set ref
-    (result.current.scrollRef as any).current = mockScrollElement;
+    (result.current.mainScrollRef as any).current = mockScrollElement;
 
     // Mock document.getElementById
     const mockCell = {

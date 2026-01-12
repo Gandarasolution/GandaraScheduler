@@ -233,15 +233,6 @@ export default function HomePage({
     };
   }, [interaction, timeline, viewState.viewType]);
 
-  // Init: Centrage sur la date lors du changement de vue
-  useEffect(() => {
-    if (viewState.viewType === 'calendar' && timeline.isScrollReady) {
-      // Appeler goToDate de manière asynchrone      
-      timeline.goToDate(viewState.selectedDate);
-    }
-  }, [viewState.viewType, timeline.isScrollReady]);
-
-
   // --- RENDU VISUEL ---
 
   return (
@@ -287,8 +278,7 @@ export default function HomePage({
                       
                       /* État Temporel */
                       dayInTimeline={timeline.days}
-                      mainScrollRef={timeline.scrollRef}
-                      handleScroll={timeline.handleScroll}
+                      mainScrollRef={timeline.mainScrollRef}
                       
                       /* Configuration */
                       isDisplayWeekend={viewState.isDisplayWeekend}
@@ -308,7 +298,7 @@ export default function HomePage({
                       onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
                       onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
                       handleContextMenu={interaction.handleContextMenu}
-                      onScrollElementMounted={timeline.onScrollElementMounted}
+                      onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
                       
                       /* Sélection Optimisée */
                       selectedCell={appointmentLogic.selectedCell}

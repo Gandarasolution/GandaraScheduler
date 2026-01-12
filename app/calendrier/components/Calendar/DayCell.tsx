@@ -1,5 +1,5 @@
 "use client";
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { format, setHours, setMinutes, setSeconds, setMilliseconds, isSameDay } from 'date-fns';
 import { IntervalCell } from '../index';
 import { Appointment, HalfDayInterval, Item } from '../../types';
@@ -102,11 +102,16 @@ const DayCell: React.FC<DayCellProps> = ({
   onSelectAppointment,
 }) => {
   const day = useMemo(() => dayTs, [dayTs]);
+  const [nowTs, setNowTs] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState<{
     anchor: HTMLElement | null;
     app: Appointment | null;
     et: Item | null;
   } | null>(null);
+
+  useEffect(() => {
+    setNowTs(Date.now());
+  }, []);
 
   const isFerie = useMemo(() => isHoliday(day), [day]);
   const isNonWorkingDay = useMemo(() => nonWorkingDates?.some((date) => isSameDay(date, day)) ?? false, [nonWorkingDates, day]);
@@ -125,7 +130,7 @@ const DayCell: React.FC<DayCellProps> = ({
     const maxVisible = 3;
     const visibleAppointments = normalizedAppointments.slice(0, maxVisible);
     const hiddenCount = normalizedAppointments.length - maxVisible;
-    const isToday = isSameDay(day, Date.now());
+    const isToday = nowTs ? isSameDay(day, nowTs) : false;
 
     return (
       <div
