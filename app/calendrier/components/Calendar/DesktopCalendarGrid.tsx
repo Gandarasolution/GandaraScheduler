@@ -25,7 +25,7 @@ import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees }
 import { isSameDay, isWeekend } from 'date-fns';
 import { getNextWorkedDay, isHoliday } from '../../utils/dates';
 import { getRowId } from '../../utils/domIds';
-import { useScrollbarGrab } from '../../hooks/useScrollbarGrab';
+import { useSmartScroll } from '../../hooks/useSmartScroll';
 
 interface DesktopCalendarGridProps {
   employees: Employee[];
@@ -58,7 +58,7 @@ interface DesktopCalendarGridProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   hoverColumnLeft: number | null;
-  onLoadAppointmentsInRange: (startDate: number, endDate: number) => void;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
 }
 
 interface DragItem {
@@ -115,8 +115,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       left: 0, 
       width: 0 
   });
+  const isLoadingRef = useRef(false);
+  const visibleWindowStartInitial = useRef(0);
+  const visibleWindowEndInitial = useRef(0);
 
-  const isUserGrabbingScrollbar = useScrollbarGrab(mainScrollRef as React.RefObject<HTMLElement>);
+  const { isGrabbing, isScrolling } = useSmartScroll(mainScrollRef as React.RefObject<HTMLElement>);
 
   const dimensionItems = useMemo(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
@@ -254,8 +257,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return { visibleWindowStart: startTs, visibleWindowEnd: endTs };
   }, [dayInTimeline, viewport.left, viewport.width]);
 
-  const visibleWindowStartInitial = useRef(0);
-  const visibleWindowEndInitial = useRef(0);
+  
 
 // Drag and Drop logic
   const [, dropRef] = useDrop(() => ({
@@ -441,6 +443,95 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     </svg>
   );
 
+
+  // --- 1. FONCTION DE CHARGEMENT CENTRALISÉE ---
+  // Cette fonction ne décide pas QUAND charger, mais COMMENT charger
+  const checkAndLoadData = useCallback((forceCriticalCheck = false) => {
+      if (isLoadingRef.current) return;
+
+      // Configuration des seuils
+      const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+      
+      // "Soft Threshold" (Zone de confort) : Utilisé quand on s'arrête
+      const SOFT_THRESHOLD_BEFORE = (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE - 2) * MS_PER_WEEK;
+      const SOFT_THRESHOLD_AFTER = (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER - 2) * MS_PER_WEEK;
+
+      // "Hard Threshold" (Zone critique) : Utilisé pendant le scroll continu
+      // On charge si on est à moins de 3 jours du bord par exemple
+      const HARD_THRESHOLD = 3 * 24 * 60 * 60 * 1000; 
+
+      // On choisit le seuil selon le mode (Forcé/Critique ou Normal/Arrêt)
+      const thresholdBefore = forceCriticalCheck ? HARD_THRESHOLD : SOFT_THRESHOLD_BEFORE;
+      const thresholdAfter = forceCriticalCheck ? HARD_THRESHOLD : SOFT_THRESHOLD_AFTER;
+
+      // Initialisation si vide
+      if (visibleWindowStartInitial.current === 0) {
+          visibleWindowStartInitial.current = visibleWindowStart;
+          visibleWindowEndInitial.current = visibleWindowEnd;
+          return;
+      }
+
+      // Vérification
+      const isOutOfBoundLeft = visibleWindowStart < (visibleWindowStartInitial.current - thresholdBefore);
+      const isOutOfBoundRight = visibleWindowEnd > (visibleWindowEndInitial.current + thresholdAfter);
+
+      if (isOutOfBoundLeft || isOutOfBoundRight) {
+          console.log(`Loading data... Mode: ${forceCriticalCheck ? 'CRITICAL' : 'SOFT_STOP'}`);
+          isLoadingRef.current = true;
+
+          const LOAD_BUFFER_BEFORE = INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * MS_PER_WEEK;
+          const LOAD_BUFFER_AFTER = INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * MS_PER_WEEK;
+
+          const newLoadStart = visibleWindowStart - LOAD_BUFFER_BEFORE;
+          const newLoadEnd = visibleWindowEnd + LOAD_BUFFER_AFTER;
+
+          onLoadAppointmentsInRange(newLoadStart, newLoadEnd).finally(() => {
+              isLoadingRef.current = false;
+          });
+
+          // Update optimiste
+          if (isOutOfBoundLeft) visibleWindowStartInitial.current = newLoadStart;
+          if (isOutOfBoundRight) visibleWindowEndInitial.current = newLoadEnd;
+      }
+  }, [visibleWindowStart, visibleWindowEnd, onLoadAppointmentsInRange]);
+
+
+  // --- 2. SCÉNARIO A : RELÂCHEMENT DU GRAB ---
+  // On utilise un effet qui surveille isGrabbing.
+  // Quand isGrabbing passe de true à false -> On vérifie.
+  const prevIsGrabbing = useRef(false);
+  useEffect(() => {
+    if (prevIsGrabbing.current && !isGrabbing) {
+       // L'utilisateur vient de lâcher la barre
+       checkAndLoadData(false); // Vérification standard (Soft)
+    }
+    prevIsGrabbing.current = isGrabbing;
+  }, [isGrabbing, checkAndLoadData]);
+
+
+  // --- 3. SCÉNARIO B : ARRÊT DU SCROLL (Flèches/Molette) ---
+  // Quand isScrolling passe de true à false -> On vérifie.
+  const prevIsScrolling = useRef(false);
+  useEffect(() => {
+    if (prevIsScrolling.current && !isScrolling && !isGrabbing) {
+       // L'utilisateur a arrêté de scroller (fin du timer)
+       checkAndLoadData(false); // Vérification standard (Soft)
+    }
+    prevIsScrolling.current = isScrolling;
+  }, [isScrolling, isGrabbing, checkAndLoadData]);
+
+
+  // --- 4. SCÉNARIO C : LIMITE CRITIQUE PENDANT LE SCROLL ---
+  // Si l'utilisateur scrolle (flèches/molette) SANS s'arrêter,
+  // on veut quand même charger si on arrive vraiment au bout des données chargées.
+  useEffect(() => {
+    if (isScrolling && !isGrabbing) {
+       // On vérifie avec le mode "Critique" (seuils très courts)
+       // Cela permet de charger "juste à temps" si l'utilisateur ne lâche pas la flèche
+       checkAndLoadData(true); 
+    }
+  }, [visibleWindowStart, visibleWindowEnd, isScrolling, isGrabbing, checkAndLoadData]);
+
   
   useEffect(() => {
     setTodayTs(Date.now());
@@ -475,64 +566,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     setOpenItems(dimensionItems.map(item => item.id));
   }, [dimensionItems]);
 
-  // Chargement des nouveux RDV lors du scroll horizontal
-  useEffect(() => {
-    if (visibleWindowStartInitial.current === 0 || visibleWindowEndInitial.current === 0) {
-        visibleWindowStartInitial.current = visibleWindowStart;
-        visibleWindowEndInitial.current = visibleWindowEnd;
-        return; // On attend que les refs soient calées
-    }
-
-    if (isUserGrabbingScrollbar) return;
-
-    // console.log(visibleWindowStart < visibleWindowStartInitial.current - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE - 2) * 7 * 24 * 60 * 60 * 1000 );
-    // console.log(visibleWindowEnd > visibleWindowEndInitial.current + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER - 2) * 7 * 24 * 60 * 60 * 1000);
-    console.log(visibleWindowEnd);
-    console.log(visibleWindowEndInitial.current );
-    
-    
-    
-    // Calcul des constantes en ms pour la lisibilité
-    const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
-    // Seuil de déclenchement (ex: 2 semaines avant la fin des données connues)
-    const THRESHOLD_BEFORE = (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE - 2) * MS_PER_WEEK;
-    const THRESHOLD_AFTER = (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER - 2) * MS_PER_WEEK;
-
-    // Calcul des bornes de chargement (ce qu'on va demander à l'API)
-    // ex: On charge 4 semaines avant/après
-    const LOAD_BUFFER_BEFORE = INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * MS_PER_WEEK;
-    const LOAD_BUFFER_AFTER = INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * MS_PER_WEEK;
-
-    // --- LOGIQUE DE DÉTECTION ---
-
-    const isOutOfBoundLeft = visibleWindowStart < (visibleWindowStartInitial.current - THRESHOLD_BEFORE);
-    const isOutOfBoundRight = visibleWindowEnd > (visibleWindowEndInitial.current + THRESHOLD_AFTER);
-
-    if (isOutOfBoundLeft || isOutOfBoundRight) {
-      
-      // 1. Calculer les nouvelles bornes à charger
-      // On se base sur la vue actuelle (visibleWindow) +/- le gros buffer de chargement
-      const newLoadStart = visibleWindowStart - LOAD_BUFFER_BEFORE;
-      const newLoadEnd = visibleWindowEnd + LOAD_BUFFER_AFTER;
-
-      // 2. Charger les données
-      onLoadAppointmentsInRange(newLoadStart, newLoadEnd);
-
-      // 3. IMPORTANT : Mettre à jour les Refs pour repousser la "frontière"
-      // Si on ne fait pas ça, au prochain render, isOutOfBound sera encore true !
-      
-      // On ne met à jour que le côté qui a déclenché le chargement (ou les deux)
-      if (isOutOfBoundLeft) visibleWindowStartInitial.current = newLoadStart;
-      if (isOutOfBoundRight) visibleWindowEndInitial.current = newLoadEnd;
-    }
-
-
-  }, [visibleWindowStart, visibleWindowEnd, onLoadAppointmentsInRange, isUserGrabbingScrollbar]);
-
   return (
     <div className="relative flex h-full flex-row calendar-grid" data-testid="calendar-grid">
       <div
-        className="min-w-80 max-w-80 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
+        className="min-w-80 max-w-80 max-h-[720px] pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
         style={{ scrollbarGutter: 'stable' }}
         onScroll={handleScrollY}
         ref={columnEmployeeRef}
@@ -661,7 +698,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         }}
         todayLineColor="#ffcdde"
       >
-        {isUserGrabbingScrollbar && (
+        {isGrabbing && (
           <div 
             className="absolute top-0 left-0 bg-black opacity-30 pointer-events-none z-20" 
             style={{
@@ -741,7 +778,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 {...commonProps}
                 employee={row.data}
                 dayInTimeline={dayInTimeline}
-                appointments={isUserGrabbingScrollbar ? [] : (appointmentsByEmployee[row.id as number] || [])}
+                appointments={isGrabbing ? [] : (appointmentsByEmployee[row.id as number] || [])}
                 rowHeight={row.height}
                 isFullDay={isFullDay}
                 events={events}

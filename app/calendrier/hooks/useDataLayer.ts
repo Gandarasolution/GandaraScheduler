@@ -86,7 +86,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
   }, [calendarConfig, searchQuery, appointmentsVersion]); // Dépend de la version pour rafraichir
     
 
-  const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number) => {
+  const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
     setIsLoading(true);
     // Simuler un appel API
     setTimeout(() => {
@@ -101,6 +101,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
       setAppointmentsVersion(prev => prev + 1);
       setIsLoading(false);
     }, 500); // Simuler délai
+    return true;
   }, []);
 
   // Effet pour charger les RDV initiaux

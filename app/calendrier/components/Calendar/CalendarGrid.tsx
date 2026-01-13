@@ -52,7 +52,7 @@ interface CalendarGridProps {
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
-  onLoadAppointmentsInRange: (startDate: number, endDate: number) => void;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
