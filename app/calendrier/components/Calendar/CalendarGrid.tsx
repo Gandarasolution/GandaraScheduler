@@ -85,6 +85,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
   const [hoverColumnLeft, setHoverColumnLeft] = useState<number | null>(null);
   const hasAutoScrolled = useRef(false);
+  
 
   // Use custom hooks for logic
   const { employeeHeights, appointmentsWithTop } = useCalendarLayout({

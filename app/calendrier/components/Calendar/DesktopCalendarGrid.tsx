@@ -106,7 +106,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   hoverColumnLeft,
   onLoadAppointmentsInRange
 }) => {
-  const [openItems, setOpenItems] = useState<(string | number)[]>([]);
+  const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
+    return getDimensionItems(calendarConfig.dimension, employees, initialTeams).map(i => i.id);
+  });  
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [todayTs, setTodayTs] = useState<number | null>(null);
   const [viewport, setViewport] = useState<{ top: number; height: number; left: number; width: number }>({ 
@@ -563,8 +565,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [mainScrollRef]);
 
   useEffect(() => {
-    setOpenItems(dimensionItems.map(item => item.id));
-  }, [dimensionItems]);
+    // On recalcule les IDs basés sur la nouvelle config
+    const currentDimensionItems = getDimensionItems(calendarConfig.dimension, employees, initialTeams);
+    setOpenItems(currentDimensionItems.map(item => item.id));
+    
+  }, [calendarConfig.dimension]);
 
   return (
     <div className="relative flex h-full flex-row calendar-grid" data-testid="calendar-grid">
