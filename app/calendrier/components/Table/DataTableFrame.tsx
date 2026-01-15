@@ -123,8 +123,6 @@ export interface AttributeConfig {
   sortable?: boolean;
   /** Alignement du texte dans la cellule */
   align?: 'left' | 'center' | 'right';
-  /** Indique si la colonne a une taille fixe(largeur minimale utilisée)*/
-  isFixed?: boolean;
   /** Clé de la colonne cachée à réafficher (pour type='hidden-column') */
   hiddenColumnKey?: string;
   /** Configuration de la largeur de la colonne */
@@ -239,6 +237,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   );  
   
   const containerRef = useRef<HTMLDivElement>(null);
+  const tableWidth = useRef<number>(containerWidth);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -313,7 +312,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
               label: attr.label,
               type: 'hidden-column',
               hiddenColumnKey: attr.key,
-              isFixed: true, // Largeur fixe de 30px
             });
           } else {
             // Garder la colonne normale
@@ -527,11 +525,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       if (attributeConfig?.type === 'hidden-column') {
         return { width: HIDDEN_COLUMN_WIDTH, isFixed: true };
       }
-              
-      // Si c'est une colonne image ou fixe, retourner la largeur fixe
-      if (attributeConfig?.isFixed) {
-        return { width: MIN_WIDTH, isFixed: true };
-      }
 
       // Handle custom fixed width
       if (customConfig) {
@@ -574,7 +567,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       return { width: idealWidth, isFixed: false };
     });
 
-    //console.log('columnWidths avant ajustement:', columnWidths);
     
     const fixedColumns = columnWidths.filter(col => col.isFixed);
     const flexibleColumns = columnWidths.filter(col => !col.isFixed);
@@ -658,6 +650,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       );
     }
   }
+    tableWidth.current = adjustedWidths.reduce((sum, width) => sum + width, 0);
 
     return adjustedWidths;
   }, [attributeLabels, attributeKeys, containerWidth, sortedItems, categoriesStructure, getAttributeValue, measureTextWidth, FontSize]);
@@ -927,6 +920,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                     className="grid transition-colors border-b border-default"
                     style={{
                       ...style,
+                      width: `${tableWidth.current}px`,
                       gridTemplateColumns: gridTemplateColumns 
                     }}
                     onClick={() => onRowClick?.(item)}

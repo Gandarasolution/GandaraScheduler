@@ -9,6 +9,7 @@ import {
 } from "../../datasource";
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../utils/constants';
+import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
 
 
 interface DataLayerProps {
@@ -116,7 +117,6 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
   const getTableItems = () => {
      if (viewType === 'chantier-table') return filteredItems.filter(e => e.type === 'chantier');
      if (viewType === 'paie-table') return filteredItems.filter(e => e.type !== 'chantier');
-      if (viewType === 'manual-event-table') return filteredItems.filter(e => e.isManual);
      return filteredEmployees.map(emp => ({
         id: emp.id,
         image: emp.image,
@@ -128,23 +128,23 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
      }));
   };
 
-  const getTableStructure = () => {
+  const getTableStructure = (): CategoryStructure[] => {
       if (viewType === 'chantier-table') 
           return [
               {
                   key: 'IG',
                   label: 'Informations Générales', 
                   attributes: [
-                      { key: 'image', label: '', isFixed: true, sortable: false },
+                      { key: 'image', label: '', sortable: false , width:50 },
                       { key: 'poleActivite',   label: 'Pôle', type:'string', width:120 },
                       { key: 'code',  label: 'Code', type:'string', width:85 },
                       { key: 'identifiant',  label: 'Identifiant', type:'string', width:125 },
-                      { key: 'libelle' , label: 'Libellé', type:'string', width:280 },
-                      { key: 'etat', label: 'État', type:'string' },
-                      { key: 'chargeAffaire',  label: 'Chargé d\'Affaires', type:'string' },
-                      { key: 'chefChantier',  label: 'Chef de Chantier', type:'string' },
-                      { key: 'dateOS' , label: 'Date OS', type:'date' },
-                      { key: 'dateFin', label: 'Date Fin', type:'date' }
+                      { key: 'libelle' , label: 'Libellé', type:'string' },
+                      { key: 'etat', label: 'État', type:'string', width:90 },
+                      { key: 'chargeAffaire',  label: 'Chargé d\'Affaires', type:'string', width:140 },
+                      { key: 'chefChantier',  label: 'Chef de Chantier', type:'string', width:140 },
+                      { key: 'dateOS' , label: 'Date OS', type:'date', width:100 },
+                      { key: 'dateFin', label: 'Date Fin', type:'date', width:100 }
                   ]
               },
               {
@@ -157,7 +157,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
                       { key: 'DPF',  label: 'Durée Planifiée', type:'string', width:85 },    // Durée Planifiée
                       { key: 'RPF',  label: 'Réalisé + Futur', type:'string', width:80 },  // Réalisé + Future
                       { key: 'AP',  label: 'Avancement Prévisionnel', type:'string', width:110 },       // Avancement Prév.
-                      { key: 'SP',  label: 'Solde P.', type:'string' }        // Solde Prév.
+                      { key: 'SP',  label: 'Solde P.', type:'string', width:80}        // Solde Prév.
                   ]
               }
           ] 
@@ -167,34 +167,22 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
               key: 'all',
               label: '', 
               attributes: [
-                  { key: 'verrou', label: 'Verrou' },
-                  { key: 'image', label: '', isFixed: true, sortable: false },
-                  { key: 'code', label: 'Code' },
+                  { key: 'verrou', label: 'Verrou', width: 80},
+                  { key: 'image', label: '', sortable: false, width:50 },
+                  { key: 'code', label: 'Code', width: 150},
                   { key: 'label', label: 'Libellé' },
-                  { key: 'actif', label: 'ACTF' },
-                  { key: 'category', label: 'Catégorie' }
+                  { key: 'actif', label: 'ACTF', width: 70 },
+                  { key: 'category', label: 'Catégorie', width: 300}
               ]
               }
           ]
-      if (viewType === 'manual-event-table') 
-        return [
-          {
-          key: 'all',
-          label: 'Événements manuels',
-          attributes: [
-            { key: 'image', label: '', isFixed: true, sortable: false },
-            { key: 'label', label: 'Description', type:'string' },
-            { key: 'actif', label: 'Actif', type:'boolean' }
-          ]
-          }
-        ]
       if (viewType === 'employee-table') 
           return [
               {
               key: 'all',
               label: '',
               attributes: [
-                  { key: 'image', label: '', isFixed: true, sortable: false },
+                  { key: 'image', label: '', sortable: false, width:50 },
                   { key: 'code', label: 'Code' },
                   { key: 'nom', label: 'Nom' },
                   { key: 'prenom', label: 'Prénom'}, 
@@ -203,6 +191,8 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
               ]
               }
           ]
+      // Default: return empty structure when no matching viewType
+      return [];
   };
 
   // --- Trigger de refresh ---
