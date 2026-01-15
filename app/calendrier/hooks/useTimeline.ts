@@ -188,7 +188,6 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   }, []);
 
   useEffect(() => {
-    if(viewType !== 'calendar') return;
     // Optimisation : pré-calculer les constantes une seule fois
     
     const date = selectedDate;        

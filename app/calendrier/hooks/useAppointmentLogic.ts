@@ -274,7 +274,7 @@ export const useAppointmentLogic = ({
       }, [appointmentsRef, onResize, createAppointment, saveAppointmentState, onUpdate ]);
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
-  const handleSaveAppointment = useCallback((appointment: Appointment, eventUpdate: Item, includeNonWorkingDays: boolean) => {
+  const handleSaveAppointment = useCallback((appointment: Appointment, eventUpdate: Item, includeNonWorkingDays: boolean) => {    
       // Mise à jour des métadonnées de l'événement global
       eventsRef.current = eventsRef.current.map(e =>
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
@@ -568,8 +568,35 @@ export const useAppointmentLogic = ({
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
     setSelectedAppointmentForm(appointment);
     setSelectedAppointment(appointment);
-    setSelectedItem(eventsRef.current.find(e => e.id === appointment.EventId) || null);
+    setSelectedItem(eventsRef.current.find(e => e.id === appointment.EventId) || 
+      {
+        id: -1,
+        code: '',
+        label: '',
+        color: '#1E40AF',
+        borderColor: '#1E40AF',
+        textColor: '#FFFFFF',
+        actif: true,
+        tags: [],
+        type: 'autre',
+        verrou: false,
+        category: ''
+      }
+    );
     setIsModalOpen(true);
+  }, []);
+
+  const handleAddDimension = useCallback((dimension: Item) => {
+    eventsRef.current.push(dimension);
+    setIsModalOpen(false);
+    onUpdate();
+  }, []);
+
+  const handleEditDimension = useCallback((dimension: Item) => {
+    eventsRef.current = eventsRef.current.map(e =>
+      e.id === dimension.id ? { ...e, ...dimension } : e
+    );
+    onUpdate();
   }, []);
 
   return {
@@ -591,7 +618,9 @@ export const useAppointmentLogic = ({
     moveAppointment,
     createAppointmentFromDrag,
     handleOpenEditModal,
-    
+    handleAddDimension,
+    handleEditDimension,
+
     // Actions Spécifiques
     handleDeleteAppointmentConfirm,
     handleDivideConfirm,

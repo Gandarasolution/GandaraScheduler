@@ -28,7 +28,6 @@ import {
   CalendarHeader,
   CalendarModals,
   DraggableSource,
-  ManualEventsManager
 } from '@/app/calendrier/components';
 
 // --- CUSTOM HOOKS ---
@@ -113,6 +112,7 @@ export default function HomePage({
     onUpdate: dataLayer.refreshData // Callback pour rafraichir l'UI après modification des Refs
   });
 
+  
   // 6. INTERACTIONS UTILISATEUR (Clic droit, Clavier, Copier/Coller)
   const interaction = useInteraction({
     selectedAppointment: appointmentLogic.selectedAppointment,
@@ -256,6 +256,7 @@ export default function HomePage({
               user={user}
               viewState={viewState}
               notifications={notifications}
+              handleAddModal={appointmentLogic.handleOpenEditModal}
               onNavigateDate={timeline.goToDate}
             />
           )}
@@ -309,17 +310,6 @@ export default function HomePage({
                   ) : (
                     <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>
                   )
-                ) : viewState.viewType === 'manual-event-table' ? (
-                  <ManualEventsManager
-                    events={dataLayer.filteredItems}
-                    images={dataLayer.availableImages}
-                    onCreate={(payload) => dataLayer.addManualEvent(payload)}
-                    onToggleActive={(id) => dataLayer.toggleManualEvent(id)}
-                    onDelete={(id) => dataLayer.deleteManualEvent(id)}
-                    onImageUpload={interaction.handleImageUpload}
-                    isUploading={interaction.isUploading}
-                    uploadError={interaction.uploadError}
-                  />
                 ) : (
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
                   <DataTableFrame 
@@ -372,6 +362,8 @@ export default function HomePage({
             handlers={{
               closeModal: () => appointmentLogic.setIsModalOpen(false),
               saveAppointment: appointmentLogic.handleSaveAppointment,
+              handleAddDimension: appointmentLogic.handleAddDimension,
+              handleEditDimension: appointmentLogic.handleEditDimension,
               
               // Repeat / Extend
               setRepeatData: appointmentLogic.setRepeatData,
@@ -382,8 +374,6 @@ export default function HomePage({
               // Images
               closeImageModal: interaction.handleCloseImageModal,
               handleImageSelect: (newImageUrl) => {
-                
-
                 // Logique de décision basée sur la vue active
                 if (viewState.viewType === 'employee-table') {
                     const id = appointmentLogic.selectedEmployee?.id || null;
@@ -391,7 +381,7 @@ export default function HomePage({
                     dataLayer.updateEmployeeImage(id, newImageUrl);
                 } else {
                     const id = appointmentLogic.selectedItem?.id || null;
-                    if (id === null) return;
+                    if (id === null) return;                    
                     appointmentLogic.setSelectedItem(prev => {
                         if (prev) {
                             return { ...prev, image: newImageUrl };
@@ -515,7 +505,7 @@ export default function HomePage({
           {/* Indicateur de chargement global */}
           {dataLayer.isLoading && (
              <div className="fixed top-0 left-0 w-full h-1 bg-primary z-50">
-               <div className="h-full bg-blue-600 animate-pulse w-1/3 rounded-r-full" />
+               <div className="h-full bg-primary animate-pulse w-1/3 rounded-r-full" />
              </div>
           )}
 

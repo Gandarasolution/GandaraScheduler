@@ -22,7 +22,7 @@ interface DataLayerProps {
 }
 
 export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, globalEmployeesRef, isSearchOverlayOpen }: DataLayerProps) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Données Sources (Refs pour éviter re-renders inutiles sur grosses données)
   const itemsRef = useRef<Item[]>(getEvenements());

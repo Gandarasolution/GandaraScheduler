@@ -16,8 +16,8 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect } from 'react';
-import {Appointment, Employee, HalfDayInterval, Item, Tags } from '../../types';
-import { format, setHours, startOfDay, setSeconds, setMinutes, addDays, isSameDay, isSameYear, isSameMonth } from 'date-fns';
+import {Appointment, Employee, HalfDayInterval, Item, Tags, CommonPaieAttributs } from '../../types';
+import { format, startOfDay, isSameDay, isSameYear, isSameMonth } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 
 import { AppointmentItem } from '../index';
@@ -57,6 +57,8 @@ interface AppointmentFormProps {
   handleOpenImageModal: (itemId: number) => void;
   /** Callback pour notifier si le formulaire a des modifications non enregistrées */
   onDirtyChange?: (isDirty: boolean) => void;
+  handleAddDimension: (dimension: Item) => void;
+  handleEditDimension: (dimension: Item) => void;
 }
 
 
@@ -102,8 +104,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   onClose,
   handleOpenImageModal,
   onDirtyChange,
+  handleAddDimension,
+  handleEditDimension,
 }) => {
-  
+    
   // ===== ÉTATS LOCAUX =====
   
   /**
@@ -116,7 +120,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
  
 
   useEffect(() => {
-    setFormDataItemType(prev => ({ ...prev, image: item.image }));
+    setFormDataItemType(prev => ({ ...prev, image: item?.image }));
   }, [item]);
   
 
@@ -253,6 +257,19 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (formDataAppointment.id === -1) {
+      // Si c'est une création, on ajoute le nouvel événement
+      handleAddDimension({...formDataItemType, id: Date.now()});
+      return;
+    }
+
+    if (formDataItemType.id === 0) {
+      // Si c'est une modification, on met à jour l'événement existant
+      handleEditDimension(formDataItemType);
+      return;
+    }
+
+    
     // Validation des dates
     if (formDataAppointment.startDate >= formDataAppointment.endDate) {
       setDateValidationError(true);
@@ -261,7 +278,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
     setDateValidationError(false);
     
-    onSave(formDataAppointment, formDataItemType, includeAllNonWorkingDays);
+    onSave(
+      formDataAppointment,
+      formDataItemType,
+      includeAllNonWorkingDays
+    );
   };
 
   /**
@@ -291,6 +312,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
   };
 
+  const handleItemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormDataItemType(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+  
   
   
 
@@ -299,7 +328,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     <>
       <div className={`flex ${isReducedVersion ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} gap-4 rounded-xl poppins transition-all duration-300`}>
         {/* Section principale du formulaire */}
-        <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-full max-w-[380px] min-w-[320px]`}>
+        <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-full max-w-[380px] min-w-[320px]`} noValidate>
           {/* Flèche d'expansion */}
           {!isReducedVersion && (
             <button
@@ -320,16 +349,83 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               </svg>
             </button>
           )}
+          {formDataAppointment.id === -1 && (
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                  {/* Champ CODE */}
+                  <div className="w-1/3">
+                      <label htmlFor="code" className="block text-xs font-medium text-gray-500 mb-1">Code</label>
+                      <input
+                          type="text"
+                          name="code"
+                          id="code"
+                          value={formDataItemType.code || ''}
+                          onChange={handleItemChange}
+                          placeholder="EX: CH"
+                          className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                          required
+                      />
+                  </div>
+                  
+                  {/* Champ ACTIF (Switch) */}
+                  <div className="flex flex-col items-center justify-center w-1/6">
+                      <label htmlFor="active" className="block text-xs font-medium text-gray-500 mb-1">Actif</label>
+                      <input
+                          type="checkbox"
+                          name="actif"
+                          id="actif"
+                          checked={!!(formDataItemType as CommonPaieAttributs).actif}
+                          onChange={handleItemChange}
+                          className="w-5 h-5 cursor-pointer accent-primary"
+                          title="Statut actif/inactif"
+                      />
+                  </div>
+              </div>
+
+              {/* Champ DESCRIPTION (Nom) */}
+              <div className="w-full">
+                  <label htmlFor="name" className="block text-xs font-medium text-gray-500 mb-1">Description</label>
+                  <input
+                      type="text"
+                      name="label"
+                      id="label"
+                      value={formDataItemType.label || ''}
+                      onChange={handleItemChange}
+                      placeholder="Nom de la rubrique..."
+                      className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                      required
+                  />
+              </div>
+            </div>
+          )}
+          
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mr-2">
             <div className='flex item-start w-full sm:w-[68px]'>Icône</div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
               {/* Container pour l'image et le bouton de modification */}
               <div className="relative group">
-                <img 
-                  src={formDataItemType.image?.image} 
-                  alt="Icône" 
-                  className="w-12 h-12 rounded border border-default object-cover" 
-                />
+                {formDataItemType?.image?.image ? (
+                  // CAS 1 : L'image existe -> On l'affiche
+                  <img 
+                    src={formDataItemType.image.image} 
+                    alt="Icône" 
+                    className="w-12 h-12 rounded border border-default object-cover" 
+                  />
+                ) : (
+                  // CAS 2 : Pas d'image -> Fond gris avec une croix
+                  <div className="w-12 h-12 rounded border border-default bg-gray-200 flex items-center justify-center text-gray-400">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      strokeWidth={2} 
+                      stroke="currentColor" 
+                      className="w-6 h-6"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => handleOpenImageModal(formDataItemType.id)}
@@ -348,13 +444,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   <label 
                     htmlFor="color-fond"
                     className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataItemType.color || '#1E40AF' }}
+                    style={{ backgroundColor: formDataItemType?.color || '#1E40AF' }}
                     title="Couleur de fond"
                   />
                   <input
                     id="color-fond"
                     type="color"
-                    value={formDataItemType.color || '#1E40AF'}
+                    value={formDataItemType?.color || '#1E40AF'}
                     onChange={(e) => setFormDataItemType(prev => ({ ...prev, color: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de fond"
@@ -368,13 +464,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                  <label 
                     htmlFor="color-bordure"
                     className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataItemType.borderColor || '#1E40AF' }}
+                    style={{ backgroundColor: formDataItemType?.borderColor || '#1E40AF' }}
                     title="Couleur de bordure"
                   />
                   <input
                     id="color-bordure"
                     type="color"
-                    value={formDataItemType.borderColor || '#1E40AF'}
+                    value={formDataItemType?.borderColor || '#1E40AF'}
                     onChange={(e) => setFormDataItemType(prev => ({ ...prev, borderColor: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de bordure"
@@ -389,13 +485,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   <label 
                     htmlFor="color-texte"
                     className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataItemType.textColor || '#FFFFFF' }}
+                    style={{ backgroundColor: formDataItemType?.textColor || '#FFFFFF' }}
                     title="Couleur de texte"
                   />
                   <input
                     id="color-texte"
                     type="color"
-                    value={formDataItemType.textColor || '#FFFFFF'}
+                    value={formDataItemType?.textColor || '#FFFFFF'}
                     onChange={(e) => setFormDataItemType(prev => ({ ...prev, textColor: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de texte"
@@ -569,12 +665,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
           {/* Boutons d'action */}
           <div className="flex flex-col sm:flex-row justify-between gap-3 mt-5">
-            <button
+            <input
               type="submit"
               className="px-4 py-2 bg-primary cursor-pointer text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
-            >
-              {appointment ? 'Enregistrer' : 'Créer'}
-            </button>
+              value={appointment?.id === -1 ? 'Créer' : 'Enregistrer'}
+            />
             <button
               type="button"
               onClick={onClose}
@@ -616,10 +711,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
             {/* Liste des étiquettes */}
             <div className="flex flex-wrap gap-2 min-h-[60px] max-h-[200px] overflow-y-auto">
-              {formDataItemType.tags?.length === 0 ? (
+              {formDataItemType?.tags?.length === 0 ? (
                 <span className="text-xs text-gray-400 italic">Aucune étiquette</span>
               ) : (
-                formDataItemType.tags?.map((tag, index) => (
+                formDataItemType?.tags?.map((tag, index) => (
                   <div
                     key={index}
                     className="inline-flex items-center gap-1 px-3 py-1 bg-primary-ultra-light text-primary rounded-full text-xs group hover:bg-red-50 hover:text-red-600 transition-colors"

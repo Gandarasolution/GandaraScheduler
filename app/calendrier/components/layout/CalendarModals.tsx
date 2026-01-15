@@ -27,6 +27,8 @@ interface CalendarModalsProps {
   handlers: {
     closeModal: () => void;
     saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean) => void;
+    handleAddDimension: (dimension: Item) => void;
+    handleEditDimension: (dimension: Item) => void;
     
     // Repeat Handlers
     setRepeatData: (data: RepeatData | null) => void;
@@ -325,7 +327,7 @@ export const CalendarModals = ({
             appointments={data.appointments}
             appointment={modalsState.selectedAppointmentForm as Appointment}
             item={data.selectedItem!}
-            isReducedVersion={modalsState.selectedAppointmentForm?.id === 0}
+            isReducedVersion={modalsState.selectedAppointmentForm?.id === 0 || modalsState.selectedAppointmentForm?.id === -1}
             employees={data.employees}
             HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
             isFullDay={config.isFullDay}
@@ -334,6 +336,8 @@ export const CalendarModals = ({
             onClose={() => handlers.closeModal()}
             handleOpenImageModal={handlers.openImageModalForEvent}
             onDirtyChange={setIsFormDirty}
+            handleAddDimension={handlers.handleAddDimension}
+            handleEditDimension={handlers.handleEditDimension}
           />
         )}
       </Modal>

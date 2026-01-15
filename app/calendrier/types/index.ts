@@ -116,7 +116,7 @@ export interface ChantierItem extends BaseItem {
 }
 
 // Interface commune pour les attributs partagés entre Absence et Autre
-interface CommonPaieAttributs extends BaseItem {
+export interface CommonPaieAttributs extends BaseItem {
   verrou: boolean;
   actif: boolean;
   category: BaseItemCategory["name"];
