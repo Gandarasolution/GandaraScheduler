@@ -188,13 +188,12 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   }, []);
 
   useEffect(() => {
-    // Optimisation : pré-calculer les constantes une seule fois
     
     const date = selectedDate;        
     const newTimeline = buildWindow(date);
 
     setDays(newTimeline);
-  }, [isDisplayWeekend, buildWindow, selectedDate]);
+  }, [isDisplayWeekend, buildWindow]);
 
   return {
     days,

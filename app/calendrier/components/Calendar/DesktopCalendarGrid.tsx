@@ -104,7 +104,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   onSelectCell,
   onSelectAppointment,
   hoverColumnLeft,
-  onLoadAppointmentsInRange
+  onLoadAppointmentsInRange,
 }) => {
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams).map(i => i.id);
@@ -446,6 +446,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   );
 
 
+
   // --- 1. FONCTION DE CHARGEMENT CENTRALISÉE ---
   // Cette fonction ne décide pas QUAND charger, mais COMMENT charger
   const checkAndLoadData = useCallback((forceCriticalCheck = false) => {
@@ -571,10 +572,12 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     
   }, [calendarConfig.dimension]);
 
+
+
   return (
     <div className="relative flex h-full flex-row calendar-grid" data-testid="calendar-grid">
       <div
-        className="min-w-80 max-w-80 max-h-[720px] pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
+        className="min-w-80 max-w-80 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide mb-8"
         style={{ scrollbarGutter: 'stable' }}
         onScroll={handleScrollY}
         ref={columnEmployeeRef}
@@ -789,12 +792,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 events={events}
                 visibleWindowStart={visibleWindowStart}
                 visibleWindowEnd={visibleWindowEnd}
-                nonWorkingDates={nonWorkingDates}
                 isDisplayWeekend={isDisplayWeekend}
                 onAppointmentMoved={onAppointmentMoved}
-                onCellDoubleClick={onCellDoubleClick}
                 onAppointmentDoubleClick={onAppointmentDoubleClick}
-                onExternalDragDrop={onExternalDragDrop}
                 handleContextMenu={handleContextMenu}
                 todayIndex={todayIndex}
                 selectedCell={selectedCell}

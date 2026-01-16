@@ -79,7 +79,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   selectedAppointmentId,
   onSelectCell,
   onSelectAppointment,
-  onLoadAppointmentsInRange
+  onLoadAppointmentsInRange,
 }) => {
 
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
@@ -126,6 +126,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     scroller.scrollLeft = Math.max(0, todayIdx * CELL_WIDTH);
     hasAutoScrolled.current = true;
   }, [dayInTimeline, isMobile, mainScrollRef]);
+    
 
   if (isMobile) {
     return (
@@ -184,7 +185,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       onSelectAppointment={onSelectAppointment}
       hoverColumnLeft={hoverColumnLeft}
       onLoadAppointmentsInRange={onLoadAppointmentsInRange}
-      
     />
   );
 };
