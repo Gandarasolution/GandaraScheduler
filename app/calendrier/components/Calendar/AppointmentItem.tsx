@@ -328,8 +328,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     backgroundColor: isGhost ? 'transparent' : (isHovered ? 'white' : appointmentColor), 
     border: isGhost ? 'none' : `2px solid ${appointmentBorderColor}`,
     transition: 'all 0.2s ease-in-out',
-    zIndex: isGhost ? 30 : (isDragging ? 40 : 20),
-  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost]);
+    // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
+    zIndex: isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.priority || 0))),
+  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment.priority]);
 
   return (
     <div
@@ -444,7 +445,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
       {/* CONTENU (Tags, Icone, Texte) */}
       {/* On met z-10 et relative pour être au-dessus des backgrounds */}
-      <div className="relative z-10 flex items-center gap-2 w-full h-full" style={{left: isGhost ? `${ghostWidthPx}px` : '0px'}}>
+      <div className="relative z-10 flex items-center gap-2 w-full h-full" style={{left: isGhost ? `${ghostWidthPx}px` : '0px'}}>        
         {appointment.tag && (
             <AppointmentTag 
             tagName={appointment?.tag.name}

@@ -162,6 +162,8 @@ export interface Appointment{
   EventId: number;
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
   tag?: Tags;
+  /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */
+  priority?: number;
 }
 
 

@@ -24,7 +24,7 @@ interface DayCellProps {
   nonWorkingDates?: number[];
   isMobile: boolean;
   isDisplayWeekend?: boolean;
-  onAppointmentMoved: (id: number, newStartTs: number, newEndTs: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
+  onAppointmentMoved: (id: number, newStartTs: number, newEndTs: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
   onCellDoubleClick: (dateTs: number, employeeId: number, intervalName: 'morning' | 'afternoon' | 'day') => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onExternalDragDrop: (

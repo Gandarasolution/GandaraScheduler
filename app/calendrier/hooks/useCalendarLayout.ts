@@ -117,73 +117,62 @@ export const useCalendarLayout = ({
   }, [employees, appointments, dayInTimeline, isMobile, getMaxOverlaps]);
 
   /**
-   * Attribue à chaque rendez-vous un indice de "pile" (top)
+   * Attribue à chaque rendez-vous un indice de "pile" (top) basé sur la priorité
+   * Le top est calculé automatiquement : priorité basse = top bas (visuellement en bas)
+   * Pour les rdv sans priorité ou priorité 0, on les place en bas
    */
   const assignAppointmentTops = useCallback((appointments: Appointment[], isMobile: boolean, dayInTimeline: number[]) => {
     const result: (Appointment & { top: number, _dayKey?: number })[] = [];
 
     employees.forEach(emp => {
       if (isMobile) {
-
         const empAppointments = appointments.filter(app => app.employeeId === emp.id);
 
         dayInTimeline.forEach(day => {
-            
             const dayStartTs = day; 
             const dayEndTs = dayStartTs + DAY_MS;
 
-            // 2. Filtrage et Tri numérique
+            // Filtrer les appointments du jour
             const dayAppointments = empAppointments
                 .filter(app => 
                     app.startDate < dayEndTs && app.endDate > dayStartTs
-                )
-                .sort((a, b) => a.startDate - b.startDate); 
+                );
 
-            // 3. Calcul des slots (Collision)
-            const slots: Appointment[][] = [];
-            
+            // Pour chaque groupe de rdv qui chevauchent, assigner le top basé sur la priorité
             dayAppointments.forEach(app => {
-                let slotIndex = 0;
-
-                // La logique d'intersection reste identique, mais opère sur des nombres
-                while (
-                    slots[slotIndex] &&
-                    slots[slotIndex].some(other =>
-                        !(app.endDate <= other.startDate || app.startDate >= other.endDate)
-                    )
-                ) {
-                    slotIndex++;
-                }
-
-                if (!slots[slotIndex]) slots[slotIndex] = [];
-                slots[slotIndex].push(app);
-
-                // 4. Construction du résultat sans conversion Date inutile
+                // Trouver tous les rdv qui chevauchent avec celui-ci
+                const overlapping = dayAppointments.filter(other => 
+                    !(app.endDate <= other.startDate || app.startDate >= other.endDate)
+                );
+                
+                // Trier par priorité croissante pour compter combien sont en dessous
+                const lowerPriorityCount = overlapping.filter(other => 
+                    (other.priority ?? 0) < (app.priority ?? 0)
+                ).length;
+                
                 result.push({ 
                     ...app, 
-                    top: slotIndex, 
-                    _dayKey: dayStartTs // On réutilise le nombre calculé au début
+                    top: lowerPriorityCount, // Le top = nombre de rdv avec priorité inférieure
+                    _dayKey: dayStartTs
                 });
             });
         });
     } else {
-        const sorted = [...appointments]
-          .filter(app => app.employeeId === emp.id)
-          .sort((a, b) => a.startDate - b.startDate);
-        const slots: Appointment[][] = [];
-        sorted.forEach(app => {
-          let slotIndex = 0;
-          while (
-            slots[slotIndex] &&
-            slots[slotIndex].some(other =>
-              !(app.endDate <= other.startDate || app.startDate >= other.endDate)
-            )
-          ) {
-            slotIndex++;
-          }
-          if (!slots[slotIndex]) slots[slotIndex] = [];
-          slots[slotIndex].push(app);
-          result.push({ ...app, top: slotIndex});
+        // Desktop : même logique
+        const empAppointments = appointments.filter(app => app.employeeId === emp.id);
+        
+        empAppointments.forEach(app => {
+            // Trouver tous les rdv qui chevauchent
+            const overlapping = empAppointments.filter(other => 
+                !(app.endDate <= other.startDate || app.startDate >= other.endDate)
+            );
+            
+            // Compter combien ont une priorité inférieure
+            const lowerPriorityCount = overlapping.filter(other => 
+                (other.priority ?? 0) < (app.priority ?? 0)
+            ).length;
+            
+            result.push({ ...app, top: lowerPriorityCount });
         });
       }
     });

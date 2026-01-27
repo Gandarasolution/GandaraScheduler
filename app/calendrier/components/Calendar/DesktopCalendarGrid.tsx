@@ -47,7 +47,7 @@ interface DesktopCalendarGridProps {
   tableRef: React.RefObject<HTMLDivElement | null>;
   handleMouseOver: (e: React.MouseEvent<HTMLElement>) => void;
   handleMouseOut: (e: React.MouseEvent<HTMLElement>) => void;
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
+  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
   onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
@@ -290,11 +290,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       const intervalIndex = Math.min(
         Math.max(Math.floor(adjustedX / intervalWidth), 0),
         totalIntervals - 1
-      );
-
-      console.log(intervalIndex);
-      
-      
+      );      
 
       const dayIndex = Math.min(Math.floor(intervalIndex / intervalsPerDay), dayInTimeline.length - 1);
       const intervalInDay = intervalIndex % intervalsPerDay;
@@ -317,11 +313,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         targetInterval = 'morning';
       }
 
-
-      // console.log(dayIndex);
-      // console.log(new Date(targetDate));
-      
-
       if (item.sourceType === 'external') {
         onExternalDragDrop(
           item.title || 'Nouveau rendez-vous',
@@ -337,11 +328,49 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       const duration = item.endDate - item.startDate;
       const newEnd = targetDate + duration;
       
+      // Gestion de la priorité : détecter sur quel rdv (position Y) l'utilisateur drop
+      const targetEmployeeId = Number(targetRow.id);
+      
+      // Trouver tous les rdv qui chevauchent la nouvelle position
+      const overlappingAppointments = appointmentsWithTop.filter(app => 
+        app.id !== item.id &&
+        app.employeeId === targetEmployeeId &&
+        app.startDate < newEnd &&
+        app.endDate > targetDate
+      );
+
+      let newPriority: number | undefined = undefined;
+      
+      if (overlappingAppointments.length > 0) {
+        // Calculer la position Y relative à la ligne de l'employé
+        const employeeRowY = relativeY - (targetRow.start || 0);
+        
+        // Déterminer sur quel rdv (quelle rangée/top) l'utilisateur dépose
+        // Chaque rangée a une hauteur de CELL_HEIGHT + 2px de marge
+        const targetTopIndex = Math.floor(employeeRowY / (CELL_HEIGHT + 2));
+        
+        // Trouver le rdv qui est à cet index de top parmi les rdv qui chevauchent
+        const rdvAtTargetPosition = overlappingAppointments
+          .sort((a, b) => (a.priority || 0) - (b.priority || 0)) // Trier par priorité croissante
+          .find(app => app.top === targetTopIndex);
+        
+        if (rdvAtTargetPosition) {
+          // Le rdv déposé prend la priorité du rdv sur lequel il est déposé + 1
+          newPriority = (rdvAtTargetPosition.priority || 0) + 1;
+        } else {
+          // Pas de rdv à cette position, prendre la priorité max + 1
+          const maxPriority = Math.max(0, ...overlappingAppointments.map(app => app.priority || 0));
+          newPriority = maxPriority + 1;
+        }
+      }
+
+      console.log(newPriority);
+      
       
 
-      onAppointmentMoved(item.id, targetDate, newEnd, Number(targetRow.id));
+      onAppointmentMoved(item.id, targetDate, newEnd, targetEmployeeId, 'right', true, newPriority);
     },
-  }), [DAY_INTERVALS, HALF_DAY_INTERVALS, dayInTimeline, getNextWorkedDay, isFullDay, nonWorkingDates, onAppointmentMoved, onExternalDragDrop, rowBoundaries]);
+  }), [DAY_INTERVALS, HALF_DAY_INTERVALS, dayInTimeline, getNextWorkedDay, isFullDay, nonWorkingDates, onAppointmentMoved, onExternalDragDrop, rowBoundaries, appointmentsWithTop]);
 
   const setTableRef = useCallback((node: HTMLDivElement | null) => {
     tableRef.current = node;
@@ -416,16 +445,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const appointmentsByEmployee = useMemo(() => {
     const map: Record<number, (Appointment & { top: number })[]> = {};
 
-    // 1. Initialiser les tableaux (optionnel, mais plus propre)
     employees.forEach(emp => map[emp.id] = []);
 
-    // 2. Remplir les tableaux (Complexité O(N) - Une seule passe)
     appointmentsWithTop.forEach(app => {
-      // Sécurité si l'employé existe
       if (!map[app.employeeId]) map[app.employeeId] = [];
-      
-      // OPTIMISATION ULTIME : On peut déjà filtrer ici ce qui est hors écran
-      // si on veut soulager les enfants (optionnel mais recommandé)
       if (app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd) {
         map[app.employeeId].push(app);
       }
