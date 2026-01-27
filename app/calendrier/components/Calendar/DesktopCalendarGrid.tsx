@@ -278,19 +278,24 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       if (relativeX < 0 || relativeY < 0 || relativeY > totalHeight) return;
 
       const intervalsPerDay = Math.max(1, HALF_DAY_INTERVALS.length);
-      const slotWidth = CELL_WIDTH / intervalsPerDay;
+      const intervalWidth = CELL_WIDTH / intervalsPerDay;
       const totalIntervals = dayInTimeline.length * intervalsPerDay;
       if (totalIntervals <= 0) return;
 
       const adjustedX = Math.min(
-        Math.max(relativeX - (item.dragOffset ?? 0), 0),
-        totalIntervals * slotWidth - 1
+        Math.max(relativeX - (relativeX % intervalWidth), 0),
+        totalIntervals * intervalWidth - 1
       );
 
       const intervalIndex = Math.min(
-        Math.max(Math.floor(adjustedX / slotWidth), 0),
+        Math.max(Math.floor(adjustedX / intervalWidth), 0),
         totalIntervals - 1
       );
+
+      console.log(intervalIndex);
+      
+      
+
       const dayIndex = Math.min(Math.floor(intervalIndex / intervalsPerDay), dayInTimeline.length - 1);
       const intervalInDay = intervalIndex % intervalsPerDay;
 
@@ -311,6 +316,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);
         targetInterval = 'morning';
       }
+
+
+      // console.log(dayIndex);
+      // console.log(new Date(targetDate));
+      
 
       if (item.sourceType === 'external') {
         onExternalDragDrop(

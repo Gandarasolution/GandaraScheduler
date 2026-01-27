@@ -46,6 +46,7 @@ import { notificationService } from "../services";
 import { getEmployees } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
+import { ManualEventsManager } from '../components/ManualEvents/app/calendrier/components/ManualEvents';
 
 /**
  * Composant wrapper pour éviter les erreurs d'hydratation Next.js
@@ -310,6 +311,10 @@ export default function HomePage({
                   ) : (
                     <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>
                   )
+                ) : viewState.viewType === 'manual-event-table' ? (
+                  <ManualEventsManager
+                    events={dataLayer.filteredItems}
+                  />
                 ) : (
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
                   <DataTableFrame 

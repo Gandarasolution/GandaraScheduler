@@ -587,7 +587,11 @@ export const useAppointmentLogic = ({
   }, []);
 
   const handleAddDimension = useCallback((dimension: Item) => {
-    eventsRef.current.push(dimension);
+    // Marquer les Items de type 'autre' comme manuels
+    const newItem = dimension.type === 'autre' 
+      ? { ...dimension, isManual: true } 
+      : dimension;
+    eventsRef.current.push(newItem);
     setIsModalOpen(false);
     onUpdate();
   }, []);
