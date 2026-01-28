@@ -510,7 +510,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               appointment={{
                 ...formDataAppointment,
                 id: formDataAppointment.id || 0,
-                top: 0,
                 startDate: Date.now(),
                 endDate: Date.now() + 86400000 * 3, // +3 jours
               }}

@@ -166,13 +166,20 @@ export const useCalendarLayout = ({
             const overlapping = empAppointments.filter(other => 
                 !(app.endDate <= other.startDate || app.startDate >= other.endDate)
             );
-            
             // Compter combien ont une priorité inférieure
-            const lowerPriorityCount = overlapping.filter(other => 
-                (other.priority ?? 0) < (app.priority ?? 0)
-            ).length;
-            
-            result.push({ ...app, top: lowerPriorityCount });
+            const lowerPriorityTab = overlapping.filter(other => 
+                ((other.priority ?? 0) < (app.priority ?? 0))
+            )
+            let lowerPriorityCount = 0;
+            if (lowerPriorityTab.length > 0) {              
+              lowerPriorityTab.forEach(lpApp => {
+                const priorityValue = lpApp.priority ?? 0;
+                if (priorityValue >= lowerPriorityCount) {
+                  lowerPriorityCount = priorityValue + 1;
+                }
+            });
+            }   
+            result.push({ ...app, top: lowerPriorityCount});
         });
       }
     });

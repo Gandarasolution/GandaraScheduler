@@ -46,7 +46,7 @@ import { notificationService } from "../services";
 import { getEmployees } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
-import { ManualEventsManager } from '../components/ManualEvents/app/calendrier/components/ManualEvents';
+import { ManualEventsManager } from '../components/ManualEvents';
 
 /**
  * Composant wrapper pour éviter les erreurs d'hydratation Next.js

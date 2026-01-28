@@ -37,7 +37,6 @@ export const customRenderersFactory = (
             startDate: Date.now(),
             endDate: snapToHour(Date.now(), 12),
             employeeId: 0,
-            top: 0,
           }}
           isFullDay={false}
           isMobile={false}

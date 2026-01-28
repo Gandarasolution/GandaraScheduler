@@ -50,8 +50,11 @@ export const useSmartScroll = (ref: React.RefObject<HTMLElement>) => {
       }, 50);
 
 
-      const delta = Math.abs(node.scrollLeft - lastScrollPos.current);      
-      if (isDownOnScrollbar.current && delta > 150 && !isGrabbing) {
+      const deltaX = Math.abs(node.scrollLeft - lastScrollPos.current);
+      const deltaY = Math.abs(node.scrollTop - lastScrollPos.current);
+
+      // Si on a scrollé beaucoup en X ou Y et que la souris est sur la scrollbar, on active le mode "grabbing"      
+      if (((isDownOnScrollbar.current && deltaX > 150) || (isDownOnScrollbar.current && deltaY > 150)) && !isGrabbing) {
          setIsGrabbing(true); 
       }
       lastScrollPos.current = node.scrollLeft;

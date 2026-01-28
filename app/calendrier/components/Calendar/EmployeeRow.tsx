@@ -28,6 +28,7 @@ interface EmployeeRowProps {
   isOverlapExpanded: boolean;
   onExpandOverlaps: () => void;
   onCollapseOverlaps: () => void;
+  collapseTrigger?: number;
 }
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
@@ -52,8 +53,14 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   isOverlapExpanded,
   onExpandOverlaps,
   onCollapseOverlaps,
+  collapseTrigger,
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    setExpandedGroups({});
+  }, [collapseTrigger]);
+
   const timelineStart = useMemo(() => dayInTimeline[0], [dayInTimeline]);
   
   // Positionnement et calcul des dimensions
@@ -110,6 +117,17 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         lastGroup.end = Math.max(lastGroup.end, app.endDate);
       } else {
         groups.push({ key: app.id, apps: [app], end: app.endDate });
+      }
+    }
+
+   for (const group of groups) {
+      // OPTIMISATION 5 : Ne trier que si nécessaire (plus de 1 élément)
+      if (group.apps.length > 1) {
+        group.apps.sort((a, b) => {
+          const pA = a.priority ?? 0;
+          const pB = b.priority ?? 0;
+          return (pA - pB) || (a.startDate - b.startDate);
+        });
       }
     }
 
@@ -210,20 +228,27 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         const isExpanded = expandedGroups[group.key] === true;
         const appsToRender = group.apps;
         const baseTopPx = group.apps[0].topPx;
+
+        
+        
         
         // Date de fin du rendez-vous "de base" (celui qui est en dessous)
         // Utile pour calculer l'intersection
-        const baseEndDate = group.apps[0].endDate;
+        const appFilter = group.apps.filter(app => (app.priority ?? 0) === 0);
+        
 
+        const baseEndDate = appFilter[appFilter.length - 1]?.endDate;
         return (
           <React.Fragment key={group.key}>
             {appsToRender.map((app, index) => {
               const event = events.find((et) => et.id === app.EventId) as Item | undefined;
               
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
-              const isGhost = !isExpanded && index > 0;
+              const isGhost = !isExpanded && (app.priority ?? 0) !== 0;
               
               // Position verticale forcée (superposition)
+              // Si l'événement est dans un groupe non étendu, on utilise la position du premier rendez-vous
+              // Sinon, on utilise sa propre position
               const forcedTopPx = !isExpanded ? baseTopPx : app.topPx;
 
               // Calcul de la fin du chevauchement :
@@ -232,10 +257,23 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               // ghostEndDate sera le 5.
               const ghostEndDate = isGhost ? Math.min(app.endDate, baseEndDate) : undefined;
 
+              if (group.apps.length > 1) {
+                // console.log('baseTopPx', baseTopPx);
+                // console.log('app.topPx', app.topPx);
+                // console.log('left', group.apps[0].left );
+                // console.log('group.apps[0].width', group.apps[0].width);
+                //console.log(group.apps);
+                
+                // console.log('isGhost', isGhost);
+                // console.log('app', app);
+                
+
+              }
+
               return (
                 <AppointmentItem
                   key={app.id}
-                  appointment={app as Appointment & { top: number;}}
+                  appointment={app as Appointment}
                   isFullDay={isFullDay}
                   isMobile={false}
                   isDisplayWeekend={isDisplayWeekend}
@@ -281,7 +319,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 }}
               >
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
-                +{group.apps.length - 1}
+                +{Math.max(...group.apps.map(a => a.priority ?? 0))}
               </button>
             )}
 
@@ -320,7 +358,8 @@ export default memo(EmployeeRow, (prev, next) => {
       prev.todayIndex !== next.todayIndex ||
       prev.isOverlapExpanded !== next.isOverlapExpanded ||
       prev.visibleWindowStart !== next.visibleWindowStart ||
-      prev.visibleWindowEnd !== next.visibleWindowEnd
+      prev.visibleWindowEnd !== next.visibleWindowEnd ||
+      prev.collapseTrigger !== next.collapseTrigger
   ) {
     return false;
   }

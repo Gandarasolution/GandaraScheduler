@@ -13,7 +13,7 @@ import AppointmentTag from './AppointmentTag';
 import { countWeekends } from '../../utils/dates';
 
 interface AppointmentItemProps {
-  appointment: Appointment & { top: number};
+  appointment: Appointment;
   isFullDay: boolean;
   isMobile: boolean;
   isDisplayWeekend?: boolean;
@@ -150,10 +150,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   });
 
   const isAnyDragging = useDragLayer((monitor) => monitor.isDragging());
-  const computedTop = absoluteTop !== undefined
-    ? `${absoluteTop}px`
-    : `${(appointment.top * CELL_HEIGHT) + (2 * appointment.top)}px`;
-
+  const computedTop = `${absoluteTop}px`;
   // --- Handlers (Resize/Drag) ---
   const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();

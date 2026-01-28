@@ -110,6 +110,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams).map(i => i.id);
   });  
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
+  const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
   const [todayTs, setTodayTs] = useState<number | null>(null);
   const [viewport, setViewport] = useState<{ top: number; height: number; left: number; width: number }>({ 
       top: 0, 
@@ -282,8 +283,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       const totalIntervals = dayInTimeline.length * intervalsPerDay;
       if (totalIntervals <= 0) return;
 
+
+      const dragOffset = item.dragOffset ?? 0;
       const adjustedX = Math.min(
-        Math.max(relativeX - (relativeX % intervalWidth), 0),
+        Math.max(relativeX - (relativeX % intervalWidth) - (dragOffset - (dragOffset % intervalWidth)), 0),
         totalIntervals * intervalWidth - 1
       );
 
@@ -347,27 +350,81 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         
         // Déterminer sur quel rdv (quelle rangée/top) l'utilisateur dépose
         // Chaque rangée a une hauteur de CELL_HEIGHT + 2px de marge
-        const targetTopIndex = Math.floor(employeeRowY / (CELL_HEIGHT + 2));
-        
-        // Trouver le rdv qui est à cet index de top parmi les rdv qui chevauchent
+        const targetPriorityIndex = Math.floor(employeeRowY / (CELL_HEIGHT + 2));
+
+        // Récupérer l'item d'origine pour vérifier s'il était déjà présent dans cette zone
+        const originalItem = appointmentsWithTop.find(a => a.id === item.id);
+        const isAlreadyPresent = originalItem && 
+                               originalItem.employeeId === targetEmployeeId && 
+                               originalItem.startDate < newEnd && 
+                               originalItem.endDate > targetDate;
+
+        // Trouver les rdv qui est à cet index de top parmi les rdv qui chevauchent
         const rdvAtTargetPosition = overlappingAppointments
           .sort((a, b) => (a.priority || 0) - (b.priority || 0)) // Trier par priorité croissante
-          .find(app => app.top === targetTopIndex);
+          .filter(app => (app.priority ?? 0) === targetPriorityIndex);
+          
+        const startDateRdvTarget = rdvAtTargetPosition[0]?.startDate;
+        const endDateRdvTarget = rdvAtTargetPosition[rdvAtTargetPosition.length - 1]?.endDate;
+        // Trouver les rdv qui chevauchent et qui ont la même priorité que l'original
+        const rdvatOriginalPosition = appointmentsWithTop
+          .filter(app =>
+            app.id !== item.id &&
+            app.employeeId === originalItem?.employeeId &&
+            app.startDate < endDateRdvTarget &&
+            app.endDate > startDateRdvTarget &&
+            (app.priority ?? 0) === (originalItem?.priority ?? 0)
+          );          
         
-        if (rdvAtTargetPosition) {
-          // Le rdv déposé prend la priorité du rdv sur lequel il est déposé + 1
-          newPriority = (rdvAtTargetPosition.priority || 0) + 1;
+        if (isAlreadyPresent) {
+          if (rdvAtTargetPosition.length > 0) {
+            // Si le rdv est déjà présent dans les overlapping et qu'on drop sur un autre rdv : on interchange
+            newPriority = (rdvAtTargetPosition[0].priority ?? 0);
+            // On update les autre RDV pour prendre l'ancienne priorité du RDV déplacé
+            rdvAtTargetPosition.forEach(appToMove => {
+              onAppointmentMoved(
+                appToMove.id,
+                appToMove.startDate,
+                appToMove.endDate,
+                appToMove.employeeId,
+                undefined,
+                false,
+                (originalItem?.priority ?? 0)
+              );
+            });
+
+            if (rdvatOriginalPosition.length > 0) {
+              // Si on a des rdv à la position originale, on doit réajuster leur priorité
+              rdvatOriginalPosition.forEach(appToAdjust => {
+                if (appToAdjust.id !== item.id) {
+                  onAppointmentMoved(
+                    appToAdjust.id,
+                    appToAdjust.startDate,
+                    appToAdjust.endDate,
+                    appToAdjust.employeeId,
+                    undefined,
+                    false,
+                    newPriority
+                  );
+                } 
+              });
+            }
+          } else {
+            // Si c'est vide, il prend la priorité de l'emplacement choisi 
+            newPriority = targetPriorityIndex;
+          }
         } else {
-          // Pas de rdv à cette position, prendre la priorité max + 1
-          const maxPriority = Math.max(0, ...overlappingAppointments.map(app => app.priority || 0));
-          newPriority = maxPriority + 1;
+          // Si il n'est pas dans les rdv overlapper
+          if (rdvAtTargetPosition.length > 0) {
+            // Et qu'on drop sur un autre rdv -> sa prio + 1
+             newPriority = (rdvAtTargetPosition[0].priority ?? 0) + 1;
+          } else {
+             newPriority = targetPriorityIndex;
+          }
         }
       }
 
-      console.log(newPriority);
-      
-      
-
+      //console.log(newPriority);  
       onAppointmentMoved(item.id, targetDate, newEnd, targetEmployeeId, 'right', true, newPriority);
     },
   }), [DAY_INTERVALS, HALF_DAY_INTERVALS, dayInTimeline, getNextWorkedDay, isFullDay, nonWorkingDates, onAppointmentMoved, onExternalDragDrop, rowBoundaries, appointmentsWithTop]);
@@ -719,9 +776,22 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                           <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-interim border-2 border-white"></span>
                         )}
                       </div>
-                      <div className="flex flex-col">
-                        <span className="poppins text-[16px] font-inherit group-hover:font-semibold">{employee.name + ' ' + employee.firstName}</span>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="poppins text-[16px] font-inherit group-hover:font-semibold truncate">{employee.name + ' ' + employee.firstName}</span>
                       </div>
+                      {expandedOverlapRows[employee.id] && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedOverlapRows(prev => ({ ...prev, [employee.id]: false }));
+                            setCollapseTriggers(prev => ({ ...prev, [employee.id]: (prev[employee.id] || 0) + 1 }));
+                          }}
+                          className="text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
+                          type="button"
+                        >
+                          Masquer
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -837,6 +907,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 isOverlapExpanded={!!expandedOverlapRows[row.id as number]}
                 onExpandOverlaps={() => setExpandedOverlapRows((prev) => ({ ...prev, [row.id as number]: true }))}
                 onCollapseOverlaps={() => setExpandedOverlapRows((prev) => ({ ...prev, [row.id as number]: false }))}
+                collapseTrigger={collapseTriggers[row.id as number]}
               />
             );
           })}
