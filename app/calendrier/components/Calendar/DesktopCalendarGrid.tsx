@@ -5,6 +5,10 @@ import { TimelineFrame } from './index';
 import EmployeeRow from './EmployeeRow';
 import GroupRow from './GroupRow';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
+
+import { useCalendarContext } from '../../context/CalendarContext';
+
+
 import { 
   CELL_WIDTH, 
   CELL_HEIGHT,
@@ -28,37 +32,7 @@ import { getRowId } from '../../utils/domIds';
 import { useSmartScroll } from '../../hooks/useSmartScroll';
 
 interface DesktopCalendarGridProps {
-  employees: Employee[];
-  appointmentsWithTop: (Appointment & { top: number })[];
-  employeeHeights: { employeeId: number; height: number }[];
-  dayInTimeline: number[];
-  initialTeams: Groupe[];
-  calendarConfig: CalendarConfig;
-  onCalendarConfigChange: (config: CalendarConfig) => void;
-  availableConfigs: CalendarConfig[];
-  HALF_DAY_INTERVALS: HalfDayInterval[];
-  isFullDay: boolean;
-  events: Item[];
-  nonWorkingDates: number[];
-  isDisplayWeekend: boolean;
-  mainScrollRef: React.RefObject<HTMLDivElement | null>;
-  handleScrollY: (e: React.UIEvent<HTMLDivElement>) => void;
-  columnEmployeeRef: React.RefObject<HTMLDivElement | null>;
-  tableRef: React.RefObject<HTMLDivElement | null>;
-  handleMouseOver: (e: React.MouseEvent<HTMLElement>) => void;
-  handleMouseOut: (e: React.MouseEvent<HTMLElement>) => void;
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
-  onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
-  onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
-  updateHighlightedEmployeeRow: (employeeId: number | null) => void;
-  selectedCell: { employeeId: number; date: number } | null;
-  selectedAppointmentId: number | undefined;
-  onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
-  onSelectAppointment: (appointment: Appointment | null) => void;
-  hoverColumnLeft: number | null;
-  onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
+  
 }
 
 interface DragItem {
@@ -73,44 +47,163 @@ interface DragItem {
   dragOffset?: number;
 }
 
-const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
-  employees,
-  appointmentsWithTop,
-  employeeHeights,
+interface CalendarRowsProps {
+  visibleRows: Array<{ type: 'group' | 'employee', id: string | number, data: any, height: number, start: number, end: number, domId: string }>;
+  dayInTimeline: number[];
+  todayIndex: number;
+  isFullDay: boolean;
+  isGrabbing: boolean;
+  appointmentsByEmployee: Record<number, (Appointment & { top: number })[]>;
+  EMPTY_APPOINTMENTS: (Appointment & { top: number })[];
+  events: Item[];
+  visibleWindowStart: number;
+  visibleWindowEnd: number;
+  isDisplayWeekend: boolean;
+  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentDoubleClick: (appointment: Appointment) => void;
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
+  selectedCell: { employeeId: number; date: number } | null;
+  selectedAppointmentId: number | undefined;
+  onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
+  onSelectAppointment: (appointment: Appointment | null) => void;
+  expandedOverlapRows: Record<number, boolean>;
+  handleSetRowExpansion: (employeeId: number, expanded: boolean) => void;
+  collapseTriggers: Record<number, number>;
+}
+
+const CalendarRows = memo(({
+  visibleRows,
   dayInTimeline,
-  initialTeams,
-  calendarConfig,
-  onCalendarConfigChange,
-  availableConfigs,
-  HALF_DAY_INTERVALS,
+  todayIndex,
   isFullDay,
+  isGrabbing,
+  appointmentsByEmployee,
+  EMPTY_APPOINTMENTS,
   events,
-  nonWorkingDates,
+  visibleWindowStart,
+  visibleWindowEnd,
   isDisplayWeekend,
-  mainScrollRef,
-  handleScrollY,
-  columnEmployeeRef,
-  tableRef,
-  handleMouseOver,
-  handleMouseOut,
   onAppointmentMoved,
-  onCellDoubleClick,
   onAppointmentDoubleClick,
-  onExternalDragDrop,
   handleContextMenu,
-  updateHighlightedEmployeeRow,
   selectedCell,
   selectedAppointmentId,
   onSelectCell,
   onSelectAppointment,
-  hoverColumnLeft,
-  onLoadAppointmentsInRange,
+  expandedOverlapRows,
+  handleSetRowExpansion,
+  collapseTriggers,
+}: CalendarRowsProps) => {
+  return (
+    <>
+      {visibleRows.map((row) => {
+        const commonProps = {
+          style: {
+            width: '100%',
+            position: 'absolute' as const,
+            top: row.start,
+            height: row.height,
+            left: 0,
+            right: 0,
+          },
+        };
+
+        return row.type === 'group' ? (
+          <GroupRow
+            key={row.id}
+            {...commonProps}
+            itemId={row.id}
+            dayInTimeline={dayInTimeline}
+            rowHeight={row.height}
+            todayIndex={todayIndex}
+            isFullDay={isFullDay}
+          />
+        ) : (
+          <EmployeeRow
+            key={row.id}
+            {...commonProps}
+            employee={row.data}
+            dayInTimeline={dayInTimeline}
+            appointments={isGrabbing ? EMPTY_APPOINTMENTS : (appointmentsByEmployee[row.id as number] || EMPTY_APPOINTMENTS)}
+            rowHeight={row.height}
+            isFullDay={isFullDay}
+            events={events}
+            visibleWindowStart={visibleWindowStart}
+            visibleWindowEnd={visibleWindowEnd}
+            isDisplayWeekend={isDisplayWeekend}
+            onAppointmentMoved={onAppointmentMoved}
+            onAppointmentDoubleClick={onAppointmentDoubleClick}
+            handleContextMenu={handleContextMenu}
+            todayIndex={todayIndex}
+            selectedCell={selectedCell}
+            selectedAppointmentId={selectedAppointmentId}
+            onSelectCell={onSelectCell}
+            onSelectAppointment={onSelectAppointment}
+            isOverlapExpanded={!!expandedOverlapRows[row.id as number]}
+            onSetExpansion={handleSetRowExpansion}
+            collapseTrigger={collapseTriggers[row.id as number]}
+          />
+        );
+      })}
+    </>
+  );
+});
+CalendarRows.displayName = 'CalendarRows';
+
+
+const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 }) => {
+
+  
+   const {
+      employees,
+      appointmentsWithTop,
+      employeeHeights,
+      dayInTimeline,
+      HALF_DAY_INTERVALS,
+      isFullDay,
+      nonWorkingDates,
+      events,
+      calendarConfig,
+      initialTeams,
+      availableConfigs,
+      mainScrollRef,
+      tableRef,
+      columnEmployeeRef,
+      appointmentsDefault,
+      handleScrollY,
+      onLoadAppointmentsInRange,
+      onCalendarConfigChange,
+      updateHighlightedEmployeeRow,
+      handleMouseOver,
+      hoverColumnLeft,
+      isDisplayWeekend,
+      handleMouseOut,
+      onAppointmentMoved,
+      onAppointmentDoubleClick,
+      onExternalDragDrop,
+      handleContextMenu,
+      selectedCell,
+      selectedAppointmentId,
+      onSelectCell,
+      onSelectAppointment,
+    } = useCalendarContext();
+  
+
+
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams).map(i => i.id);
   });  
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
+  
+  // Use a stable empty array reference
+  const EMPTY_APPOINTMENTS = useMemo(() => [], []);
+
+  const handleSetRowExpansion = useCallback((employeeId: number, expanded: boolean) => {
+    setExpandedOverlapRows((prev) => ({ ...prev, [employeeId]: expanded }));
+  }, []);
+
   const [todayTs, setTodayTs] = useState<number | null>(null);
   const [viewport, setViewport] = useState<{ top: number; height: number; left: number; width: number }>({ 
       top: 0, 
@@ -335,7 +428,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       const targetEmployeeId = Number(targetRow.id);
       
       // Trouver tous les rdv qui chevauchent la nouvelle position
-      const overlappingAppointments = appointmentsWithTop.filter(app => 
+      const overlappingAppointments = appointmentsDefault.filter(app => 
         app.id !== item.id &&
         app.employeeId === targetEmployeeId &&
         app.startDate < newEnd &&
@@ -353,7 +446,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         const targetPriorityIndex = Math.floor(employeeRowY / (CELL_HEIGHT + 2));
 
         // Récupérer l'item d'origine pour vérifier s'il était déjà présent dans cette zone
-        const originalItem = appointmentsWithTop.find(a => a.id === item.id);
+        const originalItem = appointmentsDefault.find(a => a.id === item.id);
         const isAlreadyPresent = originalItem && 
                                originalItem.employeeId === targetEmployeeId && 
                                originalItem.startDate < newEnd && 
@@ -367,7 +460,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         const startDateRdvTarget = rdvAtTargetPosition[0]?.startDate;
         const endDateRdvTarget = rdvAtTargetPosition[rdvAtTargetPosition.length - 1]?.endDate;
         // Trouver les rdv qui chevauchent et qui ont la même priorité que l'original
-        const rdvatOriginalPosition = appointmentsWithTop
+        const rdvatOriginalPosition = appointmentsDefault
           .filter(app =>
             app.id !== item.id &&
             app.employeeId === originalItem?.employeeId &&
@@ -505,14 +598,13 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     employees.forEach(emp => map[emp.id] = []);
 
     appointmentsWithTop.forEach(app => {
+      // Opti: Removed window filtering to keep reference stable
       if (!map[app.employeeId]) map[app.employeeId] = [];
-      if (app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd) {
-        map[app.employeeId].push(app);
-      }
+      map[app.employeeId].push(app);
     });
 
     return map;
-  }, [appointmentsWithTop, employees, visibleWindowStart, visibleWindowEnd]);
+  }, [appointmentsWithTop, employees]);
 
   const toggleItem = (itemId: string | number) => {
     setOpenItems(open =>
@@ -861,56 +953,29 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
               />
             </>
           )}
-          {visibleRows.map((row) => {
-            const commonProps = {
-              style: {
-                width: '100%',
-                position: 'absolute' as const,
-                top: row.start,
-                height: row.height,
-                left: 0,
-                right: 0,
-              },
-            };
-
-            return row.type === 'group' ? (
-              <GroupRow
-                key={row.id}
-                {...commonProps}
-                itemId={row.id}
-                dayInTimeline={dayInTimeline}
-                rowHeight={row.height}
-                todayIndex={todayIndex}
-                isFullDay={isFullDay}
-              />
-            ) : (
-              <EmployeeRow
-                key={row.id}
-                {...commonProps}
-                employee={row.data}
-                dayInTimeline={dayInTimeline}
-                appointments={isGrabbing ? [] : (appointmentsByEmployee[row.id as number] || [])}
-                rowHeight={row.height}
-                isFullDay={isFullDay}
-                events={events}
-                visibleWindowStart={visibleWindowStart}
-                visibleWindowEnd={visibleWindowEnd}
-                isDisplayWeekend={isDisplayWeekend}
-                onAppointmentMoved={onAppointmentMoved}
-                onAppointmentDoubleClick={onAppointmentDoubleClick}
-                handleContextMenu={handleContextMenu}
-                todayIndex={todayIndex}
-                selectedCell={selectedCell}
-                selectedAppointmentId={selectedAppointmentId}
-                onSelectCell={onSelectCell}
-                onSelectAppointment={onSelectAppointment}
-                isOverlapExpanded={!!expandedOverlapRows[row.id as number]}
-                onExpandOverlaps={() => setExpandedOverlapRows((prev) => ({ ...prev, [row.id as number]: true }))}
-                onCollapseOverlaps={() => setExpandedOverlapRows((prev) => ({ ...prev, [row.id as number]: false }))}
-                collapseTrigger={collapseTriggers[row.id as number]}
-              />
-            );
-          })}
+          <CalendarRows 
+            visibleRows={visibleRows}
+            dayInTimeline={dayInTimeline}
+            todayIndex={todayIndex}
+            isFullDay={isFullDay}
+            isGrabbing={isGrabbing}
+            appointmentsByEmployee={appointmentsByEmployee}
+            EMPTY_APPOINTMENTS={EMPTY_APPOINTMENTS}
+            events={events}
+            visibleWindowStart={visibleWindowStart}
+            visibleWindowEnd={visibleWindowEnd}
+            isDisplayWeekend={isDisplayWeekend}
+            onAppointmentMoved={onAppointmentMoved}
+            onAppointmentDoubleClick={onAppointmentDoubleClick}
+            handleContextMenu={handleContextMenu}
+            selectedCell={selectedCell}
+            selectedAppointmentId={selectedAppointmentId}
+            onSelectCell={onSelectCell}
+            onSelectAppointment={onSelectAppointment}
+            expandedOverlapRows={expandedOverlapRows}
+            handleSetRowExpansion={handleSetRowExpansion}
+            collapseTriggers={collapseTriggers}
+          />
         </div>
       </TimelineFrame>
     </div>

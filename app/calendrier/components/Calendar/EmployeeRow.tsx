@@ -26,8 +26,7 @@ interface EmployeeRowProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   isOverlapExpanded: boolean;
-  onExpandOverlaps: () => void;
-  onCollapseOverlaps: () => void;
+  onSetExpansion: (id: number, expanded: boolean) => void;
   collapseTrigger?: number;
 }
 
@@ -51,8 +50,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   onSelectCell,
   onSelectAppointment,
   isOverlapExpanded,
-  onExpandOverlaps,
-  onCollapseOverlaps,
+  onSetExpansion,
   collapseTrigger,
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
@@ -138,11 +136,11 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
   useEffect(() => {
     if (hasExpandedGroup && !isOverlapExpanded) {
-      onExpandOverlaps();
+      onSetExpansion(employee.id, true);
     } else if (!hasExpandedGroup && isOverlapExpanded) {
-      onCollapseOverlaps();
+      onSetExpansion(employee.id, false);
     }
-  }, [hasExpandedGroup, isOverlapExpanded, onCollapseOverlaps, onExpandOverlaps]);
+  }, [hasExpandedGroup, isOverlapExpanded, onSetExpansion, employee.id]);
 
   const selectionOverlay = useMemo(() => {
     if (!selectedCell || selectedCell.employeeId !== employee.id) return null;
@@ -359,7 +357,8 @@ export default memo(EmployeeRow, (prev, next) => {
       prev.isOverlapExpanded !== next.isOverlapExpanded ||
       prev.visibleWindowStart !== next.visibleWindowStart ||
       prev.visibleWindowEnd !== next.visibleWindowEnd ||
-      prev.collapseTrigger !== next.collapseTrigger
+      prev.collapseTrigger !== next.collapseTrigger || 
+      prev.onSetExpansion !== next.onSetExpansion
   ) {
     return false;
   }

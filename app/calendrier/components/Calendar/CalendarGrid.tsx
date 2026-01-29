@@ -20,17 +20,19 @@
  */
 
 "use client";
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Item } from '../../types';
 import { useCalendarLayout } from '../../hooks/useCalendarLayout';
 import { useCalendarInteractions } from '../../hooks/useCalendarInteractions';
 import MobileCalendarGrid from './MobileCalendarGrid';
 import DesktopCalendarGrid from './DesktopCalendarGrid';
 import { CELL_WIDTH } from '../../utils/constants';
+import { CalendarProvider } from '../../context/CalendarContext';
 
 interface CalendarGridProps {
   employees: Employee[];
   appointments: Appointment[];
+  appointmentsDefault: Appointment[];
   events: Item[];
   initialTeams: Groupe[];
   dayInTimeline: number[];
@@ -58,6 +60,7 @@ interface CalendarGridProps {
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   employees,
   appointments,
+  appointmentsDefault,
   initialTeams,
   dayInTimeline,
   HALF_DAY_INTERVALS,
@@ -95,6 +98,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     isMobile
   });
 
+  const handleHoverMove = useCallback(({ colLeft }: { colLeft: number }) => {
+    setHoverColumnLeft(colLeft >= 0 ? colLeft : null);
+  }, []);
+
   const { 
     tableRef, 
     handleMouseMove, 
@@ -105,8 +112,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     dayInTimeline,
     mainScrollRef,
     columnEmployeeRef,
-    onHoverMove: ({ colLeft }) => {
-      setHoverColumnLeft(colLeft >= 0 ? colLeft : null);    }
+    onHoverMove: handleHoverMove
   });
 
  
@@ -130,62 +136,83 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   if (isMobile) {
     return (
-      <MobileCalendarGrid
+      <CalendarProvider
         employees={employees}
         appointmentsWithTop={appointmentsWithTop}
-        employeeHeights={employeeHeights as any}
+        appointmentsDefault={appointmentsDefault}
+        employeeHeights={employeeHeights}
         dayInTimeline={dayInTimeline}
+        initialTeams={initialTeams}
+        calendarConfig={calendarConfig}
+        onCalendarConfigChange={onCalendarConfigChange}
+        availableConfigs={availableConfigs}
         HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
         isFullDay={isFullDay}
-        nonWorkingDates={nonWorkingDates}
         events={events}
+        nonWorkingDates={nonWorkingDates}
+        isDisplayWeekend={isDisplayWeekend}
+        mainScrollRef={mainScrollRef}
+        handleScrollY={handleScrollY}
+        columnEmployeeRef={columnEmployeeRef}
+        tableRef={tableRef}
+        handleMouseOver={handleMouseMove}
+        handleMouseOut={handleMouseOut}
         onAppointmentMoved={onAppointmentMoved}
         onCellDoubleClick={onCellDoubleClick}
         onAppointmentDoubleClick={onAppointmentDoubleClick}
         onExternalDragDrop={onExternalDragDrop}
         handleContextMenu={handleContextMenu}
+        updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
         selectedCell={selectedCell}
         selectedAppointmentId={selectedAppointmentId}
         onSelectCell={onSelectCell}
         onSelectAppointment={onSelectAppointment}
-      />
+        hoverColumnLeft={hoverColumnLeft}
+        onLoadAppointmentsInRange={onLoadAppointmentsInRange}
+      >
+        <MobileCalendarGrid/>
+      </CalendarProvider>
     );
   }
 
   return (
-    <DesktopCalendarGrid
+    <CalendarProvider
       employees={employees}
       appointmentsWithTop={appointmentsWithTop}
-      employeeHeights={employeeHeights as any}
+      appointmentsDefault={appointmentsDefault}
+      employeeHeights={employeeHeights}
       dayInTimeline={dayInTimeline}
-      initialTeams={initialTeams}
-      calendarConfig={calendarConfig}
-      onCalendarConfigChange={onCalendarConfigChange}
-      availableConfigs={availableConfigs}
-      HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
-      isFullDay={isFullDay}
-      events={events}
-      nonWorkingDates={nonWorkingDates}
-      isDisplayWeekend={isDisplayWeekend}
-      mainScrollRef={mainScrollRef}
-      handleScrollY={handleScrollY}
-      columnEmployeeRef={columnEmployeeRef}
-      tableRef={tableRef}
-      handleMouseOver={handleMouseMove}
-      handleMouseOut={handleMouseOut}
-      onAppointmentMoved={onAppointmentMoved}
-      onCellDoubleClick={onCellDoubleClick}
-      onAppointmentDoubleClick={onAppointmentDoubleClick}
-      onExternalDragDrop={onExternalDragDrop}
-      handleContextMenu={handleContextMenu}
-      updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
-      selectedCell={selectedCell}
-      selectedAppointmentId={selectedAppointmentId}
-      onSelectCell={onSelectCell}
-      onSelectAppointment={onSelectAppointment}
-      hoverColumnLeft={hoverColumnLeft}
-      onLoadAppointmentsInRange={onLoadAppointmentsInRange}
-    />
+        initialTeams={initialTeams}
+        calendarConfig={calendarConfig}
+        onCalendarConfigChange={onCalendarConfigChange}
+        availableConfigs={availableConfigs}
+        HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+        isFullDay={isFullDay}
+        events={events}
+        nonWorkingDates={nonWorkingDates}
+        isDisplayWeekend={isDisplayWeekend}
+        mainScrollRef={mainScrollRef}
+        handleScrollY={handleScrollY}
+        columnEmployeeRef={columnEmployeeRef}
+        tableRef={tableRef}
+        handleMouseOver={handleMouseMove}
+        handleMouseOut={handleMouseOut}
+        onAppointmentMoved={onAppointmentMoved}
+        onCellDoubleClick={onCellDoubleClick}
+        onAppointmentDoubleClick={onAppointmentDoubleClick}
+        onExternalDragDrop={onExternalDragDrop}
+        handleContextMenu={handleContextMenu}
+        updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
+        selectedCell={selectedCell}
+        selectedAppointmentId={selectedAppointmentId}
+        onSelectCell={onSelectCell}
+        onSelectAppointment={onSelectAppointment}
+        hoverColumnLeft={hoverColumnLeft}
+        onLoadAppointmentsInRange={onLoadAppointmentsInRange}
+    >
+      <DesktopCalendarGrid 
+      />
+    </CalendarProvider>
   );
 };
 

@@ -275,6 +275,9 @@ export default function HomePage({
                       /* Données */
                       employees={dataLayer.filteredEmployees}
                       appointments={dataLayer.filteredAppointments}
+                      appointmentsDefault={dataLayer.appointmentsRef.current}
+
+                      /* Équipes & Événements */
                       initialTeams={dataLayer.initialTeams}
                       events={dataLayer.itemsRef.current}
                       

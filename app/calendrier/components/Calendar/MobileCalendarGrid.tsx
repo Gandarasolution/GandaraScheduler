@@ -1,50 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { format, isSameDay, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Appointment, Employee, HalfDayInterval, Item } from '../../types';
 import { DayCell } from './index';
 import { CELL_HEIGHT } from '../../utils/constants';
 import { snapToHour } from '../../utils/dates';
+import { useCalendarContext } from '../../context/CalendarContext';
 
-interface MobileCalendarGridProps {
-  employees: Employee[];
-  appointmentsWithTop: (Appointment & { top: number; _dayKey?: number;})[];
-  employeeHeights: { employeeId: number; dayKey?: number; height: number }[];
-  dayInTimeline: number[];
-  HALF_DAY_INTERVALS: HalfDayInterval[];
-  isFullDay: boolean;
-  nonWorkingDates: number[];
-  events: Item[];
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right') => void;
-  onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
-  onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
-  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
-  selectedCell?: { employeeId: number; date: number } | null;
-  selectedAppointmentId?: number | undefined;
-  onSelectCell?: (cell: { employeeId: number; date: number } | null) => void;
-  onSelectAppointment?: (appointment: Appointment | null) => void;
-}
+const MobileCalendarGrid: React.FC = () => {
+  const {
+    employees,
+    appointmentsWithTop,
+    employeeHeights,
+    dayInTimeline,
+    HALF_DAY_INTERVALS,
+    isFullDay,
+    nonWorkingDates,
+    events,
+    onAppointmentMoved,
+    onCellDoubleClick,
+    onAppointmentDoubleClick,
+    onExternalDragDrop,
+    handleContextMenu,
+    selectedCell,
+    selectedAppointmentId,
+    onSelectCell,
+    onSelectAppointment,
+  } = useCalendarContext();
 
-const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
-  employees,
-  appointmentsWithTop,
-  employeeHeights,
-  dayInTimeline,
-  HALF_DAY_INTERVALS,
-  isFullDay,
-  nonWorkingDates,
-  events,
-  onAppointmentMoved,
-  onCellDoubleClick,
-  onAppointmentDoubleClick,
-  onExternalDragDrop,
-  handleContextMenu,
-  selectedCell,
-  selectedAppointmentId,
-  onSelectCell,
-  onSelectAppointment,
-}) => {
   const [todayTs, setTodayTs] = useState<number | null>(null);
 
   useEffect(() => {
