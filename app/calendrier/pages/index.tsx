@@ -93,7 +93,7 @@ export default function HomePage({
   const timeline = useTimeline({
     isDisplayWeekend: viewState.isDisplayWeekend,
     selectedDate: viewState.selectedDate,
-    viewType: viewState.viewType
+    setSelectedDate: viewState.setSelectedDate,
   });
 
   // 5. LOGIQUE MÉTIER (CRUD, Règles de gestion, Historique)
@@ -304,6 +304,7 @@ export default function HomePage({
                       onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
                       handleContextMenu={interaction.handleContextMenu}
                       onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
+                      mouseUpAfterScroll={timeline.getFirstDayAppearing}
                       
                       /* Sélection Optimisée */
                       selectedCell={appointmentLogic.selectedCell}

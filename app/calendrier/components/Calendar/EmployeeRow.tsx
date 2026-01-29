@@ -54,7 +54,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   collapseTrigger,
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
-
   useEffect(() => {
     setExpandedGroups({});
   }, [collapseTrigger]);
@@ -133,6 +132,21 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   }, [positionedAppointments]);
 
   const hasExpandedGroup = useMemo(() => overlappingGroups.some((g) => expandedGroups[g.key]), [overlappingGroups, expandedGroups]);
+  
+  // Nettoyer les groupes étendus qui n'existent plus
+  useEffect(() => {
+    const validKeys = new Set(overlappingGroups.map(g => g.key));
+    setExpandedGroups(prev => {
+      const cleaned: Record<number, boolean> = {};
+      for (const key in prev) {
+        if (validKeys.has(Number(key))) {
+          cleaned[key] = prev[key];
+        }
+      }
+      return cleaned;
+    });
+  }, [overlappingGroups]);
+  
 
   useEffect(() => {
     if (hasExpandedGroup && !isOverlapExpanded) {

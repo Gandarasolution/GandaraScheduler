@@ -5,10 +5,10 @@ import { CELL_WIDTH, WINDOW_SIZE, DAY_MS } from '../utils/constants';
 interface UseTimelineProps {
   isDisplayWeekend: boolean;
   selectedDate: number;
-  viewType: string;
+  setSelectedDate: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTimelineProps) => {
+export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }: UseTimelineProps) => {
   const [days, setDays] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -19,6 +19,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
   
   const isInfiniteScrollEnabled = useRef(false);
   const isAutoScrolling = useRef(false);
+  
 
   const buildWindow = useCallback((centerDate: number) => {
     const shouldInclude = (ts: number) => isDisplayWeekend || !isWeekend(ts);
@@ -82,11 +83,11 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
               const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
               if (todayCell && scrollElement) {
                   isAutoScrolling.current = true;
-                  // const cellRect = todayCell.getBoundingClientRect();
-                  // const containerRect = scrollElement.getBoundingClientRect();
-                  // const targetLeft = scrollElement.scrollLeft + cellRect.left - containerRect.left ;
+                  const cellRect = todayCell.getBoundingClientRect();
+                  const containerRect = scrollElement.getBoundingClientRect();
+                  const targetLeft = scrollElement.scrollLeft + cellRect.left - containerRect.left ;
                   
-                  //scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
+                  scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
                   scrollElement.scrollIntoView({
                       behavior: 'smooth',
                       block: 'nearest',
@@ -165,6 +166,15 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     };
   }, []);
 
+  const getFirstDayAppearing = useCallback(() => {
+    if (days.length === 0 || !mainScrollRef.current) return null;
+    const scroller = mainScrollRef.current;
+
+    const firstVisibleIndex = Math.floor(scroller.scrollLeft / CELL_WIDTH);
+    setSelectedDate(days[firstVisibleIndex])
+  }, [days]);
+
+
   // --- Gestion Clavier Scroll ---
   const handleKeyboardScroll = useCallback((e: KeyboardEvent) => {
     const scroller = mainScrollRef.current;
@@ -175,17 +185,20 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
     if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
 
-    const step = CELL_WIDTH * (e.shiftKey ? 20 : 1);
+    const step = CELL_WIDTH
 
     if (e.key === 'ArrowLeft') {
       scroller.scrollLeft = Math.max(0, scroller.scrollLeft - step);
+      requestAnimationFrame(() => getFirstDayAppearing());
       e.preventDefault();
     } else if (e.key === 'ArrowRight') {
       const max = scroller.scrollWidth - scroller.clientWidth;
       scroller.scrollLeft = Math.min(max, scroller.scrollLeft + step);
+      requestAnimationFrame(() => getFirstDayAppearing());
       e.preventDefault();
     }
-  }, []);
+  }, [getFirstDayAppearing]);
+
 
   useEffect(() => {
     
@@ -202,5 +215,6 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, viewType }: UseTim
     goToDate,
     isLoading,
     handleKeyboardScroll,
+    getFirstDayAppearing,
   };
 };

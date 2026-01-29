@@ -6,8 +6,6 @@ import EmployeeRow from './EmployeeRow';
 import GroupRow from './GroupRow';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
 
-import { useCalendarContext } from '../../context/CalendarContext';
-
 
 import { 
   CELL_WIDTH, 
@@ -31,9 +29,6 @@ import { getNextWorkedDay, isHoliday } from '../../utils/dates';
 import { getRowId } from '../../utils/domIds';
 import { useSmartScroll } from '../../hooks/useSmartScroll';
 
-interface DesktopCalendarGridProps {
-  
-}
 
 interface DragItem {
   id: number;
@@ -150,45 +145,78 @@ const CalendarRows = memo(({
 });
 CalendarRows.displayName = 'CalendarRows';
 
+interface DesktopCalendarGridProps {
+   employees: Employee[];
+  appointmentsWithTop: (Appointment & { top: number })[];
+  appointmentsDefault: Appointment[];
+  employeeHeights: { employeeId: number; height: number }[];
+  dayInTimeline: number[];
+  initialTeams: Groupe[];
+  calendarConfig: CalendarConfig;
+  onCalendarConfigChange: (config: CalendarConfig) => void;
+  availableConfigs: CalendarConfig[];
+  HALF_DAY_INTERVALS: HalfDayInterval[];
+  isFullDay: boolean;
+  events: Item[];
+  nonWorkingDates: number[];
+  isDisplayWeekend: boolean;
+  mainScrollRef: React.RefObject<HTMLDivElement | null>;
+  handleScrollY: (e: React.UIEvent<HTMLDivElement>) => void;
+  columnEmployeeRef: React.RefObject<HTMLDivElement | null>;
+  tableRef: React.RefObject<HTMLDivElement | null>;
+  handleMouseOver: (e: React.MouseEvent<HTMLElement>) => void;
+  handleMouseOut: (e: React.MouseEvent<HTMLElement>) => void;
+  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
+  onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
+  onAppointmentDoubleClick: (appointment: Appointment) => void;
+  onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
+  handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
+  updateHighlightedEmployeeRow: (employeeId: number | null) => void;
+  selectedCell: { employeeId: number; date: number } | null;
+  selectedAppointmentId: number | undefined;
+  onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
+  onSelectAppointment: (appointment: Appointment | null) => void;
+  hoverColumnLeft: number | null;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
+  mouseUpAfterScroll: () => void;
+}
+
 
 const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
+  employees,
+  appointmentsWithTop,
+  employeeHeights,
+  dayInTimeline,
+  HALF_DAY_INTERVALS,
+  isFullDay,
+  nonWorkingDates,
+  events,
+  appointmentsDefault,
+  onAppointmentMoved,
+  onAppointmentDoubleClick,
+  onExternalDragDrop,
+  handleContextMenu,
+  selectedCell,
+  selectedAppointmentId,
+  onSelectCell,
+  onSelectAppointment,
+  calendarConfig,
+  onCalendarConfigChange,
+  availableConfigs,
+  mainScrollRef,
+  handleScrollY,
+  columnEmployeeRef,
+  tableRef,
+  initialTeams,
+  onLoadAppointmentsInRange,
+  updateHighlightedEmployeeRow,
+  handleMouseOver,
+  handleMouseOut,
+  hoverColumnLeft,
+  isDisplayWeekend,
+  mouseUpAfterScroll
 }) => {
 
-  
-   const {
-      employees,
-      appointmentsWithTop,
-      employeeHeights,
-      dayInTimeline,
-      HALF_DAY_INTERVALS,
-      isFullDay,
-      nonWorkingDates,
-      events,
-      calendarConfig,
-      initialTeams,
-      availableConfigs,
-      mainScrollRef,
-      tableRef,
-      columnEmployeeRef,
-      appointmentsDefault,
-      handleScrollY,
-      onLoadAppointmentsInRange,
-      onCalendarConfigChange,
-      updateHighlightedEmployeeRow,
-      handleMouseOver,
-      hoverColumnLeft,
-      isDisplayWeekend,
-      handleMouseOut,
-      onAppointmentMoved,
-      onAppointmentDoubleClick,
-      onExternalDragDrop,
-      handleContextMenu,
-      selectedCell,
-      selectedAppointmentId,
-      onSelectCell,
-      onSelectAppointment,
-    } = useCalendarContext();
-  
 
 
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
@@ -215,7 +243,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const visibleWindowStartInitial = useRef(0);
   const visibleWindowEndInitial = useRef(0);
 
-  const { isGrabbing, isScrolling } = useSmartScroll(mainScrollRef as React.RefObject<HTMLElement>);
+  const { isGrabbing, isScrolling } = useSmartScroll(mainScrollRef as React.RefObject<HTMLElement>, mouseUpAfterScroll);
 
   const dimensionItems = useMemo(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
@@ -302,7 +330,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const contentViewportTop = Math.max(0, viewport.top - headerHeight);
   const contentViewportHeight = Math.max(0, viewport.height - headerHeight);
   const contentViewportBottom = contentViewportTop + contentViewportHeight;
-  const OVERSCAN_Y = 400;
+  const OVERSCAN_Y = 800;
   const OVERSCAN_X = 400;
 
   const visibleRangeStart = useMemo(() => {
@@ -428,7 +456,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       const targetEmployeeId = Number(targetRow.id);
       
       // Trouver tous les rdv qui chevauchent la nouvelle position
-      const overlappingAppointments = appointmentsDefault.filter(app => 
+      const overlappingAppointments = appointmentsWithTop.filter(app => 
         app.id !== item.id &&
         app.employeeId === targetEmployeeId &&
         app.startDate < newEnd &&
@@ -446,7 +474,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         const targetPriorityIndex = Math.floor(employeeRowY / (CELL_HEIGHT + 2));
 
         // Récupérer l'item d'origine pour vérifier s'il était déjà présent dans cette zone
-        const originalItem = appointmentsDefault.find(a => a.id === item.id);
+        const originalItem = appointmentsWithTop.find(a => a.id === item.id);
         const isAlreadyPresent = originalItem && 
                                originalItem.employeeId === targetEmployeeId && 
                                originalItem.startDate < newEnd && 
@@ -460,7 +488,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         const startDateRdvTarget = rdvAtTargetPosition[0]?.startDate;
         const endDateRdvTarget = rdvAtTargetPosition[rdvAtTargetPosition.length - 1]?.endDate;
         // Trouver les rdv qui chevauchent et qui ont la même priorité que l'original
-        const rdvatOriginalPosition = appointmentsDefault
+        const rdvatOriginalPosition = appointmentsWithTop
           .filter(app =>
             app.id !== item.id &&
             app.employeeId === originalItem?.employeeId &&
@@ -700,7 +728,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   useEffect(() => {
     if (prevIsScrolling.current && !isScrolling && !isGrabbing) {
        // L'utilisateur a arrêté de scroller (fin du timer)
-       checkAndLoadData(false); // Vérification standard (Soft)
+       checkAndLoadData(false); // Vérification standard (Soft)       
     }
     prevIsScrolling.current = isScrolling;
   }, [isScrolling, isGrabbing, checkAndLoadData]);
@@ -765,7 +793,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         ref={columnEmployeeRef}
       >
         <div 
-          className={`sticky top-0 z-10 flex items-center bg-bg-primary justify-center flex-shrink-0`}
+          className={`sticky top-0 z-20 flex items-center bg-bg-primary justify-center flex-shrink-0`}
           style={{
             height: TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING
           }}
@@ -802,11 +830,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
             />
           </div>
         </div>
-        {dimensionItems.map((item) => {
+        {dimensionItems.map((item, index) => {
           const isOpen = openItems.includes(item.id);
           const itemEmployees = employeesByDimension[item.id] || [];
           
           if (itemEmployees.length === 0) return null;
+          
+          // Calcul de la position sticky : header principal + hauteurs des headers précédents
+          const stickyTop = TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
           
           return (
             <div
@@ -817,8 +848,13 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
               }}
             >
               <button
-                className="flex justify-between items-center w-full px-4 rounded-t-2xl focus:outline-none cursor-pointer"
-                style={{ paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y, paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y }}
+                className="flex justify-between items-center w-full px-4 rounded-t-4xl focus:outline-none cursor-pointer sticky bg-bg-secondary"
+                style={{ 
+                  paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y, 
+                  paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y,
+                  top: stickyTop,
+                  zIndex: 10 - index
+                }}
                 onClick={() => toggleItem(item.id)}
                 type="button"
               >
@@ -850,11 +886,15 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 {isOpen && itemEmployees.map((employee) => {
                   const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.id);
                   const employeeRowHeight = rows.find(e => e.id === employee.id)?.height ?? CELL_HEIGHT;
+                  
                   return (
                     <div
                       key={employee.id}
                       className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer hover:bg-primary-ultra-light employee-row-item"
-                      style={{ height: employeeRowHeight, alignItems: 'center' }}
+                      style={{ 
+                        height: employeeRowHeight, 
+                        alignItems: 'center'
+                      }}
                       data-employee-id={employee.id}
                     >
                       <div className="relative">
@@ -888,6 +928,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                   );
                 })}
               </div>
+              
+              
             </div>
           );
         })}

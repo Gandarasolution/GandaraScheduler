@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-export const useSmartScroll = (ref: React.RefObject<HTMLElement>) => {
+export const useSmartScroll = (ref: React.RefObject<HTMLElement>, mouseUpAfterScroll: () => void) => {
   const [isGrabbing, setIsGrabbing] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
   
@@ -34,6 +34,7 @@ export const useSmartScroll = (ref: React.RefObject<HTMLElement>) => {
       isDownOnScrollbar.current = false;
       document.body.style.userSelect = '';
       if (isGrabbing) setIsGrabbing(false);
+      mouseUpAfterScroll();
     };
 
     // --- 2. LOGIQUE SCROLL GÉNÉRIQUE (Timer) ---

@@ -27,7 +27,6 @@ import { useCalendarInteractions } from '../../hooks/useCalendarInteractions';
 import MobileCalendarGrid from './MobileCalendarGrid';
 import DesktopCalendarGrid from './DesktopCalendarGrid';
 import { CELL_WIDTH } from '../../utils/constants';
-import { CalendarProvider } from '../../context/CalendarContext';
 
 interface CalendarGridProps {
   employees: Employee[];
@@ -55,6 +54,7 @@ interface CalendarGridProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
+  mouseUpAfterScroll: () => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -83,6 +83,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onSelectCell,
   onSelectAppointment,
   onLoadAppointmentsInRange,
+  mouseUpAfterScroll,
 }) => {
 
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
@@ -136,7 +137,30 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   if (isMobile) {
     return (
-      <CalendarProvider
+      <MobileCalendarGrid
+        employees={employees}
+        appointmentsWithTop={appointmentsWithTop}
+        employeeHeights={employeeHeights}
+        dayInTimeline={dayInTimeline}
+        HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+        isFullDay={isFullDay}
+        nonWorkingDates={nonWorkingDates}
+        events={events} 
+        onAppointmentMoved={onAppointmentMoved}
+        onCellDoubleClick={onCellDoubleClick}
+        onAppointmentDoubleClick={onAppointmentDoubleClick}
+        onExternalDragDrop={onExternalDragDrop}
+        handleContextMenu={handleContextMenu}
+        selectedCell={selectedCell}
+        selectedAppointmentId={selectedAppointmentId}
+        onSelectCell={onSelectCell}
+        onSelectAppointment={onSelectAppointment}     
+      />
+    );
+  }
+
+  return (
+      <DesktopCalendarGrid 
         employees={employees}
         appointmentsWithTop={appointmentsWithTop}
         appointmentsDefault={appointmentsDefault}
@@ -169,50 +193,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         onSelectAppointment={onSelectAppointment}
         hoverColumnLeft={hoverColumnLeft}
         onLoadAppointmentsInRange={onLoadAppointmentsInRange}
-      >
-        <MobileCalendarGrid/>
-      </CalendarProvider>
-    );
-  }
-
-  return (
-    <CalendarProvider
-      employees={employees}
-      appointmentsWithTop={appointmentsWithTop}
-      appointmentsDefault={appointmentsDefault}
-      employeeHeights={employeeHeights}
-      dayInTimeline={dayInTimeline}
-        initialTeams={initialTeams}
-        calendarConfig={calendarConfig}
-        onCalendarConfigChange={onCalendarConfigChange}
-        availableConfigs={availableConfigs}
-        HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
-        isFullDay={isFullDay}
-        events={events}
-        nonWorkingDates={nonWorkingDates}
-        isDisplayWeekend={isDisplayWeekend}
-        mainScrollRef={mainScrollRef}
-        handleScrollY={handleScrollY}
-        columnEmployeeRef={columnEmployeeRef}
-        tableRef={tableRef}
-        handleMouseOver={handleMouseMove}
-        handleMouseOut={handleMouseOut}
-        onAppointmentMoved={onAppointmentMoved}
-        onCellDoubleClick={onCellDoubleClick}
-        onAppointmentDoubleClick={onAppointmentDoubleClick}
-        onExternalDragDrop={onExternalDragDrop}
-        handleContextMenu={handleContextMenu}
-        updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
-        selectedCell={selectedCell}
-        selectedAppointmentId={selectedAppointmentId}
-        onSelectCell={onSelectCell}
-        onSelectAppointment={onSelectAppointment}
-        hoverColumnLeft={hoverColumnLeft}
-        onLoadAppointmentsInRange={onLoadAppointmentsInRange}
-    >
-      <DesktopCalendarGrid 
+        mouseUpAfterScroll={mouseUpAfterScroll}
       />
-    </CalendarProvider>
   );
 };
 
