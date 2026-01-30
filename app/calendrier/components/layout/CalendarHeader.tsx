@@ -343,27 +343,6 @@ export const CalendarHeader = ({
               </>
             )}
             <>
-              {viewType === 'manual-event-table' && (
-                <button
-                  className="transition btn-header px-3 py-2 border-r border-default group hover:text-[#00947f] cursor-pointer text-gray-400"
-                  name="ajouter-une-rubrique"
-                  onClick={() => handleAddModal({
-                    id: -1,
-                    description: '',
-                    startDate: 0,
-                    endDate: 1,
-                    employeeId: 0,
-                    type: 'autre',
-                    EventId: 0
-                  })}
-                  title="Ajouter une rubrique"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bg-icon bi bi-plus-lg w-5 h-5 text-inherit text-gray-500 transition duration-200" viewBox="0 0 16 16">
-                    <path d="M8 0a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2H9v6a1 1 0 1 1-2 0V9H1a1 1 0 1 1 0-2h6V1a1 1 0 0 1 1-1z"/>
-                  </svg>
-                </button>
-              )}
-              
               <button 
                 className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
                 name="filtrer"
@@ -379,11 +358,24 @@ export const CalendarHeader = ({
           </div>
 
           {/* Bouton Ajouter Évènement */}
-          {viewType === 'calendar' && (
+          {(viewType === 'calendar' || viewType === 'manual-event-table') && (
             <button
               className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto bg-primary-light"
               type="button"
-              onClick={() => setIsSearchOverlayOpen(true)}
+              onClick={() => 
+                viewType === 'calendar' 
+                  ? setIsSearchOverlayOpen(true) 
+                  : handleAddModal({
+                    id: -1,
+                    description: '',
+                    startDate: 0,
+                    endDate: 1,
+                    employeeId: 0,
+                    type: 'autre',
+                    EventId: 0
+                  })
+              }
+              title={viewType === 'calendar' ? "Ajouter un évènement" : "Ajouter une rubrique"}
             >
               + Ajouter un évènement
             </button>

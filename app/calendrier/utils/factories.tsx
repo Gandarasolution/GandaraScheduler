@@ -3,7 +3,6 @@ import { addHours } from "date-fns";
 import { Appointment, Employee, ChantierItem, Groupe } from "../types";
 import { HOURS_PER_DAY } from "./constants";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
-import { snapToHour } from './dates';
 
 
 // --- FACTORY DES RENDERERS (AFFICHAGE DES CELLULES DES TABLEAUX ) ---
@@ -35,7 +34,7 @@ export const customRenderersFactory = (
             type: chantierItem.type,
             EventId: Number(chantierItem.id),
             startDate: Date.now(),
-            endDate: snapToHour(Date.now(), 12),
+            endDate: new Date().setHours(12, 0, 0, 0),
             employeeId: 0,
           }}
           isFullDay={false}
@@ -51,7 +50,7 @@ export const customRenderersFactory = (
               type: chantierItem.type,
               EventId: Number(chantierItem.id),
               startDate: Date.now(),
-              endDate: snapToHour(Date.now(), 12),
+              endDate: new Date().setHours(12, 0, 0, 0),
               employeeId: 0,
             }
             setSelectedAppointment(newAppointment);
@@ -238,7 +237,7 @@ export const customComputedFieldsFactory = (
 
   // Calcul de la Durée Planifiée (DPF)
   const calculateDPF = (chantierId: number): string => {
-    const currentDate = snapToHour(Date.now(), 0, 0, 0, 0);
+    const currentDate = new Date().setHours(0, 0, 0, 0);
 
     const relevantAppointments = appointments.filter(appointment => {
       if (appointment.type !== 'chantier' || appointment.EventId !== chantierId) {

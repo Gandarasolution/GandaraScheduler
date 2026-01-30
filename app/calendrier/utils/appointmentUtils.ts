@@ -15,7 +15,7 @@
 
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { Appointment, Item } from '../types';
-import { getIntervals, getNextWorkedDay, getWorkedDayIntervals, isWorkedDay, snapToHour } from './dates';
+import { getIntervals, getNextWorkedDay, getWorkedDayIntervals } from './dates';
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from './constants';
 
 export interface AppointmentUtils {
@@ -308,14 +308,14 @@ export const createAppointmentUtils = (): AppointmentUtils => {
     let endDate: number;
     
     if (intervalName === 'morning') {
-      startDate = snapToHour(date, HALF_DAY_INTERVALS[0].startHour, 0);
-      endDate = snapToHour(date, HALF_DAY_INTERVALS[0].endHour - 1, 59, 59, 999);
+      startDate =  new Date(date).setHours(HALF_DAY_INTERVALS[0].startHour, 0, 0, 0);
+      endDate = new Date(date).setHours(HALF_DAY_INTERVALS[0].endHour - 1, 59, 59, 999);
     } else if (intervalName === 'afternoon') {
-      startDate = snapToHour(date, HALF_DAY_INTERVALS[1].startHour, 0);
-      endDate = snapToHour(date, HALF_DAY_INTERVALS[1].endHour - 1, 59, 59, 999);
+      startDate = new Date(date).setHours(HALF_DAY_INTERVALS[1].startHour, 0, 0, 0);
+      endDate = new Date(date).setHours(HALF_DAY_INTERVALS[1].endHour - 1, 59, 59, 999);
     } else { // day
-      startDate = snapToHour(date, DAY_INTERVALS[0].startHour, 0);
-      endDate = snapToHour(date, DAY_INTERVALS[0].endHour - 1, 59, 59, 999);
+      startDate = new Date(date).setHours(DAY_INTERVALS[0].startHour, 0, 0, 0);
+      endDate = new Date(date).setHours(DAY_INTERVALS[0].endHour - 1, 59, 59, 999);
     }
     
     return {

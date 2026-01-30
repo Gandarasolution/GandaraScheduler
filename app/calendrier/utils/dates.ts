@@ -240,13 +240,6 @@ export const getWeekNumber = (d: number): number => {
   return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 };
 
-// "Snap" à une heure précise du jour courant
-// Équivalent à setHours(h, 0, 0, 0)
-export const snapToHour = (ts: number, targetHour: number, targetMinute: number = 0, targetSecond: number = 0, targetMillisecond: number = 0) => {
-      const midnight = ts - (ts % DAY_MS); // On retire le reste pour revenir à 00:00
-      return midnight + (targetHour * HOUR_MS) + (targetMinute * 60 * 1000) + (targetSecond * 1000) + targetMillisecond;
-};
-
 /**
  *  Compte le nombre de jours de week-end dans un intervalle de dates
  * @param startDate Date de début de l'intervalle

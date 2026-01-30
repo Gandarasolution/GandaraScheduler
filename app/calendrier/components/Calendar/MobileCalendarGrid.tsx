@@ -4,7 +4,6 @@ import { fr } from 'date-fns/locale';
 import { Appointment, Employee, HalfDayInterval, Item } from '../../types';
 import { DayCell } from './index';
 import { CELL_HEIGHT } from '../../utils/constants';
-import { snapToHour } from '../../utils/dates';
 
 interface MobileCalendarGridProps {
   employees: Employee[];
@@ -72,8 +71,7 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({
       <div className="flex flex-col w-full">
         {dayInTimeline.map((day) => {
           const dayStart = day;
-          snapToHour(dayStart, 0, 0, 0, 0);
-          
+
           const dayEmployeeAppointments = appointmentsWithTop.filter((app) =>
             app.employeeId === displayEmployee.id &&
             app._dayKey === dayStart

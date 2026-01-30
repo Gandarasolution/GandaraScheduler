@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CalendarConfig } from '../types'; // Assumed type
 import { ActiveFilters } from '../utils/searchAndFilterUtils';
 import { useCalendarConfig } from './useCalendarConfig'; // Le hook existant
@@ -93,6 +93,7 @@ export const useCalendarView = (employeesRef: any) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isViewDropdownOpen]);
+    
 
   return {
     // États

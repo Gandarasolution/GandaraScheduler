@@ -254,7 +254,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           <React.Fragment key={group.key}>
             {appsToRender.map((app, index) => {
               const event = events.find((et) => et.id === app.EventId) as Item | undefined;
-              
+  
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
               const isGhost = !isExpanded && (app.priority ?? 0) !== 0;
               
@@ -299,8 +299,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   isGhost={isGhost} 
                   ghostEndDate={ghostEndDate} // On passe la limite du quadrillage
 
-                  onResize={(id, newStartDate, newEndDate, resizeDirection) =>{              
-                    onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection)}
+                  onResize={(id, newStartDate, newEndDate, resizeDirection, priority) =>{              
+                    onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection, true, priority)}
                   }
                   handleContextMenu={(e, origin) =>
                     handleContextMenu(

@@ -3,7 +3,7 @@ import { addHours, eachDayOfInterval } from "date-fns";
 import { Appointment, Employee, HistoryAction, Item } from '../types';
 import { createAppointmentUtils } from '../utils/appointmentUtils';
 import { notificationService } from "../services";
-import { getWorkedDayIntervals, isWeekend, snapToHour } from "../utils/dates";
+import { getWorkedDayIntervals, isWeekend } from "../utils/dates";
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../utils/constants";
 
 // Type pour les données de répétition
@@ -16,7 +16,6 @@ export type RepeatData = {
 
 interface LogicProps {
   appointmentsRef: React.MutableRefObject<Appointment[]>;
-  employeesRef: React.MutableRefObject<any[]>;
   eventsRef: React.MutableRefObject<Item[]>;
   timelineState: {
     isFullDay: boolean;
@@ -26,13 +25,17 @@ interface LogicProps {
     nonWorkingDates: number[];
   };
   onUpdate: () => void; // Callback pour forcer le rafraîchissement de l'UI
+  setIsSearchOverlayOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setDimensionsSearchInput: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export const useAppointmentLogic = ({ 
   appointmentsRef, 
   eventsRef, 
   timelineState, 
-  onUpdate 
+  onUpdate,
+  setIsSearchOverlayOpen,
+  setDimensionsSearchInput
 }: LogicProps) => {
   
   // --- Initialisation des Utilitaires ---
@@ -73,6 +76,33 @@ export const useAppointmentLogic = ({
     title: "",
     onConfirm: () => {},
   });
+  
+
+  /**
+   * Réorganise les priorités des rendez-vous qui chevauchent quand un rdv change de priorité
+   */
+  const reorganizePriorities = useCallback((
+    movedAppointmentId: number,
+    newPriority: number,
+    employeeId: number,
+    startDate: number,
+    endDate: number
+  ) => {
+    // Trouver tous les rdv qui chevauchent (même employé et même période)
+    const overlappingAppointments = appointmentsRef.current.filter(app => 
+      app.id !== movedAppointmentId &&
+      app.employeeId === employeeId &&
+      app.startDate < endDate &&
+      app.endDate > startDate
+    );
+
+    // Réorganiser : tous les rdv avec priorité >= newPriority doivent être décalés
+    overlappingAppointments.forEach(app => {
+      if ((app.priority ?? 0) >= newPriority) {        
+        app.priority = (app.priority ?? 0) + 1;
+      }
+    });
+  }, [appointmentsRef]);
 
   // --- GESTION DE L'HISTORIQUE (UNDO) ---
 
@@ -176,13 +206,16 @@ export const useAppointmentLogic = ({
           ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId, priority: newPriority !== undefined ? newPriority : app.priority }
           : app
       );
+      if (newPriority !== undefined && newEmployeeId !== undefined) {
+        reorganizePriorities(id, newPriority, newEmployeeId , newStartDate, newEndDate);
+      }
       onUpdate();
   }, [appointmentsRef, onUpdate, saveAppointmentState]);
 
   // Création unitaire d'un RDV
   const createAppointment = useCallback((
     startDate: number, endDate: number, employeeId: number, eventId: number, 
-    saveToHistory: boolean = true, type: 'chantier' | 'absence' | 'autre', description?: string
+    saveToHistory: boolean = true, type: 'chantier' | 'absence' | 'autre', description?: string, priority?: number
   ) => {
       const id = ++idCounter.current;
       
@@ -192,9 +225,11 @@ export const useAppointmentLogic = ({
         app.startDate < endDate &&
         app.endDate > startDate
       );
-      const maxPriority = overlappingAppointments.length > 0
-        ? Math.max(...overlappingAppointments.map(app => app.priority || 0))
-        : 0;
+      const maxPriority = priority !== undefined 
+        ? priority 
+        : (overlappingAppointments.length > 0
+          ? Math.max(...overlappingAppointments.map(app => app.priority || 0)) + 1
+          : 0);
       
       const newApp: Appointment = {
         id: id,
@@ -204,7 +239,7 @@ export const useAppointmentLogic = ({
         employeeId,
         type: type,
         EventId: eventId,
-        priority: maxPriority + 1, // Nouveau rdv au-dessus de la pile
+        priority: maxPriority, // Nouveau rdv au-dessus de la pile
       };
       appointmentsRef.current.push(newApp);
       
@@ -217,32 +252,6 @@ export const useAppointmentLogic = ({
   }, [appointmentsRef, onUpdate, saveAppointmentState]);
 
   // --- GESTION DES PRIORITÉS ---
-  
-  /**
-   * Réorganise les priorités des rendez-vous qui chevauchent quand un rdv change de priorité
-   */
-  const reorganizePriorities = useCallback((
-    movedAppointmentId: number,
-    newPriority: number,
-    employeeId: number,
-    startDate: number,
-    endDate: number
-  ) => {
-    // Trouver tous les rdv qui chevauchent (même employé et même période)
-    const overlappingAppointments = appointmentsRef.current.filter(app => 
-      app.id !== movedAppointmentId &&
-      app.employeeId === employeeId &&
-      app.startDate < endDate &&
-      app.endDate > startDate
-    );
-
-    // Réorganiser : tous les rdv avec priorité >= newPriority doivent être décalés
-    overlappingAppointments.forEach(app => {
-      if (app.priority !== undefined && app.priority >= newPriority) {
-        app.priority = app.priority + 1;
-      }
-    });
-  }, [appointmentsRef]);
 
   // --- LOGIQUE MÉTIER COMPLEXE (Move, Split, Save) ---
 
@@ -250,11 +259,15 @@ export const useAppointmentLogic = ({
       const appointment = appointmentsRef.current.find((app) => app.id === id);
       if (!appointment) return;
       
+      
       // Si une nouvelle priorité est fournie, réorganiser les priorités avant d'appliquer
       if (newPriority !== undefined) {
         reorganizePriorities(id, newPriority, newEmployeeId, newStartDate, newEndDate);
         appointment.priority = newPriority;
       }
+
+      console.log('yes');
+      
 
       const state = timelineStateRef.current;
 
@@ -352,7 +365,8 @@ export const useAppointmentLogic = ({
             eventUpdate.id,
             true,
             appointment.type,
-            appointment.description
+            appointment.description, 
+            appointment.priority
           );
           if (newApp) createdAppointments.push(newApp);
         });
@@ -372,6 +386,7 @@ export const useAppointmentLogic = ({
             }
             return app;
           });
+          reorganizePriorities(appointment.id, appointment.priority ?? 0, appointment.employeeId as number, days[0].start, days[0].end);
           
           if (days.length > 1) createExtraAppointments(1);
         }
@@ -379,6 +394,7 @@ export const useAppointmentLogic = ({
         // --- MODE CRÉATION ---
         createExtraAppointments(0);
       }      
+
 
       // Gestion Historique
       if (appointment.id && previousAppointment) {
@@ -536,9 +552,11 @@ export const useAppointmentLogic = ({
     (title: string, date: number, intervalName: "morning" | "afternoon" | "day", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
       const startHour = intervalName === "day" ? DAY_INTERVALS[0].startHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[1].startHour;
       const endHour = intervalName === "day" ? DAY_INTERVALS[0].endHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].endHour : HALF_DAY_INTERVALS[1].endHour;
+      
 
-      const startDate =  snapToHour(date, startHour, 0)
-      const endDate = snapToHour(date, endHour, 59, 59 , 999);
+      const startDate =  new Date(date).setHours(startHour, 0, 0, 0);
+      const endDate = new Date(date).setHours(endHour, 59, 59 , 999);
+
 
       let eventTypeId = eventsRef.current.find(e => e.label === title)?.id;
       if (!eventTypeId) {
@@ -554,6 +572,9 @@ export const useAppointmentLogic = ({
         true,
         typeEvent.toLowerCase() as 'chantier' | 'absence' | 'autre'
       );
+
+      setIsSearchOverlayOpen(false);
+      setDimensionsSearchInput('');
     },
     [eventsRef, createAppointment]
   );

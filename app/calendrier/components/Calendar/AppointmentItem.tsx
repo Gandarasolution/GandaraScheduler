@@ -32,7 +32,7 @@ interface AppointmentItemProps {
   ghostEndDate?: number; 
   onClick?: () => void;
   onDoubleClick?: () => void;
-  onResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right') => void;
+  onResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right', priority: number) => void;
   handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
 }
 
@@ -231,10 +231,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   const handleMouseUp = useCallback(() => {
     if (isResizingRight) {
-      onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right');
+      onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right', (appointment.priority ?? 0));
     }
     if (isResizingLeft) {      
-      onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'left');
+      onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'left', (appointment.priority ?? 0));
     }
     setIsResizingLeft(false);
     setIsResizingRight(false);
@@ -311,6 +311,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const appointmentColor = event?.color || '#1E40AF';
   const appointmentBorderColor = event?.borderColor || '#1E40AF';
   const appointmentTextColor = event?.textColor || '#FFFFFF';
+
+  // if (event.label === '1052 Logements Vesoul') {
+  //   console.log('appointmentColor', appointmentColor);
+  //   console.log('appointmentBorderColor', appointmentBorderColor);
+  //   console.log('appointmentTextColor', appointmentTextColor);
+  // }
 
   const containerStyle = useMemo(() => ({
     width: source === 'demo' ? '100%' : computedWidth,

@@ -28,6 +28,7 @@ import { isSameDay, isWeekend } from 'date-fns';
 import { getNextWorkedDay, isHoliday } from '../../utils/dates';
 import { getRowId } from '../../utils/domIds';
 import { useSmartScroll } from '../../hooks/useSmartScroll';
+import { useAutoScrollOnDrag } from '../../hooks/useAutoScrollOnDrag';
 
 
 interface DragItem {
@@ -244,6 +245,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const visibleWindowEndInitial = useRef(0);
 
   const { isGrabbing, isScrolling } = useSmartScroll(mainScrollRef as React.RefObject<HTMLElement>, mouseUpAfterScroll);
+
+  // Auto-scroll pendant le drag quand on est proche des bords
+  useAutoScrollOnDrag({
+    scrollContainerRef: mainScrollRef as React.RefObject<HTMLElement>,
+    enabled: isGrabbing,
+    edgeThreshold: 160,
+    scrollSpeed: 100,
+  });
 
   const dimensionItems = useMemo(() => {
     return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
@@ -787,13 +796,13 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   return (
     <div className="relative flex h-full flex-row calendar-grid" data-testid="calendar-grid">
       <div
-        className="min-w-80 max-w-80 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide mb-8"
+        className="min-w-80 max-w-80 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
         style={{ scrollbarGutter: 'stable' }}
         onScroll={handleScrollY}
         ref={columnEmployeeRef}
       >
         <div 
-          className={`sticky top-0 z-20 flex items-center bg-bg-primary justify-center flex-shrink-0`}
+          className={`sticky top-0 z-40 flex items-center bg-bg-primary justify-center flex-shrink-0`}
           style={{
             height: TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING
           }}
@@ -842,13 +851,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           return (
             <div
               key={item.id}
-              className="rounded-4xl bg-white border-default bg-bg-secondary text-primary"
+              className="rounded-4xl border-default bg-bg-primary text-primary"
               style={{ 
-                marginBottom: MARGIN_BETWEEN_TEAMS, borderWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE 
+                marginBottom: MARGIN_BETWEEN_TEAMS, 
+                borderWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE
               }}
             >
               <button
-                className="flex justify-between items-center w-full px-4 rounded-t-4xl focus:outline-none cursor-pointer sticky bg-bg-secondary"
+                className={`flex justify-between items-center w-full px-4 ${isOpen ? 'rounded-t-4xl' : 'rounded-4xl'} focus:outline-none cursor-pointer sticky bg-bg-secondary`}
                 style={{ 
                   paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y, 
                   paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y,
@@ -872,30 +882,28 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 </div>
                 <CustomArrow isOpen={isOpen} />
               </button>
-              <div 
-                className={`flex flex-col px-4 transition-all duration-200 ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}
-                style={{ paddingBottom: isOpen ? EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM : 0 }}
-                onMouseOver={(e) => {
-                  const target = (e.target as HTMLElement).closest('[data-employee-id]');
-                  if (target) {
-                    const id = target.getAttribute('data-employee-id');
-                    if (id) updateHighlightedEmployeeRow(parseInt(id));
-                  }
-                }}
-              >
-                {isOpen && itemEmployees.map((employee) => {
-                  const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.id);
-                  const employeeRowHeight = rows.find(e => e.id === employee.id)?.height ?? CELL_HEIGHT;
-                  
-                  return (
-                    <div
-                      key={employee.id}
-                      className="flex items-center group gap-2 px-2 rounded-2xl cursor-pointer hover:bg-primary-ultra-light employee-row-item"
-                      style={{ 
-                        height: employeeRowHeight, 
-                        alignItems: 'center'
-                      }}
+              
+              {isOpen && itemEmployees.map((employee) => {
+                const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.id);
+                const employeeRowHeight = rows.find(e => e.id === employee.id)?.height ?? CELL_HEIGHT;
+                
+                return (
+                  <div
+                    key={employee.id}
+                    className="flex  px-4 cursor-pointer bg-bg-secondary"
+                    style={{ 
+                      height: employeeRowHeight, 
+                      alignItems: 'center',
+                      top: stickyTop + EMPLOYEE_GROUP_HEADER_PADDING_Y * 2 + 24,
+                      zIndex: 20 - index,
+                    }}                    
+                  >
+                    <div 
+                      className="flex rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-ultra-light employee-row-item"
                       data-employee-id={employee.id}
+                      onMouseOver={(e) => {
+                        updateHighlightedEmployeeRow(employee.id);
+                      }}
                     >
                       <div className="relative">
                         <img
@@ -925,10 +933,24 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                         </button>
                       )}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
               
+              {isOpen && (
+                <div 
+                  className="sticky w-[284px] h-9 bg-bg-secondary border-b border-l border-r border-default rounded-b-4xl"
+                  style={{
+                    bottom: 0,
+                    zIndex: 5 - index,
+                    marginLeft: -1,
+                    marginBottom: -EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
+                    paddingLeft: 16,
+                    paddingRight: 16
+                  }}
+                >
+                </div>
+              )}
               
             </div>
           );
@@ -945,7 +967,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       >
         {isGrabbing && (
           <div 
-            className="absolute top-0 left-0 bg-black opacity-30 pointer-events-none z-20" 
+            className="absolute top-0 left-0 bg-black opacity-30 pointer-events-none z-10" 
             style={{
               width:`${dayInTimeline.length * CELL_WIDTH}px`,
               height: totalContentHeight,

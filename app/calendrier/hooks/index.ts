@@ -10,3 +10,4 @@
 export { useNotifications } from './useNotifiactions';
 export type { Notification, NotificationsState } from './useNotifiactions';
 export { useCalendarConfig } from './useCalendarConfig';
+export { useAutoScrollOnDrag } from './useAutoScrollOnDrag';

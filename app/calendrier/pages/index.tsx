@@ -107,10 +107,11 @@ export default function HomePage({
 
   const appointmentLogic = useAppointmentLogic({
     appointmentsRef: dataLayer.appointmentsRef,
-    employeesRef: globalEmployeesRef,
     eventsRef: dataLayer.itemsRef,
     timelineState,
-    onUpdate: dataLayer.refreshData // Callback pour rafraichir l'UI après modification des Refs
+    onUpdate: dataLayer.refreshData, // Callback pour rafraichir l'UI après modification des Refs
+    setIsSearchOverlayOpen: viewState.setIsSearchOverlayOpen,
+    setDimensionsSearchInput: viewState.setDimensionsSearchInput
   });
 
   
