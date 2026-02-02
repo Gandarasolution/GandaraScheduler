@@ -241,15 +241,9 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         const appsToRender = group.apps;
         const baseTopPx = group.apps[0].topPx;
 
+        // Récupérer tous les RDV avec priorité 0 (RDV de base)
+        const priority0Apps = group.apps.filter(app => (app.priority ?? 0) === 0);
         
-        
-        
-        // Date de fin du rendez-vous "de base" (celui qui est en dessous)
-        // Utile pour calculer l'intersection
-        const appFilter = group.apps.filter(app => (app.priority ?? 0) === 0);
-        
-
-        const baseEndDate = appFilter[appFilter.length - 1]?.endDate;
         return (
           <React.Fragment key={group.key}>
             {appsToRender.map((app, index) => {
@@ -263,23 +257,21 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               // Sinon, on utilise sa propre position
               const forcedTopPx = !isExpanded ? baseTopPx : app.topPx;
 
-              // Calcul de la fin du chevauchement :
-              // Le minimum entre la fin de CE rdv et la fin du RDV de base.
-              // Si le RDV actuel commence le 3 et finit le 7, et le RDV de base finit le 5.
-              // ghostEndDate sera le 5.
-              const ghostEndDate = isGhost ? Math.min(app.endDate, baseEndDate) : undefined;
-
-              if (group.apps.length > 1) {
-                // console.log('baseTopPx', baseTopPx);
-                // console.log('app.topPx', app.topPx);
-                // console.log('left', group.apps[0].left );
-                // console.log('group.apps[0].width', group.apps[0].width);
-                //console.log(group.apps);
-                
-                // console.log('isGhost', isGhost);
-                // console.log('app', app);
-                
-
+              // Calcul des intervalles de chevauchement avec les RDV de priorité 0
+              // Pour chaque RDV de priorité 0, on calcule l'intersection temporelle
+              const ghostIntervals: { start: number; end: number }[] = [];
+              
+              if (isGhost) {
+                priority0Apps.forEach(baseApp => {
+                  // Calculer l'intersection entre le RDV actuel et le RDV de base
+                  const overlapStart = Math.max(app.startDate, baseApp.startDate);
+                  const overlapEnd = Math.min(app.endDate, baseApp.endDate);
+                  
+                  // S'il y a un chevauchement réel
+                  if (overlapStart < overlapEnd) {
+                    ghostIntervals.push({ start: overlapStart, end: overlapEnd });
+                  }
+                });
               }
 
               return (
@@ -297,7 +289,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   absoluteTop={forcedTopPx} 
                   
                   isGhost={isGhost} 
-                  ghostEndDate={ghostEndDate} // On passe la limite du quadrillage
+                  ghostInterval={ghostIntervals.length > 0 ? ghostIntervals : undefined}
 
                   onResize={(id, newStartDate, newEndDate, resizeDirection, priority) =>{              
                     onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection, true, priority)}
@@ -331,7 +323,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 }}
               >
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
-                +{Math.max(...group.apps.map(a => a.priority ?? 0))}
+                +{group.apps.reduce((count, app) => (app.priority && app.priority > 0 ? count + 1 : count), 0)}
               </button>
             )}
 

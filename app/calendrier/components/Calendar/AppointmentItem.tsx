@@ -28,8 +28,8 @@ interface AppointmentItemProps {
   isSelected?: boolean;
   /* Indique si le composant est en mode chevauchement */
   isGhost?: boolean;
-  /* Date de fin du chevauchement pour le calcul de la zone hachurée */
-  ghostEndDate?: number; 
+  /* Intervalle(s) de chevauchement pour le mode ghost (accepte soit un intervalle, soit un tableau d'intervalles) */
+  ghostInterval?: { start: number; end: number } | { start: number; end: number }[]; 
   onClick?: () => void;
   onDoubleClick?: () => void;
   onResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right', priority: number) => void;
@@ -51,7 +51,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   absoluteWidth,
   absoluteTop,
   isGhost = false,
-  ghostEndDate,
+  ghostInterval,
   onClick,
   onDoubleClick,
   onResize,
@@ -67,7 +67,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const dragStartRef = useRef<number>(appointment.startDate);
   const dragEndRef = useRef<number>(appointment.endDate);
   const initialX = useRef(0);
-  const [ghostWidthPx, setGhostWidthPx] = useState<number>(0);
+  const [ghostWidthPx, setGhostWidthPx] = useState<{widthGhost: number, widthNoGhost: number}[]>([{widthGhost: 0, widthNoGhost: 0}]);
 
   const startDate = React.useMemo(() => appointment.startDate, [appointment.startDate]);
   const endDate = React.useMemo(() => appointment.endDate, [appointment.endDate]);
@@ -268,19 +268,78 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     setComputedWidth((visualDurationDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2)) + 'px');
 
     // 2. Calcul de la largeur de la zone Ghost (si activée)
-    if (isGhost && ghostEndDate && ghostEndDate > dragStartRef.current) {
-        const ghostDurationMs = Math.min(ghostEndDate, dragEndRef.current) - dragStartRef.current;
-        const ghostIntervals = Math.round(ghostDurationMs / (isFullDay ? DAY_MS : DAY_MS / 2));
+    if (isGhost && ghostInterval) {
+        const intervals = Array.isArray(ghostInterval) ? ghostInterval : [ghostInterval];
+        // Trier les intervalles par date de début
+        const sortedIntervals = intervals
+            .filter(gi => gi && gi.end > dragStart && gi.start < dragEnd)
+            .sort((a, b) => a.start - b.start);
         
-        let ghostWeekends = 0;
-        if (!isDisplayWeekend) {
-            ghostWeekends = countWeekends(dragStartRef.current, Math.min(ghostEndDate, dragEndRef.current));
+        const ghostWidths: {widthGhost: number, widthNoGhost: number}[] = [];
+        let currentPos = dragStart;
+        
+        sortedIntervals.forEach((gi, index) => {
+            const overlapStart = Math.max(gi.start, dragStart);
+            const overlapEnd = Math.min(gi.end, dragEnd);
+            
+            // Zone visible AVANT le chevauchement (si il y a un espace)
+            if (overlapStart > currentPos) {
+                const visibleDurationMs = overlapStart - currentPos;
+                const visibleIntervals = Math.round(visibleDurationMs / (isFullDay ? DAY_MS : DAY_MS / 2));
+                
+                let visibleWeekends = 0;
+                if (!isDisplayWeekend) {
+                    visibleWeekends = countWeekends(currentPos, overlapStart);
+                }
+                
+                const visualVisibleDays = Math.max(0, visibleIntervals - (visibleWeekends * (isFullDay ? 1 : 2)));
+                const visibleWidthPx = visualVisibleDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2);
+                
+                if (visibleWidthPx > 0) {
+                    ghostWidths.push({ widthGhost: 0, widthNoGhost: visibleWidthPx });
+                }
+            }
+            
+            // Zone hachurée (chevauchement)
+            const ghostDurationMs = overlapEnd - overlapStart;
+            const ghostIntervals = Math.round(ghostDurationMs / (isFullDay ? DAY_MS : DAY_MS / 2));
+            
+            let ghostWeekends = 0;
+            if (!isDisplayWeekend) {
+                ghostWeekends = countWeekends(overlapStart, overlapEnd);
+            }
+            
+            const visualGhostDays = Math.max(0, ghostIntervals - (ghostWeekends * (isFullDay ? 1 : 2)));
+            const ghostWidthPx = visualGhostDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2);
+            
+            if (ghostWidthPx > 0) {
+                ghostWidths.push({ widthGhost: ghostWidthPx, widthNoGhost: 0 });
+            }
+            
+            currentPos = overlapEnd;
+        });
+        
+        // Zone visible APRÈS le dernier chevauchement
+        if (currentPos < dragEnd) {
+            const visibleDurationMs = dragEnd - currentPos;
+            const visibleIntervals = Math.round(visibleDurationMs / (isFullDay ? DAY_MS : DAY_MS / 2));
+            
+            let visibleWeekends = 0;
+            if (!isDisplayWeekend) {
+                visibleWeekends = countWeekends(currentPos, dragEnd);
+            }
+            
+            const visualVisibleDays = Math.max(0, visibleIntervals - (visibleWeekends * (isFullDay ? 1 : 2)));
+            const visibleWidthPx = visualVisibleDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2);
+            
+            if (visibleWidthPx > 0) {
+                ghostWidths.push({ widthGhost: 0, widthNoGhost: visibleWidthPx });
+            }
         }
         
-        const visualGhostDays = Math.max(0, ghostIntervals - (ghostWeekends * (isFullDay ? 1 : 2)));
-        setGhostWidthPx(visualGhostDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2));
+        setGhostWidthPx(ghostWidths.length > 0 ? ghostWidths : [{widthGhost: 0, widthNoGhost: 0}]);
     } else {
-        setGhostWidthPx(0);
+        setGhostWidthPx([{widthGhost: 0, widthNoGhost: 0}]);
     }
 
     // 3. Calcul du Left en cas de resize
@@ -295,7 +354,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       const newLeftPixel = Math.max(0, visualInstervalsOffset * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2));
       setComputedLeft(newLeftPixel);
     }
-  }, [absoluteWidth, isMobile, intervalCount, INTERVAL_WIDTH, isResizingLeft, timelineStart, isFullDay, isDisplayWeekend, isGhost, ghostEndDate, dragStartRef, dragEndRef]); 
+  }, [absoluteWidth, isMobile, intervalCount, INTERVAL_WIDTH, isResizingLeft, timelineStart, isFullDay, isDisplayWeekend, isGhost, ghostInterval, dragStart, dragEnd]); 
   
   useEffect(() => {
     if (isResizingLeft) return; 
@@ -406,29 +465,49 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       */}
       {isGhost && (
           <>
-            {/* Zone Hachurée (Chevauchement) */}
-            <div 
-                className="absolute top-0 bottom-0 left-0 rounded-l-xl"
-                style={{
-                    width: `${ghostWidthPx}px`,
-                    backgroundImage: `repeating-linear-gradient(45deg, ${appointmentColor} 0px, ${appointmentColor} 10px, rgba(255,255,255,0.8) 10px, rgba(255,255,255,0.8) 20px)`,
-                    opacity: 0.4,
-                    border: '2px dashed rgba(0,0,0,0.2)',
-                    borderRight: 'none',
-                    zIndex: 0
-                }}
-            />
-            {/* Zone Pleine (Visible) */}
-            <div 
-                className="absolute top-0 bottom-0 right-0 rounded-r-xl"
-                style={{
-                    left: `${ghostWidthPx}px`,
-                    backgroundColor: isHovered ? 'white' : appointmentColor,
-                    border: `2px solid ${appointmentBorderColor}`,
-                    borderLeft: 'none', // Pas de bordure entre les deux zones
-                    zIndex: 0
-                }}
-            />
+            {ghostWidthPx.map((segment, index) => {
+              const leftOffset = ghostWidthPx.slice(0, index).reduce((acc, g) => acc + g.widthGhost + g.widthNoGhost, 0);
+              const isFirst = index === 0;
+              const isLast = index === ghostWidthPx.length - 1;
+              
+              return (
+                <React.Fragment key={index}>
+                  {/* Zone hachurée (chevauchement) */}
+                  {segment.widthGhost > 0 && (
+                    <div 
+                      className="absolute top-0 bottom-0"
+                      style={{
+                          left: `${leftOffset}px`,
+                          width: `${segment.widthGhost}px`,
+                          backgroundImage: `repeating-linear-gradient(45deg, ${appointmentColor} 0px, ${appointmentColor} 10px, rgba(255,255,255,0.8) 10px, rgba(255,255,255,0.8) 20px)`,
+                          opacity: 0.4,
+                          border: '2px dashed rgba(0,0,0,0.2)',
+                          borderRight: segment.widthNoGhost > 0 ? 'none' : undefined,
+                          borderLeft: isFirst ? undefined : 'none',
+                          borderRadius: isFirst ? '0.75rem 0 0 0.75rem' : '0',
+                          zIndex: 0
+                      }}
+                    />
+                  )}
+                  {/* Zone visible (non chevauchement) */}
+                  {segment.widthNoGhost > 0 && (
+                    <div 
+                      className="absolute top-0 bottom-0"
+                      style={{
+                          left: `${leftOffset + segment.widthGhost}px`,
+                          width: `${segment.widthNoGhost}px`,
+                          backgroundColor: isHovered ? 'white' : appointmentColor,
+                          border: `2px solid ${appointmentBorderColor}`,
+                          borderLeft: segment.widthGhost > 0 ? 'none' : (isFirst ? undefined : 'none'),
+                          borderRight: isLast ? undefined : 'none',
+                          borderRadius: isLast && segment.widthGhost === 0 && isFirst ? '0.75rem' : (isLast ? '0 0.75rem 0.75rem 0' : (isFirst && segment.widthGhost === 0 ? '0.75rem 0 0 0.75rem' : '0')),
+                          zIndex: 0
+                      }}
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
           </>
       )}
 
@@ -448,7 +527,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
       {/* CONTENU (Tags, Icone, Texte) */}
       {/* On met z-10 et relative pour être au-dessus des backgrounds */}
-      <div className="relative z-10 flex items-center gap-2 w-full h-full" style={{left: isGhost ? `${ghostWidthPx}px` : '0px'}}>        
+      <div className="relative z-10 flex items-center gap-2 w-full h-full" style={{left: isGhost ? `${ghostWidthPx.reduce((acc, g) => acc + g.widthGhost + g.widthNoGhost, 0)}px` : '0px'}}>        
         {appointment.tag && (
             <AppointmentTag 
             tagName={appointment?.tag.name}

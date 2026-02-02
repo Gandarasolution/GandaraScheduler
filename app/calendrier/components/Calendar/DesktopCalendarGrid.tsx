@@ -29,6 +29,7 @@ import { getNextWorkedDay, isHoliday } from '../../utils/dates';
 import { getRowId } from '../../utils/domIds';
 import { useSmartScroll } from '../../hooks/useSmartScroll';
 import { useAutoScrollOnDrag } from '../../hooks/useAutoScrollOnDrag';
+import { is } from 'date-fns/locale';
 
 
 interface DragItem {
@@ -847,41 +848,71 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           
           // Calcul de la position sticky : header principal + hauteurs des headers précédents
           const stickyTop = TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
+
+          const style = isOpen ? {
+              marginBottom: MARGIN_BETWEEN_TEAMS, 
+              borderLeftWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
+              borderRightWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
+          } : {
+              marginBottom: MARGIN_BETWEEN_TEAMS, 
+              borderWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
+              width: '100%',
+          }
           
           return (
             <div
               key={item.id}
               className="rounded-4xl border-default bg-bg-primary text-primary"
-              style={{ 
-                marginBottom: MARGIN_BETWEEN_TEAMS, 
-                borderWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE
-              }}
+              style={style}
             >
-              <button
-                className={`flex justify-between items-center w-full px-4 ${isOpen ? 'rounded-t-4xl' : 'rounded-4xl'} focus:outline-none cursor-pointer sticky bg-bg-secondary`}
+              {/* --- DÉBUT DU HEADER "SANDWICH" --- */}
+              <div
+                className="sticky w-full"
                 style={{ 
-                  paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y, 
-                  paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y,
                   top: stickyTop,
-                  zIndex: 10 - index
+                  // Z-Index très haut pour être sûr d'être au-dessus de tout le reste (liste + footer)
+                  zIndex: 30 - index 
                 }}
-                onClick={() => toggleItem(item.id)}
-                type="button"
               >
-                <div className="flex items-center gap-4">
-                  <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="18" height="18" viewBox="0 0 510 510" enableBackground="new 0 0 510 510"  xmlSpace="preserve">
-                    <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                      <g>
-                        <g id="play-install">
-                          <path d="M459,114.75H357v-51l-51-51H204l-51,51v51H51c-28.05,0-51,22.95-51,51v280.5c0,28.05,22.95,51,51,51h408&#10;&#9;&#9;&#9;c28.05,0,51-22.95,51-51v-280.5C510,137.7,487.05,114.75,459,114.75z M204,63.75h102v51H204V63.75z M216.75,408l-89.25-89.25&#10;&#9;&#9;&#9;l35.7-35.7l53.55,53.55L349.35,204l35.7,35.7L216.75,408z" fill="#00957f" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                {isOpen && (
+                  <>
+                    {/* 1. LES CACHES (Le "Pain" du dessous) 
+                      Ils masquent les éléments qui défilent derrière les coins arrondis du haut. 
+                      Important : Mettre la couleur de fond globale de la page (ex: bg-bg-primary) */}
+                    <div className="absolute top-0 -left-1 w-8 h-7 bg-bg-primary" />
+                    <div className="absolute top-0 -right-1 w-7 h-7 bg-bg-primary" />
+                  </>
+                )}
+                
+
+                {/* 2. LE BOUTON VISUEL (Le "Fromage" du dessus)
+                    On retire 'sticky', 'top' et 'zIndex' d'ici car c'est le parent qui gère ça maintenant.
+                    On ajoute 'relative' pour qu'il s'empile bien sur les caches. */}
+                <button
+                  className={`relative flex justify-between items-center  px-4 ${isOpen ? 'rounded-t-4xl -ml-px border-default border-t border-r border-l w-[284px]' : 'rounded-4xl w-full'} focus:outline-none cursor-pointer bg-bg-secondary`}
+                  style={{ 
+                    paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y, 
+                    paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y,
+                  }}
+                  onClick={() => toggleItem(item.id)}
+                  type="button"
+                >
+                  <div className="flex items-center gap-4">
+                    {/* ... Contenu de votre SVG et du Titre ... */}
+                    <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="18" height="18" viewBox="0 0 510 510" enableBackground="new 0 0 510 510" xmlSpace="preserve">
+                      <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                        <g>
+                          <g id="play-install">
+                            <path d="M459,114.75H357v-51l-51-51H204l-51,51v51H51c-28.05,0-51,22.95-51,51v280.5c0,28.05,22.95,51,51,51h408c28.05,0,51-22.95,51-51v-280.5C510,137.7,487.05,114.75,459,114.75z M204,63.75h102v51H204V63.75z M216.75,408l-89.25-89.25l35.7-35.7l53.55,53.55L349.35,204l35.7,35.7L216.75,408z" fill="#00957f" fillOpacity="1" data-original-color="#000000ff" stroke="none" strokeOpacity="1"/>
+                          </g>
                         </g>
                       </g>
-                    </g>
-                  </svg>
-                  <span className="poppins font-bold">{item.name}</span>
-                </div>
-                <CustomArrow isOpen={isOpen} />
-              </button>
+                    </svg>
+                    <span className="poppins font-bold">{item.name}</span>
+                  </div>
+                  <CustomArrow isOpen={isOpen} />
+                </button>
+              </div>
               
               {isOpen && itemEmployees.map((employee) => {
                 const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.id);
@@ -899,7 +930,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                     }}                    
                   >
                     <div 
-                      className="flex rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-ultra-light employee-row-item"
+                      className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-ultra-light employee-row-item"
                       data-employee-id={employee.id}
                       onMouseOver={(e) => {
                         updateHighlightedEmployeeRow(employee.id);
@@ -939,16 +970,27 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
               
               {isOpen && (
                 <div 
-                  className="sticky w-[284px] h-9 bg-bg-secondary border-b border-l border-r border-default rounded-b-4xl"
+                  // 1. LE CONTENEUR STICKY (Invisible, sert juste de calque supérieur)
+                  className="sticky w-[284px] h-9"
                   style={{
                     bottom: 0,
-                    zIndex: 5 - index,
+                    zIndex: 30 - index, // Toujours au-dessus de la liste
                     marginLeft: -1,
                     marginBottom: -EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
-                    paddingLeft: 16,
-                    paddingRight: 16
                   }}
                 >
+                  {/* 2. LES CACHES (Le "Pain" du dessous) 
+                      Ils masquent la liste qui défile. Couleur = Fond de la page globale. */}
+                  <div className="absolute bottom-0 left-0 w-6 h-7 bg-bg-primary" />
+                  <div className="absolute bottom-0 right-0 w-6 h-7 bg-bg-primary" />
+
+                  {/* 3. LE VISUEL DU FOOTER (Le "Fromage" du dessus)
+                      C'est lui qui a l'arrondi, la couleur et la bordure. 
+                      Il se pose SUR les caches. */}
+                  <div 
+                    className="relative w-full h-full bg-bg-secondary border-b border-l border-r border-default rounded-b-4xl"
+                    // Pas besoin de z-index ici, car le flux naturel le place après (donc sur) les caches
+                  />
                 </div>
               )}
               
