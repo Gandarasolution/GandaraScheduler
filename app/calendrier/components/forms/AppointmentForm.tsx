@@ -33,6 +33,8 @@ interface AppointmentFormProps {
   appointment: Appointment;
   /** Événement associé au rendez-vous */
   item: Item;
+  /** Événements*/
+  items: Item[];
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
@@ -95,6 +97,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   appointments,
   appointment,
   item,
+  items,
   employees,
   HALF_DAY_INTERVALS,
   isFullDay,
@@ -116,7 +119,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    */
   const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(appointment);
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
-  const [dateValidationError, setDateValidationError] = useState(false);  
+  const [dateValidationError, setDateValidationError] = useState(false);
+  const [codeValidationError, setCodeValidationError] = useState(false);  
  
 
   useEffect(() => {
@@ -258,6 +262,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     e.preventDefault();
 
     if (formDataAppointment.id === -1) {
+      // Validation du code avant la création
+      if (formDataItemType.code && items.find(item => item.code === formDataItemType.code.toUpperCase())) {
+        setCodeValidationError(true);
+        return;
+      }
       // Si c'est une création, on ajoute le nouvel événement
       handleAddDimension({...formDataItemType, id: Date.now()});
       return;
@@ -314,6 +323,31 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
   const handleItemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+
+    if (name === 'code') {
+      // Réinitialiser l'erreur lors de la modification
+      if (codeValidationError) {
+        setCodeValidationError(false);
+      }
+      
+      // Forcer les majuscules pour le champ code
+      const upperCode = value.toUpperCase();
+      if (items.find(item => item.code === upperCode && item.id !== formDataItemType.id)) {
+        // Gérer le cas où le code existe déjà
+        setCodeValidationError(true);
+        setFormDataItemType(prev => ({
+          ...prev,
+          [name]: upperCode
+        }));
+        return;
+      }
+      setFormDataItemType(prev => ({
+        ...prev,
+        [name]: upperCode
+      }));
+      return;
+    }
+
     setFormDataItemType(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -362,9 +396,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                           value={formDataItemType.code || ''}
                           onChange={handleItemChange}
                           placeholder="EX: CH"
-                          className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                          className={`w-full p-2 border rounded-xl focus:outline-none focus:ring-2 text-sm ${codeValidationError ? 'border-red-500 focus:ring-red-500' : 'border-default focus:ring-primary'}`}
                           required
                       />
+                      {codeValidationError && (
+                        <p className="text-xs text-red-500 mt-1">Ce code est déjà utilisé</p>
+                      )}
                   </div>
                   
                   {/* Champ ACTIF (Switch) */}

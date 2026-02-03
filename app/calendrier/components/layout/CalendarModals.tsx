@@ -327,6 +327,7 @@ export const CalendarModals = ({
             appointments={data.appointments}
             appointment={modalsState.selectedAppointmentForm as Appointment}
             item={data.selectedItem!}
+            items={data.items}
             isReducedVersion={modalsState.selectedAppointmentForm?.id === 0 || modalsState.selectedAppointmentForm?.id === -1}
             employees={data.employees}
             HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}

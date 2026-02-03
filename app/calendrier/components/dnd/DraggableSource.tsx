@@ -45,11 +45,7 @@ const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title, imageUrl =
       `}
     >
       <img 
-        src={
-          type === 'Chantier' ? ChantierIcones.src : 
-          type === 'Absence' ? AbsenceIcones.src : 
-          AutreIcones.src
-        }
+        src={imageUrl ? imageUrl : ''}
         width={24}
         height={24}
         alt={title} 

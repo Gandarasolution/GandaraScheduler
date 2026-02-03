@@ -136,7 +136,6 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
     poppins text-[14px] font-medium bg-bg-secondary cursor-pointer
     transition-colors duration-200 ease-in-out
     border border-default
-    focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent
     ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'hover:border-gray-400'}
     ${className}
   `;

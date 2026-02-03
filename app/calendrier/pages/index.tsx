@@ -264,7 +264,7 @@ export default function HomePage({
           )}
 
           {/* CORPS PRINCIPAL : Grille ou Tableaux */}
-          <div className="flex-1 flex min-h-0">
+          <div className="flex-1 flex min-h-0 box-border">
             <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!viewState.isMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
               <div className={`flex-grow rounded-lg w-full h-full pb-4 ${dataLayer.isLoading ? "pointer-events-none opacity-60" : ""}`}>
                 
@@ -277,6 +277,7 @@ export default function HomePage({
                       employees={dataLayer.filteredEmployees}
                       appointments={dataLayer.filteredAppointments}
                       appointmentsDefault={dataLayer.appointmentsRef.current}
+                      user={user}
 
                       /* Équipes & Événements */
                       initialTeams={dataLayer.initialTeams}
@@ -346,7 +347,9 @@ export default function HomePage({
 
           {/* --- COMPOSANTS FLOTTANTS & MODALES --- */}
           
-          <ThemeSelector position='bottom-right' onThemeChange={onThemeChange} />
+          {!viewState.isMobile && (
+            <ThemeSelector position='bottom-right' onThemeChange={onThemeChange} />
+          )}
 
           <RightClickComponent
             open={!!interaction.contextMenu}
@@ -499,10 +502,11 @@ export default function HomePage({
               noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
               noResults: { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
-            renderItem={(event, index) => (
+            renderItem={(event, index) => (              
               <DraggableSource
                 key={`${event.label}-${event.id}-${index}`}
                 id={event.id as number}
+                imageUrl={event.image.image}
                 title={event.label}
                 type={(event as any).type as "Chantier" | "Absence" | "Autre"}
                 className="w-full"

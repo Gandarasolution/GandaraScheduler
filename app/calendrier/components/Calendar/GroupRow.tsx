@@ -5,7 +5,6 @@ import { getRowId } from '../../utils/domIds';
 interface GroupRowProps {
   itemId: string | number;
   dayInTimeline: number[];
-  rowHeight: number;
   style?: React.CSSProperties;
   todayIndex: number;
   isFullDay: boolean;
@@ -14,7 +13,6 @@ interface GroupRowProps {
 const GroupRow: React.FC<GroupRowProps> = ({
   itemId,
   dayInTimeline,
-  rowHeight,
   style,
   todayIndex,
   isFullDay,
@@ -29,7 +27,6 @@ const GroupRow: React.FC<GroupRowProps> = ({
       role="row"
       style={{
         ...style,
-        height: rowHeight,
         width: rowWidth,
         backgroundColor: 'transparent',
         backgroundImage: `repeating-linear-gradient(

@@ -165,8 +165,8 @@ export const useInteraction = ({
 
   const handleGlobalKeyboard = useCallback((e: KeyboardEvent) => {
       if (e.ctrlKey) {
-          switch(e.key) {
-              case 'c': 
+          switch(e.key.toLocaleLowerCase()) {
+              case 'c' : 
                   if (selectedAppointment) {
                        copyAppointment(selectedAppointment);
                   }

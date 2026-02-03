@@ -24,7 +24,7 @@ import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Item } from '../../types';
 import { useCalendarLayout } from '../../hooks/useCalendarLayout';
 import { useCalendarInteractions } from '../../hooks/useCalendarInteractions';
-import MobileCalendarGrid from './MobileCalendarGrid';
+import MobileCalendarGrid from './MobileCalendar/MobileCalendarGrid';
 import DesktopCalendarGrid from './DesktopCalendarGrid';
 import { CELL_WIDTH } from '../../utils/constants';
 
@@ -34,6 +34,13 @@ interface CalendarGridProps {
   appointmentsDefault: Appointment[];
   events: Item[];
   initialTeams: Groupe[];
+  user: {
+    id: number;
+    name: string;
+    role: string;
+    theme: string;
+    image: string;
+  };
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
@@ -66,6 +73,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   HALF_DAY_INTERVALS,
   isFullDay,
   events,
+  user,
   nonWorkingDates,
   isMobile,
   isDisplayWeekend,
@@ -139,23 +147,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return (
       <MobileCalendarGrid
         employees={employees}
-        appointmentsWithTop={appointmentsWithTop}
-        employeeHeights={employeeHeights}
-        dayInTimeline={dayInTimeline}
-        HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
-        isFullDay={isFullDay}
-        nonWorkingDates={nonWorkingDates}
-        events={events} 
-        onAppointmentMoved={onAppointmentMoved}
-        onCellDoubleClick={onCellDoubleClick}
-        onAppointmentDoubleClick={onAppointmentDoubleClick}
-        onExternalDragDrop={onExternalDragDrop}
-        handleContextMenu={handleContextMenu}
-        selectedCell={selectedCell}
-        selectedAppointmentId={selectedAppointmentId}
-        onSelectCell={onSelectCell}
-        onSelectAppointment={onSelectAppointment}     
-      />
+        appointments={appointments}
+        user={user}
+        items={events}
+      ></MobileCalendarGrid>
     );
   }
 

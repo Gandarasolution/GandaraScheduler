@@ -111,7 +111,6 @@ const CalendarRows = memo(({
             {...commonProps}
             itemId={row.id}
             dayInTimeline={dayInTimeline}
-            rowHeight={row.height}
             todayIndex={todayIndex}
             isFullDay={isFullDay}
           />
@@ -287,16 +286,19 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         
         inactiveRowHeight += MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2;
         if (isPrevOpen) {
-          inactiveRowHeight += EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM;
+          inactiveRowHeight += EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM + 27;
         }
       }
       
-      rows.push({
-        type: 'group',
-        id: item.id,
-        data: item,
-        height: inactiveRowHeight
-      });
+      if (idx !== 0 ) {
+        rows.push({
+          type: 'group',
+          id: item.id,
+          data: item,
+          height: inactiveRowHeight 
+        });
+      }      
+      
       
       if (openItems.includes(item.id)) {
         const itemEmployees = employeesByDimension[item.id] || [];
@@ -803,9 +805,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         ref={columnEmployeeRef}
       >
         <div 
-          className={`sticky top-0 z-40 flex items-center bg-bg-primary justify-center flex-shrink-0`}
+          className={`sticky top-0 z-40 flex bg-bg-primary justify-center flex-shrink-0`}
           style={{
-            height: TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING
+            height: TIMELINE_HEADERITEMS_CELL_HEIGHT + CONTAINER_PADDING
           }}
         >
           <div className="custom-select-wrapper relative inline-block w-full">
@@ -847,7 +849,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           if (itemEmployees.length === 0) return null;
           
           // Calcul de la position sticky : header principal + hauteurs des headers précédents
-          const stickyTop = TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
+          const stickyTop = TIMELINE_HEADERITEMS_CELL_HEIGHT + CONTAINER_PADDING;
 
           const style = isOpen ? {
               marginBottom: MARGIN_BETWEEN_TEAMS, 
