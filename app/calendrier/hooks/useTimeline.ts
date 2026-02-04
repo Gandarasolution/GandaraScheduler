@@ -61,7 +61,8 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
   // --- **NOUVELLE FONCTION**: Exécution de la navigation vers une date ---
   const executeGoToDate = useCallback((date: number): Promise<boolean> => {
     return new Promise((resolve) => {
-      const scrollElement = mainScrollRef.current;
+      const scrollElement = mainScrollRef.current;      
+      
       
       if (!scrollElement) {
         resolve(false);
@@ -75,8 +76,6 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
         setDays(newTimeline);
       }
       
-
-
       // Centrage visuel
       queueMicrotask(() => {
           requestAnimationFrame(() => {
@@ -86,7 +85,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
                   const cellRect = todayCell.getBoundingClientRect();
                   const containerRect = scrollElement.getBoundingClientRect();
                   const targetLeft = scrollElement.scrollLeft + cellRect.left - containerRect.left ;
-                  
+
                   scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
                   scrollElement.scrollIntoView({
                       behavior: 'smooth',
@@ -127,34 +126,6 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
     // Tentative immédiate
     const success = await executeGoToDate(date);
     
-    // if (!success) {
-    //   // Stocker la date pour retry
-    //   pendingNavigationRef.current = date;
-      
-    //   // Retry avec timeout croissant (100ms, 200ms, 400ms max)
-    //   let attempts = 0;
-    //   const maxAttempts = 3;
-      
-    //   const retry = async () => {
-    //     attempts++;
-        
-    //     if (pendingNavigationRef.current && attempts <= maxAttempts) {
-    //       const retrySuccess = await executeGoToDate(pendingNavigationRef.current);
-          
-    //       if (retrySuccess) {
-    //         pendingNavigationRef.current = null;
-    //       } else {
-    //         const delay = Math.min(100 * Math.pow(2, attempts - 1), 400);
-    //         retryTimeoutRef.current = setTimeout(retry, delay);
-    //       }
-    //     } else if (attempts > maxAttempts) {
-    //       pendingNavigationRef.current = null;
-    //       setIsLoading(false);
-    //     }
-    //   };
-      
-    //   retryTimeoutRef.current = setTimeout(retry, 100);
-    // }
   }, [executeGoToDate]);
 
   // --- **NETTOYAGE**: Annuler les retries au démontage ---

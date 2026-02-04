@@ -1,29 +1,45 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { Appointment, Employee, Item } from '../../../types/index';
+import { Appointment, Employee, Item, User } from '../../../types/index';
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, isToday, startOfMonth, startOfWeek, subMonths } from 'date-fns';
-import { Plus, Bell, MoreHorizontal, LogOut, ChevronDown, Search, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Bell, MoreHorizontal, LogOut, ChevronDown, Search, Check, ChevronLeft, ChevronRight, X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import AppointmentList from './AppointmentList';
 import { fr } from 'date-fns/locale';
+import { useNotifications } from '../../../hooks/useNotifiactions';
+import { getNotificationsByUserId } from '@/app/datasource';
 
 interface MobileCalendarGridProps {
   employees: Employee[];
   appointments: Appointment[];
-  user: {
-    id: number;
-    name: string;
-    role: string;
-    theme: string;
-    image: string;
-  };
+  user: User;
   items: Item[];
 }
 
 const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appointments, user, items }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(employees[0] || null);
   const [showLogout, setShowLogout] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Hook de notifications
+  const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
+    
+  // Gestion des droits d'accès
+  const isAdmin = user.role === 'admin';
+  
+  // Filtrer les employés visibles selon le rôle
+  const visibleEmployees = isAdmin 
+    ? employees 
+    : employees.filter(emp => emp.id === user.id);
+  
+  // Initialiser l'employé sélectionné selon le rôle
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(() => {
+    if (!isAdmin) {
+      // Si c'est un user, sélectionner automatiquement son propre profil
+      return visibleEmployees.find(emp => emp.id === user.id) || null;
+    }
+    return employees[0] || null;
+  });
 
 
   const handleLogout = () => {
@@ -36,13 +52,24 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appo
     const monthStart = startOfMonth(currentDate).getTime();
     const monthEnd = endOfMonth(currentDate).getTime();
     
-    return appointments.filter(app => {
+    // Filtrer selon les droits utilisateur
+    let filteredApps = appointments;
+    
+    // Si l'utilisateur n'est pas admin, il ne voit que ses propres rendez-vous
+    if (!isAdmin) {
+      filteredApps = appointments.filter(app => app.employeeId === user.id);
+    }
+    
+    return filteredApps.filter(app => {
       const matchesEmployee = !selectedEmployee || app.employeeId === selectedEmployee.id;
       const isInMonth = app.startDate <= monthEnd && app.endDate >= monthStart;
       return matchesEmployee && isInMonth;
     });
-  }, [appointments, currentDate, selectedEmployee]);
+  }, [appointments, currentDate, selectedEmployee, isAdmin, user.id]);
 
+
+  //console.log(monthlyAppointments.map(app => ({...app, startDate: new Date(app.startDate), endDate: new Date(app.endDate)})));
+  
   const selectedDayAppointments = useMemo(() => {
     const selectedDayStart = new Date(selectedDate).setHours(0, 0, 0, 0);
     const selectedDayEnd = new Date(selectedDate).setHours(23, 59, 59, 999);
@@ -52,21 +79,42 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appo
     );
   }, [monthlyAppointments, selectedDate]);
 
-
+  // Ajouter les notifications depuis la base de données au montage du composant
+  useEffect(() => {
+    // Charger les notifications de l'utilisateur depuis la BDD fictive
+    const userNotifications = getNotificationsByUserId(user.id);
+    
+    // Ajouter chaque notification au système
+    userNotifications.forEach(notif => {
+      addNotification(notif.type, notif.title, notif.message);
+    });
+    
+    // Notification de bienvenue
+    setTimeout(() => {
+      addNotification('info', 'Bienvenue', `Bonjour ${user.name} !`);
+    }, 500);
+  }, []);
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center p-4 sm:p-8"
-      onClick={() => setShowLogout(false)}
+      className="h-full flex items-center justify-center p-4 sm:p-8"
+      onClick={() => {
+        setShowLogout(false);
+        setShowNotifications(false);
+      }}
     >
       {/* Mobile Mockup Container */}
-      <div className="w-full max-w-[400px] bg-white sm:bg-gray-50 h-[850px] sm:h-[800px] rounded-[3rem] sm:border-[8px] sm:border-white sm:shadow-2xl overflow-hidden relative flex flex-col">
+      <div className="w-full max-w-[400px] bg-white sm:bg-gray-50 h-full rounded-[3rem] sm:border-[8px] sm:border-white sm:shadow-2xl overflow-hidden relative flex flex-col">
         
         {/* Header */}
-        <header className="pt-8 px-6 pb-2 flex items-center justify-between bg-white z-10">
+        <header className="pt-8 px-6 pb-2 flex items-center justify-between bg-white z-10 relative">
           <div className="relative">
             <button 
-                onClick={() => setShowLogout(!showLogout)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowLogout(!showLogout);
+                  setShowNotifications(false);
+                }}
                 className="flex items-center gap-2 hover:bg-gray-50 rounded-full pr-3 pl-1 py-1 transition-colors"
             >
                 <img src={user.image} alt="User" className="w-8 h-8 rounded-full border border-gray-100" />
@@ -74,7 +122,7 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appo
             </button>
             
             {showLogout && (
-                <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-40 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50">
+                <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-40 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50" onClick={(e) => e.stopPropagation()}>
                     <button 
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 flex items-center"
@@ -86,14 +134,36 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appo
             )}
           </div>
           
-          <div className="flex items-center gap-4">
-             <button className="text-gray-400 hover:text-teal-500 transition-colors relative">
+          <div className="flex items-center gap-4 relative">
+             <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowNotifications(!showNotifications);
+                  setShowLogout(false);
+                }}
+                className="text-gray-400 hover:text-teal-500 transition-colors relative"
+             >
                 <Bell size={20} />
-                <span className="absolute top-0 right-0 w-2 h-2 bg-red-400 rounded-full border-2 border-white"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
              </button>
              <button className="text-gray-400 hover:text-teal-500 transition-colors">
                 <MoreHorizontal size={20} />
              </button>
+             
+             {/* Panneau de notifications */}
+             {showNotifications && (
+               <NotificationPanel 
+                 notifications={notifications}
+                 onClose={() => setShowNotifications(false)}
+                 onMarkAsRead={markAsRead}
+                 onRemove={removeNotification}
+                 onClearAll={clearAll}
+               />
+             )}
           </div>
         </header>
 
@@ -108,12 +178,14 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appo
             />
           </div>
 
-          {/* Employee Selector */}
-          <EmployeeSelector 
-            employees={employees}
-            selectedEmployee={selectedEmployee}
-            onSelect={setSelectedEmployee}
-          />
+          {/* Employee Selector - visible seulement pour les admins */}
+          {isAdmin && (
+            <EmployeeSelector 
+              employees={visibleEmployees}
+              selectedEmployee={selectedEmployee}
+              onSelect={setSelectedEmployee}
+            />
+          )}
 
           {/* Calendar */}
           <CalendarGrid 
@@ -176,11 +248,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const weekDays = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
   const hasAppointment = (day: number) => {
-    return appointments.some(app => app.startDate <= day && app.endDate >= day);
+    const start = new Date(day).setHours(0, 0, 0, 0);
+    const end = new Date(day).setHours(23, 59, 59, 999);
+    return appointments.some(app => app.startDate <= end && app.endDate >= start);
   };
 
   const getDayAppointmentCount = (day: number) => {
-    return appointments.filter(app => app.startDate <= day && app.endDate >= day).length;
+    const start = new Date(day).setHours(0, 0, 0, 0);
+    const end = new Date(day).setHours(23, 59, 59, 999);
+
+    return appointments.filter(app => app.startDate <= end && app.endDate >= start).length;
   };
 
   return (
@@ -270,7 +347,7 @@ const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({ employees, selected
   }, [wrapperRef]);
 
   return (
-    <div className="px-6 mb-6 relative z-20" ref={wrapperRef}>
+    <div className="px-6 mb-6 relative z-5" ref={wrapperRef}>
       <div 
         className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1 flex items-center cursor-pointer hover:shadow-md transition-shadow"
         onClick={() => setIsOpen(!isOpen)}
@@ -358,11 +435,6 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onChange }) 
         <h2 className="text-xl font-bold text-gray-800 uppercase tracking-widest capitalize">
           {format(currentDate, 'MMMM yyyy', { locale: fr })}
         </h2>
-        <div className="flex space-x-1 mt-1">
-            <span className="w-1 h-1 rounded-full bg-teal-500"></span>
-            <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-            <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-        </div>
       </div>
 
       <button 
@@ -371,6 +443,123 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onChange }) 
       >
         <ChevronRight size={24} />
       </button>
+    </div>
+  );
+};
+
+
+interface NotificationPanelProps {
+  notifications: any[];
+  onClose: () => void;
+  onMarkAsRead: (id: string) => void;
+  onRemove: (id: string) => void;
+  onClearAll: () => void;
+}
+
+const NotificationPanel: React.FC<NotificationPanelProps> = ({ 
+  notifications, 
+  onClose, 
+  onMarkAsRead, 
+  onRemove,
+  onClearAll 
+}) => {
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle size={18} className="text-green-500" />;
+      case 'error':
+        return <AlertCircle size={18} className="text-red-500" />;
+      case 'warning':
+        return <AlertTriangle size={18} className="text-orange-500" />;
+      case 'info':
+      default:
+        return <Info size={18} className="text-blue-500" />;
+    }
+  };
+
+
+  const formatTime = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'À l\'instant';
+    if (diffMins < 60) return `Il y a ${diffMins} min`;
+    if (diffMins < 1440) return `Il y a ${Math.floor(diffMins / 60)}h`;
+    return format(date, 'dd/MM à HH:mm', { locale: fr });
+  };
+
+  return (
+    <div 
+      className="absolute top-full right-0 mt-2 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-30"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-bold text-gray-800">Notifications</h3>
+          <p className="text-xs text-gray-400">{notifications.length} notification{notifications.length > 1 ? 's' : ''}</p>
+        </div>
+        {notifications.length > 0 && (
+          <button 
+            onClick={() => onClearAll()}
+            className="text-xs text-teal-500 hover:text-teal-600 font-medium"
+          >
+            Tout effacer
+          </button>
+        )}
+      </div>
+
+      {/* Notifications List */}
+      <div className="max-h-96 overflow-y-auto">
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-6 opacity-60">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Bell size={32} className="text-gray-400" />
+            </div>
+            <p className="text-gray-500 font-medium text-sm">Aucune notification</p>
+            <p className="text-xs text-gray-400 mt-1">Vous êtes à jour !</p>
+          </div>
+        ) : (
+          <div className="py-2">
+            {notifications.map((notif) => (
+              <div 
+                key={notif.id}
+                className={`px-6 py-4 border-b border-gray-50 hover:bg-gray-50/50 transition-colors ${!notif.isRead ? 'bg-teal-50/30' : ''}`}
+                onClick={() => !notif.isRead && onMarkAsRead(notif.id)}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex-shrink-0">
+                    {getIcon(notif.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h4 className="text-sm font-semibold text-gray-800 truncate">{notif.title}</h4>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemove(notif.id);
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">{notif.message}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-gray-400">{formatTime(notif.timestamp)}</span>
+                      {!notif.isRead && (
+                        <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

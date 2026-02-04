@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Employee, Groupe, Item, Image, poleActivite, BaseItemCategory} from './calendrier/types/index';
+import { Appointment, Employee, Groupe, Item, Image, poleActivite, BaseItemCategory, MockNotification, User} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -2546,6 +2546,292 @@ export const Images: Image[] = [
   {id: 41, name : 'Lemoine Manon', image: 'https://i.pravatar.cc/40?img=7'},
   {id: 42, name : 'Moreau Hugo', image: 'https://i.pravatar.cc/40?img=8'},
 ]
+
+// ===== BASE DE DONNÉES DES NOTIFICATIONS =====
+
+export const mockNotifications: MockNotification[] = [
+  // Notifications pour l'utilisateur 1 (Admin Grégory)
+  {
+    id: 'notif-1',
+    userId: 1,
+    type: 'info',
+    title: 'Nouvelle demande de congés',
+    message: 'Sophie Martin a soumis une demande de congés du 15 au 20 février.',
+    timestamp: Date.now() - 3600000, // Il y a 1h
+    isRead: false
+  },
+  {
+    id: 'notif-2',
+    userId: 1,
+    type: 'warning',
+    title: 'Retard sur chantier',
+    message: 'Le chantier Vesoul accuse un retard de 2 jours.',
+    timestamp: Date.now() - 7200000, // Il y a 2h
+    isRead: false
+  },
+  {
+    id: 'notif-3',
+    userId: 1,
+    type: 'success',
+    title: 'Validation effectuée',
+    message: 'La feuille de temps d\'Alexandre a été validée.',
+    timestamp: Date.now() - 86400000, // Il y a 1 jour
+    isRead: true
+  },
+  {
+    id: 'notif-4',
+    userId: 1,
+    type: 'error',
+    title: 'Conflit d\'horaires',
+    message: 'Un conflit a été détecté dans le planning de Lucas.',
+    timestamp: Date.now() - 172800000, // Il y a 2 jours
+    isRead: true
+  },
+
+  // Notifications pour l'utilisateur 2 (Alexandre)
+  {
+    id: 'notif-5',
+    userId: 2,
+    type: 'info',
+    title: 'Rendez-vous confirmé',
+    message: 'Votre rendez-vous client à 14h a été confirmé.',
+    timestamp: Date.now() - 1800000, // Il y a 30min
+    isRead: false
+  },
+  {
+    id: 'notif-6',
+    userId: 2,
+    type: 'warning',
+    title: 'Rappel : Formation',
+    message: 'Formation sécurité demain à 9h.',
+    timestamp: Date.now() - 43200000, // Il y a 12h
+    isRead: false
+  },
+  {
+    id: 'notif-7',
+    userId: 2,
+    type: 'success',
+    title: 'Validation de congés',
+    message: 'Votre demande de congés a été approuvée.',
+    timestamp: Date.now() - 259200000, // Il y a 3 jours
+    isRead: true
+  },
+
+  // Notifications pour l'utilisateur 3 (Lucas)
+  {
+    id: 'notif-8',
+    userId: 3,
+    type: 'info',
+    title: 'Nouveau message',
+    message: 'Le client Dupuis souhaite vous contacter.',
+    timestamp: Date.now() - 900000, // Il y a 15min
+    isRead: false
+  },
+  {
+    id: 'notif-9',
+    userId: 3,
+    type: 'warning',
+    title: 'Document à signer',
+    message: 'Le contrat chantier Lyon nécessite votre signature.',
+    timestamp: Date.now() - 21600000, // Il y a 6h
+    isRead: false
+  },
+  {
+    id: 'notif-10',
+    userId: 3,
+    type: 'info',
+    title: 'Réunion planifiée',
+    message: 'Réunion d\'équipe jeudi à 10h.',
+    timestamp: Date.now() - 86400000, // Il y a 1 jour
+    isRead: true
+  },
+
+  // Notifications génériques pour d'autres utilisateurs
+  {
+    id: 'notif-11',
+    userId: 5,
+    type: 'info',
+    title: 'Planning mis à jour',
+    message: 'Votre planning de la semaine prochaine est disponible.',
+    timestamp: Date.now() - 3600000,
+    isRead: false
+  },
+  {
+    id: 'notif-12',
+    userId: 5,
+    type: 'success',
+    title: 'Tâche terminée',
+    message: 'La réparation du système électrique est complète.',
+    timestamp: Date.now() - 172800000,
+    isRead: true
+  },
+];
+
+export const getNotificationsByUserId = (userId: number): MockNotification[] => {
+  return mockNotifications.filter(notif => notif.userId === userId);
+};
+
+// ===== BASE DE DONNÉES DES UTILISATEURS =====
+
+/**
+ * Base de données des utilisateurs du système
+ * Certains utilisateurs sont liés à des employés (même id), d'autres non
+ * Différents rôles : admin (accès complet) et user (accès limité à son calendrier)
+ */
+export const mockUsers = [
+  // ADMINS - Accès complet au système
+  {
+    id: 1,
+    name: 'ANDRE Grégory',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=1',
+    employeeId: 1, // Lié à l'employé Grégory
+    email: 'gregory.andre@gandara.com'
+  },
+  {
+    id: 100,
+    name: 'Administrateur Système',
+    role: 'admin' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=50',
+    employeeId: null, // Pas lié à un employé
+    email: 'admin@gandara.com'
+  },
+  {
+    id: 5,
+    name: 'DACHAUD Fabrice',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=12',
+    employeeId: 5, // Lié à l'employé Fabrice (Admin/RH)
+    email: 'fabrice.dachaud@gandara.com'
+  },
+
+  // USERS - Accès limité à leur propre calendrier
+  {
+    id: 2,
+    name: 'BARRET Alexandre',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=2',
+    employeeId: 2, // Lié à l'employé Alexandre
+    email: 'alexandre.barret@gandara.com'
+  },
+  {
+    id: 3,
+    name: 'BOURDIN Lucas',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=3',
+    employeeId: 3, // Lié à l'employé Lucas
+    email: 'lucas.bourdin@gandara.com'
+  },
+  {
+    id: 4,
+    name: 'PERRAS Romain',
+    role: 'user' as const,
+    theme: 'dark',
+    image: 'https://i.pravatar.cc/40?img=4',
+    employeeId: 4, // Lié à l'employé Romain
+    email: 'romain.perras@gandara.com'
+  },
+  {
+    id: 11,
+    name: 'MARTIN Sophie',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=11',
+    employeeId: 11, // Lié à l'employée Sophie
+    email: 'sophie.martin@gandara.com'
+  },
+  {
+    id: 17,
+    name: 'DUPONT Jean',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=17',
+    employeeId: 17, // Lié à l'employé Jean
+    email: 'jean.dupont@gandara.com'
+  },
+  {
+    id: 21,
+    name: 'SIMON Caroline',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=21',
+    employeeId: 21, // Lié à l'employée Caroline
+    email: 'caroline.simon@gandara.com'
+  },
+
+  // USERS sans compte employé (ex: clients, partenaires, consultants externes)
+  {
+    id: 200,
+    name: 'Consultant Externe',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=60',
+    employeeId: null, // Pas d'employé associé
+    email: 'consultant@externe.com'
+  },
+  {
+    id: 201,
+    name: 'Client VIP',
+    role: 'user' as const,
+    theme: 'dark',
+    image: 'https://i.pravatar.cc/40?img=65',
+    employeeId: null, // Pas d'employé associé
+    email: 'client.vip@entreprise.com'
+  },
+  {
+    id: 202,
+    name: 'Stagiaire RH',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=70',
+    employeeId: null, // Pas encore d'employé créé
+    email: 'stagiaire.rh@gandara.com'
+  },
+];
+
+/**
+ * Récupérer un utilisateur par son ID
+ */
+export const getUserById = (userId: number): User | undefined => {
+  return mockUsers.find(user => user.id === userId);
+};
+
+/**
+ * Récupérer un utilisateur par son email
+ */
+export const getUserByEmail = (email: string): User | undefined => {
+  return mockUsers.find(user => user.email === email);
+};
+
+/**
+ * Récupérer tous les utilisateurs
+ */
+export const getAllUsers = () => {
+  return mockUsers;
+};
+
+/**
+ * Récupérer les utilisateurs par rôle
+ */
+export const getUsersByRole = (role: 'admin' | 'user') => {
+  return mockUsers.filter(user => user.role === role);
+};
+
+/**
+ * Récupérer l'employé associé à un utilisateur (si existe)
+ */
+export const getEmployeeByUserId = (userId: number) => {
+  const user = getUserById(userId);
+  if (!user || !user.employeeId) return null;
+  
+  const employees = getEmployees();
+  return employees.find(emp => emp.id === user.employeeId) || null;
+};
 
 
 

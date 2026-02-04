@@ -8,6 +8,7 @@ export const useSmartScroll = (ref: React.RefObject<HTMLElement>, mouseUpAfterSc
   const isDownOnScrollbar = useRef(false);
   const scrollTimeout = useRef<number | null>(null);
   const lastScrollPos = useRef(0);
+  const hasScrolled = useRef(false); // Nouveau: track si un scroll a eu lieu
 
   useEffect(() => {
     const node = ref.current;
@@ -26,7 +27,7 @@ export const useSmartScroll = (ref: React.RefObject<HTMLElement>, mouseUpAfterSc
       if (isVertical || isHorizontal) {
         isDownOnScrollbar.current = true;
         document.body.style.userSelect = 'none'; // UX: On évite de sélectionner du texte
-
+        hasScrolled.current = false; // Reset le flag au début d'un potentiel scroll
       }
     };
 
@@ -34,11 +35,19 @@ export const useSmartScroll = (ref: React.RefObject<HTMLElement>, mouseUpAfterSc
       isDownOnScrollbar.current = false;
       document.body.style.userSelect = '';
       if (isGrabbing) setIsGrabbing(false);
-      mouseUpAfterScroll();
+      
+      // N'appeler mouseUpAfterScroll que si un scroll a réellement eu lieu
+      if (hasScrolled.current) {
+        mouseUpAfterScroll();
+        hasScrolled.current = false;
+      }
     };
 
     // --- 2. LOGIQUE SCROLL GÉNÉRIQUE (Timer) ---
     const handleScroll = () => {
+      // Marquer qu'un scroll a eu lieu
+      hasScrolled.current = true;
+      
       // On signale que ça bouge
       if (!isScrolling) setIsScrolling(true);
 

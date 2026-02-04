@@ -21,7 +21,7 @@
 
 "use client";
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Item } from '../../types';
+import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Item, User } from '../../types';
 import { useCalendarLayout } from '../../hooks/useCalendarLayout';
 import { useCalendarInteractions } from '../../hooks/useCalendarInteractions';
 import MobileCalendarGrid from './MobileCalendar/MobileCalendarGrid';
@@ -34,13 +34,7 @@ interface CalendarGridProps {
   appointmentsDefault: Appointment[];
   events: Item[];
   initialTeams: Groupe[];
-  user: {
-    id: number;
-    name: string;
-    role: string;
-    theme: string;
-    image: string;
-  };
+  user: User;
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;

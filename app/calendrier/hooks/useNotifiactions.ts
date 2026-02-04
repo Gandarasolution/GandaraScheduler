@@ -55,12 +55,7 @@ export const useNotifications = (): NotificationsState => {
     
     setNotifications(prev => [newNotification, ...prev].slice(0, 50)); // Garder seulement les 50 dernières
     
-    // Auto-suppression après 5 secondes pour les notifications success/info
-    if (type === 'success' || type === 'info') {
-      setTimeout(() => {
-        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
-      }, 5000);
-    }
+    // Les notifications restent jusqu'à suppression manuelle
   }, []);
 
   const markAsRead = useCallback((id: string) => {

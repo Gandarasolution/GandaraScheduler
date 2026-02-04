@@ -1,8 +1,6 @@
 import React from 'react';
 import { Appointment, Item } from '../../../types/index';
 import { Clock, MapPin } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 interface AppointmentListProps {
   appointments: Appointment[];
@@ -10,15 +8,7 @@ interface AppointmentListProps {
   items: Item[];
 }
 
-const AppointmentCard: React.FC<{ app: Appointment, colorClass: string, items: Item[] }> = ({ app, colorClass, items }) => {
-  const diffInMs = app.endDate - app.startDate;
-  
-  const timeSlot= diffInMs >= 24 * 59 * 1 * 1000 ? 'Toute la journée' :
-    new Date(app.startDate).getHours() === 0 && new Date(app.endDate).getHours() === 11 ? 'Matin' :
-    new Date(app.startDate).getHours() === 12 && new Date(app.endDate).getHours() === 23 ? 'Après-midi' :
-    `${format(new Date(app.startDate), 'HH:mm', { locale: fr })} - ${format(new Date(app.endDate), 'HH:mm', { locale: fr })}`;
-
-
+const AppointmentCard: React.FC<{ app: Appointment, colorClass: string, items: Item[], timeSlot: string }> = ({ app, colorClass, items, timeSlot }) => {
   return (
     <div className="bg-white rounded-3xl p-5 mb-4 shadow-sm border border-gray-50 flex items-start group hover:shadow-md transition-all duration-300">
       <div className={`w-1.5 h-12 rounded-full ${colorClass} mr-4 mt-1`}></div>
@@ -27,31 +17,76 @@ const AppointmentCard: React.FC<{ app: Appointment, colorClass: string, items: I
         <div className="flex items-center text-gray-400 text-xs mb-2">
           <span className="capitalize">{app.type}</span>
         </div>
-        <div className="inline-flex items-center bg-gray-50 px-3 py-1 rounded-full">
+        {/* <div className="inline-flex items-center bg-gray-50 px-3 py-1 rounded-full">
           <Clock size={12} className="text-gray-400 mr-1.5" />
           <span className="text-xs font-medium text-gray-600">{timeSlot}</span>
-        </div>
+        </div> */}
       </div>
     </div>
   );
 };
 
-const AppointmentList: React.FC<AppointmentListProps> = ({ appointments, items }) => {
-  // Group appointments by time of day
+const AppointmentList: React.FC<AppointmentListProps> = ({ appointments, selectedDate, items }) => {
+  // Helper to check if appointment covers a specific period of a day
+  const getAppointmentPeriodForDay = (app: Appointment, targetDate: Date) => {
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const noonOfDay = new Date(targetDate);
+    noonOfDay.setHours(12, 0, 0, 0);
+    
+    const appStart = new Date(app.startDate);
+    const appEnd = new Date(app.endDate);
+    
+    // Check if appointment intersects with this day
+    if (appEnd < startOfDay || appStart > endOfDay) {
+      return null; // Not on this day
+    }
+    
+    // Determine effective start and end for this specific day
+    const effectiveStart = appStart < startOfDay ? startOfDay : appStart;
+    const effectiveEnd = appEnd > endOfDay ? endOfDay : appEnd;
+    
+    // Check if it covers the whole day
+    const coversFullDay = effectiveStart <= startOfDay && effectiveEnd >= new Date(endOfDay.getTime() - 1000);
+    
+    if (coversFullDay) {
+      return 'full';
+    }
+    
+    // Check if it's only in the morning (before noon)
+    if (effectiveEnd <= noonOfDay) {
+      return 'morning';
+    }
+    
+    // Check if it's only in the afternoon (starts at noon or after)
+    if (effectiveStart >= noonOfDay) {
+      return 'afternoon';
+    }
+    
+    // If it spans both morning and afternoon but not full day
+    return 'full';
+  };
+  
+  // Group appointments by time of day for the selected date
   const morningApps = appointments.filter(a => {
-    const hour = new Date(a.startDate).getHours();
-    return hour < 12;
+    const period = getAppointmentPeriodForDay(a, selectedDate);
+    return period === 'morning';
   });
   
   const afternoonApps = appointments.filter(a => {
-    const hour = new Date(a.startDate).getHours();
-    return hour >= 12 && hour < 18;
+    const period = getAppointmentPeriodForDay(a, selectedDate);
+    return period === 'afternoon';
   });
   
-  const eveningApps = appointments.filter(a => {
-    const hour = new Date(a.startDate).getHours();
-    return hour >= 18;
+  const fullDayApps = appointments.filter(a => {
+    const period = getAppointmentPeriodForDay(a, selectedDate);
+    return period === 'full';
   });
+
 
   if (appointments.length === 0) {
     return (
@@ -60,7 +95,6 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments, items }
            <Clock size={32} />
         </div>
         <p className="text-gray-500 font-medium">Aucun rendez-vous ce jour.</p>
-        <p className="text-xs text-gray-400 mt-1">Profitez de votre temps libre !</p>
       </div>
     );
   }
@@ -68,11 +102,20 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments, items }
   return (
     <div className="px-6 pb-24 animate-in slide-in-from-bottom-4 duration-500">
       
+      {fullDayApps.length > 0 && (
+        <div className="mb-6">
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Journée complète</h4>
+          {fullDayApps.map(app => (
+            <AppointmentCard key={app.id} app={app} colorClass="bg-purple-500" items={items} timeSlot="Toute la journée" />
+          ))}
+        </div>
+      )}
+      
       {morningApps.length > 0 && (
         <div className="mb-6">
           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Matin</h4>
           {morningApps.map(app => (
-            <AppointmentCard key={app.id} app={app} colorClass="bg-teal-500" items={items} />
+            <AppointmentCard key={app.id} app={app} colorClass="bg-teal-500" items={items} timeSlot="Matin" />
           ))}
         </div>
       )}
@@ -81,16 +124,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments, items }
         <div className="mb-6">
           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Après-midi</h4>
           {afternoonApps.map(app => (
-            <AppointmentCard key={app.id} app={app} colorClass="bg-orange-400" items={items} />
-          ))}
-        </div>
-      )}
-      
-      {eveningApps.length > 0 && (
-        <div className="mb-6">
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Soir</h4>
-          {eveningApps.map(app => (
-            <AppointmentCard key={app.id} app={app} colorClass="bg-purple-500" items={items} />
+            <AppointmentCard key={app.id} app={app} colorClass="bg-orange-400" items={items} timeSlot="Après-midi" />
           ))}
         </div>
       )}

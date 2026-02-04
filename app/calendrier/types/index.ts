@@ -222,3 +222,24 @@ export interface HistoryAction {
   appointments?: Appointment[]; // Pour une sauvegarde complète
   createdAppointments?: Appointment[]; // Pour les RDV créés lors d'un resize split
 } 
+
+export interface User{
+  id: number;
+  name: string;
+  role: 'admin' | 'user';
+  theme: string;
+  image?: string;
+  employeeId?: number | null; // ID de l'employé associé (si existe)
+  email?: string; // Email de l'utilisateur
+}
+
+
+export interface MockNotification {
+  id: string;
+  userId: number;
+  type: 'success' | 'error' | 'warning' | 'info';
+  title: string;
+  message: string;
+  timestamp: number;
+  isRead: boolean;
+}

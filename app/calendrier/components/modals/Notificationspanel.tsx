@@ -92,7 +92,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
           <div className="flex items-center gap-2">
             {notifications.length > 0 && (
               <button
-                onClick={onClearAll}
+                onClick={() => onClearAll()}
                 className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-bg-secondary/20 transition-colors"
                 title="Tout effacer"
               >
@@ -102,7 +102,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={() => onClose()}
               className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-bg-secondary/20 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

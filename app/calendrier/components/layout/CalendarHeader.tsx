@@ -4,6 +4,7 @@ import { UserMenu } from '../index';
 import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
 import { Appointment } from '../../types';
+import { use, useEffect } from 'react';
 
 interface CalendarHeaderProps {
   theme: string;
@@ -44,6 +45,7 @@ export const CalendarHeader = ({
     // Date
     selectedDate, setSelectedDate
   } = viewState;
+
 
 
   return (
@@ -300,6 +302,8 @@ export const CalendarHeader = ({
                 value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
                 onChange={(e) => {
                   const date = new Date(e.target.value).setHours(0,0,0,0);
+                  console.log(new Date(date));
+                  
                   if (isNaN(date)) return;
                   setSelectedDate(date);
                   onNavigateDate(date);

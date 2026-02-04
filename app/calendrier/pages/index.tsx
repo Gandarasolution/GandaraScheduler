@@ -47,6 +47,7 @@ import { getEmployees } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
 import { ManualEventsManager } from '../components/ManualEvents';
+import { User } from '../types';
 
 /**
  * Composant wrapper pour éviter les erreurs d'hydratation Next.js
@@ -66,7 +67,7 @@ export default function HomePage({
   user,
   onThemeChange,
 }: {
-  user: { id: number, name: string, role: string, theme: string, image: string };
+  user: User;
   onThemeChange?: (theme: any) => void;
 }) {
   // 1. SERVICES GLOBAUX
