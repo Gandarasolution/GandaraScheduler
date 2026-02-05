@@ -448,7 +448,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);
         targetInterval = 'morning';
       }
-
+      
       if (item.sourceType === 'external') {
         onExternalDragDrop(
           item.title || 'Nouveau rendez-vous',

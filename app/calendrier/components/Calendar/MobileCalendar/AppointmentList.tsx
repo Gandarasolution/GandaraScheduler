@@ -1,6 +1,6 @@
 import React from 'react';
 import { Appointment, Item } from '../../../types/index';
-import { Clock, MapPin } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 interface AppointmentListProps {
   appointments: Appointment[];

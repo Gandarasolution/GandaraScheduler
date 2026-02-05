@@ -7,19 +7,23 @@ import AppointmentList from './AppointmentList';
 import { fr } from 'date-fns/locale';
 import { useNotifications } from '../../../hooks/useNotifiactions';
 import { getNotificationsByUserId } from '@/app/datasource';
+import AppointmentForm from '../../forms/AppointmentForm';
+import { HALF_DAY_INTERVALS } from '../../../utils/constants';
 
 interface MobileCalendarGridProps {
   employees: Employee[];
   appointments: Appointment[];
   user: User;
   items: Item[];
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => void;
 }
 
-const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appointments, user, items }) => {
+const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appointments, user, items, onAddAppointment }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showLogout, setShowLogout] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
 
   // Hook de notifications
   const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
@@ -95,6 +99,67 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appo
     }, 500);
   }, []);
 
+  // Gérer l'ouverture du modal d'ajout de rendez-vous
+  const handleOpenAddAppointment = () => {
+    if (isAdmin) {
+      setShowAppointmentForm(true);
+    }
+  };
+
+  // Gérer la sauvegarde d'un nouveau rendez-vous
+  const handleSaveAppointment = (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => {
+    if (onAddAppointment) {
+      onAddAppointment(appointment, item, includeAllNonWorkingDays);
+      addNotification('success', 'Rendez-vous créé', 'Le rendez-vous a été ajouté avec succès');
+    }
+    setShowAppointmentForm(false);
+  };
+
+  // Créer un rendez-vous vide pour le formulaire
+  const createEmptyAppointment = (id?: number): Appointment => {
+    const startOfSelectedDay = new Date(selectedDate).setHours(8, 0, 0, 0);
+    const endOfSelectedDay = new Date(selectedDate).setHours(17, 0, 0, 0);
+    
+    return {
+      id: id ?? -1,
+      description: '',
+      startDate: startOfSelectedDay,
+      endDate: endOfSelectedDay,
+      employeeId: selectedEmployee?.id || employees[0]?.id || 0,
+      type: 'chantier',
+      EventId: 0,
+      priority: 0,
+    };
+  };
+
+  // Créer un item vide pour le formulaire
+  const createEmptyItem = (): Item => {
+    return {
+      id: 0,
+      type: 'chantier',
+      label: '',
+      color: '#3953aaff',
+      borderColor: '#2c4086',
+      textColor: '#ffffff',
+      code: '',
+      identifiant: '',
+      poleActivite: '',
+      libelle: '',
+      etat: 'En cours',
+      chargeAffaire: '',
+      chefChantier: '',
+      dateOS: '',
+      dateFin: '',
+      TM: 0,
+      HR: 0,
+      SH: 0,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0,
+    } as Item;
+  };
+
   return (
     <div 
       className="h-full flex items-center justify-center p-4 sm:p-8"
@@ -145,7 +210,7 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appo
              >
                 <Bell size={20} />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -203,17 +268,66 @@ const MobileCalendarGrid: React.FC<MobileCalendarGridProps> = ({ employees, appo
           />
         </main>
 
-        {/* Floating Action Button & Bottom Bar Mock */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none flex justify-center items-end h-32">
-          <div className="pointer-events-auto flex items-center justify-center px-8 w-full bg-white rounded-full shadow-soft p-2 mb-2">
-             
+        {/* Floating Action Button & Bottom Bar Mock - Visible uniquement pour les admins */}
+        {isAdmin && (
+          <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none flex justify-center items-end h-32">
+            <div className="pointer-events-auto flex items-center justify-center px-8 w-full bg-white rounded-full shadow-soft p-2 mb-2">
+               
 
-             {/* Big Plus Button */}
-             <button className="w-14 h-14 bg-teal-500 hover:bg-teal-600 rounded-full shadow-lg shadow-teal-500/40 text-white flex items-center justify-center transform -translate-y-6 transition-transform hover:scale-105 active:scale-95">
-                <Plus size={28} />
-             </button>
+               {/* Big Plus Button */}
+               <button 
+                 onClick={handleOpenAddAppointment}
+                 className="w-14 h-14 bg-teal-500 hover:bg-teal-600 rounded-full shadow-lg shadow-teal-500/40 text-white flex items-center justify-center transform -translate-y-6 transition-transform hover:scale-105 active:scale-95"
+               >
+                  <Plus size={28} />
+               </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Modal d'ajout de rendez-vous - Visible uniquement pour les admins */}
+        {isAdmin && showAppointmentForm && (
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200"
+            onClick={() => setShowAppointmentForm(false)}
+          >
+            <div 
+              className="bg-white rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header du modal mobile */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-10">
+                <h2 className="text-xl font-bold text-gray-800">Nouveau rendez-vous</h2>
+                <button 
+                  onClick={() => setShowAppointmentForm(false)}
+                  className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+                >
+                  <X size={20} className="text-gray-600" />
+                </button>
+              </div>
+              
+              {/* Contenu scrollable */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <AppointmentForm
+                  appointments={appointments}
+                  appointment={createEmptyAppointment(0)}
+                  item={createEmptyItem()}
+                  items={items}
+                  employees={visibleEmployees}
+                  HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+                  isFullDay={true}
+                  nonWorkingDates={[]}
+                  isReducedVersion={false}
+                  onSave={handleSaveAppointment}
+                  onClose={() => setShowAppointmentForm(false)}
+                  handleOpenImageModal={() => {}}
+                  handleAddDimension={() => {}}
+                  handleEditDimension={() => {}}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

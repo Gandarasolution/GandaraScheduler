@@ -264,10 +264,7 @@ export const useAppointmentLogic = ({
       if (newPriority !== undefined) {
         reorganizePriorities(id, newPriority, newEmployeeId, newStartDate, newEndDate);
         appointment.priority = newPriority;
-      }
-
-      console.log('yes');
-      
+      }      
 
       const state = timelineStateRef.current;
 
@@ -555,7 +552,7 @@ export const useAppointmentLogic = ({
       
 
       const startDate =  new Date(date).setHours(startHour, 0, 0, 0);
-      const endDate = new Date(date).setHours(endHour, 59, 59 , 999);
+      const endDate = new Date(date).setHours(endHour - 1, 59, 59 , 999);      
 
 
       let eventTypeId = eventsRef.current.find(e => e.label === title)?.id;

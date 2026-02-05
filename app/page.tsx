@@ -8,7 +8,7 @@ import { getUserById } from './datasource';
 
 export default function Home() {
 
-  const [user, setUser] = useState<User | undefined>(() => getUserById(1));
+  const [user, setUser] = useState<User | undefined>(() => getUserById(100));
 
   const { theme, setTheme, availableThemes } = useTheme();
   
