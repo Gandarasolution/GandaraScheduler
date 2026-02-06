@@ -12,14 +12,12 @@
 "use client";
 
 import '../styles/custom.scss';
-import React, { useEffect, useRef, useMemo, use, useCallback } from "react";
+import React, { useEffect, useRef, useMemo, use, useCallback, lazy, Suspense } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
-// --- COMPOSANTS UI ---
+// --- COMPOSANTS UI (Eager loading pour éviter le flash) ---
 import { 
-  CalendarGrid, 
-  DataTableFrame, 
   ThemeSelector, 
   RightClickComponent,
   Notificationspanel,
@@ -29,6 +27,12 @@ import {
   CalendarModals,
   DraggableSource,
 } from '@/app/calendrier/components';
+
+
+// --- COMPOSANTS UI AVEC CODE SPLITTING ---
+const CalendarGrid = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.CalendarGrid })));
+const DataTableFrame = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.DataTableFrame })));
+const ManualEventsManager = lazy(() => import('../components/ManualEvents').then(mod => ({ default: mod.ManualEventsManager })));
 
 // --- CUSTOM HOOKS ---
 import { useCalendarView } from "../hooks/useCalendarView";
@@ -46,8 +50,17 @@ import { notificationService } from "../services";
 import { getEmployees } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
-import { ManualEventsManager } from '../components/ManualEvents';
 import { User } from '../types';
+
+// Composant de chargement réutilisable
+const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
+  <div className="flex items-center justify-center h-full">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
+      <p className="text-gray-600">{message}</p>
+    </div>
+  </div>
+);
 
 /**
  * Composant wrapper pour éviter les erreurs d'hydratation Next.js
@@ -273,58 +286,63 @@ export default function HomePage({
                 {viewState.viewType === 'calendar' ? (
                   /* VUE PLANNING */
                   viewState.currentCalendarConfig ? (
-                    <CalendarGrid
-                      /* Données */
-                      employees={dataLayer.filteredEmployees}
-                      appointments={dataLayer.filteredAppointments}
-                      appointmentsDefault={dataLayer.appointmentsRef.current}
-                      user={user}
+                    <Suspense fallback={<LoadingFallback message="Chargement du calendrier..." />}>
+                      <CalendarGrid
+                        /* Données */
+                        employees={dataLayer.filteredEmployees}
+                        appointments={dataLayer.filteredAppointments}
+                        appointmentsDefault={dataLayer.appointmentsRef.current}
+                        user={user}
 
-                      /* Équipes & Événements */
-                      initialTeams={dataLayer.initialTeams}
-                      events={dataLayer.itemsRef.current}
-                      
-                      /* État Temporel */
-                      dayInTimeline={timeline.days}
-                      mainScrollRef={timeline.mainScrollRef}
-                      
-                      /* Configuration */
-                      isDisplayWeekend={viewState.isDisplayWeekend}
-                      isFullDay={viewState.isFullDay}
-                      isMobile={viewState.isMobile}
-                      nonWorkingDates={viewState.nonWorkingDates}
-                      HALF_DAY_INTERVALS={viewState.constants.intervals}
-                      
-                      /* Config Calendrier */
-                      calendarConfig={viewState.currentCalendarConfig}
-                      onCalendarConfigChange={viewState.setCurrentCalendarConfig}
-                      availableConfigs={viewState.availableConfigs}
-                      
-                      /* Actions & Events */
-                      onAppointmentMoved={appointmentLogic.moveAppointment}
-                      onCellDoubleClick={handleCellDoubleClick}
-                      onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
-                      onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
-                      handleContextMenu={interaction.handleContextMenu}
-                      onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
-                      mouseUpAfterScroll={timeline.getFirstDayAppearing}
-                      
-                      /* Sélection Optimisée */
-                      selectedCell={appointmentLogic.selectedCell}
-                      selectedAppointmentId={appointmentLogic.selectedAppointment?.id}
-                      onSelectCell={appointmentLogic.setSelectedCell}
-                      onSelectAppointment={appointmentLogic.setSelectedAppointment}
-                    />
+                        /* Équipes & Événements */
+                        initialTeams={dataLayer.initialTeams}
+                        events={dataLayer.itemsRef.current}
+                        
+                        /* État Temporel */
+                        dayInTimeline={timeline.days}
+                        mainScrollRef={timeline.mainScrollRef}
+                        
+                        /* Configuration */
+                        isDisplayWeekend={viewState.isDisplayWeekend}
+                        isFullDay={viewState.isFullDay}
+                        isMobile={viewState.isMobile}
+                        nonWorkingDates={viewState.nonWorkingDates}
+                        HALF_DAY_INTERVALS={viewState.constants.intervals}
+                        
+                        /* Config Calendrier */
+                        calendarConfig={viewState.currentCalendarConfig}
+                        onCalendarConfigChange={viewState.setCurrentCalendarConfig}
+                        availableConfigs={viewState.availableConfigs}
+                        
+                        /* Actions & Events */
+                        onAppointmentMoved={appointmentLogic.moveAppointment}
+                        onCellDoubleClick={handleCellDoubleClick}
+                        onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
+                        onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
+                        handleContextMenu={interaction.handleContextMenu}
+                        onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
+                        mouseUpAfterScroll={timeline.getFirstDayAppearing}
+                        
+                        /* Sélection Optimisée */
+                        selectedCell={appointmentLogic.selectedCell}
+                        selectedAppointmentId={appointmentLogic.selectedAppointment?.id}
+                        onSelectCell={appointmentLogic.setSelectedCell}
+                        onSelectAppointment={appointmentLogic.setSelectedAppointment}
+                      />
+                    </Suspense>
                   ) : (
                     <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>
                   )
                 ) : viewState.viewType === 'manual-event-table' ? (
-                  <ManualEventsManager
-                    events={dataLayer.filteredItems}
-                  />
+                  <Suspense fallback={<LoadingFallback message="Chargement des événements..." />}>
+                    <ManualEventsManager
+                      events={dataLayer.filteredItems}
+                    />
+                  </Suspense>
                 ) : (
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
-                  <DataTableFrame 
+                  <Suspense fallback={<LoadingFallback message="Chargement du tableau..." />}>
+                    <DataTableFrame 
                     items={dataLayer.getTableItems()} 
                     categoriesStructure={dataLayer.getTableStructure() || []}
                     computedFields={currentComputedFields as any}
@@ -341,6 +359,7 @@ export default function HomePage({
                     showGroupHeaders={viewState.viewType === 'chantier-table'}
                     onRightClick={interaction.handleDataTableContextMenu}
                   />
+                  </Suspense>
                 )}
               </div>
             </div>

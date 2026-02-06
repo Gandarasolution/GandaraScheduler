@@ -5,6 +5,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ThemeType, useTheme } from './calendrier/utils/themeManager';
 import { User } from './calendrier/types';
 import { getUserById } from './datasource';
+import { ErrorBoundary } from "./calendrier/components/ui/ErrorBoundary";
+
 
 export default function Home() {
 
@@ -37,6 +39,15 @@ export default function Home() {
   if (!user) return null;
 
   return (
-    <Calendrier user={user} onThemeChange={handleThemeChange} />
+     <ErrorBoundary
+        maxRetries={3}
+        retryDelay={2000}
+        onError={(error, errorInfo) => {
+          // Log l'erreur (peut être envoyé à un service de monitoring)
+          console.error('[Error Boundary]', error, errorInfo);
+        }}
+      >
+        <Calendrier user={user} onThemeChange={handleThemeChange} />
+      </ErrorBoundary>
   );
 }

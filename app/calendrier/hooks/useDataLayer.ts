@@ -10,6 +10,7 @@ import {
 import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../utils/constants';
 import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
+import { useCalendarWorker } from './useCalendarWorker';
 
 
 interface DataLayerProps {
@@ -24,6 +25,7 @@ interface DataLayerProps {
 
 export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, globalEmployeesRef, isSearchOverlayOpen }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(true);
+  const worker = useCalendarWorker();
   
   // Données Sources (Refs pour éviter re-renders inutiles sur grosses données)
   const itemsRef = useRef<Item[]>(getEvenements());
@@ -32,6 +34,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
   const [availableImages, setAvailableImages] = useState<Image[]>(getImages());
+  const [workerFilteredAppointments, setWorkerFilteredAppointments] = useState<Appointment[]>([]);
 
 
   // Instanciation Utils
@@ -71,8 +74,13 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     // Logique de filtrage combinée (Types RDV + Filtres champs)
     let filtered = appointmentsRef.current;
     
+    // Utiliser le worker pour le pré-filtrage si disponible et si gros volume
+    // Sinon utiliser workerFilteredAppointments si déjà calculé
+    if (workerFilteredAppointments.length > 0 && appointmentsRef.current.length > 500) {
+      filtered = workerFilteredAppointments;
+    }
     
-    // Filtre par type de RDV
+    // Filtre par type de RDV (logique métier)
     if (calendarConfig.selectedRdvTypes?.length > 0) {
          const allTypes = ['Chantier', 'Absence', 'Autre'];
          const isAllSelected = allTypes.every(t => calendarConfig.selectedRdvTypes.includes(t));
@@ -84,7 +92,27 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
          }
     }
     return applyFiltersToAppointments(filtered, calendarConfig.filters, searchQuery, globalEmployeesRef.current);
-  }, [calendarConfig, searchQuery, appointmentsVersion]); // Dépend de la version pour rafraichir
+  }, [calendarConfig, searchQuery, appointmentsVersion, workerFilteredAppointments]); // Dépend de la version pour rafraichir
+  
+  // Pré-filtrage avec Web Worker pour améliorer les performances (gros volumes)
+  useEffect(() => {
+    if (!worker.isReady || !calendarConfig || appointmentsRef.current.length <= 500) {
+      // Pas besoin du worker pour petits volumes
+      return;
+    }
+    
+    const preFilterWithWorker = async () => {
+      // Le worker peut faire un pré-filtrage basique
+      // La logique métier complète est appliquée après
+      const stats = await worker.calculateStats(appointmentsRef.current);
+      
+      // Pour l'instant, on stocke juste les données brutes
+      // Le filtrage fin est fait dans le useMemo ci-dessus
+      setWorkerFilteredAppointments(appointmentsRef.current);
+    };
+    
+    preFilterWithWorker();
+  }, [worker.isReady, appointmentsVersion, calendarConfig]);
     
 
   const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
