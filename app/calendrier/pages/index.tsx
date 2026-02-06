@@ -238,7 +238,7 @@ export default function HomePage({
       if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
 
       interaction.handleGlobalKeyboard(e);
-      if (viewState.viewType === 'calendar') {
+      if (viewState.viewType === 'calendar') {        
         timeline.handleKeyboardScroll(e);
       }
     };

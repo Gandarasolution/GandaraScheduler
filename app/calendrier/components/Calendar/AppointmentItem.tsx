@@ -132,6 +132,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       : `${intervalCount * INTERVAL_WIDTH}px`
   );
   const [computedLeft, setComputedLeft] = useState<number>(absoluteLeft !== undefined ? absoluteLeft : offsetIntervals * INTERVAL_WIDTH);
+  
+  
 
   // --- Drag & Drop ---
   const [{ isDragging }, drag] = useDrag({
@@ -392,7 +394,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     transition: 'all 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
     zIndex: isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.priority || 0))),
-  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment.priority]);
+  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment]);
 
   return (
     <div

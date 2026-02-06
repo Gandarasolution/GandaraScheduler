@@ -78,38 +78,46 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
       
       // Centrage visuel
       queueMicrotask(() => {
-          requestAnimationFrame(() => {
-              const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
-              if (todayCell && scrollElement) {
-                  isAutoScrolling.current = true;
-                  const cellRect = todayCell.getBoundingClientRect();
-                  const containerRect = scrollElement.getBoundingClientRect();
-                  const targetLeft = scrollElement.scrollLeft + cellRect.left - containerRect.left ;
-
-                  scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
-                  scrollElement.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'nearest',
-                      inline: 'start',
-                  })
-                  setTimeout(() => {
-                      isAutoScrolling.current = false;
-                      isInfiniteScrollEnabled.current = true;
-                      setIsLoading(false);
-                      resolve(true);
-                  }, 800);
-              } else {
-                  isInfiniteScrollEnabled.current = true;
-                  setIsLoading(false);
-                  resolve(true);
-              }
-          });
+        requestAnimationFrame(() => {
+            const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
+            if (todayCell && scrollElement) {
+                isAutoScrolling.current = true;
+                
+                // Trouver l'index de la date dans le tableau days
+                const dateIndex = days.indexOf(date);
+                
+                if (dateIndex !== -1) {
+                    // Calculer la position exacte basée sur l'index
+                    const targetLeft = dateIndex * CELL_WIDTH;
+                    
+                    scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
+                } else {
+                    // Fallback si la date n'est pas trouvée
+                    const cellRect = todayCell.getBoundingClientRect();
+                    const containerRect = scrollElement.getBoundingClientRect();
+                    const targetLeft = scrollElement.scrollLeft + cellRect.left - containerRect.left;
+                    scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
+                }
+                
+                setTimeout(() => {
+                    isAutoScrolling.current = false;
+                    isInfiniteScrollEnabled.current = true;
+                    setIsLoading(false);
+                    resolve(true);
+                }, 800);
+            } else {
+                isInfiniteScrollEnabled.current = true;
+                setIsLoading(false);
+                resolve(true);
+            }
+        });
       });
     });
   }, [isDisplayWeekend, buildWindow]);
 
   useEffect(() => {
-    if (days.length > 0 && mainScrollRef.current) {
+    if (days.length > 0) {
+      // Activer dès que les jours sont chargés
       isInfiniteScrollEnabled.current = true;
     }
   }, [days]);
@@ -149,8 +157,9 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
   // --- Gestion Clavier Scroll ---
   const handleKeyboardScroll = useCallback((e: KeyboardEvent) => {
     const scroller = mainScrollRef.current;
+    
     if (!scroller || !isInfiniteScrollEnabled.current) return;
-      
+          
     if (e.defaultPrevented) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();

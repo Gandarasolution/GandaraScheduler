@@ -172,7 +172,7 @@ export interface Appointment{
  * Types disponibles pour le système de filtres
  * @type FilterType
  */
-export type FilterType = 'equals' | 'contains' | 'in' | 'range' | 'date_range';
+type FilterType = 'equals' | 'contains' | 'in' | 'range' | 'date_range';
 
 /**
  * Interface représentant un filtre de recherche

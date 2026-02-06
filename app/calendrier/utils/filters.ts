@@ -1,4 +1,4 @@
-import { Employee, Appointment, Filter, CalendarConfig, DimensionItem, DimensionType, Groupe } from '../types';
+import { Employee, Appointment, Filter, DimensionItem, DimensionType, Groupe } from '../types';
 
 // Types pour l'accès sécurisé aux propriétés
 type EmployeeField = keyof Employee;

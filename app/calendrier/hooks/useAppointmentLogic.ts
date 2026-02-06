@@ -259,6 +259,7 @@ export const useAppointmentLogic = ({
       const appointment = appointmentsRef.current.find((app) => app.id === id);
       if (!appointment) return;
       
+      const previousAppointment = saveToHistory ? { ...appointment } : undefined;
       
       // Si une nouvelle priorité est fournie, réorganiser les priorités avant d'appliquer
       if (newPriority !== undefined) {
@@ -283,7 +284,6 @@ export const useAppointmentLogic = ({
 
       if (days.length === 0) return;
       
-      const previousAppointment = saveToHistory ? { ...appointment } : undefined;
       const createdAppointments: Appointment[] = [];
       
       // Helper pour traiter les jours

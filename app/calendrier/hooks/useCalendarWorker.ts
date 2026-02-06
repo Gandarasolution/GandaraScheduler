@@ -21,7 +21,7 @@ interface WorkerTask {
 interface WorkerResponse {
   taskId: string;
   type: TaskType;
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'ready';
   result?: any;
   error?: string;
 }
