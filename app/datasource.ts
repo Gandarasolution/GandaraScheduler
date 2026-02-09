@@ -2353,8 +2353,40 @@ const Evenements = [
 // ===== GÉNÉRATEUR DE RENDEZ-VOUS =====
 
 /**
+ * Générateur pseudo-aléatoire déterministe (Xorshift32)
+ * Permet d'avoir des rendez-vous toujours identiques pour un seed donné
+ */
+class SeededRandom {
+  private state: number;
+
+  constructor(seed: number) {
+    this.state = seed;
+  }
+
+  /**
+   * Génère un nombre pseudo-aléatoire entre 0 et 1
+   */
+  next(): number {
+    let x = this.state;
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    this.state = x;
+    return ((x >>> 0) / 0xFFFFFFFF);
+  }
+
+  /**
+   * Génère un entier pseudo-aléatoire entre 0 (inclus) et max (exclus)
+   */
+  nextInt(max: number): number {
+    return Math.floor(this.next() * max);
+  }
+}
+
+/**
  * Générateur de rendez-vous sans superposition
  * Garantit qu'aucun rendez-vous ne se chevauche pour chaque employé
+ * Les rendez-vous sont déterministes et tournent autour de la date actuelle
  * @param employees - Liste des employés à planifier
  * @returns Tableau de rendez-vous générés
  */
@@ -2391,11 +2423,16 @@ function generateAppointments(employees: Employee[]): Appointment[] {
   };
 
   employees.forEach((employee) => {
+    // Créer un générateur déterministe unique pour chaque employé
+    // Le seed est basé sur l'ID de l'employé pour garantir la reproductibilité
+    const employeeSeed = 12345 + employee.id;
+    const rng = new SeededRandom(employeeSeed);
+    
     // Stocker en timestamp (number) est plus léger que { start: Date, end: Date }
     const employeeAppointments: { start: number; end: number }[] = [];
 
     for (let week = 0; week < weeksToGenerate; week++) {
-      const weeklyQuota = Math.floor(Math.random() * 3);
+      const weeklyQuota = Math.floor(rng.next() * 3);
       if (weeklyQuota === 0) continue; // Optimisation: skip direct
 
       const isFullWeek = weeklyQuota === 1;
@@ -2416,7 +2453,7 @@ function generateAppointments(employees: Employee[]): Appointment[] {
           attempts++;
 
           // --- LOGIQUE METIER ---
-          const rand = Math.random();
+          const rand = rng.next();
           let typeTarget = 'chantier';
           if (rand >= 0.6 && rand < 0.8) typeTarget = 'absence';
           else if (rand >= 0.8) typeTarget = 'autre';
@@ -2424,17 +2461,17 @@ function generateAppointments(employees: Employee[]): Appointment[] {
           // Sécurité pour éviter la boucle infinie si Evenements est vide
           const candidates = Evenements.filter(e => e.type === typeTarget);
           const selectedEvent = candidates.length > 0 
-            ? candidates[Math.floor(Math.random() * candidates.length)] 
+            ? candidates[rng.nextInt(candidates.length)] 
             : Evenements[0]; // Fallback
 
           appointmentType = typeTarget as any;
           selectedEventId = selectedEvent?.id || 0;
           
-          let duration = isFullWeek ? 5 : (Math.floor(Math.random() * 2) + 1);
+          let duration = isFullWeek ? 5 : (Math.floor(rng.next() * 2) + 1);
           description = `${selectedEvent?.label || 'Event'} (${duration}j)`;
 
           // --- CALCUL DATES (Optimisé) ---
-          const dayOffset = isFullWeek ? 0 : Math.floor(Math.random() * 5); // 0..4 (Lun..Ven)
+          const dayOffset = isFullWeek ? 0 : Math.floor(rng.next() * 5); // 0..4 (Lun..Ven)
           
           // On crée une Date juste pour calculer le jour précis (gestion DST)
           const tempStart = new Date(currentMondayTs);
