@@ -27,6 +27,12 @@ interface LogicProps {
   onUpdate: () => void; // Callback pour forcer le rafraîchissement de l'UI
   setIsSearchOverlayOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setDimensionsSearchInput: React.Dispatch<React.SetStateAction<string>>;
+  // Méthodes de collaboration optionnelles
+  collaboration?: {
+    setAppointment: (appointment: Appointment) => void;
+    deleteAppointment: (appointmentId: number) => void;
+    setAppointments: (appointments: Appointment[]) => void;
+  };
 }
 
 export const useAppointmentLogic = ({ 
@@ -35,7 +41,8 @@ export const useAppointmentLogic = ({
   timelineState, 
   onUpdate,
   setIsSearchOverlayOpen,
-  setDimensionsSearchInput
+  setDimensionsSearchInput,
+  collaboration
 }: LogicProps) => {
   
   // --- Initialisation des Utilitaires ---
@@ -51,6 +58,25 @@ export const useAppointmentLogic = ({
   useEffect(() => {
     timelineStateRef.current = timelineState;
   }, [timelineState]);
+
+  // Helper pour synchroniser avec Yjs
+  const syncWithCollaboration = useCallback((appointment: Appointment) => {
+    if (collaboration) {
+      collaboration.setAppointment(appointment);
+    }
+  }, [collaboration]);
+
+  const syncMultipleWithCollaboration = useCallback((appointments: Appointment[]) => {
+    if (collaboration) {
+      collaboration.setAppointments(appointments);
+    }
+  }, [collaboration]);
+
+  const deleteFromCollaboration = useCallback((appointmentId: number) => {
+    if (collaboration) {
+      collaboration.deleteAppointment(appointmentId);
+    }
+  }, [collaboration]);
 
   // --- États UI nécessaires à la logique ---
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -247,6 +273,9 @@ export const useAppointmentLogic = ({
         saveAppointmentState(newApp, 'create');
       }
       
+      // Sync avec collaboration
+      syncWithCollaboration(newApp);
+      
       onUpdate();
       return newApp;
   }, [appointmentsRef, onUpdate, saveAppointmentState]);
@@ -430,6 +459,10 @@ export const useAppointmentLogic = ({
         }
         
         appointmentsRef.current = appointmentsRef.current.filter((app) => app.id !== id);
+        
+        // Sync avec collaboration
+        deleteFromCollaboration(id);
+        
         onUpdate();
         setIsModalOpen(false);
         setSelectedAppointment(null);

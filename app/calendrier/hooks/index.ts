@@ -30,3 +30,6 @@ export { useCalendarLayout } from './useCalendarLayout';
 export { useCalendarView } from './useCalendarView';
 export { useDataLayer } from './useDataLayer';
 export { useTimeline } from './useTimeline';
+
+// Hooks de collaboration
+export { useCollaboration } from './useCollaboration';

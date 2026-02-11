@@ -100,7 +100,11 @@ export default function HomePage({
     filters: viewState.activeFilters,
     calendarConfig: viewState.currentCalendarConfig,
     globalEmployeesRef,
-    isSearchOverlayOpen: viewState.isSearchOverlayOpen
+    isSearchOverlayOpen: viewState.isSearchOverlayOpen,
+    // Activer la collaboration
+    enableCollaboration: true,
+    userId: user?.id ? String(user.id) : 'anonymous',
+    userName: user?.name || 'Utilisateur'
   });
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
@@ -125,7 +129,13 @@ export default function HomePage({
     timelineState,
     onUpdate: dataLayer.refreshData, // Callback pour rafraichir l'UI après modification des Refs
     setIsSearchOverlayOpen: viewState.setIsSearchOverlayOpen,
-    setDimensionsSearchInput: viewState.setDimensionsSearchInput
+    setDimensionsSearchInput: viewState.setDimensionsSearchInput,
+    // Passer les méthodes de collaboration
+    collaboration: dataLayer.collaboration ? {
+      setAppointment: dataLayer.collaboration.setAppointment,
+      deleteAppointment: dataLayer.collaboration.deleteAppointment,
+      setAppointments: dataLayer.collaboration.setAppointments
+    } : undefined
   });
 
   
@@ -274,6 +284,11 @@ export default function HomePage({
               notifications={notifications}
               handleAddModal={appointmentLogic.handleOpenEditModal}
               onNavigateDate={timeline.goToDate}
+              collaboration={dataLayer.collaboration ? {
+                isConnected: dataLayer.collaboration.isConnected,
+                isSynced: dataLayer.collaboration.isSynced,
+                connectedUsers: dataLayer.collaboration.connectedUsers
+              } : undefined}
             />
           )}
 
