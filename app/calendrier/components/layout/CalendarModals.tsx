@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { 
   Modal, 
@@ -98,7 +98,7 @@ interface CalendarModalsProps {
   };
 }
 
-export const CalendarModals = ({ 
+export const CalendarModals = memo(({ 
   modalsState, 
   handlers, 
   data, 
@@ -144,8 +144,9 @@ export const CalendarModals = ({
         return modalsState.selectedAppointmentForm.id === 0 ? "Modification Évènement" : "Modifier le rendez-vous";
     }
     return "Ajouter un rendez-vous";
-  };
+  };  
 
+  
   return (
     <>
       {/* --- MODALE PRINCIPALE (Formulaire / Répétition / Prolongation) --- */}
@@ -397,4 +398,4 @@ export const CalendarModals = ({
       )}
     </>
   );
-};
+});

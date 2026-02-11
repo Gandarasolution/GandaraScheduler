@@ -24,8 +24,7 @@ import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Item, User } from '../../types';
 import { useCalendarLayout } from '../../hooks/useCalendarLayout';
 import { useCalendarInteractions } from '../../hooks/useCalendarInteractions';
-import MobileCalendarGrid from './MobileCalendar/MobileCalendarGrid';
-import DesktopCalendarGrid from './DesktopCalendarGrid';
+import { DesktopCalendarGrid, MobileCalendar } from '@/app/calendrier/components';
 import { CELL_WIDTH } from '../../utils/constants';
 
 interface CalendarGridProps {
@@ -139,12 +138,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   if (isMobile) {
     return (
-      <MobileCalendarGrid
+      <MobileCalendar
         employees={employees}
         appointments={appointments}
         user={user}
         items={events}
-      ></MobileCalendarGrid>
+      />
     );
   }
 

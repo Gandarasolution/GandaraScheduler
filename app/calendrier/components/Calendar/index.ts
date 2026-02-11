@@ -9,3 +9,4 @@ export { default as AppointmentTag } from './AppointmentTag';
 export { default as DesktopCalendarGrid } from './DesktopCalendarGrid';
 export { default as EmployeeRow } from './EmployeeRow';
 export { default as GroupRow } from './GroupRow';
+export * from './MobileCalendar';

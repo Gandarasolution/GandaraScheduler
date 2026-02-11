@@ -12,6 +12,7 @@ export const useCalendarView = (employeesRef: any) => {
     }
     return def;
   };
+  const [isMobile, setIsMobile] = useState(false);
 
   const [isDisplayWeekend, setIsDisplayWeekend] = useState(() => getStoredBool('isDisplayWeekend', false));
   const [includeWeekend, setIncludeWeekend] = useState(() => getStoredBool('includeWeekend', false));
@@ -19,7 +20,7 @@ export const useCalendarView = (employeesRef: any) => {
   const [isFullDay, setIsFullDay] = useState(() => getStoredBool('isFullDay', false));
   const [respectNonWorkingDays, setRespectNonWorkingDays] = useState(() => getStoredBool('respectNonWorkingDays', false));
   
-  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {    
+  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {
       const saved = window.localStorage.getItem('viewType');
       return (saved as any) || 'calendar';
@@ -28,7 +29,6 @@ export const useCalendarView = (employeesRef: any) => {
   });
 
   // --- États UI Volatiles ---
-  const [isMobile, setIsMobile] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
@@ -64,7 +64,14 @@ export const useCalendarView = (employeesRef: any) => {
 
   // --- Detection Mobile ---
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    const handleResize = () => {
+      const isTrue = window.innerWidth < 640;
+      setIsMobile(isTrue);
+
+      if (isTrue) {
+        setViewType('calendar');
+      }
+    };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);

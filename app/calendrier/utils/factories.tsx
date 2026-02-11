@@ -33,8 +33,8 @@ export const customRenderersFactory = (
             description: '',
             type: chantierItem.type,
             EventId: Number(chantierItem.id),
-            startDate: Date.now(),
-            endDate: new Date().setHours(12, 0, 0, 0),
+            startDate: 0,
+            endDate: 1000,
             employeeId: 0,
           }}
           isFullDay={false}
@@ -49,8 +49,8 @@ export const customRenderersFactory = (
               description: '',
               type: chantierItem.type,
               EventId: Number(chantierItem.id),
-              startDate: Date.now(),
-              endDate: new Date().setHours(12, 0, 0, 0),
+              startDate: 0,
+              endDate: 1000,
               employeeId: 0,
             }
             setSelectedAppointment(newAppointment);

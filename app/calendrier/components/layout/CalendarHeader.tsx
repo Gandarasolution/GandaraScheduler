@@ -4,7 +4,7 @@ import { UserMenu } from '../index';
 import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
 import { Appointment } from '../../types';
-import { use, useEffect } from 'react';
+import { memo, use, useEffect } from 'react';
 
 interface CalendarHeaderProps {
   theme: string;
@@ -15,7 +15,7 @@ interface CalendarHeaderProps {
   onNavigateDate: (date: number) => void;
 }
 
-export const CalendarHeader = ({ 
+export const CalendarHeader = memo(({ 
   theme, 
   user, 
   viewState, 
@@ -386,4 +386,4 @@ export const CalendarHeader = ({
       </div>
     </div>
   );
-};
+});

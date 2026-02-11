@@ -5,9 +5,9 @@
  * @version 1.0.0
  */
 
-export { MobileCalendarGrid } from './MobileCalendarGrid';
+export { MobileCalendar } from './MobileCalendar';
 export { EmployeeSelector } from './EmployeeSelector';
 export { MonthSelector } from './MonthSelector';
-export { CalendarGrid } from './CalendarGrid';
+export { MobileCalendarGrid } from './MobileCalendarGrid';
 export { NotificationPanel } from './NotificationPanel';
-export { default as AppointmentList } from './AppointmentList';
+export { AppointmentList } from './AppointmentList';

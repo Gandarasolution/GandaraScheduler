@@ -32,7 +32,7 @@ import {
 // --- COMPOSANTS UI AVEC CODE SPLITTING ---
 const CalendarGrid = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.CalendarGrid })));
 const DataTableFrame = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.DataTableFrame })));
-const ManualEventsManager = lazy(() => import('../components/ManualEvents').then(mod => ({ default: mod.ManualEventsManager })));
+const ManualEventsManager = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.ManualEventsManager })));
 
 // --- CUSTOM HOOKS ---
 import { useCalendarView } from "../hooks/useCalendarView";
@@ -390,7 +390,7 @@ export default function HomePage({
               repeatData: appointmentLogic.repeatData,
               extendData: appointmentLogic.extendData,
               modalInfo: viewState.modalInfo,
-              selectedAppointmentForm: appointmentLogic.selectedAppointmentForm
+              selectedAppointmentForm: appointmentLogic.selectedAppointmentForm,
             }}
             handlers={{
               closeModal: () => appointmentLogic.setIsModalOpen(false),

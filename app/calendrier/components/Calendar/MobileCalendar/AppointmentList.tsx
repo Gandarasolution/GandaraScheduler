@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Appointment, Item } from '../../../types/index';
 import { Clock } from 'lucide-react';
 
@@ -26,7 +26,7 @@ const AppointmentCard: React.FC<{ app: Appointment, colorClass: string, items: I
   );
 };
 
-const AppointmentList: React.FC<AppointmentListProps> = ({ appointments, selectedDate, items }) => {
+export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointments, selectedDate, items }) => {
   // Helper to check if appointment covers a specific period of a day
   const getAppointmentPeriodForDay = (app: Appointment, targetDate: Date) => {
     const startOfDay = new Date(targetDate);
@@ -130,6 +130,5 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments, selecte
       )}
     </div>
   );
-};
+});
 
-export default AppointmentList;
