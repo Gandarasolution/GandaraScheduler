@@ -11,7 +11,6 @@ import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/fi
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../utils/constants';
 import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
 import { useCalendarWorker } from './useCalendarWorker';
-import { useCollaboration } from './useCollaboration';
 
 
 interface DataLayerProps {
@@ -34,20 +33,6 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
   const itemsRef = useRef<Item[]>(getEvenements());
   const appointmentsRef = useRef<Appointment[]>([]);
   
-  // Données Filtrées (State pour l'UI)
-
-  // Hook de collaboration
-  const collaboration = useCollaboration({
-    docName: 'gandara-appointments',
-    userId,
-    userName,
-    enabled: enableCollaboration,
-    onAppointmentsChange: (appointments) => {
-      // Synchroniser les rendez-vous depuis Yjs
-      appointmentsRef.current = appointments;
-      setAppointmentsVersion(prev => prev + 1);
-    }
-  });
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
   const [availableImages, setAvailableImages] = useState<Image[]>(getImages());
@@ -130,22 +115,6 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     
     preFilterWithWorker();
   }, [worker.isReady, appointmentsVersion, calendarConfig]);
-
-  // Synchronisation initiale avec Yjs
-  useEffect(() => {
-    if (enableCollaboration && collaboration.isSynced && appointmentsRef.current.length > 0) {
-      // Charger les données depuis Yjs ou les synchroniser
-      const yjsAppointments = collaboration.getAppointments();
-      if (yjsAppointments.length === 0) {
-        // Premier client : envoyer les données initiales
-        collaboration.syncInitialData(appointmentsRef.current);
-      } else {
-        // Autres clients : utiliser les données de Yjs
-        appointmentsRef.current = yjsAppointments;
-        setAppointmentsVersion(prev => prev + 1);
-      }
-    }
-  }, [enableCollaboration, collaboration.isSynced]);
     
 
   const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
@@ -349,7 +318,5 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     updateEventImage,
     updateEmployeeImage,
     loadAppointmentsInRange,
-    // Méthodes de collaboration
-    collaboration
   };
 };

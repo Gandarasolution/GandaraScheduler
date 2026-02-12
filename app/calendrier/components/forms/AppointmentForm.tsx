@@ -125,10 +125,27 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);  
    
+  /**
+   * Normalise une couleur en format hexadécimal court (#RRGGBB)
+   * Supprime le canal alpha si présent (#RRGGBBAA -> #RRGGBB)
+   * @param color - Couleur au format hex (#RRGGBB ou #RRGGBBAA)
+   * @returns Couleur normalisée au format #RRGGBB
+   */
+  const normalizeColorForInput = (color: string | undefined): string => {
+    if (!color) return '#1E40AF';
+    // Si la couleur a 9 caractères (#RRGGBBAA), on retire les 2 derniers (canal alpha)
+    if (color.length === 9 && color.startsWith('#')) {
+      return color.substring(0, 7);
+    }
+    return color;
+  };
 
   useEffect(() => {
-    setFormDataItemType(prev => ({ ...prev, image: item?.image }));
-  }, [item]);
+    // Ne mettre à jour que si l'image a réellement changé
+    if (item?.image !== formDataItemType.image) {
+      setFormDataItemType(prev => ({ ...prev, image: item?.image }));
+    }
+  }, [item?.image, formDataItemType.image]);
   
 
   /**
@@ -493,7 +510,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                   <input
                     id="color-fond"
                     type="color"
-                    value={formDataItemType?.color || '#1E40AF'}
+                    value={normalizeColorForInput(formDataItemType?.color)}
                     onChange={(e) => setFormDataItemType(prev => ({ ...prev, color: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de fond"
@@ -513,7 +530,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                   <input
                     id="color-bordure"
                     type="color"
-                    value={formDataItemType?.borderColor || '#1E40AF'}
+                    value={normalizeColorForInput(formDataItemType?.borderColor)}
                     onChange={(e) => setFormDataItemType(prev => ({ ...prev, borderColor: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de bordure"
@@ -534,7 +551,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                   <input
                     id="color-texte"
                     type="color"
-                    value={formDataItemType?.textColor || '#FFFFFF'}
+                    value={normalizeColorForInput(formDataItemType?.textColor)}
                     onChange={(e) => setFormDataItemType(prev => ({ ...prev, textColor: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de texte"

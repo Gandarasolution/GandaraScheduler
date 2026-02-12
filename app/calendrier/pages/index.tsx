@@ -130,12 +130,6 @@ export default function HomePage({
     onUpdate: dataLayer.refreshData, // Callback pour rafraichir l'UI après modification des Refs
     setIsSearchOverlayOpen: viewState.setIsSearchOverlayOpen,
     setDimensionsSearchInput: viewState.setDimensionsSearchInput,
-    // Passer les méthodes de collaboration
-    collaboration: dataLayer.collaboration ? {
-      setAppointment: dataLayer.collaboration.setAppointment,
-      deleteAppointment: dataLayer.collaboration.deleteAppointment,
-      setAppointments: dataLayer.collaboration.setAppointments
-    } : undefined
   });
 
   
@@ -195,8 +189,8 @@ export default function HomePage({
               'Annulé': 'bg-red-100 text-red-800'
             }
           }, 
-          chargeAffaire: { label: 'Chargé Aff.', type: 'combobox' as FilterType }, 
-          chefChantier: { label: 'Chef Ch.', type: 'combobox' as FilterType }
+          chargeAffaire: { label: 'Chargé d\'Affaires', type: 'combobox' as FilterType }, 
+          chefChantier: { label: 'Chef de Chantier', type: 'combobox' as FilterType }
         };
     }
     // Par défaut ou autres vues
@@ -284,11 +278,6 @@ export default function HomePage({
               notifications={notifications}
               handleAddModal={appointmentLogic.handleOpenEditModal}
               onNavigateDate={timeline.goToDate}
-              collaboration={dataLayer.collaboration ? {
-                isConnected: dataLayer.collaboration.isConnected,
-                isSynced: dataLayer.collaboration.isSynced,
-                connectedUsers: dataLayer.collaboration.connectedUsers
-              } : undefined}
             />
           )}
 

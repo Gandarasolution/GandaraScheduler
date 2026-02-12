@@ -8,8 +8,8 @@
  */
 
 // Hooks de notifications
-export { useNotifications } from './useNotifiactions';
-export type { Notification, NotificationsState } from './useNotifiactions';
+export { useNotifications } from './useNotifications';
+export type { Notification, NotificationsState } from './useNotifications';
 
 // Hooks de configuration
 export { useCalendarConfig } from './useCalendarConfig';
@@ -31,5 +31,3 @@ export { useCalendarView } from './useCalendarView';
 export { useDataLayer } from './useDataLayer';
 export { useTimeline } from './useTimeline';
 
-// Hooks de collaboration
-export { useCollaboration } from './useCollaboration';

@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { UserMenu, CollaborationIndicator } from '../index'; 
+import { UserMenu } from '../index'; 
 
 import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
@@ -13,12 +13,6 @@ interface CalendarHeaderProps {
   notifications: any; // Type retourné par useNotifications
   handleAddModal: (appointment: Appointment) => void;
   onNavigateDate: (date: number) => void;
-  // Props pour la collaboration
-  collaboration?: {
-    isConnected: boolean;
-    isSynced: boolean;
-    connectedUsers: Array<{ id: string | number; name: string; color: string }>;
-  };
 }
 
 export const CalendarHeader = memo(({ 
@@ -28,7 +22,6 @@ export const CalendarHeader = memo(({
   notifications, 
   handleAddModal,
   onNavigateDate,
-  collaboration
 }: CalendarHeaderProps) => {
   
   // Déstructuration du viewState pour simplifier l'accès dans le JSX
@@ -275,15 +268,6 @@ export const CalendarHeader = memo(({
                   )}
                 </div>
               </button>
-
-              {/* Indicateur de collaboration */}
-              {collaboration && (
-                <CollaborationIndicator
-                  isConnected={collaboration.isConnected}
-                  isSynced={collaboration.isSynced}
-                  connectedUsers={collaboration.connectedUsers}
-                />
-              )}
 
               {/* Menu Utilisateur */}
               <div className="p-4 transition relative">
