@@ -4,112 +4,30 @@
  */
 
 import { useState, useCallback, useMemo, MutableRefObject } from 'react';
-import { CalendarConfig, Employee } from '../types';
+import { CalendarConfig, Employee, User } from '../types';
+import { getCalendarConfigsByUserId } from '@/app/datasource';
 
 interface UseCalendarConfigProps {
   employees: MutableRefObject<Employee[]>;
+  user: User;
 }
 
-export function useCalendarConfig({ employees }: UseCalendarConfigProps) {
+export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
   const [customConfigs, setCustomConfigs] = useState<CalendarConfig[]>([]);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<CalendarConfig | null>(null);
   const [isCreatingConfig, setIsCreatingConfig] = useState(false);
 
-  // Fonction pour obtenir les configurations disponibles selon les pôles des employés
+  // Fonction pour obtenir les configurations disponibles depuis la base de données
   const getAvailableConfigs = useMemo((): CalendarConfig[] => {
-    const poles = Array.from(new Set(employees.current.map(emp => emp.pole)));
-    const configs: CalendarConfig[] = [];
-
-    // Configuration par pôles (toujours disponible si plusieurs pôles)
-    if (poles.length > 1) {
-      configs.push({
-        id: 2,
-        name: 'Vue par pôles',
-        dimension: 'pole',
-        filters: [],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    // Configurations spécifiques selon les pôles présents
-    if (poles.includes('Technique')) {
-      configs.push({
-        id: 3,
-        name: 'Vue Technique - Par équipes',
-        dimension: 'group',
-        filters: [
-          {
-            id: 'pole-technique',
-            field: 'pole',
-            type: 'equals',
-            value: 'Technique',
-            label: 'Pôle Technique'
-          }
-        ],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    if (poles.includes('Commercial')) {
-      configs.push({
-        id: 4,
-        name: 'Vue Commercial - Par contrats',
-        dimension: 'contract',
-        filters: [
-          {
-            id: 'pole-commercial',
-            field: 'pole',
-            type: 'equals',
-            value: 'Commercial',
-            label: 'Pôle Commercial'
-          }
-        ],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    if (poles.includes('Administrative')) {
-      configs.push({
-        id: 5,
-        name: 'Vue Administrative - Par types',
-        dimension: 'type',
-        filters: [
-          {
-            id: 'pole-administrative',
-            field: 'pole',
-            type: 'equals',
-            value: 'Administrative',
-            label: 'Pôle Administrative'
-          }
-        ],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    if (poles.includes('RH')) {
-      configs.push({
-        id: 6,
-        name: 'Vue RH - Par contrats',
-        dimension: 'contract',
-        filters: [
-          {
-            id: 'pole-rh',
-            field: 'pole',
-            type: 'equals',
-            value: 'RH',
-            label: 'Pôle RH'
-          }
-        ],
-        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-      });
-    }
-
-    // Ajouter les configurations personnalisées
-    configs.push(...customConfigs);
+    // Charger les configurations d'après l'accès utilisateur depuis datasource
+    const userConfigs = getCalendarConfigsByUserId(user.id);
+    
+    // Ajouter les configurations personnalisées créées par l'utilisateur
+    const configs = [...userConfigs, ...customConfigs];
 
     return configs;
-  }, [employees.current.length, customConfigs]);
+  }, [user.id, customConfigs]);
 
   const openConfigModal = useCallback(() => {
     setIsConfigModalOpen(true);

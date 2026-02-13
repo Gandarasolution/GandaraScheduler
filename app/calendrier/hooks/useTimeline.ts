@@ -59,60 +59,56 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
 
 
   // --- **NOUVELLE FONCTION**: Exécution de la navigation vers une date ---
-  const executeGoToDate = useCallback((date: number): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const scrollElement = mainScrollRef.current;      
-      
-      
-      if (!scrollElement) {
-        resolve(false);
-        return;
-      }
-      
-      setIsLoading(true);
+  const executeGoToDate = useCallback((date: number): boolean => {
+    const scrollElement = mainScrollRef.current;      
     
-      if(!days.includes(date)) {
-        const newTimeline = buildWindow(date);
-        setDays(newTimeline);
-      }
-      
-      // Centrage visuel
-      queueMicrotask(() => {
-        requestAnimationFrame(() => {
-            const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
-            if (todayCell && scrollElement) {
-                isAutoScrolling.current = true;
-                
-                // Trouver l'index de la date dans le tableau days
-                const dateIndex = days.indexOf(date);
-                
-                if (dateIndex !== -1) {
-                    // Calculer la position exacte basée sur l'index
-                    const targetLeft = dateIndex * CELL_WIDTH;
-                    
-                    scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
-                } else {
-                    // Fallback si la date n'est pas trouvée
-                    const cellRect = todayCell.getBoundingClientRect();
-                    const containerRect = scrollElement.getBoundingClientRect();
-                    const targetLeft = scrollElement.scrollLeft + cellRect.left - containerRect.left;
-                    scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
-                }
-                
-                setTimeout(() => {
-                    isAutoScrolling.current = false;
-                    isInfiniteScrollEnabled.current = true;
-                    setIsLoading(false);
-                    resolve(true);
-                }, 800);
-            } else {
-                isInfiniteScrollEnabled.current = true;
-                setIsLoading(false);
-                resolve(true);
-            }
-        });
+    
+    if (!scrollElement) {
+      return false;
+    }
+    
+    setIsLoading(true);
+  
+    if(!days.includes(date)) {
+      const newTimeline = buildWindow(date);
+      setDays(newTimeline);
+    }
+    
+    // Centrage visuel
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+          const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
+          if (todayCell && scrollElement) {
+              isAutoScrolling.current = true;
+              
+              // Trouver l'index de la date dans le tableau days
+              const dateIndex = days.indexOf(date);
+              
+              if (dateIndex !== -1) {
+                  // Calculer la position exacte basée sur l'index
+                  const targetLeft = dateIndex * CELL_WIDTH;
+                  
+                  scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
+              } else {
+                  // Fallback si la date n'est pas trouvée
+                  const cellRect = todayCell.getBoundingClientRect();
+                  const containerRect = scrollElement.getBoundingClientRect();
+                  const targetLeft = scrollElement.scrollLeft + cellRect.left - containerRect.left;
+                  scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
+              }
+              
+              setTimeout(() => {
+                  isAutoScrolling.current = false;
+                  isInfiniteScrollEnabled.current = true;
+                  setIsLoading(false);
+              }, 800);
+          } else {
+              isInfiniteScrollEnabled.current = true;
+              setIsLoading(false);
+          }
       });
     });
+    return true;
   }, [isDisplayWeekend, buildWindow]);
 
   useEffect(() => {
@@ -123,17 +119,14 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
   }, [days]);
 
   // --- **FONCTION PUBLIQUE**: Navigation avec retry automatique ---
-  const goToDate = useCallback(async (date: number) => {
+  const goToDate = useCallback((date: number) => {
     
     // Annuler tout retry en cours
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
     }
-
-    // Tentative immédiate
-    const success = await executeGoToDate(date);
-    
+    executeGoToDate(date);
   }, [executeGoToDate]);
 
   // --- **NETTOYAGE**: Annuler les retries au démontage ---

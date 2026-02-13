@@ -1,4 +1,4 @@
-import { Employee, Appointment, Filter, DimensionItem, DimensionType, Groupe } from '../types';
+import { Employee, Appointment, Filter, DimensionItem, Groupe, GroupingLevel, GroupingLevels, FilterCategories } from '../types';
 
 // Types pour l'accès sécurisé aux propriétés
 type EmployeeField = keyof Employee;
@@ -12,6 +12,23 @@ function getEmployeeProperty(employee: Employee, field: string): any {
 // Fonction d'accès sécurisé aux propriétés de rendez-vous
 function getAppointmentProperty(appointment: Appointment, field: string): any {
   return appointment[field as AppointmentField];
+}
+
+// Fonction utilitaire pour extraire tous les filtres de filterCategories
+export function getFlatFilters(filterCategories?: FilterCategories): Filter[] {
+  if (!filterCategories) return [];
+  
+  const allFilters: Filter[] = [];
+  
+  if (filterCategories.personnel) {
+    allFilters.push(...filterCategories.personnel);
+  }
+  
+  if (filterCategories.evenements) {
+    allFilters.push(...filterCategories.evenements.filters);
+  }
+  
+  return allFilters;
 }
 
 // Fonction pour appliquer les filtres aux employés
@@ -93,105 +110,141 @@ export function applyFiltersToAppointments(
   });
 }
 
-// Fonction pour transformer les données selon la dimension
-export function getDimensionItems(
-  dimension: DimensionType, 
-  employees: Employee[], 
-  groups: Groupe[]
-): DimensionItem[] {
-  switch (dimension) {
-    case 'employee':
-      return employees.map(emp => ({
-        id: emp.id,
-        name: emp.name,
-        image: emp.image,
-        group: emp.group,
-        data: emp
-      }));
-    
-    case 'group':
-      return groups.map(group => ({
-        id: group.id,
-        name: group.name,
-        data: group
-      }));
-    
-    case 'contract':
-      // Optimisation: Utiliser Set pour obtenir des valeurs uniques en O(n)
-      const contractTypes = Array.from(new Set(employees.map(emp => emp.type)));
-      return contractTypes.map(type => ({
-        id: type,
-        name: type === 'employee' ? 'CDI' : 'Intérimaire',
-        data: { contract: type }
-      }));
-    
-    case 'type':
-      const types = ['Chantier', 'Absence', 'Autre'];
-      return types.map(type => ({
-        id: type,
-        name: type,
-        data: { type }
-      }));
-    
-    case 'pole':
-      // Optimisation: Utiliser Set pour obtenir des valeurs uniques en O(n)
-      const poles = Array.from(new Set(employees.map(emp => emp.pole).filter((p): p is string => p !== undefined)));
-      return poles.map(pole => ({
-        id: pole,
-        name: pole,
-        data: { pole }
-      }));
-    
-    default:
-      return [];
-  }
+// Interface pour une structure hiérarchique de groupes
+export interface HierarchicalGroupItem {
+  id: string | number;
+  name: string;
+  level: number; // 1 pour level1, 2 pour level2
+  children?: HierarchicalGroupItem[];
+  employees?: Employee[];
+  data?: any;
 }
 
-// Fonction pour regrouper les employés selon la dimension
-export function groupEmployeesByDimension(
-  employees: Employee[], 
-  dimension: DimensionType,
+// Fonction pour obtenir les éléments de dimension avec hiérarchie
+export function getHierarchicalDimensionItems(
+  groupingLevels: GroupingLevels | undefined,
+  employees: Employee[],
+  groups: Groupe[]
+): HierarchicalGroupItem[] {
+  if (!groupingLevels?.level1) {
+    // Pas de grouping défini, retourner une liste plate d'employés
+    return employees.map(emp => ({
+      id: emp.id,
+      name: emp.name,
+      level: 0,
+      employees: [emp],
+      data: emp
+    }));
+  }
+
+  const { level1, level2 } = groupingLevels;
+
+  // Cas 1: Un seul niveau de grouping
+  if (!level2 || level1 === level2) {
+    return getItemsByLevel(level1, employees, groups).map(item => ({
+      ...item,
+      level: 1
+    }));
+  }
+
+  // Cas 2: Deux niveaux de grouping (level1 !== level2)
+  const level1Items = getItemsByLevel(level1, employees, groups);
+  
+  return level1Items.map(level1Item => {
+    // Filtrer les employés appartenant à ce groupe de niveau 1
+    const level1Employees = filterEmployeesByLevel(employees, level1, level1Item.id);
+    
+    // Obtenir les sous-groupes de niveau 2
+    const level2Items = getItemsByLevel(level2, level1Employees, groups);
+    
+    return {
+      ...level1Item,
+      level: 1,
+      children: level2Items.map(level2Item => ({
+        ...level2Item,
+        level: 2
+      }))
+    };
+  });
+}
+
+// Fonction auxiliaire pour obtenir les items selon le type de grouping
+function getItemsByLevel(
+  levelType: GroupingLevel,
+  employees: Employee[],
+  groups: Groupe[]
+): HierarchicalGroupItem[] {
+  if (levelType === 'pole') {
+    const poles = Array.from(new Set(employees.map(emp => emp.pole).filter((p): p is string => p !== undefined)));
+    return poles.map(pole => {
+      const poleEmployees = employees.filter(emp => emp.pole === pole);
+      return {
+        id: pole,
+        name: pole,
+        level: 0, // Sera écrasé par l'appelant
+        employees: poleEmployees,
+        data: { pole }
+      };
+    });
+  } else if (levelType === 'equipe') {
+    return groups.map(group => {
+      const groupEmployees = employees.filter(emp => emp.group?.id === group.id);
+      return {
+        id: group.id,
+        name: group.name,
+        level: 0, // Sera écrasé par l'appelant
+        employees: groupEmployees,
+        data: group
+      };
+    });
+  }
+  return [];
+}
+
+// Fonction auxiliaire pour filtrer les employés selon un niveau
+function filterEmployeesByLevel(
+  employees: Employee[],
+  levelType: GroupingLevel,
+  levelId: string | number
+): Employee[] {
+  if (levelType === 'pole') {
+    return employees.filter(emp => emp.pole === levelId);
+  } else if (levelType === 'equipe') {
+    return employees.filter(emp => emp.group?.id === levelId);
+  }
+  return [];
+}
+
+// Fonction pour regrouper les employés hiérarchiquement
+export function groupEmployeesHierarchically(
+  employees: Employee[],
+  groupingLevels: GroupingLevels | undefined,
   groups: Groupe[]
 ): { [key: string]: Employee[] } {
   const result: { [key: string]: Employee[] } = {};
   
-  switch (dimension) {
-    case 'employee':
-      employees.forEach(emp => {
-        result[emp.id] = [emp];
-      });
-      break;
-    
-    case 'group':
-      employees.forEach(emp => {
-        const groupKey = emp.group ? emp.group.id.toString() : 'no-group';
-        if (!result[groupKey]) result[groupKey] = [];
-        result[groupKey].push(emp);
-      });
-      break;
-    
-    case 'contract':
-      employees.forEach(emp => {
-        // Utiliser le type réel de l'employé comme clé de regroupement
-        const contractKey = emp.type;
-        if (!result[contractKey]) result[contractKey] = [];
-        result[contractKey].push(emp);
-      });
-      break;
-    
-    case 'pole':
-      employees.forEach(emp => {
-        if (!emp.pole) {
-          return;
-        }
-        if (!result[emp.pole]) result[emp.pole] = [];
-        result[emp.pole].push(emp);
-      });
-      break;
-    
-    default:
-      result['all'] = employees;
+  if (!groupingLevels?.level1) {
+    // Pas de grouping, retourner les employés individuellement
+    employees.forEach(emp => {
+      result[emp.id] = [emp];
+    });
+    return result;
+  }
+
+  const hierarchicalItems = getHierarchicalDimensionItems(groupingLevels, employees, groups);
+  
+  // Aplatir la hiérarchie pour créer la structure Record
+  function flattenHierarchy(items: HierarchicalGroupItem[]) {
+    items.forEach(item => {
+      if (item.employees && item.employees.length > 0) {
+        result[item.id] = item.employees;
+      }
+      if (item.children) {
+        flattenHierarchy(item.children);
+      }
+    });
   }
   
+  flattenHierarchy(hierarchicalItems);
   return result;
 }

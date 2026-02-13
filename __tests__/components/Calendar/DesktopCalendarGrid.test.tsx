@@ -26,9 +26,16 @@ const mockEmployees: Employee[] = [
 const mockConfig = {
   id: 1,
   name: 'Default',
-  dimension: 'employee' as const,
-  filters: [],
-  selectedRdvTypes: []
+  groupingLevels: {
+    level1: 'pole' as const
+  },
+  filterCategories: {
+    personnel: [],
+    evenements: {
+      filters: [],
+      selectedRdvTypes: []
+    }
+  },
 };
 
 const defaultProps = {

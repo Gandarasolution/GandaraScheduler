@@ -7,7 +7,7 @@ import {
   initialTeams, 
   getImages
 } from "../../datasource";
-import { applyFiltersToEmployees, applyFiltersToAppointments } from "../utils/filters";
+import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../utils/filters";
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../utils/constants';
 import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
 import { useCalendarWorker } from './useCalendarWorker';
@@ -49,7 +49,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     if (viewType === 'calendar') {
       return applyFiltersToEmployees(
         globalEmployeesRef.current.filter(emp => emp.type === 'employee' || emp.type === 'interim'), 
-        calendarConfig.filters
+        getFlatFilters(calendarConfig.filterCategories)
       );
     }
 
@@ -83,17 +83,23 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     }
     
     // Filtre par type de RDV (logique métier)
-    if (calendarConfig.selectedRdvTypes?.length > 0) {
+    const selectedRdvTypes = calendarConfig.filterCategories?.evenements && 
+      typeof calendarConfig.filterCategories.evenements === 'object' &&
+      'selectedRdvTypes' in calendarConfig.filterCategories.evenements
+      ? calendarConfig.filterCategories.evenements.selectedRdvTypes
+      : [];
+    
+    if (selectedRdvTypes.length > 0) {
          const allTypes = ['Chantier', 'Absence', 'Autre'];
-         const isAllSelected = allTypes.every(t => calendarConfig.selectedRdvTypes.includes(t));
+         const isAllSelected = allTypes.every(t => selectedRdvTypes.includes(t));
          if (!isAllSelected) {
              filtered = filtered.filter(app => {
                  const norm = app.type === 'chantier' ? 'Chantier' : app.type === 'absence' ? 'Absence' : 'Autre';
-                 return calendarConfig.selectedRdvTypes.includes(norm);
+                 return selectedRdvTypes.includes(norm);
              });
          }
     }
-    return applyFiltersToAppointments(filtered, calendarConfig.filters, searchQuery, globalEmployeesRef.current);
+    return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), searchQuery, globalEmployeesRef.current);
   }, [calendarConfig, searchQuery, appointmentsVersion, workerFilteredAppointments]); // Dépend de la version pour rafraichir
   
   // Pré-filtrage avec Web Worker pour améliorer les performances (gros volumes)

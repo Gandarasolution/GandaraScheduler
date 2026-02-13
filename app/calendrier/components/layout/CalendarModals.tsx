@@ -8,11 +8,12 @@ import {
   ConfigurationModal, 
   FilterModal 
 } from '@/app/calendrier/components';
-import { Appointment, Item, Employee, CalendarConfig, Image } from '../../types';
+import { Appointment, Item, Employee, CalendarConfig, Image, User } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/useAppointmentLogic';
 
 interface CalendarModalsProps {
+  user: User;
   modalsState: {
     isModalOpen: boolean;
     isSettingsOpen: boolean;
@@ -99,6 +100,7 @@ interface CalendarModalsProps {
 }
 
 export const CalendarModals = memo(({ 
+  user,
   modalsState, 
   handlers, 
   data, 
@@ -365,6 +367,7 @@ export const CalendarModals = memo(({
       
       {/* --- CONFIGURATION VUES CALENDRIER --- */}
       <ConfigurationModal
+        user={user}
         isOpen={modalsState.isConfigModalOpen}
         onClose={handlers.closeConfigModal}
         availableConfigs={data.availableConfigs}

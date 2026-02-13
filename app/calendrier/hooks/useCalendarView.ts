@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { CalendarConfig } from '../types'; // Assumed type
+import { CalendarConfig, User } from '../types'; // Assumed type
 import { ActiveFilters } from '../utils/searchAndFilterUtils';
 import { useCalendarConfig } from './useCalendarConfig'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../utils/constants';
 
-export const useCalendarView = (employeesRef: any) => {
+export const useCalendarView = (employeesRef: any, user: User) => {
   // --- Préférences persistantes (localStorage) ---
   const getStoredBool = (key: string, def: boolean) => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -41,7 +41,7 @@ export const useCalendarView = (employeesRef: any) => {
   const [dimensionSearchInput, setDimensionsSearchInput] = useState<string>('');
 
   // --- Hook de configuration existant ---
-  const calendarConfigHook = useCalendarConfig({ employees: employeesRef });
+  const calendarConfigHook = useCalendarConfig({ employees: employeesRef, user });
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
 
    // État local pour le menu déroulant des vues

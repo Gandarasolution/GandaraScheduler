@@ -91,7 +91,7 @@ export default function HomePage({
   const globalEmployeesRef = useRef(getEmployees());
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
-  const viewState = useCalendarView(globalEmployeesRef);
+  const viewState = useCalendarView(globalEmployeesRef, user);
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
@@ -385,6 +385,7 @@ export default function HomePage({
 
           {/* Gestion centralisée de toutes les modales */}
           <CalendarModals 
+            user={user}
             modalsState={{
               isModalOpen: appointmentLogic.isModalOpen,
               isSettingsOpen: viewState.isSettingsOpen,

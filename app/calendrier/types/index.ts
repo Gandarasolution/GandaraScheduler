@@ -179,26 +179,54 @@ type FilterType = 'equals' | 'contains' | 'in' | 'range' | 'date_range';
  * @interface Filter
  */
 export interface Filter {
-  /** Identifiant unique du filtre */
-  id: string;
   /** Champ à filtrer (ex: 'contrat', 'groupId', 'type') */
   field: string;
   /** Type de filtre à appliquer */
   type: FilterType;
   /** Valeur du filtre */
   value: any;
-  /** Libellé affiché à l'utilisateur */
-  label: string;
 }
 
-export type DimensionType = 'employee' | 'group' | 'contract' | 'type' | 'pole';
+/**
+ * Catégories de filtres structurées
+ * @interface FilterCategories
+ */
+export interface FilterCategories {
+  /** Filtres appliqués au personnel (pole, équipe, contrat, etc.) */
+  personnel: Filter[];
+  /** Filtres appliqués aux événements (chantier, social, etc.) */
+  evenements: {filters: Filter[], selectedRdvTypes: string[]}; // Types de RDV sélectionnés (Chantier, Absence, Autre)
+}
+
+/**
+ * Niveaux de groupement disponibles
+ * @type GroupingLevel
+ */
+export type GroupingLevel = 'equipe' | 'pole';
+
+/**
+ * Configuration des niveaux de groupement
+ * @interface GroupingLevels
+ */
+export interface GroupingLevels {
+  /** Premier niveau de groupement */
+  level1?: GroupingLevel;
+  /** Deuxième niveau de groupement */
+  level2?: GroupingLevel;
+}
+
 
 export interface CalendarConfig {
   id: number;
   name: string;
-  dimension: DimensionType; // Ce qui s'affiche dans la colonne de gauche
-  filters: Filter[]; // Les filtres appliqués
-  selectedRdvTypes: string[]; // Types de RDV sélectionnés (Chantier, Absence, Autre)
+  /** Image associée à la vue */
+  image?: Image;
+  /** Description de la vue */
+  description?: string;
+  /** Configuration des niveaux de groupement (équipe et pole) */
+  groupingLevels?: GroupingLevels;
+  /** Filtres structurés par catégories */
+  filterCategories?: FilterCategories;
   color?: string;
 }
 

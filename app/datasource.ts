@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Employee, Groupe, Item, Image, poleActivite, BaseItemCategory, MockNotification, User} from './calendrier/types/index';
+import { Appointment, Employee, Groupe, Item, Image, poleActivite, BaseItemCategory, MockNotification, User, CalendarConfig} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -2699,6 +2699,210 @@ export const mockUsers = [
     email: 'stagiaire.rh@gandara.com'
   },
 ];
+
+// ===== CONFIGURATIONS DE VUES CALENDRIER =====
+
+/**
+ * Configuration des vues calendrier disponibles dans le système
+ * Chaque vue définit comment organiser et filtrer les données du calendrier
+ */
+const mockCalendarConfigs: CalendarConfig[] = [
+  // Vue Générale - Tous les employés
+  {
+    id: 1,
+    name: 'Vue Générale',
+    description: 'Vue complète sans filtres, organisée par pôles d\'activité',
+    groupingLevels: {
+      level1: 'pole',
+    },
+    filterCategories: {
+      personnel: [],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue Technique
+  {
+    id: 2,
+    name: 'Vue par équipes',
+    description: 'Vue organisée par équipes',
+    groupingLevels: {
+      level1: 'equipe',
+    },
+    filterCategories: {
+      personnel: [],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue Commercial - Hiérarchie Pôle > Équipe
+  {
+    id: 3,
+    name: 'Vue Commercial - Par équipes',
+    description: 'Organisation hiérarchique du pôle Commercial par équipes',
+    groupingLevels: {
+      level1: 'pole',
+      level2: 'equipe'
+    },
+    filterCategories: {
+      personnel: [
+        {
+          field: 'pole',
+          type: 'equals',
+          value: 'Commercial',
+        }
+      ],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue par Pôles (un seul niveau)
+  {
+    id: 4,
+    name: 'Vue par Pôles',
+    description: 'Organisation simple par pôles d\'activité',
+    groupingLevels: {
+      level1: 'pole'
+    },
+    filterCategories: {
+      personnel: [],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue Administrative
+  {
+    id: 5,
+    name: 'Vue Administrative',
+    description: 'Vue du pôle Administratif',
+    groupingLevels: {
+      level1: 'pole',
+    },
+    filterCategories: {
+      personnel: [
+        {
+          field: 'pole',
+          type: 'equals',
+          value: 'Administrative',
+        }
+      ],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue RH
+  {
+    id: 6,
+    name: 'Vue RH',
+    description: 'Vue du pôle Ressources Humaines',
+    groupingLevels: {
+      level1: 'pole',
+    },
+    filterCategories: {
+      personnel: [
+        {
+          field: 'pole',
+          type: 'equals',
+          value: 'RH',
+        }
+      ],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue Chantiers uniquement
+  {
+    id: 7,
+    name: 'Vue Chantiers',
+    description: 'Vue avec uniquement les chantiers',
+    groupingLevels: {
+      level1: 'pole',
+    },
+    filterCategories: {
+      personnel: [],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier']
+      }
+    },
+  },
+];
+
+/**
+ * Relation entre utilisateurs et leurs vues autorisées
+ * Chaque utilisateur peut avoir accès à une ou plusieurs vues
+ */
+const userCalendarConfigAccess: Record<number, number[]> = {
+  // Admin - Accès à toutes les vues
+  100: [1, 2, 3, 4, 5, 6, 7],
+  
+  // Grégory (Technique) - Accès vues générales et techniques
+  1: [1, 2, 4, 7],
+  
+  // Alexandre (Technique) - Accès vues générales et techniques
+  2: [1, 2, 4, 7],
+  
+  // Lucas (Commercial) - Accès vues générales et commerciales
+  3: [1, 3, 4, 7],
+  
+  // Romain (Commercial) - Accès vues générales et commerciales
+  4: [1, 3, 4, 7],
+  
+  // Fabrice (Administrative) - Accès vues générales et administratives
+  5: [1, 4, 5],
+  
+  // Autres utilisateurs - Vue générale uniquement par défaut
+  11: [1, 2, 4],
+  12: [1, 3, 4],
+};
+
+/**
+ * Récupérer toutes les configurations de vues
+ */
+export const getAllCalendarConfigs = (): CalendarConfig[] => {
+  return mockCalendarConfigs;
+};
+
+/**
+ * Récupérer une configuration par son ID
+ */
+export const getCalendarConfigById = (configId: number): CalendarConfig | undefined => {
+  return mockCalendarConfigs.find(config => config.id === configId);
+};
+
+/**
+ * Récupérer les configurations accessibles pour un utilisateur
+ */
+export const getCalendarConfigsByUserId = (userId: number): CalendarConfig[] => {
+  const configIds = userCalendarConfigAccess[userId] || [1]; // Vue générale par défaut
+  return mockCalendarConfigs.filter(config => configIds.includes(config.id));
+};
+
+/**
+ * Vérifier si un utilisateur a accès à une configuration
+ */
+export const hasAccessToConfig = (userId: number, configId: number): boolean => {
+  const allowedConfigs = userCalendarConfigAccess[userId] || [1];
+  return allowedConfigs.includes(configId);
+};
 
 /**
  * Récupérer un utilisateur par son ID

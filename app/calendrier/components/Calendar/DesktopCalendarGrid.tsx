@@ -23,7 +23,7 @@ import {
   INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE,
   INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER,
 } from '../../utils/constants';
-import { getDimensionItems, groupEmployeesByDimension, applyFiltersToEmployees } from '../../utils/filters';
+import { applyFiltersToEmployees, getHierarchicalDimensionItems, groupEmployeesHierarchically, HierarchicalGroupItem, getFlatFilters } from '../../utils/filters';
 import { isSameDay, isWeekend } from 'date-fns';
 import { getNextWorkedDay, isHoliday } from '../../utils/dates';
 import { getRowId } from '../../utils/domIds';
@@ -45,7 +45,7 @@ interface DragItem {
 }
 
 interface CalendarRowsProps {
-  visibleRows: Array<{ type: 'group' | 'employee', id: string | number, data: any, height: number, start: number, end: number, domId: string }>;
+  visibleRows: Array<{ type: 'group' | 'employee', id: string | number, uniqueKey: string, data: any, height: number, start: number, end: number, domId: string }>;
   dayInTimeline: number[];
   todayIndex: number;
   isFullDay: boolean;
@@ -107,7 +107,7 @@ const CalendarRows = memo(({
 
         return row.type === 'group' ? (
           <GroupRow
-            key={row.id}
+            key={row.uniqueKey}
             {...commonProps}
             itemId={row.id}
             dayInTimeline={dayInTimeline}
@@ -116,7 +116,7 @@ const CalendarRows = memo(({
           />
         ) : (
           <EmployeeRow
-            key={row.id}
+            key={row.uniqueKey}
             {...commonProps}
             employee={row.data}
             dayInTimeline={dayInTimeline}
@@ -221,7 +221,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
 
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
-    return getDimensionItems(calendarConfig.dimension, employees, initialTeams).map(i => i.id);
+    const items = getHierarchicalDimensionItems(calendarConfig.groupingLevels, employees, initialTeams);
+    return items.map(i => i.id);
   });  
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
@@ -255,16 +256,16 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   });
 
   const dimensionItems = useMemo(() => {
-    return getDimensionItems(calendarConfig.dimension, employees, initialTeams);
-  }, [calendarConfig.dimension, employees, initialTeams]);
+    return getHierarchicalDimensionItems(calendarConfig.groupingLevels, employees, initialTeams);
+  }, [calendarConfig.groupingLevels, employees, initialTeams]);
 
   const filteredEmployees = useMemo(() => {
-    return applyFiltersToEmployees(employees, calendarConfig.filters);
-  }, [employees, calendarConfig.filters]);
+    return applyFiltersToEmployees(employees, getFlatFilters(calendarConfig.filterCategories));
+  }, [employees, calendarConfig.filterCategories]);
 
   const employeesByDimension = useMemo(() => {
-    return groupEmployeesByDimension(filteredEmployees, calendarConfig.dimension, initialTeams);
-  }, [filteredEmployees, calendarConfig.dimension, initialTeams]);
+    return groupEmployeesHierarchically(filteredEmployees, calendarConfig.groupingLevels, initialTeams);
+  }, [filteredEmployees, calendarConfig.groupingLevels, initialTeams]);
   
 
   const todayIndex = useMemo(() => {
@@ -274,14 +275,22 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   // Flatten the data structure for virtualization
   const flatRows = useMemo(() => {
-    const rows: Array<{ type: 'group' | 'employee', id: string | number, data: any, height: number }> = [];
+    const rows: Array<{ type: 'group' | 'employee', id: string | number, uniqueKey: string, data: any, height: number }> = [];
     
-    dimensionItems.forEach((item, idx) => {
+    // Fonction récursive pour traiter les items hiérarchiques
+    const processHierarchicalItem = (
+      item: any, 
+      idx: number, 
+      isChild: boolean = false,
+      parentIdx?: number,
+      level: number = 1
+    ) => {
       // Calculate group header height
       let inactiveRowHeight = EMPLOYEE_GROUP_HEADER_HEIGHT;
       
-      if (idx > 0) {
-        const prevItem = dimensionItems[idx - 1];
+      if (idx > 0 && !isChild) {
+        const prevSiblingIdx = isChild && parentIdx !== undefined ? parentIdx : idx - 1;
+        const prevItem = dimensionItems[prevSiblingIdx];
         const isPrevOpen = openItems.includes(prevItem.id);
         
         inactiveRowHeight += MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2;
@@ -290,32 +299,46 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         }
       }
       
-      if (idx !== 0 ) {
+      if (idx !== 0 || isChild) {
         rows.push({
           type: 'group',
           id: item.id,
+          uniqueKey: `group-level${level}-${item.id}`,
           data: item,
           height: inactiveRowHeight 
         });
       }      
       
-      
       if (openItems.includes(item.id)) {
-        const itemEmployees = employeesByDimension[item.id] || [];
-        itemEmployees.forEach(employee => {
-          const baseHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
-          const adjustedHeight = expandedOverlapRows[employee.id]
-            ? baseHeight
-            : Math.min(baseHeight, CELL_HEIGHT + 12);
-
-          rows.push({
-            type: 'employee',
-            id: employee.id,
-            data: employee,
-            height: adjustedHeight
+        // Si l'item a des enfants (niveau 2), les traiter
+        if (item.children && item.children.length > 0) {
+          item.children.forEach((child: any, childIdx: number) => {
+            processHierarchicalItem(child, childIdx, true, idx, level + 1);
           });
-        });
+        } else {
+          // Sinon, afficher les employés
+          const itemEmployees = employeesByDimension[item.id] || [];
+          itemEmployees.forEach(employee => {
+            const baseHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
+            const adjustedHeight = expandedOverlapRows[employee.id]
+              ? baseHeight
+              : Math.min(baseHeight, CELL_HEIGHT + 12);
+
+            rows.push({
+              type: 'employee',
+              id: employee.id,
+              uniqueKey: `employee-${employee.id}`,
+              data: employee,
+              height: adjustedHeight
+            });
+          });
+        }
       }
+    };
+    
+    // Traiter tous les items de dimension
+    dimensionItems.forEach((item, idx) => {
+      processHierarchicalItem(item, idx);
     });
     
     return rows;
@@ -789,10 +812,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   useEffect(() => {
     // On recalcule les IDs basés sur la nouvelle config
-    const currentDimensionItems = getDimensionItems(calendarConfig.dimension, employees, initialTeams);
+    const currentDimensionItems = getHierarchicalDimensionItems(calendarConfig.groupingLevels, employees, initialTeams);
     setOpenItems(currentDimensionItems.map(item => item.id));
     
-  }, [calendarConfig.dimension]);
+  }, [calendarConfig.groupingLevels]);
 
 
 
