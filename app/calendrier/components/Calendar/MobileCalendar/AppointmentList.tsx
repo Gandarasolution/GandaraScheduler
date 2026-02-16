@@ -10,17 +10,37 @@ interface AppointmentListProps {
 
 const AppointmentCard: React.FC<{ app: Appointment, colorClass: string, items: Item[], timeSlot: string }> = ({ app, colorClass, items, timeSlot }) => {
   return (
-    <div className="bg-white rounded-3xl p-5 mb-4 shadow-sm border border-gray-50 flex items-start group hover:shadow-md transition-all duration-300">
+    <div 
+      className="rounded-3xl p-5 mb-4 border flex items-start group transition-all duration-300"
+      style={{
+        backgroundColor: 'var(--bg-card)',
+        boxShadow: 'var(--shadow-sm)',
+        borderColor: 'var(--border-light)'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+      }}
+    >
       <div className={`w-1.5 h-12 rounded-full ${colorClass} mr-4 mt-1`}></div>
       <div className="flex-1">
-        <h3 className="text-gray-800 font-semibold text-base mb-1 group-hover:text-teal-600 transition-colors">{items.find(item => item.id === app.EventId)?.label || 'Rendez-vous'}</h3>
-        <div className="flex items-center text-gray-400 text-xs mb-2">
+        <h3 
+          className="font-semibold text-base mb-1 transition-colors"
+          style={{ color: 'var(--text-primary)' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--color-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--text-primary)';
+          }}
+        >
+          {items.find(item => item.id === app.EventId)?.label || 'Rendez-vous'}
+        </h3>
+        <div className="flex items-center text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
           <span className="capitalize">{app.type}</span>
         </div>
-        {/* <div className="inline-flex items-center bg-gray-50 px-3 py-1 rounded-full">
-          <Clock size={12} className="text-gray-400 mr-1.5" />
-          <span className="text-xs font-medium text-gray-600">{timeSlot}</span>
-        </div> */}
       </div>
     </div>
   );
@@ -91,10 +111,16 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
   if (appointments.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-6 opacity-60">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
+        <div 
+          className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+          style={{ 
+            backgroundColor: 'var(--bg-secondary)',
+            color: 'var(--text-tertiary)'
+          }}
+        >
            <Clock size={32} />
         </div>
-        <p className="text-gray-500 font-medium">Aucun rendez-vous ce jour.</p>
+        <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>Aucun rendez-vous ce jour.</p>
       </div>
     );
   }
@@ -104,7 +130,12 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
       
       {fullDayApps.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Journée complète</h4>
+          <h4 
+            className="text-xs font-bold uppercase tracking-wider mb-3 ml-2"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            Journée complète
+          </h4>
           {fullDayApps.map(app => (
             <AppointmentCard key={app.id} app={app} colorClass="bg-purple-500" items={items} timeSlot="Toute la journée" />
           ))}
@@ -113,7 +144,12 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
       
       {morningApps.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Matin</h4>
+          <h4 
+            className="text-xs font-bold uppercase tracking-wider mb-3 ml-2"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            Matin
+          </h4>
           {morningApps.map(app => (
             <AppointmentCard key={app.id} app={app} colorClass="bg-teal-500" items={items} timeSlot="Matin" />
           ))}
@@ -122,7 +158,12 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
 
       {afternoonApps.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-2">Après-midi</h4>
+          <h4 
+            className="text-xs font-bold uppercase tracking-wider mb-3 ml-2"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            Après-midi
+          </h4>
           {afternoonApps.map(app => (
             <AppointmentCard key={app.id} app={app} colorClass="bg-orange-400" items={items} timeSlot="Après-midi" />
           ))}

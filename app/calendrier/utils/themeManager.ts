@@ -2,13 +2,28 @@
  * @fileoverview Gestionnaire de Thèmes - Changement dynamique de thème
  * 
  * Ce module permet de:
+ * - Détecter automatiquement le thème du navigateur (clair/sombre)
+ * - Synchroniser avec les changements de préférence système
  * - Changer le thème de l'application (clair/sombre/client)
- * - Sauvegarder les préférences utilisateur
- * - Détecter automatiquement le thème système
  * - Appliquer les thèmes personnalisés par client
+ * - Utiliser le thème de l'utilisateur (user.theme) comme source de vérité
+ * 
+ * ORDRE DE PRIORITÉ :
+ * 1. NAVIGATEUR (prefers-color-scheme) - TOUJOURS EN PREMIER
+ *    - Si dark → forcer dark (fin, pas de choix utilisateur)
+ *    - Si light → continuer à l'étape 2
+ * 
+ * 2. USER.THEME (si navigateur light uniquement)
+ *    - Utiliser user.theme si valide ET différent de 'dark'
+ *    - Si user.theme est 'dark' → ignorer et continuer à l'étape 3
+ * 
+ * 3. LOCALSTORAGE (fallback si user.theme absent/invalide)
+ *    - Utiliser localStorage si valide ET différent de 'dark'
+ * 
+ * 4. LIGHT PAR DÉFAUT (si rien trouvé)
  * 
  * @author Gandara Solutions
- * @version 1.0.0
+ * @version 2.3.0
  */
 
 // ============================================================================
@@ -36,6 +51,8 @@ export interface ThemeConfig {
 // ============================================================================
 // CONSTANTES
 // ============================================================================
+
+const STORAGE_KEY = 'gandara-theme-preference';
 
 export const AVAILABLE_THEMES: Record<ThemeType, ThemeConfig> = {
   light: {
@@ -98,8 +115,10 @@ class ThemeManager {
   private currentTheme: ThemeType = 'light';
   private systemThemeListener: MediaQueryList | null = null;
   private observers: Set<(theme: ThemeType) => void> = new Set();
+  private user: User | undefined;
 
-  constructor() {
+  constructor(user?: User) {
+    this.user = user;
     if (typeof window !== 'undefined') {
       this.initialize();
     }
@@ -107,10 +126,41 @@ class ThemeManager {
 
   /**
    * Initialise le gestionnaire de thème
+   * 
+   * ORDRE DE PRIORITÉ :
+   * 1. NAVIGATEUR (prefers-color-scheme) - Vérifié en premier
+   * 2. USER.THEME - Si navigateur light
+   * 3. LOCALSTORAGE - Fallback
+   * 4. LIGHT - Par défaut
+   * 
+   * OPTIMISATION: Synchronise avec le thème déjà appliqué par le script inline (pas de re-render)
    */
   private initialize(): void {
-    // Appliquer le thème par défaut
-    this.applyTheme('light');
+    // PRIORITÉ 1 : Vérifier la config du navigateur EN PREMIER
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // Lire le thème déjà appliqué au DOM par le script inline
+    const currentDataTheme = document.documentElement.getAttribute('data-theme');
+    
+    if (prefersDark) {
+      // Navigateur en dark → FORCER dark, ignorer toute autre logique
+      this.currentTheme = 'dark';
+      if (currentDataTheme !== 'dark') {
+        this.applyThemeToDOM('dark');
+      }
+    } else {
+      // Navigateur en light → Appliquer la logique user.theme / localStorage
+      // PRIORITÉ 2, 3, 4 : user.theme > localStorage > 'light'
+      const userPref = this.getUserPreference();
+      const theme = (userPref && userPref !== 'dark') ? userPref : 'light';
+      this.currentTheme = theme;
+      
+      // Vérifier que le DOM est cohérent avec la préférence
+      const expectedDataTheme = theme === 'light' ? null : theme;
+      if (currentDataTheme !== expectedDataTheme) {
+        this.applyThemeToDOM(theme);
+      }
+    }
 
     // Écouter les changements du thème système
     this.setupSystemThemeListener();
@@ -118,12 +168,86 @@ class ThemeManager {
 
   /**
    * Configure l'écoute des changements du thème système
+   * 
+   * PRIORITÉ NAVIGATEUR : Quand le navigateur change de thème, on réapplique la hiérarchie complète
+   * 1. Si changement vers dark → forcer dark
+   * 2. Si changement vers light → appliquer logique (user.theme > localStorage > light)
    */
   private setupSystemThemeListener(): void {
     if (typeof window === 'undefined') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     this.systemThemeListener = mediaQuery;
+    
+    // Écouter les changements de préférence système
+    const handler = (e: MediaQueryListEvent) => {
+      // PRIORITÉ 1 : Vérifier le navigateur
+      if (e.matches) {
+        // Changement vers dark → forcer dark (ignorer user.theme)
+        this.applyTheme('dark');
+      } else {
+        // Changement vers light → charger la logique user.theme / localStorage
+        const userPref = this.getUserPreference();
+        const theme = (userPref && userPref !== 'dark') ? userPref : 'light';
+        this.applyTheme(theme);
+      }
+    };
+    
+    // Support pour les anciennes et nouvelles API
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handler);
+    } else {
+      // Fallback pour les anciens navigateurs
+      mediaQuery.addListener(handler);
+    }
+  }
+
+  /**
+   * Récupère la préférence thème selon la hiérarchie
+   * 
+   * ORDRE (appelé UNIQUEMENT si navigateur en light) :
+   * 1. user.theme - Source de vérité principale
+   * 2. localStorage - Fallback pour persistance
+   * 3. null - Aucune préférence (utilisera 'light' par défaut)
+   * 
+   * Note: Cette fonction n'est jamais appelée si navigateur en dark
+   */
+  private getUserPreference(): ThemeType | null {
+    // Priorité 2 (après navigateur) : Thème de l'utilisateur
+    if (this.user && this.user.theme) {
+      const userTheme = this.user.theme as string;
+      if (this.isValidTheme(userTheme)) {
+        return userTheme as ThemeType;
+      }
+    }
+    
+    // Priorité 3 : LocalStorage (fallback)
+    if (typeof window === 'undefined') return null;
+    
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored && this.isValidTheme(stored)) {
+        return stored as ThemeType;
+      }
+    } catch (error) {
+      console.warn('Impossible de lire la préférence de thème:', error);
+    }
+    
+    // Priorité 4 : Aucune préférence (light par défaut)
+    return null;
+  }
+
+  /**
+   * Sauvegarde la préférence utilisateur dans localStorage
+   */
+  private saveUserPreference(theme: ThemeType): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      localStorage.setItem(STORAGE_KEY, theme);
+    } catch (error) {
+      console.warn('Impossible de sauvegarder la préférence de thème:', error);
+    }
   }
 
   /**
@@ -161,12 +285,30 @@ class ThemeManager {
 
   /**
    * Applique un thème spécifique
-   * Le thème est maintenant géré par la prop user, pas de sauvegarde locale
+   * 
+   * IMPORTANT : Vérifie toujours la config navigateur avant d'appliquer
+   * - Si navigateur dark → ignore la demande et force dark
+   * - Si navigateur light → applique et sauvegarde (sauf si dark demandé)
    */
   public applyTheme(theme: ThemeType): void {
-    this.currentTheme = theme;
-    this.applyThemeToDOM(theme);
+    // Vérifier la config navigateur avant tout
+    const prefersDark = typeof window !== 'undefined' && 
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
     
+    if (prefersDark) {
+      // Navigateur en dark → forcer dark, ignorer la demande
+      this.currentTheme = 'dark';
+      this.applyThemeToDOM('dark');
+      return;
+    }
+    
+    // Navigateur en light → appliquer le thème demandé (sauf dark)
+    const finalTheme = theme === 'dark' ? 'light' : theme;
+    this.currentTheme = finalTheme;
+    this.applyThemeToDOM(finalTheme);
+    
+    // Sauvegarder dans localStorage pour persistance
+    this.saveUserPreference(finalTheme);
   }
 
   /**
@@ -225,20 +367,22 @@ class ThemeManager {
 // ============================================================================
 // EXPORT DE L'INSTANCE SINGLETON
 // ============================================================================
-
-export const themeManager = new ThemeManager();
+ 
 
 // ============================================================================
 // HOOKS POUR REACT
 // ============================================================================
 
 import { useEffect, useState } from 'react';
+import { User } from '../types';
 
 /**
  * Hook React pour utiliser le thème actuel
  */
-export function useTheme() {
-  const [theme, setTheme] = useState<ThemeType>(() => {
+export function useTheme(user?: User) {
+  const [themeManager] = useState(() => new ThemeManager(user));
+
+  const [theme, setThemeState] = useState<ThemeType>(() => {
     if (typeof window !== 'undefined') {
       return themeManager.getCurrentTheme();
     }
@@ -248,11 +392,11 @@ export function useTheme() {
   useEffect(() => {
     // S'abonner aux changements de thème
     const unsubscribe = themeManager.subscribe((newTheme) => {
-      setTheme(newTheme);
+      setThemeState(newTheme);
     });
 
     return unsubscribe;
-  }, []);
+  }, [themeManager]);
 
   return {
     theme,
@@ -267,31 +411,3 @@ export function useTheme() {
 // FONCTIONS UTILITAIRES
 // ============================================================================
 
-/**
- * Change le thème de l'application
- */
-export function setTheme(theme: ThemeType): void {
-  themeManager.applyTheme(theme);
-}
-
-/**
- * Récupère le thème actuel
- */
-export function getCurrentTheme(): ThemeType {
-  return themeManager.getCurrentTheme();
-}
-
-/**
- * Bascule entre clair et sombre
- */
-export function toggleTheme(): void {
-  themeManager.toggleTheme();
-}
-
-/**
- * Vérifie si le thème actuel est sombre
- */
-export function isDarkTheme(): boolean {
-  const effectiveTheme = themeManager.getEffectiveTheme();
-  return effectiveTheme === 'dark';
-}

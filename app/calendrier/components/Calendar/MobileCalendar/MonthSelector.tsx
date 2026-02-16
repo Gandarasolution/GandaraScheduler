@@ -25,21 +25,38 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, onCha
     <div className="flex items-center justify-between px-4 py-4 w-full">
       <button 
         onClick={handlePrev}
-        className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
+        className="p-2 rounded-full transition-colors"
+        style={{ color: 'var(--text-secondary)' }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }}
         aria-label="Mois précédent"
       >
         <ChevronLeft size={24} />
       </button>
       
       <div className="flex flex-col items-center">
-        <h2 className="text-xl font-bold text-gray-800 uppercase tracking-widest capitalize">
+        <h2 
+          className="text-xl font-bold uppercase tracking-widest capitalize"
+          style={{ color: 'var(--text-primary)' }}
+        >
           {format(currentDate, 'MMMM yyyy', { locale: fr })}
         </h2>
       </div>
 
       <button 
         onClick={handleNext}
-        className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
+        className="p-2 rounded-full transition-colors"
+        style={{ color: 'var(--text-secondary)' }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }}
         aria-label="Mois suivant"
       >
         <ChevronRight size={24} />

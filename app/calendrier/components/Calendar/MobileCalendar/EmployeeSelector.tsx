@@ -120,41 +120,89 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     <div className="px-6 mb-6 relative z-5" ref={wrapperRef}>
       {/* Bouton de sélection */}
       <div 
-        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1 flex items-center cursor-pointer hover:shadow-md transition-shadow"
+        className="rounded-2xl border p-1 flex items-center cursor-pointer transition-shadow"
+        style={{
+          backgroundColor: 'var(--bg-card)',
+          boxShadow: 'var(--shadow-sm)',
+          borderColor: 'var(--border-light)'
+        }}
         onClick={() => setIsOpen(!isOpen)}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+        }}
       >
-        <div className="bg-teal-50 rounded-xl p-2.5 text-teal-600 mr-3">
+        <div 
+          className="rounded-xl p-2.5 mr-3"
+          style={{
+            backgroundColor: 'var(--color-primary-lighter)',
+            color: 'var(--color-primary)'
+          }}
+        >
           <Search size={20} />
         </div>
         
         <div className="flex-1">
-          <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Employé</p>
-          <p className="text-sm font-semibold text-gray-800 truncate">
+          <p 
+            className="text-xs font-medium uppercase tracking-wide"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            Employé
+          </p>
+          <p 
+            className="text-sm font-semibold truncate"
+            style={{ color: 'var(--text-primary)' }}
+          >
             {selectedEmployee ? `${selectedEmployee.name} ${selectedEmployee.firstName}` : 'Sélectionner...'}
           </p>
         </div>
 
-        <div className="p-2 text-gray-400">
+        <div className="p-2" style={{ color: 'var(--text-tertiary)' }}>
           <ChevronDown size={20} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
         </div>
       </div>
 
       {/* Panel de sélection */}
       {isOpen && (
-        <div className="absolute left-6 right-6 top-full mt-2 bg-white rounded-3xl shadow-xl p-4 border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-96">
+        <div 
+          className="absolute left-6 right-6 top-full mt-2 rounded-3xl p-4 border overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-96"
+          style={{
+            backgroundColor: 'var(--bg-card)',
+            boxShadow: 'var(--shadow-xl)',
+            borderColor: 'var(--border-light)'
+          }}
+        >
           {/* Barre de recherche */}
-          <div className="sticky top-0 bg-white pb-3 border-b border-gray-100 mb-3">
+          <div 
+            className="sticky top-0 pb-3 border-b mb-3"
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              borderColor: 'var(--border-light)'
+            }}
+          >
             <input 
               type="text"
               placeholder="Rechercher un employé..."
-              className="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+              className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.outline = '2px solid var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.outline = 'none';
+              }}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onClick={(e) => e.stopPropagation()}
               autoFocus
             />
             {search && (
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
                 {searchResults.length} résultat{searchResults.length > 1 ? 's' : ''}
               </p>
             )}
@@ -166,7 +214,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             {validRecentEmployees.length > 0 && !search && (
               <EmployeeGroup
                 title="Récents"
-                icon={<Clock size={14} className="text-teal-500" />}
+                icon={<Clock size={14} style={{ color: 'var(--color-primary)' }} />}
                 employees={validRecentEmployees}
                 isExpanded={expandedGroups.has('récents')}
                 onToggle={() => toggleGroup('récents')}
@@ -181,7 +229,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               <EmployeeGroup
                 key={groupName}
                 title={groupName}
-                icon={<Users size={14} className="text-gray-400" />}
+                icon={<Users size={14} style={{ color: 'var(--text-tertiary)' }} />}
                 employees={groupEmployees}
                 isExpanded={expandedGroups.has(groupName)}
                 onToggle={() => toggleGroup(groupName)}
@@ -192,7 +240,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             
             {/* Message si aucun résultat */}
             {searchResults.length === 0 && (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8" style={{ color: 'var(--text-tertiary)' }}>
                 <Search size={32} className="mx-auto mb-2 opacity-40" />
                 <p className="text-sm font-medium">Aucun employé trouvé</p>
                 <p className="text-xs mt-1">Essayez un autre terme de recherche</p>
@@ -234,16 +282,28 @@ const EmployeeGroup: React.FC<EmployeeGroupProps> = ({
         e.stopPropagation();
         onToggle();
       }}
-      className="flex items-center justify-between w-full px-2 py-1 hover:bg-gray-50 rounded-lg transition-colors mb-2"
+      className="flex items-center justify-between w-full px-2 py-1 rounded-lg transition-colors mb-2"
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }}
     >
       <div className="flex items-center gap-2">
         {icon}
-        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{title}</span>
-        <span className="text-xs text-gray-400">({employees.length})</span>
+        <span 
+          className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          {title}
+        </span>
+        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>({employees.length})</span>
       </div>
       <ChevronDown 
         size={16} 
-        className={`text-gray-400 transition-transform ${isExpanded ? '' : '-rotate-90'}`}
+        className={`transition-transform ${isExpanded ? '' : '-rotate-90'}`}
+        style={{ color: 'var(--text-tertiary)' }}
       />
     </button>
     
@@ -276,11 +336,26 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
   return (
   <div 
     onClick={() => onSelect(employee)}
-    className={`flex items-center p-2 rounded-xl cursor-pointer transition-colors ${
-      isSelected ? 'bg-teal-50 border border-teal-200' : 'hover:bg-gray-50'
-    }`}
+    className="flex items-center p-2 rounded-xl cursor-pointer transition-colors border"
+    style={{
+      backgroundColor: isSelected ? 'var(--color-primary-lighter)' : 'transparent',
+      borderColor: isSelected ? 'var(--color-primary)' : 'transparent'
+    }}
+    onMouseEnter={(e) => {
+      if (!isSelected) {
+        e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+      }
+    }}
+    onMouseLeave={(e) => {
+      if (!isSelected) {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }
+    }}
   >
-    <div className="relative w-9 h-9 rounded-full overflow-hidden mr-3 border border-gray-200 flex-shrink-0">
+    <div 
+      className="relative w-9 h-9 rounded-full overflow-hidden mr-3 border flex-shrink-0"
+      style={{ borderColor: 'var(--border-light)' }}
+    >
       <img 
         src={avatarUrl}
         alt={`${employee.name} ${employee.firstName}`}
@@ -292,30 +367,39 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
     </div>
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-2">
-        <p className={`text-sm font-medium truncate ${
-          isSelected ? 'text-teal-700' : 'text-gray-700'
-        }`}>
+        <p 
+          className="text-sm font-medium truncate"
+          style={{ 
+            color: isSelected ? 'var(--color-primary-dark)' : 'var(--text-primary)' 
+          }}
+        >
           {employee.name} {employee.firstName}
         </p>
         {showBadge && (
-          <span className="flex-shrink-0 px-1.5 py-0.5 bg-teal-100 text-teal-700 text-[10px] font-semibold rounded">
+          <span 
+            className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded"
+            style={{
+              backgroundColor: 'var(--color-primary-lighter)',
+              color: 'var(--color-primary-dark)'
+            }}
+          >
             Récent
           </span>
         )}
       </div>
       <div className="flex items-center gap-2 mt-0.5">
-        <p className="text-xs text-gray-400">
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
           {employee.type === 'interim' ? 'Intérimaire' : 'Employé'}
         </p>
         {employee.code && (
           <>
-            <span className="text-gray-300">•</span>
-            <p className="text-xs text-gray-400">{employee.code}</p>
+            <span style={{ color: 'var(--border-light)' }}>•</span>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{employee.code}</p>
           </>
         )}
       </div>
     </div>
-    {isSelected && <Check size={18} className="text-teal-500 flex-shrink-0" />}
+    {isSelected && <Check size={18} className="flex-shrink-0" style={{ color: 'var(--color-primary)' }} />}
   </div>
   );
 };

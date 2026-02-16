@@ -12,27 +12,52 @@ export default function Home() {
 
   const [user, setUser] = useState<User | undefined>(() => getUserById(100));
 
-  const { theme, setTheme, availableThemes } = useTheme();
+  const { setTheme } = useTheme(user);
   
   // Fonction pour changer le thème et mettre à jour l'objet user
+  // RÈGLE: Si navigateur dark → ne pas sauvegarder les changements (dark forcé)
   const handleThemeChange = useCallback((newTheme: ThemeType) => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (prefersDark) {
+      // Navigateur en dark → forcer dark, ignorer la demande de changement
+      setTheme('dark');
+      return;
+    }
+    
+    // Navigateur en light → bloquer le thème dark, autoriser les autres
+    const finalTheme = newTheme === 'dark' ? 'light' : newTheme;
+    
     // 1. Mettre à jour l'objet user
     setUser(prevUser => prevUser ? ({
       ...prevUser,
-      theme: newTheme
+      theme: finalTheme
     }) : prevUser);
     
     // 2. Appliquer le thème visuellement
-    setTheme(newTheme);
+    setTheme(finalTheme);
     
     // 3. TODO: Sauvegarder sur le backend
-    // await updateUserTheme(user.id, newTheme);
+    // await updateUserTheme(user.id, finalTheme);
   }, [setTheme]);
   
-  // Appliquer le thème initial au chargement
+  // Synchroniser le thème de l'utilisateur avec localStorage au chargement
+  // Cela garantit que le script inline dans layout.tsx aura la bonne valeur au prochain chargement
   useEffect(() => {
-    if (user) {
-      setTheme(user.theme as ThemeType);
+    if (!user) return;
+    
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (prefersDark) {
+      // Navigateur en dark → forcer dark
+      setTheme('dark');
+    } else {
+      // Navigateur en light → appliquer le thème de l'utilisateur (sauf dark)
+      const userTheme = user.theme as ThemeType;
+      const finalTheme = userTheme === 'dark' ? 'light' : userTheme;
+      
+      // Appliquer le thème (sauvegarde automatiquement dans localStorage)
+      setTheme(finalTheme);
     }
   }, [user, setTheme]);
 
