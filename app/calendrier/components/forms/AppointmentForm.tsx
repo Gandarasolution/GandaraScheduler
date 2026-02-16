@@ -22,6 +22,8 @@ import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 
 import { AppointmentItem } from '../index';
 
+const MAX_LENGTH_TAG = 20; // Longueur maximale pour les étiquettes
+
 /**
  * Interface définissant les propriétés du composant AppointmentForm
  * @interface AppointmentFormProps
@@ -746,15 +748,19 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             
             {/* Input pour ajouter une étiquette */}
             <div className="flex gap-2">
-              <input
-                type="text"
-                value={newTag.name}
-                onChange={(e) => setNewTag({id: 0, name: e.target.value})}
-                onKeyPress={handleTagKeyPress}
-                placeholder="Nouvelle étiquette..."
-                className="flex-1 px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                maxLength={20}
-              />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={newTag.name}
+                  onChange={(e) => setNewTag({id: 0, name: e.target.value})}
+                  onKeyPress={handleTagKeyPress}
+                  placeholder="Nouvelle étiquette..."
+                  className="flex-1 px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                  maxLength={MAX_LENGTH_TAG}
+                />
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400">{newTag.name.length}/{MAX_LENGTH_TAG}</span>
+              </div>
+
               <button
                 type="button"
                 onClick={handleAddTag}

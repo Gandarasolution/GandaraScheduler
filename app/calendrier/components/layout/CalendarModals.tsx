@@ -143,7 +143,7 @@ export const CalendarModals = memo(({
     if (modalsState.repeatData) return "Répéter ce rendez-vous";
     if (modalsState.extendData) return "Prolonger le rendez-vous";
     if (modalsState.selectedAppointmentForm) {
-        return modalsState.selectedAppointmentForm.id === 0 ? "Modification Évènement" : "Modifier le rendez-vous";
+        return modalsState.selectedAppointmentForm.id === 0 ? "Modification la ressource" : "Modifier l'Évènement";
     }
     return "Ajouter un rendez-vous";
   };  
