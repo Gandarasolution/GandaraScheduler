@@ -195,7 +195,7 @@ export interface FilterCategories {
   /** Filtres appliqués au personnel (pole, équipe, contrat, etc.) */
   personnel: Filter[];
   /** Filtres appliqués aux événements (chantier, social, etc.) */
-  evenements: {filters: Filter[], selectedRdvTypes: string[]}; // Types de RDV sélectionnés (Chantier, Absence, Autre)
+  evenements: {filters: Filter[], selectedRdvTypes: string[]} | []; // Types de RDV sélectionnés (Chantier, Absence, Autre)
 }
 
 /**

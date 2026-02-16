@@ -24,7 +24,7 @@ export function getFlatFilters(filterCategories?: FilterCategories): Filter[] {
     allFilters.push(...filterCategories.personnel);
   }
   
-  if (filterCategories.evenements) {
+  if (filterCategories.evenements && !Array.isArray(filterCategories.evenements)) {
     allFilters.push(...filterCategories.evenements.filters);
   }
   

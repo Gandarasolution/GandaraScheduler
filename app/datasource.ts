@@ -2755,7 +2755,7 @@ const mockCalendarConfigs: CalendarConfig[] = [
         {
           field: 'pole',
           type: 'equals',
-          value: 'Commercial',
+          value: 'Commercial'
         }
       ],
       evenements: {
@@ -2795,7 +2795,7 @@ const mockCalendarConfigs: CalendarConfig[] = [
         {
           field: 'pole',
           type: 'equals',
-          value: 'Administrative',
+          value: 'Administrative'
         }
       ],
       evenements: {
@@ -2818,7 +2818,7 @@ const mockCalendarConfigs: CalendarConfig[] = [
         {
           field: 'pole',
           type: 'equals',
-          value: 'RH',
+          value: 'RH'
         }
       ],
       evenements: {

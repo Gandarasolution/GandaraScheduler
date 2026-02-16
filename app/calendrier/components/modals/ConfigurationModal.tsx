@@ -178,9 +178,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   </p>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs bg-[#009580]/10 px-2 py-1 rounded-full text-[#009580] font-medium">
-                    {currentConfig.dimension}
-                  </span>
                   {currentConfig.groupingLevels && (
                     <span className="text-xs bg-blue-50 px-2 py-1 rounded-full text-blue-600 font-medium">
                       {currentConfig.groupingLevels.level1 && `Niv.1: ${currentConfig.groupingLevels.level1}`}
@@ -255,13 +252,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         <p className="text-xs text-gray-500 mb-2">{config.description}</p>
                       )}
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-600 font-medium">
-                          {config.dimension === 'employee' ? 'Par employé' :
-                           config.dimension === 'group' ? 'Par équipe' :
-                           config.dimension === 'pole' ? 'Par pôle' :
-                           config.dimension === 'contract' ? 'Par type de contrat' :
-                           config.dimension === 'type' ? 'Par type de contrat' : config.dimension}
-                        </span>
                         {config.groupingLevels && (
                           <span className="text-xs bg-blue-50 px-3 py-1 rounded-full text-blue-600 font-medium">
                             {config.groupingLevels.level1 && `Niv.1: ${config.groupingLevels.level1}`}
@@ -270,27 +260,16 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         )}
                         {config.filterCategories && (
                           (() => {
-                            const totalFilters = (config.filterCategories.personnel?.length || 0) + (config.filterCategories.evenements?.length || 0);
+                            const evenementsFiltersCount = !Array.isArray(config.filterCategories.evenements) 
+                              ? config.filterCategories.evenements?.filters?.length || 0 
+                              : 0;
+                            const totalFilters = (config.filterCategories.personnel?.length || 0) + evenementsFiltersCount;
                             return totalFilters > 0 && (
                               <span className="text-xs bg-orange-50 px-3 py-1 rounded-full text-orange-600 font-medium">
                                 {totalFilters} filtre{totalFilters > 1 ? 's' : ''}
                               </span>
                             );
                           })()
-                        )}
-                        {config.filterCategories && (
-                          <>
-                            {config.filterCategories.personnel.length > 0 && (
-                              <span className="text-xs bg-blue-50 px-3 py-1 rounded-full text-blue-600 font-medium">
-                                {config.filterCategories.personnel.length} Personnel
-                              </span>
-                            )}
-                            {config.filterCategories.evenements.length > 0 && (
-                              <span className="text-xs bg-purple-50 px-3 py-1 rounded-full text-purple-600 font-medium">
-                                {config.filterCategories.evenements.length} Événements
-                              </span>
-                            )}
-                          </>
                         )}
                         {config.filterCategories?.evenements &&
                          typeof config.filterCategories.evenements === 'object' &&
@@ -553,15 +532,14 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     {filterCategories.personnel.length > 0 ? (
                       <div className="space-y-2">
                         {filterCategories.personnel.map((filter) => (
-                          <div key={filter.id} className="flex items-center justify-between bg-blue-50 p-2 rounded-lg">
-                            <span className="text-sm text-gray-700">{filter.label}</span>
+                          <div key={filter.value + filter.field} className="flex items-center justify-between bg-blue-50 p-2 rounded-lg">
                             <button
                               onClick={() => {
                                 setFilterCategories({
                                   ...filterCategories,
-                                  personnel: filterCategories.personnel.filter(f => f.id !== filter.id)
+                                  personnel: filterCategories.personnel.filter(f => f.value !== filter.value || f.field !== filter.field)
                                 });
-                                setConfigFilters(configFilters.filter(f => f.id !== filter.id));
+                                setConfigFilters(configFilters.filter(f => f.value !== filter.value || f.field !== filter.field));
                               }}
                               className="text-red-500 hover:text-red-700"
                             >
@@ -582,12 +560,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       onClick={() => {
                         // Logique pour ajouter un filtre personnel
                         const newFilter: Filter = {
-                          id: `filter-personnel-${Date.now()}`,
                           field: 'pole',
                           type: 'equals',
                           value: '',
-                          label: 'Nouveau filtre personnel',
-                          category: 'personnel'
                         };
                         setFilterCategories({
                           ...filterCategories,
@@ -703,21 +678,25 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     </div>
 
                     {/* Autres filtres événements personnalisés */}
-                    {filterCategories.evenements.length > 0 && (
+                    {!Array.isArray(filterCategories.evenements) && filterCategories.evenements.filters.length > 0 && (
                       <>
                         <hr className="my-3" />
                         <p className="text-xs text-gray-500 mb-2 font-medium">Filtres personnalisés</p>
                         <div className="space-y-2">
-                          {filterCategories.evenements.map((filter) => (
-                            <div key={filter.id} className="flex items-center justify-between bg-purple-50 p-2 rounded-lg">
-                              <span className="text-sm text-gray-700">{filter.label}</span>
+                          {filterCategories.evenements.filters.map((filter, index) => (
+                            <div key={index} className="flex items-center justify-between bg-purple-50 p-2 rounded-lg">
+                              <span className="text-sm text-gray-700">{filter.field}: {filter.value}</span>
                               <button
                                 onClick={() => {
-                                  setFilterCategories({
-                                    ...filterCategories,
-                                    evenements: filterCategories.evenements.filter(f => f.id !== filter.id)
-                                  });
-                                  setConfigFilters(configFilters.filter(f => f.id !== filter.id));
+                                  if (!Array.isArray(filterCategories.evenements)) {
+                                    setFilterCategories({
+                                      ...filterCategories,
+                                      evenements: {
+                                        ...filterCategories.evenements,
+                                        filters: filterCategories.evenements.filters.filter((_, i) => i !== index)
+                                      }
+                                    });
+                                  }
                                 }}
                                 className="text-red-500 hover:text-red-700"
                               >
@@ -735,18 +714,19 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       onClick={() => {
                         // Logique pour ajouter un filtre événement
                         const newFilter: Filter = {
-                          id: `filter-evenement-${Date.now()}`,
                           field: 'type',
                           type: 'equals',
-                          value: 'chantier',
-                          label: 'Nouveau filtre événement',
-                          category: 'evenements'
+                          value: 'chantier'
                         };
-                        setFilterCategories({
-                          ...filterCategories,
-                          evenements: [...filterCategories.evenements, newFilter]
-                        });
-                        setConfigFilters([...configFilters, newFilter]);
+                        if (!Array.isArray(filterCategories.evenements)) {
+                          setFilterCategories({
+                            ...filterCategories,
+                            evenements: {
+                              ...filterCategories.evenements,
+                              filters: [...filterCategories.evenements.filters, newFilter]
+                            }
+                          });
+                        }
                       }}
                       className="mt-3 w-full px-3 py-2 border border-purple-300 text-purple-600 rounded-lg hover:bg-purple-50 text-sm font-medium transition-colors"
                     >
