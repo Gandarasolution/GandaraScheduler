@@ -336,14 +336,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         {/* Scrollable Content Area */}
         <main className="flex-1 overflow-y-auto no-scrollbar bg-gray-50/50">
           
-          {/* Month Slider */}
-          <div className="bg-white pb-2 rounded-b-[2.5rem] shadow-sm mb-4">
-            <MonthSelector 
-              currentDate={currentDate} 
-              onChange={setCurrentDate} 
-            />
-          </div>
-
           {/* Employee Selector - visible seulement pour les admins */}
           {isAdmin && (
             <EmployeeSelector 
@@ -359,6 +351,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             selectedDate={selectedDate}
             appointments={monthlyAppointments}
             onDateSelect={setSelectedDate}
+            onChange={setCurrentDate}
           />
 
           {/* Appointments Detail */}
