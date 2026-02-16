@@ -123,10 +123,10 @@ export interface AttributeConfig {
   sortable?: boolean;
   /** Alignement du texte dans la cellule */
   align?: 'left' | 'center' | 'right';
-  /** Indique si la colonne est fixe (ex: image) */
-  isFixed?: boolean;
   /** Clé de la colonne cachée à réafficher (pour type='hidden-column') */
   hiddenColumnKey?: string;
+  /** Configuration de la largeur de la colonne */
+  width?: number | ColumnWidthConfig;
 }
 
 /**
@@ -171,8 +171,6 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   containerWidth?: number;
   /** Fonctions de calcul pour les champs dynamiques */
   computedFields?: Record<string, ComputedField<T>>;
-  /** Configuration des largeurs de colonnes */
-  columnWidths?: Record<string, number | ColumnWidthConfig>;
   /** Renderers personnalisés pour des colonnes spécifiques */
   customRenderers?: Record<string, CellRenderer<T>>;
   /** Active/désactive le surlignage en L au survol */
@@ -219,7 +217,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   heightCell = 60,
   containerWidth: customContainerWidth,
   computedFields = {},
-  columnWidths: customColumnWidths,
   customRenderers = {},
   enableHighlight = true,
   showGroupHeaders = true,
@@ -240,6 +237,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   );  
   
   const containerRef = useRef<HTMLDivElement>(null);
+  const tableWidth = useRef<number>(containerWidth);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -314,7 +312,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
               label: attr.label,
               type: 'hidden-column',
               hiddenColumnKey: attr.key,
-              isFixed: true, // Largeur fixe de 30px
             });
           } else {
             // Garder la colonne normale
@@ -450,9 +447,9 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     const isSameColumn = columnKey === columnHoveredKey;
 
     if (isSameRow && isCurrentColumnBeforeHovered) {
-      return 'bg-primary-ultra-light';
+      return 'bg-cell-hover';
     } else if (isSameColumn && isCurrentRowBeforeHovered) {
-      return 'bg-primary-ultra-light';
+      return 'bg-cell-hover';
     }
     
     return 'bg-transparent';
@@ -507,10 +504,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
    * 6. S'adapte automatiquement aux changements de taille de fenêtre
    */
   const calculateColumnWidths = useMemo(() => {
-    const MIN_WIDTH = 60;
+    const MIN_WIDTH = 50;
     const MAX_WIDTH = 450;
     const HIDDEN_COLUMN_WIDTH = 20; // Largeur fine pour colonnes cachées
-    const PADDING = 20; // Padding supplémentaire pour l'espacement
+    const PADDING = 10; // Padding supplémentaire pour l'espacement
     
     if (!sortedItems.length) return attributeLabels.map(() => MIN_WIDTH);
 
@@ -521,14 +518,21 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
         .flatMap(cat => cat.attributes)
         .find(attr => attr.key === key);
       
+      // Check for custom column width configuration
+      const customConfig = attributeConfig?.width;
+
       // Si c'est une colonne "hidden-column" (colonne cachée à réafficher)
       if (attributeConfig?.type === 'hidden-column') {
         return { width: HIDDEN_COLUMN_WIDTH, isFixed: true };
       }
-              
-      // Si c'est une colonne image ou fixe, retourner la largeur fixe
-      if (attributeConfig?.isFixed) {
-        return { width: MIN_WIDTH, isFixed: true };
+
+      // Handle custom fixed width
+      if (customConfig) {
+        if (typeof customConfig === 'number') {
+             return { width: customConfig, isFixed: true };
+        } else if (customConfig.fixed) {
+             return { width: customConfig.fixed, isFixed: true };
+        }
       }
       
       // Mesurer la largeur du header
@@ -550,12 +554,19 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       });
       
       // Appliquer les limites min/max et ajouter du padding
-      const idealWidth = Math.min(Math.max(maxContentWidth + PADDING, MIN_WIDTH), MAX_WIDTH);
+      let min = MIN_WIDTH;
+      let max = MAX_WIDTH;
+
+      if (customConfig && typeof customConfig === 'object') {
+          if (customConfig.min) min = customConfig.min;
+          if (customConfig.max) max = customConfig.max;
+      }
+
+      const idealWidth = Math.min(Math.max(maxContentWidth + PADDING, min), max);
     
       return { width: idealWidth, isFixed: false };
     });
 
-    //console.log('columnWidths avant ajustement:', columnWidths);
     
     const fixedColumns = columnWidths.filter(col => col.isFixed);
     const flexibleColumns = columnWidths.filter(col => !col.isFixed);
@@ -610,7 +621,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     adjustedWidths = columnWidths.map(col => col.width);
   }
 
-  //console.log('adjustedWidths avant correction finale:', adjustedWidths);
   
   // Étape 4 : CORRECTION FINALE - Ajuster pour correspondre EXACTEMENT à containerWidth
   // Cette étape élimine les erreurs d'arrondi
@@ -640,6 +650,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       );
     }
   }
+    tableWidth.current = adjustedWidths.reduce((sum, width) => sum + width, 0);
 
     return adjustedWidths;
   }, [attributeLabels, attributeKeys, containerWidth, sortedItems, categoriesStructure, getAttributeValue, measureTextWidth, FontSize]);
@@ -712,15 +723,18 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     >
       <FlexibleFrame
         mainRef={containerRef}
-        className={`data-table-frame h-full pl-7 ${className}`}
+        className={`data-table-frame h-full px-7 ${className}`}
         contentClassName='overflow-x-hidden'
         gridConfig={{
           mode: 'custom',
           template: gridTemplateColumns
         }}
+        style={{
+          boxSizing: 'border-box'
+        }}
         headers={[
           // Niveau 1: Groupes (si fournis)
-          ...(groups && showGroupHeaders ? [{
+          ...(items.length === 0 ? [] : groups && showGroupHeaders ? [{
             items: groups.map(g => ({
               span: g.span,
               key: g.key,
@@ -731,14 +745,14 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                   </div>
                 </div>
               ),
-              className: 'col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-primary-ultra-light border-b max-h-[49px]'
+              className: 'col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-header-table border-b max-h-[49px]'
             })),
             show: true,
             minHeight: '40px',
             containerClassName: 'bg-bg-secondary border-ultra-light',
           }] : []),
           // Niveau 2: En-têtes de colonnes (si withHeader=true)
-          ...(withHeader ? [{
+          ...(items.length === 0 ? [] : withHeader ? [{
             items: customHeader ? 
               // Si customHeader fourni, l'utiliser
               attributeLabels.map((label, index) => ({
@@ -805,7 +819,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                     
                     return (
                       <div
-                        className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-primary-ultra-light hover:bg-gray-50 transition-colors relative group"
+                        className="flex flex-col justify-center border-b border-r border-default text-center text-sm text-primary p-2 bg-header-table transition-colors relative group"
                         style={{
                           width: `${calculateColumnWidths[index]}px`,
                           height: '56px',
@@ -837,40 +851,42 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
 
                         {/* En-tête cliquable pour le tri */}
                         <div 
-                          className="flex flex-col justify-center items-center h-full px-2 cursor-pointer"
-                          onClick={() => handleSort(attributeKey)}
+                          className={`flex flex-col justify-center items-center h-full px-2 ${attributeConfig?.sortable === false ? 'cursor-default' : 'cursor-pointer'}`}
+                          onClick={() => attributeConfig?.sortable !== false && handleSort(attributeKey)}
                           title={`Cliquer pour trier par ${label}`}
                         >
                           <div className="flex items-center justify-center gap-1">
                             <span className="leading-3 break-words text-center">
                               {label}
                             </span>
-                            <div className="flex flex-col items-center ml-1">
-                              {/* Flèche vers le haut */}
-                              <svg 
-                                className={`w-2 h-2 transition-colors ${
-                                  isActive && direction === 'asc' 
-                                    ? 'text-color-primary' 
-                                    : 'text-gray-300'
-                                }`}
-                                fill="currentColor" 
-                                viewBox="0 0 8 8"
-                              >
-                                <path d="M4 0L0 4h8z" />
-                              </svg>
-                              {/* Flèche vers le bas */}
-                              <svg 
-                                className={`w-2 h-2 -mt-0.5 transition-colors ${
-                                  isActive && direction === 'desc' 
-                                    ? 'text-color-primary' 
-                                    : 'text-gray-300'
-                                }`}
-                                fill="currentColor" 
-                                viewBox="0 0 8 8"
-                              >
-                                <path d="M4 8L8 4H0z" />
-                              </svg>
-                            </div>
+                            {attributeConfig?.sortable !== false && (
+                              <div className="flex flex-col items-center ml-1">
+                                {/* Flèche vers le haut */}
+                                <svg 
+                                  className={`w-2 h-2 transition-colors ${
+                                    isActive && direction === 'asc' 
+                                      ? 'text-color-primary' 
+                                      : 'text-gray-300'
+                                  }`}
+                                  fill="currentColor" 
+                                  viewBox="0 0 8 8"
+                                >
+                                  <path d="M4 0L0 4h8z" />
+                                </svg>
+                                {/* Flèche vers le bas */}
+                                <svg 
+                                  className={`w-2 h-2 -mt-0.5 transition-colors ${
+                                    isActive && direction === 'desc' 
+                                      ? 'text-color-primary' 
+                                      : 'text-gray-300'
+                                  }`}
+                                  fill="currentColor" 
+                                  viewBox="0 0 8 8"
+                                >
+                                  <path d="M4 8L8 4H0z" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -884,9 +900,13 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
           }] : [])
         ]}
       >
-        <table className="w-full border-collapse overflow-auto">
-          {/* Corps du tableau */}
-          <tbody>
+        {items.length === 0 ? (
+          <div className="w-full h-full flex items-center justify-center text-gray-500">
+            Aucun élément à afficher.
+          </div>
+        ) : 
+        (
+          <div className="flex flex-col w-full min-w-max"> 
             {sortedItems
               .filter(item => !!item)
               .map((item, rowIndex) => {
@@ -894,10 +914,15 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                 const allValues = itemByCategories.flatMap(cat => cat.values);
                 
                 return (
-                  <tr 
+                  <div 
                     key={`row-${item.id}`} 
-                    className=""
-                    style={style}
+                    // Application de la grille sur la ligne
+                    className="grid transition-colors border-b border-default"
+                    style={{
+                      ...style,
+                      width: `${tableWidth.current}px`,
+                      gridTemplateColumns: gridTemplateColumns 
+                    }}
                     onClick={() => onRowClick?.(item)}
                     onContextMenu={(e) => {
                       e.preventDefault();
@@ -908,60 +933,45 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                       const columnIndex = attributeKeys.indexOf(attributeKey);
                       const isExactHoveredCell = itemHoveredId === item.id && columnHoveredKey === attributeKey;
                       
-                      // Trouver la configuration de l'attribut pour détecter les colonnes cachées
+                      // Configuration attribut...
                       const attributeConfig = categoriesStructure
                         .flatMap(cat => cat.attributes)
                         .find(attr => attr.key === attributeKey);
                       
-                      // Si c'est une colonne cachée (type='hidden-column'), afficher cellule vide
+                      // Gestion colonne cachée
                       if (attributeConfig?.type === 'hidden-column') {
-                        // Vérifier si la colonne précédente est aussi cachée
-                        const prevAttributeConfig = valueIndex > 0 
-                          ? categoriesStructure.flatMap(cat => cat.attributes).find(attr => attr.key === attributeKeys[valueIndex - 1])
-                          : null;
-                        const isPrevHidden = prevAttributeConfig?.type === 'hidden-column';
-                        
-                        // Vérifier si la colonne suivante est aussi cachée
                         const nextAttributeConfig = valueIndex < attributeKeys.length - 1
-                          ? categoriesStructure.flatMap(cat => cat.attributes).find(attr => attr.key === attributeKeys[valueIndex + 1])
-                          : null;
+                            ? categoriesStructure.flatMap(cat => cat.attributes).find(attr => attr.key === attributeKeys[valueIndex + 1])
+                            : null;
                         const isNextHidden = nextAttributeConfig?.type === 'hidden-column';
 
                         return (
-                          <td
+                          <div // Remplacé <td> par <div>
                             key={`${item.id}-${attributeKey}`}
-                            className="border-b border-default bg-gradient-to-r from-gray-50 to-gray-100"
+                            className="bg-gradient-to-r from-gray-50 to-gray-100"
                             style={{
-                              width: `${calculateColumnWidths[valueIndex]}px`,
-                              minWidth: `${calculateColumnWidths[valueIndex]}px`,
-                              maxWidth: `${calculateColumnWidths[valueIndex]}px`,
                               height: `${heightCell}px`,
-                              padding: 0,
                               borderRight: isNextHidden ? '1px dashed #e5e7eb' : '1px solid #e5e7eb',
-                              borderLeft: isPrevHidden ? 'none' : '1px solid #e5e7eb',
+                              // ...
                             }}
                           />
                         );
                       }
 
-                      // Rendu normal pour colonnes visibles
+                      // Cellule standard
                       const cellClasses = isExactHoveredCell 
-                        ? 'bg-primary-ultra-light' 
+                        ? 'bg-cell-hover' 
                         : getCellPositionClasses(item.id, attributeKey, columnIndex);
                       
                       return (
-                        <td
+                        <div // Remplacé <td> par <div>
                           key={`${item.id}-${attributeKey}`}
-                          className={`border-b border-r border-default overflow-hidden text-sm transition-colors text-primary ${cellClasses}`}
+                          className={`border-r border-default overflow-hidden text-sm transition-colors text-primary flex items-center ${cellClasses}`}
                           title={`${attributeLabel}: ${value || '-'}`}
                           style={{
-                            width: `${calculateColumnWidths[valueIndex]}px`,
-                            minWidth: `${calculateColumnWidths[valueIndex]}px`,
-                            maxWidth: `${calculateColumnWidths[valueIndex]}px`,
                             height: `${heightCell}px`,
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            padding: `${cellPadding}px`
+                            padding: `${cellPadding}px`,
+                            whiteSpace: 'nowrap'
                           }}
                           onMouseEnter={() => {
                             setItemHoveredId(item.id);
@@ -973,15 +983,20 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                           }}
                           onDoubleClick={() => onCellDoubleClick?.(item, attributeKey, value)}
                         >
-                          {renderAttributeValue(value, attributeKey, item)}
-                        </td>
+                          {/* Le contenu doit prendre toute la largeur pour l'alignement */}
+                          <div className="w-full">
+                            {renderAttributeValue(value, attributeKey, item)}
+                          </div>
+                        </div>
                       );
                     })}
-                  </tr>
+                  </div>
                 );
-              })}
-          </tbody>
-        </table>
+              })
+            }
+          </div>
+        )}
+       
       </FlexibleFrame>
     </div>
   );

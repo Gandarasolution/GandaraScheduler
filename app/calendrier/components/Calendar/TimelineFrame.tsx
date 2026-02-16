@@ -17,8 +17,10 @@
 import React, { useMemo, ReactNode, memo } from 'react';
 import { format, isToday, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CELL_WIDTH } from '../../utils/constants';
+import { CELL_WIDTH, TIMELINE_HEADERGROUPS_CELL_HEIGHT, TIMELINE_HEADERITEMS_CELL_HEIGHT } from '../../utils/constants';
 import FlexibleFrame from '../dnd/FlexibleFrame';
+import { getWeekNumber } from '../../utils/dates';
+import { isHoliday } from '../../utils/dates';
 
 /**
  * Interface définissant les propriétés du composant TimelineFrame
@@ -26,7 +28,7 @@ import FlexibleFrame from '../dnd/FlexibleFrame';
  */
 interface TimelineFrameProps {
   /** Liste des dates à afficher dans la timeline (optionnel pour mode custom) */
-  dayInTimeline?: Date[];
+  dayInTimeline?: number[];
   /** Configuration des colonnes pour mode custom */
   columns?: {
     /** Labels pour les groupes/catégories */
@@ -44,8 +46,6 @@ interface TimelineFrameProps {
   className?: string;
   /** Style inline pour le conteneur principal */
   style?: React.CSSProperties;
-  /** Afficher la ligne de la date actuelle */
-  showTodayLine?: boolean;
   /** Couleur de la ligne de la date actuelle */
   todayLineColor?: string;
   /** Afficher les en-têtes de groupes (défaut: true) */
@@ -76,7 +76,6 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   children,
   className = '',
   style,
-  showTodayLine = true,
   todayLineColor = '#ffcdde',
   showGroupHeaders = true,
   showItemHeaders = true,
@@ -86,18 +85,6 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   useAutoCells = false
 }) => {
 
-  /**
-   * Calcule le numéro de semaine pour un jour donné
-   * @param d - Date à analyser
-   * @returns Numéro de la semaine
-   */
-  const getWeekNumber = (d: Date): number => {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  };
 
   /**
    * Calcule les groupes et leur portée pour l'en-tête
@@ -189,16 +176,6 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   }, [dayInTimeline, customDayLabels, columns]);
 
 
-  /**
-   * Trouve l'index du jour courant dans la timeline
-   */
-  const todayIndex = useMemo(() => {
-    if (!dayInTimeline || !showTodayLine) return -1;
-    return dayInTimeline.findIndex(day => 
-      format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-    );
-  }, [dayInTimeline, showTodayLine]);
-
   return (
     <FlexibleFrame
       mainRef={mainScrollRef}
@@ -227,10 +204,14 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
                 </div>
               </div>
             ),
-            className: ' col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-bg-secondary border-b max-h-[49px] '
+            style: {
+              maxHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
+              minHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
+            },
+            className: `col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-bg-secondary border-b`
           })),
           show: true,
-          minHeight: '40px',
+          minHeight: TIMELINE_HEADERGROUPS_CELL_HEIGHT,
           containerClassName: 'bg-bg-secondary border-ultra-light',
         }] : []),
         // Niveau 2: Items (Jours)
@@ -265,24 +246,25 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
               }
               
               const day = dayInTimeline[index];
+              const holiday = isHoliday(day);
               const weekNumber = getWeekNumber(day);
               
               return (
                 <div
                   className={`
                     flex flex-col justify-end border-b border-r border-default text-center text-sm font-semibold text-primary p-1
-                    ${(isToday(day) && 'calendar-today') || (isWeekend(day) ? 'calendar-weekend' : 'bg-bg-secondary')}
+                    ${(isToday(day) && 'calendar-today') || (holiday ? 'FERIE' : (isWeekend(day) ? 'calendar-weekend' : 'bg-bg-secondary'))}
                     relative
                     day-cell
                   `}
                   style={{ 
                     width: `${CELL_WIDTH}px`,
-                    height: '100%',
+                    height: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
                     minWidth: `${CELL_WIDTH}px`
                   }}
                 >
                   {/* Affiche le numéro de semaine en début de semaine */}
-                  {day.getDay() === 1 && (
+                  {new Date(day).getDay() === 1 && (
                     <span
                       className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
                       style={{
@@ -312,25 +294,18 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
                 </div>
               );
             },
-            className: 'h-full',
+            style: {
+              maxHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
+              minHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
+            },
           })),
           show: true,
-          minHeight: '56px',
+          minHeight: TIMELINE_HEADERITEMS_CELL_HEIGHT,
           containerClassName: 'bg-bg-secondary border-ultra-light',
         }] : [])
       ]}
     >
       {children}
-      
-      {/* Ligne verticale pour aujourd'hui */}
-      {showTodayLine && todayIndex >= 0 && (
-        <div
-          className="absolute top-0 bottom-0 w-0.5 z-10 pointer-events-none calendar-today"
-          style={{
-            left: `${(todayIndex * CELL_WIDTH + CELL_WIDTH / 2) - 2}px`,
-          }}
-        />
-      )}
     </FlexibleFrame>
   );
 };

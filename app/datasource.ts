@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Employee, Groupe, Item, Image, poleActivite, AbsenceItem} from './calendrier/types/index';
+import { Appointment, Employee, Groupe, Item, Image, poleActivite, BaseItemCategory, MockNotification, User, CalendarConfig} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -122,7 +122,7 @@ const PA: poleActivite[] = [
  * - RH : 5 employés (recrutement, formation, gestion sociale)
  * - Statuts : CDI et Intérim pour flexibilité
  */
-const initialEmployees = [
+const initialEmployeesBase = [
     // ===== ÉQUIPE TECHNIQUE (15 employés) =====
     // Spécialisés dans les travaux de construction, rénovation et maintenance
     { name: 'ANDRE', firstName: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 35, pole: 'Technique', code: 'EMP-001'},
@@ -179,8 +179,112 @@ const initialEmployees = [
     { name: 'GARCIA', firstName: 'Céline', id: 41, type: 'employee', pole: 'Commercial' , code: 'EMP-041'},
     { name: 'MALIVERNAY', firstName: 'Eric', id: 42, type: 'employee', pole: 'Commercial' , code: 'EMP-042'},
     { name: 'MARTIN', firstName: 'Sophie', id: 43, type: 'employee', pole: 'Commercial' , code: 'EMP-043'},
+
+    { name: 'FAURE', firstName: 'Julien', id: 45, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-045' },
+    { name: 'BLANC', firstName: 'Benoît', id: 46, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-046' },
+    { name: 'PONT', firstName: 'Aurélie', id: 47, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-047' },
+    { name: 'GUERIN', firstName: 'Lucas', id: 48, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-048' },
+    { name: 'MULLER', firstName: 'Kevin', id: 49, groupId: 5, type: 'interim', pole: 'Technique', code: 'EMP-049' },
+    { name: 'SCHMITT', firstName: 'Sarah', id: 50, groupId: 8, type: 'employee', pole: 'Technique', code: 'EMP-050' },
+    { name: 'LEMAIRE', firstName: 'Thomas', id: 51, groupId: 8, type: 'employee', pole: 'Technique', code: 'EMP-051' },
+    { name: 'ROBIN', firstName: 'Emma', id: 52, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-052' },
+    { name: 'PICARD', firstName: 'Nicolas', id: 53, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-053' },
+    { name: 'RIVIERE', firstName: 'Laura', id: 54, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-054' },
+    { name: 'MARCHAND', firstName: 'Antoine', id: 55, groupId: 2, type: 'interim', pole: 'Commercial', code: 'EMP-055' },
+    { name: 'DUPUIS', firstName: 'Chloé', id: 56, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-056' },
+    { name: 'LAMBERT', firstName: 'Juliette', id: 57, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-057' },
+    { name: 'CLEMENT', firstName: 'Julien', id: 58, groupId: 4, type: 'employee', pole: 'RH', code: 'EMP-058' },
+    { name: 'GUILLAUME', firstName: 'Sophie', id: 59, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-059' },
+    { name: 'LEDUC', firstName: 'Mathieu', id: 60, groupId: 4, type: 'employee', pole: 'RH', code: 'EMP-060' },
+    { name: 'FERNANDEZ', firstName: 'Isabelle', id: 61, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-061' },
+    { name: 'MARTINEZ', firstName: 'Sébastien', id: 62, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-062' },
+    { name: 'DAVID', firstName: 'Céline', id: 63, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-063' },
+    { name: 'JACQUET', firstName: 'Vincent', id: 64, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-064' },
+    { name: 'LOPEZ', firstName: 'Amélie', id: 65, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-065' },
+    { name: 'FOUCAULT', firstName: 'Cédric', id: 66, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-066' },
+    { name: 'MARTY', firstName: 'Aline', id: 67, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-067' },
+    { name: 'LEBLANC', firstName: 'Bruno', id: 68, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-068' },
+    { name: 'GARNIER', firstName: 'Catherine', id: 69, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-069' },
+    { name: 'CARTER', firstName: 'David', id: 70, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-070' },
+    { name: 'WILLIAMS', firstName: 'Laura', id: 71, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-071' },
+    { name: 'JONES', firstName: 'Kevin', id: 72, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-072' },
+    { name: 'BROWN', firstName: 'Sophie', id: 73, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-073' },
+    { name: 'DAVIS', firstName: 'Thomas', id: 74, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-074' },
+    { name: 'MILLER', firstName: 'Emma', id: 75, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-075' },
+    { name: 'WILSON', firstName: 'Lucas', id: 76, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-076' },
+    { name: 'MOORE', firstName: 'Chloé', id: 77, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-077' },
+    { name: 'TAYLOR', firstName: 'Antoine', id: 78, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-078' },
+    { name: 'ANDERSON', firstName: 'Julie', id: 79, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-079' },
+    { name: 'THOMAS', firstName: 'Nicolas', id: 80, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-080' },
+    { name: 'JACKSON', firstName: 'Isabelle', id: 81, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-081' },
+    { name: 'WHITE', firstName: 'David', id: 82, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-082' },
+    { name: 'HARRIS', firstName: 'Sophie', id: 83, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-083' },
+    { name: 'SANCHEZ', firstName: 'Julien', id: 84, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-084' },
+    { name: 'CLARK', firstName: 'Emma', id: 85, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-085' },
+    { name: 'RAMIREZ', firstName: 'Lucas', id: 86, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-086' },
+    { name: 'LEWIS', firstName: 'Laura', id: 87, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-087' },
+    { name: 'ROBINSON', firstName: 'Kevin', id: 88, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-088' },
+    { name: 'WALKER', firstName: 'Sophie', id: 89, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-089' },
+    { name: 'YOUNG', firstName: 'Thomas', id: 90, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-090' },
+    { id: 91, name: 'HERNANDEZ', firstName: 'Chloé', type: 'employee', pole: 'Commercial', code: 'EMP-091' },
+    { id: 92, name: 'KING', firstName: 'Antoine', type: 'employee', pole: 'Commercial', code: 'EMP-092' },
+    { id: 93, name: 'WRIGHT', firstName: 'Julie', type: 'employee', pole: 'Commercial', code: 'EMP-093' },
+    { id: 94, name: 'LOPEZ', firstName: 'Nicolas', type: 'employee', pole: 'Commercial', code: 'EMP-094' },
+    { id: 95, name: 'HILL', firstName: 'Isabelle', type: 'employee', pole: 'Commercial', code: 'EMP-095' },
+    { id: 96, name: 'SCOTT', firstName: 'David', type: 'employee', pole: 'Commercial', code: 'EMP-096' },
+    { id: 97, name: 'GREEN', firstName: 'Sophie', type: 'employee', pole: 'Commercial', code: 'EMP-097' },
+    { id: 98, name: 'ADAMS', firstName: 'Julien', type: 'employee', pole: 'Commercial', code: 'EMP-098' },
+    { id: 99, name: 'BAKER', firstName: 'Emma', type: 'employee', pole: 'Commercial', code: 'EMP-099' },
+    { id: 100, name: 'GONZALEZ', firstName: 'Lucas', type: 'employee', pole: 'Commercial', code: 'EMP-100' },
+    { name: 'LEE', firstName: 'Laura', id: 101, type: 'employee', pole: 'Commercial', code: 'EMP-101' },
+    { name: 'HARRISON', firstName: 'Kevin', id: 102, type: 'employee', pole: 'Commercial', code: 'EMP-102' },
+    { name: 'SULLIVAN', firstName: 'Sophie', id: 103, type: 'employee', pole: 'Commercial', code: 'EMP-103' },
+    { name: 'MURPHY', firstName: 'Antoine', id: 104, type: 'employee', pole: 'Commercial', code: 'EMP-104' },
+    { name: 'COOK', firstName: 'Julie', id: 105, type: 'employee', pole: 'Commercial', code: 'EMP-105' },
+    { name: 'ROGERS', firstName: 'Nicolas', id: 106, type: 'employee', pole: 'Commercial', code: 'EMP-106' },
+    { name: 'REED', firstName: 'Isabelle', id: 107, type: 'employee', pole: 'Commercial', code: 'EMP-107' },
+    { name: 'COOPER', firstName: 'David', id: 108, type: 'employee', pole: 'Commercial', code: 'EMP-108' },
+    { name: 'MORGAN', firstName: 'Sophie', id: 109, type: 'employee', pole: 'Commercial', code: 'EMP-109' },
+    { name: 'BELL', firstName: 'Julien', id: 110, type: 'employee', pole: 'Commercial', code: 'EMP-110' },
+    { name: 'MURRAY', firstName: 'Emma', id: 111, type: 'employee', pole: 'Commercial', code: 'EMP-111' },
+    { name: 'BAILEY', firstName: 'Lucas', id: 112, type: 'employee', pole: 'Commercial', code: 'EMP-112' },
 ];
 
+const generatedEmployees = Array.from({ length: 200 }, (_, idx) => {
+  const id = 113 + idx;
+  const poleOrder = ['Technique', 'Commercial', 'Administrative', 'RH'];
+  const pole = poleOrder[idx % poleOrder.length];
+  const group = initialTeams[idx % initialTeams.length];
+  const isInterim = idx % 5 === 0;
+
+  return {
+    id,
+    name: `EMP${id}`,
+    firstName: `Auto${id}`,
+    code: `EMP-${String(id).padStart(3, '0')}`,
+    pole,
+    type: isInterim ? 'interim' : 'employee',
+    groupId: group?.id,
+    image: 35 + (idx % 5),
+  };
+});
+
+const initialEmployees = [
+  ...initialEmployeesBase,
+  ...generatedEmployees,
+];
+
+const EventCategory: BaseItemCategory[] = [
+    { id: 1, name: 'Congés' },
+    { id: 2, name: 'Maladie' },
+    { id: 3, name: 'Formation' },
+    { id: 4, name: 'RTT' },
+    { id: 5, name: 'Réunion' },
+    { id: 6, name: 'Commercial' },
+    { id: 7, name: 'Technique' },
+    { id: 8, name: 'Administratif' },
+    { id: 9, name: 'Sécurité' },
+];
 
 const Evenements = [
     // Nouveaux événements
@@ -205,13 +309,13 @@ const Evenements = [
       dateOS: '15/01/2024',
       dateFin: '15/07/2025',
       // Analyse Chantier
-      TM: '2500h',        // Temps Marché
-      HR: '1625h',        // Heures Réalisées (65% de 2500h)
-      SH: '875h',         // Solde Heure (2500h - 1625h)
-      DPF: '',        // Durée Planifiée Future
-      RPF: '',          // Réalisé - Planif Future
-      AP: '',          // Avancement prévisionnel
-      SP: ''           // Solde Prévisionnel
+      TM: 2500,        // Temps Marché
+      HR: 1625,        // Heures Réalisées (65% de 2500h)
+      SH: 875,         // Solde Heure (2500h - 1625h)
+      DPF: 0,        // Durée Planifiée Future
+      RPF: 0,          // Réalisé - Planif Future
+      AP: 0,          // Avancement prévisionnel
+      SP: 0           // Solde Prévisionnel
     },
     {
       id: 2,
@@ -235,13 +339,13 @@ const Evenements = [
         dateOS: '01/03/2024',
         dateFin: '01/03/2026',
         // Analyse Chantier
-        TM: '5800h',        // Temps Marché
-        HR: '580h',         // Heures Réalisées (10% de 5800h)
-        SH: '5220h',        // Solde Heure (5800h - 580h)
-        DPF: '',       // Durée Planifiée Future
-        RPF: '',          // Réalisé - Planif Future
-        AP: '',          // Avancement prévisionnel
-        SP: ''           // Solde Prévisionnel
+        TM: 5800,        // Temps Marché
+        HR: 580,         // Heures Réalisées (10% de 5800h)
+        SH: 5220,        // Solde Heure (5800h - 580h)
+        DPF: 0,       // Durée Planifiée Future
+        RPF: 0,          // Réalisé - Planif Future
+        AP: 0,          // Avancement prévisionnel
+        SP: 0           // Solde Prévisionnel
   
     },
     {
@@ -264,13 +368,13 @@ const Evenements = [
         dateOS: '10/09/2023',
         dateFin: '10/12/2024',
         // Analyse Chantier
-        TM: '3200h',        // Temps Marché
-        HR: '1280h',        // Heures Réalisées (40% de 3200h)
-        SH: '1920h',        // Solde Heure (3200h - 1280h)
-        DPF: '',       // Durée Planifiée Future
-        RPF: '',          // Réalisé - Planif Future
-        AP: '',          // Avancement prévisionnel
-        SP: ''           // Solde Prévisionnel
+        TM: 3200,        // Temps Marché
+        HR: 1280,        // Heures Réalisées (40% de 3200h)
+        SH: 1920,        // Solde Heure (3200h - 1280h)
+        DPF: 0,       // Durée Planifiée Future
+        RPF: 0,          // Réalisé - Planif Future
+        AP: 0,          // Avancement prévisionnel
+        SP: 0           // Solde Prévisionnel
  
     },
     // Chantiers existants avec données enrichies
@@ -292,13 +396,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '05/02/2024',
         dateFin: '05/11/2024',
-        TM: '1800h',
-        HR: '1350h',
-        SH: '450h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 1800,
+        HR: 1350,
+        SH: 450,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
      
     },
     {
@@ -319,13 +423,13 @@ const Evenements = [
         chefChantier: 38,
         dateOS: '15/04/2024',
         dateFin: '15/12/2025',
-        TM: '8500h',
-        HR: '425h',
-        SH: '8075h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 8500,
+        HR: 425,
+        SH: 8075,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
    
     },
     {
@@ -346,13 +450,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '01/01/2024',
         dateFin: '01/08/2025',
-        TM: '4200h',
-        HR: '2310h',
-        SH: '1890h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 4200,
+        HR: 2310,
+        SH: 1890,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
 
     },
     {
@@ -373,13 +477,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '01/06/2023',
         dateFin: '01/02/2024',
-        TM: '2100h',
-        HR: '2100h',
-        SH: '0h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 2100,
+        HR: 2100,
+        SH: 0,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
   
     },
     {
@@ -400,13 +504,12 @@ const Evenements = [
         chefChantier: 40,
         dateOS: '01/05/2024',
         dateFin: '01/10/2025',
-        TM: '6800h',
-        HR: '1700h',
-        SH: '5100h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-
+        TM: 6800,
+        HR: 1700,
+        SH: 5100,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
     },
     {
       id: 9,
@@ -426,13 +529,13 @@ const Evenements = [
         chefChantier: 40,
         dateOS: '01/03/2024',
         dateFin: '01/01/2025',
-        TM: '3500h',
-        HR: '525h',
-        SH: '2975h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 3500,
+        HR: 525,
+        SH: 2975,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
 
     },
     {
@@ -453,13 +556,13 @@ const Evenements = [
         chefChantier: 38,
         dateOS: '01/06/2024',
         dateFin: '01/12/2025',
-        TM: '4100h',
-        HR: '0h',
-        SH: '4100h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 4100,
+        HR: 0,
+        SH: 4100,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
  
     },
     {
@@ -480,13 +583,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '01/02/2024',
         dateFin: '01/01/2025',
-        TM: '3800h',
-        HR: '2280h',
-        SH: '1520h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 3800,
+        HR: 2280,
+        SH: 1520,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
     },
     {
       id: 12,
@@ -506,13 +609,13 @@ const Evenements = [
         chefChantier: 42,
         dateOS: '15/03/2024',
         dateFin: '15/09/2024',
-        TM: '2200h',
-        HR: '1980h',
-        SH: '220h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 2200,
+        HR: 1980,
+        SH: 220,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
     },
     {
       id: 13,
@@ -532,13 +635,13 @@ const Evenements = [
         chefChantier: 38,
         dateOS: '01/08/2024',
         dateFin: '01/06/2025',
-        TM: '4500h',
-        HR: '0h',
-        SH: '4500h',
-        DPF: '',
-        RPF: '',
-        AP: '',
-        SP: ''
+        TM: 4500,
+        HR: 0,
+        SH: 4500,
+        DPF: 0,
+        RPF: 0,
+        AP: 0,
+        SP: 0
     },
     { 
       id: 14, 
@@ -549,7 +652,7 @@ const Evenements = [
       borderColor: '#16A34A',
       textColor: '#FFFFFF',
       defaultDescription: 'Congés payés',
-      category: 'Congés',
+      category: 1,
       verrou: true,
       code: 'CP-2024',
       actif: false,
@@ -563,7 +666,7 @@ const Evenements = [
       borderColor: '#DC2626',
       textColor: '#FFFFFF',
       defaultDescription: 'Arrêt maladie',
-      category: 'Maladie',
+      category: 2,
       verrou: false,
       code: 'AM-2024',
       actif: true,
@@ -577,7 +680,7 @@ const Evenements = [
       borderColor: '#2563EB',
       textColor: '#FFFFFF',
       defaultDescription: 'Formation professionnelle',
-      category: 'Formation',
+      category: 3,
       verrou: false,
       code: 'FOR-2024',
       actif: true,
@@ -591,7 +694,7 @@ const Evenements = [
       borderColor: '#7C3AED',
       textColor: '#FFFFFF',
       defaultDescription: 'Réduction du temps de travail',
-      category: 'RTT',
+      category: 4,
       verrou: false,
       code: 'RTT-2024',
       actif: false,
@@ -605,7 +708,7 @@ const Evenements = [
       borderColor: '#D97706',
       textColor: '#FFFFFF',
       defaultDescription: 'Congé sans solde',
-      category: 'Congés',
+      category: 1,
       verrou: true,
       code: 'CSS-2024',
       actif: true,
@@ -619,7 +722,7 @@ const Evenements = [
       borderColor: '#0891B2',
       textColor: '#FFFFFF',
       defaultDescription: 'Réunion d\'équipe',
-      category: 'Réunion',
+      category: 5,
       verrou: false,
       code: 'REU-2024',
       actif: true,
@@ -633,7 +736,7 @@ const Evenements = [
       borderColor: '#DB2777',
       textColor: '#FFFFFF',
       defaultDescription: 'Rendez-vous avec le client',
-      category: 'Commercial',
+      category: 6,
       verrou: false,
       code: 'RDC-2024',
       actif: true,
@@ -647,7 +750,7 @@ const Evenements = [
       type: 'autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Visite technique sur site',
-      category: 'Technique',
+      category: 7,
       verrou: false,
       code: 'VTS-2024',
       actif: true,
@@ -661,7 +764,7 @@ const Evenements = [
       type: 'autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Réunion sécurité',
-      category: 'Sécurité',
+      category: 9,
       verrou: false,
       code: 'RES-2024',
       actif: true,
@@ -675,7 +778,7 @@ const Evenements = [
       type: 'autre',
       textColor: '#FFFFFF',
       defaultDescription: 'Formation technique',
-      category: 'Formation',
+      category: 1,
       verrou: false,
       code: 'FT-2024',
       actif: true,
@@ -698,13 +801,13 @@ const Evenements = [
       chefChantier: 38,
       dateOS: '01/03/2024',
       dateFin: '01/11/2025',
-      TM: '3400h',
-      HR: '1360h',
-      SH: '2040h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3400,
+      HR: 1360,
+      SH: 2040,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 25,
@@ -724,14 +827,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/06/2024',
       dateFin: '15/09/2025',
-      TM: '5200h',
-      HR: '0h',
-      SH: '5200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
-
+      TM: 5200,
+      HR: 0,
+      SH: 5200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 26,
@@ -751,13 +853,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/02/2024',
       dateFin: '01/03/2026',
-      TM: '7600h',
-      HR: '3800h',
-      SH: '3800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 7600,
+      HR: 3800,
+      SH: 3800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
 
   },
   {
@@ -778,13 +880,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/09/2024',
       dateFin: '01/06/2026',
-      TM: '4100h',
-      HR: '0h',
-      SH: '4100h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4100,
+      HR: 0,
+      SH: 4100,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
 
   },
   {
@@ -805,13 +907,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '15/03/2024',
       dateFin: '15/07/2025',
-      TM: '6200h',
-      HR: '3720h',
-      SH: '2480h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6200,
+      HR: 3720,
+      SH: 2480,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -832,13 +934,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/05/2024',
       dateFin: '01/11/2025',
-      TM: '4500h',
-      HR: '2250h',
-      SH: '2250h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4500,
+      HR: 2250,
+      SH: 2250,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -859,13 +961,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/10/2024',
       dateFin: '01/07/2026',
-      TM: '5300h',
-      HR: '0h',
-      SH: '5300h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5300,
+      HR: 0,
+      SH: 5300,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   
   },
   {
@@ -886,13 +988,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/04/2024',
       dateFin: '01/10/2025',
-      TM: '4000h',
-      HR: '1800h',
-      SH: '2200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4000,
+      HR: 1800,
+      SH: 2200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -913,13 +1015,13 @@ const Evenements = [
       chefChantier: 38,
       dateOS: '01/02/2023',
       dateFin: '01/05/2024',
-      TM: '3100h',
-      HR: '3100h',
-      SH: '0h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3100,
+      HR: 3100,
+      SH: 0,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 33,
@@ -939,13 +1041,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/01/2024',
       dateFin: '15/06/2025',
-      TM: '5400h',
-      HR: '2700h',
-      SH: '2700h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5400,
+      HR: 2700,
+      SH: 2700,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
     {
@@ -966,13 +1068,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/02/2025',
-      TM: '2800h',
-      HR: '1820h',
-      SH: '980h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 2800,
+      HR: 1820,
+      SH: 980,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -993,13 +1095,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/09/2024',
       dateFin: '01/06/2026',
-      TM: '3900h',
-      HR: '0h',
-      SH: '3900h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3900,
+      HR: 0,
+      SH: 3900,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -1020,13 +1122,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '15/03/2024',
       dateFin: '15/12/2025',
-      TM: '5800h',
-      HR: '2320h',
-      SH: '3480h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5800,
+      HR: 2320,
+      SH: 3480,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
    
   },
   {
@@ -1047,13 +1149,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/10/2024',
       dateFin: '01/06/2026',
-      TM: '4600h',
-      HR: '0h',
-      SH: '4600h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4600,
+      HR: 0,
+      SH: 4600,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -1074,13 +1176,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/02/2025',
-      TM: '2900h',
-      HR: '2100h',
-      SH: '800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 2900,
+      HR: 2100,
+      SH: 800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   
   },
   {
@@ -1101,13 +1203,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/08/2024',
       dateFin: '01/04/2026',
-      TM: '6300h',
-      HR: '0h',
-      SH: '6300h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6300,
+      HR: 0,
+      SH: 6300,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -1128,13 +1230,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/02/2024',
       dateFin: '01/12/2025',
-      TM: '3100h',
-      HR: '1550h',
-      SH: '1550h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3100,
+      HR: 1550,
+      SH: 1550,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -1155,13 +1257,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/05/2024',
       dateFin: '15/02/2026',
-      TM: '3800h',
-      HR: '0h',
-      SH: '3800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3800,
+      HR: 0,
+      SH: 3800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 42,
@@ -1181,13 +1283,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/01/2024',
       dateFin: '01/10/2025',
-      TM: '4800h',
-      HR: '1920h',
-      SH: '2880h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4800,
+      HR: 1920,
+      SH: 2880,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 43,
@@ -1207,13 +1309,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '15/02/2024',
       dateFin: '15/08/2025',
-      TM: '7200h',
-      HR: '3600h',
-      SH: '3600h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 7200,
+      HR: 3600,
+      SH: 3600,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
     {
     id: 44,
@@ -1233,13 +1335,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/09/2024',
       dateFin: '01/05/2026',
-      TM: '4200h',
-      HR: '0h',
-      SH: '4200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4200,
+      HR: 0,
+      SH: 4200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 45,
@@ -1259,13 +1361,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/11/2025',
-      TM: '6900h',
-      HR: '3100h',
-      SH: '3800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6900,
+      HR: 3100,
+      SH: 3800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 46,
@@ -1285,13 +1387,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/12/2025',
-      TM: '5700h',
-      HR: '2600h',
-      SH: '3100h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5700,
+      HR: 2600,
+      SH: 3100,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 47,
@@ -1311,13 +1413,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/06/2024',
       dateFin: '01/03/2026',
-      TM: '3900h',
-      HR: '0h',
-      SH: '3900h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3900,
+      HR: 0,
+      SH: 3900,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 48,
@@ -1337,13 +1439,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/02/2024',
       dateFin: '15/08/2025',
-      TM: '5100h',
-      HR: '2550h',
-      SH: '2550h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5100,
+      HR: 2550,
+      SH: 2550,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 49,
@@ -1363,13 +1465,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/07/2024',
       dateFin: '01/04/2026',
-      TM: '4800h',
-      HR: '0h',
-      SH: '4800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4800,
+      HR: 0,
+      SH: 4800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 50,
@@ -1389,13 +1491,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/10/2025',
-      TM: '3600h',
-      HR: '1800h',
-      SH: '1800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3600,
+      HR: 1800,
+      SH: 1800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 51,
@@ -1415,13 +1517,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/01/2024',
       dateFin: '01/12/2025',
-      TM: '4400h',
-      HR: '3080h',
-      SH: '1320h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4400,
+      HR: 3080,
+      SH: 1320,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -1442,13 +1544,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/01/2023',
       dateFin: '01/04/2024',
-      TM: '3800h',
-      HR: '3800h',
-      SH: '0h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3800,
+      HR: 3800,
+      SH: 0,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
     
   },
   {
@@ -1469,13 +1571,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/09/2024',
       dateFin: '01/05/2026',
-      TM: '5000h',
-      HR: '0h',
-      SH: '5000h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5000,
+      HR: 0,
+      SH: 5000,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
     {
     id: 54,
@@ -1495,13 +1597,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/09/2025',
-      TM: '6400h',
-      HR: '3200h',
-      SH: '3200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6400,
+      HR: 3200,
+      SH: 3200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 55,
@@ -1521,12 +1623,12 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/07/2024',
       dateFin: '01/05/2026',
-      TM: '7200h',
-      HR: '0h',
-      SH: '7200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
+      TM: 7200,
+      HR: 0,
+      SH: 7200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
       SP: ''
   },
   {
@@ -1547,13 +1649,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/02/2024',
       dateFin: '15/12/2025',
-      TM: '5300h',
-      HR: '2120h',
-      SH: '3180h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5300,
+      HR: 2120,
+      SH: 3180,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
  
   },
   {
@@ -1574,13 +1676,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/06/2024',
       dateFin: '01/02/2026',
-      TM: '3800h',
-      HR: '0h',
-      SH: '3800h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3800,
+      HR: 0,
+      SH: 3800,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
 
   },
   {
@@ -1601,13 +1703,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/09/2025',
-      TM: '4700h',
-      HR: '2350h',
-      SH: '2350h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4700,
+      HR: 2350,
+      SH: 2350,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 59,
@@ -1627,13 +1729,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/05/2024',
       dateFin: '01/03/2026',
-      TM: '3900h',
-      HR: '0h',
-      SH: '3900h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3900,
+      HR: 0,
+      SH: 3900,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 60,
@@ -1653,13 +1755,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/02/2024',
       dateFin: '01/10/2025',
-      TM: '3500h',
-      HR: '1750h',
-      SH: '1750h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3500,
+      HR: 1750,
+      SH: 1750,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 61,
@@ -1679,13 +1781,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/12/2025',
-      TM: '7100h',
-      HR: '3550h',
-      SH: '3550h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 7100,
+      HR: 3550,
+      SH: 3550,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 62,
@@ -1705,13 +1807,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/08/2024',
       dateFin: '01/06/2026',
-      TM: '4100h',
-      HR: '0h',
-      SH: '4100h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4100,
+      HR: 0,
+      SH: 4100,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 63,
@@ -1731,13 +1833,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/10/2025',
-      TM: '6400h',
-      HR: '3200h',
-      SH: '3200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6400,
+      HR: 3200,
+      SH: 3200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
     {
     id: 64,
@@ -1756,13 +1858,13 @@ const Evenements = [
     chefChantier: 42,
     dateOS: '01/03/2024',
     dateFin: '01/10/2025',
-    TM: '4300h',
-    HR: '2150h',
-    SH: '2150h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 4300,
+    HR: 2150,
+    SH: 2150,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
   {
     id: 65,
@@ -1781,13 +1883,13 @@ const Evenements = [
     chefChantier: 40,
     dateOS: '01/09/2024',
     dateFin: '01/07/2026',
-    TM: '3900h',
-    HR: '0h',
-    SH: '3900h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 3900,
+    HR: 0,
+    SH: 3900,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
   {
     id: 66,
@@ -1807,13 +1909,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '15/02/2024',
       dateFin: '15/09/2025',
-      TM: '6200h',
-      HR: '3720h',
-      SH: '2480h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 6200,
+      HR: 3720,
+      SH: 2480,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 67,
@@ -1833,13 +1935,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/08/2024',
       dateFin: '01/04/2026',
-      TM: '3100h',
-      HR: '0h',
-      SH: '3100h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 3100,
+      HR: 0,
+      SH: 3100,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 68,
@@ -1859,13 +1961,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/04/2024',
       dateFin: '01/12/2025',
-      TM: '4800h',
-      HR: '1920h',
-      SH: '2880h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 4800,
+      HR: 1920,
+      SH: 2880,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 69,
@@ -1885,13 +1987,13 @@ const Evenements = [
       chefChantier: 40,
       dateOS: '01/06/2024',
       dateFin: '01/06/2026',
-      TM: '5200h',
-      HR: '0h',
-      SH: '5200h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
+      TM: 5200,
+      HR: 0,
+      SH: 5200,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 70,
@@ -1911,14 +2013,13 @@ const Evenements = [
       chefChantier: 42,
       dateOS: '01/03/2024',
       dateFin: '01/11/2025',
-      TM: '6100h',
-      HR: '3050h',
-      SH: '3050h',
-      DPF: '',
-      RPF: '',
-      AP: '',
-      SP: ''
-
+      TM: 6100,
+      HR: 3050,
+      SH: 3050,
+      DPF: 0,
+      RPF: 0,
+      AP: 0,
+      SP: 0
   },
   {
     id: 71,
@@ -1937,13 +2038,13 @@ const Evenements = [
     chefChantier: 42,
     dateOS: '01/09/2023',
     dateFin: '01/04/2024',
-    TM: '3500h',
-    HR: '3500h',
-    SH: '0h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 3500,
+    HR: 3500,
+    SH: 0,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
   {
     id: 72,
@@ -1962,13 +2063,13 @@ const Evenements = [
     chefChantier: 42,
     dateOS: '01/01/2024',
     dateFin: '01/09/2025',
-    TM: '6700h',
-    HR: '3350h',
-    SH: '3350h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 6700,
+    HR: 3350,
+    SH: 3350,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
   {
     id: 73,
@@ -1987,14 +2088,264 @@ const Evenements = [
     chefChantier: 40,
     dateOS: '01/07/2024',
     dateFin: '01/05/2026',
-    TM: '4600h',
-    HR: '0h',
-    SH: '4600h',
-    DPF: '',
-    RPF: '',
-    AP: '',
-    SP: ''
+    TM: 4600,
+    HR: 0,
+    SH: 4600,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
   },
+  {
+    id: 74,
+    label: 'Rénovation Gare Saint-Lazare',
+    image: 26,
+    color: '#3F51B5',
+    borderColor: '#283593',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-074',
+    identifiant: 'PAR-2024-074',
+    libelle: 'Rénovation Gare Saint-Lazare',
+    etat: 'En cours',
+    chargeAffaire: 36,
+    chefChantier: 40,
+    dateOS: '01/02/2024',
+    dateFin: '01/12/2025',
+    TM: 8000,
+    HR: 3200,
+    SH: 4800,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 75,
+    label: 'Construction Piscine Olympique',
+    image: 26,
+    color: '#03A9F4',
+    borderColor: '#0277BD',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-075',
+    identifiant: 'LYO-2024-075',
+    libelle: 'Construction Piscine Olympique',
+    etat: 'Planifié',
+    chargeAffaire: 37,
+    chefChantier: 38,
+    dateOS: '01/06/2024',
+    dateFin: '01/06/2026',
+    TM: 12000,
+    HR: 0,
+    SH: 12000,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 76,
+    label: 'Aménagement Bureaux La Défense',
+    image: 26,
+    color: '#607D8B',
+    borderColor: '#455A64',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 2,
+    code: 'CHT-076',
+    identifiant: 'DEF-2024-076',
+    libelle: 'Aménagement Bureaux La Défense',
+    etat: 'En cours',
+    chargeAffaire: 39,
+    chefChantier: 42,
+    dateOS: '15/01/2024',
+    dateFin: '15/09/2024',
+    TM: 4500,
+    HR: 2250,
+    SH: 2250,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 77,
+    label: 'Réfection Toiture École Jules Ferry',
+    image: 26,
+    color: '#795548',
+    borderColor: '#4E342E',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-077',
+    identifiant: 'NAN-2024-077',
+    libelle: 'Réfection Toiture École Jules Ferry',
+    etat: 'Terminé',
+    chargeAffaire: 41,
+    chefChantier: 40,
+    dateOS: '01/09/2023',
+    dateFin: '01/03/2024',
+    TM: 1800,
+    HR: 1800,
+    SH: 0,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 78,
+    label: 'Installation Fibre Optique Quartier Nord',
+    image: 26,
+    color: '#9C27B0',
+    borderColor: '#7B1FA2',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 3,
+    code: 'CHT-078',
+    identifiant: 'MAR-2024-078',
+    libelle: 'Installation Fibre Optique Quartier Nord',
+    etat: 'En cours',
+    chargeAffaire: 36,
+    chefChantier: 38,
+    dateOS: '01/04/2024',
+    dateFin: '01/10/2024',
+    TM: 2500,
+    HR: 1000,
+    SH: 1500,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 79,
+    label: 'Construction Parking Souterrain Centre-Ville',
+    image: 26,
+    color: '#424242',
+    borderColor: '#212121',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-079',
+    identifiant: 'BOR-2024-079',
+    libelle: 'Construction Parking Souterrain Centre-Ville',
+    etat: 'En cours',
+    chargeAffaire: 37,
+    chefChantier: 42,
+    dateOS: '01/02/2024',
+    dateFin: '01/02/2025',
+    TM: 5600,
+    HR: 2000,
+    SH: 3600,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 80,
+    label: 'Restauration Château de Versailles (Aile Nord)',
+    image: 26,
+    color: '#D4AF37',
+    borderColor: '#B8860B',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-080',
+    identifiant: 'VER-2024-080',
+    libelle: 'Restauration Château de Versailles (Aile Nord)',
+    etat: 'Planifié',
+    chargeAffaire: 39,
+    chefChantier: 40,
+    dateOS: '01/09/2024',
+    dateFin: '01/09/2026',
+    TM: 15000,
+    HR: 0,
+    SH: 15000,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 81,
+    label: 'Construction Hôpital Privé de l\'Ouest',
+    image: 26,
+    color: '#E91E63',
+    borderColor: '#C2185B',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-081',
+    identifiant: 'REN-2024-081',
+    libelle: 'Construction Hôpital Privé de l\'Ouest',
+    etat: 'En cours',
+    chargeAffaire: 41,
+    chefChantier: 38,
+    dateOS: '01/01/2024',
+    dateFin: '01/06/2025',
+    TM: 9500,
+    HR: 3500,
+    SH: 6000,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 82,
+    label: 'Aménagement Parc Urbain Les Érables',
+    image: 26,
+    color: '#8BC34A',
+    borderColor: '#689F38',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 2,
+    code: 'CHT-082',
+    identifiant: 'STR-2024-082',
+    libelle: 'Aménagement Parc Urbain Les Érables',
+    etat: 'En cours',
+    chargeAffaire: 36,
+    chefChantier: 42,
+    dateOS: '01/03/2024',
+    dateFin: '01/11/2024',
+    TM: 3200,
+    HR: 1600,
+    SH: 1600,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  },
+  {
+    id: 83,
+    label: 'Rénovation Théâtre Municipal',
+    image: 26,
+    color: '#673AB7',
+    borderColor: '#512DA8',
+    textColor: '#FFFFFF',
+    type: 'chantier',
+    poleActivite: 1,
+    code: 'CHT-083',
+    identifiant: 'NIC-2024-083',
+    libelle: 'Rénovation Théâtre Municipal',
+    etat: 'Planifié',
+    chargeAffaire: 37,
+    chefChantier: 40,
+    dateOS: '01/10/2024',
+    dateFin: '01/10/2025',
+    TM: 4800,
+    HR: 0,
+    SH: 4800,
+    DPF: 0,
+    RPF: 0,
+    AP: 0,
+    SP: 0
+  }
 ];
 
 
@@ -2002,131 +2353,57 @@ const Evenements = [
 // ===== GÉNÉRATEUR DE RENDEZ-VOUS =====
 
 /**
+ * Générateur pseudo-aléatoire déterministe (Xorshift32)
+ * Permet d'avoir des rendez-vous toujours identiques pour un seed donné
+ */
+class SeededRandom {
+  private state: number;
+
+  constructor(seed: number) {
+    this.state = seed;
+  }
+
+  /**
+   * Génère un nombre pseudo-aléatoire entre 0 et 1
+   */
+  next(): number {
+    let x = this.state;
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    this.state = x;
+    return ((x >>> 0) / 0xFFFFFFFF);
+  }
+
+  /**
+   * Génère un entier pseudo-aléatoire entre 0 (inclus) et max (exclus)
+   */
+  nextInt(max: number): number {
+    return Math.floor(this.next() * max);
+  }
+}
+
+/**
+ * ANCIENNE VERSION - REMPLACÉE PAR SYSTÈME DE LAZY LOADING
+ * Cette fonction a été remplacée par generateAppointmentsForWeek() avec cache
+ * Conservée pour référence historique
+ * 
+ * @deprecated Utiliser getAppointments() avec le système de cache à la place
+ * 
  * Générateur de rendez-vous sans superposition
  * Garantit qu'aucun rendez-vous ne se chevauche pour chaque employé
+ * Les rendez-vous sont déterministes et tournent autour de la date actuelle
  * @param employees - Liste des employés à planifier
  * @returns Tableau de rendez-vous générés
  */
-function generateAppointments(employees: Employee[]): Appointment[] {
-  const appointments: Appointment[] = [];
-  let appointmentId = 1;
-  const baseDate = new Date();
-  
-
-  // Fonction utilitaire pour obtenir une date de semaine aléatoire
-  const getRandomWeekDate = (baseDate: Date, maxDays: number): Date => {
-    let randomDate: Date;
-    do {
-      const randomDays = Math.floor(Math.random() * maxDays);
-      randomDate = new Date(baseDate);
-      randomDate.setDate(baseDate.getDate() + randomDays);
-    } while (randomDate.getDay() === 0 || randomDate.getDay() === 6); // Éviter week-ends
-    return randomDate;
-  };
-
-  // Fonction pour vérifier si deux périodes se chevauchent
-  const isOverlapping = (start1: Date, end1: Date, start2: Date, end2: Date): boolean => {
-    return !(end1 < start2 || start1 > end2);
-  };
-
-  // Générer des rendez-vous pour chaque employé
-  employees.forEach((employee) => {
-    const employeeAppointments: { start: Date; end: Date }[] = [];
-    
-    // Chaque employé aura 2 à 4 rendez-vous
-    const numberOfAppointments = Math.floor(Math.random() * 3) + 2;
-    
-    for (let i = 0; i < numberOfAppointments; i++) {
-      let attempts = 0;
-      let isValid = false;
-      let startDate: Date = new Date();
-      let endDate: Date = new Date();
-      let duration: number = 1;
-      let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
-      let selectedEvent = null;
-      let description = '';
-      
-      // Essayer de trouver un créneau libre jusqu'à 100 tentatives
-      while (!isValid && attempts < 100) {
-        attempts++;
-        
-        // Choisir le type d'événement
-        const rand = Math.random();
-        if (rand < 0.6) { // 60% chantiers
-          appointmentType = 'chantier';
-          while (!selectedEvent) {
-            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'chantier') {
-              selectedEvent = null;
-            }
-          }
-          duration = Math.floor(Math.random() * 3) + 3; // 3 à 5 jours
-          description = `Chantier de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-        } else if (rand < 0.8) { // 20% absences
-          appointmentType = 'absence';
-          while (!selectedEvent) {
-            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'absence') {
-              selectedEvent = null;
-            }
-          }
-          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
-          description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-        } else { // 20% autres
-          appointmentType = 'autre';
-          while (!selectedEvent) {
-            selectedEvent = Evenements[Math.floor(Math.random() * Evenements.length)];
-            if (selectedEvent.type !== 'autre') {
-              selectedEvent = null;
-            }
-          }
-          duration = Math.floor(Math.random() * 2) + 1; // 1 à 2 jours
-          description = `${selectedEvent?.label} de ${duration} jour${duration > 1 ? 's' : ''} pour ${employee.name}`;
-        }
-        
-        // Générer date de début aléatoire (dans les 60 prochains jours)
-        startDate = getRandomWeekDate(baseDate, 60);
-        startDate.setHours(0, 0, 0, 0);
-        
-        // Calculer date de fin
-        endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + duration - 1);
-        endDate.setHours(23, 59, 59, 999);
-        
-        // Ajuster si ça tombe sur un week-end
-        while (endDate.getDay() === 0 || endDate.getDay() === 6) {
-          endDate.setDate(endDate.getDate() - 1);
-        }
-        
-        // Vérifier qu'il n'y a pas de chevauchement avec les rendez-vous existants de cet employé
-        isValid = !employeeAppointments.some(existing => 
-          isOverlapping(startDate, endDate, existing.start, existing.end)
-        );
-      }
-      
-      // Si on a trouvé un créneau valide, créer le rendez-vous
-      if (isValid) {
-        employeeAppointments.push({ start: new Date(startDate), end: new Date(endDate) });
-        
-        // Créer l'appointment avec les bonnes propriétés selon le type
-        const newAppointment: Appointment = {
-          id: appointmentId++,
-          description: description,
-          startDate: startDate,
-          endDate: endDate,
-          employeeId: employee.id,
-          type: appointmentType,
-          EventId: selectedEvent?.id as number
-        };
-
-        appointments.push(newAppointment);
-      }
-    }
-  });
-  
-  return appointments;
+/*
+function generateAppointments_DEPRECATED(employees: Employee[]): Appointment[] {
+  // ... Code conservé pour référence ...
+  // Cette fonction générait TOUS les RDV au chargement (lent)
+  // Nouvelle approche : génération à la demande par semaine (rapide)
+  return [];
 }
-
+*/
 
 
 
@@ -2176,6 +2453,497 @@ export const Images: Image[] = [
   {id: 42, name : 'Moreau Hugo', image: 'https://i.pravatar.cc/40?img=8'},
 ]
 
+// ===== BASE DE DONNÉES DES NOTIFICATIONS =====
+
+export const mockNotifications: MockNotification[] = [
+  // Notifications pour l'utilisateur 1 (Admin Grégory)
+  {
+    id: 'notif-1',
+    userId: 1,
+    type: 'info',
+    title: 'Nouvelle demande de congés',
+    message: 'Sophie Martin a soumis une demande de congés du 15 au 20 février.',
+    timestamp: Date.now() - 3600000, // Il y a 1h
+    isRead: false
+  },
+  {
+    id: 'notif-2',
+    userId: 1,
+    type: 'warning',
+    title: 'Retard sur chantier',
+    message: 'Le chantier Vesoul accuse un retard de 2 jours.',
+    timestamp: Date.now() - 7200000, // Il y a 2h
+    isRead: false
+  },
+  {
+    id: 'notif-3',
+    userId: 1,
+    type: 'success',
+    title: 'Validation effectuée',
+    message: 'La feuille de temps d\'Alexandre a été validée.',
+    timestamp: Date.now() - 86400000, // Il y a 1 jour
+    isRead: true
+  },
+  {
+    id: 'notif-4',
+    userId: 1,
+    type: 'error',
+    title: 'Conflit d\'horaires',
+    message: 'Un conflit a été détecté dans le planning de Lucas.',
+    timestamp: Date.now() - 172800000, // Il y a 2 jours
+    isRead: true
+  },
+
+  // Notifications pour l'utilisateur 2 (Alexandre)
+  {
+    id: 'notif-5',
+    userId: 2,
+    type: 'info',
+    title: 'Rendez-vous confirmé',
+    message: 'Votre rendez-vous client à 14h a été confirmé.',
+    timestamp: Date.now() - 1800000, // Il y a 30min
+    isRead: false
+  },
+  {
+    id: 'notif-6',
+    userId: 2,
+    type: 'warning',
+    title: 'Rappel : Formation',
+    message: 'Formation sécurité demain à 9h.',
+    timestamp: Date.now() - 43200000, // Il y a 12h
+    isRead: false
+  },
+  {
+    id: 'notif-7',
+    userId: 2,
+    type: 'success',
+    title: 'Validation de congés',
+    message: 'Votre demande de congés a été approuvée.',
+    timestamp: Date.now() - 259200000, // Il y a 3 jours
+    isRead: true
+  },
+
+  // Notifications pour l'utilisateur 3 (Lucas)
+  {
+    id: 'notif-8',
+    userId: 3,
+    type: 'info',
+    title: 'Nouveau message',
+    message: 'Le client Dupuis souhaite vous contacter.',
+    timestamp: Date.now() - 900000, // Il y a 15min
+    isRead: false
+  },
+  {
+    id: 'notif-9',
+    userId: 3,
+    type: 'warning',
+    title: 'Document à signer',
+    message: 'Le contrat chantier Lyon nécessite votre signature.',
+    timestamp: Date.now() - 21600000, // Il y a 6h
+    isRead: false
+  },
+  {
+    id: 'notif-10',
+    userId: 3,
+    type: 'info',
+    title: 'Réunion planifiée',
+    message: 'Réunion d\'équipe jeudi à 10h.',
+    timestamp: Date.now() - 86400000, // Il y a 1 jour
+    isRead: true
+  },
+
+  // Notifications génériques pour d'autres utilisateurs
+  {
+    id: 'notif-11',
+    userId: 5,
+    type: 'info',
+    title: 'Planning mis à jour',
+    message: 'Votre planning de la semaine prochaine est disponible.',
+    timestamp: Date.now() - 3600000,
+    isRead: false
+  },
+  {
+    id: 'notif-12',
+    userId: 5,
+    type: 'success',
+    title: 'Tâche terminée',
+    message: 'La réparation du système électrique est complète.',
+    timestamp: Date.now() - 172800000,
+    isRead: true
+  },
+];
+
+export const getNotificationsByUserId = (userId: number): MockNotification[] => {
+  return mockNotifications.filter(notif => notif.userId === userId);
+};
+
+// ===== BASE DE DONNÉES DES UTILISATEURS =====
+
+/**
+ * Base de données des utilisateurs du système
+ * Certains utilisateurs sont liés à des employés (même id), d'autres non
+ * Différents rôles : admin (accès complet) et user (accès limité à son calendrier)
+ */
+export const mockUsers = [
+  // ADMINS - Accès complet au système
+  {
+    id: 1,
+    name: 'ANDRE Grégory',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=1',
+    employeeId: 1, // Lié à l'employé Grégory
+    email: 'gregory.andre@gandara.com'
+  },
+  {
+    id: 100,
+    name: 'Administrateur Système',
+    role: 'admin' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=50',
+    employeeId: null, // Pas lié à un employé
+    email: 'admin@gandara.com'
+  },
+  {
+    id: 5,
+    name: 'DACHAUD Fabrice',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=12',
+    employeeId: 5, // Lié à l'employé Fabrice (Admin/RH)
+    email: 'fabrice.dachaud@gandara.com'
+  },
+
+  // USERS - Accès limité à leur propre calendrier
+  {
+    id: 2,
+    name: 'BARRET Alexandre',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=2',
+    employeeId: 2, // Lié à l'employé Alexandre
+    email: 'alexandre.barret@gandara.com'
+  },
+  {
+    id: 3,
+    name: 'BOURDIN Lucas',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=3',
+    employeeId: 3, // Lié à l'employé Lucas
+    email: 'lucas.bourdin@gandara.com'
+  },
+  {
+    id: 4,
+    name: 'PERRAS Romain',
+    role: 'user' as const,
+    theme: 'dark',
+    image: 'https://i.pravatar.cc/40?img=4',
+    employeeId: 4, // Lié à l'employé Romain
+    email: 'romain.perras@gandara.com'
+  },
+  {
+    id: 11,
+    name: 'MARTIN Sophie',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=11',
+    employeeId: 11, // Lié à l'employée Sophie
+    email: 'sophie.martin@gandara.com'
+  },
+  {
+    id: 17,
+    name: 'DUPONT Jean',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=17',
+    employeeId: 17, // Lié à l'employé Jean
+    email: 'jean.dupont@gandara.com'
+  },
+  {
+    id: 21,
+    name: 'SIMON Caroline',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=21',
+    employeeId: 21, // Lié à l'employée Caroline
+    email: 'caroline.simon@gandara.com'
+  },
+
+  // USERS sans compte employé (ex: clients, partenaires, consultants externes)
+  {
+    id: 200,
+    name: 'Consultant Externe',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=60',
+    employeeId: null, // Pas d'employé associé
+    email: 'consultant@externe.com'
+  },
+  {
+    id: 201,
+    name: 'Client VIP',
+    role: 'user' as const,
+    theme: 'dark',
+    image: 'https://i.pravatar.cc/40?img=65',
+    employeeId: null, // Pas d'employé associé
+    email: 'client.vip@entreprise.com'
+  },
+  {
+    id: 202,
+    name: 'Stagiaire RH',
+    role: 'user' as const,
+    theme: 'light',
+    image: 'https://i.pravatar.cc/40?img=70',
+    employeeId: null, // Pas encore d'employé créé
+    email: 'stagiaire.rh@gandara.com'
+  },
+];
+
+// ===== CONFIGURATIONS DE VUES CALENDRIER =====
+
+/**
+ * Configuration des vues calendrier disponibles dans le système
+ * Chaque vue définit comment organiser et filtrer les données du calendrier
+ */
+const mockCalendarConfigs: CalendarConfig[] = [
+  // Vue Générale - Tous les employés
+  {
+    id: 1,
+    name: 'Vue Générale',
+    description: 'Vue complète sans filtres, organisée par pôles d\'activité',
+    groupingLevels: {
+      level1: 'pole',
+    },
+    filterCategories: {
+      personnel: [],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue Technique
+  {
+    id: 2,
+    name: 'Vue par équipes',
+    description: 'Vue organisée par équipes',
+    groupingLevels: {
+      level1: 'equipe',
+    },
+    filterCategories: {
+      personnel: [],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue Commercial - Hiérarchie Pôle > Équipe
+  {
+    id: 3,
+    name: 'Vue Commercial - Par équipes',
+    description: 'Organisation hiérarchique du pôle Commercial par équipes',
+    groupingLevels: {
+      level1: 'pole',
+      level2: 'equipe'
+    },
+    filterCategories: {
+      personnel: [
+        {
+          field: 'pole',
+          type: 'equals',
+          value: 'Commercial'
+        }
+      ],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue par Pôles (un seul niveau)
+  {
+    id: 4,
+    name: 'Vue par Pôles',
+    description: 'Organisation simple par pôles d\'activité',
+    groupingLevels: {
+      level1: 'pole'
+    },
+    filterCategories: {
+      personnel: [],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue Administrative
+  {
+    id: 5,
+    name: 'Vue Administrative',
+    description: 'Vue du pôle Administratif',
+    groupingLevels: {
+      level1: 'pole',
+    },
+    filterCategories: {
+      personnel: [
+        {
+          field: 'pole',
+          type: 'equals',
+          value: 'Administrative'
+        }
+      ],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue RH
+  {
+    id: 6,
+    name: 'Vue RH',
+    description: 'Vue du pôle Ressources Humaines',
+    groupingLevels: {
+      level1: 'pole',
+    },
+    filterCategories: {
+      personnel: [
+        {
+          field: 'pole',
+          type: 'equals',
+          value: 'RH'
+        }
+      ],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
+      }
+    },
+  },
+
+  // Vue Chantiers uniquement
+  {
+    id: 7,
+    name: 'Vue Chantiers',
+    description: 'Vue avec uniquement les chantiers',
+    groupingLevels: {
+      level1: 'pole',
+    },
+    filterCategories: {
+      personnel: [],
+      evenements: {
+        filters: [],
+        selectedRdvTypes: ['Chantier']
+      }
+    },
+  },
+];
+
+/**
+ * Relation entre utilisateurs et leurs vues autorisées
+ * Chaque utilisateur peut avoir accès à une ou plusieurs vues
+ */
+const userCalendarConfigAccess: Record<number, number[]> = {
+  // Admin - Accès à toutes les vues
+  100: [1, 2, 3, 4, 5, 6, 7],
+  
+  // Grégory (Technique) - Accès vues générales et techniques
+  1: [1, 2, 4, 7],
+  
+  // Alexandre (Technique) - Accès vues générales et techniques
+  2: [1, 2, 4, 7],
+  
+  // Lucas (Commercial) - Accès vues générales et commerciales
+  3: [1, 3, 4, 7],
+  
+  // Romain (Commercial) - Accès vues générales et commerciales
+  4: [1, 3, 4, 7],
+  
+  // Fabrice (Administrative) - Accès vues générales et administratives
+  5: [1, 4, 5],
+  
+  // Autres utilisateurs - Vue générale uniquement par défaut
+  11: [1, 2, 4],
+  12: [1, 3, 4],
+};
+
+/**
+ * Récupérer toutes les configurations de vues
+ */
+export const getAllCalendarConfigs = (): CalendarConfig[] => {
+  return mockCalendarConfigs;
+};
+
+/**
+ * Récupérer une configuration par son ID
+ */
+export const getCalendarConfigById = (configId: number): CalendarConfig | undefined => {
+  return mockCalendarConfigs.find(config => config.id === configId);
+};
+
+/**
+ * Récupérer les configurations accessibles pour un utilisateur
+ */
+export const getCalendarConfigsByUserId = (userId: number): CalendarConfig[] => {
+  const configIds = userCalendarConfigAccess[userId] || [1]; // Vue générale par défaut
+  return mockCalendarConfigs.filter(config => configIds.includes(config.id));
+};
+
+/**
+ * Vérifier si un utilisateur a accès à une configuration
+ */
+export const hasAccessToConfig = (userId: number, configId: number): boolean => {
+  const allowedConfigs = userCalendarConfigAccess[userId] || [1];
+  return allowedConfigs.includes(configId);
+};
+
+/**
+ * Récupérer un utilisateur par son ID
+ */
+export const getUserById = (userId: number): User | undefined => {
+  return mockUsers.find(user => user.id === userId);
+};
+
+/**
+ * Récupérer un utilisateur par son email
+ */
+export const getUserByEmail = (email: string): User | undefined => {
+  return mockUsers.find(user => user.email === email);
+};
+
+/**
+ * Récupérer tous les utilisateurs
+ */
+export const getAllUsers = () => {
+  return mockUsers;
+};
+
+/**
+ * Récupérer les utilisateurs par rôle
+ */
+export const getUsersByRole = (role: 'admin' | 'user') => {
+  return mockUsers.filter(user => user.role === role);
+};
+
+/**
+ * Récupérer l'employé associé à un utilisateur (si existe)
+ */
+export const getEmployeeByUserId = (userId: number) => {
+  const user = getUserById(userId);
+  if (!user || !user.employeeId) return null;
+  
+  const employees = getEmployees();
+  return employees.find(emp => emp.id === user.employeeId) || null;
+};
+
+
 
 
 
@@ -2196,12 +2964,16 @@ export const getEvenements = (): Item[] => {
     } else {
       return {
         ...event,
+        category: event.type === 'absence' ? EventCategory.find(cat => cat.id === (event as any).category)?.name || null : null,
         image
       } as Item;
     }
   });
 };
 
+export const getEventCategories = (): BaseItemCategory[] => {
+  return EventCategory;
+}
 
 export const getEmployees = (): Employee[] => {
 
@@ -2225,6 +2997,204 @@ export const getImages = (): Image[] => {
   return Images;
 }
 
+// ===== SYSTÈME DE CACHE INTELLIGENT POUR SIMULATION BDD =====
+/**
+ * Cache des rendez-vous générés par plage de dates
+ * Structure: Map<clé_plage, Appointment[]>
+ * Permet génération lazy loading et simule une BDD locale
+ * TODO: Remplacer par appels API vers une vraie BDD plus tard
+ */
+const appointmentsCache = new Map<string, Appointment[]>();
+let nextAppointmentId = 1;
 
+/**
+ * Crée une clé de cache pour une plage de dates (par semaine)
+ * @param weekStart - Timestamp du début de semaine
+ * @returns Clé unique pour le cache
+ */
+const getCacheKey = (weekStart: number): string => {
+  return `week_${weekStart}`;
+};
 
-export const initialAppointments: Appointment[] = generateAppointments(getEmployees());
+/**
+ * Récupère ou génère les rendez-vous pour une plage de dates
+ * Système de lazy loading : génère uniquement si nécessaire
+ * MIGRATION FUTURE BDD: Remplacer le contenu par fetch('/api/appointments?start=...&end=...')
+ * 
+ * @param startDate - Timestamp de début
+ * @param endDate - Timestamp de fin
+ * @returns Tableau de rendez-vous pour la plage demandée
+ */
+export const getAppointments = (startDate: number, endDate: number): Appointment[] => {
+  const employees = getEmployees();
+  const result: Appointment[] = [];
+  
+  // Calculer les semaines à couvrir
+  const startWeek = new Date(startDate);
+  startWeek.setHours(0, 0, 0, 0);
+  const day = startWeek.getDay();
+  const diffToMonday = (day + 6) % 7;
+  startWeek.setDate(startWeek.getDate() - diffToMonday);
+  
+  const endWeek = new Date(endDate);
+  endWeek.setHours(0, 0, 0, 0);
+  
+  // Parcourir semaine par semaine
+  const currentWeek = new Date(startWeek);
+  while (currentWeek <= endWeek) {
+    const weekTs = currentWeek.getTime();
+    const cacheKey = getCacheKey(weekTs);
+    
+    // Vérifier le cache
+    if (!appointmentsCache.has(cacheKey)) {
+      // Générer pour cette semaine si pas en cache
+      const weekEnd = new Date(currentWeek);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      
+      const weekAppointments = generateAppointmentsForWeek(
+        employees, 
+        currentWeek.getTime(),
+        weekEnd.getTime()
+      );
+      
+      appointmentsCache.set(cacheKey, weekAppointments);
+    }
+    
+    // Ajouter au résultat
+    const cached = appointmentsCache.get(cacheKey) || [];
+    result.push(...cached);
+    
+    // Semaine suivante
+    currentWeek.setDate(currentWeek.getDate() + 7);
+  }
+  
+  // Filtrer pour retourner exactement la plage demandée
+  return result.filter(app => 
+    (app.startDate <= endDate) && (app.endDate >= startDate)
+  );
+};
+
+/**
+ * Génère les rendez-vous pour une semaine spécifique
+ * Utilise un seed déterministe pour reproductibilité
+ * 
+ * @param employees - Liste des employés
+ * @param weekStart - Timestamp du début de semaine
+ * @param weekEnd - Timestamp de fin de semaine
+ * @returns Rendez-vous générés pour cette semaine
+ */
+function generateAppointmentsForWeek(
+  employees: Employee[], 
+  weekStart: number, 
+  weekEnd: number
+): Appointment[] {
+  const appointments: Appointment[] = [];
+  
+  employees.forEach((employee) => {
+    // Seed déterministe basé sur employé + semaine
+    const employeeSeed = 12345 + employee.id + Math.floor(weekStart / 1000000);
+    const rng = new SeededRandom(employeeSeed);
+    
+    // Quota aléatoire de RDV pour cette semaine
+    const weeklyQuota = Math.floor(rng.next() * 3);
+    if (weeklyQuota === 0) return;
+    
+    const employeeAppointments: { start: number; end: number }[] = [];
+    
+    const isOverlapping = (start1: number, end1: number, start2: number, end2: number): boolean => {
+      return !(end1 < start2 || start1 > end2);
+    };
+    
+    for (let slot = 0; slot < weeklyQuota; slot++) {
+      let attempts = 0;
+      let isValid = false;
+      let finalStartTs = 0;
+      let finalEndTs = 0;
+      let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
+      let selectedEventId = 0;
+      
+      while (!isValid && attempts < 50) {
+        attempts++;
+        
+        // Déterminer le type
+        const rand = rng.next();
+        let typeTarget = 'chantier';
+        if (rand >= 0.6 && rand < 0.8) typeTarget = 'absence';
+        else if (rand >= 0.8) typeTarget = 'autre';
+        
+        const candidates = Evenements.filter(e => e.type === typeTarget);
+        const selectedEvent = candidates.length > 0 
+          ? candidates[rng.nextInt(candidates.length)] 
+          : Evenements[0];
+        
+        appointmentType = typeTarget as any;
+        selectedEventId = selectedEvent?.id || 0;
+        
+        // Durée aléatoire (1-3 jours)
+        let duration = Math.floor(rng.next() * 2) + 1;
+        if (typeTarget === 'chantier') duration = Math.floor(rng.next() * 3) + 1;
+        
+        // Jour de début
+        const startDayOffset = Math.floor(rng.next() * 5);
+        const startTs = weekStart + (startDayOffset * 24 * 60 * 60 * 1000);
+        const endTs = startTs + (duration * 24 * 60 * 60 * 1000);
+        
+        // Vérifier chevauchement
+        const overlaps = employeeAppointments.some(existing => 
+          isOverlapping(startTs, endTs, existing.start, existing.end)
+        );
+        
+        if (!overlaps && endTs <= weekEnd) {
+          finalStartTs = startTs;
+          finalEndTs = endTs;
+          employeeAppointments.push({ start: finalStartTs, end: finalEndTs });
+          isValid = true;
+          
+          // Créer le RDV
+          appointments.push({
+            id: nextAppointmentId++,
+            employeeId: employee.id,
+            startDate: finalStartTs,
+            endDate: finalEndTs,
+            type: appointmentType,
+            EventId: selectedEventId,
+            description: selectedEvent?.defaultDescription || '',
+          });
+        }
+      }
+    }
+  });
+  
+  return appointments;
+}
+
+// ===== INITIALISATION DU CACHE (Semaine courante uniquement) =====
+// Génération minimale au chargement pour performance maximale
+// Les autres semaines seront générées à la demande (lazy loading)
+(() => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const day = now.getDay();
+  const diffToMonday = (day + 6) % 7;
+  now.setDate(now.getDate() - diffToMonday);
+  
+  // Pré-charger seulement 3 semaines (celle-ci + 1 avant + 1 après)
+  // Temps de chargement: < 50ms au lieu de 1500ms+
+  const employees = getEmployees();
+  
+  for (let i = -1; i <= 1; i++) {
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() + (i * 7));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+    
+    const cacheKey = getCacheKey(weekStart.getTime());
+    const weekApps = generateAppointmentsForWeek(
+      employees,
+      weekStart.getTime(),
+      weekEnd.getTime()
+    );
+    
+    appointmentsCache.set(cacheKey, weekApps);
+  }
+})();

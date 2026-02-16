@@ -3,26 +3,24 @@ import Calendrier from './calendrier/pages/index';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { ThemeType, useTheme } from './calendrier/utils/themeManager';
+import { User } from './calendrier/types';
+import { getUserById } from './datasource';
+import { ErrorBoundary } from "./calendrier/components/ui/ErrorBoundary";
+
 
 export default function Home() {
 
-  const [user, setUser] = useState({
-    id: 1,
-    name: "John Doe",
-    role: "admin",
-    theme: "light",
-    image: "https://i.pravatar.cc/40?img=1"
-  })
+  const [user, setUser] = useState<User | undefined>(() => getUserById(100));
 
   const { theme, setTheme, availableThemes } = useTheme();
   
   // Fonction pour changer le thème et mettre à jour l'objet user
   const handleThemeChange = useCallback((newTheme: ThemeType) => {
     // 1. Mettre à jour l'objet user
-    setUser(prevUser => ({
+    setUser(prevUser => prevUser ? ({
       ...prevUser,
       theme: newTheme
-    }));
+    }) : prevUser);
     
     // 2. Appliquer le thème visuellement
     setTheme(newTheme);
@@ -33,10 +31,23 @@ export default function Home() {
   
   // Appliquer le thème initial au chargement
   useEffect(() => {
-    setTheme(user.theme as ThemeType);
-  }, []);
+    if (user) {
+      setTheme(user.theme as ThemeType);
+    }
+  }, [user, setTheme]);
+
+  if (!user) return null;
 
   return (
-    <Calendrier user={user} onThemeChange={handleThemeChange} />
+     <ErrorBoundary
+        maxRetries={3}
+        retryDelay={2000}
+        onError={(error, errorInfo) => {
+          // Log l'erreur (peut être envoyé à un service de monitoring)
+          console.error('[Error Boundary]', error, errorInfo);
+        }}
+      >
+        <Calendrier user={user} onThemeChange={handleThemeChange} />
+      </ErrorBoundary>
   );
 }

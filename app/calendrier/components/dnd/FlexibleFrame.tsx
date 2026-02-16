@@ -56,6 +56,8 @@ interface HeaderLevel {
   stickyTop?: number | string;
   /** Hauteur minimale */
   minHeight?: number | string;
+  /** Hauteur maximale */
+  maxHeight?: number | string;
   /** Classes CSS pour le conteneur du niveau */
   containerClassName?: string;
   /** Classes CSS pour chaque item du niveau */
@@ -239,17 +241,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
     >
       {/* Rendu de tous les niveaux d'en-têtes */}
       {headers.map((headerLevel: HeaderLevel, index: number) => renderHeader(headerLevel, index))}
-
-      {/* Zone de contenu */}
-      <div
-        className="relative"
-        style={{
-          gridTemplateColumns,
-          display: 'grid',
-        }}
-      >
-        {children}
-      </div>
+      {children}
     </div>
   );
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { 
   Modal, 
@@ -8,11 +8,12 @@ import {
   ConfigurationModal, 
   FilterModal 
 } from '@/app/calendrier/components';
-import { Appointment, Item, Employee, CalendarConfig, Image } from '../../types';
+import { Appointment, Item, Employee, CalendarConfig, Image, User } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/useAppointmentLogic';
 
 interface CalendarModalsProps {
+  user: User;
   modalsState: {
     isModalOpen: boolean;
     isSettingsOpen: boolean;
@@ -20,20 +21,22 @@ interface CalendarModalsProps {
     isImageSelectorOpen: boolean;
     isConfigModalOpen: boolean;
     repeatData: RepeatData | null;
-    extendData: Date | null;
+    extendData: number | null;
     modalInfo: { message: string, color: string } | null;
     selectedAppointmentForm: Appointment | null;
   };
   handlers: {
     closeModal: () => void;
     saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean) => void;
+    handleAddDimension: (dimension: Item) => void;
+    handleEditDimension: (dimension: Item) => void;
     
     // Repeat Handlers
     setRepeatData: (data: RepeatData | null) => void;
     handleRepeat: () => void;
     
     // Extend Handlers
-    setExtendData: (date: Date | null) => void;
+    setExtendData: (date: number | null) => void;
     handleExtend: () => void;
     
     // Image Handlers
@@ -85,23 +88,25 @@ interface CalendarModalsProps {
     setIncludeWeekend: (v: boolean) => void;
     respectNonWorkingDays: boolean;
     setRespectNonWorkingDays: (v: boolean) => void;
-    nonWorkingDates: Date[];
-    setNonWorkingDates: (dates: Date[]) => void;
+    nonWorkingDates: number[];
+    setNonWorkingDates: (dates: number[]) => void;
     
     // Constants
     HALF_DAY_INTERVALS: any[];
     isFullDay: boolean;
     isDisplayWeekend: boolean;
-    viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table';
+    viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table';
   };
 }
 
-export const CalendarModals = ({ 
+export const CalendarModals = memo(({ 
+  user,
   modalsState, 
   handlers, 
   data, 
   config 
 }: CalendarModalsProps) => {
+  const [isFormDirty, setIsFormDirty] = useState(false);
 
   // Reconstitution de la structure des paramètres pour SettingsModal
   const settings = useMemo(() => [
@@ -141,8 +146,9 @@ export const CalendarModals = ({
         return modalsState.selectedAppointmentForm.id === 0 ? "Modification Évènement" : "Modifier le rendez-vous";
     }
     return "Ajouter un rendez-vous";
-  };
+  };  
 
+  
   return (
     <>
       {/* --- MODALE PRINCIPALE (Formulaire / Répétition / Prolongation) --- */}
@@ -152,11 +158,14 @@ export const CalendarModals = ({
           handlers.closeModal();
           handlers.setRepeatData(null);
           handlers.setExtendData(null);
+          setIsFormDirty(false);
         }}
         title={getMainModalTitle()}
         whithoutCloseButton={true}
         roundedSize="2xl"
         classNameContent='px-4 py-4'
+        confirmCloseOnOverlay={true}
+        hasUnsavedChanges={isFormDirty}
       >
         {/* CAS 1: Répétition */}
         {!!modalsState.repeatData ? (
@@ -243,7 +252,7 @@ export const CalendarModals = ({
                     value="endDate"
                     checked={modalsState.repeatData.endDate !== null && modalsState.repeatData.repeatCount === null}
                     onChange={() => {                        
-                      handlers.setRepeatData({ ...modalsState.repeatData!, repeatCount: null, endDate: new Date() });
+                      handlers.setRepeatData({ ...modalsState.repeatData!, repeatCount: null, endDate: Date.now() });
                     }}
                   />
                   <span className="ml-1">{'Fin répétition'}</span>
@@ -255,8 +264,9 @@ export const CalendarModals = ({
                   min={modalsState.selectedAppointmentForm?.endDate ? format(modalsState.selectedAppointmentForm.endDate, "yyyy-MM-dd") : undefined}
                   onChange={e => {
                     const value = e.target.value;
-                    const endDate = value ? new Date(value) : null;
-                    handlers.setRepeatData({ ...modalsState.repeatData!, endDate, repeatCount: null });
+                    const parsed = value ? new Date(value).getTime() : null;
+                    if (parsed !== null && Number.isNaN(parsed)) return; // Ignore invalid dates
+                    handlers.setRepeatData({ ...modalsState.repeatData!, endDate: parsed, repeatCount: null });
                   }}
                 />
               </div>
@@ -290,8 +300,10 @@ export const CalendarModals = ({
                 value={format(modalsState.extendData, "yyyy-MM-dd")}
                 min={modalsState.selectedAppointmentForm?.endDate ? format(modalsState.selectedAppointmentForm.endDate, "yyyy-MM-dd") : undefined}
                 onChange={(e) => {
-                  const date = new Date(new Date(e.target.value).setHours(23, 59, 59, 999));
-                  if (!isNaN(date.getTime())) handlers.setExtendData(date);
+                  const date = new Date(e.target.value).setHours(23, 59, 59, 999);
+                  if (!isNaN(date)) {
+                    handlers.setExtendData(date);
+                  }
                 }}
               />
             </div>
@@ -318,7 +330,8 @@ export const CalendarModals = ({
             appointments={data.appointments}
             appointment={modalsState.selectedAppointmentForm as Appointment}
             item={data.selectedItem!}
-            isReducedVersion={modalsState.selectedAppointmentForm?.id === 0}
+            items={data.items}
+            isReducedVersion={modalsState.selectedAppointmentForm?.id === 0 || modalsState.selectedAppointmentForm?.id === -1}
             employees={data.employees}
             HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
             isFullDay={config.isFullDay}
@@ -326,6 +339,9 @@ export const CalendarModals = ({
             onSave={handlers.saveAppointment}
             onClose={() => handlers.closeModal()}
             handleOpenImageModal={handlers.openImageModalForEvent}
+            onDirtyChange={setIsFormDirty}
+            handleAddDimension={handlers.handleAddDimension}
+            handleEditDimension={handlers.handleEditDimension}
           />
         )}
       </Modal>
@@ -351,6 +367,7 @@ export const CalendarModals = ({
       
       {/* --- CONFIGURATION VUES CALENDRIER --- */}
       <ConfigurationModal
+        user={user}
         isOpen={modalsState.isConfigModalOpen}
         onClose={handlers.closeConfigModal}
         availableConfigs={data.availableConfigs}
@@ -384,4 +401,4 @@ export const CalendarModals = ({
       )}
     </>
   );
-};
+});

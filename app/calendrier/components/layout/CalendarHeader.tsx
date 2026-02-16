@@ -1,24 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import { UserMenu } from '../index'; 
 
 import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
+import { Appointment } from '../../types';
+import { memo, use, useEffect } from 'react';
 
 interface CalendarHeaderProps {
   theme: string;
   user: any;
   viewState: any; // Type retourné par useCalendarView
   notifications: any; // Type retourné par useNotifications
-  onNavigateDate: (date: Date) => void;
+  handleAddModal: (appointment: Appointment) => void;
+  onNavigateDate: (date: number) => void;
 }
 
-export const CalendarHeader = ({ 
+export const CalendarHeader = memo(({ 
   theme, 
   user, 
   viewState, 
   notifications, 
-  onNavigateDate 
+  handleAddModal,
+  onNavigateDate,
 }: CalendarHeaderProps) => {
   
   // Déstructuration du viewState pour simplifier l'accès dans le JSX
@@ -30,7 +33,10 @@ export const CalendarHeader = ({
     isNotificationsPanelOpen, setIsNotificationsPanelOpen,
     isSearchOverlayOpen, setIsSearchOverlayOpen,
     isFilterModalOpen, setIsFilterModalOpen,
+    isViewDropdownOpen, setIsViewDropdownOpen,
+    viewDropdownRef,
     calendarConfigHook, // Pour ouvrir la modale de config calendrier
+    
     
     // Toggles d'affichage
     isDisplayWeekend, setIsDisplayWeekend,
@@ -40,29 +46,7 @@ export const CalendarHeader = ({
     selectedDate, setSelectedDate
   } = viewState;
 
-  // État local pour le menu déroulant des vues
-  const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
-  const viewDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fermer le dropdown quand on clique à l'extérieur
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isViewDropdownOpen && viewDropdownRef.current) {
-        const target = event.target as HTMLElement;
-        if (!viewDropdownRef.current.contains(target)) {
-          setIsViewDropdownOpen(false);
-        }
-      }
-    };
-
-    if (isViewDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isViewDropdownOpen]);
 
   return (
     <div className="flex flex-col items-center pr-9">
@@ -230,7 +214,20 @@ export const CalendarHeader = ({
                         </div>
                         {viewType === 'paie-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
                       </button>
-                      
+                      {/* Option: Événements manuels */}
+                      <button
+                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
+                        onClick={() => { setViewType('manual-event-table'); setIsViewDropdownOpen(false); }}
+                      >
+                        <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'manual-event-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 011 1v10a1 1 0 01-1 1h-6.586l-3.707 3.707A1 1 0 018 19v-3H4a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v8h4a1 1 0 011 1v1.586L12.586 15H19V6H5zm2 2h10v2H7V8zm0 3h7v2H7v-2z"/></svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">Événements manuels</div>
+                          <div className="text-xs text-primary mt-0.5">Créer et gérer les rubriques personnalisées</div>
+                        </div>
+                        {viewType === 'manual-event-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}                     
+                      </button>
                       {/* Option: Employee Table */}
                       <button
                         className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'employee-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
@@ -289,6 +286,7 @@ export const CalendarHeader = ({
               viewType === 'calendar' ? 'Planning' 
               : viewType === 'chantier-table' ? 'Liste des chantiers' 
               : viewType === 'paie-table' ? 'Rubrique Paie' 
+              : viewType === 'manual-event-table' ? 'Rubrique personnalisée' 
               : 'Liste des employées'
             }
           </p>
@@ -303,14 +301,15 @@ export const CalendarHeader = ({
                 className="date-input border w-38 border-default rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-color transition bg-bg-secondary text-base text-primary"
                 value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
                 onChange={(e) => {
-                  const date = new Date(e.target.value);
-                  if (isNaN(date.getTime())) return;
+                  const date = new Date(e.target.value).setHours(0,0,0,0);                  
+                  if (isNaN(date)) return;
                   setSelectedDate(date);
                   onNavigateDate(date);
                 }}
               />
             )}
           </div>
+
 
           {/* Toggle Weekend / Full Day / Filtres */}
           <div className="border border-default rounded-xl flex items-center multi-op">
@@ -345,24 +344,40 @@ export const CalendarHeader = ({
                 </button>
               </>
             )}
-            <button 
-              className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
-              name="filtrer"
-              onClick={() => viewType === 'calendar' ? calendarConfigHook.openConfigModal() : setIsFilterModalOpen(true)}
-              title="Filtrer"
-            >
-              <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bg-icon w-5 h-5 text-inherit text-gray-500 transition duration-200">
-                <g><path d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"/></g>
-              </svg>
-            </button>
+            <>
+              <button 
+                className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
+                name="filtrer"
+                onClick={() => viewType === 'calendar' ? calendarConfigHook.openConfigModal() : setIsFilterModalOpen(true)}
+                title="Filtrer"
+              >
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bg-icon w-5 h-5 text-inherit text-gray-500 transition duration-200">
+                  <g><path d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"/></g>
+                </svg>
+              </button>
+            </>
+            
           </div>
 
           {/* Bouton Ajouter Évènement */}
-          {viewType === 'calendar' && (
+          {(viewType === 'calendar' || viewType === 'manual-event-table') && (
             <button
               className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto bg-primary-light"
               type="button"
-              onClick={() => setIsSearchOverlayOpen(true)}
+              onClick={() => 
+                viewType === 'calendar' 
+                  ? setIsSearchOverlayOpen(true) 
+                  : handleAddModal({
+                    id: -1,
+                    description: '',
+                    startDate: 0,
+                    endDate: 1,
+                    employeeId: 0,
+                    type: 'autre',
+                    EventId: 0
+                  })
+              }
+              title={viewType === 'calendar' ? "Ajouter un évènement" : "Ajouter une rubrique"}
             >
               + Ajouter un évènement
             </button>
@@ -371,4 +386,4 @@ export const CalendarHeader = ({
       </div>
     </div>
   );
-};
+});

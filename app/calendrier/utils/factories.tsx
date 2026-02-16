@@ -3,7 +3,6 @@ import { addHours } from "date-fns";
 import { Appointment, Employee, ChantierItem, Groupe } from "../types";
 import { HOURS_PER_DAY } from "./constants";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
-import { Group } from 'next/dist/shared/lib/router/utils/route-regex';
 
 
 // --- FACTORY DES RENDERERS (AFFICHAGE DES CELLULES DES TABLEAUX ) ---
@@ -20,6 +19,10 @@ export const customRenderersFactory = (
   onTeamChange: (empId: number, groupId: number | null) => void
 ) => {
 
+  const getWithSeparator = (num: string): string => {
+    return num.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
   // 1. Renderer pour les images de Chantiers / Paie (Affiche un mini AppointmentItem)
   const imageRendererChantierAndPaie = (value: any, item: any) => {
     const chantierItem = item as ChantierItem;
@@ -30,10 +33,9 @@ export const customRenderersFactory = (
             description: '',
             type: chantierItem.type,
             EventId: Number(chantierItem.id),
-            startDate: new Date(),
-            endDate: addHours(new Date(), 12),
+            startDate: 0,
+            endDate: 1000,
             employeeId: 0,
-            top: 0,
           }}
           isFullDay={false}
           isMobile={false}
@@ -47,8 +49,8 @@ export const customRenderersFactory = (
               description: '',
               type: chantierItem.type,
               EventId: Number(chantierItem.id),
-              startDate: new Date(),
-              endDate: addHours(new Date(), 12),
+              startDate: 0,
+              endDate: 1000,
               employeeId: 0,
             }
             setSelectedAppointment(newAppointment);
@@ -59,8 +61,9 @@ export const customRenderersFactory = (
   };
 
   // 2. Renderer pour les valeurs importantes (Alertes rouges)
-  const importantRenderer = (value: any, item: any, attributeKey: string) => {
+  const analyseChantierRender = (value: any, item: any, attributeKey: string) => {
     const apValue = parseFloat(value) || 0;
+    
     // Logique: Si AP > 100% ou Solde < 0, on affiche en rouge
     if ((attributeKey === 'AP' && apValue > 100) || (attributeKey === 'SP' && apValue < 0)) {
       return (
@@ -88,13 +91,13 @@ export const customRenderersFactory = (
               strokeLinejoin="round"
             />
           </svg>
-          <span className="text-red-600 poppins font-medium">{value}</span>
+          <span className="text-red-600 poppins font-medium">{getWithSeparator(value)}</span>
         </div>
       );
     }
     return (
-      <div className='flex items-center justify-end w-full h-full font-bold'>
-        <span className="poppins">{value}</span>
+      <div className='flex items-center justify-end w-full h-full'>
+        <span className="poppins">{getWithSeparator(value)}</span>
       </div>
     );
   };
@@ -118,9 +121,11 @@ export const customRenderersFactory = (
     </div>
   );
 
+
   // --- RETOUR SELON LE VIEW TYPE ---
 
   if (viewType === 'chantier-table') {
+
     return {
       image: imageRendererChantierAndPaie,
       etat: (value: string) => {
@@ -140,8 +145,14 @@ export const customRenderersFactory = (
           </div>
         );
       },
-      AP: (value: any, item: any) => importantRenderer(value, item, 'AP'),
-      SP: (value: any, item: any) => importantRenderer(value, item, 'SP'),
+      AP: (value: any, item: any) => analyseChantierRender(value, item, 'AP'),
+      SP: (value: any, item: any) => analyseChantierRender(value, item, 'SP'),
+      TM: (value: any, item: any) => analyseChantierRender(value, item, 'TM'),
+      HR: (value: any, item: any) => analyseChantierRender(value, item, 'HR'),
+      SH: (value: any, item: any) => analyseChantierRender(value, item, 'SH'),
+      DPF: (value: any, item: any) => analyseChantierRender(value, item, 'DPF'),
+      RPF: (value: any, item: any) => analyseChantierRender(value, item, 'RPF'),
+
     };
   }
 
@@ -163,7 +174,7 @@ export const customRenderersFactory = (
       ),
       actif: (value: boolean) => (
         <div className="flex items-center justify-center">
-          <span className={`w-3 h-3 rounded-full ${value ? 'bg-green-500' : 'bg-red-500'}`}></span>
+          <span className={`w-3 h-3 rounded-full ${value ? 'bg-green-600' : 'bg-red-600'}`}></span>
         </div>
       )
     };
@@ -226,8 +237,7 @@ export const customComputedFieldsFactory = (
 
   // Calcul de la Durée Planifiée (DPF)
   const calculateDPF = (chantierId: number): string => {
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0);
+    const currentDate = new Date().setHours(0, 0, 0, 0);
 
     const relevantAppointments = appointments.filter(appointment => {
       if (appointment.type !== 'chantier' || appointment.EventId !== chantierId) {
@@ -246,33 +256,33 @@ export const customComputedFieldsFactory = (
       const endDate = appointment.endDate;
       
       // Approximation simple (à affiner avec hoursPerDay si besoin)
-      const timeDiff = endDate.getTime() - startDate.getTime();
+      const timeDiff = endDate - startDate;
       const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + (timeDiff > 0 ? 0 : 1); // +1 pour inclure le jour même si nécessaire
       
       // Utilisation de la constante globale HOURS_PER_DAY
       totalHours += daysDiff * (HOURS_PER_DAY || 7); 
     });
 
-    return `${totalHours}h`;
+    return `${Math.round(totalHours)}h`;
   };
 
   // Calcul du Reste à Faire + Réalisé (RPF)
   const calculateRPF = (chantier: any): string => {
-    const hrValue = parseFloat((chantier.HR || '0').replace('h', '')) || 0;
+    const hrValue = parseFloat((chantier.HR || '0')) || 0;
     const dpfString = calculateDPF(chantier.id);
-    const dpfValue = parseFloat(dpfString.replace('h', '')) || 0;
+    const dpfValue = parseFloat(dpfString) || 0;
 
     const totalRPF = hrValue + dpfValue;
-    return `${totalRPF}h`;
+    return `${Math.round(totalRPF)}h`;
   };
 
   // Calcul de l'Avancement % (AP)
   const calculateAP = (chantier: any): string => {
-    const tmValue = parseFloat((chantier.TM || '0').replace('h', '')) || 0;
+    const tmValue = parseFloat((chantier.TM || '0')) || 0;
     if (tmValue === 0) return '0%';
 
     const rpfString = calculateRPF(chantier);
-    const rpfValue = parseFloat(rpfString.replace('h', '')) || 0;
+    const rpfValue = parseFloat(rpfString) || 0;
 
     const percentage = Math.round((rpfValue / tmValue) * 100);
     return `${percentage}%`;
@@ -280,22 +290,23 @@ export const customComputedFieldsFactory = (
 
   // Calcul du Solde Prévu (SP)
   const calculateSP = (chantier: any): string => {
-    const tmValue = parseFloat((chantier.TM || '0').replace('h', '')) || 0;
+    const tmValue = parseFloat(chantier.TM || '0') || 0;
     const rpfString = calculateRPF(chantier);
-    const rpfValue = parseFloat(rpfString.replace('h', '')) || 0;
+    const rpfValue = parseFloat(rpfString) || 0;
 
     const soldeHeures = tmValue - rpfValue;
-    return `${soldeHeures}h`;
+    return `${Math.round(soldeHeures)}h`;
   };
 
   return {
     chantierTable: {
       DPF: (item: any) => calculateDPF(item.id),
-      HR: (item: any) => item?.HR || '0h',
+      HR: (item: any) => `${Math.round(parseFloat(item?.HR || '0'))}h` || '0h',
       RPF: (item: any) => calculateRPF(item),
-      SH: (item: any) => item?.SH || '0h',
+      SH: (item: any) => `${Math.round(parseFloat(item?.SH || '0'))}h` || '0h',
       AP: (item: any) => calculateAP(item),
       SP: (item: any) => calculateSP(item),
+      TM: (item: any) => `${Math.round(parseFloat(item?.TM || '0'))}h` || '0h',
     },
     // Ajout vide pour typescript safety
     paieTable: {}, 

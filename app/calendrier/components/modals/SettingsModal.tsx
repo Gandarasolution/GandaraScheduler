@@ -89,13 +89,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               if (
                                 newNonWorkingDate &&
                                 !setting.nonWorkingDates.some(
-                                  (d: Date) =>
+                                  (d: number) =>
                                     format(d, "yyyy-MM-dd") === newNonWorkingDate
                                 )
                               ) {
-                                setting.setNonWorkingDates((prev: Date[]) => [
+                                setting.setNonWorkingDates((prev: number[]) => [
                                   ...prev,
-                                  new Date(newNonWorkingDate),
+                                  newNonWorkingDate,
                                 ]);
                                 setNewNonWorkingDate("");
                               }
@@ -121,8 +121,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           ) : (
                             <div className="space-y-2 max-h-40 overflow-y-auto">
                               <h4 className="text-sm font-semibold  mb-3 poppins">Dates non travaillées ({setting.nonWorkingDates.length})</h4>
-                              {setting.nonWorkingDates.map((date: Date, idx: number) => (
-                                <div key={format(date, "yyyy-MM-dd") + idx} className="flex items-center justify-between bg-bg-secondary rounded-xl px-4 py-3 shadow-sm border border-ultra-light hover:shadow-md transition-all duration-200">
+                              {setting.nonWorkingDates.map((date: number, idx: number) => (
+                                <div key={date + idx} className="flex items-center justify-between bg-bg-secondary rounded-xl px-4 py-3 shadow-sm border border-ultra-light hover:shadow-md transition-all duration-200">
                                   <div className="flex items-center gap-3">
                                     <div className="w-2 h-2 bg-primary rounded-full"></div>
                                     <span className="text-sm font-medium poppins">{format(date, "dd/MM/yyyy")}</span>
@@ -130,10 +130,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   <button
                                     className="text-red-500 hover:text-white hover:bg-red-500 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1"
                                     onClick={() =>
-                                      setting.setNonWorkingDates((prev: Date[]) =>
+                                      setting.setNonWorkingDates((prev: number[]) =>
                                         prev.filter(
-                                          (d: Date) =>
-                                            format(d, "yyyy-MM-dd") !== format(date, "yyyy-MM-dd")
+                                          (d: number) =>
+                                            d !== date
                                         )
                                       )
                                     }

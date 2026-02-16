@@ -16,9 +16,9 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect } from 'react';
-import {Appointment, Employee, HalfDayInterval, Item, Tags } from '../../types';
-import { format, parseISO, setHours, startOfDay, setSeconds, setMinutes, addDays, eachDayOfInterval, addMinutes } from 'date-fns';
-import { isHoliday, isWeekend } from '../../utils/dates';
+import {Appointment, Employee, HalfDayInterval, Item, Tags, CommonPaieAttributs } from '../../types';
+import { format, startOfDay, isSameDay, isSameYear, isSameMonth } from 'date-fns';
+import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 
 import { AppointmentItem } from '../index';
 
@@ -33,6 +33,8 @@ interface AppointmentFormProps {
   appointment: Appointment;
   /** Événement associé au rendez-vous */
   item: Item;
+  /** Événements*/
+  items: Item[];
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
@@ -42,9 +44,11 @@ interface AppointmentFormProps {
   /** Indique si le rendez-vous occupe une journée complète */
   isFullDay: boolean;
   /** Liste des dates non-travaillées (week-ends, fériés) */
-  nonWorkingDates: Date[];
+  nonWorkingDates: number[];
   /** Version réduite du formulaire (moins de champs) */
   isReducedVersion?: boolean;
+  /** Indique si l'application est utilisée sur un appareil mobile */
+  isMobile?: boolean;
   /** Callback appelé lors de la sauvegarde */
   onSave: (
     appointment: Appointment,
@@ -55,6 +59,10 @@ interface AppointmentFormProps {
   onClose: () => void;
   /** Callback appelé lors de la sauvegarde de l'événement */
   handleOpenImageModal: (itemId: number) => void;
+  /** Callback pour notifier si le formulaire a des modifications non enregistrées */
+  onDirtyChange?: (isDirty: boolean) => void;
+  handleAddDimension: (dimension: Item) => void;
+  handleEditDimension: (dimension: Item) => void;
 }
 
 
@@ -87,10 +95,11 @@ interface AppointmentFormProps {
  *   onClose={handleClose}
  * />
  */
-const AppointmentForm: React.FC<AppointmentFormProps> = ({
+const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   appointments,
   appointment,
   item,
+  items,
   employees,
   HALF_DAY_INTERVALS,
   isFullDay,
@@ -98,9 +107,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   isReducedVersion,
   onSave,
   onClose,
-  handleOpenImageModal
+  handleOpenImageModal,
+  onDirtyChange,
+  handleAddDimension,
+  handleEditDimension,
+  isMobile,
 }) => {
-  
+    
   // ===== ÉTATS LOCAUX =====
   
   /**
@@ -109,13 +122,31 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    */
   const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(appointment);
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
-  const [dateValidationError, setDateValidationError] = useState(false);  
- 
+  const [dateValidationError, setDateValidationError] = useState(false);
+  const [codeValidationError, setCodeValidationError] = useState(false);  
+   
+  /**
+   * Normalise une couleur en format hexadécimal court (#RRGGBB)
+   * Supprime le canal alpha si présent (#RRGGBBAA -> #RRGGBB)
+   * @param color - Couleur au format hex (#RRGGBB ou #RRGGBBAA)
+   * @returns Couleur normalisée au format #RRGGBB
+   */
+  const normalizeColorForInput = (color: string | undefined): string => {
+    if (!color) return '#1E40AF';
+    // Si la couleur a 9 caractères (#RRGGBBAA), on retire les 2 derniers (canal alpha)
+    if (color.length === 9 && color.startsWith('#')) {
+      return color.substring(0, 7);
+    }
+    return color;
+  };
 
   useEffect(() => {
-    setFormDataItemType(prev => ({ ...prev, image: item.image }));
-  }, [item]);
-
+    // Ne mettre à jour que si l'image a réellement changé
+    if (item?.image !== formDataItemType.image) {
+      setFormDataItemType(prev => ({ ...prev, image: item?.image }));
+    }
+  }, [item?.image, formDataItemType.image]);
+  
 
   /**
    * Vérifie si le rendez-vous actuel chevauche des jours non-travaillés
@@ -127,9 +158,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     const days = eachDayOfInterval({ start: app.startDate, end: app.endDate });
     return days.some((date) =>
       (nonWorkingDates.some(nd => 
-        nd.getDay() === date.getDay()
-        && nd.getMonth() === date.getMonth()
-        && nd.getFullYear() === date.getFullYear()
+        isSameDay(nd, date)
+        && isSameMonth(nd, date)
+        && isSameYear(nd, date)
       ) || isHoliday(date) || isWeekend(date)) // Vérifie jours non travaillés, fériés ou week-ends
     );
   }, [appointments, formDataAppointment.id, nonWorkingDates]);
@@ -137,7 +168,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   /**
    * État pour contrôler l'expansion du panel d'options avancées
    */
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(isReducedVersion ? false : true);
 
   /**
    * État unifié pour la gestion de tous les jours non travaillés
@@ -151,6 +182,36 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
    * États pour la gestion des étiquettes (version réduite uniquement)
    */
   const [newTag, setNewTag] = useState<Tags>({id: 0, name: ''});
+
+  /**
+   * Détection des changements non sauvegardés
+   */
+  useEffect(() => {
+    if (!onDirtyChange) return;
+
+    // Comparaison simple pour détecter les changements
+    // Note: Pour une comparaison plus robuste, on pourrait utiliser lodash.isEqual
+    // ou une comparaison champ par champ spécifique
+    
+    // On ignore certaines propriétés qui peuvent changer sans impacter la "saleté" du formulaire
+    // comme l'ordre des clés ou des références d'objets identiques
+    
+    const isAppDirty = JSON.stringify({
+      ...formDataAppointment,
+      // Normalisation des dates pour éviter les faux positifs dus aux millisecondes
+      startDate: formDataAppointment.startDate,
+      endDate: formDataAppointment.endDate
+    }) !== JSON.stringify({
+      ...appointment,
+      startDate: appointment.startDate,
+      endDate: appointment.endDate
+    });
+
+    const isItemDirty = JSON.stringify(formDataItemType) !== JSON.stringify(item);
+    const isIncludeDirty = includeAllNonWorkingDays !== isAppointmentSplitByNotWorkingDay;
+
+    onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
+  }, [formDataAppointment, formDataItemType, includeAllNonWorkingDays, appointment, item, isAppointmentSplitByNotWorkingDay, onDirtyChange]);
 
   /**
    * Gère les changements des champs texte, textarea et select du formulaire.
@@ -181,18 +242,33 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
 
     const { name, value } = e.target;
-    if (!value) return;    
-    const datePart = parseISO(value);
-    let newDate: Date;
+    if (!value) return;
 
-    if (name === 'startDate') {
-      
-        newDate = setHours(setMinutes(datePart, (formDataAppointment.startDate || new Date()).getMinutes()), (formDataAppointment.startDate || new Date()).getHours());
-        setFormDataAppointment(prev => ({ ...prev, startDate: newDate }));
-    } else if (name === 'endDate') {
-        newDate = setHours(setMinutes(datePart, (formDataAppointment.endDate || new Date()).getMinutes()), (formDataAppointment.endDate || new Date()).getHours());
-        setFormDataAppointment(prev => ({ ...prev, endDate: newDate }));
-    }
+    const baseDate = new Date(value);
+    const baseTs = baseDate.getTime();
+    if (Number.isNaN(baseTs)) return; // Ignore invalid input to avoid propagating NaN
+
+    // 2. On récupère l'heure actuelle stockée dans le state (ou l'heure courante si vide)
+    // formDataAppointment[name] est supposé être un timestamp (number)
+    const currentTimestamp = formDataAppointment[name as 'startDate' | 'endDate'] || Date.now();
+    const timeSource = new Date(currentTimestamp);
+    const timeSourceTs = timeSource.getTime();
+    const safeTimeSource = Number.isNaN(timeSourceTs) ? new Date() : timeSource;
+
+    // 3. FUSION : On applique l'heure conservée sur la nouvelle date
+    // setHours prend (heures, minutes, secondes, ms)
+    baseDate.setHours(
+      safeTimeSource.getHours(), 
+      safeTimeSource.getMinutes(), 
+      0, 
+      0
+    );
+
+    // 4. On met à jour le state avec un TIMESTAMP (nombre)
+    setFormDataAppointment(prev => ({ 
+        ...prev, 
+        [name]: baseDate.getTime() 
+    }));
   };
 
 
@@ -205,15 +281,39 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    
+    if (formDataAppointment.id === -1) {
+      // Validation du code avant la création
+      if (formDataItemType.code && items.find(item => item.code === formDataItemType.code.toUpperCase())) {
+        setCodeValidationError(true);
+        return;
+      }
+      // Si c'est une création, on ajoute le nouvel événement
+      handleAddDimension({...formDataItemType, id: Date.now()});
+      return;
+    }
+    
+    if (formDataItemType.id === 0) {
+      // Si c'est une modification, on met à jour l'événement existant
+      handleEditDimension(formDataItemType);
+      return;
+    }    
+
     // Validation des dates
-    if (formDataAppointment.startDate >= formDataAppointment.endDate) {
+    if (formDataAppointment.startDate >= formDataAppointment.endDate) {      
       setDateValidationError(true);
       return;
     }
 
     setDateValidationError(false);
     
-    onSave(formDataAppointment, formDataItemType, includeAllNonWorkingDays);
+       // console.log(formDataItemType.id);
+
+    onSave(
+      formDataAppointment,
+      formDataItemType,
+      includeAllNonWorkingDays
+    );
   };
 
   /**
@@ -243,15 +343,46 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
   };
 
-  
-  
+  const handleItemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
 
+    if (name === 'code') {
+      // Réinitialiser l'erreur lors de la modification
+      if (codeValidationError) {
+        setCodeValidationError(false);
+      }
+      
+      // Forcer les majuscules pour le champ code
+      const upperCode = value.toUpperCase();
+      if (items.find(item => item.code === upperCode && item.id !== formDataItemType.id)) {
+        // Gérer le cas où le code existe déjà
+        setCodeValidationError(true);
+        setFormDataItemType(prev => ({
+          ...prev,
+          [name]: upperCode
+        }));
+        return;
+      }
+      setFormDataItemType(prev => ({
+        ...prev,
+        [name]: upperCode
+      }));
+      return;
+    }
+
+    setFormDataItemType(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+    
+  
   // Rendu du formulaire
   return (
     <>
       <div className={`flex ${isReducedVersion ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} gap-4 rounded-xl poppins transition-all duration-300`}>
         {/* Section principale du formulaire */}
-        <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-full max-w-[380px] min-w-[320px]`}>
+        <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-full max-w-[380px] min-w-[320px]`} noValidate>
           {/* Flèche d'expansion */}
           {!isReducedVersion && (
             <button
@@ -272,19 +403,92 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               </svg>
             </button>
           )}
+          {formDataAppointment.id === -1 && (
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                  {/* Champ CODE */}
+                  <div className="w-1/3">
+                      <label htmlFor="code" className="block text-xs font-medium text-gray-500 mb-1">Code</label>
+                      <input
+                          type="text"
+                          name="code"
+                          id="code"
+                          value={formDataItemType.code || ''}
+                          onChange={handleItemChange}
+                          placeholder="EX: CH"
+                          className={`w-full p-2 border rounded-xl focus:outline-none focus:ring-2 text-sm ${codeValidationError ? 'border-red-500 focus:ring-red-500' : 'border-default focus:ring-primary'}`}
+                          required
+                      />
+                      {codeValidationError && (
+                        <p className="text-xs text-red-500 mt-1">Ce code est déjà utilisé</p>
+                      )}
+                  </div>
+                  
+                  {/* Champ ACTIF (Switch) */}
+                  <div className="flex flex-col items-center justify-center w-1/6">
+                      <label htmlFor="active" className="block text-xs font-medium text-gray-500 mb-1">Actif</label>
+                      <input
+                          type="checkbox"
+                          name="actif"
+                          id="actif"
+                          checked={!!(formDataItemType as CommonPaieAttributs).actif}
+                          onChange={handleItemChange}
+                          className="w-5 h-5 cursor-pointer accent-primary"
+                          title="Statut actif/inactif"
+                      />
+                  </div>
+              </div>
+
+              {/* Champ DESCRIPTION (Nom) */}
+              <div className="w-full">
+                  <label htmlFor="name" className="block text-xs font-medium text-gray-500 mb-1">Description</label>
+                  <input
+                      type="text"
+                      name="label"
+                      id="label"
+                      value={formDataItemType.label || ''}
+                      onChange={handleItemChange}
+                      placeholder="Nom de la rubrique..."
+                      className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                      required
+                  />
+              </div>
+            </div>
+          )}
+          
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mr-2">
             <div className='flex item-start w-full sm:w-[68px]'>Icône</div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
               {/* Container pour l'image et le bouton de modification */}
-              <div className="relative group">
-                <img 
-                  src={formDataItemType.image?.image} 
-                  alt="Icône" 
-                  className="w-12 h-12 rounded border border-default object-cover" 
-                />
+              <div 
+                className="relative group"
+                onClick={() => {if (isMobile) handleOpenImageModal(formDataItemType.id)}}
+              >
+                {formDataItemType?.image?.image ? (
+                  // CAS 1 : L'image existe -> On l'affiche
+                  <img 
+                    src={formDataItemType.image.image} 
+                    alt="Icône" 
+                    className="w-12 h-12 rounded border border-default object-cover" 
+                  />
+                ) : (
+                  // CAS 2 : Pas d'image -> Fond gris avec une croix
+                  <div className="w-12 h-12 rounded border border-default bg-gray-200 flex items-center justify-center text-gray-400">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      strokeWidth={2} 
+                      stroke="currentColor" 
+                      className="w-6 h-6"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                )}
                 <button
                   type="button"
-                  onClick={() => handleOpenImageModal(formDataItemType.id)}
+                  onClick={() => {if (!isMobile) handleOpenImageModal(formDataItemType.id)}}
                   className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
                   title="Modifier l'image"
                 >
@@ -294,65 +498,65 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                 </button>
               </div>
               {/* Sélecteurs de couleur */}
-              <div className="flex flex-row sm:flex-col gap-2">
+              <div className="flex flex-col gap-2 w-full">
                 {/* Couleur de fond */}
-                <div className="relative group flex items-center gap-1">
+                <div className="relative group flex items-center gap-2">
                   <label 
                     htmlFor="color-fond"
-                    className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataItemType.color || '#1E40AF' }}
+                    className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                    style={{ backgroundColor: formDataItemType?.color || '#1E40AF' }}
                     title="Couleur de fond"
                   />
                   <input
                     id="color-fond"
                     type="color"
-                    value={formDataItemType.color || '#1E40AF'}
+                    value={normalizeColorForInput(formDataItemType?.color)}
                     onChange={(e) => setFormDataItemType(prev => ({ ...prev, color: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de fond"
                   />
-                  <label htmlFor="color-fond" className="cursor-pointer">
+                  <label htmlFor="color-fond" className="cursor-pointer text-sm flex-1">
                     Couleur de fond
                   </label>
                 </div>
                 {/* Couleur de bordure */}
-                <div className="relative group flex items-center gap-1">
+                <div className="relative group flex items-center gap-2">
                  <label 
                     htmlFor="color-bordure"
-                    className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataItemType.borderColor || '#1E40AF' }}
+                    className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                    style={{ backgroundColor: formDataItemType?.borderColor || '#1E40AF' }}
                     title="Couleur de bordure"
                   />
                   <input
                     id="color-bordure"
                     type="color"
-                    value={formDataItemType.borderColor || '#1E40AF'}
+                    value={normalizeColorForInput(formDataItemType?.borderColor)}
                     onChange={(e) => setFormDataItemType(prev => ({ ...prev, borderColor: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de bordure"
                   />
-                  <label htmlFor="color-bordure" className="cursor-pointer">
+                  <label htmlFor="color-bordure" className="cursor-pointer text-sm flex-1">
                     Couleur de bordure
                   </label>
                 </div>
               
                 {/* Couleur de texte */}
-                <div className="relative group flex items-center gap-1">
+                <div className="relative group flex items-center gap-2">
                   <label 
                     htmlFor="color-texte"
-                    className="w-4 h-4 border-1 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataItemType.textColor || '#FFFFFF' }}
+                    className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                    style={{ backgroundColor: formDataItemType?.textColor || '#FFFFFF' }}
                     title="Couleur de texte"
                   />
                   <input
                     id="color-texte"
                     type="color"
-                    value={formDataItemType.textColor || '#FFFFFF'}
+                    value={normalizeColorForInput(formDataItemType?.textColor)}
                     onChange={(e) => setFormDataItemType(prev => ({ ...prev, textColor: e.target.value }))}
                     className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
                     title="Couleur de texte"
                   />
-                  <label htmlFor="color-texte" className="cursor-pointer">
+                  <label htmlFor="color-texte" className="cursor-pointer text-sm flex-1">
                     Couleur de texte
                   </label>
                 </div>
@@ -361,14 +565,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           </div>
 
           {/* Aperçu du rendez-vous - Repositionné sous les couleurs */}
-          <div className="relative flex items-center w-full h-full">
+          <div className='relative'>
             <AppointmentItem
               appointment={{
                 ...formDataAppointment,
                 id: formDataAppointment.id || 0,
-                top: 0,
-                startDate: new Date(),
-                endDate: new Date(addDays(new Date(), 3)),
+                startDate: Date.now(),
+                endDate: Date.now() + 86400000 * 3, // +3 jours
               }}
               event={formDataItemType}
               isFullDay={isFullDay}
@@ -381,16 +584,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
               handleContextMenu={() => {}}
             />
           </div>
-
         
 
           {!isReducedVersion && (
             <>
               {/* Dates et créneaux */}
               <div className="flex flex-col gap-4 bg-transparent">
-              <div className="flex-1 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <label htmlFor="startDate" className={"block text-sm font-medium sm:mr-auto"}>Début</label>
-                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+              <div className="flex-1 flex flex-row gap-2 items-center justify-between">
+                <label htmlFor="startDate" className={"block text-sm font-medium"}>Début</label>
+                <div className="flex flex-row gap-2 w-full justify-end">
                   <input
                     type="date"
                     id="startDate"
@@ -398,17 +600,17 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     value={format(formDataAppointment.startDate, 'yyyy-MM-dd')}
                     onChange={handleDateChange}
                     required
-                    className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color`}
+                    className={`w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm`}
                   />
             
-                  <div className='w-full sm:w-[145px]'>
+                  <div className='w-[145px]'>
                     {!isFullDay && (
                       <select
                         id="intervalNameStart"
                         name="intervalName"
                         value={
-                          formDataAppointment.startDate.getHours() >= HALF_DAY_INTERVALS[0].startHour 
-                          && formDataAppointment.startDate.getHours() < HALF_DAY_INTERVALS[0].endHour
+                          new Date(formDataAppointment.startDate).getHours() >= HALF_DAY_INTERVALS[0].startHour 
+                          && new Date(formDataAppointment.startDate).getHours() < HALF_DAY_INTERVALS[0].endHour
                           ? 'morning' : 'afternoon'
                         }
                         onChange={e => {
@@ -417,7 +619,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                             : HALF_DAY_INTERVALS[1].startHour;
                           setFormDataAppointment(prev => ({
                             ...prev,
-                            startDate: setHours(startOfDay(prev.startDate), newHour),
+                            startDate: startOfDay(prev.startDate).setHours(newHour),
                           }));
                         }}
                         className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
@@ -426,7 +628,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                         <option value="afternoon"
                           disabled={
                             format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
-                            formDataAppointment.endDate.getHours() === HALF_DAY_INTERVALS[0].endHour
+                            new Date(formDataAppointment.endDate).getHours() === HALF_DAY_INTERVALS[0].endHour - 1
                           }
                         >Après-midi</option>
                       </select>
@@ -434,10 +636,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                   </div>
                 </div>
               </div>
-              <div className="flex-1 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <label htmlFor="endDate" className="block text-sm font-medium sm:mr-auto">Fin</label>
-                <div className="flex flex-col w-full sm:w-auto">
-                  <div className="flex sm:flex-row gap-4 w-full sm:w-auto">
+              <div className="flex-1 flex flex-row gap-2 items-center">
+                <label htmlFor="endDate" className="block text-sm font-medium">Fin</label>
+                <div className="flex flex-col w-full">
+                  <div className="flex flex-row gap-2 w-full justify-end">
                     <input
                       type="date"
                       id="endDate"
@@ -445,32 +647,33 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                       value={format(formDataAppointment.endDate, 'yyyy-MM-dd')}
                       onChange={handleDateChange}
                       required
-                      className={`w-full sm:w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color`}
+                      className={`w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm`}
                     />
 
-                    <div className='w-full sm:w-[145px]'>
+                    <div className='w-[145px]'>
                       {!isFullDay && (
                         <select
                           id="intervalNameEnd"
                           name="intervalName"
                           value={
-                            formDataAppointment.endDate.getHours() <= HALF_DAY_INTERVALS[0].endHour
+                            new Date(formDataAppointment.endDate).getHours() <= HALF_DAY_INTERVALS[0].endHour
                               ? 'morning'
                               : 'afternoon'
                           }
                           onChange={e => {
                             const isAfternoon = e.target.value === 'afternoon';
+
                             setFormDataAppointment(prev => {
-                              const endDateDay = new Date(format(prev.endDate, 'yyyy-MM-dd') + 'T00:00:00');
-                              let newEndDate;
-                              if (isAfternoon) {
-                                newEndDate = setHours(setMinutes(setSeconds(endDateDay, 59), 59), HALF_DAY_INTERVALS[1].endHour - 1);
-                              } else {
-                                newEndDate = setHours(setMinutes(setSeconds(endDateDay, 0), 0), HALF_DAY_INTERVALS[0].endHour);
-                              }
+                              const targetDate = new Date(prev.endDate);
+                              targetDate.setHours(
+                                isAfternoon ? HALF_DAY_INTERVALS[1].endHour - 1 : HALF_DAY_INTERVALS[0].endHour - 1 ,
+                                59 ,
+                                59 ,
+                                999
+                              );
                               return {
                                 ...prev,
-                                endDate: newEndDate,
+                                endDate: targetDate.getTime(),
                               };
                             });
                           }}
@@ -480,7 +683,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                             value="morning"
                             disabled={
                               format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
-                              formDataAppointment.startDate.getHours() === HALF_DAY_INTERVALS[1].startHour
+                              new Date(formDataAppointment.startDate).getHours() === HALF_DAY_INTERVALS[1].startHour
                             }
                           >Matin</option>
                           <option value="afternoon">Après-midi</option>
@@ -489,8 +692,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     </div>
                   </div>
                   {dateValidationError && (
-                    <div className='w-full sm:w-auto'>
-                      <span className="text-red-500 text-[11px] mt-1 block">
+                    <div className='w-full'>
+                      <span className="text-red-500 text-xs mt-1 block">
                         La date de fin doit être postérieure à la date de début
                       </span>
                     </div>
@@ -500,18 +703,18 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
             </div>
 
             {/* Sélecteur de chargé d'affaire */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <label htmlFor="employeeId" className="block text-sm font-medium sm:mr-auto">Affecté</label>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="employeeId" className="block text-sm font-medium">Affecté</label>
               <select
                 id="employeeId"
                 name="employeeId"
                 value={formDataAppointment.employeeId || ''}
                 onChange={handleChange}
-                className="w-full sm:w-[305px] p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-bg-secondary"
+                className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-bg-secondary text-sm"
               >
                 {employees.map(employee => (
                   <option key={employee.id} value={employee.id}>
-                    {employee.firstName + ' ' + employee.name}
+                    {employee.name + ' ' + employee.firstName}
                   </option>
                 ))}
               </select>
@@ -521,16 +724,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
           {/* Boutons d'action */}
           <div className="flex flex-col sm:flex-row justify-between gap-3 mt-5">
-            <button
+            <input
               type="submit"
-              className="px-4 py-2 bg-primary cursor-pointer text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
-            >
-              {appointment ? 'Enregistrer' : 'Créer'}
-            </button>
+              className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation"
+              value={appointment?.id === -1 ? 'Créer' : 'Enregistrer'}
+            />
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-primary cursor-pointer text-white rounded-xl w-full sm:w-[110px] flex items-center poppins text-[14px] justify-center"
+              className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation"
             >
               Annuler
             </button>
@@ -568,10 +770,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
 
             {/* Liste des étiquettes */}
             <div className="flex flex-wrap gap-2 min-h-[60px] max-h-[200px] overflow-y-auto">
-              {formDataItemType.tags?.length === 0 ? (
+              {formDataItemType?.tags?.length === 0 ? (
                 <span className="text-xs text-gray-400 italic">Aucune étiquette</span>
               ) : (
-                formDataItemType.tags?.map((tag, index) => (
+                formDataItemType?.tags?.map((tag, index) => (
                   <div
                     key={index}
                     className="inline-flex items-center gap-1 px-3 py-1 bg-primary-ultra-light text-primary rounded-full text-xs group hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -670,10 +872,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       </div>
     </>
   );
-};
-
-export default memo(AppointmentForm);
+});
 
 
-
-
+export default AppointmentForm;

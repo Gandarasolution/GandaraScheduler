@@ -78,6 +78,10 @@ export interface Tags {
   name: string;
 }
 
+export interface BaseItemCategory{
+  id: number;
+  name: string;
+}
 
 interface BaseItem {
   id: number;
@@ -89,7 +93,7 @@ interface BaseItem {
   image?: Image;
   defaultDescription?: string;
   tags?: Tags[];
-  category?: string;
+  isManual?: boolean;
 }
 
 export interface ChantierItem extends BaseItem {
@@ -102,19 +106,21 @@ export interface ChantierItem extends BaseItem {
   chefChantier: string;
   dateOS: string;
   dateFin: string;
-  TM: string;
-  HR: string;
-  SH: string;
-  DPF: string;
-  RPF: string;
-  AP: string;
-  SP: string;
+  TM: number;
+  HR: number;
+  SH: number;
+  DPF: number;
+  RPF: number;
+  AP: number;
+  SP: number;
 }
 
 // Interface commune pour les attributs partagés entre Absence et Autre
-interface CommonPaieAttributs extends BaseItem {
+export interface CommonPaieAttributs extends BaseItem {
   verrou: boolean;
   actif: boolean;
+  category: BaseItemCategory["name"];
+
 }
 
 export interface AbsenceItem extends CommonPaieAttributs {
@@ -145,17 +151,19 @@ export interface Appointment{
   /** Description spécifique du rendez-vous */
   description: string;
   /** Date et heure de début du rendez-vous */
-  startDate: Date;
+  startDate: number;
   /** Date et heure de fin du rendez-vous */
-  endDate: Date;
+  endDate: number;
   /** ID de l'employé assigné au rendez-vous */
-  employeeId: number | string;
+  employeeId: number;
   /** Type de rendez-vous */
   type: 'chantier' | 'absence' | 'autre';
   /** ID de l'événement auquel ce RDV est lié */
   EventId: number;
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
   tag?: Tags;
+  /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */
+  priority?: number;
 }
 
 
@@ -164,33 +172,61 @@ export interface Appointment{
  * Types disponibles pour le système de filtres
  * @type FilterType
  */
-export type FilterType = 'equals' | 'contains' | 'in' | 'range' | 'date_range';
+type FilterType = 'equals' | 'contains' | 'in' | 'range' | 'date_range';
 
 /**
  * Interface représentant un filtre de recherche
  * @interface Filter
  */
 export interface Filter {
-  /** Identifiant unique du filtre */
-  id: string;
   /** Champ à filtrer (ex: 'contrat', 'groupId', 'type') */
   field: string;
   /** Type de filtre à appliquer */
   type: FilterType;
   /** Valeur du filtre */
   value: any;
-  /** Libellé affiché à l'utilisateur */
-  label: string;
 }
 
-export type DimensionType = 'employee' | 'group' | 'contract' | 'type' | 'pole';
+/**
+ * Catégories de filtres structurées
+ * @interface FilterCategories
+ */
+export interface FilterCategories {
+  /** Filtres appliqués au personnel (pole, équipe, contrat, etc.) */
+  personnel: Filter[];
+  /** Filtres appliqués aux événements (chantier, social, etc.) */
+  evenements: {filters: Filter[], selectedRdvTypes: string[]} | []; // Types de RDV sélectionnés (Chantier, Absence, Autre)
+}
+
+/**
+ * Niveaux de groupement disponibles
+ * @type GroupingLevel
+ */
+export type GroupingLevel = 'equipe' | 'pole';
+
+/**
+ * Configuration des niveaux de groupement
+ * @interface GroupingLevels
+ */
+export interface GroupingLevels {
+  /** Premier niveau de groupement */
+  level1?: GroupingLevel;
+  /** Deuxième niveau de groupement */
+  level2?: GroupingLevel;
+}
+
 
 export interface CalendarConfig {
   id: number;
   name: string;
-  dimension: DimensionType; // Ce qui s'affiche dans la colonne de gauche
-  filters: Filter[]; // Les filtres appliqués
-  selectedRdvTypes: string[]; // Types de RDV sélectionnés (Chantier, Absence, Autre)
+  /** Image associée à la vue */
+  image?: Image;
+  /** Description de la vue */
+  description?: string;
+  /** Configuration des niveaux de groupement (équipe et pole) */
+  groupingLevels?: GroupingLevels;
+  /** Filtres structurés par catégories */
+  filterCategories?: FilterCategories;
   color?: string;
 }
 
@@ -214,3 +250,24 @@ export interface HistoryAction {
   appointments?: Appointment[]; // Pour une sauvegarde complète
   createdAppointments?: Appointment[]; // Pour les RDV créés lors d'un resize split
 } 
+
+export interface User{
+  id: number;
+  name: string;
+  role: 'admin' | 'user';
+  theme: string;
+  image?: string;
+  employeeId?: number | null; // ID de l'employé associé (si existe)
+  email?: string; // Email de l'utilisateur
+}
+
+
+export interface MockNotification {
+  id: string;
+  userId: number;
+  type: 'success' | 'error' | 'warning' | 'info';
+  title: string;
+  message: string;
+  timestamp: number;
+  isRead: boolean;
+}

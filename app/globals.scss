@@ -37,8 +37,7 @@
   --color-interim: #e6b11a;           // Jaune pour intérimaires
   --color-employee: #4baea4;          // Turquoise pour employés
 
-
-  
+  --color-header-table: #f3f4f6;     // Gris clair pour header tableau
 
   
   // ── Couleurs Neutres (Gris) ───────────────────────────────────────────────
@@ -93,10 +92,11 @@
   // ── Couleurs Spécifiques Calendrier ───────────────────────────────────────
   --calendar-weekend: #f6f6f6;        // Week-end
   --calendar-holiday: #fce4e4;        // Jours fériés (rose clair)
+  --calendar-non-working: #f3f7f8;   // Jours non travaillés (gris très clair)
   --calendar-today: #ffcdde;          // Aujourd'hui (rose)
   --calendar-today-dark: #ffc1dd;
   --calendar-border: #e5e7eb;
-  --calendar-cell-hover: var(--color-primary-ultra-light);     // Hover cellule
+  --calendar-cell-hover: rgb(228, 245, 239);    // Hover cellule
   --calendar-cell-active: #d4ede9;    // Cellule active (intersection)
   
   // ── Bordures ──────────────────────────────────────────────────────────────
@@ -287,6 +287,14 @@ body {
 // ============================================================================
 .poppins {
   font-family: 'Poppins', sans-serif;
+}
+
+.bg-cell-hover {
+  background-color: var(--calendar-cell-hover) !important;
+}
+
+.bg-header-table {
+  background-color: var(--color-header-table) !important;
 }
 
 

@@ -10,7 +10,7 @@ type NotificationsPanelProps = {
     type: 'success' | 'error' | 'warning' | 'info';
     title: string;
     message: string;
-    timestamp: Date;
+    timestamp: number;
     isRead: boolean;
   }>;
   onMarkAsRead: (id: string) => void;
@@ -66,20 +66,6 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
     }
   };
 
-  const formatTimestamp = (timestamp: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'À l\'instant';
-    if (minutes < 60) return `Il y a ${minutes} min`;
-    if (hours < 24) return `Il y a ${hours}h`;
-    if (days < 7) return `Il y a ${days}j`;
-    return format(timestamp, 'dd/MM/yyyy HH:mm');
-  };
-
   return (
     <>
       {/* Overlay pour fermer en cliquant à l'extérieur */}
@@ -106,7 +92,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
           <div className="flex items-center gap-2">
             {notifications.length > 0 && (
               <button
-                onClick={onClearAll}
+                onClick={() => onClearAll()}
                 className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-bg-secondary/20 transition-colors"
                 title="Tout effacer"
               >
@@ -116,7 +102,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={() => onClose()}
               className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-bg-secondary/20 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,7 +161,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                         {notification.message}
                       </p>
                       <p className="text-xs text-gray-400">
-                        {formatTimestamp(notification.timestamp)}
+                        {notification.timestamp.toLocaleString()}
                       </p>
                     </div>
                   </div>

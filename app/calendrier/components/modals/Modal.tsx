@@ -18,7 +18,7 @@
  * @version 1.0.0
  */
 
-import { useEffect, memo } from "react";
+import { useEffect, memo, useState } from "react";
 
 /**
  * Interface définissant les propriétés du composant Modal
@@ -43,6 +43,10 @@ interface ModalProps {
     classNameContent?: string;
     /** Classe CSS additionnelle pour la modal */
     className?: string;
+    /** Active la confirmation lors du clic sur l'overlay */
+    confirmCloseOnOverlay?: boolean;
+    /** Indique si des modifications non sauvegardées sont présentes (pour conditionner la confirmation) */
+    hasUnsavedChanges?: boolean;
 }
 
 /**
@@ -72,8 +76,11 @@ const Modal: React.FC<ModalProps> = ({
     whithoutCloseButton = false, 
     roundedSize = "2xl",
     classNameContent = "",
-    className = ""
+    className = "",
+    confirmCloseOnOverlay = false,
+    hasUnsavedChanges
 }) => {
+    const [showConfirm, setShowConfirm] = useState(false);
     
     // ===== GESTION DES ÉVÉNEMENTS CLAVIER =====
     
@@ -84,7 +91,15 @@ const Modal: React.FC<ModalProps> = ({
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {            
             if (event.key === 'Escape') {
-                onClose();
+                if (showConfirm) return;
+
+                const shouldConfirm = confirmCloseOnOverlay && (hasUnsavedChanges ?? true);
+
+                if (shouldConfirm) {
+                    setShowConfirm(true);
+                } else {
+                    onClose();
+                }
             }
         };
 
@@ -92,16 +107,66 @@ const Modal: React.FC<ModalProps> = ({
         return () => {
             document.removeEventListener('keydown', handleEscape);
         };
-    }, [onClose]);
+    }, [onClose, confirmCloseOnOverlay, showConfirm, hasUnsavedChanges]);
     
+    const handleOverlayClick = () => {
+        const shouldConfirm = confirmCloseOnOverlay && (hasUnsavedChanges ?? true);
+
+        if (shouldConfirm) {
+            setShowConfirm(true);
+        } else {
+            onClose();
+        }
+    };
+
+    const handleConfirmClose = () => {
+        setShowConfirm(false);
+        onClose();
+    };
+
+    const handleCancelClose = () => {
+        setShowConfirm(false);
+    };
+
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center modal">
             {/* Overlay */}
             {isOverlayVisible && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 transition-opacity animate-fadeIn overlay" onClick={onClose} />
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-40 transition-opacity animate-fadeIn overlay" 
+                    onClick={handleOverlayClick} 
+                />
             )}
+            
+            {/* Confirmation Dialog */}
+            {showConfirm && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center animate-fadeIn">
+                    {/* Overlay spécifique pour la confirmation (empêche de cliquer ailleurs) */}
+                    <div className="fixed inset-0 bg-black/20 backdrop-blur-[1px]" onClick={handleCancelClose}></div>
+                    
+                    <div className="bg-white p-6 rounded-xl shadow-2xl border border-gray-200 max-w-sm w-full mx-4 animate-zoomIn relative z-10">
+                        <h3 className="text-lg font-bold mb-2 text-gray-800">Fermer la fenêtre ?</h3>
+                        <p className="text-gray-600 mb-6 text-sm">Vos modifications en cours pourraient être perdues.</p>
+                        <div className="flex justify-end gap-3">
+                            <button 
+                                onClick={handleCancelClose}
+                                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Annuler
+                            </button>
+                            <button 
+                                onClick={handleConfirmClose}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+                            >
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Modal content */}
             <div className={`text-primary relative bg-bg-secondary rounded-${roundedSize} shadow-2xl  mx-4 p-0 animate-zoomIn border border-default z-10 modal-content ${className}`}>
                 <div className="flex justify-between items-center px-4 pt-3 pb-2 modal-header">

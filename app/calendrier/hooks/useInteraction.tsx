@@ -5,13 +5,13 @@ import { Appointment, Employee, Item, type Image } from '../types';
 interface InteractionProps {
   selectedAppointment: Appointment | null;
   setSelectedAppointment: (app: Appointment | null) => void;
-  selectedCell: { employeeId: number; date: Date } | null;
-  setSelectedCell: (cell: { employeeId: number; date: Date } | null) => void;
+  selectedCell: { employeeId: number; date: number } | null;
+  setSelectedCell: (cell: { employeeId: number; date: number } | null) => void;
   setSelectedEmployee: (employee: Employee | null) => void;
   
   // Actions provenant de useAppointmentLogic
   copyAppointment: (app: Appointment) => void;
-  pasteAppointment: (cell?: { employeeId: number; date: Date } | null) => void;
+  pasteAppointment: (cell?: { employeeId: number; date: number } | null) => void;
   undoAction: () => void;
   deleteAction: (appointment?: Appointment) => void;
   
@@ -31,6 +31,8 @@ interface InteractionProps {
 
   viewType: string;
   addImage: (newImage: Image) => Image;
+
+  setIsViewDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const useInteraction = ({
@@ -42,7 +44,8 @@ export const useInteraction = ({
     handleRepeat, handleExtend, handleDivide,
     isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS,
     viewType,
-    addImage
+    addImage,
+    setIsViewDropdownOpen
 }: InteractionProps) => {
 
   // --- ÉTATS LOCAUX ---
@@ -58,7 +61,7 @@ export const useInteraction = ({
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: Date }) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -105,7 +108,7 @@ export const useInteraction = ({
         });
 
         // Item: Diviser (Conditionnel)
-        const duration = appointment.endDate.getTime() - appointment.startDate.getTime();
+        const duration = appointment.endDate - appointment.startDate;
         const intervalDuration = isFullDay 
           ? (DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 3600000 
           : (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * 3600000;
@@ -162,8 +165,8 @@ export const useInteraction = ({
 
   const handleGlobalKeyboard = useCallback((e: KeyboardEvent) => {
       if (e.ctrlKey) {
-          switch(e.key) {
-              case 'c': 
+          switch(e.key.toLocaleLowerCase()) {
+              case 'c' : 
                   if (selectedAppointment) {
                        copyAppointment(selectedAppointment);
                   }
@@ -184,11 +187,15 @@ export const useInteraction = ({
                   setIsImageSelectorOpen(false);
                   openSearch();
                   break;
+              case 'q':
+                  e.preventDefault();
+                  setIsViewDropdownOpen(prev => !prev);
+                  break;
           }
       } else if ((e.key === 'Delete' || e.key === 'rubout') && selectedAppointment) {
           deleteAction(selectedAppointment);
       }
-  }, [selectedAppointment, selectedCell, copyAppointment, pasteAppointment, undoAction, deleteAction, openSearch]);
+  }, [selectedAppointment, selectedCell, copyAppointment, pasteAppointment, undoAction, deleteAction, openSearch, setIsViewDropdownOpen]);
 
   // --- GESTION CLIC DROIT TABLEAUX (DataTableFrame) ---
   
@@ -209,8 +216,8 @@ export const useInteraction = ({
                  description: '',
                  type: item.type,
                  EventId: Number(item.id),
-                 startDate: new Date(),
-                 endDate: new Date(),
+                 startDate: Date.now(),
+                 endDate: Date.now(),
                  employeeId: 0
              };
              handleOpenEditModal(mockApp);

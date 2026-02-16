@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
-import { setHours, setMinutes, addHours, eachDayOfInterval } from "date-fns";
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { addHours, eachDayOfInterval } from "date-fns";
 import { Appointment, Employee, HistoryAction, Item } from '../types';
 import { createAppointmentUtils } from '../utils/appointmentUtils';
 import { notificationService } from "../services";
@@ -11,28 +11,38 @@ export type RepeatData = {
   numberCount: number;
   repeatCount: number | null;
   repeatInterval: "day" | "week" | "month";
-  endDate: Date | null;
+  endDate: number | null;
 };
 
 interface LogicProps {
   appointmentsRef: React.MutableRefObject<Appointment[]>;
-  employeesRef: React.MutableRefObject<any[]>;
   eventsRef: React.MutableRefObject<Item[]>;
   timelineState: {
     isFullDay: boolean;
     isDisplayWeekend: boolean;
     includeWeekend: boolean;
     respectNonWorkingDays: boolean;
-    nonWorkingDates: Date[];
+    nonWorkingDates: number[];
   };
   onUpdate: () => void; // Callback pour forcer le rafraîchissement de l'UI
+  setIsSearchOverlayOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setDimensionsSearchInput: React.Dispatch<React.SetStateAction<string>>;
+  // Méthodes de collaboration optionnelles
+  collaboration?: {
+    setAppointment: (appointment: Appointment) => void;
+    deleteAppointment: (appointmentId: number) => void;
+    setAppointments: (appointments: Appointment[]) => void;
+  };
 }
 
 export const useAppointmentLogic = ({ 
   appointmentsRef, 
   eventsRef, 
   timelineState, 
-  onUpdate 
+  onUpdate,
+  setIsSearchOverlayOpen,
+  setDimensionsSearchInput,
+  collaboration
 }: LogicProps) => {
   
   // --- Initialisation des Utilitaires ---
@@ -43,20 +53,44 @@ export const useAppointmentLogic = ({
   const idCounter = useRef(10000);
   const clipboardAppointment = useRef<Appointment | null>(null);
   const timestampCounter = useRef(1000);
+  const timelineStateRef = useRef(timelineState);
+
+  useEffect(() => {
+    timelineStateRef.current = timelineState;
+  }, [timelineState]);
+
+  // Helper pour synchroniser avec Yjs
+  const syncWithCollaboration = useCallback((appointment: Appointment) => {
+    if (collaboration) {
+      collaboration.setAppointment(appointment);
+    }
+  }, [collaboration]);
+
+  const syncMultipleWithCollaboration = useCallback((appointments: Appointment[]) => {
+    if (collaboration) {
+      collaboration.setAppointments(appointments);
+    }
+  }, [collaboration]);
+
+  const deleteFromCollaboration = useCallback((appointmentId: number) => {
+    if (collaboration) {
+      collaboration.deleteAppointment(appointmentId);
+    }
+  }, [collaboration]);
 
   // --- États UI nécessaires à la logique ---
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedAppointmentForm, setSelectedAppointmentForm] = useState<Appointment | null>(null);
-  const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: Date } | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: number } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: Date; employeeId: number } | null>(null);
+  const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: number; employeeId: number } | null>(null);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   
   
   // États pour les actions complexes
   const [repeatData, setRepeatData] = useState<RepeatData | null>(null);
-  const [extendData, setExtendData] = useState<Date | null>(null);
+  const [extendData, setExtendData] = useState<number | null>(null);
   
   // État de l'alerte de confirmation
   const [alertState, setAlertState] = useState<{
@@ -68,9 +102,43 @@ export const useAppointmentLogic = ({
     title: "",
     onConfirm: () => {},
   });
+  
+
+  /**
+   * Réorganise les priorités des rendez-vous qui chevauchent quand un rdv change de priorité
+   */
+  const reorganizePriorities = useCallback((
+    movedAppointmentId: number,
+    newPriority: number,
+    employeeId: number,
+    startDate: number,
+    endDate: number
+  ) => {
+    // Trouver tous les rdv qui chevauchent (même employé et même période)
+    const overlappingAppointments = appointmentsRef.current.filter(app => 
+      app.id !== movedAppointmentId &&
+      app.employeeId === employeeId &&
+      app.startDate < endDate &&
+      app.endDate > startDate
+    );
+
+    // Réorganiser : tous les rdv avec priorité >= newPriority doivent être décalés
+    overlappingAppointments.forEach(app => {
+      if ((app.priority ?? 0) >= newPriority) {        
+        app.priority = (app.priority ?? 0) + 1;
+      }
+    });
+  }, [appointmentsRef]);
 
   // --- GESTION DE L'HISTORIQUE (UNDO) ---
 
+  /**
+   * Sauvegarde l'état actuel d'un rendez-vous dans l'historique
+   * @param appointment Rendez-vous à sauvegarder
+   * @param type Type d'action ('create', 'update', 'delete', 'move', 'resize_split')
+   * @param previousAppointment État précédent du rendez-vous (pour 'update', 'move', 'resize_split')
+   * @param createdAppointments Rendez-vous créés (pour 'resize_split')
+   */
   const saveAppointmentState = useCallback((
     appointment: Appointment | null, 
     type: 'create' | 'update' | 'delete' | 'move' | 'resize_split', 
@@ -152,7 +220,7 @@ export const useAppointmentLogic = ({
   // --- FONCTIONS CRUD INTERNES ---
 
   // Resize interne (mise à jour simple)
-  const onResize = useCallback((id: number, newStartDate: Date, newEndDate: Date, newEmployeeId?: number, saveToHistory: boolean = true) => {     
+  const onResize = useCallback((id: number, newStartDate: number, newEndDate: number, newEmployeeId?: number, saveToHistory: boolean = true, newPriority?: number) => {     
       const appointmentToResize = appointmentsRef.current.find(app => app.id === id);
       
       if (appointmentToResize && saveToHistory) {
@@ -161,18 +229,34 @@ export const useAppointmentLogic = ({
 
       appointmentsRef.current = appointmentsRef.current.map((app) =>
         app.id === id
-          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId }
+          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId, priority: newPriority !== undefined ? newPriority : app.priority }
           : app
       );
+      if (newPriority !== undefined && newEmployeeId !== undefined) {
+        reorganizePriorities(id, newPriority, newEmployeeId , newStartDate, newEndDate);
+      }
       onUpdate();
   }, [appointmentsRef, onUpdate, saveAppointmentState]);
 
   // Création unitaire d'un RDV
   const createAppointment = useCallback((
-    startDate: Date, endDate: Date, employeeId: number, eventId: number, 
-    saveToHistory: boolean = true, type: 'chantier' | 'absence' | 'autre', description?: string
+    startDate: number, endDate: number, employeeId: number, eventId: number, 
+    saveToHistory: boolean = true, type: 'chantier' | 'absence' | 'autre', description?: string, priority?: number
   ) => {
       const id = ++idCounter.current;
+      
+      // Calculer la priorité par défaut basée sur les rdv existants qui chevauchent
+      const overlappingAppointments = appointmentsRef.current.filter(app =>
+        app.employeeId === employeeId &&
+        app.startDate < endDate &&
+        app.endDate > startDate
+      );
+      const maxPriority = priority !== undefined 
+        ? priority 
+        : (overlappingAppointments.length > 0
+          ? Math.max(...overlappingAppointments.map(app => app.priority || 0)) + 1
+          : 0);
+      
       const newApp: Appointment = {
         id: id,
         description: description || `Nouveau rendez-vous`,
@@ -181,6 +265,7 @@ export const useAppointmentLogic = ({
         employeeId,
         type: type,
         EventId: eventId,
+        priority: maxPriority, // Nouveau rdv au-dessus de la pile
       };
       appointmentsRef.current.push(newApp);
       
@@ -188,34 +273,46 @@ export const useAppointmentLogic = ({
         saveAppointmentState(newApp, 'create');
       }
       
+      // Sync avec collaboration
+      syncWithCollaboration(newApp);
+      
       onUpdate();
       return newApp;
   }, [appointmentsRef, onUpdate, saveAppointmentState]);
 
+  // --- GESTION DES PRIORITÉS ---
+
   // --- LOGIQUE MÉTIER COMPLEXE (Move, Split, Save) ---
 
-  const moveAppointment = useCallback((id: number, newStartDate: Date, newEndDate: Date, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true) => {
+  const moveAppointment = useCallback((id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true, newPriority?: number) => {
       const appointment = appointmentsRef.current.find((app) => app.id === id);
       if (!appointment) return;
+      
+      const previousAppointment = saveToHistory ? { ...appointment } : undefined;
+      
+      // Si une nouvelle priorité est fournie, réorganiser les priorités avant d'appliquer
+      if (newPriority !== undefined) {
+        reorganizePriorities(id, newPriority, newEmployeeId, newStartDate, newEndDate);
+        appointment.priority = newPriority;
+      }      
+
+      const state = timelineStateRef.current;
 
       // Calcul des intervalles (Jours/Demi-journées)
-      const intervalType = timelineState.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+      const intervalType = state.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
       
 
       const days = getWorkedDayIntervals(
-        new Date(newStartDate), 
-        new Date(newEndDate),
+        newStartDate, 
+        newEndDate,
         intervalType,
-        timelineState.respectNonWorkingDays || !timelineState.isDisplayWeekend,
-        timelineState.includeWeekend || !timelineState.isDisplayWeekend,
-        timelineState.nonWorkingDates
-      );    
-      
-      
+        state.respectNonWorkingDays,
+        (state.isDisplayWeekend && state.includeWeekend) || !state.isDisplayWeekend,
+        state.nonWorkingDates
+      );  
 
       if (days.length === 0) return;
       
-      const previousAppointment = saveToHistory ? { ...appointment } : undefined;
       const createdAppointments: Appointment[] = [];
       
       // Helper pour traiter les jours
@@ -225,15 +322,16 @@ export const useAppointmentLogic = ({
         const mainStart = resizeDirection === 'left' ? mainDay.start : newStartDate;
         const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
         
+        
         // Note: On ne sauvegarde pas l'historique ici, on le fait à la fin pour grouper
-        onResize(appointment.id, mainStart, new Date(mainEnd), newEmployeeId, false);
+        onResize(appointment.id, mainStart, mainEnd, newEmployeeId, false);
         
         // 2. Créer des nouveaux RDV pour les jours suivants (Split)
         for (let i = startIndex; i !== endIndex; i += step) {
           const day = days[i];
           const newApp = createAppointment(
             day.start, 
-            new Date(day.end),
+            day.end,
             newEmployeeId, 
             appointment.EventId,
             false, // Pas d'historique individuel
@@ -257,18 +355,15 @@ export const useAppointmentLogic = ({
           saveAppointmentState(updatedAppointment, actionType, previousAppointment, createdAppointments);
         }
       }
-      onUpdate();
-  }, [appointmentsRef, timelineState, onResize, createAppointment, saveAppointmentState, onUpdate]);
+        onUpdate();
+      }, [appointmentsRef, onResize, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities]);
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
-  const handleSaveAppointment = useCallback((appointment: Appointment, eventUpdate: Item, includeNonWorkingDays: boolean) => {
+  const handleSaveAppointment = useCallback((appointment: Appointment, eventUpdate: Item, includeNonWorkingDays: boolean) => {    
       // Mise à jour des métadonnées de l'événement global
       eventsRef.current = eventsRef.current.map(e =>
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
-      );      
-
-      console.log('appointment', appointment);
-      
+      );            
 
       const days = getWorkedDayIntervals(
         appointment.startDate, 
@@ -296,7 +391,8 @@ export const useAppointmentLogic = ({
             eventUpdate.id,
             true,
             appointment.type,
-            appointment.description
+            appointment.description, 
+            appointment.priority
           );
           if (newApp) createdAppointments.push(newApp);
         });
@@ -316,6 +412,7 @@ export const useAppointmentLogic = ({
             }
             return app;
           });
+          reorganizePriorities(appointment.id, appointment.priority ?? 0, appointment.employeeId as number, days[0].start, days[0].end);
           
           if (days.length > 1) createExtraAppointments(1);
         }
@@ -323,6 +420,7 @@ export const useAppointmentLogic = ({
         // --- MODE CRÉATION ---
         createExtraAppointments(0);
       }      
+
 
       // Gestion Historique
       if (appointment.id && previousAppointment) {
@@ -361,6 +459,10 @@ export const useAppointmentLogic = ({
         }
         
         appointmentsRef.current = appointmentsRef.current.filter((app) => app.id !== id);
+        
+        // Sync avec collaboration
+        deleteFromCollaboration(id);
+        
         onUpdate();
         setIsModalOpen(false);
         setSelectedAppointment(null);
@@ -377,11 +479,8 @@ export const useAppointmentLogic = ({
     const originalAppointment = { ...appointmentToDivide };
     const { startDate, endDate, employeeId } = appointmentToDivide;
     
-    console.log('startDate', startDate);
-    console.log('endDate', endDate);
-
     // Calcul du milieu
-    let totalDuration = (endDate.getTime() - startDate.getTime()) + 1;
+    let totalDuration = (endDate - startDate) + 1;
     const timeInterval = timelineState.isFullDay 
       ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour 
       : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
@@ -391,7 +490,7 @@ export const useAppointmentLogic = ({
 
     let compteur = 0;
     allDates.forEach(date => {
-      if (isWeekend(date) && !timelineState.isDisplayWeekend && !timelineState.includeWeekend) {
+      if (isWeekend(date.getTime()) && !timelineState.isDisplayWeekend && !timelineState.includeWeekend) {
           compteur++;
       } 
     });
@@ -399,7 +498,7 @@ export const useAppointmentLogic = ({
     totalDuration -= (timelineState.isFullDay ? compteur : compteur * 2) * (timeInterval * 60 * 60 * 1000);
 
     const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000));
-    const splitDate = new Date(startDate.getTime() + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000)));
+    const splitDate = startDate + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000));
   
 
     // 1. Redimensionner l'original
@@ -471,7 +570,7 @@ export const useAppointmentLogic = ({
       selectedAppointment.startDate, 
       extendData, 
       selectedAppointment.employeeId as number,
-      selectedAppointment.endDate.getTime() < extendData.getTime() ? 'right' : 'left'
+      selectedAppointment.endDate < extendData ? 'right' : 'left'
     );
 
     setExtendData(null);
@@ -480,12 +579,14 @@ export const useAppointmentLogic = ({
   // --- INTERACTION EXTERNE (Drag & Drop, Search) ---
 
   const createAppointmentFromDrag = useCallback(
-    (title: string, date: Date, intervalName: "morning" | "afternoon" | "day", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
+    (title: string, date: number, intervalName: "morning" | "afternoon" | "day", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
       const startHour = intervalName === "day" ? DAY_INTERVALS[0].startHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[1].startHour;
       const endHour = intervalName === "day" ? DAY_INTERVALS[0].endHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].endHour : HALF_DAY_INTERVALS[1].endHour;
+      
 
-      const startDate = setHours(setMinutes(new Date(date), 0), startHour);
-      const endDate = setHours(setMinutes(new Date(date), 0), endHour);
+      const startDate =  new Date(date).setHours(startHour, 0, 0, 0);
+      const endDate = new Date(date).setHours(endHour - 1, 59, 59 , 999);      
+
 
       let eventTypeId = eventsRef.current.find(e => e.label === title)?.id;
       if (!eventTypeId) {
@@ -501,6 +602,9 @@ export const useAppointmentLogic = ({
         true,
         typeEvent.toLowerCase() as 'chantier' | 'absence' | 'autre'
       );
+
+      setIsSearchOverlayOpen(false);
+      setDimensionsSearchInput('');
     },
     [eventsRef, createAppointment]
   );
@@ -511,8 +615,8 @@ export const useAppointmentLogic = ({
       handleSaveAppointment(
         {
           description: event.label,
-          startDate: new Date(selectedCell.date),
-          endDate: new Date((timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).setMinutes(59, 59)),
+          startDate: selectedCell.date,
+          endDate: (timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).setMinutes(59, 59),
           employeeId: selectedCell.employeeId,
           type: (event as any).type.toLowerCase() as "chantier" | "absence" | "autre",
         } as Appointment,
@@ -525,14 +629,14 @@ export const useAppointmentLogic = ({
 
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
     if (app) {
-      clipboardAppointment.current = appointmentUtils.copyAppointment(app);
+      clipboardAppointment.current = app;
       notificationService.info('Rendez-vous copié', 'Le rendez-vous a été copié dans le presse-papier');
       return clipboardAppointment.current;
     } 
     return null;
   }, [appointmentUtils]);
 
-  const pasteAppointment = useCallback((targetCell?: { employeeId: number; date: Date } | null) => {
+  const pasteAppointment = useCallback((targetCell?: { employeeId: number; date: number } | null) => {
     const cell = targetCell || selectedCell;
     if (!clipboardAppointment.current || !cell) return;
 
@@ -546,9 +650,12 @@ export const useAppointmentLogic = ({
         includeNonWorkingDays: timelineState.respectNonWorkingDays,
       });
 
+      newAppointments.forEach(app => {
+        saveAppointmentState(app, 'create');
+      });
       appointmentsRef.current = [...appointmentsRef.current, ...newAppointments];
       onUpdate();
-      notificationService.appointmentCreated(newAppointments.length);
+      notificationService.appointmentCreated(1);
     } catch (error) {
       notificationService.error('Erreur', (error as Error).message);
     }
@@ -558,8 +665,39 @@ export const useAppointmentLogic = ({
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
     setSelectedAppointmentForm(appointment);
     setSelectedAppointment(appointment);
-    setSelectedItem(eventsRef.current.find(e => e.id === appointment.EventId) || null);
+    setSelectedItem(eventsRef.current.find(e => e.id === appointment.EventId) || 
+      {
+        id: -1,
+        code: '',
+        label: '',
+        color: '#1E40AF',
+        borderColor: '#1E40AF',
+        textColor: '#FFFFFF',
+        actif: true,
+        tags: [],
+        type: 'autre',
+        verrou: false,
+        category: ''
+      }
+    );
     setIsModalOpen(true);
+  }, []);
+
+  const handleAddDimension = useCallback((dimension: Item) => {
+    // Marquer les Items de type 'autre' comme manuels
+    const newItem = dimension.type === 'autre' 
+      ? { ...dimension, isManual: true } 
+      : dimension;
+    eventsRef.current.push(newItem);
+    setIsModalOpen(false);
+    onUpdate();
+  }, []);
+
+  const handleEditDimension = useCallback((dimension: Item) => {
+    eventsRef.current = eventsRef.current.map(e =>
+      e.id === dimension.id ? { ...e, ...dimension } : e
+    );
+    onUpdate();
   }, []);
 
   return {
@@ -581,7 +719,9 @@ export const useAppointmentLogic = ({
     moveAppointment,
     createAppointmentFromDrag,
     handleOpenEditModal,
-    
+    handleAddDimension,
+    handleEditDimension,
+
     // Actions Spécifiques
     handleDeleteAppointmentConfirm,
     handleDivideConfirm,

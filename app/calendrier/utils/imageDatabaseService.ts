@@ -21,7 +21,7 @@ export interface DatabaseImage {
     width: number;
     height: number;
     format: string;
-    uploadDate: Date;
+    uploadDate: number;
   };
   /** ID de l'entité associée (chantier, événement paie, etc.) */
   entityId: number;
@@ -84,7 +84,7 @@ export class ImageDatabaseService {
           width: metadata.width,
           height: metadata.height,
           format: imageData.split(';')[0].split(':')[1],
-          uploadDate: new Date()
+          uploadDate: Date.now()
         },
         entityId,
         entityType

@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { CalendarConfig } from '../types'; // Assumed type
+import { useState, useEffect, useRef } from 'react';
+import { CalendarConfig, User } from '../types'; // Assumed type
 import { ActiveFilters } from '../utils/searchAndFilterUtils';
 import { useCalendarConfig } from './useCalendarConfig'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../utils/constants';
 
-export const useCalendarView = (employeesRef: any) => {
+export const useCalendarView = (employeesRef: any, user: User) => {
   // --- Préférences persistantes (localStorage) ---
   const getStoredBool = (key: string, def: boolean) => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -12,6 +12,7 @@ export const useCalendarView = (employeesRef: any) => {
     }
     return def;
   };
+  const [isMobile, setIsMobile] = useState(false);
 
   const [isDisplayWeekend, setIsDisplayWeekend] = useState(() => getStoredBool('isDisplayWeekend', false));
   const [includeWeekend, setIncludeWeekend] = useState(() => getStoredBool('includeWeekend', false));
@@ -19,7 +20,7 @@ export const useCalendarView = (employeesRef: any) => {
   const [isFullDay, setIsFullDay] = useState(() => getStoredBool('isFullDay', false));
   const [respectNonWorkingDays, setRespectNonWorkingDays] = useState(() => getStoredBool('respectNonWorkingDays', false));
   
-  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table'>(() => {
+  const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {
       const saved = window.localStorage.getItem('viewType');
       return (saved as any) || 'calendar';
@@ -28,21 +29,25 @@ export const useCalendarView = (employeesRef: any) => {
   });
 
   // --- États UI Volatiles ---
-  const [isMobile, setIsMobile] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({ empty: [] });
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<number>(new Date().setHours(0,0,0,0));
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
-  const [nonWorkingDates, setNonWorkingDates] = useState<Date[]>([]);
+  const [nonWorkingDates, setNonWorkingDates] = useState<number[]>([]);
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
   const [searchInput, setSearchInput] = useState<string>('');
-  const [eventSearchInput, setEventSearchInput] = useState<string>('');
+  const [dimensionSearchInput, setDimensionsSearchInput] = useState<string>('');
 
   // --- Hook de configuration existant ---
-  const calendarConfigHook = useCalendarConfig({ employees: employeesRef });
+  const calendarConfigHook = useCalendarConfig({ employees: employeesRef, user });
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
+
+   // État local pour le menu déroulant des vues
+  const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
+  const viewDropdownRef = useRef<HTMLDivElement>(null);
+
 
   // --- Setters avec persistence ---
   const toggleSet = (key: string, setter: React.Dispatch<React.SetStateAction<boolean>>, value: boolean) => {
@@ -59,7 +64,14 @@ export const useCalendarView = (employeesRef: any) => {
 
   // --- Detection Mobile ---
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    const handleResize = () => {
+      const isTrue = window.innerWidth < 640;
+      setIsMobile(isTrue);
+
+      if (isTrue) {
+        setViewType('calendar');
+      }
+    };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -68,6 +80,27 @@ export const useCalendarView = (employeesRef: any) => {
   useEffect(() => {
     setSearchInput('');
   }, [viewType]);
+
+  // Fermer le dropdown quand on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isViewDropdownOpen && viewDropdownRef.current) {
+        const target = event.target as HTMLElement;
+        if (!viewDropdownRef.current.contains(target)) {
+          setIsViewDropdownOpen(false);
+        }
+      }
+    };
+
+    if (isViewDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isViewDropdownOpen]);
+    
 
   return {
     // États
@@ -80,6 +113,8 @@ export const useCalendarView = (employeesRef: any) => {
         setViewType(v);
         setTimeout(() => localStorage.setItem('viewType', v), 0);
     },
+    isViewDropdownOpen, setIsViewDropdownOpen,
+    viewDropdownRef,
     
     isMobile,
     isSettingsOpen, setIsSettingsOpen,
@@ -91,7 +126,7 @@ export const useCalendarView = (employeesRef: any) => {
     nonWorkingDates, setNonWorkingDates,
     isNotificationsPanelOpen, setIsNotificationsPanelOpen,
     searchInput, setSearchInput,
-    eventSearchInput, setEventSearchInput,
+    dimensionSearchInput, setDimensionsSearchInput,
     
     // Config Calendar
     calendarConfigHook,
