@@ -23,6 +23,7 @@ import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 import { AppointmentItem } from '../index';
 
 const MAX_LENGTH_TAG = 20; // Longueur maximale pour les étiquettes
+const MAX_LENGTH_SHORT_TAG = 6; // Longueur maximale pour les versions courtes
 
 /**
  * Interface définissant les propriétés du composant AppointmentForm
@@ -183,7 +184,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   /**
    * États pour la gestion des étiquettes (version réduite uniquement)
    */
-  const [newTag, setNewTag] = useState<Tags>({id: 0, name: ''});
+  const [newTag, setNewTag] = useState<Tags>({id: 0, name: '', shortName: ''});
+  const [showTagCreation, setShowTagCreation] = useState(false);
 
   /**
    * Détection des changements non sauvegardés
@@ -325,9 +327,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     if (newTag.name.trim() && !formDataItemType.tags?.some(tag => tag.name === newTag.name.trim())) {
       setFormDataItemType(prev => ({
         ...prev,
-        tags: prev.tags ? [...prev.tags, { id: Date.now(), name: newTag.name.trim() }] : [{ id: Date.now(), name: newTag.name.trim() }]
+        tags: prev.tags ? [...prev.tags, { id: Date.now(), name: newTag.name.trim(), shortName: newTag.shortName?.trim() || undefined }] : [{ id: Date.now(), name: newTag.name.trim(), shortName: newTag.shortName?.trim() || undefined }]
       }));
-      setNewTag({id: 0, name: ''});
+      setNewTag({id: 0, name: '', shortName: ''});
+      setShowTagCreation(false);
     }
   };
 
@@ -568,6 +571,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
           {/* Aperçu du rendez-vous - Repositionné sous les couleurs */}
           <div className='relative'>
+            {/* Badge code chantier - Affiché de manière subtile */}
+            {formDataAppointment.id !== -1 && formDataItemType.code && (
+              <div className="absolute -top-2 right-0 z-20 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-md shadow-sm">
+                <span className="text-[10px] font-mono font-semibold text-gray-600 uppercase tracking-wider">
+                  {formDataItemType.code}
+                </span>
+              </div>
+            )}
             <AppointmentItem
               appointment={{
                 ...formDataAppointment,
@@ -743,34 +754,54 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
         {/* Section étiquettes - Version réduite uniquement */}
         {isReducedVersion && (
-          <div className="w-full lg:w-[280px] p-4 flex flex-col gap-4 border-l border-light">
+          <div className="w-full lg:w-[320px] p-4 flex flex-col gap-4 border-l border-light">
             <h3 className="text-sm font-semibold text-primary">Étiquettes</h3>
             
-            {/* Input pour ajouter une étiquette */}
-            <div className="flex gap-2">
+            {/* Formulaire d'ajout d'étiquette */}
+            <div className="flex flex-col gap-3">
+              {/* Version longue */}
               <div className="relative flex-1">
+                <label className="text-xs text-gray-600 mb-1 block">Nom complet</label>
                 <input
                   type="text"
                   value={newTag.name}
-                  onChange={(e) => setNewTag({id: 0, name: e.target.value})}
+                  onChange={(e) => setNewTag(prev => ({...prev, name: e.target.value}))}
                   onKeyPress={handleTagKeyPress}
-                  placeholder="Nouvelle étiquette..."
-                  className="flex-1 px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Ex: Béton coulé"
+                  className="w-full px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
                   maxLength={MAX_LENGTH_TAG}
                 />
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400">{newTag.name.length}/{MAX_LENGTH_TAG}</span>
+                <span className="absolute right-3 top-8 text-xs text-gray-400">{newTag.name.length}/{MAX_LENGTH_TAG}</span>
               </div>
-
+              
+              {/* Version courte (optionnelle) */}
+              <div className="relative flex-1">
+                <label className="text-xs text-gray-600 mb-1 block">
+                  Version courte <span className="text-gray-400 italic">(pour RDV ≤ 2 jours)</span>
+                </label>
+                <input
+                  type="text"
+                  value={newTag.shortName || ''}
+                  onChange={(e) => setNewTag(prev => ({...prev, shortName: e.target.value}))}
+                  onKeyPress={handleTagKeyPress}
+                  placeholder="Ex: BÉT"
+                  className="w-full px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                  maxLength={MAX_LENGTH_SHORT_TAG}
+                />
+                <span className="absolute right-3 top-8 text-xs text-gray-400">{(newTag.shortName?.length || 0)}/{MAX_LENGTH_SHORT_TAG}</span>
+              </div>
+              
               <button
                 type="button"
                 onClick={handleAddTag}
                 disabled={!newTag.name.trim()}
-                className="px-3 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 title="Ajouter l'étiquette"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                 </svg>
+                <span>Ajouter</span>
               </button>
             </div>
 
@@ -807,7 +838,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           <div className="w-full lg:w-[530px] p-4 flex flex-col gap-1 animate-in slide-in-from-right text-primary duration-300 lg:border-l border-light mt-4 lg:mt-0">
             
             {/* Cases à cocher */}
-            <div className="mb-[50px]">
+            {/* <div className="mb-[50px]">
               <label className="flex items-start space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -822,7 +853,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                 />
                 <span className="text-sm  leading-tight">Inclure les week-ends, jours fériés et jours non travaillés</span>
               </label>
-            </div>
+            </div> */}
 
             {/* Zone de texte pour annotations */}
             <div className="flex flex-col gap-6">
@@ -835,44 +866,120 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               />
             </div>
 
-            {/* Sélecteur d'étiquette - Version étendue uniquement */}
-            <div className="flex flex-col gap-4 mt-6">
-              <label className="text-sm font-medium">Étiquette associée</label>
-              <select
-                value={formDataAppointment.tag?.id || ''}
-                onChange={(e) => setFormDataAppointment(prev => ({
-                  ...prev,
-                  tag: e.target.value ? formDataItemType.tags?.find(tag => tag.id === Number(e.target.value)) || undefined : undefined
-                }))}
-                className="w-full p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-bg-secondary"
-              >
-                <option value="">Aucune étiquette</option>
-                {formDataItemType.tags?.map((tag) => (
-                  <option key={tag.id} value={tag.id}>
-                    {tag.name}
-                  </option>
-                ))}
-              </select>
-              
-              {/* Aperçu de l'étiquette sélectionnée */}
-              {formDataAppointment.tag && formDataItemType.tags && (
-                <div className="flex items-center gap-2 p-3 bg-primary-ultra-light rounded-xl">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-primary">
-                    <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
-                  </svg>
-                  <span className="text-sm text-primary font-medium">
-                    {formDataAppointment.tag.name}
-                  </span>
+            {formDataItemType.type === 'chantier' && (
+              <>
+                {/* Sélecteur d'étiquette - Version étendue uniquement */}
+                <div className="flex flex-col gap-4 mt-6">
+                  <label className="text-sm font-medium">Étiquette associée</label>
+                  
+                  {/* Ligne avec le select et le bouton d'ajout */}
+                  
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={formDataAppointment.tag?.id || ''}
+                          onChange={(e) => setFormDataAppointment(prev => ({
+                            ...prev,
+                            tag: e.target.value ? formDataItemType.tags?.find(tag => tag.id === Number(e.target.value)) || undefined : undefined
+                          }))}
+                          className="flex-1 p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-bg-secondary"
+                        >
+                          <option value="">Aucune étiquette</option>
+                          {formDataItemType.tags?.map((tag) => (
+                            <option key={tag.id} value={tag.id}>
+                              {tag.name} {tag.shortName ? `(${tag.shortName})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        
+                        {/* Petit bouton pour créer une étiquette */}
+                        <button
+                          type="button"
+                          onClick={() => setShowTagCreation(!showTagCreation)}
+                          className="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors shadow-sm"
+                          title={showTagCreation ? "Annuler" : "Créer une étiquette"}
+                        >
+                          {showTagCreation ? (
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                              <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                            </svg>
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    
+                      {/* Aperçu de l'étiquette sélectionnée */}
+                      {formDataAppointment.tag && formDataItemType.tags && !showTagCreation && (
+                        <div className="flex items-center gap-2 p-3 bg-primary-ultra-light rounded-xl">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-primary">
+                            <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+                          </svg>
+                          <div className="flex flex-col">
+                            <span className="text-sm text-primary font-medium">
+                              {formDataAppointment.tag.name}
+                            </span>
+                            {formDataAppointment.tag.shortName && (
+                              <span className="text-xs text-gray-500">
+                                Version courte : {formDataAppointment.tag.shortName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                  
+                  
+                  {/* Formulaire de création d'étiquette */}
+                  {showTagCreation && (
+                    <div className="p-4 border border-primary rounded-xl bg-primary-ultra-light space-y-3 animate-in slide-in-from-top duration-200">
+                      <h4 className="text-sm font-semibold text-primary">Nouvelle étiquette</h4>
+                      
+                      <div className="relative">
+                        <label className="text-xs text-gray-600 mb-1 block">Nom complet</label>
+                        <input
+                          type="text"
+                          value={newTag.name}
+                          onChange={(e) => setNewTag(prev => ({...prev, name: e.target.value}))}
+                          placeholder="Ex: Béton coulé"
+                          className="w-full px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+                          maxLength={MAX_LENGTH_TAG}
+                        />
+                        <span className="absolute right-3 top-8 text-xs text-gray-400">{newTag.name.length}/{MAX_LENGTH_TAG}</span>
+                      </div>
+                      
+                      <div className="relative">
+                        <label className="text-xs text-gray-600 mb-1 block">
+                          Version courte <span className="text-gray-400 italic">(pour RDV ≤ 2 jours)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={newTag.shortName || ''}
+                          onChange={(e) => setNewTag(prev => ({...prev, shortName: e.target.value}))}
+                          placeholder="Ex: BÉT"
+                          className="w-full px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+                          maxLength={MAX_LENGTH_SHORT_TAG}
+                        />
+                        <span className="absolute right-3 top-8 text-xs text-gray-400">{(newTag.shortName?.length || 0)}/{MAX_LENGTH_SHORT_TAG}</span>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={handleAddTag}
+                        disabled={!newTag.name.trim()}
+                        className="w-full px-3 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                        </svg>
+                        <span>Ajouter l'étiquette</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              
-              {/* Message si aucune étiquette disponible */}
-              {(!formDataItemType.tags || formDataItemType.tags.length === 0) && (
-                <div className="text-xs text-gray-400 italic p-2 bg-gray-50 rounded-lg">
-                  Aucune étiquette disponible. Ajoutez des étiquettes à cet événement en mode réduit.
-                </div>
-              )}
-            </div>
+              </>
+            )}
+
           </div>
         )}
       </div>

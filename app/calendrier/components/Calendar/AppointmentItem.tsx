@@ -72,6 +72,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const startDate = React.useMemo(() => appointment.startDate, [appointment.startDate]);
   const endDate = React.useMemo(() => appointment.endDate, [appointment.endDate]);
 
+  // Calculer la durée du rendez-vous en jours
+  const appointmentDurationDays = React.useMemo(() => {
+    const durationMs = endDate - startDate;
+    return Math.ceil(durationMs / DAY_MS);
+  }, [startDate, endDate]);
+
   const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
   const INTERVAL_DURATION = isFullDay 
     ? (DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 60 * 60 * 1000 
@@ -232,6 +238,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   }, [isResizingLeft, isResizingRight, startDate, endDate, isFullDay, addInterval, setDragStartSafe, setDragEndSafe, INTERVAL_WIDTH]);
 
   const handleMouseUp = useCallback(() => {
+    
     if (isResizingRight) {
       onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right', (appointment.priority ?? 0));
     }
@@ -530,16 +537,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       {/* CONTENU (Tags, Icone, Texte) */}
       {/* On met z-10 et relative pour être au-dessus des backgrounds */}
       <div className="relative z-10 flex items-center gap-2 w-full h-full" style={{left: isGhost ? `${ghostWidthPx.reduce((acc, g) => acc + g.widthGhost + g.widthNoGhost, 0)}px` : '0px'}}>        
-        {appointment.tag && (
-            <AppointmentTag 
-            tagName={appointment?.tag.name}
-            color={isGhost ? '#333' : appointmentColor}
-            textColor={isGhost ? '#000' : appointmentTextColor}
-            isHovered={isHovered}
-            isResizing={isResizingRight}
-            />
-        )}
-
         {event?.image ? (
             <img
             src={event?.image.image}
@@ -553,7 +550,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
         <div className='flex flex-col min-w-0 flex-1'>
             <span 
-            className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 ${appointment?.tag ? 'pr-5' : ''}`}
+            className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200`}
             style={{ 
                 color: isGhost 
                     ? '#000' // Noir pour contraster avec hachures et zone pleine
@@ -579,6 +576,20 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             </div>
         </div>
       </div>
+
+      {/* Étiquette/Tag sous forme d'indicateur en bas à droite */}
+      {appointment.tag && (
+        <AppointmentTag 
+          tagName={appointment?.tag.name}
+          tagShortName={appointment?.tag.shortName}
+          color={isGhost ? '#333' : appointmentColor}
+          textColor={isGhost ? '#000' : appointmentTextColor}
+          isHovered={isHovered}
+          isResizing={isResizingRight}
+          appointmentWidth={appointmentWidthPx}
+          appointmentDurationDays={appointmentDurationDays}
+        />
+      )}
 
       {/* Handle de redimensionnement à droite */}
       {source === 'calendar' && (

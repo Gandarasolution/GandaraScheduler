@@ -76,6 +76,7 @@ export interface Calendar {
 export interface Tags {
   id: number;
   name: string;
+  shortName?: string; // Version courte pour les petits rendez-vous (2 jours ou moins)
 }
 
 export interface BaseItemCategory{

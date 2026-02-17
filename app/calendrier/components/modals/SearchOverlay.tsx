@@ -7,14 +7,14 @@
  * - Recherche en temps réel
  * - Support du drag & drop (optionnel)
  * - Actions personnalisables par item
- * - Interface responsive et adaptée mobile
+ * - Interface responsive
  * - Gestion du clavier (ESC pour fermer)
  * - États vides personnalisables
- * - Animation slide-in sur mobile
+
  * 
  * @component SearchOverlay
  * @author Gandara Solutions
- * @version 2.1.0 - Generic, Reusable & Mobile Optimized
+ * @version 2.0.0 - Generic & Reusable
  * 
  * @example
  * // Nomenclature des données :
@@ -57,7 +57,7 @@
 
 import { useDragDropManager } from "react-dnd";
 import { memo, useEffect, useState, ReactNode } from "react";
-import { X } from "lucide-react";
+
 
 /**
  * Type générique pour un élément recherchable
@@ -150,9 +150,9 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
   // Utiliser React DnD pour détecter l'état de drag (optionnel)
   useEffect(() => {
     if (!enableDragDetection) return;
-    
+
     const monitor = dragDropManager.getMonitor();
-    
+
     const unsubscribe = monitor.subscribeToStateChange(() => {
       const isDragInProgress = monitor.isDragging();
       setIsDragging(isDragInProgress);
@@ -185,15 +185,15 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
   };
 
   if (!isOpen) return null;
-  
+
   return (
     <>
       {/* Overlay de fond */}
       <div 
-        className={`fixed inset-0 backdrop-blur-sm z-50 transition-opacity duration-300 ${
+        className={`fixed inset-0 overlay z-50 ${
           enableDragDetection && isDragging ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
-        style={{ backgroundColor: 'var(--bg-overlay)' }}
+
         onClick={() => {
           if (!enableDragDetection || !isDragging) {
             onClose();
@@ -201,97 +201,42 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
           }
         }}
       />
-      
-      {/* Conteneur principal - Responsive */}
+
+      {/* Conteneur principal */}
       <div 
-        className={`
-          fixed z-[60] flex flex-col
-          rounded-t-[2rem] sm:rounded-2xl 
-          w-full sm:max-w-${maxWidth}
-          max-h-[90vh] sm:max-h-[80vh]
-          bottom-0 sm:bottom-auto
-          left-0 sm:left-1/2 sm:-translate-x-1/2
-          transition-all duration-300 ease-out
-          ${enableDragDetection && isDragging ? 'opacity-0 translate-y-full sm:translate-y-0' : 'opacity-100 translate-y-0'}
-          ${className}
-        `}
+        className={`fixed z-60 bg-opacity-0 rounded-2xl 
+          w-[calc(100vw-2rem)] left-4 top-[10%] 
+          sm:w-[calc(100vw-4rem)] sm:left-8 sm:top-[20%] 
+          lg:w-auto lg:max-w-${maxWidth} lg:left-[32%] lg:top-[35%] 
+          max-h-[80vh] flex flex-col ${
+          enableDragDetection && isDragging ? 'opacity-0' : 'opacity-100'
+        } transition-all duration-300 ease-in-out ${className}`}
         onClick={(e) => e.stopPropagation()}
         style={{ 
-          top: position.top,
-          backgroundColor: 'var(--bg-card)',
-          boxShadow: 'var(--shadow-2xl)',
+          ...(window.innerWidth >= 1024 ? position : {}),
+          left: enableDragDetection && isDragging ? '100%' : (window.innerWidth < 640 ? '1rem' : window.innerWidth < 1024 ? '2rem' : position.left),
+          minWidth: window.innerWidth >= 1024 ? '675px' : undefined,
           ...style
         }}
       >
-        {/* Header avec bouton de fermeture - Mobile */}
-        <div 
-          className="flex items-center justify-between px-4 sm:px-6 py-4"
-          style={{ borderBottom: '1px solid var(--border-light)' }}
-        >
-          <h3 
-            className="text-lg font-semibold"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            Rechercher
-          </h3>
-          <button
-            onClick={() => {
-              onClose();
-              setSearchInput('');
-            }}
-            className="w-10 h-10 rounded-full active:scale-95 transition-all flex items-center justify-center"
-            style={{ 
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--text-secondary)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
-            }}
-          >
-            <X size={20} />
-          </button>
-        </div>
-
         {/* Barre de recherche */}
-        <div className="px-4 sm:px-6 pt-4">
+        <div className="">
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-              <svg 
-                className="w-5 h-5" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
+            <div className="absolute inset-y-0 left-0 flex items-center pl-2 sm:pl-3 pointer-events-none">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <input
               type="text"
               placeholder={placeholder}
-              className="
-                block w-full pl-11 pr-4 py-3.5 sm:py-3
-                rounded-xl
-                focus:outline-none focus:ring-2
-                text-base sm:text-sm
-                transition-all duration-200
-              "
-              style={{
-                backgroundColor: 'var(--bg-secondary)',
-                color: 'var(--text-primary)',
-                borderWidth: '1px',
-                borderColor: 'var(--border-light)',
-                '--tw-ring-color': 'var(--color-primary)'
-              } as React.CSSProperties}
+              className="block bg-bg-secondary placeholder:text-primary text-primary w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-sm sm:text-base"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
-                  e.preventDefault();
+                  e.preventDefault(); // Empêche le comportement par défaut si nécessaire
                   onClose();
                   setSearchInput('');
                 }
@@ -299,105 +244,56 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
             />
           </div>
         </div>
-        
+
+        <div className="p-3"></div>
+
         {/* Liste des items */}
         <div 
-          className="flex-1 overflow-y-auto px-4 sm:px-6 py-4"
+          className="flex-1 overflow-y-auto px-2 sm:px-2 py-2 bg-bg-secondary rounded-2xl shadow-lg border border-light text-primary"
           style={{ maxHeight }}
         >
           {searchInput.trim() === '' ? (
             // État: aucune recherche
-            <div className="text-center py-12 sm:py-8">
+            <div className="text-center py-4 sm:py-8">
               {defaultEmptyStates.noInput.icon}
-              <p 
-                className="text-lg font-semibold mb-2"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                {defaultEmptyStates.noInput.title}
-              </p>
-              <p 
-                className="text-sm"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                {defaultEmptyStates.noInput.description}
-              </p>
+              <p className="text-base sm:text-lg font-medium mb-2">{defaultEmptyStates.noInput.title}</p>
+              <p className="text-xs sm:text-sm">{defaultEmptyStates.noInput.description}</p>
             </div>
           ) : items.length === 0 ? (
             // État: aucun résultat
-            <div className="text-center py-12 sm:py-8">
+            <div className="text-center py-4 sm:py-8">
               {defaultEmptyStates.noResults.icon}
-              <p 
-                className="text-lg font-semibold mb-2"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                {defaultEmptyStates.noResults.title}
-              </p>
-              <p 
-                className="text-sm"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                {defaultEmptyStates.noResults.description}
-              </p>
+              <p className="text-base sm:text-lg font-medium mb-2">{defaultEmptyStates.noResults.title}</p>
+              <p className="text-xs sm:text-sm">{defaultEmptyStates.noResults.description}</p>
             </div>
           ) : (
             // Affichage des résultats
-            <div className="space-y-2">
+            <div className="grid gap-2 sm:gap-3">
               {items.map((item, index) => (
                 <div 
                   key={`${item.id}-${index}`} 
-                  className="
-                    w-full flex justify-between items-center
-                    rounded-xl transition-all duration-200
-                  "
-                  style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    borderWidth: '1px',
-                    borderColor: 'var(--border-light)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
-                  }}
+                  className="w-full flex justify-between hover:bg-primary-ultra-light rounded-xl transition-colors px-1 sm:px-2"
                 >
                   {/* Rendu personnalisé ou rendu par défaut */}
                   {renderItem ? (
                     renderItem(item, index)
                   ) : (
-                    <div className="flex-1 py-3 px-4">
-                      <span 
-                        className="font-medium"
-                        style={{ color: 'var(--text-primary)' }}
-                      >
-                        {item.label}
-                      </span>
+                    <div className="flex-1 py-1.5 sm:py-2">
+                      <span className="poppins text-sm sm:text-base">{item.label}</span>
                     </div>
                   )}
-                  
+
                   {/* Bouton d'action optionnel */}
                   {onItemAction && (
-                    <div className="pr-2">
+                    <div className="h-full">
                       <button
-                        className="
-                          w-10 h-10 flex items-center justify-center
-                          rounded-lg transition-all duration-200
-                          text-xl font-semibold
-                          active:scale-95
-                        "
-                        style={{ color: 'var(--color-primary)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--color-primary-lighter)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
+                        className="px-1.5 sm:px-2 py-1 text-lg sm:text-xl cursor-pointer h-full hover:text-color-primary transition-colors"
                         onClick={() => {
                           onItemAction(item);
                           onClose();
                           setSearchInput('');
                         }}
-                        title="Sélectionner"
+                        title="Ajouter"
                       >
                         {actionLabel}
                       </button>
@@ -412,6 +308,5 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
     </>
   );
 };
-
 
 export default memo(SearchOverlay);

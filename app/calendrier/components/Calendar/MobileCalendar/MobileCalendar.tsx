@@ -26,7 +26,6 @@ import SearchOverlay from '../../modals/SearchOverlay';
 
 // Hooks & Utils
 import { useNotifications, useCalendarWorker } from '../../../hooks';
-import { useSwipe } from '../../../hooks';
 import { getNotificationsByUserId } from '@/app/datasource';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
 
@@ -68,12 +67,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
   const worker = useCalendarWorker();
   
-  // Hook de swipe pour changer de mois
-  const swipeRef = useSwipe<HTMLDivElement>({
-    onSwipeLeft: () => setCurrentDate(prev => addMonths(prev, 1)),
-    onSwipeRight: () => setCurrentDate(prev => subMonths(prev, 1)),
-  }, { minSwipeDistance: 75, preventScroll: true });
-    
+
   // ----- GESTION DES DROITS D'ACCÈS -----
   const isAdmin = user.role === 'admin';
   
@@ -292,7 +286,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     >
       {/* Mobile Mockup Container */}
       <div 
-        ref={swipeRef}
         className="w-full max-w-[400px] h-full rounded-[3rem] sm:border-[8px] sm:shadow-2xl overflow-hidden relative flex flex-col"
         style={{
           backgroundColor: 'var(--bg-card)',

@@ -527,7 +527,7 @@ export default function HomePage({
               noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
               noResults: { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
-            renderItem={(event, index) => (              
+            renderItem={(event: any, index: number) => (              
               <DraggableSource
                 key={`${event.label}-${event.id}-${index}`}
                 id={event.id as number}

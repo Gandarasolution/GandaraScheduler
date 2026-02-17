@@ -55,7 +55,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
       ...(includeCenter ? [centerDate] : []),
       ...right,
     ];
-  }, [isDisplayWeekend]);
+  }, [isDisplayWeekend]); 
 
 
   // --- **NOUVELLE FONCTION**: Exécution de la navigation vers une date ---
