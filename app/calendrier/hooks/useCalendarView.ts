@@ -15,10 +15,10 @@ export const useCalendarView = (employeesRef: any, user: User) => {
   const [isMobile, setIsMobile] = useState(false);
 
   const [isDisplayWeekend, setIsDisplayWeekend] = useState(() => getStoredBool('isDisplayWeekend', false));
-  const [includeWeekend, setIncludeWeekend] = useState(() => getStoredBool('includeWeekend', false));
+  const [includeWeekend, setIncludeWeekend] = useState(true); // Pas de persistence pour celui-ci, c'est une option temporaire
   const [isExpanded, setIsExpanded] = useState(() => getStoredBool('isExpanded', false));
   const [isFullDay, setIsFullDay] = useState(() => getStoredBool('isFullDay', false));
-  const [respectNonWorkingDays, setRespectNonWorkingDays] = useState(() => getStoredBool('respectNonWorkingDays', false));
+  const [respectNonWorkingDays, setRespectNonWorkingDays] = useState(true);
   
   const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {

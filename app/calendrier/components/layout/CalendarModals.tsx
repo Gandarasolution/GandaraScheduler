@@ -113,20 +113,20 @@ export const CalendarModals = memo(({
     {
       category: "Gestion des jours travaillés",
       items: [
-        {
-          id: "includeWeekend", 
-          label: "Autoriser la planification sur les week-ends", 
-          type: "checkbox",
-          value: config.includeWeekend,
-          onChange: config.setIncludeWeekend,
-        },
-        {
-          id: "respectNonWorkingDays", 
-          label: "Respecter les jours non travaillés", 
-          type: "checkbox",
-          value: config.respectNonWorkingDays,
-          onChange: config.setRespectNonWorkingDays,
-        },
+        // {
+        //   id: "includeWeekend", 
+        //   label: "Autoriser la planification sur les week-ends", 
+        //   type: "checkbox",
+        //   value: config.includeWeekend,
+        //   onChange: config.setIncludeWeekend,
+        // },
+        // {
+        //   id: "respectNonWorkingDays", 
+        //   label: "Respecter les jours non travaillés", 
+        //   type: "checkbox",
+        //   value: config.respectNonWorkingDays,
+        //   onChange: config.setRespectNonWorkingDays,
+        // },
         {
           id: "nonWorkedDay", 
           label: "Dates non travaillées personnalisées", 

@@ -56,7 +56,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       <label htmlFor={setting.id} className="text-base font-medium poppins block">
                         {setting.label}
                       </label>
-                      {setting.id === "includeWeekend" && (
+                      {/* {setting.id === "includeWeekend" && (
                         <p className="text-xs text-secondary mt-1 poppins">
                           Permet de placer des rendez-vous les samedis et dimanches
                         </p>
@@ -65,7 +65,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <p className="text-xs text-secondary mt-1 poppins">
                           Bloque la planification sur les dates non travaillées définies ci-dessous
                         </p>
-                      )}
+                      )} */}
                       {setting.id === "nonWorkedDay" && (
                         <p className="text-xs text-secondary mt-1 poppins">
                           Définissez les congés d'entreprise
