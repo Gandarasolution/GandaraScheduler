@@ -6,11 +6,13 @@ import {
   ImageSelectorContentModal, 
   SettingsModal, 
   ConfigurationModal, 
-  FilterModal 
+  FilterModal,
+  DeleteModal 
 } from '@/app/calendrier/components';
 import { Appointment, Item, CalendarConfig, Image, User } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/useAppointmentLogic';
+import { DeleteScenario } from '../modals/DeleteModal';
 
 interface CalendarModalsProps {
   user: User;
@@ -24,12 +26,16 @@ interface CalendarModalsProps {
     extendData: number | null;
     modalInfo: { message: string, color: string } | null;
     selectedAppointmentForm: Appointment | null;
+    deleteConfirmData: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null;
   };
   handlers: {
     closeModal: () => void;
     saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean) => void;
     handleAddDimension: (dimension: Item) => void;
     handleEditDimension: (dimension: Item) => void;
+    handleDeleteDimension?: (dimensionId: number, forceDelete?: boolean) => any;
+    handleDeactivateDimension?: (dimensionId: number) => any;
+    setDeleteConfirmData?: (data: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null) => void;
     
     // Repeat Handlers
     setRepeatData: (data: RepeatData | null) => void;
@@ -143,7 +149,7 @@ export const CalendarModals = memo(({
     if (modalsState.repeatData) return "Répéter ce rendez-vous";
     if (modalsState.extendData) return "Prolonger le rendez-vous";
     if (modalsState.selectedAppointmentForm) {
-        return modalsState.selectedAppointmentForm.id === 0 ? "Modification la ressource" : "Modifier l'Évènement";
+        return modalsState.selectedAppointmentForm.id === -1 ? "Modification de la ressource" : `Modifier l'Évènement - ${data.items.find(i => i.id === modalsState.selectedAppointmentForm?.EventId)?.code}`;
     }
     return "Ajouter un rendez-vous";
   };  
@@ -399,6 +405,154 @@ export const CalendarModals = memo(({
           <span className={`font-semibold text-lg text-${modalsState.modalInfo.color}-800`}>{modalsState.modalInfo.message}</span>
         </div>
       )}
+
+      {/* --- CONFIRMATION SUPPRESSION RUBRIQUE --- */}
+      {modalsState.deleteConfirmData && (() => {
+        const { item, isUsedInPlanning, isActive } = modalsState.deleteConfirmData;
+        
+        // Scénario 1 : Rubrique déjà désactivée
+        if (!isActive) {
+          const scenario: DeleteScenario = {
+            title: "Rubrique déjà désactivée",
+            description: (
+              <>
+                La rubrique <span className="font-semibold text-primary">{item.label}</span> ({item.code}) est déjà désactivée.
+              </>
+            ),
+            secondaryDescription: "Voulez-vous la supprimer définitivement ?",
+            iconColor: "gray",
+            iconType: "info",
+            infoMessages: isUsedInPlanning ? [
+              {
+                text: "⚠️ Attention : Cette rubrique est encore utilisée dans le planning. La supprimer effacera tous les rendez-vous associés.",
+                type: "warning"
+              }
+            ] : undefined,
+            actions: [
+              {
+                label: "Supprimer définitivement",
+                onClick: () => {
+                  handlers.handleDeleteDimension?.(item.id, isUsedInPlanning);
+                  handlers.setDeleteConfirmData?.(null);
+                },
+                variant: "primary",
+                icon: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
+                requiresConfirm: isUsedInPlanning,
+                confirmMessage: isUsedInPlanning 
+                  ? "⚠️ Êtes-vous sûr de vouloir supprimer cette rubrique ET tous les rendez-vous associés ? Cette action est irréversible."
+                  : undefined
+              },
+              {
+                label: "Annuler",
+                onClick: () => handlers.setDeleteConfirmData?.(null),
+                variant: "cancel"
+              }
+            ]
+          };
+
+          return (
+            <DeleteModal
+              isOpen={true}
+              onClose={() => handlers.setDeleteConfirmData?.(null)}
+              title="Suppression de rubrique"
+              scenario={scenario}
+            />
+          );
+        }
+
+        // Scénario 2 : Rubrique active utilisée dans le planning
+        if (isUsedInPlanning) {
+          const scenario: DeleteScenario = {
+            title: "Cette rubrique est actuellement utilisée dans le planning",
+            description: (
+              <>
+                La rubrique <span className="font-semibold text-primary">{item.label}</span> ({item.code}) est liée à des rendez-vous existants.
+              </>
+            ),
+            iconColor: "orange",
+            iconType: "warning",
+            infoMessages: [
+              {
+                text: "💡 Recommandation : Désactivez cette rubrique au lieu de la supprimer. Elle restera visible dans l'historique mais ne pourra plus être utilisée pour de nouveaux rendez-vous.",
+                type: "info"
+              }
+            ],
+            actions: [
+              {
+                label: "Désactiver la rubrique (recommandé)",
+                onClick: () => {
+                  handlers.handleDeactivateDimension?.(item.id);
+                  handlers.setDeleteConfirmData?.(null);
+                },
+                variant: "secondary",
+                icon: "M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              },
+              {
+                label: "Supprimer tout (rubrique + RDV)",
+                onClick: () => {
+                  handlers.handleDeleteDimension?.(item.id, true);
+                  handlers.setDeleteConfirmData?.(null);
+                },
+                variant: "primary",
+                icon: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
+                requiresConfirm: true,
+                confirmMessage: "⚠️ Êtes-vous sûr de vouloir supprimer cette rubrique ET tous les rendez-vous associés ? Cette action est irréversible."
+              },
+              {
+                label: "Annuler",
+                onClick: () => handlers.setDeleteConfirmData?.(null),
+                variant: "cancel"
+              }
+            ]
+          };
+
+          return (
+            <DeleteModal
+              isOpen={true}
+              onClose={() => handlers.setDeleteConfirmData?.(null)}
+              title="Suppression de rubrique"
+              scenario={scenario}
+            />
+          );
+        }
+
+        // Scénario 3 : Rubrique active non utilisée
+        const scenario: DeleteScenario = {
+          title: "Confirmer la suppression",
+          description: (
+            <>
+              Voulez-vous vraiment supprimer la rubrique <span className="font-semibold text-primary">{item.label}</span> ({item.code}) ?
+            </>
+          ),
+          secondaryDescription: "Cette rubrique n'est pas utilisée dans le planning.",
+          iconColor: "red",
+          iconType: "trash",
+          actions: [
+            {
+              label: "Supprimer",
+              onClick: () => {
+                handlers.handleDeleteDimension?.(item.id, false);
+                handlers.setDeleteConfirmData?.(null);
+              },
+              variant: "primary"
+            },
+            {
+              label: "Annuler",
+              onClick: () => handlers.setDeleteConfirmData?.(null),
+              variant: "cancel"
+            }
+          ]
+        };
+
+        return (
+          <DeleteModal
+            isOpen={true}
+            onClose={() => handlers.setDeleteConfirmData?.(null)}
+            title="Suppression de rubrique"
+            scenario={scenario}
+          />
+        );
+      })()}
     </>
   );
 });

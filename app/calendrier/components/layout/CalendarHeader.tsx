@@ -377,9 +377,9 @@ export const CalendarHeader = memo(({
                     EventId: 0
                   })
               }
-              title={viewType === 'calendar' ? "Ajouter un évènement" : "Ajouter une rubrique"}
+              title={viewType === 'calendar' ? "Ajouter un évènement" : "Ajouter une ressource"}
             >
-              + Ajouter un évènement
+              {viewType === 'calendar' ? "+ Ajouter un évènement" : "+ Ajouter une ressource"}
             </button>
           )}
         </div>

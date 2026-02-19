@@ -23,7 +23,7 @@ import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 import { AppointmentItem } from '../index';
 
 const MAX_LENGTH_TAG = 20; // Longueur maximale pour les étiquettes
-const MAX_LENGTH_SHORT_TAG = 6; // Longueur maximale pour les versions courtes
+const MAX_LENGTH_SHORT_TAG = 4; // Longueur maximale pour les versions courtes
 
 /**
  * Interface définissant les propriétés du composant AppointmentForm
@@ -385,10 +385,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // Rendu du formulaire
   return (
     <>
-      <div className={`flex ${isReducedVersion ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} gap-4 rounded-xl poppins transition-all duration-300`}>
-        {/* Section principale du formulaire */}
-        <form onSubmit={handleSubmit} className={`flex flex-col gap-4 w-full max-w-[380px] min-w-[320px]`} noValidate>
-          {/* Flèche d'expansion */}
+      <div className={`flex ${isReducedVersion ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} 
+        gap-4 rounded-xl poppins transition-all duration-300 h-full items-stretch`}
+      >  
+        <form onSubmit={handleSubmit} 
+          className="flex flex-col gap-4 w-full max-w-[380px] min-w-[320px] flex-grow" 
+          noValidate
+        >
           {!isReducedVersion && (
             <button
               type="button"
@@ -571,14 +574,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
           {/* Aperçu du rendez-vous - Repositionné sous les couleurs */}
           <div className='relative'>
-            {/* Badge code chantier - Affiché de manière subtile */}
-            {formDataAppointment.id !== -1 && formDataItemType.code && (
-              <div className="absolute -top-2 right-0 z-20 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-md shadow-sm">
-                <span className="text-[10px] font-mono font-semibold text-gray-600 uppercase tracking-wider">
-                  {formDataItemType.code}
-                </span>
-              </div>
-            )}
             <AppointmentItem
               appointment={{
                 ...formDataAppointment,
@@ -736,7 +731,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           )}
 
           {/* Boutons d'action */}
-          <div className="flex flex-col sm:flex-row justify-between gap-3 mt-5">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 mt-auto pt-5">
             <input
               type="submit"
               className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation"
@@ -754,7 +749,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
         {/* Section étiquettes - Version réduite uniquement */}
         {isReducedVersion && (
-          <div className="w-full lg:w-[320px] p-4 flex flex-col gap-4 border-l border-light">
+          <div className="w-full lg:w-[320px] px-4 flex flex-col gap-4 border-l border-light">
             <h3 className="text-sm font-semibold text-primary">Étiquettes</h3>
             
             {/* Formulaire d'ajout d'étiquette */}
@@ -806,11 +801,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             </div>
 
             {/* Liste des étiquettes */}
-            <div className="flex flex-wrap gap-2 min-h-[60px] max-h-[200px] overflow-y-auto">
-              {formDataItemType?.tags?.length === 0 ? (
-                <span className="text-xs text-gray-400 italic">Aucune étiquette</span>
-              ) : (
-                formDataItemType?.tags?.map((tag, index) => (
+            <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto">
+              {formDataItemType?.tags?.map((tag, index) => (
                   <div
                     key={index}
                     className="inline-flex items-center gap-1 px-3 py-1 bg-primary-ultra-light text-primary rounded-full text-xs group hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -828,7 +820,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                     </button>
                   </div>
                 ))
-              )}
+              }
             </div>
           </div>
         )}

@@ -341,6 +341,12 @@ export const useAppointmentLogic = ({
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
   const handleSaveAppointment = useCallback((appointment: Appointment, eventUpdate: Item, includeNonWorkingDays: boolean) => {    
+      // Vérifier si l'événement est désactivé (pour les types absence/autre)
+      if ('actif' in eventUpdate && !eventUpdate.actif) {
+        notificationService.error('Action interdite', 'Cette rubrique est désactivée et ne peut plus être utilisée pour créer ou modifier des rendez-vous.');
+        return;
+      }
+
       // Mise à jour des métadonnées de l'événement global
       eventsRef.current = eventsRef.current.map(e =>
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
@@ -566,11 +572,19 @@ export const useAppointmentLogic = ({
       const endDate = new Date(date).setHours(endHour - 1, 59, 59 , 999);      
 
 
-      let eventTypeId = eventsRef.current.find(e => e.label === title)?.id;
-      if (!eventTypeId) {
+      const event = eventsRef.current.find(e => e.label === title);
+      if (!event) {
         console.warn(`Événement introuvable pour le titre : ${title}`);
         return;
       }
+
+      // Vérifier si l'événement est désactivé (pour les types absence/autre)
+      if ('actif' in event && !event.actif) {
+        notificationService.error('Action interdite', `La rubrique "${title}" est désactivée et ne peut plus être placée dans le planning.`);
+        return;
+      }
+
+      let eventTypeId = event.id;
 
       createAppointment(
         startDate, 
@@ -590,22 +604,38 @@ export const useAppointmentLogic = ({
   const handleSearchItemAction = useCallback((event: any) => {
       if(!selectedCell) return;
       
+      // Vérifier si l'événement est désactivé (pour les types absence/autre)
+      if ('actif' in event && !event.actif) {
+        notificationService.error('Action interdite', `La rubrique "${event.label}" est désactivée et ne peut plus être placée dans le planning.`);
+        return;
+      }
+      
       const employee = employeesRef.current.find(emp => emp.id === selectedCell.employeeId);
       
-      handleSaveAppointment(
-        {
-          id: Date.now(),
-          description: event.label,
-          startDate: selectedCell.date,
-          endDate: (timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).getTime() + 59 * 60 * 1000 + 59 * 1000,
-          employeeId: selectedCell.employeeId,
-          employee: employee as User,
-          type: (event as any).type.toLowerCase() as "chantier" | "absence" | "autre",
-          EventId: event.id,
-        } as Appointment,
-        event as Item,
-        false
+      createAppointment(
+        selectedCell.date, 
+        selectedCell.date + (timelineState.isFullDay ? 23 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000 : 11 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000),
+        selectedCell.employeeId,
+        event.id,
+        true,
+        event.type.toLowerCase() as "chantier" | "absence" | "autre",
       );
+      
+      // handleSaveAppointment(
+      //   {
+      //     id:-1,
+      //     description: event.label,
+      //     startDate: selectedCell.date,
+      //     endDate: (timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).getTime() + 59 * 60 * 1000 + 59 * 1000,
+      //     employeeId: selectedCell.employeeId,
+      //     employee: employee as User,
+      //     type: (event as any).type.toLowerCase() as "chantier" | "absence" | "autre",
+      //     EventId: event.id,
+      //   } as Appointment,
+        
+      //   event as Item,
+      //   false
+      // );
   }, [selectedCell, timelineState.isFullDay, handleSaveAppointment, employeesRef]);
 
   // --- PRESSE-PAPIER ---
@@ -683,6 +713,54 @@ export const useAppointmentLogic = ({
     onUpdate();
   }, []);
 
+  const handleDeleteDimension = useCallback((dimensionId: number, forceDelete: boolean = false) => {
+    // Vérifier si la rubrique est utilisée dans le planning
+    const isUsedInPlanning = appointmentsRef.current.some(
+      appointment => appointment.EventId === dimensionId
+    );
+
+    if (isUsedInPlanning && !forceDelete) {
+      // Retourner un objet indiquant qu'une confirmation est nécessaire
+      return {
+        success: false,
+        requiresConfirmation: true,
+        isUsedInPlanning: true,
+        message: 'Cette rubrique est utilisée dans le planning.'
+      };
+    }
+
+    if (forceDelete) {
+      // Suppression forcée : supprimer la rubrique et tous les RDV associés
+      eventsRef.current = eventsRef.current.filter(e => e.id !== dimensionId);
+      appointmentsRef.current = appointmentsRef.current.filter(
+        appointment => appointment.EventId !== dimensionId
+      );
+    } else {
+      // Suppression normale (rubrique non utilisée)
+      eventsRef.current = eventsRef.current.filter(e => e.id !== dimensionId);
+    }
+
+    onUpdate();
+    return {
+      success: true,
+      requiresConfirmation: false,
+      isUsedInPlanning: false,
+      message: 'Rubrique supprimée avec succès.'
+    };
+  }, []);
+
+  const handleDeactivateDimension = useCallback((dimensionId: number) => {
+    // Désactiver la rubrique au lieu de la supprimer
+    eventsRef.current = eventsRef.current.map(e =>
+      e.id === dimensionId ? { ...e, actif: false } : e
+    );
+    onUpdate();
+    return {
+      success: true,
+      message: 'Rubrique désactivée avec succès. Elle reste visible mais ne peut plus être utilisée.'
+    };
+  }, []);
+
   return {
     // États exposés
     selectedAppointment, setSelectedAppointment,
@@ -704,6 +782,8 @@ export const useAppointmentLogic = ({
     handleOpenEditModal,
     handleAddDimension,
     handleEditDimension,
+    handleDeleteDimension,
+    handleDeactivateDimension,
 
     // Actions Spécifiques
     handleDeleteAppointmentConfirm,

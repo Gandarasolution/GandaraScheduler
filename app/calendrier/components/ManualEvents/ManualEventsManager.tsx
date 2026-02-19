@@ -2,13 +2,18 @@
 import React, { useMemo } from 'react';
 import { Item } from '@/app/calendrier/types';
 import { DataTableFrame, CategoryStructure } from '@/app/calendrier/components/Table';
+import { GenericDataItem } from '../Table/DataTableFrame';
 
 interface ManualEventsManagerProps {
   events: Item[];
+  onDeleteRequest?: (item: Item) => void;
+  onEditRequest?: (item: Item) => void;
 }
 
 const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
   events,
+  onDeleteRequest,
+  onEditRequest,
 }) => {
   const rows = useMemo(() => events.filter((e) => e.isManual), [events]);
 
@@ -54,10 +59,54 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
               <span className="text-xs text-secondary">{item.code}</span>
             </div>
           )
+        },
+        {
+          key: 'actif',
+          label: 'Statut',
+          type: 'custom',
+          sortable: true,
+          align: 'center',
+          width: 150,
+          renderer: (value, item) => {
+            const isActive = 'actif' in item ? (item as any).actif : true;
+            return (
+              <div className="flex items-center justify-center">
+                {isActive ? (
+                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Actif
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    Désactivé
+                  </span>
+                )}
+              </div>
+            );
+          }
         }
       ]
     }
   ], []);
+  const handleRightClick = (item: GenericDataItem, e: React.MouseEvent) => {
+    e.preventDefault();
+    // Pour l'instant, on appelle directement onDeleteRequest
+    // Le menu contextuel sera géré dans le parent ou via une modal
+    if (onDeleteRequest) {
+      onDeleteRequest(item as Item);
+    }
+  };
+
+  const handleRowClick = (item: GenericDataItem) => {
+    if (onEditRequest) {
+      onEditRequest(item as Item);
+    }
+  };
 
   return (
     <div className="">
@@ -71,6 +120,8 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
         cellPadding={12}
         FontSize={14}
         showColumnVisibilityToggle={false}
+        onRightClick={handleRightClick}
+        onRowClick={handleRowClick}
       />
     </div>
   );

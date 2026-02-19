@@ -13,7 +13,7 @@ import AutreIcones from '../../image/Icones/Autres.png';
 interface DraggableSourceProps {
   id: number; // ID unique de la source
   title: string;
-  imageUrl?: string; // URL de l'image associée à la source, optionnelle
+  imageUrl?: string | undefined; // URL de l'image associée à la source, optionnelle
   type: 'Chantier' | 'Absence' | 'Autre'; // Type de l'élément, pour catégoriser les sources
   className?: string; // Classes CSS additionnelles
 }
@@ -44,12 +44,28 @@ const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title, imageUrl =
         ${className || ''}
       `}
     >
-      <img 
-        src={imageUrl ? imageUrl : ''}
-        width={24}
-        height={24}
-        alt={title} 
-      />
+      {imageUrl ? (
+        // CAS 1 : L'image existe -> On l'affiche
+        <img 
+          src={imageUrl} 
+          alt="Icône" 
+          className="w-12 h-12 rounded border border-default object-cover" 
+        />
+      ) : (
+        // CAS 2 : Pas d'image -> Fond gris avec une croix
+        <div className="w-12 h-12 rounded border border-default bg-gray-200 flex items-center justify-center text-gray-400">
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            strokeWidth={2} 
+            stroke="currentColor" 
+            className="w-6 h-6"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+      )}
       <span>{title}</span>
     </div>
   );
