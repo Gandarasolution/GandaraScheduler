@@ -104,7 +104,7 @@ export default function HomePage({
     // Activer la collaboration
     enableCollaboration: true,
     userId: user?.id ? String(user.id) : 'anonymous',
-    userName: user?.name || 'Utilisateur'
+    userName: user?.nom ? `${user.nom} ${user.prenom}` : 'Utilisateur'
   });
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
@@ -124,6 +124,7 @@ export default function HomePage({
   }), [viewState.isFullDay, viewState.isDisplayWeekend, viewState.includeWeekend, viewState.respectNonWorkingDays, viewState.nonWorkingDates]);
 
   const appointmentLogic = useAppointmentLogic({
+    employeesRef: globalEmployeesRef,
     appointmentsRef: dataLayer.appointmentsRef,
     eventsRef: dataLayer.itemsRef,
     timelineState,

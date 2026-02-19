@@ -8,7 +8,7 @@ import {
   ConfigurationModal, 
   FilterModal 
 } from '@/app/calendrier/components';
-import { Appointment, Item, Employee, CalendarConfig, Image, User } from '../../types';
+import { Appointment, Item, CalendarConfig, Image, User } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/useAppointmentLogic';
 
@@ -68,9 +68,9 @@ interface CalendarModalsProps {
   data: {
     appointments: Appointment[];
     items: Item[];
-    employees: Employee[];
+    employees: User[];
     selectedItem: Item | null;
-    selectedEmployee: Employee | null;
+    selectedEmployee: User | null;
     availableImages: Image[];
     filterConfig: any; // Options pour le filtre
     isUploading: boolean;

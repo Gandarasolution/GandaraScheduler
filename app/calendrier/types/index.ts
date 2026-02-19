@@ -8,43 +8,35 @@
  */
 
 /**
- * Interface représentant un groupe/équipe d'employés
- * @interface Groupe
+ * Interface représentant un pôle d'activité
+ * Correspond à la table Gandara_PoleActivite
+ * @interface PoleActivite
  */
-export interface Groupe {
-  /** Identifiant unique du groupe */
+export interface PoleActivite {
+  /** Identifiant unique du pôle (IdPoleActivite) */
   id: number;
-  /** Nom d'affichage du groupe */
+  /** Libellé du pôle d'activité (LibellePoleActivite) */
+  name: string;
+}
+
+/**
+ * Interface représentant une équipe
+ * Correspond à la table Gandara_Equipe
+ * @interface Equipe
+ */
+export interface Equipe {
+  /** Identifiant unique de l'équipe (IdEquipe) */
+  id: number;
+  /** Libellé de l'équipe (LibelleEquipe) */
   name: string;  
 }
 
-export type poleActivite = {
-  id: number;
-  name: string;
-};
+/** @deprecated Utiliser Equipe à la place */
+export type Groupe = Equipe;
 
-/**
- * Interface représentant un employé de l'entreprise
- * @interface Employee
- */
-export interface Employee {
-  /** Identifiant unique de l'employé */
-  id: number;
-  /** Nom complet de l'employé */
-  name: string;
-  /** Prénom de l'employé */
-  firstName: string;
-  /** Code unique de l'employé */
-  code: string;
-  /** URL de l'avatar de l'employé (optionnel) */
-  image?: Image;
-  /** ID de l'équipe à laquelle appartient l'employé (optionnel) */
-  group?: Groupe;
-  /** Type de contrat de l'employé */
-  type: 'employee' | 'interim';
-  /** Pôle auquel appartient l'employé (Technique, Commercial, etc.) */
-  pole?: string;
-}
+/** @deprecated Utiliser PoleActivite à la place */
+export type poleActivite = PoleActivite;
+
 
 
 /**
@@ -156,7 +148,7 @@ export interface Appointment{
   /** Date et heure de fin du rendez-vous */
   endDate: number;
   /** ID de l'employé assigné au rendez-vous */
-  employeeId: number;
+  employee: User;
   /** Type de rendez-vous */
   type: 'chantier' | 'absence' | 'autre';
   /** ID de l'événement auquel ce RDV est lié */
@@ -252,14 +244,34 @@ export interface HistoryAction {
   createdAppointments?: Appointment[]; // Pour les RDV créés lors d'un resize split
 } 
 
+/**
+ * Interface représentant un utilisateur
+ * Correspond à la table Gandara_Utilisateur
+ * @interface User
+ */
 export interface User{
+  /** Identifiant unique de l'utilisateur (IdPersonnel) */
   id: number;
-  name: string;
-  role: 'admin' | 'user';
-  theme: string;
-  image?: string;
-  employeeId?: number | null; // ID de l'employé associé (si existe)
-  email?: string; // Email de l'utilisateur
+  /** Nom de l'utilisateur */
+  nom: string;
+  /** Prénom de l'utilisateur */
+  prenom: string;
+  /** Code de contrat de l'utilisateur (ex: CDI, CDD, etc.) */
+  code?: string;
+  /** Référence au pôle d'activité (relation) */
+  poleActivite?: PoleActivite;
+  /** Type de l'utilisateur (employé ou intérimaire) */
+  type: 'employee' | 'interim';
+  /** Référence à l'équipe (relation) */
+  equipe?: Equipe;
+  /** Rôle de l'utilisateur dans l'application */
+  role?: 'admin' | 'user';
+  /** Thème préféré de l'utilisateur */
+  theme?: string;
+  /** Image de profil de l'utilisateur */
+  image?: Image;
+  /** Email de l'utilisateur */
+  email?: string;
 }
 
 

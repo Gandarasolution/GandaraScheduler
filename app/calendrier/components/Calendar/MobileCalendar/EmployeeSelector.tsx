@@ -14,14 +14,14 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, Clock, Users } from 'lucide-react';
 import Fuse from 'fuse.js';
-import { Employee } from '../../../types';
+import { User } from '../../../types';
 import { useDebounce } from '../../../hooks';
 import { useRecentEmployees } from '../../../hooks/useRecentEmployees';
 
 interface EmployeeSelectorProps {
-  employees: Employee[];
-  selectedEmployee: Employee | null;
-  onSelect: (employee: Employee) => void;
+  employees: User[];
+  selectedEmployee: User | null;
+  onSelect: (employee: User) => void;
 }
 
 export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({ 
@@ -64,10 +64,10 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 
   // Grouper les employés par équipe
   const groupedEmployees = useMemo(() => {
-    const groups: Record<string, Employee[]> = {};
+    const groups: Record<string, User[]> = {};
     
     searchResults.forEach(emp => {
-      const groupName = emp.group?.name || 'Sans équipe';
+      const groupName = emp.equipe?.name || 'Sans équipe';
       if (!groups[groupName]) {
         groups[groupName] = [];
       }
@@ -98,7 +98,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   };
 
   // Gestion de la sélection
-  const handleSelect = (emp: Employee) => {
+  const handleSelect = (emp: User) => {
     addRecentEmployee(emp);
     onSelect(emp);
     setIsOpen(false);
@@ -155,7 +155,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             className="text-sm font-semibold truncate"
             style={{ color: 'var(--text-primary)' }}
           >
-            {selectedEmployee ? `${selectedEmployee.name} ${selectedEmployee.firstName}` : 'Sélectionner...'}
+            {selectedEmployee ? `${selectedEmployee.nom} ${selectedEmployee.prenom}` : 'Sélectionner...'}
           </p>
         </div>
 
@@ -258,11 +258,11 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 interface EmployeeGroupProps {
   title: string;
   icon: React.ReactNode;
-  employees: Employee[];
+  employees: User[];
   isExpanded: boolean;
   onToggle: () => void;
-  selectedEmployee: Employee | null;
-  onSelect: (employee: Employee) => void;
+  selectedEmployee: User | null;
+  onSelect: (employee: User) => void;
   showBadge?: boolean;
 }
 
@@ -324,14 +324,14 @@ const EmployeeGroup: React.FC<EmployeeGroupProps> = ({
 );
 
 interface EmployeeItemProps {
-  employee: Employee;
+  employee: User;
   isSelected: boolean;
-  onSelect: (employee: Employee) => void;
+  onSelect: (employee: User) => void;
   showBadge?: boolean;
 }
 
 const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSelect, showBadge }) => {
-  const avatarUrl = employee.image?.image || `https://ui-avatars.com/api/?name=${employee.name}+${employee.firstName}&background=009580&color=fff`;
+  const avatarUrl = employee.image?.image || `https://ui-avatars.com/api/?name=${employee.nom}+${employee.prenom}&background=009580&color=fff`;
   
   return (
   <div 
@@ -358,7 +358,7 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
     >
       <img 
         src={avatarUrl}
-        alt={`${employee.name} ${employee.firstName}`}
+        alt={`${employee.nom} ${employee.prenom}`}
         width="36"
         height="36"
         className="object-cover"
@@ -373,7 +373,7 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
             color: isSelected ? 'var(--color-primary-dark)' : 'var(--text-primary)' 
           }}
         >
-          {employee.name} {employee.firstName}
+          {employee.nom} {employee.prenom}
         </p>
         {showBadge && (
           <span 

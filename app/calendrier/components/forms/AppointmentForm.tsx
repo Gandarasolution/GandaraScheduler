@@ -16,7 +16,7 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect } from 'react';
-import {Appointment, Employee, HalfDayInterval, Item, Tags, CommonPaieAttributs } from '../../types';
+import {Appointment, HalfDayInterval, Item, Tags, CommonPaieAttributs, User } from '../../types';
 import { format, startOfDay, isSameDay, isSameYear, isSameMonth } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 
@@ -41,7 +41,7 @@ interface AppointmentFormProps {
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
-  employees: Employee[];
+  employees: User[];
   /** Configuration des créneaux horaires (matin/après-midi/journée) */
   HALF_DAY_INTERVALS: HalfDayInterval[];
   /** Indique si le rendez-vous occupe une journée complète */
@@ -721,13 +721,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               <select
                 id="employeeId"
                 name="employeeId"
-                value={formDataAppointment.employeeId || ''}
+                value={formDataAppointment.employee.id || ''}
                 onChange={handleChange}
                 className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-bg-secondary text-sm"
               >
                 {employees.map(employee => (
                   <option key={employee.id} value={employee.id}>
-                    {employee.name + ' ' + employee.firstName}
+                    {employee.nom + ' ' + employee.prenom}
                   </option>
                 ))}
               </select>

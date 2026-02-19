@@ -3,7 +3,7 @@ import { UserMenu } from '../index';
 
 import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
-import { Appointment } from '../../types';
+import { Appointment, User } from '../../types';
 import { memo, use, useEffect } from 'react';
 
 interface CalendarHeaderProps {
@@ -372,7 +372,7 @@ export const CalendarHeader = memo(({
                     description: '',
                     startDate: 0,
                     endDate: 1,
-                    employeeId: 0,
+                    employee: {} as User,
                     type: 'autre',
                     EventId: 0
                   })

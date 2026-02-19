@@ -14,7 +14,7 @@
  */
 
 import { addDays, addWeeks, addMonths } from 'date-fns';
-import { Appointment, Item } from '../types';
+import { Appointment, Item, User } from '../types';
 import { getIntervals, getNextWorkedDay, getWorkedDayIntervals } from './dates';
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from './constants';
 
@@ -108,7 +108,9 @@ export interface SaveAppointmentParams {
  * Crée une instance des utilitaires de gestion des rendez-vous
  * @returns Objet contenant toutes les fonctions utilitaires
  */
-export const createAppointmentUtils = (): AppointmentUtils => {
+export const createAppointmentUtils = (
+  employees: User[],
+): AppointmentUtils => {
   let idCounter = 10000; // Compteur pour générer des IDs uniques
 
   const idGenerator = (): number => {
@@ -123,7 +125,7 @@ export const createAppointmentUtils = (): AppointmentUtils => {
       description: description || 'Nouveau rendez-vous',
       startDate,
       endDate,
-      employeeId,
+      employee: employees.find(emp => emp.id === employeeId) || employees[0],
       type,
       EventId: eventId,
     };
@@ -171,7 +173,7 @@ export const createAppointmentUtils = (): AppointmentUtils => {
             description: appointment.description || 'Description du rendez-vous répété',
             startDate: day.start,
             endDate: day.end,
-            employeeId: appointment.employeeId,
+            employee: appointment.employee,
             type: appointment.type,
             EventId: appointment.EventId,
           });
@@ -204,7 +206,7 @@ export const createAppointmentUtils = (): AppointmentUtils => {
             description: appointment.description || 'Description du rendez-vous répété',
             startDate: day.start,
             endDate: day.end,
-            employeeId: appointment.employeeId,
+            employee: appointment.employee,
             type: appointment.type,
             EventId: appointment.EventId,
           });
@@ -323,7 +325,7 @@ export const createAppointmentUtils = (): AppointmentUtils => {
       description: title,
       startDate: startDate,
       endDate: endDate,
-      employeeId,
+      employee : employees.find(emp => emp.id === employeeId) || employees[0],
       type: typeEvent.toLowerCase() as 'chantier' | 'absence' | 'autre',
       EventId: 1, // Sera mis à jour selon l'événement sélectionné
     };
@@ -356,7 +358,7 @@ export const createAppointmentUtils = (): AppointmentUtils => {
           description: appointment.description,
           startDate: day.start,
           endDate: day.end,
-          employeeId: appointment.employeeId,
+          employee: appointment.employee,
           type: appointment.type,
           EventId: appointment.EventId,
         });

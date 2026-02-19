@@ -13,7 +13,7 @@ import { addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
-import { Appointment, Employee, Item, User } from '../../../types/index';
+import { Appointment, Item, User } from '../../../types/index';
 
 // Composants
 
@@ -34,7 +34,7 @@ import { HALF_DAY_INTERVALS } from '../../../utils/constants';
 // ===== TYPES =====
 
 interface MobileCalendarGridProps {
-  employees: Employee[];
+  employees: User[];
   appointments: Appointment[];
   user: User;
   items: Item[];
@@ -75,7 +75,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     ? employees 
     : employees.filter(emp => emp.id === user.id);
   
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(() => {
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(() => {
     if (!isAdmin) {
       return visibleEmployees.find(emp => emp.id === user.id) || null;
     }
@@ -94,11 +94,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       let filteredApps = appointments;
       
       if (!isAdmin) {
-        filteredApps = appointments.filter(app => app.employeeId === user.id);
+        filteredApps = appointments.filter(app => app.employee.id === user.id);
       }
       
       const filtered = filteredApps.filter(app => {
-        const matchesEmployee = !selectedEmployee || app.employeeId === selectedEmployee.id;
+        const matchesEmployee = !selectedEmployee || app.employee.id === selectedEmployee.id;
         const isInMonth = app.startDate <= monthEnd && app.endDate >= monthStart;
         return matchesEmployee && isInMonth;
       });
@@ -170,7 +170,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     });
     
     setTimeout(() => {
-      addNotification('info', 'Bienvenue', `Bonjour ${user.name} !`);
+      addNotification('info', 'Bienvenue', `Bonjour ${user.nom} ${user.prenom} !`);
     }, 500);
   }, []);
 
@@ -238,7 +238,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       description: '',
       startDate: startOfSelectedDay,
       endDate: endOfSelectedDay,
-      employeeId: selectedEmployee?.id || employees[0]?.id || 0,
+      employee: selectedEmployee || employees[0] || null,
       type: 'chantier',
       EventId: 0,
       priority: 0,
@@ -319,7 +319,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 style={{ borderWidth: '1px', borderColor: 'var(--border-light)' }}
               >
                 <img 
-                  src={user.image || '/default-avatar.png'}
+                  src={user.image?.image || '/default-avatar.png'}
                   alt="User"
                   width={32}
                   height={32}
@@ -330,7 +330,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 className="text-sm font-semibold hidden sm:inline-block"
                 style={{ color: 'var(--text-primary)' }}
               >
-                {user.name}
+                {user.nom} {user.prenom}
               </span>
             </button>
             

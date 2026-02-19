@@ -1,6 +1,6 @@
 import React from 'react';
 import { addHours } from "date-fns";
-import { Appointment, Employee, ChantierItem, Groupe } from "../types";
+import { Appointment, User, ChantierItem, Groupe } from "../types";
 import { HOURS_PER_DAY } from "./constants";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
 
@@ -9,8 +9,8 @@ import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous q
 
 export const customRenderersFactory = (
   viewType: string, 
-  employees: Employee[], 
-  onImageClick: (employee: Employee) => void,
+  employees: User[], 
+  onImageClick: (employee: User) => void,
   setSelectedAppointment: (appointment: Appointment) => void,
   handleOpenEditModal: (appointment: Appointment) => void,
   // Ces deux derniers arguments sont optionnels pour la compatibilité, 
@@ -35,7 +35,7 @@ export const customRenderersFactory = (
             EventId: Number(chantierItem.id),
             startDate: 0,
             endDate: 1000,
-            employeeId: 0,
+            employee: employees[0],
           }}
           isFullDay={false}
           isMobile={false}
@@ -51,7 +51,7 @@ export const customRenderersFactory = (
               EventId: Number(chantierItem.id),
               startDate: 0,
               endDate: 1000,
-              employeeId: 0,
+              employee: employees[0],
             }
             setSelectedAppointment(newAppointment);
             handleOpenEditModal(newAppointment);
@@ -187,7 +187,7 @@ export const customRenderersFactory = (
       <div className="flex items-center justify-start w-full h-full">
         {/* Selecteur d'équipe */}
         <select
-          value={employees.find(emp => emp.id === item.id)?.group?.id || ''}
+          value={employees.find(emp => emp.id === item.id)?.equipe?.id || ''}
           onChange={(e) => {
             if (onTeamChange) {
                 const newGroupId = e.target.value ? Number(e.target.value) : null;

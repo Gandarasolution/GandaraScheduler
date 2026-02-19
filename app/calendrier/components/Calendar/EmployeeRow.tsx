@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Employee, Appointment, Item } from '../../types';
+import { Appointment, Item, User } from '../../types';
 import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
@@ -7,7 +7,7 @@ import { countWeekends } from '../../utils/dates';
 import { isSameDay } from 'date-fns';
 
 interface EmployeeRowProps {
-  employee: Employee;
+  employee: User;
   dayInTimeline: number[];
   appointments: (Appointment & { top: number})[];
   rowHeight: number;
@@ -64,7 +64,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const positionedAppointments = useMemo(() => {
     return appointments
       .filter((app) => {
-        if (app.employeeId !== employee.id) return false;
+        if (app.employee.id !== employee.id) return false;
         return app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd;
       })
       .map((app) => {
@@ -305,14 +305,14 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   ghostInterval={ghostIntervals.length > 0 ? ghostIntervals : undefined}
 
                   onResize={(id, newStartDate, newEndDate, resizeDirection, priority) =>{              
-                    onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection, true, priority)}
+                    onAppointmentMoved(id, newStartDate, newEndDate, app.employee.id as number, resizeDirection, true, priority)}
                   }
                   handleContextMenu={(e, origin) =>
                     handleContextMenu(
                       e,
                       origin,
                       { ...app, startDate: app.startDate, endDate: app.endDate },
-                      { employeeId: app.employeeId as number, date: app.startDate }
+                      { employeeId: app.employee.id as number, date: app.startDate }
                     )
                   }
                   onDoubleClick={() => onAppointmentDoubleClick(app)}

@@ -1,9 +1,9 @@
 import { useMemo, useCallback } from 'react';
-import { Appointment, Employee } from '../types';
+import { Appointment, User } from '../types';
 import { CELL_HEIGHT, DAY_MS } from '../utils/constants';
 
 interface UseCalendarLayoutParams {
-  employees: Employee[];
+  employees: User[];
   appointments: Appointment[];
   dayInTimeline: number[];
   isMobile: boolean;
@@ -45,7 +45,7 @@ export const useCalendarLayout = ({
           
       
           const employeeAllAppointments = appointments.filter(
-              app => app.employeeId === employee.id
+              app => app.employee.id === employee.id
           );
           dayInTimeline.forEach(dayTimestamp => {
               // 'dayTimestamp' est supposé être le timestamp à 00:00:00
@@ -76,7 +76,7 @@ export const useCalendarLayout = ({
       return heights;
     } else {
       return employees.map(employee => {
-        const employeeAppointments = appointments.filter(app => app.employeeId === employee.id);
+        const employeeAppointments = appointments.filter(app => app.employee.id === employee.id);
         
         let maxOverallOverlap = 0;
         if (employeeAppointments.length > 0) {
@@ -126,7 +126,7 @@ export const useCalendarLayout = ({
 
     employees.forEach(emp => {
       if (isMobile) {
-        const empAppointments = appointments.filter(app => app.employeeId === emp.id);
+        const empAppointments = appointments.filter(app => app.employee.id === emp.id);
 
         dayInTimeline.forEach(day => {
             const dayStartTs = day; 
@@ -159,7 +159,7 @@ export const useCalendarLayout = ({
         });
     } else {
         // Desktop : même logique
-        const empAppointments = appointments.filter(app => app.employeeId === emp.id);
+        const empAppointments = appointments.filter(app => app.employee.id === emp.id);
         
         empAppointments.forEach(app => {
             // Trouver tous les rdv qui chevauchent

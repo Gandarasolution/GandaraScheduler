@@ -446,7 +446,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
          }
          
          const cellUnderMouse = {
-           employeeId: appointment.employeeId as number,
+           employeeId: appointment.employee.id as number,
            date: targetDate
          };
          

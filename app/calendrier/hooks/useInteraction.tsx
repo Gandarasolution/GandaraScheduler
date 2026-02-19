@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Appointment, Employee, Item, type Image } from '../types';
+import { Appointment, User, Item, type Image } from '../types';
 
 // Interface complète des props
 interface InteractionProps {
@@ -7,7 +7,7 @@ interface InteractionProps {
   setSelectedAppointment: (app: Appointment | null) => void;
   selectedCell: { employeeId: number; date: number } | null;
   setSelectedCell: (cell: { employeeId: number; date: number } | null) => void;
-  setSelectedEmployee: (employee: Employee | null) => void;
+  setSelectedEmployee: (employee: User | null) => void;
   
   // Actions provenant de useAppointmentLogic
   copyAppointment: (app: Appointment) => void;
@@ -218,7 +218,11 @@ export const useInteraction = ({
                  EventId: Number(item.id),
                  startDate: Date.now(),
                  endDate: Date.now(),
-                 employeeId: 0
+                 employee: {
+                     id: 0,
+                     nom: '',
+                     prenom: '',
+                    } as User
              };
              handleOpenEditModal(mockApp);
           }
@@ -230,7 +234,7 @@ export const useInteraction = ({
   
   // --- GESTION IMAGE MODAL ---
 
-  const handleOpenImageModal = useCallback((employee?: Employee) => {
+  const handleOpenImageModal = useCallback((employee?: User) => {
       setSelectedEmployee(employee!);
       setIsImageSelectorOpen(true);
   }, []);

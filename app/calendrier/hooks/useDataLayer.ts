@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Appointment, Employee, Item, CalendarConfig, Image } from '../types';
+import { Appointment, User, Item, CalendarConfig, Image } from '../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../utils/searchAndFilterUtils';
 import { 
   getAppointments, 
@@ -18,7 +18,7 @@ interface DataLayerProps {
   searchQuery: string;
   filters: ActiveFilters;
   calendarConfig: CalendarConfig | null;
-  globalEmployeesRef: React.RefObject<Employee[]>;
+  globalEmployeesRef: React.RefObject<User[]>;
   userId: string;
   userName: string;
   enableCollaboration: boolean;
@@ -157,10 +157,10 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
         id: emp.id,
         image: emp.image,
         code: emp.code,
-        nom: emp.name,
-        prenom: emp.firstName,
+        nom: emp.nom,
+        prenom: emp.prenom,
         type: emp.type,
-        equipe: emp.group?.name || ''
+        equipe: emp.equipe?.name || ''
      }));
   };
 
