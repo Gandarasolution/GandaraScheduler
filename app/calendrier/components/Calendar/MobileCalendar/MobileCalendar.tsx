@@ -80,8 +80,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     if (!isAdmin) {
       return visibleEmployees.find(emp => emp.id === user.id) || null;
     }
-    // Pour les admins, commencer sans sélection pour voir tous les rendez-vous
-    return null;
+    return employees[0] || null;
   });
 
   // ----- FILTRAGE DES RENDEZ-VOUS (Web Worker) -----
