@@ -52,6 +52,8 @@ interface AppointmentFormProps {
   isReducedVersion?: boolean;
   /** Indique si l'application est utilisée sur un appareil mobile */
   isMobile?: boolean;
+  /** Mode d'édition de ressource: 'create' pour créer, 'edit' pour modifier, null pour un rendez-vous normal */
+  resourceEditMode?: 'create' | 'edit' | null;
   /** Callback appelé lors de la sauvegarde */
   onSave: (
     appointment: Appointment,
@@ -115,7 +117,16 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   handleAddDimension,
   handleEditDimension,
   isMobile,
+  resourceEditMode = null,
 }) => {
+
+  // Variables dérivées pour améliorer la lisibilité
+  const isCreatingResource = resourceEditMode === 'create';
+  const isEditingResource = resourceEditMode === 'edit';
+  const isResourceMode = isCreatingResource || isEditingResource;
+
+  //console.log(appointment);
+  
     
   // ===== ÉTATS LOCAUX =====
   
@@ -285,20 +296,24 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log(formDataAppointment);
     
-    if (formDataAppointment.id === -1) {
+    // Gestion de la création d'une nouvelle ressource
+    if (isCreatingResource) {
       // Validation du code avant la création
-      if (formDataItemType.code && items.find(item => item.code === formDataItemType.code.toUpperCase())) {
+      if (formDataItemType.code && items.find(item => item.code === formDataItemType.code.toUpperCase() && item.id !== formDataItemType.id)) {
         setCodeValidationError(true);
         return;
       }
-      // Si c'est une création, on ajoute le nouvel événement
+      // Ajout du nouvel événement
       handleAddDimension({...formDataItemType, id: Date.now()});
       return;
     }
     
-    if (formDataItemType.id === 0) {
-      // Si c'est une modification, on met à jour l'événement existant
+    // Gestion de la modification d'une ressource existante
+    if (isEditingResource) {
+      console.log('Modification de ressource');
+      // Mise à jour de l'événement existant
       handleEditDimension(formDataItemType);
       return;
     }    
@@ -411,7 +426,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               </svg>
             </button>
           )}
-          {formDataAppointment.id === -1 && (
+          {(isCreatingResource || (isEditingResource && formDataItemType.isManual)) && (
             <div className="flex flex-col gap-3">
               <div className="flex gap-3">
                   {/* Champ CODE */}
@@ -735,7 +750,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             <input
               type="submit"
               className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation"
-              value={appointment?.id === -1 ? 'Créer' : 'Enregistrer'}
+              value={isCreatingResource ? 'Créer' : 'Enregistrer'}
             />
             <button
               type="button"

@@ -144,12 +144,22 @@ export const CalendarModals = memo(({
     }
   ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates]);  
 
+  // Détermination du mode d'édition de ressource
+  const resourceEditMode: 'create' | 'edit' | null = useMemo(() => {
+    if (!modalsState.selectedAppointmentForm) return null;
+    if (modalsState.selectedAppointmentForm.id === -1) return 'create';
+    if (modalsState.selectedAppointmentForm.id === 0) return 'edit';
+    return null;
+  }, [modalsState.selectedAppointmentForm]);
+
   // Titre dynamique de la modale principale
   const getMainModalTitle = () => {
     if (modalsState.repeatData) return "Répéter ce rendez-vous";
     if (modalsState.extendData) return "Prolonger le rendez-vous";
     if (modalsState.selectedAppointmentForm) {
-        return modalsState.selectedAppointmentForm.id === -1 ? "Modification de la ressource" : `Modifier l'Évènement - ${data.items.find(i => i.id === modalsState.selectedAppointmentForm?.EventId)?.code}`;
+        if (resourceEditMode === 'create') return "Création de la ressource";
+        if (resourceEditMode === 'edit') return "Modification de la ressource";
+        return `Modifier l'Évènement - ${data.items.find(i => i.id === modalsState.selectedAppointmentForm?.EventId)?.code}`;
     }
     return "Ajouter un rendez-vous";
   };  
@@ -337,7 +347,8 @@ export const CalendarModals = memo(({
             appointment={modalsState.selectedAppointmentForm as Appointment}
             item={data.selectedItem!}
             items={data.items}
-            isReducedVersion={modalsState.selectedAppointmentForm?.id === 0 || modalsState.selectedAppointmentForm?.id === -1}
+            isReducedVersion={resourceEditMode !== null}
+            resourceEditMode={resourceEditMode}
             employees={data.employees}
             HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
             isFullDay={config.isFullDay}
@@ -430,17 +441,13 @@ export const CalendarModals = memo(({
             ] : undefined,
             actions: [
               {
-                label: "Supprimer définitivement",
+                label: "Supprimer",
                 onClick: () => {
-                  handlers.handleDeleteDimension?.(item.id, isUsedInPlanning);
+                  handlers.handleDeleteDimension?.(item.id, true);
                   handlers.setDeleteConfirmData?.(null);
                 },
                 variant: "primary",
-                icon: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
                 requiresConfirm: isUsedInPlanning,
-                confirmMessage: isUsedInPlanning 
-                  ? "⚠️ Êtes-vous sûr de vouloir supprimer cette rubrique ET tous les rendez-vous associés ? Cette action est irréversible."
-                  : undefined
               },
               {
                 label: "Annuler",
@@ -496,7 +503,6 @@ export const CalendarModals = memo(({
                 variant: "primary",
                 icon: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
                 requiresConfirm: true,
-                confirmMessage: "⚠️ Êtes-vous sûr de vouloir supprimer cette rubrique ET tous les rendez-vous associés ? Cette action est irréversible."
               },
               {
                 label: "Annuler",
@@ -531,7 +537,7 @@ export const CalendarModals = memo(({
             {
               label: "Supprimer",
               onClick: () => {
-                handlers.handleDeleteDimension?.(item.id, false);
+                handlers.handleDeleteDimension?.(item.id, true);
                 handlers.setDeleteConfirmData?.(null);
               },
               variant: "primary"

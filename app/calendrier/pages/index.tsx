@@ -347,7 +347,7 @@ export default function HomePage({
                       events={dataLayer.filteredItems}
                       onDeleteRequest={(item) => {
                         // Vérifier si l'item est utilisé dans le planning
-                        const result = appointmentLogic.handleDeleteDimension(item.id, false);
+                        const result = appointmentLogic.handleDeleteDimension(item.id);
                         const isActive = 'actif' in item ? (item as CommonPaieAttributs).actif : true;
                         // Toujours ouvrir la modal de confirmation
                         setDeleteConfirmData({ 
@@ -357,6 +357,15 @@ export default function HomePage({
                         });
                       }}
                       onEditRequest={(item) => {
+                        appointmentLogic.setSelectedAppointmentForm({
+                          id: 0,
+                          description: '',
+                          type: item.type,
+                          EventId: Number(item.id),
+                          startDate: 0,
+                          endDate: 1000,
+                          employee: globalEmployeesRef.current[0],
+                        });
                         appointmentLogic.setSelectedItem(item);
                         appointmentLogic.setIsModalOpen(true);
                       }}

@@ -30,7 +30,10 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
           align: 'center',
           width: 200,
           renderer: (value, item) => (
-            <div className="flex items-center justify-center">
+            <div 
+              className="flex items-center justify-center"
+              onDoubleClick={() => onEditRequest && onEditRequest(item as Item)}
+            >
               {(item as any).image?.image ? (
                 <img
                   src={(item as any).image.image}
@@ -102,11 +105,6 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
     }
   };
 
-  const handleRowClick = (item: GenericDataItem) => {
-    if (onEditRequest) {
-      onEditRequest(item as Item);
-    }
-  };
 
   return (
     <div className="">
@@ -121,7 +119,6 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
         FontSize={14}
         showColumnVisibilityToggle={false}
         onRightClick={handleRightClick}
-        onRowClick={handleRowClick}
       />
     </div>
   );

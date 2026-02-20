@@ -374,7 +374,7 @@ export const CalendarHeader = memo(({
                     endDate: 1,
                     employee: {} as User,
                     type: 'autre',
-                    EventId: 0
+                    EventId: 0,
                   })
               }
               title={viewType === 'calendar' ? "Ajouter un évènement" : "Ajouter une ressource"}

@@ -690,7 +690,8 @@ export const useAppointmentLogic = ({
         tags: [],
         type: 'autre',
         verrou: false,
-        category: ''
+        category: '',
+        isManual: true  // Ressource manuelle par défaut lors de la création
       }
     );
     setIsModalOpen(true);
@@ -698,6 +699,8 @@ export const useAppointmentLogic = ({
 
   const handleAddDimension = useCallback((dimension: Item) => {
     // Marquer les Items de type 'autre' comme manuels
+
+    dimension.id = Date.now(); // Générer un ID unique temporaire
     const newItem = dimension.type === 'autre' 
       ? { ...dimension, isManual: true } 
       : dimension;
@@ -710,14 +713,21 @@ export const useAppointmentLogic = ({
     eventsRef.current = eventsRef.current.map(e =>
       e.id === dimension.id ? { ...e, ...dimension } : e
     );
+    setIsModalOpen(false);
     onUpdate();
   }, []);
 
   const handleDeleteDimension = useCallback((dimensionId: number, forceDelete: boolean = false) => {
+    
     // Vérifier si la rubrique est utilisée dans le planning
     const isUsedInPlanning = appointmentsRef.current.some(
       appointment => appointment.EventId === dimensionId
     );
+
+    console.log("isUsedInPlanning:", isUsedInPlanning);
+    console.log(forceDelete);
+    
+    
 
     if (isUsedInPlanning && !forceDelete) {
       // Retourner un objet indiquant qu'une confirmation est nécessaire
@@ -730,14 +740,21 @@ export const useAppointmentLogic = ({
     }
 
     if (forceDelete) {
+
+      console.log("oui on force delete");
+      
       // Suppression forcée : supprimer la rubrique et tous les RDV associés
       eventsRef.current = eventsRef.current.filter(e => e.id !== dimensionId);
       appointmentsRef.current = appointmentsRef.current.filter(
         appointment => appointment.EventId !== dimensionId
       );
     } else {
-      // Suppression normale (rubrique non utilisée)
-      eventsRef.current = eventsRef.current.filter(e => e.id !== dimensionId);
+      return {
+        success: false,
+        requiresConfirmation: true,
+        isUsedInPlanning: false,
+        message: 'Cette rubrique n\'est pas utilisée dans le planning. Voulez-vous la supprimer ?'
+      };
     }
 
     onUpdate();
@@ -764,7 +781,7 @@ export const useAppointmentLogic = ({
   return {
     // États exposés
     selectedAppointment, setSelectedAppointment,
-    selectedAppointmentForm,
+    selectedAppointmentForm, setSelectedAppointmentForm,
     selectedCell, setSelectedCell,
     isModalOpen, setIsModalOpen,
     repeatData, setRepeatData,
