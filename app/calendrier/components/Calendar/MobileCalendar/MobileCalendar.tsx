@@ -71,6 +71,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   // ----- GESTION DES DROITS D'ACCÈS -----
   const isAdmin = user.role === 'admin';
   
+  
   const visibleEmployees = isAdmin 
     ? employees 
     : employees.filter(emp => emp.id === user.id);
@@ -79,7 +80,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     if (!isAdmin) {
       return visibleEmployees.find(emp => emp.id === user.id) || null;
     }
-    return employees[0] || null;
+    // Pour les admins, commencer sans sélection pour voir tous les rendez-vous
+    return null;
   });
 
   // ----- FILTRAGE DES RENDEZ-VOUS (Web Worker) -----
@@ -288,15 +290,15 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       <div 
         className="w-full max-w-[400px] h-full rounded-[3rem] sm:border-[8px] sm:shadow-2xl overflow-hidden relative flex flex-col"
         style={{
-          backgroundColor: 'var(--bg-card)',
-          borderColor: 'var(--bg-card)'
+          backgroundColor: 'var(--bg-secondary)',
+          borderColor: 'var(--bg-secondary)'
         }}
       >
         
         {/* Header */}
         <header 
           className="pt-8 px-6 pb-2 flex items-center justify-between z-10 relative"
-          style={{ backgroundColor: 'var(--bg-card)' }}
+          style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           {/* User Menu */}
           <div className="relative">
@@ -389,7 +391,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                     backgroundColor: 'var(--color-error)',
                     color: 'var(--text-inverse)',
                     borderWidth: '2px',
-                    borderColor: 'var(--bg-card)'
+                    borderColor: 'var(--bg-secondary)'
                   }}
                 >
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -460,14 +462,14 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         {isAdmin && (
           <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none flex justify-center items-end h-32"
             style={{
-              backgroundImage: `linear-gradient(to top, var(--bg-card), transparent)`
+              backgroundImage: `linear-gradient(to top, var(--bg-secondary), transparent)`
             }}
           >
             <div 
               className="pointer-events-auto flex items-center justify-center px-8 w-full rounded-full p-2 mb-2"
               style={{
-                backgroundColor: 'var(--bg-card)',
-                boxShadow: 'var(--shadow-md)'
+                //backgroundColor: 'var(--bg-secondary)',
+                //boxShadow: 'var(--shadow-md)'
               }}
             >
               <button 

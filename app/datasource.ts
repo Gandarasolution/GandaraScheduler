@@ -2745,6 +2745,7 @@ export const getUserById = (userId: number): User => {
       equipe: initialTeams.find(g => g.id === initialEmployees[0].groupId) || undefined,
       poleActivite: PA.find(p => p.id === initialEmployees[0].pole) || undefined,
       type: initialEmployees[0].type as 'employee' | 'interim',
+      role: initialEmployees[0].role as 'admin' | 'user',
       email: initialEmployees[0].email || ''
   }; // Fallback pour éviter undefined
 
@@ -2756,6 +2757,7 @@ export const getUserById = (userId: number): User => {
     equipe: initialTeams.find(g => g.id === u.groupId) || undefined,
     poleActivite: PA.find(p => p.id === u.pole) || undefined,
     type: u.type as 'employee' | 'interim',
+    role: u.role as 'admin' | 'user',
     email: u.email || ''
   }
 };

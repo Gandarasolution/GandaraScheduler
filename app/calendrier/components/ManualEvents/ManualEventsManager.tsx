@@ -31,7 +31,7 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
           width: 200,
           renderer: (value, item) => (
             <div 
-              className="flex items-center justify-center"
+              className="flex items-center justify-center cursor-pointer"
               onDoubleClick={() => onEditRequest && onEditRequest(item as Item)}
             >
               {(item as any).image?.image ? (
