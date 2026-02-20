@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Employee, Appointment, Item } from '../../types';
+import { Appointment, Item, User } from '../../types';
 import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
@@ -7,7 +7,7 @@ import { countWeekends } from '../../utils/dates';
 import { isSameDay } from 'date-fns';
 
 interface EmployeeRowProps {
-  employee: Employee;
+  employee: User;
   dayInTimeline: number[];
   appointments: (Appointment & { top: number})[];
   rowHeight: number;
@@ -64,7 +64,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const positionedAppointments = useMemo(() => {
     return appointments
       .filter((app) => {
-        if (app.employeeId !== employee.id) return false;
+        if (app.employee.id !== employee.id) return false;
         return app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd;
       })
       .map((app) => {
@@ -104,7 +104,17 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const overlappingGroups = useMemo(() => {
     if (!positionedAppointments.length) return [] as { key: number; apps: (typeof positionedAppointments) }[];
 
-    const sorted = [...positionedAppointments].sort((a, b) => a.startDate - b.startDate);
+    // DÉDUPLICATION : Supprimer les doublons basés sur l'ID
+    // Si plusieurs rendez-vous ont le même ID, ne garder que le premier
+    const deduplicatedAppointments = positionedAppointments.reduce((acc, app) => {
+      const existingIndex = acc.findIndex(a => a.id === app.id);
+      if (existingIndex === -1) {
+        acc.push(app);
+      }
+      return acc;
+    }, [] as typeof positionedAppointments);
+
+    const sorted = [...deduplicatedAppointments].sort((a, b) => a.startDate - b.startDate);
     const groups: Array<{ key: number; apps: (typeof positionedAppointments)[number][]; end: number }> = [];
 
     for (const app of sorted) {
@@ -244,8 +254,11 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         // Récupérer tous les RDV avec priorité 0 (RDV de base)
         const priority0Apps = group.apps.filter(app => (app.priority ?? 0) === 0);
         
+        // Clé unique pour le groupe basée sur tous les IDs des rendez-vous
+        const groupUniqueKey = `group-${group.apps.map(a => `${a.id}-${a.startDate}-${a.endDate}`).join('_')}`;
+        
         return (
-          <React.Fragment key={group.key}>
+          <React.Fragment key={groupUniqueKey}>
             {appsToRender.map((app, index) => {
               const event = events.find((et) => et.id === app.EventId) as Item | undefined;
   
@@ -276,7 +289,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
               return (
                 <AppointmentItem
-                  key={app.id}
+                  key={`${app.id}-${app.startDate}-${app.endDate}-${index}`}
                   appointment={app as Appointment}
                   isFullDay={isFullDay}
                   isMobile={false}
@@ -292,14 +305,14 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   ghostInterval={ghostIntervals.length > 0 ? ghostIntervals : undefined}
 
                   onResize={(id, newStartDate, newEndDate, resizeDirection, priority) =>{              
-                    onAppointmentMoved(id, newStartDate, newEndDate, app.employeeId as number, resizeDirection, true, priority)}
+                    onAppointmentMoved(id, newStartDate, newEndDate, app.employee.id as number, resizeDirection, true, priority)}
                   }
                   handleContextMenu={(e, origin) =>
                     handleContextMenu(
                       e,
                       origin,
                       { ...app, startDate: app.startDate, endDate: app.endDate },
-                      { employeeId: app.employeeId as number, date: app.startDate }
+                      { employeeId: app.employee.id as number, date: app.startDate }
                     )
                   }
                   onDoubleClick={() => onAppointmentDoubleClick(app)}

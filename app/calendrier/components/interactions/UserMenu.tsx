@@ -1,19 +1,14 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
+import { User } from '../../types';
 
 interface UserMenuProps {
-  user: {
-    id: number;
-    name: string;
-    role: string;
-    email?: string;
-    image?: string;
-  };
+  user: User;
 }
 
 export default function UserMenu({ user }: UserMenuProps) {
-  const router = useRouter();
+  const router = useRouter();  
 
   const handleLogout = () => {
     // Supprimer les données de localStorage
@@ -31,19 +26,19 @@ export default function UserMenu({ user }: UserMenuProps) {
         <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold cursor-pointer poppins">
           {user.image ? (
             <img
-              src={user.image}
+              src={user.image.image}
               alt="Avatar"
               className="h-10 w-10 rounded-full object-cover"
             />
           ) : (
-            <span className="text-lg">{user.name.charAt(0).toUpperCase()}</span>
+            <span className="text-lg">{user.nom.charAt(0).toUpperCase()}</span>
           )}
         </div>
         
         {/* Menu déroulant */}
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-light opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
           <div className="p-3 border-b border-light">
-            <p className="text-sm font-medium text-primary poppins">{user.name}</p>
+            <p className="text-sm font-medium text-primary poppins">{user.nom} {user.prenom}</p>
             {user.email && (
               <p className="text-xs text-secondary mt-1 poppins">{user.email}</p>
             )}

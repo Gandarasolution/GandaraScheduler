@@ -12,7 +12,7 @@
 "use client";
 
 import '../styles/custom.scss';
-import React, { useEffect, useRef, useMemo, use, useCallback, lazy, Suspense } from "react";
+import React, { useEffect, useRef, useMemo, use, useCallback, lazy, Suspense, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
@@ -50,7 +50,7 @@ import { notificationService } from "../services";
 import { getEmployees } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
-import { User } from '../types';
+import { User, Item, CommonPaieAttributs } from '../types';
 
 // Composant de chargement réutilisable
 const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
@@ -87,6 +87,9 @@ export default function HomePage({
   const { theme, setTheme } = useTheme();
   const notifications = useNotifications();
 
+  // État pour la confirmation de suppression de rubrique
+  const [deleteConfirmData, setDeleteConfirmData] = useState<{ item: Item, isUsedInPlanning: boolean, isActive: boolean } | null>(null);
+
   // Refs de données statiques
   const globalEmployeesRef = useRef(getEmployees());
 
@@ -104,7 +107,7 @@ export default function HomePage({
     // Activer la collaboration
     enableCollaboration: true,
     userId: user?.id ? String(user.id) : 'anonymous',
-    userName: user?.name || 'Utilisateur'
+    userName: user?.nom ? `${user.nom} ${user.prenom}` : 'Utilisateur'
   });
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
@@ -124,6 +127,7 @@ export default function HomePage({
   }), [viewState.isFullDay, viewState.isDisplayWeekend, viewState.includeWeekend, viewState.respectNonWorkingDays, viewState.nonWorkingDates]);
 
   const appointmentLogic = useAppointmentLogic({
+    employeesRef: globalEmployeesRef,
     appointmentsRef: dataLayer.appointmentsRef,
     eventsRef: dataLayer.itemsRef,
     timelineState,
@@ -341,6 +345,30 @@ export default function HomePage({
                   <Suspense fallback={<LoadingFallback message="Chargement des événements..." />}>
                     <ManualEventsManager
                       events={dataLayer.filteredItems}
+                      onDeleteRequest={(item) => {
+                        // Vérifier si l'item est utilisé dans le planning
+                        const result = appointmentLogic.handleDeleteDimension(item.id);
+                        const isActive = 'actif' in item ? (item as CommonPaieAttributs).actif : true;
+                        // Toujours ouvrir la modal de confirmation
+                        setDeleteConfirmData({ 
+                          item, 
+                          isUsedInPlanning: result.isUsedInPlanning || false, 
+                          isActive 
+                        });
+                      }}
+                      onEditRequest={(item) => {
+                        appointmentLogic.setSelectedAppointmentForm({
+                          id: 0,
+                          description: '',
+                          type: item.type,
+                          EventId: Number(item.id),
+                          startDate: 0,
+                          endDate: 1000,
+                          employee: globalEmployeesRef.current[0],
+                        });
+                        appointmentLogic.setSelectedItem(item);
+                        appointmentLogic.setIsModalOpen(true);
+                      }}
                     />
                   </Suspense>
                 ) : (
@@ -396,12 +424,28 @@ export default function HomePage({
               extendData: appointmentLogic.extendData,
               modalInfo: viewState.modalInfo,
               selectedAppointmentForm: appointmentLogic.selectedAppointmentForm,
+              deleteConfirmData: deleteConfirmData,
             }}
             handlers={{
               closeModal: () => appointmentLogic.setIsModalOpen(false),
               saveAppointment: appointmentLogic.handleSaveAppointment,
               handleAddDimension: appointmentLogic.handleAddDimension,
               handleEditDimension: appointmentLogic.handleEditDimension,
+              handleDeleteDimension: (dimensionId: number, forceDelete: boolean = false) => {
+                const result = appointmentLogic.handleDeleteDimension(dimensionId, forceDelete);
+                if (result.success) {
+                  notificationService.info('Suppression réussie', result.message);
+                }
+                return result;
+              },
+              handleDeactivateDimension: (dimensionId: number) => {
+                const result = appointmentLogic.handleDeactivateDimension(dimensionId);
+                if (result.success) {
+                  notificationService.info('Désactivation réussie', result.message);
+                }
+                return result;
+              },
+              setDeleteConfirmData: setDeleteConfirmData,
               
               // Repeat / Extend
               setRepeatData: appointmentLogic.setRepeatData,
@@ -520,14 +564,20 @@ export default function HomePage({
             onClose={() => viewState.setIsSearchOverlayOpen(false)}
             searchInput={viewState.dimensionSearchInput}
             setSearchInput={viewState.setDimensionsSearchInput}
-            items={dataLayer.filteredItems}
+            items={dataLayer.filteredItems.filter(item => {
+              // Filtrer les items désactivés (pour les types absence/autre)
+              if ('actif' in item) {
+                return item.actif !== false;
+              }
+              return true; // Les chantiers n'ont pas de champ actif, donc toujours actifs
+            })}
             onItemAction={appointmentLogic.selectedCell ? appointmentLogic.handleSearchItemAction : undefined}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
               noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
               noResults: { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
-            renderItem={(event, index) => (              
+            renderItem={(event: any, index: number) => (              
               <DraggableSource
                 key={`${event.label}-${event.id}-${index}`}
                 id={event.id as number}

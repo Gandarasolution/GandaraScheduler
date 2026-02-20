@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Employee, Groupe, Item, Image, poleActivite, BaseItemCategory, MockNotification, User, CalendarConfig} from './calendrier/types/index';
+import { Appointment, Equipe, Groupe, Item, Image, PoleActivite, poleActivite, BaseItemCategory, MockNotification, User, CalendarConfig} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -66,6 +66,7 @@ import iconesPrime from './calendrier/image/Icones/Paie/Prime.svg';
 import iconesHeurSup from './calendrier/image/Icones/Paie/HeuresSupplementaires.svg';
 import iconesCongesPayes from './calendrier/image/Icones/Paie/CongesPayes.svg';
 import iconesSalaire from './calendrier/image/Icones/Paie/Salaire.svg';
+import { Group } from 'lucide-react';
 
 // ===== PALETTE DE COULEURS =====
 
@@ -125,147 +126,150 @@ const PA: poleActivite[] = [
 const initialEmployeesBase = [
     // ===== ÉQUIPE TECHNIQUE (15 employés) =====
     // Spécialisés dans les travaux de construction, rénovation et maintenance
-    { name: 'ANDRE', firstName: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 35, pole: 'Technique', code: 'EMP-001'},
-    { name: 'BARRET', firstName: 'Alexandre', id: 2, groupId: 1, type: 'employee', image: 36, pole: 'Technique', code: 'EMP-002'},
-    { name: 'MALIVERNAY', firstName: 'Eric', id: 7, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-007'},
-    { name: 'MARTIN', firstName: 'Sophie', id: 11, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-011'},
-    { name: 'DUBOIS', firstName: 'Antoine', id: 13, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-013'},
-    { name: 'LEROY', firstName: 'Marie', id: 14, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-014'},
-    { name: 'MOREAU', firstName: 'Vincent', id: 15, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-015'},
-    { name: 'GARCIA', firstName: 'Céline', id: 16, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-016'},
+    { nom: 'ANDRE', prenom: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 35, pole: 1, code: 'EMP-001', role: 'admin', theme: 'light', email: "gregory.andre@entreprise.fr" },
+    { nom: 'BARRET', prenom: 'Alexandre', id: 2, groupId: 1, type: 'employee', image: 36, pole: 1, code: 'EMP-002', role: 'user', theme: 'light', email: "alexandre.barret@entreprise.fr"},
+    { nom: 'MALIVERNAY', prenom: 'Eric', id: 7, groupId: 1, type: 'interim', pole: 1, code: 'EMP-007', role: 'user', theme: 'dark' },
+    { nom: 'MARTIN', prenom: 'Sophie', id: 11, groupId: 1, type: 'employee', pole: 1, code: 'EMP-011', role: 'user', theme: 'light' },
+    { nom: 'DUBOIS', prenom: 'Antoine', id: 13, groupId: 1, type: 'interim', pole: 1, code: 'EMP-013', role:'user' , theme:'dark'},
+    { nom:'LEROY', prenom:'Marie', id : 14, groupId : 1 , type : "employee", pole : 1 , code : "EMP-014", role : "user", theme : "light", email : "marie.leroy@entreprise.fr"},
+    { nom: 'MOREAU', prenom: 'Vincent', id: 15, groupId: 1, type: 'employee', pole: 1, code: 'EMP-015', role: 'user', theme: 'dark' },
+    { nom: 'GARCIA', prenom: 'Céline', id: 16, groupId: 1, type: 'interim', pole: 1, code: 'EMP-016', role:'user' , theme:'light'},
     
     // Équipe Commercial
-    { name: 'BOURDIN', firstName: 'Lucas', id: 3, groupId: 2, type: 'interim', image: 37, pole: 'Commercial', code: 'EMP-003'},
-    { name: 'ZERR', firstName: 'Romain', id: 4, groupId: 2,  type: 'employee', pole: 'Commercial' , code: 'EMP-004'},
-    { name: 'BERNARD', firstName: 'Lucas', id: 8, groupId: 2,  type: 'employee', pole: 'Commercial' , code: 'EMP-008'},
-    { name: 'PETIT', firstName: 'Julien', id: 12, groupId: 2, type: 'interim', pole: 'Commercial' , code: 'EMP-012'},
-    { name: 'ROBERT', firstName: 'Nathalie', id: 17, groupId: 2, type: 'employee', pole: 'Commercial' , code: 'EMP-017'},
-    { name: 'RICHARD', firstName: 'David', id: 18, groupId: 2, type: 'employee', pole: 'Commercial' , code: 'EMP-018'},
-    { name: 'DURAND', firstName: 'Isabelle', id: 19, groupId: 2, type: 'interim', pole: 'Commercial' , code: 'EMP-019'},
-    { name: 'LEFEBVRE', firstName: 'Stéphane', id: 20, groupId: 2, type: 'employee', pole: 'Commercial' , code: 'EMP-020'},
+    { nom: 'BOURDIN', prenom: 'Lucas', id: 3, groupId: 2, type: 'interim', image: 37, pole: 2, code: 'EMP-003', role: 'user', theme: 'light'},
+    { nom: 'ZERR', prenom: 'Romain', id: 4, groupId: 2,  type: 'employee', pole: 2 , code: 'EMP-004', role: 'user', theme: 'dark'},
+    { nom: 'BERNARD', prenom: 'Lucas', id: 8, groupId: 2,  type: 'employee', pole: 2 , code: 'EMP-008', role: 'user', theme: 'light'},
+    { nom: 'PETIT', prenom: 'Julien', id: 12, groupId: 2, type: 'interim', pole: 2 , code: 'EMP-012', role:'user' , theme:'dark'},
+    { nom: 'ROBERT', prenom: 'Nathalie', id: 17, groupId: 2, type: 'employee', pole: 2 , code: 'EMP-017', role:'user' , theme:'light'},
+    { nom: 'RICHARD', prenom: 'David', id: 18, groupId: 2, type: 'employee', pole: 2 , code: 'EMP-018', role:'user' , theme:'dark'},
+    { nom: 'DURAND', prenom: 'Isabelle', id: 19, groupId: 2, type: 'interim', pole: 2 , code: 'EMP-019', role:'user' , theme:'light'},
+    { nom: 'LEFEBVRE', prenom: 'Stéphane', id: 20, groupId: 2, type: 'employee', pole: 2 , code: 'EMP-020', role:'user' , theme:'dark'},
     
     // Équipe Administrative
-    { name: 'DACHAUD', firstName: 'Fabrice', id: 5, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-005' },
-    { name: 'GERMAIN', firstName: 'Sébastien', id: 6, groupId: 3, type: 'employee', pole: 'Administrative' , code: 'EMP-006'},
-    { name: 'SIMON', firstName: 'Caroline', id: 21, groupId: 3, type: 'employee', pole: 'Administrative' , code: 'EMP-021'},
-    { name: 'MICHEL', firstName: 'Philippe', id: 22, groupId: 3, type: 'interim', pole: 'Administrative' , code: 'EMP-022'},
-    { name: 'LAURENT', firstName: 'Valérie', id: 23, groupId: 3, type: 'employee', pole: 'Administrative' , code: 'EMP-023'},
-    { name: 'LEFRANC', firstName: 'Patrick', id: 24, groupId: 3, type: 'employee', pole: 'Administrative'   , code: 'EMP-024'},
+    { nom: 'DACHAUD', prenom: 'Fabrice', id: 5, groupId: 3, type: 'employee', pole: 3, code: 'EMP-005', role:'user' , theme:'light' },
+    { nom: 'GERMAIN', prenom: 'Sébastien', id: 6, groupId: 3, type: 'employee', pole: 3 , code: 'EMP-006', role:'user' , theme:'dark'},
+    { nom: 'SIMON', prenom: 'Caroline', id: 21, groupId: 3, type: 'employee', pole: 3 , code: 'EMP-021', role:'user' , theme:'light'},
+    { nom: 'MICHEL', prenom: 'Philippe', id: 22, groupId: 3, type: 'interim', pole: 3 , code: 'EMP-022', role:'user' , theme:'dark'},
+    { nom: 'LAURENT', prenom: 'Valérie', id: 23, groupId: 3, type: 'employee', pole: 3 , code: 'EMP-023', role:'user' , theme:'light'},
+    { nom: 'LEFRANC', prenom: 'Patrick', id: 24, groupId: 3, type: 'employee', pole: 3   , code: 'EMP-024', role:'user' , theme:'dark'},
     
     // Équipe RH
-    { name: 'ROUSSEAU', firstName: 'Emma', id: 9, groupId: 4,  type: 'employee', pole: 'RH', code: 'EMP-009'},
-    { name: 'VINCENT', firstName: 'Paul', id: 10, groupId: 4, type: 'interim', pole: 'RH' , code: 'EMP-010'},
-    { name: 'THOMAS', firstName: 'Sandrine', id: 25, groupId: 4, type: 'employee', pole: 'RH' , code: 'EMP-025'},
-    { name: 'BONNET', firstName: 'Christophe', id: 26, groupId: 4, type: 'employee', pole: 'RH' , code: 'EMP-026'},
-    { name: 'FRANCOIS', firstName: 'Sylvie', id: 27, groupId: 4, type: 'interim', pole: 'RH' , code: 'EMP-027'},
+    { nom: 'ROUSSEAU', prenom: 'Emma', id: 9, groupId: 4,  type: 'employee', pole: 4, code: 'EMP-009', role:'user' , theme:'light'},
+    { nom: 'VINCENT', prenom: 'Paul', id: 10, groupId: 4, type: 'interim', pole: 4 , code: 'EMP-010', role:'user' , theme:'dark'},
+    { nom: 'THOMAS', prenom: 'Sandrine', id: 25, groupId: 4, type: 'employee', pole: 4 , code: 'EMP-025', role:'user' , theme:'light'},
+    { nom: 'BONNET', prenom: 'Christophe', id: 26, groupId: 4, type: 'employee', pole: 4 , code: 'EMP-026', role:'user' , theme:'dark'},
+    { nom: 'FRANCOIS', prenom: 'Sylvie', id: 27, groupId: 4, type: 'interim', pole: 4 , code: 'EMP-027', role:'user' , theme:'light'},
     
     // Nouvelles équipes
-    { name: 'GIRARD', firstName: 'Marine', id: 28, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-028'},
-    { name: 'ANDRE', firstName: 'Pierre', id: 29, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-029'},
-    { name: 'NICOLAS', firstName: 'Sylvie', id: 30, groupId: 7, type: 'employee', pole: 'Administrative' , code: 'EMP-030'},
-    { name: 'MOREL', firstName: 'Thomas', id: 31, groupId: 8, type: 'employee', pole: 'Technique' , code: 'EMP-031'},
-    { name: 'FOURNIER', firstName: 'Julie', id: 32, groupId: 5, type: 'interim', pole: 'Technique' , code: 'EMP-032'},
-    { name: 'MORETTI', firstName: 'Olivier', id: 33, groupId: 6, type: 'employee', pole: 'Commercial' , code: 'EMP-033'},
-    { name: 'ROUSSEL', firstName: 'Patricia', id: 34, groupId: 7, type: 'employee', pole: 'Administrative' , code: 'EMP-034'},
-    { name: 'GERARD', firstName: 'Frédéric', id: 35, groupId: 8, type: 'interim', pole: 'Technique' , code: 'EMP-035'},
+    { nom: 'GIRARD', prenom: 'Marine', id: 28, groupId: 5, type: 'employee', pole: 1, code: 'EMP-028', role:'user' , theme:'dark'},
+    { nom: 'ANDRE', prenom: 'Pierre', id: 29, groupId: 6, type: 'employee', pole: 2, code: 'EMP-029', role:'user' , theme:'light'},
+    { nom: 'NICOLAS', prenom: 'Sylvie', id: 30, groupId: 7, type: 'employee', pole: 3 , code: 'EMP-030', role:'user' , theme:'dark'},
+    { nom: 'MOREL', prenom: 'Thomas', id: 31, groupId: 8, type: 'employee', pole: 1 , code: 'EMP-031', role:'user' , theme:'light'},
+    { nom: 'FOURNIER', prenom: 'Julie', id: 32, groupId: 5, type: 'interim', pole: 1 , code: 'EMP-032', role:'user' , theme:'dark'},
+    { nom: 'MORETTI', prenom: 'Olivier', id: 33, groupId: 6, type: 'employee', pole: 2 , code: 'EMP-033', role:'user' , theme:'light'},
+    { nom: 'ROUSSEL', prenom: 'Patricia', id: 34, groupId: 7, type: 'employee', pole: 3 , code: 'EMP-034', role:'user' , theme:'dark'},
+    { nom: 'GERARD', prenom: 'Frédéric', id: 35, groupId: 8, type: 'interim', pole: 1 , code : "EMP-035", role:"user", theme:"light"},
 
 
-    { name: 'GERARD', firstName: 'Frédéric', id: 44, type: 'employee', pole: 'Commercial', code: 'EMP-044'},
-    { name: 'DUPONT', firstName: 'Jean', id: 36, type: 'employee', pole: 'Commercial' , code: 'EMP-036'},
-    { name: 'DUBOIS', firstName: 'Marie', id: 37, type: 'employee', pole: 'Commercial', code: 'EMP-037' },
-    { name: 'MOREAU', firstName: 'Luc', id: 38, type: 'employee', pole: 'Commercial' , code: 'EMP-038'},
-    { name: 'LEROY', firstName: 'Sophie', id: 39, type: 'employee', pole: 'Commercial' , code: 'EMP-039'},
-    { name: 'ROUSSEAU', firstName: 'Marc', id: 40, type: 'employee', pole: 'Commercial' , code: 'EMP-040'},
-    { name: 'GARCIA', firstName: 'Céline', id: 41, type: 'employee', pole: 'Commercial' , code: 'EMP-041'},
-    { name: 'MALIVERNAY', firstName: 'Eric', id: 42, type: 'employee', pole: 'Commercial' , code: 'EMP-042'},
-    { name: 'MARTIN', firstName: 'Sophie', id: 43, type: 'employee', pole: 'Commercial' , code: 'EMP-043'},
+    { nom: 'GERARD', prenom: 'Frédéric', id: 44, type: 'employee', pole: 2, code: 'EMP-044', role:'user' , theme:'dark'},
+    { nom: 'DUPONT', prenom: 'Jean', id: 36, type: 'employee', pole: 2 , code: 'EMP-036', role:'user' , theme:'light'},
+    { nom: 'DUBOIS', prenom: 'Marie', id: 37, type: 'employee', pole: 2, code: 'EMP-037' , role:'user' , theme:'dark'},
+    { nom: 'MOREAU', prenom: 'Luc', id: 38, type: 'employee', pole: 2 , code: 'EMP-038', role:'user' , theme:'light'},
+    { nom: 'LEROY', prenom: 'Sophie', id: 39, type: 'employee', pole: 2 , code: 'EMP-039', role:'user' , theme:'dark'},
+    { nom: 'ROUSSEAU', prenom: 'Marc', id: 40, type: 'employee', pole: 2 , code: 'EMP-040', role:'user' , theme:'light'},
+    { nom: 'GARCIA', prenom: 'Céline', id: 41, type: 'employee', pole: 2 , code: 'EMP-041', role:'user' , theme:'dark'},
+    { nom: 'MALIVERNAY', prenom: 'Eric', id: 42, type: 'employee', pole: 2 , code : "EMP-042", role:"user", theme:"light"},
+    { nom: 'MARTIN', prenom: 'Sophie', id: 43, type: 'employee', pole: 2 , code: 'EMP-043', role:'user' , theme:'dark'},
 
-    { name: 'FAURE', firstName: 'Julien', id: 45, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-045' },
-    { name: 'BLANC', firstName: 'Benoît', id: 46, groupId: 1, type: 'interim', pole: 'Technique', code: 'EMP-046' },
-    { name: 'PONT', firstName: 'Aurélie', id: 47, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-047' },
-    { name: 'GUERIN', firstName: 'Lucas', id: 48, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-048' },
-    { name: 'MULLER', firstName: 'Kevin', id: 49, groupId: 5, type: 'interim', pole: 'Technique', code: 'EMP-049' },
-    { name: 'SCHMITT', firstName: 'Sarah', id: 50, groupId: 8, type: 'employee', pole: 'Technique', code: 'EMP-050' },
-    { name: 'LEMAIRE', firstName: 'Thomas', id: 51, groupId: 8, type: 'employee', pole: 'Technique', code: 'EMP-051' },
-    { name: 'ROBIN', firstName: 'Emma', id: 52, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-052' },
-    { name: 'PICARD', firstName: 'Nicolas', id: 53, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-053' },
-    { name: 'RIVIERE', firstName: 'Laura', id: 54, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-054' },
-    { name: 'MARCHAND', firstName: 'Antoine', id: 55, groupId: 2, type: 'interim', pole: 'Commercial', code: 'EMP-055' },
-    { name: 'DUPUIS', firstName: 'Chloé', id: 56, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-056' },
-    { name: 'LAMBERT', firstName: 'Juliette', id: 57, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-057' },
-    { name: 'CLEMENT', firstName: 'Julien', id: 58, groupId: 4, type: 'employee', pole: 'RH', code: 'EMP-058' },
-    { name: 'GUILLAUME', firstName: 'Sophie', id: 59, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-059' },
-    { name: 'LEDUC', firstName: 'Mathieu', id: 60, groupId: 4, type: 'employee', pole: 'RH', code: 'EMP-060' },
-    { name: 'FERNANDEZ', firstName: 'Isabelle', id: 61, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-061' },
-    { name: 'MARTINEZ', firstName: 'Sébastien', id: 62, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-062' },
-    { name: 'DAVID', firstName: 'Céline', id: 63, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-063' },
-    { name: 'JACQUET', firstName: 'Vincent', id: 64, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-064' },
-    { name: 'LOPEZ', firstName: 'Amélie', id: 65, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-065' },
-    { name: 'FOUCAULT', firstName: 'Cédric', id: 66, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-066' },
-    { name: 'MARTY', firstName: 'Aline', id: 67, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-067' },
-    { name: 'LEBLANC', firstName: 'Bruno', id: 68, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-068' },
-    { name: 'GARNIER', firstName: 'Catherine', id: 69, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-069' },
-    { name: 'CARTER', firstName: 'David', id: 70, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-070' },
-    { name: 'WILLIAMS', firstName: 'Laura', id: 71, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-071' },
-    { name: 'JONES', firstName: 'Kevin', id: 72, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-072' },
-    { name: 'BROWN', firstName: 'Sophie', id: 73, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-073' },
-    { name: 'DAVIS', firstName: 'Thomas', id: 74, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-074' },
-    { name: 'MILLER', firstName: 'Emma', id: 75, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-075' },
-    { name: 'WILSON', firstName: 'Lucas', id: 76, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-076' },
-    { name: 'MOORE', firstName: 'Chloé', id: 77, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-077' },
-    { name: 'TAYLOR', firstName: 'Antoine', id: 78, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-078' },
-    { name: 'ANDERSON', firstName: 'Julie', id: 79, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-079' },
-    { name: 'THOMAS', firstName: 'Nicolas', id: 80, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-080' },
-    { name: 'JACKSON', firstName: 'Isabelle', id: 81, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-081' },
-    { name: 'WHITE', firstName: 'David', id: 82, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-082' },
-    { name: 'HARRIS', firstName: 'Sophie', id: 83, groupId: 2, type: 'employee', pole: 'Commercial', code: 'EMP-083' },
-    { name: 'SANCHEZ', firstName: 'Julien', id: 84, groupId: 3, type: 'employee', pole: 'Administrative', code: 'EMP-084' },
-    { name: 'CLARK', firstName: 'Emma', id: 85, groupId: 4, type: 'interim', pole: 'RH', code: 'EMP-085' },
-    { name: 'RAMIREZ', firstName: 'Lucas', id: 86, groupId: 5, type: 'employee', pole: 'Technique', code: 'EMP-086' },
-    { name: 'LEWIS', firstName: 'Laura', id: 87, groupId: 6, type: 'employee', pole: 'Commercial', code: 'EMP-087' },
-    { name: 'ROBINSON', firstName: 'Kevin', id: 88, groupId: 7, type: 'employee', pole: 'Administrative', code: 'EMP-088' },
-    { name: 'WALKER', firstName: 'Sophie', id: 89, groupId: 8, type: 'interim', pole: 'Technique', code: 'EMP-089' },
-    { name: 'YOUNG', firstName: 'Thomas', id: 90, groupId: 1, type: 'employee', pole: 'Technique', code: 'EMP-090' },
-    { id: 91, name: 'HERNANDEZ', firstName: 'Chloé', type: 'employee', pole: 'Commercial', code: 'EMP-091' },
-    { id: 92, name: 'KING', firstName: 'Antoine', type: 'employee', pole: 'Commercial', code: 'EMP-092' },
-    { id: 93, name: 'WRIGHT', firstName: 'Julie', type: 'employee', pole: 'Commercial', code: 'EMP-093' },
-    { id: 94, name: 'LOPEZ', firstName: 'Nicolas', type: 'employee', pole: 'Commercial', code: 'EMP-094' },
-    { id: 95, name: 'HILL', firstName: 'Isabelle', type: 'employee', pole: 'Commercial', code: 'EMP-095' },
-    { id: 96, name: 'SCOTT', firstName: 'David', type: 'employee', pole: 'Commercial', code: 'EMP-096' },
-    { id: 97, name: 'GREEN', firstName: 'Sophie', type: 'employee', pole: 'Commercial', code: 'EMP-097' },
-    { id: 98, name: 'ADAMS', firstName: 'Julien', type: 'employee', pole: 'Commercial', code: 'EMP-098' },
-    { id: 99, name: 'BAKER', firstName: 'Emma', type: 'employee', pole: 'Commercial', code: 'EMP-099' },
-    { id: 100, name: 'GONZALEZ', firstName: 'Lucas', type: 'employee', pole: 'Commercial', code: 'EMP-100' },
-    { name: 'LEE', firstName: 'Laura', id: 101, type: 'employee', pole: 'Commercial', code: 'EMP-101' },
-    { name: 'HARRISON', firstName: 'Kevin', id: 102, type: 'employee', pole: 'Commercial', code: 'EMP-102' },
-    { name: 'SULLIVAN', firstName: 'Sophie', id: 103, type: 'employee', pole: 'Commercial', code: 'EMP-103' },
-    { name: 'MURPHY', firstName: 'Antoine', id: 104, type: 'employee', pole: 'Commercial', code: 'EMP-104' },
-    { name: 'COOK', firstName: 'Julie', id: 105, type: 'employee', pole: 'Commercial', code: 'EMP-105' },
-    { name: 'ROGERS', firstName: 'Nicolas', id: 106, type: 'employee', pole: 'Commercial', code: 'EMP-106' },
-    { name: 'REED', firstName: 'Isabelle', id: 107, type: 'employee', pole: 'Commercial', code: 'EMP-107' },
-    { name: 'COOPER', firstName: 'David', id: 108, type: 'employee', pole: 'Commercial', code: 'EMP-108' },
-    { name: 'MORGAN', firstName: 'Sophie', id: 109, type: 'employee', pole: 'Commercial', code: 'EMP-109' },
-    { name: 'BELL', firstName: 'Julien', id: 110, type: 'employee', pole: 'Commercial', code: 'EMP-110' },
-    { name: 'MURRAY', firstName: 'Emma', id: 111, type: 'employee', pole: 'Commercial', code: 'EMP-111' },
-    { name: 'BAILEY', firstName: 'Lucas', id: 112, type: 'employee', pole: 'Commercial', code: 'EMP-112' },
+    { nom: 'FAURE', prenom: 'Julien', id: 45, groupId: 1, type: 'employee', pole: 1, code: 'EMP-045', role:'user' , theme:'light'},
+    { nom: 'BLANC', prenom: 'Benoît', id: 46, groupId: 1, type: 'interim', pole: 1, code: 'EMP-046', role:'user' , theme:'dark'},
+    { nom: 'PONT', prenom: 'Aurélie', id: 47, groupId: 1, type: 'employee', pole: 1, code: 'EMP-047', role:'user' , theme:'light'},
+    { nom: 'GUERIN', prenom: 'Lucas', id: 48, groupId: 5, type: 'employee', pole: 1, code: 'EMP-048', role:'user' , theme:'dark'},
+    { nom: 'MULLER', prenom: 'Kevin', id: 49, groupId: 5, type: 'interim', pole: 1, code: 'EMP-049', role:'user' , theme:'light'},
+    { nom: 'SCHMITT', prenom: 'Sarah', id: 50, groupId: 8, type: 'employee', pole: 1, code : "EMP-050", role:"user", theme:"dark"},
+    { nom: 'LEMAIRE', prenom: 'Thomas', id :51 , groupId :8 , type : "employee", pole :1 , code :"EMP-051", role:"user", theme:"light"},
+    { nom : "ROBIN", prenom : "Emma", id :52 , groupId :6 , type :"employee", pole :2 , code :"EMP-052", role:"user", theme:"dark"},
+    { nom: 'PICARD', prenom: 'Nicolas', id: 53, groupId: 6, type: 'employee', pole: 2, code: 'EMP-053', role:'user' , theme:'light'},
+    { nom: 'RIVIERE', prenom: 'Laura', id: 54, groupId: 2, type: 'employee', pole: 2, code: 'EMP-054', role:'user' , theme:'dark'},
+    { nom: 'MARCHAND', prenom: 'Antoine', id: 55, groupId: 2, type: 'interim', pole: 2, code: 'EMP-055', role:'user' , theme:'light'},
+    { nom: 'DUPUIS', prenom: 'Chloé', id: 56, groupId: 3, type: 'employee', pole: 3, code: 'EMP-056', role:'user' , theme:'dark'},
+    { nom: 'LAMBERT', prenom: 'Juliette', id: 57, groupId: 3, type: 'employee', pole: 3, code: 'EMP-057', role:'user' , theme:'light'},
+    { nom: 'CLEMENT', prenom: 'Julien', id: 58, groupId: 4, type: 'employee', pole: 4, code: 'EMP-058', role:'user' , theme:'dark'},
+    { nom: 'GUILLAUME', prenom: 'Sophie', id: 59, groupId: 4, type: 'interim', pole: 4, code:'EMP-059' , role:'user' , theme:'dark'},
+    { nom : "LEDUC", prenom : "Mathieu", id :60 , groupId :4 , type :"employee", pole :4 , code :"EMP-060", role:"user", theme:"light"},
+    { nom : "FERNANDEZ", prenom : "Isabelle", id :61 , groupId :7 , type :"employee", pole :3 , code :"EMP-061", role:"user", theme:"dark"},
+    { nom : "MARTINEZ", prenom : "Sébastien", id :62 , groupId :7 , type :"employee", pole :3 , code :"EMP-062", role:"user", theme:"light"},
+    { nom: 'DAVID', prenom: 'Céline', id: 63, groupId: 6, type: 'employee', pole: 2, code: 'EMP-063', role:'user' , theme:'dark'},
+    { nom: 'JACQUET', prenom: 'Vincent', id: 64, groupId: 5, type: 'employee', pole: 1, code: 'EMP-064', role:'user' , theme:'light'},
+    { nom: 'LOPEZ', prenom: 'Amélie', id: 65, groupId: 8, type: 'interim', pole: 1, code: 'EMP-065', role:'user' , theme:'dark'},
+    { nom: 'FOUCAULT', prenom: 'Cédric', id: 66, groupId: 1, type: 'employee', pole: 1, code: 'EMP-066', role:'user' , theme:'light'},
+    { nom: 'MARTY', prenom: 'Aline', id: 67, groupId: 2, type: 'employee', pole: 2, code: 'EMP-067', role:'user' , theme:'dark'},
+    { nom: 'LEBLANC', prenom: 'Bruno', id: 68, groupId: 3, type: 'employee', pole: 3, code: 'EMP-068', role:'user' , theme:'light'},
+    { nom: 'GARNIER', prenom: 'Catherine', id: 69, groupId: 4, type: 'interim', pole: 4, code: 'EMP-069', role:'user' , theme:'dark'},
+    { nom: 'CARTER', prenom: 'David', id: 70, groupId: 5, type: 'employee', pole: 1, code: 'EMP-070', role:'user' , theme:'light'},
+    { nom: 'WILLIAMS', prenom: 'Laura', id: 71, groupId: 6, type: 'employee', pole: 2, code: 'EMP-071', role:'user' , theme:'dark'},
+    { nom: 'JONES', prenom: 'Kevin', id: 72, groupId: 7, type: 'employee', pole: 3, code: 'EMP-072', role:'user' , theme:'light'},
+    { nom: 'BROWN', prenom: 'Sophie', id: 73, groupId: 8, type: 'interim', pole: 1, code: 'EMP-073', role:'user' , theme:'dark'},
+    { nom: 'DAVIS', prenom: 'Thomas', id: 74, groupId: 1, type: 'employee', pole: 1, code: 'EMP-074', role:'user' , theme:'light'},
+    { nom: 'MILLER', prenom: 'Emma', id: 75, groupId: 2, type: 'employee', pole: 2, code: 'EMP-075', role:'user' , theme:'dark'},
+    { nom : "WILSON", prenom : "Lucas", id :76 , groupId :3 , type :"employee", pole :3 , code :"EMP-076", role:"user", theme:"light"},
+    { nom : "MOORE", prenom : "Chloé", id :77 , groupId :4 , type :"interim", pole :4 , code :"EMP-077", role:"user", theme:"dark"},
+    { nom : "TAYLOR", prenom : "Antoine", id :78 , groupId :5 , type :"employee", pole :1 , code :"EMP-078", role:"user", theme:"light"},
+    { nom: 'ANDERSON', prenom: 'Julie', id: 79, groupId: 6, type: 'employee', pole: 2, code: 'EMP-079', role:'user' , theme:'dark'},
+    { nom: 'THOMAS', prenom: 'Nicolas', id: 80, groupId: 7, type: 'employee', pole: 3, code: 'EMP-080', role:'user' , theme:'light'},
+    { nom: 'JACKSON', prenom: 'Isabelle', id: 81, groupId: 8, type: 'interim', pole: 1, code: 'EMP-081', role:'user' , theme:'dark'},
+    { nom: 'WHITE', prenom: 'David', id: 82, groupId: 1, type: 'employee', pole: 1, code: 'EMP-082', role:'user' , theme:'light'},
+    { nom: 'HARRIS', prenom: 'Sophie', id: 83, groupId: 2, type: 'employee', pole: 2, code: 'EMP-083', role:'user' , theme:'dark'},
+    { nom: 'SANCHEZ', prenom: 'Julien', id: 84, groupId: 3, type: 'employee', pole: 3, code: 'EMP-084', role:'user' , theme:'light'},
+    { nom : "CLARK", prenom : "Emma", id :85 , groupId :4 , type :"interim", pole :4 , code :"EMP-085", role:"user", theme:"dark"},
+    { nom : "RAMIREZ", prenom : "Lucas", id :86 , groupId :5 , type :"employee", pole :1 , code :"EMP-086", role:"user", theme:"light"},
+    { nom : "LEWIS", prenom : "Laura", id :87 , groupId :6 , type :"employee", pole :2 , code :"EMP-087", role:"user", theme:"dark"},
+    { nom : "ROBINSON", prenom : "Kevin", id :88 , groupId :7 , type :"employee", pole :3 , code :"EMP-088", role:"user", theme:"light"},
+    { nom: 'WALKER', prenom: 'Sophie', id: 89, groupId: 8, type: 'interim', pole: 1, code: 'EMP-089', role:'user' , theme:'dark'},
+    { nom: 'YOUNG', prenom: 'Thomas', id: 90, groupId: 1, type: 'employee', pole: 1, code: 'EMP-090', role:'user' , theme:'light'},
+    { id: 91, nom: 'HERNANDEZ', prenom: 'Chloé', type: 'employee', pole: 2, code: 'EMP-091', role:'user' , theme:'dark'},
+    { id: 92, nom: 'KING', prenom: 'Antoine', type: 'employee', pole: 2, code: 'EMP-092', role:'user' , theme:'light'},
+    { id: 93, nom: 'WRIGHT', prenom: 'Julie', type: 'employee', pole: 2, code: 'EMP-093', role:'user' , theme:'dark'},
+    { id: 94, nom: 'LOPEZ', prenom: 'Nicolas', type: 'employee', pole: 2, code: 'EMP-094', role:'user' , theme:'light'},
+    { id: 95, nom: 'HILL', prenom: 'Isabelle', type: 'employee', pole: 2, code: 'EMP-095', role:'user' , theme:'dark'},
+    { id: 96, nom: 'SCOTT', prenom: 'David', type: 'employee', pole: 2, code: 'EMP-096', role:'user' , theme:'light'},
+    { id: 97, nom : "GREEN", prenom : "Sophie" , groupId :1 , type :"employee", pole :3 , code :"EMP-097", role:"user", theme:"dark"},
+    { id : 98, nom : "ADAMS", prenom : "Julien", type :"employee", pole :4 , code :"EMP-098", role:"user", theme:"light"},
+    { id: 99, nom: 'BAKER', prenom: 'Emma', type: 'employee', pole: 2, code: 'EMP-099', role:'user' , theme:'dark'},
+    { id: 100, nom: 'GONZALEZ', prenom: 'Lucas', type: 'employee', pole: 2, code: 'EMP-100', role:'user' , theme:'light'},
+    { nom: 'LEE', prenom: 'Laura', id: 101, type: 'employee', pole: 2, code: 'EMP-101', role:'user' , theme:'dark'},
+    { nom: 'HARRISON', prenom: 'Kevin', id: 102, type: 'employee', pole: 2, code: 'EMP-102', role:'user' , theme:'light'},
+    { nom: 'SULLIVAN', prenom: 'Sophie', id: 103, type: 'employee', pole: 2, code: 'EMP-103', role:'user' , theme:'dark'},
+    { nom: 'MURPHY', prenom: 'Antoine', id: 104, type: 'employee', pole: 2, code: 'EMP-104', role:'user' , theme:'light'},
+    { nom: 'COOK', prenom: 'Julie', id: 105, type: 'employee', pole: 2, code: 'EMP-105', role:'user' , theme:'dark'},
+    { nom: 'ROGERS', prenom: 'Nicolas', id: 106, type: 'employee', pole: 2, code: 'EMP-106', role:'user' , theme:'light'},
+    { nom : "REED", prenom : "Isabelle", id :107 , groupId :7 , type :"employee", pole :4 , code :"EMP-107", role:"user", theme:"dark"},
+    { nom : "COOPER", prenom : "David", id :108 , groupId :8 , type :"employee", pole :3 , code :"EMP-108", role:"user", theme:"light"},
+    { nom: 'MORGAN', prenom: 'Sophie', id: 109, type: 'employee', pole: 2, code: 'EMP-109', role:'user' , theme:'dark'},
+    { nom: 'BELL', prenom: 'Julien', id: 110, type: 'employee', pole: 2, code: 'EMP-110', role:'user' , theme:'light'},
+    { nom: 'MURRAY', prenom: 'Emma', id: 111, type: 'employee', pole: 2, code: 'EMP-111', role:'user' , theme:'dark'},
+    { nom: 'BAILEY', prenom: 'Lucas', id: 112, type: 'employee', pole: 2, code: 'EMP-112', role:'user' , theme:'light'},
 ];
 
 const generatedEmployees = Array.from({ length: 200 }, (_, idx) => {
   const id = 113 + idx;
-  const poleOrder = ['Technique', 'Commercial', 'Administrative', 'RH'];
+  const poleOrder = [1, 2, 3, 4];
   const pole = poleOrder[idx % poleOrder.length];
   const group = initialTeams[idx % initialTeams.length];
   const isInterim = idx % 5 === 0;
 
   return {
     id,
-    name: `EMP${id}`,
-    firstName: `Auto${id}`,
+    nom: `EMP${id}`,
+    prenom: `Auto${id}`,
     code: `EMP-${String(id).padStart(3, '0')}`,
     pole,
     type: isInterim ? 'interim' : 'employee',
     groupId: group?.id,
     image: 35 + (idx % 5),
+    role: 'user',
+    theme: idx % 2 === 0 ? 'light' : 'dark',
+    email: `${id}@entreprise.fr`
   };
 });
 
@@ -2350,61 +2354,6 @@ const Evenements = [
 
 
 
-// ===== GÉNÉRATEUR DE RENDEZ-VOUS =====
-
-/**
- * Générateur pseudo-aléatoire déterministe (Xorshift32)
- * Permet d'avoir des rendez-vous toujours identiques pour un seed donné
- */
-class SeededRandom {
-  private state: number;
-
-  constructor(seed: number) {
-    this.state = seed;
-  }
-
-  /**
-   * Génère un nombre pseudo-aléatoire entre 0 et 1
-   */
-  next(): number {
-    let x = this.state;
-    x ^= x << 13;
-    x ^= x >>> 17;
-    x ^= x << 5;
-    this.state = x;
-    return ((x >>> 0) / 0xFFFFFFFF);
-  }
-
-  /**
-   * Génère un entier pseudo-aléatoire entre 0 (inclus) et max (exclus)
-   */
-  nextInt(max: number): number {
-    return Math.floor(this.next() * max);
-  }
-}
-
-/**
- * ANCIENNE VERSION - REMPLACÉE PAR SYSTÈME DE LAZY LOADING
- * Cette fonction a été remplacée par generateAppointmentsForWeek() avec cache
- * Conservée pour référence historique
- * 
- * @deprecated Utiliser getAppointments() avec le système de cache à la place
- * 
- * Générateur de rendez-vous sans superposition
- * Garantit qu'aucun rendez-vous ne se chevauche pour chaque employé
- * Les rendez-vous sont déterministes et tournent autour de la date actuelle
- * @param employees - Liste des employés à planifier
- * @returns Tableau de rendez-vous générés
- */
-/*
-function generateAppointments_DEPRECATED(employees: Employee[]): Appointment[] {
-  // ... Code conservé pour référence ...
-  // Cette fonction générait TOUS les RDV au chargement (lent)
-  // Nouvelle approche : génération à la demande par semaine (rapide)
-  return [];
-}
-*/
-
 
 
 
@@ -2577,128 +2526,6 @@ export const getNotificationsByUserId = (userId: number): MockNotification[] => 
   return mockNotifications.filter(notif => notif.userId === userId);
 };
 
-// ===== BASE DE DONNÉES DES UTILISATEURS =====
-
-/**
- * Base de données des utilisateurs du système
- * Certains utilisateurs sont liés à des employés (même id), d'autres non
- * Différents rôles : admin (accès complet) et user (accès limité à son calendrier)
- */
-export const mockUsers = [
-  // ADMINS - Accès complet au système
-  {
-    id: 1,
-    name: 'ANDRE Grégory',
-    role: 'user' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=1',
-    employeeId: 1, // Lié à l'employé Grégory
-    email: 'gregory.andre@gandara.com'
-  },
-  {
-    id: 100,
-    name: 'Administrateur Système',
-    role: 'admin' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=50',
-    employeeId: null, // Pas lié à un employé
-    email: 'admin@gandara.com'
-  },
-  {
-    id: 5,
-    name: 'DACHAUD Fabrice',
-    role: 'user' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=12',
-    employeeId: 5, // Lié à l'employé Fabrice (Admin/RH)
-    email: 'fabrice.dachaud@gandara.com'
-  },
-
-  // USERS - Accès limité à leur propre calendrier
-  {
-    id: 2,
-    name: 'BARRET Alexandre',
-    role: 'user' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=2',
-    employeeId: 2, // Lié à l'employé Alexandre
-    email: 'alexandre.barret@gandara.com'
-  },
-  {
-    id: 3,
-    name: 'BOURDIN Lucas',
-    role: 'user' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=3',
-    employeeId: 3, // Lié à l'employé Lucas
-    email: 'lucas.bourdin@gandara.com'
-  },
-  {
-    id: 4,
-    name: 'PERRAS Romain',
-    role: 'user' as const,
-    theme: 'dark',
-    image: 'https://i.pravatar.cc/40?img=4',
-    employeeId: 4, // Lié à l'employé Romain
-    email: 'romain.perras@gandara.com'
-  },
-  {
-    id: 11,
-    name: 'MARTIN Sophie',
-    role: 'user' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=11',
-    employeeId: 11, // Lié à l'employée Sophie
-    email: 'sophie.martin@gandara.com'
-  },
-  {
-    id: 17,
-    name: 'DUPONT Jean',
-    role: 'user' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=17',
-    employeeId: 17, // Lié à l'employé Jean
-    email: 'jean.dupont@gandara.com'
-  },
-  {
-    id: 21,
-    name: 'SIMON Caroline',
-    role: 'user' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=21',
-    employeeId: 21, // Lié à l'employée Caroline
-    email: 'caroline.simon@gandara.com'
-  },
-
-  // USERS sans compte employé (ex: clients, partenaires, consultants externes)
-  {
-    id: 200,
-    name: 'Consultant Externe',
-    role: 'user' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=60',
-    employeeId: null, // Pas d'employé associé
-    email: 'consultant@externe.com'
-  },
-  {
-    id: 201,
-    name: 'Client VIP',
-    role: 'user' as const,
-    theme: 'dark',
-    image: 'https://i.pravatar.cc/40?img=65',
-    employeeId: null, // Pas d'employé associé
-    email: 'client.vip@entreprise.com'
-  },
-  {
-    id: 202,
-    name: 'Stagiaire RH',
-    role: 'user' as const,
-    theme: 'light',
-    image: 'https://i.pravatar.cc/40?img=70',
-    employeeId: null, // Pas encore d'employé créé
-    email: 'stagiaire.rh@gandara.com'
-  },
-];
 
 // ===== CONFIGURATIONS DE VUES CALENDRIER =====
 
@@ -2907,44 +2734,216 @@ export const hasAccessToConfig = (userId: number, configId: number): boolean => 
 /**
  * Récupérer un utilisateur par son ID
  */
-export const getUserById = (userId: number): User | undefined => {
-  return mockUsers.find(user => user.id === userId);
+export const getUserById = (userId: number): User => {
+  const u = initialEmployees.find(user => user.id === userId);
+
+  if (!u) return {
+      id: initialEmployees[0].id,
+      nom: initialEmployees[0].nom,
+      prenom: initialEmployees[0].prenom,
+      image: Images.find(img => img.id === initialEmployees[0].image) || undefined,
+      equipe: initialTeams.find(g => g.id === initialEmployees[0].groupId) || undefined,
+      poleActivite: PA.find(p => p.id === initialEmployees[0].pole) || undefined,
+      type: initialEmployees[0].type as 'employee' | 'interim',
+      email: initialEmployees[0].email || ''
+  }; // Fallback pour éviter undefined
+
+  return {
+    id: u.id,
+    nom: u.nom,
+    prenom: u.prenom,
+    image: Images.find(img => img.id === u.image) || undefined,
+    equipe: initialTeams.find(g => g.id === u.groupId) || undefined,
+    poleActivite: PA.find(p => p.id === u.pole) || undefined,
+    type: u.type as 'employee' | 'interim',
+    email: u.email || ''
+  }
 };
 
 /**
  * Récupérer un utilisateur par son email
  */
-export const getUserByEmail = (email: string): User | undefined => {
-  return mockUsers.find(user => user.email === email);
+export const getUserByEmail = (email: string) => {
+  return initialEmployeesBase.find(user => user.email === email);
 };
 
 /**
  * Récupérer tous les utilisateurs
  */
 export const getAllUsers = () => {
-  return mockUsers;
+  return initialEmployeesBase;
 };
 
 /**
  * Récupérer les utilisateurs par rôle
  */
 export const getUsersByRole = (role: 'admin' | 'user') => {
-  return mockUsers.filter(user => user.role === role);
+  return initialEmployeesBase.filter(user => user.role === role);
 };
 
 /**
  * Récupérer l'employé associé à un utilisateur (si existe)
+ * L'ID de l'utilisateur correspond à l'ID de l'employé (IdPersonnel)
  */
 export const getEmployeeByUserId = (userId: number) => {
   const user = getUserById(userId);
-  if (!user || !user.employeeId) return null;
+  if (!user) return null;
   
   const employees = getEmployees();
-  return employees.find(emp => emp.id === user.employeeId) || null;
+  return employees.find(emp => emp.id === user.id) || null;
 };
 
 
 
+
+// ===== GÉNÉRATEUR DE RENDEZ-VOUS =====
+
+/**
+ * Générateur de rendez-vous sans superposition
+ * Garantit qu'aucun rendez-vous ne se chevauche pour chaque employé
+ * @param employees - Liste des employés à planifier
+ * @returns Tableau de rendez-vous générés
+ */
+function generateAppointments(employees: User[]): Appointment[] {
+  const appointments: Appointment[] = [];
+  let appointmentId = 1;
+
+  // 1. Calcul stable du Lundi de départ (Reset heures pour éviter effets de bord)
+  const baseDate = new Date();
+  baseDate.setHours(0, 0, 0, 0); 
+
+  const day = baseDate.getDay();
+  const diffToMonday = (day + 6) % 7; 
+  const baseMonday = new Date(baseDate);
+  baseMonday.setDate(baseDate.getDate() - diffToMonday);
+
+  const weeksBefore = 200;
+  const weeksAfter = 200;
+  const startMonday = new Date(baseMonday);
+  startMonday.setDate(baseMonday.getDate() - (weeksBefore * 7));
+
+  const weeksToGenerate = weeksBefore + weeksAfter + 1;
+
+  // Pré-calculer les timestamps des lundis pour éviter new Date() dans les boucles
+  const weekMondays: number[] = [];
+  for(let i=0; i < weeksToGenerate; i++) {
+     const d = new Date(startMonday);
+     d.setDate(startMonday.getDate() + (i * 7));
+     weekMondays.push(d.getTime());
+  }
+
+  const isOverlapping = (start1: number, end1: number, start2: number, end2: number): boolean => {
+    return !(end1 < start2 || start1 > end2);
+  };
+
+  employees.forEach((employee) => {
+    // Stocker en timestamp (number) est plus léger que { start: Date, end: Date }
+    const employeeAppointments: { start: number; end: number }[] = [];
+
+    for (let week = 0; week < weeksToGenerate; week++) {
+      const weeklyQuota = Math.floor(Math.random() * 3);
+      if (weeklyQuota === 0) continue; // Optimisation: skip direct
+
+      const isFullWeek = weeklyQuota === 1;
+      const currentMondayTs = weekMondays[week];
+
+      for (let slot = 0; slot < weeklyQuota; slot++) {
+        let attempts = 0;
+        let isValid = false;
+
+        // Variables pour le résultat final
+        let finalStartTs = 0;
+        let finalEndTs = 0;
+        let description = '';
+        let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
+        let selectedEventId = 0;
+
+        while (!isValid && attempts < 50) {
+          attempts++;
+
+          // --- LOGIQUE METIER ---
+          const rand = Math.random();
+          let typeTarget = 'chantier';
+          if (rand >= 0.6 && rand < 0.8) typeTarget = 'absence';
+          else if (rand >= 0.8) typeTarget = 'autre';
+
+          // Sécurité pour éviter la boucle infinie si Evenements est vide
+          const candidates = Evenements.filter(e => e.type === typeTarget);
+          const selectedEvent = candidates.length > 0 
+            ? candidates[Math.floor(Math.random() * candidates.length)] 
+            : Evenements[0]; // Fallback
+
+          appointmentType = typeTarget as any;
+          selectedEventId = selectedEvent?.id || 0;
+
+          let duration = isFullWeek ? 5 : (Math.floor(Math.random() * 2) + 1);
+          description = `${selectedEvent?.label || 'Event'} (${duration}j)`;
+
+          // --- CALCUL DATES (Optimisé) ---
+          const dayOffset = isFullWeek ? 0 : Math.floor(Math.random() * 5); // 0..4 (Lun..Ven)
+
+          // On crée une Date juste pour calculer le jour précis (gestion DST)
+          const tempStart = new Date(currentMondayTs);
+          tempStart.setDate(tempStart.getDate() + dayOffset);
+          tempStart.setHours(0, 0, 0, 0);
+
+          const tempEnd = new Date(tempStart);
+          tempEnd.setDate(tempStart.getDate() + duration - 1);
+
+          // Gestion Week-end (Recul)
+          const endDay = tempEnd.getDay();
+          if (endDay === 6) tempEnd.setDate(tempEnd.getDate() - 1); // Sam -> Ven
+          else if (endDay === 0) tempEnd.setDate(tempEnd.getDate() - 2); // Dim -> Ven
+
+          tempEnd.setHours(23, 59, 59, 999);
+
+          const startTs = tempStart.getTime();
+          const endTs = tempEnd.getTime();
+
+          // --- VALIDATION STRICTE (Anti-Crash Luxon) ---
+
+          // 1. Vérifier NaN
+          if (isNaN(startTs) || isNaN(endTs)) continue;
+
+          // 2. Vérifier cohérence temporelle
+          if (startTs > endTs) continue;
+
+          // 3. Vérifier Week-end (Start)
+          const startDay = tempStart.getDay();
+          if (startDay === 0 || startDay === 6) continue;
+
+          // 4. Vérifier Chevauchement
+          const overlap = employeeAppointments.some(existing => 
+            isOverlapping(startTs, endTs, existing.start, existing.end)
+          );
+
+          if (!overlap) {
+            isValid = true;
+            finalStartTs = startTs;
+            finalEndTs = endTs;
+          }
+        }
+
+        if (isValid) {
+          // On pousse des nombres, pas des objets Date
+          employeeAppointments.push({ start: finalStartTs, end: finalEndTs });
+
+          appointments.push({
+            id: appointmentId++,
+            description,
+            startDate: finalStartTs, // C'est garanti valide et nombre
+            endDate: finalEndTs,     // C'est garanti valide et nombre
+            employee: employee,
+            type: appointmentType,
+            EventId: selectedEventId
+          });
+        }
+      }
+    }
+  });
+
+  return appointments;
+}
 
 
 
@@ -2957,8 +2956,8 @@ export const getEvenements = (): Item[] => {
       return {
         ...event,
         image,
-        chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).chargeAffaire)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).chargeAffaire)?.firstName || '',
-        chefChantier : initialEmployees.find(emp => emp.id === (event as any).chefChantier)?.name + ' ' + initialEmployees.find(emp => emp.id === (event as any).chefChantier)?.firstName || '',
+        chargeAffaire: initialEmployees.find(emp => emp.id === (event as any).chargeAffaire)?.nom + ' ' + initialEmployees.find(emp => emp.id === (event as any).chargeAffaire)?.prenom || '',
+        chefChantier : initialEmployees.find(emp => emp.id === (event as any).chefChantier)?.nom + ' ' + initialEmployees.find(emp => emp.id === (event as any).chefChantier)?.prenom || '',
         poleActivite : PA.find(pa => pa.id === (event as any).poleActivite)?.name || ''
       } as Item;
     } else {
@@ -2975,20 +2974,23 @@ export const getEventCategories = (): BaseItemCategory[] => {
   return EventCategory;
 }
 
-export const getEmployees = (): Employee[] => {
+export const getEmployees = (): User[] => {
 
-  return initialEmployees.map(emp => {
-    return { 
-      id: emp.id,
-      name: emp.name,
-      firstName: emp.firstName,
-      type: emp.type as "employee" | "interim",
-      pole: emp.pole,
-      image: Images.find(img => img.id === emp.image) || undefined,
-      code: emp.code,
-      group: initialTeams.find(group => group.id === emp.groupId) || undefined
-    }
-  });
+  return initialEmployees
+    .filter(emp => emp.nom && emp.prenom)
+    .map(emp => {
+      return { 
+        id: emp.id,
+        nom: emp.nom || '',
+        prenom: emp.prenom || '',
+        code: emp.code || '',
+        type: emp.type as "employee" | "interim",
+        poleActivite: PA.find(pa => pa.id === emp.pole) || undefined,
+        image: Images.find(img => img.id === emp.image) || undefined,
+        equipe: initialTeams.find(group => group.id === emp.groupId) || undefined,
+        email: emp.email || ''
+      }
+    });
 
 }
 
@@ -2997,204 +2999,15 @@ export const getImages = (): Image[] => {
   return Images;
 }
 
-// ===== SYSTÈME DE CACHE INTELLIGENT POUR SIMULATION BDD =====
-/**
- * Cache des rendez-vous générés par plage de dates
- * Structure: Map<clé_plage, Appointment[]>
- * Permet génération lazy loading et simule une BDD locale
- * TODO: Remplacer par appels API vers une vraie BDD plus tard
- */
-const appointmentsCache = new Map<string, Appointment[]>();
-let nextAppointmentId = 1;
 
-/**
- * Crée une clé de cache pour une plage de dates (par semaine)
- * @param weekStart - Timestamp du début de semaine
- * @returns Clé unique pour le cache
- */
-const getCacheKey = (weekStart: number): string => {
-  return `week_${weekStart}`;
-};
-
-/**
- * Récupère ou génère les rendez-vous pour une plage de dates
- * Système de lazy loading : génère uniquement si nécessaire
- * MIGRATION FUTURE BDD: Remplacer le contenu par fetch('/api/appointments?start=...&end=...')
- * 
- * @param startDate - Timestamp de début
- * @param endDate - Timestamp de fin
- * @returns Tableau de rendez-vous pour la plage demandée
- */
 export const getAppointments = (startDate: number, endDate: number): Appointment[] => {
-  const employees = getEmployees();
-  const result: Appointment[] = [];
-  
-  // Calculer les semaines à couvrir
-  const startWeek = new Date(startDate);
-  startWeek.setHours(0, 0, 0, 0);
-  const day = startWeek.getDay();
-  const diffToMonday = (day + 6) % 7;
-  startWeek.setDate(startWeek.getDate() - diffToMonday);
-  
-  const endWeek = new Date(endDate);
-  endWeek.setHours(0, 0, 0, 0);
-  
-  // Parcourir semaine par semaine
-  const currentWeek = new Date(startWeek);
-  while (currentWeek <= endWeek) {
-    const weekTs = currentWeek.getTime();
-    const cacheKey = getCacheKey(weekTs);
-    
-    // Vérifier le cache
-    if (!appointmentsCache.has(cacheKey)) {
-      // Générer pour cette semaine si pas en cache
-      const weekEnd = new Date(currentWeek);
-      weekEnd.setDate(weekEnd.getDate() + 7);
-      
-      const weekAppointments = generateAppointmentsForWeek(
-        employees, 
-        currentWeek.getTime(),
-        weekEnd.getTime()
-      );
-      
-      appointmentsCache.set(cacheKey, weekAppointments);
-    }
-    
-    // Ajouter au résultat
-    const cached = appointmentsCache.get(cacheKey) || [];
-    result.push(...cached);
-    
-    // Semaine suivante
-    currentWeek.setDate(currentWeek.getDate() + 7);
-  }
-  
-  // Filtrer pour retourner exactement la plage demandée
-  return result.filter(app => 
-    (app.startDate <= endDate) && (app.endDate >= startDate)
+  return initialAppointments.filter(appointment => 
+    (appointment.startDate <= endDate) && (appointment.endDate >= startDate)
   );
-};
-
-/**
- * Génère les rendez-vous pour une semaine spécifique
- * Utilise un seed déterministe pour reproductibilité
- * 
- * @param employees - Liste des employés
- * @param weekStart - Timestamp du début de semaine
- * @param weekEnd - Timestamp de fin de semaine
- * @returns Rendez-vous générés pour cette semaine
- */
-function generateAppointmentsForWeek(
-  employees: Employee[], 
-  weekStart: number, 
-  weekEnd: number
-): Appointment[] {
-  const appointments: Appointment[] = [];
-  
-  employees.forEach((employee) => {
-    // Seed déterministe basé sur employé + semaine
-    const employeeSeed = 12345 + employee.id + Math.floor(weekStart / 1000000);
-    const rng = new SeededRandom(employeeSeed);
-    
-    // Quota aléatoire de RDV pour cette semaine
-    const weeklyQuota = Math.floor(rng.next() * 3);
-    if (weeklyQuota === 0) return;
-    
-    const employeeAppointments: { start: number; end: number }[] = [];
-    
-    const isOverlapping = (start1: number, end1: number, start2: number, end2: number): boolean => {
-      return !(end1 < start2 || start1 > end2);
-    };
-    
-    for (let slot = 0; slot < weeklyQuota; slot++) {
-      let attempts = 0;
-      let isValid = false;
-      let finalStartTs = 0;
-      let finalEndTs = 0;
-      let appointmentType: 'chantier' | 'absence' | 'autre' = 'chantier';
-      let selectedEventId = 0;
-      
-      while (!isValid && attempts < 50) {
-        attempts++;
-        
-        // Déterminer le type
-        const rand = rng.next();
-        let typeTarget = 'chantier';
-        if (rand >= 0.6 && rand < 0.8) typeTarget = 'absence';
-        else if (rand >= 0.8) typeTarget = 'autre';
-        
-        const candidates = Evenements.filter(e => e.type === typeTarget);
-        const selectedEvent = candidates.length > 0 
-          ? candidates[rng.nextInt(candidates.length)] 
-          : Evenements[0];
-        
-        appointmentType = typeTarget as any;
-        selectedEventId = selectedEvent?.id || 0;
-        
-        // Durée aléatoire (1-3 jours)
-        let duration = Math.floor(rng.next() * 2) + 1;
-        if (typeTarget === 'chantier') duration = Math.floor(rng.next() * 3) + 1;
-        
-        // Jour de début
-        const startDayOffset = Math.floor(rng.next() * 5);
-        const startTs = weekStart + (startDayOffset * 24 * 60 * 60 * 1000);
-        const endTs = startTs + (duration * 24 * 60 * 60 * 1000);
-        
-        // Vérifier chevauchement
-        const overlaps = employeeAppointments.some(existing => 
-          isOverlapping(startTs, endTs, existing.start, existing.end)
-        );
-        
-        if (!overlaps && endTs <= weekEnd) {
-          finalStartTs = startTs;
-          finalEndTs = endTs;
-          employeeAppointments.push({ start: finalStartTs, end: finalEndTs });
-          isValid = true;
-          
-          // Créer le RDV
-          appointments.push({
-            id: nextAppointmentId++,
-            employeeId: employee.id,
-            startDate: finalStartTs,
-            endDate: finalEndTs,
-            type: appointmentType,
-            EventId: selectedEventId,
-            description: selectedEvent?.defaultDescription || '',
-          });
-        }
-      }
-    }
-  });
-  
-  return appointments;
 }
 
-// ===== INITIALISATION DU CACHE (Semaine courante uniquement) =====
-// Génération minimale au chargement pour performance maximale
-// Les autres semaines seront générées à la demande (lazy loading)
-(() => {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const day = now.getDay();
-  const diffToMonday = (day + 6) % 7;
-  now.setDate(now.getDate() - diffToMonday);
-  
-  // Pré-charger seulement 3 semaines (celle-ci + 1 avant + 1 après)
-  // Temps de chargement: < 50ms au lieu de 1500ms+
-  const employees = getEmployees();
-  
-  for (let i = -1; i <= 1; i++) {
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() + (i * 7));
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
-    
-    const cacheKey = getCacheKey(weekStart.getTime());
-    const weekApps = generateAppointmentsForWeek(
-      employees,
-      weekStart.getTime(),
-      weekEnd.getTime()
-    );
-    
-    appointmentsCache.set(cacheKey, weekApps);
-  }
-})();
+
+
+const initialAppointments: Appointment[] = generateAppointments(getEmployees());
+
+

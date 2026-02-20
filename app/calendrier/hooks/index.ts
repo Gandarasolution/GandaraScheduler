@@ -17,7 +17,6 @@ export { useCalendarConfig } from './useCalendarConfig';
 // Hooks d'interaction et UI
 export { useAutoScrollOnDrag } from './useAutoScrollOnDrag';
 export { useDebounce } from './useDebounce';
-export { useSwipe } from './useSwipe';
 export { useRecentEmployees } from './useRecentEmployees';
 export { useInteraction } from './useInteraction';
 export { useSmartScroll } from './useSmartScroll';

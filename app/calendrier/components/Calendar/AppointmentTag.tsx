@@ -1,36 +1,87 @@
-import React, { memo } from 'react';
+import React, { memo, use, useMemo } from 'react';
 
 interface AppointmentTagProps {
   tagName: string;
+  tagShortName?: string; // Version courte pour les petits rendez-vous
   color: string;
   textColor: string;
   isHovered: boolean;
   isResizing: boolean;
+  appointmentWidth?: number; // Largeur du rendez-vous en pixels
+  appointmentDurationDays?: number; // Durée du rendez-vous en jours
 }
 
 const AppointmentTag: React.FC<AppointmentTagProps> = ({
   tagName,
+  tagShortName,
   color,
   textColor,
   isHovered,
   isResizing,
+  appointmentWidth = 100,
+  appointmentDurationDays = 1,
 }) => {
+  // Adapter la taille de l'indicateur en fonction de la largeur du rendez-vous
+  const isSmallAppointment = appointmentWidth < 60;
+  const isMediumAppointment = appointmentWidth >= 60 && appointmentWidth < 120;
+  const isLargeAppointment = appointmentWidth >= 120;
+  
+  // Déterminer quel texte afficher selon la durée et la taille
+  // Pour les RDV de 2 jours ou moins, utiliser shortName si disponible
+  const shouldUseShortName = appointmentDurationDays <= 2 && tagShortName;
+  const displayText = shouldUseShortName ? tagShortName : tagName;
+  
+  // Taille de l'indicateur
+  const indicatorSize = isSmallAppointment ? 6 : isMediumAppointment ? 7 : 8;
+  // Largeur maximale du badge
+  const maxBadgeWidth = Math.min(appointmentWidth - 20, 150);
+
+  function getContrastColor(hexColor: string) {
+    // Enlever le # si présent
+    const hex = hexColor.replace('#', '');
+    
+    // 2. Convertir en RGB
+    var r = parseInt(hex.substr(0, 2), 16);
+    var g = parseInt(hex.substr(2, 2), 16);
+    var b = parseInt(hex.substr(4, 2), 16);
+    
+    // 3. Calculer la luminosité (formule YIQ standard)
+    var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    
+    // 4. Retourner Noir ou Blanc selon le seuil (128 est le milieu)
+    // Vous pouvez changer 'black' par une couleur sombre de votre choix (ex: #333333)
+    return (yiq >= 128) ? '#000000' : '#FFFFFF';
+  }
+
+
   return (
-    <div className="absolute right-0 top-2 z-30">
+    <div className="absolute right-1 bottom-1 z-30">
       <div 
-        className={`flex items-center shadow-md overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${isHovered && !isResizing ? 'max-w-[200px]' : 'max-w-[10px]'}`}
+        className={`flex items-center shadow-md overflow-hidden transition-all duration-300 ease-out ${
+          isHovered && !isResizing ? `px-2 py-1` : 'px-0 py-0'
+        }`}
         style={{
-          backgroundColor: isHovered ? color : 'white',
-          borderRadius: '6px 0 0 6px',
-          height: '22px'
+          backgroundColor: isHovered ? color : textColor,
+          borderRadius: isHovered ? '6px' : '50%',
+          width: isHovered ? 'auto' : `${indicatorSize}px`,
+          height: isHovered ? 'auto' : `${indicatorSize}px`,
+          minHeight: isHovered ? '20px' : `${indicatorSize}px`,
+          maxWidth: isHovered ? `${maxBadgeWidth}px` : `${indicatorSize}px`,
+          opacity: isSmallAppointment && !isHovered ? 0.7 : 1,
         }}
-        title={`Tag: ${tagName}`}
+        title={`Tag: ${tagName}${tagShortName ? ` (${tagShortName})` : ''}`}
       >
         <span 
-          className={`pl-3 pr-2 text-[10px] font-bold uppercase whitespace-nowrap transition-all duration-300 ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}`}
-          style={{ color: textColor }}
+          className={`font-bold uppercase whitespace-nowrap transition-all duration-300 ${
+            isHovered ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{ 
+            fontSize: isSmallAppointment ? '8px' : isMediumAppointment ? '8.5px' : '9px',
+            color: textColor,
+            textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+          }}
         >
-          {tagName}
+          {isSmallAppointment && isHovered ? displayText.slice(0, 6) : displayText}
         </span>
       </div>
     </div>

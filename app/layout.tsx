@@ -17,7 +17,44 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
+      <head>
+        {/* Script inline pour éviter le flash de thème et l'erreur d'hydratation */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  const stored = localStorage.getItem('gandara-theme-preference');
+                  
+                  if (prefersDark) {
+                    // Navigateur en dark → forcer dark
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                  } else {
+                    // Navigateur en light → charger préférence utilisateur (sauf dark)
+                    if (stored && stored !== 'dark') {
+                      // Appliquer le thème stocké (light, client-blue, client-purple, client-orange)
+                      if (stored === 'light') {
+                        // Light est le défaut, pas besoin de data-theme
+                        document.documentElement.removeAttribute('data-theme');
+                      } else {
+                        // Thème personnalisé
+                        document.documentElement.setAttribute('data-theme', stored);
+                      }
+                    } else {
+                      // Pas de préférence stockée ou dark bloqué → light par défaut
+                      document.documentElement.removeAttribute('data-theme');
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Erreur lors de l\\'initialisation du thème:', e);
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`poppins antialiased`}
       >

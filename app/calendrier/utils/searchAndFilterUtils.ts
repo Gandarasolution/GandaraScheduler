@@ -12,7 +12,7 @@
  * @version 1.0.0
  */
 
-import { Appointment, Item, ChantierItem, Employee, SocialItem } from '../types';
+import { Appointment, Item, ChantierItem, User, SocialItem } from '../types';
 
 // Types pour la configuration des filtres
 export type FilterType = 'checkbox' | 'select' | 'radio' | 'search' | 'combobox' | 'badge';
@@ -51,10 +51,10 @@ export interface SearchAndFilterUtils {
   ) => Item[];
 
   applyFiltersToEmployees: (
-    employees: Employee[],
+    employees: User[],
     searchQuery: string,
     activeFilters: ActiveFilters,
-  ) => Employee[];
+  ) => User[];
   
   
   searchAppointments: (
@@ -110,10 +110,10 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
   };
 
   const applyFiltersToEmployees = (
-    employees: Employee[],
+    employees: User[],
     searchQuery: string,
     activeFilters: ActiveFilters,
-  ): Employee[] => {
+  ): User[] => {
     let filtered = [...employees];
     
     // Appliquer le filtre de recherche si présent

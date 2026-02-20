@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { addHours, eachDayOfInterval } from "date-fns";
-import { Appointment, Employee, HistoryAction, Item } from '../types';
+import { Appointment, User, HistoryAction, Item } from '../types';
 import { createAppointmentUtils } from '../utils/appointmentUtils';
 import { notificationService } from "../services";
 import { getWorkedDayIntervals, isWeekend } from "../utils/dates";
@@ -15,6 +15,7 @@ export type RepeatData = {
 };
 
 interface LogicProps {
+  employeesRef: React.MutableRefObject<User[]>;
   appointmentsRef: React.MutableRefObject<Appointment[]>;
   eventsRef: React.MutableRefObject<Item[]>;
   timelineState: {
@@ -36,17 +37,17 @@ interface LogicProps {
 }
 
 export const useAppointmentLogic = ({ 
+  employeesRef,
   appointmentsRef, 
   eventsRef, 
   timelineState, 
   onUpdate,
   setIsSearchOverlayOpen,
   setDimensionsSearchInput,
-  collaboration
 }: LogicProps) => {
   
   // --- Initialisation des Utilitaires ---
-  const appointmentUtils = useMemo(() => createAppointmentUtils(), []);
+  const appointmentUtils = useMemo(() => createAppointmentUtils(employeesRef.current), []);
   
   // --- Refs pour la persistance hors rendu ---
   const history = useRef<HistoryAction[]>([]);
@@ -59,24 +60,7 @@ export const useAppointmentLogic = ({
     timelineStateRef.current = timelineState;
   }, [timelineState]);
 
-  // Helper pour synchroniser avec Yjs
-  const syncWithCollaboration = useCallback((appointment: Appointment) => {
-    if (collaboration) {
-      collaboration.setAppointment(appointment);
-    }
-  }, [collaboration]);
 
-  const syncMultipleWithCollaboration = useCallback((appointments: Appointment[]) => {
-    if (collaboration) {
-      collaboration.setAppointments(appointments);
-    }
-  }, [collaboration]);
-
-  const deleteFromCollaboration = useCallback((appointmentId: number) => {
-    if (collaboration) {
-      collaboration.deleteAppointment(appointmentId);
-    }
-  }, [collaboration]);
 
   // --- États UI nécessaires à la logique ---
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -85,7 +69,7 @@ export const useAppointmentLogic = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: number; employeeId: number } | null>(null);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
   
   
   // États pour les actions complexes
@@ -117,7 +101,7 @@ export const useAppointmentLogic = ({
     // Trouver tous les rdv qui chevauchent (même employé et même période)
     const overlappingAppointments = appointmentsRef.current.filter(app => 
       app.id !== movedAppointmentId &&
-      app.employeeId === employeeId &&
+      app.employee.id === employeeId &&
       app.startDate < endDate &&
       app.endDate > startDate
     );
@@ -229,7 +213,7 @@ export const useAppointmentLogic = ({
 
       appointmentsRef.current = appointmentsRef.current.map((app) =>
         app.id === id
-          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employeeId, priority: newPriority !== undefined ? newPriority : app.priority }
+          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employee.id, priority: newPriority !== undefined ? newPriority : app.priority }
           : app
       );
       if (newPriority !== undefined && newEmployeeId !== undefined) {
@@ -247,7 +231,7 @@ export const useAppointmentLogic = ({
       
       // Calculer la priorité par défaut basée sur les rdv existants qui chevauchent
       const overlappingAppointments = appointmentsRef.current.filter(app =>
-        app.employeeId === employeeId &&
+        app.employee.id === employeeId &&
         app.startDate < endDate &&
         app.endDate > startDate
       );
@@ -262,7 +246,7 @@ export const useAppointmentLogic = ({
         description: description || `Nouveau rendez-vous`,
         startDate,
         endDate,
-        employeeId,
+        employee: employeesRef.current.find(emp => emp.id === employeeId) as User,
         type: type,
         EventId: eventId,
         priority: maxPriority, // Nouveau rdv au-dessus de la pile
@@ -272,9 +256,6 @@ export const useAppointmentLogic = ({
       if (saveToHistory) {
         saveAppointmentState(newApp, 'create');
       }
-      
-      // Sync avec collaboration
-      syncWithCollaboration(newApp);
       
       onUpdate();
       return newApp;
@@ -360,6 +341,12 @@ export const useAppointmentLogic = ({
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
   const handleSaveAppointment = useCallback((appointment: Appointment, eventUpdate: Item, includeNonWorkingDays: boolean) => {    
+      // Vérifier si l'événement est désactivé (pour les types absence/autre)
+      if ('actif' in eventUpdate && !eventUpdate.actif) {
+        notificationService.error('Action interdite', 'Cette rubrique est désactivée et ne peut plus être utilisée pour créer ou modifier des rendez-vous.');
+        return;
+      }
+
       // Mise à jour des métadonnées de l'événement global
       eventsRef.current = eventsRef.current.map(e =>
         e.id === eventUpdate.id ? { ...e, ...eventUpdate } : e
@@ -387,7 +374,7 @@ export const useAppointmentLogic = ({
           const newApp = createAppointment(
             day.start,
             day.end,
-            appointment.employeeId as number,
+            appointment.employee.id as number,
             eventUpdate.id,
             true,
             appointment.type,
@@ -412,7 +399,7 @@ export const useAppointmentLogic = ({
             }
             return app;
           });
-          reorganizePriorities(appointment.id, appointment.priority ?? 0, appointment.employeeId as number, days[0].start, days[0].end);
+          reorganizePriorities(appointment.id, appointment.priority ?? 0, appointment.employee.id as number, days[0].start, days[0].end);
           
           if (days.length > 1) createExtraAppointments(1);
         }
@@ -459,10 +446,7 @@ export const useAppointmentLogic = ({
         }
         
         appointmentsRef.current = appointmentsRef.current.filter((app) => app.id !== id);
-        
-        // Sync avec collaboration
-        deleteFromCollaboration(id);
-        
+                
         onUpdate();
         setIsModalOpen(false);
         setSelectedAppointment(null);
@@ -477,7 +461,7 @@ export const useAppointmentLogic = ({
     if (!appointmentToDivide) return;
 
     const originalAppointment = { ...appointmentToDivide };
-    const { startDate, endDate, employeeId } = appointmentToDivide;
+    const { startDate, endDate, employee } = appointmentToDivide;
     
     // Calcul du milieu
     let totalDuration = (endDate - startDate) + 1;
@@ -502,7 +486,7 @@ export const useAppointmentLogic = ({
   
 
     // 1. Redimensionner l'original
-    onResize(id, startDate, splitDate, employeeId as number, false);
+    onResize(id, startDate, splitDate, employee.id as number, false);
     
     // 2. Créer le nouveau
     const newAppointmentId = Date.now() + Math.floor(Math.random() * 1000);
@@ -511,7 +495,7 @@ export const useAppointmentLogic = ({
       description: appointmentToDivide.description,
       startDate: splitDate,
       endDate: endDate,
-      employeeId: employeeId as number,
+      employee: employee,
       type: appointmentToDivide.type,
       EventId: appointmentToDivide.EventId
     };
@@ -569,7 +553,7 @@ export const useAppointmentLogic = ({
       selectedAppointment.id, 
       selectedAppointment.startDate, 
       extendData, 
-      selectedAppointment.employeeId as number,
+      selectedAppointment.employee.id as number,
       selectedAppointment.endDate < extendData ? 'right' : 'left'
     );
 
@@ -588,11 +572,19 @@ export const useAppointmentLogic = ({
       const endDate = new Date(date).setHours(endHour - 1, 59, 59 , 999);      
 
 
-      let eventTypeId = eventsRef.current.find(e => e.label === title)?.id;
-      if (!eventTypeId) {
+      const event = eventsRef.current.find(e => e.label === title);
+      if (!event) {
         console.warn(`Événement introuvable pour le titre : ${title}`);
         return;
       }
+
+      // Vérifier si l'événement est désactivé (pour les types absence/autre)
+      if ('actif' in event && !event.actif) {
+        notificationService.error('Action interdite', `La rubrique "${title}" est désactivée et ne peut plus être placée dans le planning.`);
+        return;
+      }
+
+      let eventTypeId = event.id;
 
       createAppointment(
         startDate, 
@@ -612,18 +604,39 @@ export const useAppointmentLogic = ({
   const handleSearchItemAction = useCallback((event: any) => {
       if(!selectedCell) return;
       
-      handleSaveAppointment(
-        {
-          description: event.label,
-          startDate: selectedCell.date,
-          endDate: (timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).setMinutes(59, 59),
-          employeeId: selectedCell.employeeId,
-          type: (event as any).type.toLowerCase() as "chantier" | "absence" | "autre",
-        } as Appointment,
-        event as Item,
-        false
+      // Vérifier si l'événement est désactivé (pour les types absence/autre)
+      if ('actif' in event && !event.actif) {
+        notificationService.error('Action interdite', `La rubrique "${event.label}" est désactivée et ne peut plus être placée dans le planning.`);
+        return;
+      }
+      
+      const employee = employeesRef.current.find(emp => emp.id === selectedCell.employeeId);
+      
+      createAppointment(
+        selectedCell.date, 
+        selectedCell.date + (timelineState.isFullDay ? 23 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000 : 11 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000),
+        selectedCell.employeeId,
+        event.id,
+        true,
+        event.type.toLowerCase() as "chantier" | "absence" | "autre",
       );
-  }, [selectedCell, timelineState.isFullDay, handleSaveAppointment]);
+      
+      // handleSaveAppointment(
+      //   {
+      //     id:-1,
+      //     description: event.label,
+      //     startDate: selectedCell.date,
+      //     endDate: (timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).getTime() + 59 * 60 * 1000 + 59 * 1000,
+      //     employeeId: selectedCell.employeeId,
+      //     employee: employee as User,
+      //     type: (event as any).type.toLowerCase() as "chantier" | "absence" | "autre",
+      //     EventId: event.id,
+      //   } as Appointment,
+        
+      //   event as Item,
+      //   false
+      // );
+  }, [selectedCell, timelineState.isFullDay, handleSaveAppointment, employeesRef]);
 
   // --- PRESSE-PAPIER ---
 
@@ -677,7 +690,8 @@ export const useAppointmentLogic = ({
         tags: [],
         type: 'autre',
         verrou: false,
-        category: ''
+        category: '',
+        isManual: true  // Ressource manuelle par défaut lors de la création
       }
     );
     setIsModalOpen(true);
@@ -685,6 +699,8 @@ export const useAppointmentLogic = ({
 
   const handleAddDimension = useCallback((dimension: Item) => {
     // Marquer les Items de type 'autre' comme manuels
+
+    dimension.id = Date.now(); // Générer un ID unique temporaire
     const newItem = dimension.type === 'autre' 
       ? { ...dimension, isManual: true } 
       : dimension;
@@ -697,13 +713,75 @@ export const useAppointmentLogic = ({
     eventsRef.current = eventsRef.current.map(e =>
       e.id === dimension.id ? { ...e, ...dimension } : e
     );
+    setIsModalOpen(false);
     onUpdate();
+  }, []);
+
+  const handleDeleteDimension = useCallback((dimensionId: number, forceDelete: boolean = false) => {
+    
+    // Vérifier si la rubrique est utilisée dans le planning
+    const isUsedInPlanning = appointmentsRef.current.some(
+      appointment => appointment.EventId === dimensionId
+    );
+
+    console.log("isUsedInPlanning:", isUsedInPlanning);
+    console.log(forceDelete);
+    
+    
+
+    if (isUsedInPlanning && !forceDelete) {
+      // Retourner un objet indiquant qu'une confirmation est nécessaire
+      return {
+        success: false,
+        requiresConfirmation: true,
+        isUsedInPlanning: true,
+        message: 'Cette rubrique est utilisée dans le planning.'
+      };
+    }
+
+    if (forceDelete) {
+
+      console.log("oui on force delete");
+      
+      // Suppression forcée : supprimer la rubrique et tous les RDV associés
+      eventsRef.current = eventsRef.current.filter(e => e.id !== dimensionId);
+      appointmentsRef.current = appointmentsRef.current.filter(
+        appointment => appointment.EventId !== dimensionId
+      );
+    } else {
+      return {
+        success: false,
+        requiresConfirmation: true,
+        isUsedInPlanning: false,
+        message: 'Cette rubrique n\'est pas utilisée dans le planning. Voulez-vous la supprimer ?'
+      };
+    }
+
+    onUpdate();
+    return {
+      success: true,
+      requiresConfirmation: false,
+      isUsedInPlanning: false,
+      message: 'Rubrique supprimée avec succès.'
+    };
+  }, []);
+
+  const handleDeactivateDimension = useCallback((dimensionId: number) => {
+    // Désactiver la rubrique au lieu de la supprimer
+    eventsRef.current = eventsRef.current.map(e =>
+      e.id === dimensionId ? { ...e, actif: false } : e
+    );
+    onUpdate();
+    return {
+      success: true,
+      message: 'Rubrique désactivée avec succès. Elle reste visible mais ne peut plus être utilisée.'
+    };
   }, []);
 
   return {
     // États exposés
     selectedAppointment, setSelectedAppointment,
-    selectedAppointmentForm,
+    selectedAppointmentForm, setSelectedAppointmentForm,
     selectedCell, setSelectedCell,
     isModalOpen, setIsModalOpen,
     repeatData, setRepeatData,
@@ -721,6 +799,8 @@ export const useAppointmentLogic = ({
     handleOpenEditModal,
     handleAddDimension,
     handleEditDimension,
+    handleDeleteDimension,
+    handleDeactivateDimension,
 
     // Actions Spécifiques
     handleDeleteAppointmentConfirm,

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, memo, useCallback, useRef } from 'react';
 import { useDrop } from 'react-dnd';
-import { Appointment, Employee, Groupe, CalendarConfig, Item, HalfDayInterval } from '../../types';
+import { Appointment, Groupe, CalendarConfig, Item, HalfDayInterval, User } from '../../types';
 import { TimelineFrame } from './index';
 import EmployeeRow from './EmployeeRow';
 import GroupRow from './GroupRow';
@@ -147,7 +147,7 @@ const CalendarRows = memo(({
 CalendarRows.displayName = 'CalendarRows';
 
 interface DesktopCalendarGridProps {
-   employees: Employee[];
+  employees: User[];
   appointmentsWithTop: (Appointment & { top: number })[];
   appointmentsDefault: Appointment[];
   employeeHeights: { employeeId: number; height: number }[];
@@ -493,7 +493,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       // Trouver tous les rdv qui chevauchent la nouvelle position
       const overlappingAppointments = appointmentsWithTop.filter(app => 
         app.id !== item.id &&
-        app.employeeId === targetEmployeeId &&
+        app.employee.id === targetEmployeeId &&
         app.startDate < newEnd &&
         app.endDate > targetDate
       );
@@ -511,7 +511,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         // Récupérer l'item d'origine pour vérifier s'il était déjà présent dans cette zone
         const originalItem = appointmentsWithTop.find(a => a.id === item.id);
         const isAlreadyPresent = originalItem && 
-                               originalItem.employeeId === targetEmployeeId && 
+                               originalItem.employee.id === targetEmployeeId && 
                                originalItem.startDate < newEnd && 
                                originalItem.endDate > targetDate;
 
@@ -526,7 +526,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         const rdvatOriginalPosition = appointmentsWithTop
           .filter(app =>
             app.id !== item.id &&
-            app.employeeId === originalItem?.employeeId &&
+            app.employee.id === originalItem?.employee.id &&
             app.startDate < endDateRdvTarget &&
             app.endDate > startDateRdvTarget &&
             (app.priority ?? 0) === (originalItem?.priority ?? 0)
@@ -542,7 +542,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 appToMove.id,
                 appToMove.startDate,
                 appToMove.endDate,
-                appToMove.employeeId,
+                appToMove.employee.id,
                 undefined,
                 false,
                 (originalItem?.priority ?? 0)
@@ -557,7 +557,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                     appToAdjust.id,
                     appToAdjust.startDate,
                     appToAdjust.endDate,
-                    appToAdjust.employeeId,
+                    appToAdjust.employee.id,
                     undefined,
                     false,
                     newPriority
@@ -662,8 +662,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
     appointmentsWithTop.forEach(app => {
       // Opti: Removed window filtering to keep reference stable
-      if (!map[app.employeeId]) map[app.employeeId] = [];
-      map[app.employeeId].push(app);
+      if (!map[app.employee.id]) map[app.employee.id] = [];
+      map[app.employee.id].push(app);
     });
 
     return map;
@@ -963,17 +963,17 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                     >
                       <div className="relative">
                         <img
-                          src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`}
-                          alt={employee.name}
+                          src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`}
+                          alt={employee.nom}
                           className={`w-8 h-8 rounded-full border-1 shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'}`}
-                          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.name.charAt(0)}`; }}
+                          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`; }}
                         />
                         {employee.type === 'interim' && (
                           <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-interim border-2 border-white"></span>
                         )}
                       </div>
                       <div className="flex flex-col flex-1 min-w-0">
-                        <span className="poppins text-[16px] font-inherit group-hover:font-semibold truncate">{employee.name + ' ' + employee.firstName}</span>
+                        <span className="poppins text-[16px] font-inherit group-hover:font-semibold truncate">{employee.nom + ' ' + employee.prenom}</span>
                       </div>
                       {expandedOverlapRows[employee.id] && (
                         <button

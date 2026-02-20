@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Employee } from '../types';
+import { User } from '../types';
 
 const STORAGE_KEY = 'recentEmployees';
 const MAX_RECENT = 3;
@@ -25,7 +25,7 @@ const MAX_RECENT = 3;
  * addRecentEmployee(employee);
  */
 export function useRecentEmployees() {
-  const [recentEmployees, setRecentEmployees] = useState<Employee[]>([]);
+  const [recentEmployees, setRecentEmployees] = useState<User[]>([]);
 
   // Charger les employés récents depuis localStorage au montage
   useEffect(() => {
@@ -41,7 +41,7 @@ export function useRecentEmployees() {
   }, []);
 
   // Ajouter un employé à la liste des récents
-  const addRecentEmployee = useCallback((employee: Employee) => {
+  const addRecentEmployee = useCallback((employee: User) => {
     setRecentEmployees(prev => {
       // Retirer l'employé s'il existe déjà
       const filtered = prev.filter(emp => emp.id !== employee.id);

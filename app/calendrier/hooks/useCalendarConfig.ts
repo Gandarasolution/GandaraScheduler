@@ -4,11 +4,11 @@
  */
 
 import { useState, useCallback, useMemo, MutableRefObject } from 'react';
-import { CalendarConfig, Employee, User } from '../types';
+import { CalendarConfig, User } from '../types';
 import { getCalendarConfigsByUserId } from '@/app/datasource';
 
 interface UseCalendarConfigProps {
-  employees: MutableRefObject<Employee[]>;
+  employees: MutableRefObject<User[]>;
   user: User;
 }
 

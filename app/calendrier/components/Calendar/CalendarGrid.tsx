@@ -21,14 +21,14 @@
 
 "use client";
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Appointment, Employee, HalfDayInterval, Groupe, CalendarConfig, Item, User } from '../../types';
+import { Appointment, HalfDayInterval, Groupe, CalendarConfig, Item, User } from '../../types';
 import { useCalendarLayout } from '../../hooks/useCalendarLayout';
 import { useCalendarInteractions } from '../../hooks/useCalendarInteractions';
 import { DesktopCalendarGrid, MobileCalendar } from '@/app/calendrier/components';
 import { CELL_WIDTH } from '../../utils/constants';
 
 interface CalendarGridProps {
-  employees: Employee[];
+  employees: User[];
   appointments: Appointment[];
   appointmentsDefault: Appointment[];
   events: Item[];
