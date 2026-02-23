@@ -206,6 +206,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   }, [dayInTimeline, employee.id, isFullDay, onSelectAppointment, onSelectCell]);
 
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
+  const isInactive = employee.actif === false;
+  const gridOpacity = isInactive ? 0.4 : 0.9;
 
   return (
     <div 
@@ -221,8 +223,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         backgroundColor: 'transparent',
         backgroundImage: `repeating-linear-gradient(
           to right,
-          rgba(229,231,235,0.9) 0px,
-          rgba(229,231,235,0.9) 1px,
+          rgba(229,231,235,${gridOpacity}) 0px,
+          rgba(229,231,235,${gridOpacity}) 1px,
           transparent 1px,
           transparent ${isFullDay ? CELL_WIDTH : CELL_WIDTH / 2}px
         )`
@@ -291,6 +293,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 <AppointmentItem
                   key={`${app.id}-${app.startDate}-${app.endDate}-${index}`}
                   appointment={app as Appointment}
+                  isInactive={isInactive}
                   isFullDay={isFullDay}
                   isMobile={false}
                   isDisplayWeekend={isDisplayWeekend}

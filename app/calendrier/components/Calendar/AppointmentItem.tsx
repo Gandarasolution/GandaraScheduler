@@ -18,6 +18,7 @@ interface AppointmentItemProps {
   isMobile: boolean;
   isDisplayWeekend?: boolean;
   timelineStart?: number;
+  isInactive?: boolean;
   className?: string;
   absoluteLeft?: number;
   absoluteWidth?: number;
@@ -44,6 +45,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   chargeeAffaire,
   isDisplayWeekend,
   timelineStart = 0,
+  isInactive = false,
   source = 'calendar',
   isSelected,
   className,
@@ -401,12 +403,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     transition: 'all 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
     zIndex: isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.priority || 0))),
+    opacity: isInactive ? 0.5 : 1,
+    cursor: isInactive ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' ? 'grab' : 'default')),
   }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment]);
 
   return (
     <div
       key={appointment.id}
-      ref={(node) => { if (node && source === 'calendar') drag(node); }}
+      ref={(node) => { if (node && source === 'calendar' && !isInactive) drag(node); }}
       onClick={(e) => {
         e.stopPropagation();
         onClick && onClick();
@@ -465,6 +469,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
         ${!isGhost && 'hover:shadow-xl'}
         ${className || ''}
+        
+
       `}
       title={event?.label}
       style={containerStyle}
@@ -529,8 +535,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               : '-left-1 w-3'
           }`}
           title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
-          onMouseDown={(e) => handleMouseDown(e, 'left')}
-          style={{ borderRadius: '4px 0 0 4px' }}
+          onMouseDown={(e) => !isInactive && handleMouseDown(e, 'left')}
+          style={{ 
+            borderRadius: '4px 0 0 4px',
+            cursor: isInactive ? 'not-allowed' : 'ew-resize'
+          }}
         />
       )}
 
@@ -600,8 +609,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               : '-right-1 w-3'
           }`}
           title={isSmallAppointment ? "Redimensionner (côté droit)" : "Redimensionner"}
-          onMouseDown={(e) => handleMouseDown(e, 'right')}
-          style={{ borderRadius: '0 4px 4px 0' }}
+          onMouseDown={(e) => !isInactive && handleMouseDown(e, 'right')}
+          style={{ 
+            borderRadius: '0 4px 4px 0', 
+            cursor: isInactive ? 'not-allowed' : 'ew-resize'
+          }}
         />
       )}
     </div>

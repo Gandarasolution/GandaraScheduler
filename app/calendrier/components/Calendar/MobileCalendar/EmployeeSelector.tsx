@@ -332,6 +332,7 @@ interface EmployeeItemProps {
 
 const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSelect, showBadge }) => {
   const avatarUrl = employee.image?.image || `https://ui-avatars.com/api/?name=${employee.nom}+${employee.prenom}&background=009580&color=fff`;
+  const isInactive = employee.actif === false;
   
   return (
   <div 
@@ -339,7 +340,8 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
     className="flex items-center p-2 rounded-xl cursor-pointer transition-colors border"
     style={{
       backgroundColor: isSelected ? 'var(--color-primary-lighter)' : 'transparent',
-      borderColor: isSelected ? 'var(--color-primary)' : 'transparent'
+      borderColor: isSelected ? 'var(--color-primary)' : 'transparent',
+      opacity: isInactive ? 0.5 : 1
     }}
     onMouseEnter={(e) => {
       if (!isSelected) {
@@ -353,7 +355,7 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
     }}
   >
     <div 
-      className="relative w-9 h-9 rounded-full overflow-hidden mr-3 border flex-shrink-0"
+      className={`relative w-9 h-9 rounded-full overflow-hidden mr-3 border flex-shrink-0 ${isInactive ? 'grayscale' : ''}`}
       style={{ borderColor: 'var(--border-light)' }}
     >
       <img 
@@ -370,7 +372,7 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
         <p 
           className="text-sm font-medium truncate"
           style={{ 
-            color: isSelected ? 'var(--color-primary-dark)' : 'var(--text-primary)' 
+            color: isInactive ? 'var(--text-tertiary)' : (isSelected ? 'var(--color-primary-dark)' : 'var(--text-primary)')
           }}
         >
           {employee.nom} {employee.prenom}

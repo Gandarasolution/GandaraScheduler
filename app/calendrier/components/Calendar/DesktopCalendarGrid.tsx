@@ -255,13 +255,61 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     scrollSpeed: 100,
   });
 
+  //Virtualization calcules 
+  const headerHeight = TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
+  const contentViewportTop = Math.max(0, viewport.top - headerHeight);
+  const contentViewportHeight = Math.max(0, viewport.height - headerHeight);
+  const contentViewportBottom = contentViewportTop + contentViewportHeight;
+  const OVERSCAN_Y = 800;
+  const OVERSCAN_X = 400;
+
+  const { visibleWindowStart, visibleWindowEnd } = useMemo(() => {
+    if (!dayInTimeline.length) return { visibleWindowStart: 0, visibleWindowEnd: 0 };
+    
+    // Pixel de début et de fin avec overscan
+    const startPx = Math.max(0, viewport.left - OVERSCAN_X);
+    const endPx = viewport.left + viewport.width + OVERSCAN_X;
+
+    // Convertir les pixels en index de tableau
+    const startIndex = Math.floor(startPx / CELL_WIDTH);
+    const endIndex = Math.ceil(endPx / CELL_WIDTH);
+
+    // Récupérer les timestamps correspondants
+    // On s'assure de rester dans les bornes du tableau
+    const safeStartIndex = Math.max(0, Math.min(startIndex, dayInTimeline.length - 1));
+    const safeEndIndex = Math.max(0, Math.min(endIndex, dayInTimeline.length - 1));
+
+    const startTs = dayInTimeline[safeStartIndex];
+    // Pour la fin, on ajoute 24h pour être sûr d'inclure les RDV qui dépassent la journée
+    const endTs = dayInTimeline[safeEndIndex] + (24 * 60 * 60 * 1000); 
+
+    return { visibleWindowStart: startTs, visibleWindowEnd: endTs };
+  }, [dayInTimeline, viewport.left, viewport.width]);
+
   const dimensionItems = useMemo(() => {
     return getHierarchicalDimensionItems(calendarConfig.groupingLevels, employees, initialTeams);
   }, [calendarConfig.groupingLevels, employees, initialTeams]);
 
   const filteredEmployees = useMemo(() => {
-    return applyFiltersToEmployees(employees, getFlatFilters(calendarConfig.filterCategories));
-  }, [employees, calendarConfig.filterCategories]);
+    const baseFiltered = applyFiltersToEmployees(employees, getFlatFilters(calendarConfig.filterCategories));
+    
+    // Filtrer les employés inactifs qui n'ont pas de rdv dans la fenêtre visible
+    return baseFiltered.filter(emp => {
+      // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
+      if (emp.actif !== false) {
+        return true;
+      }
+      
+      // Si l'employé est inactif, vérifier s'il a des rdv dans la fenêtre visible
+      const hasVisibleAppointments = appointmentsWithTop.some(app => 
+        app.employee.id === emp.id && 
+        app.endDate > visibleWindowStart && 
+        app.startDate < visibleWindowEnd
+      );
+      
+      return hasVisibleAppointments;
+    });
+  }, [employees, calendarConfig.filterCategories, appointmentsWithTop, visibleWindowStart, visibleWindowEnd]);
 
   const employeesByDimension = useMemo(() => {
     return groupEmployeesHierarchically(filteredEmployees, calendarConfig.groupingLevels, initialTeams);
@@ -360,14 +408,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
 
 
-  //Virtualization calcules 
-  const headerHeight = TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
-  const contentViewportTop = Math.max(0, viewport.top - headerHeight);
-  const contentViewportHeight = Math.max(0, viewport.height - headerHeight);
-  const contentViewportBottom = contentViewportTop + contentViewportHeight;
-  const OVERSCAN_Y = 800;
-  const OVERSCAN_X = 400;
-
   const visibleRangeStart = useMemo(() => {
     const target = contentViewportTop - OVERSCAN_Y;
     for (let i = 0; i < rowBoundaries.length; i++) {
@@ -393,28 +433,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [rowBoundaries, visibleRangeEnd, visibleRangeStart]);
 
 
-  const { visibleWindowStart, visibleWindowEnd } = useMemo(() => {
-    if (!dayInTimeline.length) return { visibleWindowStart: 0, visibleWindowEnd: 0 };
-    
-    // Pixel de début et de fin avec overscan
-    const startPx = Math.max(0, viewport.left - OVERSCAN_X);
-    const endPx = viewport.left + viewport.width + OVERSCAN_X;
-
-    // Convertir les pixels en index de tableau
-    const startIndex = Math.floor(startPx / CELL_WIDTH);
-    const endIndex = Math.ceil(endPx / CELL_WIDTH);
-
-    // Récupérer les timestamps correspondants
-    // On s'assure de rester dans les bornes du tableau
-    const safeStartIndex = Math.max(0, Math.min(startIndex, dayInTimeline.length - 1));
-    const safeEndIndex = Math.max(0, Math.min(endIndex, dayInTimeline.length - 1));
-
-    const startTs = dayInTimeline[safeStartIndex];
-    // Pour la fin, on ajoute 24h pour être sûr d'inclure les RDV qui dépassent la journée
-    const endTs = dayInTimeline[safeEndIndex] + (24 * 60 * 60 * 1000); 
-
-    return { visibleWindowStart: startTs, visibleWindowEnd: endTs };
-  }, [dayInTimeline, viewport.left, viewport.width]);
+  
 
   
 
@@ -942,6 +961,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
               {isOpen && itemEmployees.map((employee) => {
                 const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.id);
                 const employeeRowHeight = rows.find(e => e.id === employee.id)?.height ?? CELL_HEIGHT;
+                const isInactive = employee.actif === false;
                 
                 return (
                   <div
@@ -952,6 +972,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                       alignItems: 'center',
                       top: stickyTop + EMPLOYEE_GROUP_HEADER_PADDING_Y * 2 + 24,
                       zIndex: 20 - index,
+                      opacity: isInactive ? 0.5 : 1,
                     }}                    
                   >
                     <div 
@@ -965,15 +986,15 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                         <img
                           src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`}
                           alt={employee.nom}
-                          className={`w-8 h-8 rounded-full border-1 shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'}`}
+                          className={`w-8 h-8 rounded-full border-1 shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
                           onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`; }}
                         />
                         {employee.type === 'interim' && (
-                          <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-interim border-2 border-white"></span>
+                          <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
                         )}
                       </div>
                       <div className="flex flex-col flex-1 min-w-0">
-                        <span className="poppins text-[16px] font-inherit group-hover:font-semibold truncate">{employee.nom + ' ' + employee.prenom}</span>
+                        <span className={`poppins text-[16px] font-inherit group-hover:font-semibold truncate ${isInactive ? 'text-gray-400' : ''}`}>{employee.nom + ' ' + employee.prenom}</span>
                       </div>
                       {expandedOverlapRows[employee.id] && (
                         <button

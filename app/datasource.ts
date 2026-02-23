@@ -126,11 +126,11 @@ const PA: poleActivite[] = [
 const initialEmployeesBase = [
     // ===== ÉQUIPE TECHNIQUE (15 employés) =====
     // Spécialisés dans les travaux de construction, rénovation et maintenance
-    { nom: 'ANDRE', prenom: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 35, pole: 1, code: 'EMP-001', role: 'admin', theme: 'light', email: "gregory.andre@entreprise.fr" },
-    { nom: 'BARRET', prenom: 'Alexandre', id: 2, groupId: 1, type: 'employee', image: 36, pole: 1, code: 'EMP-002', role: 'manager', theme: 'light', email: "alexandre.barret@entreprise.fr"},
-    { nom: 'MALIVERNAY', prenom: 'Eric', id: 7, groupId: 1, type: 'interim', pole: 1, code: 'EMP-007', role: 'user', theme: 'light' },
+    { nom: 'ANDRE', prenom: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 35, pole: 1, code: 'EMP-001', role: 'admin', theme: 'light', email: "gregory.andre@entreprise.fr", actif: true},
+    { nom: 'BARRET', prenom: 'Alexandre', id: 2, groupId: 1, type: 'employee', image: 36, pole: 1, code: 'EMP-002', role: 'manager', theme: 'light', email: "alexandre.barret@entreprise.fr", actif: true},
+    { nom: 'MALIVERNAY', prenom: 'Eric', id: 7, groupId: 1, type: 'interim', pole: 1, code: 'EMP-007', role: 'user', theme: 'light', actif: false },
     { nom: 'MARTIN', prenom: 'Sophie', id: 11, groupId: 1, type: 'employee', pole: 1, code: 'EMP-011', role: 'viewer', theme: 'light' },
-    { nom: 'DUBOIS', prenom: 'Antoine', id: 13, groupId: 1, type: 'interim', pole: 1, code: 'EMP-013', role:'user' , theme:'dark'},
+    { nom: 'DUBOIS', prenom: 'Antoine', id: 13, groupId: 1, type: 'interim', pole: 1, code: 'EMP-013', role:'user' , theme:'dark', actif: false},
     { nom:'LEROY', prenom:'Marie', id : 14, groupId : 1 , type : "employee", pole : 1 , code : "EMP-014", role : "user", theme : "light", email : "marie.leroy@entreprise.fr"},
     { nom: 'MOREAU', prenom: 'Vincent', id: 15, groupId: 1, type: 'employee', pole: 1, code: 'EMP-015', role: 'user', theme: 'dark' },
     { nom: 'GARCIA', prenom: 'Céline', id: 16, groupId: 1, type: 'interim', pole: 1, code: 'EMP-016', role:'user' , theme:'light'},
@@ -138,11 +138,11 @@ const initialEmployeesBase = [
     // Équipe Commercial
     { nom: 'BOURDIN', prenom: 'Lucas', id: 3, groupId: 2, type: 'interim', image: 37, pole: 2, code: 'EMP-003', role: 'user', theme: 'light'},
     { nom: 'ZERR', prenom: 'Romain', id: 4, groupId: 2,  type: 'employee', pole: 2 , code: 'EMP-004', role: 'user', theme: 'dark'},
-    { nom: 'BERNARD', prenom: 'Lucas', id: 8, groupId: 2,  type: 'employee', pole: 2 , code: 'EMP-008', role: 'user', theme: 'light'},
+    { nom: 'BERNARD', prenom: 'Lucas', id: 8, groupId: 2,  type: 'employee', pole: 2 , code: 'EMP-008', role: 'user', theme: 'light', actif: false},
     { nom: 'PETIT', prenom: 'Julien', id: 12, groupId: 2, type: 'interim', pole: 2 , code: 'EMP-012', role:'user' , theme:'dark'},
     { nom: 'ROBERT', prenom: 'Nathalie', id: 17, groupId: 2, type: 'employee', pole: 2 , code: 'EMP-017', role:'user' , theme:'light'},
     { nom: 'RICHARD', prenom: 'David', id: 18, groupId: 2, type: 'employee', pole: 2 , code: 'EMP-018', role:'user' , theme:'dark'},
-    { nom: 'DURAND', prenom: 'Isabelle', id: 19, groupId: 2, type: 'interim', pole: 2 , code: 'EMP-019', role:'user' , theme:'light'},
+    { nom: 'DURAND', prenom: 'Isabelle', id: 19, groupId: 2, type: 'interim', pole: 2 , code: 'EMP-019', role:'user' , theme:'light', actif: false},
     { nom: 'LEFEBVRE', prenom: 'Stéphane', id: 20, groupId: 2, type: 'employee', pole: 2 , code: 'EMP-020', role:'user' , theme:'dark'},
     
     // Équipe Administrative
@@ -2746,7 +2746,8 @@ export const getUserById = (userId: number): User => {
       poleActivite: PA.find(p => p.id === initialEmployees[0].pole) || undefined,
       type: initialEmployees[0].type as 'employee' | 'interim',
       role: (initialEmployees[0].role as 'admin' | 'manager' | 'user' | 'viewer') || 'user',
-      email: initialEmployees[0].email || ''
+      email: initialEmployees[0].email || '',
+      actif: ('actif' in initialEmployees[0]) ? initialEmployees[0].actif : true,
   }; // Fallback pour éviter undefined
 
   return {
@@ -2758,7 +2759,8 @@ export const getUserById = (userId: number): User => {
     poleActivite: PA.find(p => p.id === u.pole) || undefined,
     type: u.type as 'employee' | 'interim',
     role: (u.role as 'admin' | 'manager' | 'user' | 'viewer') || 'user',
-    email: u.email || ''
+    email: u.email || '',
+    actif: ('actif' in u) ? u.actif : true,
   }
 };
 
@@ -3010,7 +3012,10 @@ export const getEmployees = (): User[] => {
         poleActivite: PA.find(pa => pa.id === emp.pole) || undefined,
         image: Images.find(img => img.id === emp.image) || undefined,
         equipe: initialTeams.find(group => group.id === emp.groupId) || undefined,
-        email: emp.email || ''
+        email: emp.email || '',
+        actif: ('actif' in emp) ? emp.actif : true,
+        role: (emp.role as UserRole) || 'user'
+
       }
     });
 

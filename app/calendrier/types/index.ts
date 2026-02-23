@@ -329,6 +329,8 @@ export interface User{
   image?: Image;
   /** Email de l'utilisateur */
   email?: string;
+  /** Statut actif de l'utilisateur (défaut: true) */
+  actif?: boolean;
 }
 
 

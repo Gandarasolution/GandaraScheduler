@@ -81,13 +81,30 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   
   // Les admins et managers peuvent voir tous les employés
   // Les users voient seulement leur propre calendrier  
-  const visibleEmployees = (isAdmin || isManager)
-    ? employees 
-    : employees.filter(emp => emp.id === user.id);
+  const visibleEmployees = useMemo(() => {
+    const baseEmployees = (isAdmin || isManager)
+      ? employees 
+      : employees.filter(emp => emp.id === user.id);
+    
+    // Filtrer les employés inactifs qui n'ont pas de rdv dans le mois visible
+    return baseEmployees.filter(emp => {
+      // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
+      if (emp.actif !== false) {
+        return true;
+      }
+      
+      // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
+      const hasMonthlyAppointments = monthlyAppointments.some(app => 
+        app.employee.id === emp.id
+      );
+      
+      return hasMonthlyAppointments;
+    });
+  }, [employees, isAdmin, isManager, user.id, monthlyAppointments]);
   
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(() => {
     if (!isAdmin && !isManager) {
-      return visibleEmployees.find(emp => emp.id === user.id) || null;
+      return employees.find(emp => emp.id === user.id) || null;
     }
     return employees[0] || null;
   });
