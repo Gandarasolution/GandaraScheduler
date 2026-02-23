@@ -208,7 +208,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Charger les permissions existantes au montage ou lors du changement d'item
   useEffect(() => {
-    if (isEditingResource && formDataItemType.id && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre')) {
+    if (isEditingResource && formDataItemType.id && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
       // Charger les permissions existantes pour cet item
       const permissions = new Map<number, SocialItemPermission>();
       employees.forEach(emp => {
@@ -228,7 +228,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         }
       });
       setEmployeePermissions(permissions);
-    } else if (isCreatingResource && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre')) {
+    } else if (isCreatingResource && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
       // Pour la création, initialiser avec tous les droits
       const permissions = new Map<number, SocialItemPermission>();
       employees.forEach(emp => {
@@ -355,8 +355,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       
       const newItemId = Date.now();
       
-      // Sauvegarde des permissions pour les rubriques sociales
-      if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre') {
+      // Sauvegarde des permissions pour les rubriques sociales et événements manuels
+      if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
         employeePermissions.forEach((perm) => {
           setSocialItemPermission({
             ...perm,
@@ -374,8 +374,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     if (isEditingResource) {
       console.log('Modification de ressource');
       
-      // Sauvegarde des permissions pour les rubriques sociales
-      if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre') {
+      // Sauvegarde des permissions pour les rubriques sociales et événements manuels
+      if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
         employeePermissions.forEach((perm) => {
           setSocialItemPermission(perm);
         });
@@ -676,8 +676,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             />
           </div>
         
-          {/* Section Permissions par employé (Rubriques sociales uniquement) */}
-          {(isCreatingResource || isEditingResource) && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre') && (
+          {/* Section Permissions par employé (Rubriques sociales et événements manuels) */}
+          {(isCreatingResource || isEditingResource) && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) && (
             <div className="mt-4 border border-primary rounded-xl overflow-hidden bg-bg-secondary">
               {/* En-tête cliquable pour ouvrir/fermer */}
               <button
