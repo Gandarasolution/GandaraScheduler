@@ -200,34 +200,38 @@ export const CalendarHeader = memo(({
                         {viewType === 'chantier-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
                       </button>
 
-                      {/* Option: Paie Table */}
-                      <button
-                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'paie-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
-                        onClick={() => { setViewType('paie-table'); setIsViewDropdownOpen(false); }}
-                      >
-                        <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'paie-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm13-1H2a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM2 5v7h12V5H2z"/><path d="M6 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 8zm0 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5z"/></svg>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">Rubrique Sociale</div>
-                          <div className="text-xs text-primary mt-0.5">Gestion des éléments de paie</div>
-                        </div>
-                        {viewType === 'paie-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
-                      </button>
-                      {/* Option: Événements manuels */}
-                      <button
-                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
-                        onClick={() => { setViewType('manual-event-table'); setIsViewDropdownOpen(false); }}
-                      >
-                        <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'manual-event-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 011 1v10a1 1 0 01-1 1h-6.586l-3.707 3.707A1 1 0 018 19v-3H4a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v8h4a1 1 0 011 1v1.586L12.586 15H19V6H5zm2 2h10v2H7V8zm0 3h7v2H7v-2z"/></svg>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">Événements manuels</div>
-                          <div className="text-xs text-primary mt-0.5">Créer et gérer les rubriques personnalisées</div>
-                        </div>
-                        {viewType === 'manual-event-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}                     
-                      </button>
+                      {/* Option: Paie Table - Seulement pour Admin et Manager */}
+                      {(user?.role === 'admin' || user?.role === 'manager') && (
+                        <button
+                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'paie-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
+                          onClick={() => { setViewType('paie-table'); setIsViewDropdownOpen(false); }}
+                        >
+                          <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'paie-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm13-1H2a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM2 5v7h12V5H2z"/><path d="M6 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 8zm0 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5z"/></svg>
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium">Rubrique Sociale</div>
+                            <div className="text-xs text-primary mt-0.5">Gestion des éléments de paie</div>
+                          </div>
+                          {viewType === 'paie-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
+                        </button>
+                      )}
+                      {/* Option: Événements manuels - Seulement pour Admin et Manager */}
+                      {(user?.role === 'admin' || user?.role === 'manager') && (
+                        <button
+                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
+                          onClick={() => { setViewType('manual-event-table'); setIsViewDropdownOpen(false); }}
+                        >
+                          <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'manual-event-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 011 1v10a1 1 0 01-1 1h-6.586l-3.707 3.707A1 1 0 018 19v-3H4a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v8h4a1 1 0 011 1v1.586L12.586 15H19V6H5zm2 2h10v2H7V8zm0 3h7v2H7v-2z"/></svg>
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium">Événements manuels</div>
+                            <div className="text-xs text-primary mt-0.5">Créer et gérer les rubriques personnalisées</div>
+                          </div>
+                          {viewType === 'manual-event-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}                     
+                        </button>
+                      )}
                       {/* Option: Employee Table */}
                       <button
                         className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'employee-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
@@ -344,6 +348,7 @@ export const CalendarHeader = memo(({
                 </button>
               </>
             )}
+            
             <>
               <button 
                 className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"

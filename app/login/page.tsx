@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { UserRole } from '@/app/calendrier/types';
 
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'admin' as 'admin' | 'manager' | 'user'
+    role: 'admin' as UserRole
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,7 +39,7 @@ export default function LoginPage() {
     }, 800);
   };
 
-  const quickLogin = (role: 'admin' | 'manager' | 'user', email: string) => {
+  const quickLogin = (role: UserRole, email: string) => {
     setFormData({ ...formData, email, role });
     setTimeout(() => {
       const user = {
@@ -119,8 +120,9 @@ export default function LoginPage() {
               className="w-full px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all cursor-pointer poppins"
             >
               <option value="admin">👑 Administrateur - Tous les droits</option>
-              <option value="manager">📊 Manager - Lecture/Écriture</option>
-              <option value="user">👤 Utilisateur - Lecture seule</option>
+              <option value="manager">📊 Manager - Gestion d'équipe et événements</option>
+              <option value="user">👤 Utilisateur - Édition de son calendrier uniquement</option>
+              <option value="viewer">👁️ Visiteur - Lecture seule</option>
             </select>
           </div>
 
@@ -174,7 +176,7 @@ export default function LoginPage() {
               <span className="text-lg">📊</span>
               <span>Manager</span>
             </span>
-            <span className="text-xs opacity-75">Lecture + Écriture</span>
+            <span className="text-xs opacity-75">Gestion d'équipe et événements</span>
           </button>
           
           <button
@@ -184,6 +186,17 @@ export default function LoginPage() {
             <span className="flex items-center gap-2">
               <span className="text-lg">👤</span>
               <span>Utilisateur</span>
+            </span>
+            <span className="text-xs opacity-75">Édition de son calendrier</span>
+          </button>
+          
+          <button
+            onClick={() => quickLogin('viewer', 'viewer@gandara.com')}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition-all text-gray-700 font-medium poppins"
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-lg">👁️</span>
+              <span>Visiteur</span>
             </span>
             <span className="text-xs opacity-75">Lecture seule</span>
           </button>

@@ -25,7 +25,7 @@
  */
 
 
-import { Appointment, Equipe, Groupe, Item, Image, PoleActivite, poleActivite, BaseItemCategory, MockNotification, User, CalendarConfig} from './calendrier/types/index';
+import { Appointment, Equipe, Groupe, Item, Image, PoleActivite, poleActivite, BaseItemCategory, MockNotification, User, CalendarConfig, SocialItemPermission, UserRole} from './calendrier/types/index';
 
 // ===== IMPORT DES ICÔNES =====
 
@@ -127,9 +127,9 @@ const initialEmployeesBase = [
     // ===== ÉQUIPE TECHNIQUE (15 employés) =====
     // Spécialisés dans les travaux de construction, rénovation et maintenance
     { nom: 'ANDRE', prenom: 'Grégory', id: 1, groupId: 1, type: 'employee', image: 35, pole: 1, code: 'EMP-001', role: 'admin', theme: 'light', email: "gregory.andre@entreprise.fr" },
-    { nom: 'BARRET', prenom: 'Alexandre', id: 2, groupId: 1, type: 'employee', image: 36, pole: 1, code: 'EMP-002', role: 'user', theme: 'light', email: "alexandre.barret@entreprise.fr"},
-    { nom: 'MALIVERNAY', prenom: 'Eric', id: 7, groupId: 1, type: 'interim', pole: 1, code: 'EMP-007', role: 'user', theme: 'dark' },
-    { nom: 'MARTIN', prenom: 'Sophie', id: 11, groupId: 1, type: 'employee', pole: 1, code: 'EMP-011', role: 'user', theme: 'light' },
+    { nom: 'BARRET', prenom: 'Alexandre', id: 2, groupId: 1, type: 'employee', image: 36, pole: 1, code: 'EMP-002', role: 'manager', theme: 'light', email: "alexandre.barret@entreprise.fr"},
+    { nom: 'MALIVERNAY', prenom: 'Eric', id: 7, groupId: 1, type: 'interim', pole: 1, code: 'EMP-007', role: 'user', theme: 'light' },
+    { nom: 'MARTIN', prenom: 'Sophie', id: 11, groupId: 1, type: 'employee', pole: 1, code: 'EMP-011', role: 'viewer', theme: 'light' },
     { nom: 'DUBOIS', prenom: 'Antoine', id: 13, groupId: 1, type: 'interim', pole: 1, code: 'EMP-013', role:'user' , theme:'dark'},
     { nom:'LEROY', prenom:'Marie', id : 14, groupId : 1 , type : "employee", pole : 1 , code : "EMP-014", role : "user", theme : "light", email : "marie.leroy@entreprise.fr"},
     { nom: 'MOREAU', prenom: 'Vincent', id: 15, groupId: 1, type: 'employee', pole: 1, code: 'EMP-015', role: 'user', theme: 'dark' },
@@ -2745,7 +2745,7 @@ export const getUserById = (userId: number): User => {
       equipe: initialTeams.find(g => g.id === initialEmployees[0].groupId) || undefined,
       poleActivite: PA.find(p => p.id === initialEmployees[0].pole) || undefined,
       type: initialEmployees[0].type as 'employee' | 'interim',
-      role: initialEmployees[0].role as 'admin' | 'user',
+      role: (initialEmployees[0].role as 'admin' | 'manager' | 'user' | 'viewer') || 'user',
       email: initialEmployees[0].email || ''
   }; // Fallback pour éviter undefined
 
@@ -2757,7 +2757,7 @@ export const getUserById = (userId: number): User => {
     equipe: initialTeams.find(g => g.id === u.groupId) || undefined,
     poleActivite: PA.find(p => p.id === u.pole) || undefined,
     type: u.type as 'employee' | 'interim',
-    role: u.role as 'admin' | 'user',
+    role: (u.role as 'admin' | 'manager' | 'user' | 'viewer') || 'user',
     email: u.email || ''
   }
 };
@@ -2779,7 +2779,7 @@ export const getAllUsers = () => {
 /**
  * Récupérer les utilisateurs par rôle
  */
-export const getUsersByRole = (role: 'admin' | 'user') => {
+export const getUsersByRole = (role: 'admin' | 'manager' | 'user' | 'viewer') => {
   return initialEmployeesBase.filter(user => user.role === role);
 };
 
@@ -2947,6 +2947,26 @@ function generateAppointments(employees: User[]): Appointment[] {
   return appointments;
 }
 
+/**
+ * Generate and store all appointments in memory
+ * This is called once when the module loads
+ */
+const initialAppointments: Appointment[] = generateAppointments(
+  initialEmployees
+    .filter(emp => emp.nom && emp.prenom)
+    .map(emp => ({
+      id: emp.id,
+      nom: emp.nom || '',
+      prenom: emp.prenom || '',
+      code: emp.code || '',
+      type: emp.type as "employee" | "interim",
+      poleActivite: PA.find(pa => pa.id === emp.pole) || undefined,
+      image: Images.find(img => img.id === emp.image) || undefined,
+      equipe: initialTeams.find(group => group.id === emp.groupId) || undefined,
+      email: emp.email || '',
+      role: (emp.role as UserRole) || 'user'
+    }))
+);
 
 
 //API
@@ -3009,7 +3029,89 @@ export const getAppointments = (startDate: number, endDate: number): Appointment
 }
 
 
+// ===== GESTION DES PERMISSIONS PAR RUBRIQUE SOCIALE =====
 
-const initialAppointments: Appointment[] = generateAppointments(getEmployees());
+/**
+ * Stockage des permissions par rubrique sociale et par employé
+ * Structure: Map<userId, Map<itemId, SocialItemPermission>>
+ */
+const socialItemPermissions: Map<number, Map<number, SocialItemPermission>> = new Map();
 
+/**
+ * Récupère les permissions d'un employé pour une rubrique sociale spécifique
+ */
+export const getSocialItemPermission = (userId: number, itemId: number): SocialItemPermission | null => {
+  const userPermissions = socialItemPermissions.get(userId);
+  if (!userPermissions) return null;
+  return userPermissions.get(itemId) || null;
+};
+
+/**
+ * Récupère toutes les permissions d'un employé
+ */
+export const getUserSocialPermissions = (userId: number): SocialItemPermission[] => {
+  const userPermissions = socialItemPermissions.get(userId);
+  if (!userPermissions) return [];
+  return Array.from(userPermissions.values());
+};
+
+/**
+ * Récupère toutes les permissions pour une rubrique sociale
+ */
+export const getItemSocialPermissions = (itemId: number): SocialItemPermission[] => {
+  const permissions: SocialItemPermission[] = [];
+  socialItemPermissions.forEach((userPerms) => {
+    const perm = userPerms.get(itemId);
+    if (perm) permissions.push(perm);
+  });
+  return permissions;
+};
+
+/**
+ * Définit les permissions d'un employé pour une rubrique sociale
+ */
+export const setSocialItemPermission = (permission: SocialItemPermission): void => {
+  let userPermissions = socialItemPermissions.get(permission.userId);
+  if (!userPermissions) {
+    userPermissions = new Map();
+    socialItemPermissions.set(permission.userId, userPermissions);
+  }
+  userPermissions.set(permission.itemId, permission);
+};
+
+/**
+ * Supprime les permissions d'un employé pour une rubrique sociale
+ */
+export const deleteSocialItemPermission = (userId: number, itemId: number): void => {
+  const userPermissions = socialItemPermissions.get(userId);
+  if (userPermissions) {
+    userPermissions.delete(itemId);
+  }
+};
+
+/**
+ * Définit les permissions par défaut pour tous les employés
+ * (tous les droits activés par défaut)
+ */
+export const initializeDefaultSocialPermissions = (): void => {
+  const employees = getEmployees();
+  const socialItems = getEvenements().filter(item => item.type === 'absence' || item.type === 'autre');
+  
+  employees.forEach(employee => {
+    socialItems.forEach(item => {
+      // Par défaut, tous les employés ont tous les droits sur toutes les rubriques
+      setSocialItemPermission({
+        userId: employee.id,
+        itemId: item.id,
+        canView: true,
+        canCreate: true,
+        canEdit: true,
+        canDelete: true,
+      });
+    });
+  });
+};
+
+// Initialiser les permissions par défaut au chargement
+initializeDefaultSocialPermissions();
 

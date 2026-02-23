@@ -23,7 +23,15 @@ export const useCalendarView = (employeesRef: any, user: User) => {
   const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {
       const saved = window.localStorage.getItem('viewType');
-      return (saved as any) || 'calendar';
+      const savedView = (saved as any) || 'calendar';
+      
+      // Bloquer l'accès aux vues interdites pour users et viewers
+      if ((user?.role === 'user' || user?.role === 'viewer') && 
+          (savedView === 'paie-table' || savedView === 'manual-event-table')) {
+        return 'calendar';
+      }
+      
+      return savedView;
     }
     return 'calendar';
   });
@@ -110,6 +118,14 @@ export const useCalendarView = (employeesRef: any, user: User) => {
     isFullDay, setIsFullDay: (v: boolean) => toggleSet('isFullDay', setIsFullDay, v),
     respectNonWorkingDays, setRespectNonWorkingDays: (v: boolean) => toggleSet('respectNonWorkingDays', setRespectNonWorkingDays, v),
     viewType, setViewType: (v: any) => {
+        // Bloquer l'accès à paie-table et manual-event-table pour users et viewers
+        if ((user.role === 'user' || user.role === 'viewer') && 
+            (v === 'paie-table' || v === 'manual-event-table')) {
+          // Rediriger vers calendar
+          setViewType('calendar');
+          setTimeout(() => localStorage.setItem('viewType', 'calendar'), 0);
+          return;
+        }
         setViewType(v);
         setTimeout(() => localStorage.setItem('viewType', v), 0);
     },

@@ -55,6 +55,7 @@ interface CalendarGridProps {
   onSelectAppointment: (appointment: Appointment | null) => void;
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
   mouseUpAfterScroll: () => void;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -85,6 +86,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onSelectAppointment,
   onLoadAppointmentsInRange,
   mouseUpAfterScroll,
+  onAddAppointment,
 }) => {
 
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
@@ -143,6 +145,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         appointments={appointments}
         user={user}
         items={events}
+        onAddAppointment={onAddAppointment}
       />
     );
   }

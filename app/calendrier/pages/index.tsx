@@ -51,6 +51,7 @@ import { getEmployees } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
 import { User, Item, CommonPaieAttributs } from '../types';
+import { canCreateEvent } from '../utils/permissions';
 
 // Composant de chargement réutilisable
 const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
@@ -107,8 +108,17 @@ export default function HomePage({
     // Activer la collaboration
     enableCollaboration: true,
     userId: user?.id ? String(user.id) : 'anonymous',
+    userIdNumber: user?.id || 0,
+    userRole: user?.role || 'viewer',
     userName: user?.nom ? `${user.nom} ${user.prenom}` : 'Utilisateur'
   });
+
+  // Filtrer les items selon les permissions de l'utilisateur
+  const allowedItems = useMemo(() => {
+    return dataLayer.itemsRef.current.filter(item => 
+      canCreateEvent(user.role, item.type)
+    );
+  }, [dataLayer.itemsRef.current, user.role]);
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
   const timeline = useTimeline({
@@ -330,6 +340,7 @@ export default function HomePage({
                         handleContextMenu={interaction.handleContextMenu}
                         onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
                         mouseUpAfterScroll={timeline.getFirstDayAppearing}
+                        onAddAppointment={appointmentLogic.handleSaveAppointment}
                         
                         /* Sélection Optimisée */
                         selectedCell={appointmentLogic.selectedCell}
@@ -511,7 +522,7 @@ export default function HomePage({
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,
-              items: dataLayer.itemsRef.current,
+              items: allowedItems,
               employees: globalEmployeesRef.current,
               selectedItem: appointmentLogic.selectedItem,
               selectedEmployee: appointmentLogic.selectedEmployee,
@@ -565,7 +576,12 @@ export default function HomePage({
             searchInput={viewState.dimensionSearchInput}
             setSearchInput={viewState.setDimensionsSearchInput}
             items={dataLayer.filteredItems.filter(item => {
-              // Filtrer les items désactivés (pour les types absence/autre)
+              // 1. Vérifier les permissions - Ne montrer que les items que l'utilisateur peut créer
+              if (!canCreateEvent(user.role, item.type)) {
+                return false;
+              }
+              
+              // 2. Filtrer les items désactivés (pour les types absence/autre)
               if ('actif' in item) {
                 return item.actif !== false;
               }

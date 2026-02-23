@@ -28,6 +28,7 @@ import SearchOverlay from '../../modals/SearchOverlay';
 import { useNotifications, useCalendarWorker } from '../../../hooks';
 import { getNotificationsByUserId } from '@/app/datasource';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
+import { canCreateEvent, getUserPermissions } from '../../../utils/permissions';
 
 // Lazy loading des composants lourds
 
@@ -70,14 +71,22 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
   // ----- GESTION DES DROITS D'ACCÈS -----
   const isAdmin = user.role === 'admin';
+  const isManager = user.role === 'manager';
+  const userPermissions = getUserPermissions(user.role);
   
+  // Filtrer les items selon les permissions de l'utilisateur
+  const allowedItems = useMemo(() => {
+    return items.filter(item => canCreateEvent(user.role, item.type));
+  }, [items, user.role]);
   
-  const visibleEmployees = isAdmin 
+  // Les admins et managers peuvent voir tous les employés
+  // Les users voient seulement leur propre calendrier  
+  const visibleEmployees = (isAdmin || isManager)
     ? employees 
     : employees.filter(emp => emp.id === user.id);
   
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(() => {
-    if (!isAdmin) {
+    if (!isAdmin && !isManager) {
       return visibleEmployees.find(emp => emp.id === user.id) || null;
     }
     return employees[0] || null;
@@ -94,7 +103,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       let filteredApps = appointments;
       
-      if (!isAdmin) {
+      // Filtrer par rôle : users et viewers ne voient que leurs propres RDV
+      if (user.role === 'user' || user.role === 'viewer') {
         filteredApps = appointments.filter(app => app.employee.id === user.id);
       }
       
@@ -116,7 +126,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         appointments,
         currentDate,
         selectedEmployee,
-        isAdmin,
+        user.role || 'viewer',
         user.id
       );
       
@@ -128,7 +138,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     };
     
     filterAppointments();
-  }, [worker.isReady, appointments, currentDate, selectedEmployee, isAdmin, user.id]);
+  }, [worker.isReady, appointments, currentDate, selectedEmployee, user.role, user.id]);
 
   // Filtrage journalier avec Web Worker
   useEffect(() => {
@@ -182,12 +192,22 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   };
 
   const handleOpenAddAppointment = () => {
-    if (isAdmin) {
+    // Seulement les admins et managers peuvent ajouter des événements
+    if (isAdmin || isManager) {
       setShowSearchModal(true);
     }
   };
 
   const handleSelectItem = (item: Item) => {
+    // Vérifier les permissions selon le type d'événement
+    const canCreate = canCreateEvent(user.role, item.type);
+    
+    if (!canCreate) {
+      // Afficher une notification d'erreur
+      addNotification('error', 'Permission refusée', `Vous n'avez pas les droits pour créer des événements de type "${item.type}"`);
+      return;
+    }
+    
     setSelectedItem(item);
     setShowSearchModal(false);
     setShowAppointmentForm(true);
@@ -212,7 +232,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     if (!searchInput.trim()) return [];
     
     const search = searchInput.toLowerCase();
-    return items.filter(item => {
+    // Utiliser allowedItems qui contient déjà les items filtrés par permissions
+    return allowedItems.filter(item => {
       const matchLabel = item.label?.toLowerCase().includes(search);
       const matchCode = item.code?.toLowerCase().includes(search);
       
@@ -226,7 +247,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       return matchLabel || matchCode;
     });
-  }, [items, searchInput]);
+  }, [allowedItems, searchInput]);
 
   // ----- FACTORIES -----
   
@@ -431,8 +452,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           
-          {/* Employee Selector - visible seulement pour les admins */}
-          {isAdmin && (
+          {/* Employee Selector - visible seulement pour les admins et managers */}
+          {(isAdmin || isManager) && (
             <EmployeeSelector 
               employees={visibleEmployees}
               selectedEmployee={selectedEmployee}
@@ -457,8 +478,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
           />
         </main>
 
-        {/* Floating Action Button - Visible uniquement pour les admins */}
-        {isAdmin && (
+        {/* Floating Action Button - Visible pour les admins et managers */}
+        {(isAdmin || isManager) && (
           <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none flex justify-center items-end h-32"
             style={{
               backgroundImage: `linear-gradient(to top, var(--bg-secondary), transparent)`
@@ -492,7 +513,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal de recherche d'événement */}
-        {isAdmin && showSearchModal && (
+        {(isAdmin || isManager) && showSearchModal && (
           <SearchOverlay
             isOpen={showSearchModal}
             onClose={() => {
@@ -564,7 +585,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal d'ajout de rendez-vous */}
-        {isAdmin && showAppointmentForm && (
+        {(isAdmin || isManager) && showAppointmentForm && (
           <div 
             className="fixed inset-0 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200"
             style={{ backgroundColor: 'var(--bg-overlay)' }}
@@ -619,7 +640,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   appointments={appointments}
                   appointment={createEmptyAppointment(0)}
                   item={createEmptyItem()}
-                  items={items}
+                  items={allowedItems}
                   employees={visibleEmployees}
                   HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
                   isFullDay={true}
@@ -645,4 +666,4 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   );
 };
 
-export default MobileCalendarGrid;
+export default MobileCalendar;

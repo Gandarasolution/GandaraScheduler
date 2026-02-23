@@ -245,6 +245,63 @@ export interface HistoryAction {
 } 
 
 /**
+ * Rôles disponibles dans l'application
+ * @type UserRole
+ */
+export type UserRole = 'admin' | 'manager' | 'user' | 'viewer';
+
+/**
+ * Permissions pour les actions sur les rubriques sociales
+ * @interface SocialPermissions
+ */
+export interface SocialPermissions {
+  /** Peut voir les rubriques sociales */
+  canView: boolean;
+  /** Peut créer des événements de rubriques sociales */
+  canCreate: boolean;
+  /** Peut éditer les événements de rubriques sociales */
+  canEdit: boolean;
+  /** Peut supprimer les événements de rubriques sociales */
+  canDelete: boolean;
+}
+
+/**
+ * Permissions pour les actions sur les chantiers
+ * @interface ChantierPermissions
+ */
+export interface ChantierPermissions {
+  /** Peut voir les chantiers */
+  canView: boolean;
+  /** Peut créer des chantiers */
+  canCreate: boolean;
+  /** Peut éditer les chantiers */
+  canEdit: boolean;
+  /** Peut supprimer les chantiers */
+  canDelete: boolean;
+}
+
+/**
+ * Structure complète des permissions utilisateur
+ * @interface UserPermissions
+ */
+export interface UserPermissions {
+  /** Permissions sur les rubriques sociales */
+  social: SocialPermissions;
+  /** Permissions sur les chantiers */
+  chantier: ChantierPermissions;
+  /** Peut voir tous les calendriers */
+  canViewAllCalendars: boolean;
+  /** Peut éditer son propre calendrier */
+  canEditOwnCalendar: boolean;
+  /** Peut éditer tous les calendriers */
+  canEditAllCalendars: boolean;
+  /** Peut accéder à la vue rubrique sociale (paie) */
+  canAccessSocialView: boolean;
+  /** Peut accéder à la vue événements manuels */
+  canAccessManualEventsView: boolean;
+}
+
+/**
  * Interface représentant un utilisateur
  * Correspond à la table Gandara_Utilisateur
  * @interface User
@@ -265,7 +322,7 @@ export interface User{
   /** Référence à l'équipe (relation) */
   equipe?: Equipe;
   /** Rôle de l'utilisateur dans l'application */
-  role?: 'admin' | 'user';
+  role?: UserRole;
   /** Thème préféré de l'utilisateur */
   theme?: string;
   /** Image de profil de l'utilisateur */
@@ -283,4 +340,23 @@ export interface MockNotification {
   message: string;
   timestamp: number;
   isRead: boolean;
+}
+
+/**
+ * Permissions spécifiques pour une rubrique sociale par employé
+ * @interface SocialItemPermission
+ */
+export interface SocialItemPermission {
+  /** ID de l'employé */
+  userId: number;
+  /** ID de la rubrique sociale (absence ou autre) */
+  itemId: number;
+  /** L'employé peut voir cette rubrique */
+  canView: boolean;
+  /** L'employé peut créer des entrées pour cette rubrique */
+  canCreate: boolean;
+  /** L'employé peut modifier des entrées pour cette rubrique */
+  canEdit: boolean;
+  /** L'employé peut supprimer des entrées pour cette rubrique */
+  canDelete: boolean;
 }

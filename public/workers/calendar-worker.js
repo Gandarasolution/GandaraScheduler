@@ -16,7 +16,7 @@
 /**
  * Filtre les rendez-vous pour un mois donné
  */
-function filterMonthlyAppointments(appointments, currentDate, selectedEmployee, isAdmin, userId) {
+function filterMonthlyAppointments(appointments, currentDate, selectedEmployee, userRole, userId) {
   const monthStart = new Date(currentDate);
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -31,14 +31,14 @@ function filterMonthlyAppointments(appointments, currentDate, selectedEmployee, 
   
   let filteredApps = appointments;
   
-  // Filtre par utilisateur si non-admin
-  if (!isAdmin) {
-    filteredApps = appointments.filter(app => app.employeeId === userId);
+  // Filtre par rôle : users et viewers ne voient que leurs propres RDV
+  if (userRole === 'user' || userRole === 'viewer') {
+    filteredApps = appointments.filter(app => app.employee.id === userId);
   }
   
   // Filtre par employé sélectionné et par mois
   return filteredApps.filter(app => {
-    const matchesEmployee = !selectedEmployee || app.employeeId === selectedEmployee.id;
+    const matchesEmployee = !selectedEmployee || app.employee.id === selectedEmployee.id;
     const isInMonth = app.startDate <= monthEndTime && app.endDate >= monthStartTime;
     return matchesEmployee && isInMonth;
   });
@@ -80,7 +80,8 @@ function calculateMonthlyStats(appointments) {
     stats.byType[app.type] = (stats.byType[app.type] || 0) + 1;
     
     // Par employé
-    stats.byEmployee[app.employeeId] = (stats.byEmployee[app.employeeId] || 0) + 1;
+    const employeeId = app.employee.id;
+    stats.byEmployee[employeeId] = (stats.byEmployee[employeeId] || 0) + 1;
     
     // Heures totales
     const hours = (app.endDate - app.startDate) / (1000 * 60 * 60);
@@ -103,14 +104,14 @@ function detectConflicts(appointments) {
       const app2 = sorted[j];
       
       // Même employé et chevauchement d'horaires
-      if (app1.employeeId === app2.employeeId) {
+      if (app1.employee.id === app2.employee.id) {
         const hasOverlap = app1.startDate < app2.endDate && app1.endDate > app2.startDate;
         
         if (hasOverlap) {
           conflicts.push({
             appointment1: app1,
             appointment2: app2,
-            employeeId: app1.employeeId,
+            employeeId: app1.employee.id,
             overlapStart: Math.max(app1.startDate, app2.startDate),
             overlapEnd: Math.min(app1.endDate, app2.endDate),
           });
@@ -160,7 +161,7 @@ self.addEventListener('message', (event) => {
           payload.appointments,
           payload.currentDate,
           payload.selectedEmployee,
-          payload.isAdmin,
+          payload.userRole,
           payload.userId
         );
         break;
