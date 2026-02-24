@@ -19,6 +19,12 @@ export const useCalendarView = (employeesRef: any, user: User) => {
   const [isExpanded, setIsExpanded] = useState(() => getStoredBool('isExpanded', false));
   const [isFullDay, setIsFullDay] = useState(() => getStoredBool('isFullDay', false));
   const [respectNonWorkingDays, setRespectNonWorkingDays] = useState(true);
+  const [tagPlacement, setTagPlacement] = useState<'hover' | 'fixed'>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return (localStorage.getItem('tagPlacement') as 'hover' | 'fixed') || 'hover';
+    }
+    return 'hover';
+  });
   
   const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -117,6 +123,10 @@ export const useCalendarView = (employeesRef: any, user: User) => {
     isExpanded, setIsExpanded: (v: boolean) => toggleSet('isExpanded', setIsExpanded, v),
     isFullDay, setIsFullDay: (v: boolean) => toggleSet('isFullDay', setIsFullDay, v),
     respectNonWorkingDays, setRespectNonWorkingDays: (v: boolean) => toggleSet('respectNonWorkingDays', setRespectNonWorkingDays, v),
+    tagPlacement, setTagPlacement: (v: 'hover' | 'fixed') => {
+      setTagPlacement(v);
+      setTimeout(() => localStorage.setItem('tagPlacement', v), 0);
+    },
     viewType, setViewType: (v: any) => {
         // Bloquer l'accès à paie-table et manual-event-table pour users et viewers
         if ((user.role === 'user' || user.role === 'viewer') && 

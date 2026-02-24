@@ -31,6 +31,8 @@ interface AppointmentItemProps {
   isGhost?: boolean;
   /* Intervalle(s) de chevauchement pour le mode ghost (accepte soit un intervalle, soit un tableau d'intervalles) */
   ghostInterval?: { start: number; end: number } | { start: number; end: number }[]; 
+  /* Mode d'affichage de l'étiquette */
+  tagPlacement?: 'hover' | 'fixed';
   onClick?: () => void;
   onDoubleClick?: () => void;
   onResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right', priority: number) => void;
@@ -54,11 +56,15 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   absoluteTop,
   isGhost = false,
   ghostInterval,
+  tagPlacement = 'hover',
   onClick,
   onDoubleClick,
   onResize,
   handleContextMenu,
 }) => {
+
+  //console.log(tagPlacement);
+  
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
   const [dragStart, setDragStart] = useState<number>(appointment.startDate);
@@ -461,7 +467,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       className={`
         appointment-item rounded-xl text-sm shadow-md
-        flex flex-shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-ellipsis
+        flex flex-shrink-0 items-center gap-2 ${tagPlacement === 'fixed' ? 'overflow-visible' : 'overflow-hidden'} whitespace-nowrap text-ellipsis
         transition-all z-20 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${source === 'calendar' && isSelected ? 'ring-3 ring-color' : ''}
@@ -597,6 +603,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           isResizing={isResizingRight}
           appointmentWidth={appointmentWidthPx}
           appointmentDurationDays={appointmentDurationDays}
+          placement={tagPlacement}
         />
       )}
 

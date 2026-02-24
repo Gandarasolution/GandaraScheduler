@@ -325,6 +325,7 @@ export default function HomePage({
                         isFullDay={viewState.isFullDay}
                         isMobile={viewState.isMobile}
                         nonWorkingDates={viewState.nonWorkingDates}
+                        tagPlacement={viewState.tagPlacement}
                         HALF_DAY_INTERVALS={viewState.constants.intervals}
                         
                         /* Config Calendrier */
@@ -545,6 +546,8 @@ export default function HomePage({
               setRespectNonWorkingDays: viewState.setRespectNonWorkingDays,
               nonWorkingDates: viewState.nonWorkingDates,
               setNonWorkingDates: viewState.setNonWorkingDates,
+              tagPlacement: viewState.tagPlacement,
+              setTagPlacement: viewState.setTagPlacement,
               HALF_DAY_INTERVALS: viewState.constants.intervals,
               isFullDay: viewState.isFullDay,
               isDisplayWeekend: viewState.isDisplayWeekend,

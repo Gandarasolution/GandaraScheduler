@@ -14,6 +14,7 @@ interface EmployeeRowProps {
   isFullDay: boolean;
   events: Item[];
   isDisplayWeekend: boolean;
+  tagPlacement?: 'hover' | 'fixed';
   visibleWindowStart: number;
   visibleWindowEnd: number;
   onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
@@ -40,6 +41,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   visibleWindowEnd,
   visibleWindowStart,
   isDisplayWeekend,
+  tagPlacement = 'hover',
   onAppointmentMoved,
   onAppointmentDoubleClick,
   handleContextMenu,
@@ -297,6 +299,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   isFullDay={isFullDay}
                   isMobile={false}
                   isDisplayWeekend={isDisplayWeekend}
+                  tagPlacement={tagPlacement}
                   event={event as Item}
                   timelineStart={timelineStart}
                   chargeeAffaire={(event && event.type === 'chantier' ? event.chargeAffaire : '') || ''}
@@ -375,6 +378,7 @@ export default memo(EmployeeRow, (prev, next) => {
       prev.isFullDay !== next.isFullDay ||
       prev.events !== next.events ||
       prev.isDisplayWeekend !== next.isDisplayWeekend ||
+      prev.tagPlacement !== next.tagPlacement ||
       prev.todayIndex !== next.todayIndex ||
       prev.isOverlapExpanded !== next.isOverlapExpanded ||
       prev.visibleWindowStart !== next.visibleWindowStart ||

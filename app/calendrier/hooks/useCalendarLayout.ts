@@ -1,19 +1,15 @@
 import { useMemo, useCallback } from 'react';
 import { Appointment, User } from '../types';
-import { CELL_HEIGHT, DAY_MS } from '../utils/constants';
+import { CELL_HEIGHT, DAY_MS, ROW_HEIGHT } from '../utils/constants';
 
 interface UseCalendarLayoutParams {
   employees: User[];
   appointments: Appointment[];
-  dayInTimeline: number[];
-  isMobile: boolean;
 }
 
 export const useCalendarLayout = ({
   employees,
   appointments,
-  dayInTimeline,
-  isMobile,
 }: UseCalendarLayoutParams) => {
 
   /**
@@ -38,157 +34,83 @@ export const useCalendarLayout = ({
 
   // Calcule la hauteur nécessaire pour chaque cellule employé/jour
   const employeeHeights = useMemo(() => {
-    if (isMobile) {
-      const heights: { employeeId: number; dayKey: number; height: number }[] = [];
-
-      employees.forEach(employee => {
-          
+    return employees.map(employee => {
+      const employeeAppointments = appointments.filter(app => app.employee.id === employee.id);
       
-          const employeeAllAppointments = appointments.filter(
-              app => app.employee.id === employee.id
-          );
-          dayInTimeline.forEach(dayTimestamp => {
-              // 'dayTimestamp' est supposé être le timestamp à 00:00:00
+      let maxOverallOverlap = 0;
+      if (employeeAppointments.length > 0) {
+          const sortedApps = [...employeeAppointments].sort((a, b) => a.startDate - b.startDate);
+          
+          const activeSlots: { endDate: number, count: number }[] = [];
+          sortedApps.forEach(app => {
+              for (let i = activeSlots.length - 1; i >= 0; i--) {
+                  if (activeSlots[i].endDate <= app.startDate) {
+                      activeSlots.splice(i, 1);
+                  }
+              }
               
-              const startOfNextDay = dayTimestamp + DAY_MS;
-
-              // On filtre uniquement sur les nombres
-              const employeeAppointmentsForDay = employeeAllAppointments.filter(
-                  app => 
-                      // Le RDV commence avant la fin de la journée
-                      app.startDate < startOfNextDay && 
-                      // Le RDV finit après le début de la journée
-                      app.endDate > dayTimestamp
-              );
-
-              const overlapping = getMaxOverlaps(employeeAppointmentsForDay);
-
-              heights.push({
-                  employeeId: employee.id,
-                  dayKey: dayTimestamp, // C'est déjà un nombre
-                  height: overlapping === 0
-                      ? CELL_HEIGHT
-                      : overlapping * CELL_HEIGHT + 2 * overlapping + 10,
-              });
+              let placed = false;
+              for (let i = 0; i < activeSlots.length; i++) {
+                  if (activeSlots[i].endDate <= app.startDate) {
+                      activeSlots[i].endDate = app.endDate;
+                      placed = true;
+                      break;
+                  }
+              }
+              
+              if (!placed) {
+                  activeSlots.push({ endDate: app.endDate, count: activeSlots.length });
+              }
+              
+              maxOverallOverlap = Math.max(maxOverallOverlap, activeSlots.length);
           });
-      });
+      }
 
-      return heights;
-    } else {
-      return employees.map(employee => {
-        const employeeAppointments = appointments.filter(app => app.employee.id === employee.id);
-        
-        let maxOverallOverlap = 0;
-        if (employeeAppointments.length > 0) {
-            const sortedApps = [...employeeAppointments].sort((a, b) => a.startDate - b.startDate);
-            
-            const activeSlots: { endDate: number, count: number }[] = [];
-            sortedApps.forEach(app => {
-                for (let i = activeSlots.length - 1; i >= 0; i--) {
-                    if (activeSlots[i].endDate <= app.startDate) {
-                        activeSlots.splice(i, 1);
-                    }
-                }
-                
-                let placed = false;
-                for (let i = 0; i < activeSlots.length; i++) {
-                    if (activeSlots[i].endDate <= app.startDate) {
-                        activeSlots[i].endDate = app.endDate;
-                        placed = true;
-                        break;
-                    }
-                }
-                
-                if (!placed) {
-                    activeSlots.push({ endDate: app.endDate, count: activeSlots.length });
-                }
-                
-                maxOverallOverlap = Math.max(maxOverallOverlap, activeSlots.length);
-            });
-        }
+      const calculatedHeight = (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + 18;
 
-        const calculatedHeight = maxOverallOverlap === 0
-            ? CELL_HEIGHT + 12
-            : (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + 10;
-
-        return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
-      });
-    }
-  }, [employees, appointments, dayInTimeline, isMobile, getMaxOverlaps]);
+      return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
+    });
+    
+  }, [employees, appointments, getMaxOverlaps]);
 
   /**
    * Attribue à chaque rendez-vous un indice de "pile" (top) basé sur la priorité
    * Le top est calculé automatiquement : priorité basse = top bas (visuellement en bas)
    * Pour les rdv sans priorité ou priorité 0, on les place en bas
    */
-  const assignAppointmentTops = useCallback((appointments: Appointment[], isMobile: boolean, dayInTimeline: number[]) => {
+  const assignAppointmentTops = useCallback((appointments: Appointment[]) => {
     const result: (Appointment & { top: number, _dayKey?: number })[] = [];
 
     employees.forEach(emp => {
-      if (isMobile) {
-        const empAppointments = appointments.filter(app => app.employee.id === emp.id);
-
-        dayInTimeline.forEach(day => {
-            const dayStartTs = day; 
-            const dayEndTs = dayStartTs + DAY_MS;
-
-            // Filtrer les appointments du jour
-            const dayAppointments = empAppointments
-                .filter(app => 
-                    app.startDate < dayEndTs && app.endDate > dayStartTs
-                );
-
-            // Pour chaque groupe de rdv qui chevauchent, assigner le top basé sur la priorité
-            dayAppointments.forEach(app => {
-                // Trouver tous les rdv qui chevauchent avec celui-ci
-                const overlapping = dayAppointments.filter(other => 
-                    !(app.endDate <= other.startDate || app.startDate >= other.endDate)
-                );
-                
-                // Trier par priorité croissante pour compter combien sont en dessous
-                const lowerPriorityCount = overlapping.filter(other => 
-                    (other.priority ?? 0) < (app.priority ?? 0)
-                ).length;
-                
-                result.push({ 
-                    ...app, 
-                    top: lowerPriorityCount, // Le top = nombre de rdv avec priorité inférieure
-                    _dayKey: dayStartTs
-                });
-            });
-        });
-    } else {
-        // Desktop : même logique
-        const empAppointments = appointments.filter(app => app.employee.id === emp.id);
-        
-        empAppointments.forEach(app => {
-            // Trouver tous les rdv qui chevauchent
-            const overlapping = empAppointments.filter(other => 
-                !(app.endDate <= other.startDate || app.startDate >= other.endDate)
-            );
-            // Compter combien ont une priorité inférieure
-            const lowerPriorityTab = overlapping.filter(other => 
-                ((other.priority ?? 0) < (app.priority ?? 0))
-            )
-            let lowerPriorityCount = 0;
-            if (lowerPriorityTab.length > 0) {              
-              lowerPriorityTab.forEach(lpApp => {
-                const priorityValue = lpApp.priority ?? 0;
-                if (priorityValue >= lowerPriorityCount) {
-                  lowerPriorityCount = priorityValue + 1;
-                }
-            });
-            }   
-            result.push({ ...app, top: lowerPriorityCount});
-        });
-      }
+      const empAppointments = appointments.filter(app => app.employee.id === emp.id);
+      
+      empAppointments.forEach(app => {
+          // Trouver tous les rdv qui chevauchent
+          const overlapping = empAppointments.filter(other => 
+              !(app.endDate <= other.startDate || app.startDate >= other.endDate)
+          );
+          // Compter combien ont une priorité inférieure
+          const lowerPriorityTab = overlapping.filter(other => 
+              ((other.priority ?? 0) < (app.priority ?? 0))
+          )
+          let lowerPriorityCount = 0;
+          if (lowerPriorityTab.length > 0) {              
+            lowerPriorityTab.forEach(lpApp => {
+              const priorityValue = lpApp.priority ?? 0;
+              if (priorityValue >= lowerPriorityCount) {
+                lowerPriorityCount = priorityValue + 1;
+              }
+          });
+          }   
+          result.push({ ...app, top: lowerPriorityCount});
+      });
     });
     return result;
   }, [employees]);
 
   const appointmentsWithTop = useMemo(() => {
-    return assignAppointmentTops(appointments, isMobile, dayInTimeline);
-  }, [assignAppointmentTops, appointments, isMobile, dayInTimeline]);
+    return assignAppointmentTops(appointments);
+  }, [assignAppointmentTops, appointments]);
 
   return {
     employeeHeights,

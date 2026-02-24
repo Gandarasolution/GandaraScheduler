@@ -213,7 +213,7 @@ export const useAppointmentLogic = ({
 
       appointmentsRef.current = appointmentsRef.current.map((app) =>
         app.id === id
-          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employee.id, priority: newPriority !== undefined ? newPriority : app.priority }
+          ? { ...app, startDate: newStartDate, endDate: newEndDate, employee: employeesRef.current.find(emp => emp.id === newEmployeeId) || app.employee, priority: newPriority !== undefined ? newPriority : app.priority }
           : app
       );
       if (newPriority !== undefined && newEmployeeId !== undefined) {

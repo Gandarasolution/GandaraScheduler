@@ -96,6 +96,8 @@ interface CalendarModalsProps {
     setRespectNonWorkingDays: (v: boolean) => void;
     nonWorkingDates: number[];
     setNonWorkingDates: (dates: number[]) => void;
+    tagPlacement: 'hover' | 'fixed';
+    setTagPlacement: (v: 'hover' | 'fixed') => void;
     
     // Constants
     HALF_DAY_INTERVALS: any[];
@@ -141,8 +143,24 @@ export const CalendarModals = memo(({
           setNonWorkingDates: config.setNonWorkingDates,
         }
       ]
+    },
+    {
+      category: "Affichage des étiquettes",
+      items: [
+        {
+          id: "tagPlacement",
+          label: "Placement de l'étiquette",
+          type: "select",
+          value: config.tagPlacement,
+          onChange: config.setTagPlacement,
+          options: [
+            { value: 'hover', label: 'Au survol (animation)' },
+            { value: 'fixed', label: 'Toujours visible (bord inférieur)' }
+          ]
+        }
+      ]
     }
-  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates]);  
+  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement]);  
 
   // Détermination du mode d'édition de ressource
   const resourceEditMode: 'create' | 'edit' | null = useMemo(() => {

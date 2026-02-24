@@ -40,6 +40,7 @@ interface CalendarGridProps {
   nonWorkingDates: number[];
   isMobile: boolean;
   isDisplayWeekend: boolean;
+  tagPlacement?: 'hover' | 'fixed';
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   calendarConfig: CalendarConfig;
   onCalendarConfigChange: (config: CalendarConfig) => void;
@@ -71,6 +72,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   nonWorkingDates,
   isMobile,
   isDisplayWeekend,
+  tagPlacement = 'hover',
   mainScrollRef,
   calendarConfig,
   onCalendarConfigChange,
@@ -94,13 +96,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const hasAutoScrolled = useRef(false);
   
 
-  // Use custom hooks for logic
-  const { employeeHeights, appointmentsWithTop } = useCalendarLayout({
-    employees,
-    appointments,
-    dayInTimeline,
-    isMobile
-  });
 
   const handleHoverMove = useCallback(({ colLeft }: { colLeft: number }) => {
     setHoverColumnLeft(colLeft >= 0 ? colLeft : null);
@@ -153,9 +148,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   return (
       <DesktopCalendarGrid 
         employees={employees}
-        appointmentsWithTop={appointmentsWithTop}
-        appointmentsDefault={appointmentsDefault}
-        employeeHeights={employeeHeights}
+        appointments={appointmentsDefault}
         dayInTimeline={dayInTimeline}
         initialTeams={initialTeams}
         calendarConfig={calendarConfig}
@@ -166,6 +159,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         events={events}
         nonWorkingDates={nonWorkingDates}
         isDisplayWeekend={isDisplayWeekend}
+        tagPlacement={tagPlacement}
         mainScrollRef={mainScrollRef}
         handleScrollY={handleScrollY}
         columnEmployeeRef={columnEmployeeRef}

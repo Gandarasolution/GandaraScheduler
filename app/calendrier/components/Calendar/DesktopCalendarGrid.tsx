@@ -22,6 +22,7 @@ import {
   DAY_INTERVALS,
   INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE,
   INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER,
+  ROW_HEIGHT,
 } from '../../utils/constants';
 import { applyFiltersToEmployees, getHierarchicalDimensionItems, groupEmployeesHierarchically, HierarchicalGroupItem, getFlatFilters } from '../../utils/filters';
 import { isSameDay, isWeekend } from 'date-fns';
@@ -30,6 +31,7 @@ import { getRowId } from '../../utils/domIds';
 import { useSmartScroll } from '../../hooks/useSmartScroll';
 import { useAutoScrollOnDrag } from '../../hooks/useAutoScrollOnDrag';
 import { is } from 'date-fns/locale';
+import { useCalendarLayout } from '../../hooks';
 
 
 interface DragItem {
@@ -66,6 +68,7 @@ interface CalendarRowsProps {
   expandedOverlapRows: Record<number, boolean>;
   handleSetRowExpansion: (employeeId: number, expanded: boolean) => void;
   collapseTriggers: Record<number, number>;
+  tagPlacement: 'hover' | 'fixed';
 }
 
 const CalendarRows = memo(({
@@ -90,6 +93,7 @@ const CalendarRows = memo(({
   expandedOverlapRows,
   handleSetRowExpansion,
   collapseTriggers,
+  tagPlacement
 }: CalendarRowsProps) => {
   return (
     <>
@@ -138,6 +142,7 @@ const CalendarRows = memo(({
             isOverlapExpanded={!!expandedOverlapRows[row.id as number]}
             onSetExpansion={handleSetRowExpansion}
             collapseTrigger={collapseTriggers[row.id as number]}
+            tagPlacement={tagPlacement}
           />
         );
       })}
@@ -148,9 +153,7 @@ CalendarRows.displayName = 'CalendarRows';
 
 interface DesktopCalendarGridProps {
   employees: User[];
-  appointmentsWithTop: (Appointment & { top: number })[];
-  appointmentsDefault: Appointment[];
-  employeeHeights: { employeeId: number; height: number }[];
+  appointments: Appointment[];
   dayInTimeline: number[];
   initialTeams: Groupe[];
   calendarConfig: CalendarConfig;
@@ -161,6 +164,7 @@ interface DesktopCalendarGridProps {
   events: Item[];
   nonWorkingDates: number[];
   isDisplayWeekend: boolean;
+  tagPlacement?: 'hover' | 'fixed';
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   handleScrollY: (e: React.UIEvent<HTMLDivElement>) => void;
   columnEmployeeRef: React.RefObject<HTMLDivElement | null>;
@@ -185,14 +189,12 @@ interface DesktopCalendarGridProps {
 
 const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   employees,
-  appointmentsWithTop,
-  employeeHeights,
   dayInTimeline,
   HALF_DAY_INTERVALS,
   isFullDay,
   nonWorkingDates,
   events,
-  appointmentsDefault,
+  appointments,
   onAppointmentMoved,
   onAppointmentDoubleClick,
   onExternalDragDrop,
@@ -215,11 +217,17 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   handleMouseOut,
   hoverColumnLeft,
   isDisplayWeekend,
+  tagPlacement = 'hover',
   mouseUpAfterScroll
 }) => {
+  
+ // Use custom hooks for logic
+  const { employeeHeights, appointmentsWithTop } = useCalendarLayout({
+    employees,
+    appointments,
+  });
 
-
-
+  
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
     const items = getHierarchicalDimensionItems(calendarConfig.groupingLevels, employees, initialTeams);
     return items.map(i => i.id);
@@ -370,7 +378,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
             const baseHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
             const adjustedHeight = expandedOverlapRows[employee.id]
               ? baseHeight
-              : Math.min(baseHeight, CELL_HEIGHT + 12);
+              : Math.min(baseHeight, ROW_HEIGHT);
 
             rows.push({
               type: 'employee',
@@ -1126,6 +1134,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
             onSelectAppointment={onSelectAppointment}
             expandedOverlapRows={expandedOverlapRows}
             handleSetRowExpansion={handleSetRowExpansion}
+            tagPlacement={tagPlacement}
             collapseTriggers={collapseTriggers}
           />
         </div>
