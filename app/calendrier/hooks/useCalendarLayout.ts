@@ -5,11 +5,13 @@ import { CELL_HEIGHT, DAY_MS, ROW_HEIGHT } from '../utils/constants';
 interface UseCalendarLayoutParams {
   employees: User[];
   appointments: Appointment[];
+  tagPlacement: 'hover' | 'fixed';
 }
 
 export const useCalendarLayout = ({
   employees,
   appointments,
+  tagPlacement
 }: UseCalendarLayoutParams) => {
 
   /**
@@ -66,7 +68,7 @@ export const useCalendarLayout = ({
           });
       }
 
-      const calculatedHeight = (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + 18;
+      const calculatedHeight = (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + (tagPlacement === 'fixed' ? 18 : 10);
 
       return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
     });

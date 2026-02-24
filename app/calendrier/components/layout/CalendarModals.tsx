@@ -27,6 +27,7 @@ interface CalendarModalsProps {
     modalInfo: { message: string, color: string } | null;
     selectedAppointmentForm: Appointment | null;
     deleteConfirmData: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null;
+    tagPlacement: 'hover' | 'fixed';
   };
   handlers: {
     closeModal: () => void;
@@ -362,6 +363,7 @@ export const CalendarModals = memo(({
           /* CAS 3: Formulaire de RDV */
           <AppointmentForm
             appointments={data.appointments}
+            tagPlacement={modalsState.tagPlacement}
             appointment={modalsState.selectedAppointmentForm as Appointment}
             item={data.selectedItem!}
             items={data.items}

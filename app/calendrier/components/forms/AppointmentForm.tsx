@@ -55,6 +55,8 @@ interface AppointmentFormProps {
   isMobile?: boolean;
   /** Mode d'édition de ressource: 'create' pour créer, 'edit' pour modifier, null pour un rendez-vous normal */
   resourceEditMode?: 'create' | 'edit' | null;
+    /** Placement des étiquettes : 'hover' pour les afficher au survol, 'fixed' pour les afficher en permanence */
+  tagPlacement: 'hover' | 'fixed';
   /** Callback appelé lors de la sauvegarde */
   onSave: (
     appointment: Appointment,
@@ -106,6 +108,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   appointment,
   item,
   items,
+  tagPlacement = 'hover',
   employees,
   HALF_DAY_INTERVALS,
   isFullDay,
@@ -673,6 +676,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               onDoubleClick={() => {}}
               onResize={() => {}}
               handleContextMenu={() => {}}
+              tagPlacement={tagPlacement}
             />
           </div>
         

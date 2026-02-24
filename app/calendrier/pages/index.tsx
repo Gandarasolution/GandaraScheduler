@@ -437,6 +437,7 @@ export default function HomePage({
               modalInfo: viewState.modalInfo,
               selectedAppointmentForm: appointmentLogic.selectedAppointmentForm,
               deleteConfirmData: deleteConfirmData,
+              tagPlacement: viewState.tagPlacement,
             }}
             handlers={{
               closeModal: () => appointmentLogic.setIsModalOpen(false),

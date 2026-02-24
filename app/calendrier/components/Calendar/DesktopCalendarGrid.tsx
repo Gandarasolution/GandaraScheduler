@@ -225,6 +225,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const { employeeHeights, appointmentsWithTop } = useCalendarLayout({
     employees,
     appointments,
+    tagPlacement
   });
 
   

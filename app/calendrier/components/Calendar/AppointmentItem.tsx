@@ -551,7 +551,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
       {/* CONTENU (Tags, Icone, Texte) */}
       {/* On met z-10 et relative pour être au-dessus des backgrounds */}
-      <div className="relative z-10 flex items-center gap-2 w-full h-full" style={{left: isGhost ? `${ghostWidthPx.reduce((acc, g) => acc + g.widthGhost + g.widthNoGhost, 0)}px` : '0px'}}>        
+      <div className="relative z-10 flex items-center gap-2 w-full h-full overflow-hidden" style={{left: isGhost ? `${ghostWidthPx.find(g => g.widthNoGhost > 0) ? ghostWidthPx.slice(0, ghostWidthPx.findIndex(g => g.widthNoGhost > 0)).reduce((acc, g) => acc + g.widthGhost + g.widthNoGhost, 0) : 0}px` : '0px'}}>        
         {event?.image ? (
             <img
             src={event?.image.image}
