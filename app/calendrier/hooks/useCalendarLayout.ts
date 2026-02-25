@@ -14,25 +14,6 @@ export const useCalendarLayout = ({
   tagPlacement
 }: UseCalendarLayoutParams) => {
 
-  /**
-   * Calcule le nombre maximal de rendez-vous qui se chevauchent dans une liste donnée.
-   */
-  const getMaxOverlaps = useCallback((overlapping: Appointment[]) => {
-    let maxOverlap = 0;
-    for (let i = 0; i < overlapping.length; i++) {
-      let overlapCount = 1;
-      for (let j = i + 1; j < overlapping.length; j++) {
-        if (i !== j &&
-          overlapping[j].startDate < overlapping[i].endDate &&
-          overlapping[j].endDate > overlapping[i].startDate
-        ) {
-          overlapCount++;
-        }
-      }
-      if (overlapCount > maxOverlap) maxOverlap = overlapCount;
-    }
-    return Math.max(maxOverlap, 1);
-  }, []);
 
   // Calcule la hauteur nécessaire pour chaque cellule employé/jour
   const employeeHeights = useMemo(() => {
@@ -73,7 +54,7 @@ export const useCalendarLayout = ({
       return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
     });
     
-  }, [employees, appointments, getMaxOverlaps]);
+  }, [employees, appointments]);
 
   /**
    * Attribue à chaque rendez-vous un indice de "pile" (top) basé sur la priorité

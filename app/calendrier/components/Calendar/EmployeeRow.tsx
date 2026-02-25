@@ -269,10 +269,21 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
               const isGhost = !isExpanded && (app.priority ?? 0) !== 0;
               
+              const beforeApp = index > 0 ? group.apps[index - 1] : null;
+              const beforeHasTag = beforeApp && (beforeApp.priority ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.tag;
+              const widthDiff = beforeApp ? Math.abs(app.width - beforeApp.width) : Infinity;
+              const isSimilarSize = widthDiff <= CELL_WIDTH; // À une case près
+              const shouldOffsetForTag = beforeHasTag && isSimilarSize;
+
+              console.log('shouldOffsetForTag:', shouldOffsetForTag, 'beforeHasTag:', beforeHasTag, 'isSimilarSize:', isSimilarSize);
+              
+              
               // Position verticale forcée (superposition)
               // Si l'événement est dans un groupe non étendu, on utilise la position du premier rendez-vous
-              // Sinon, on utilise sa propre position
-              const forcedTopPx = !isExpanded ? baseTopPx : app.topPx;
+              // Sinon, on utilise sa propre position (+ décalage si l'événement précédent a un tag et taille similaire)
+              const forcedTopPx = !isExpanded ? baseTopPx : shouldOffsetForTag ? app.topPx + 18 : app.topPx;
+
+
 
               // Calcul des intervalles de chevauchement avec les RDV de priorité 0
               // Pour chaque RDV de priorité 0, on calcule l'intersection temporelle

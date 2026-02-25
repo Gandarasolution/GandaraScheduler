@@ -551,46 +551,42 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
       {/* CONTENU (Tags, Icone, Texte) */}
       {/* On met z-10 et relative pour être au-dessus des backgrounds */}
-      <div className="relative z-10 flex items-center gap-2 w-full h-full overflow-hidden" style={{left: isGhost ? `${ghostWidthPx.find(g => g.widthNoGhost > 0) ? ghostWidthPx.slice(0, ghostWidthPx.findIndex(g => g.widthNoGhost > 0)).reduce((acc, g) => acc + g.widthGhost + g.widthNoGhost, 0) : 0}px` : '0px'}}>        
-        {event?.image ? (
-            <img
-            src={event?.image.image}
-            alt="Icône"
-            className="w-8 h-8 object-cover rounded-full flex-shrink-0"
-            style={{ opacity: isGhost ? 1 : 1 }}
-            />
-        ): (
-            <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>
-        )}
+      {/* Masqué si en mode Ghost (chevauchement) */}
+      {!isGhost && (
+        <div className="relative z-10 flex items-center gap-2 w-full h-full px-2">        
+          {event?.image ? (
+              <img
+              src={event?.image.image}
+              alt="Icône"
+              className="w-8 h-8 object-cover rounded-full flex-shrink-0"
+              />
+          ): (
+              <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>
+          )}
 
-        <div className='flex flex-col min-w-0 flex-1'>
-            <span 
-            className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200`}
-            style={{ 
-                color: isGhost 
-                    ? '#000' // Noir pour contraster avec hachures et zone pleine
-                    : (isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'),
-                textShadow: isGhost ? '0px 0px 3px rgba(255,255,255,0.7)' : 'none'
-            }}
-            >
-            {event?.label}
-            </span>
-            
-            <div className="flex items-center gap-2 text-xs truncate max-w-full">
-            <span 
-                className="truncate transition-colors duration-200"
-                style={{ 
-                color: isGhost 
-                    ? '#000' 
-                    : (isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'),
-                textShadow: isGhost ? '0px 0px 2px rgba(255,255,255,0.7)' : 'none'
-                }}
-            >
-                {chargeeAffaire}
-            </span>
-            </div>
+          <div className='flex flex-col min-w-0 flex-1'>
+              <span 
+              className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200`}
+              style={{ 
+                  color: isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'
+              }}
+              >
+              {event?.label}
+              </span>
+              
+              <div className="flex items-center gap-2 text-xs truncate max-w-full">
+              <span 
+                  className="truncate transition-colors duration-200"
+                  style={{ 
+                  color: isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                  }}
+              >
+                  {chargeeAffaire}
+              </span>
+              </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Étiquette/Tag sous forme d'indicateur en bas à droite */}
       {appointment.tag && (
