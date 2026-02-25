@@ -521,6 +521,9 @@ export default function HomePage({
 
               // Correction : Setter pour l'item sélectionné
               setSelectedItem: appointmentLogic.setSelectedItem,
+              
+              // Suppression d'étiquette de tous les rendez-vous
+              removeTagFromAppointments: appointmentLogic.removeTagFromAppointments,
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,

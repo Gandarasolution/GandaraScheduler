@@ -778,6 +778,26 @@ export const useAppointmentLogic = ({
     };
   }, []);
 
+  /**
+   * Supprime une étiquette de tous les rendez-vous qui l'utilisent
+   */
+  const removeTagFromAppointments = useCallback((tagId: number) => {
+    let updatedCount = 0;
+    appointmentsRef.current = appointmentsRef.current.map(app => {
+      if (app.tag && app.tag.id === tagId) {
+        updatedCount++;
+        return { ...app, tag: undefined };
+      }
+      return app;
+    });
+    
+    onUpdate();
+    notificationService.info(
+      'Étiquette supprimée', 
+      `L'étiquette a été retirée de ${updatedCount} rendez-vous.`
+    );
+  }, [onUpdate]);
+
   return {
     // États exposés
     selectedAppointment, setSelectedAppointment,
@@ -801,6 +821,7 @@ export const useAppointmentLogic = ({
     handleEditDimension,
     handleDeleteDimension,
     handleDeactivateDimension,
+    removeTagFromAppointments,
 
     // Actions Spécifiques
     handleDeleteAppointmentConfirm,

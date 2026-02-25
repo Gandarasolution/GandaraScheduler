@@ -37,6 +37,7 @@ interface CalendarModalsProps {
     handleDeleteDimension?: (dimensionId: number, forceDelete?: boolean) => any;
     handleDeactivateDimension?: (dimensionId: number) => any;
     setDeleteConfirmData?: (data: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null) => void;
+    removeTagFromAppointments?: (tagId: number) => void;
     
     // Repeat Handlers
     setRepeatData: (data: RepeatData | null) => void;
@@ -379,6 +380,7 @@ export const CalendarModals = memo(({
             onDirtyChange={setIsFormDirty}
             handleAddDimension={handlers.handleAddDimension}
             handleEditDimension={handlers.handleEditDimension}
+            onRemoveTagFromAppointments={handlers.removeTagFromAppointments}
           />
         )}
       </Modal>

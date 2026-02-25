@@ -553,12 +553,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       {/* On met z-10 et relative pour être au-dessus des backgrounds */}
       {/* Masqué si en mode Ghost (chevauchement) */}
       {!isGhost && (
-        <div className="relative z-10 flex items-center gap-2 w-full h-full px-2">        
+        <div className="relative z-10 flex items-center gap-2 w-full h-full">        
           {event?.image ? (
               <img
               src={event?.image.image}
               alt="Icône"
-              className="w-8 h-8 object-cover rounded-full flex-shrink-0"
+              className="w-8 h-8 object-cover flex-shrink-0"
               />
           ): (
               <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>

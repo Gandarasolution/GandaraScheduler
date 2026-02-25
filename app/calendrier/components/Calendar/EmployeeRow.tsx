@@ -274,10 +274,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               const beforeHasTag = beforeApp && (app.priority ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.tag;
               const widthDiff = beforeApp ? Math.abs(app.width - beforeApp.width) : Infinity;
               const isSimilarSize = widthDiff <= CELL_WIDTH; // À une case près
-              const shouldOffsetForTag = beforeHasTag && isSimilarSize;
-
-              console.log('shouldOffsetForTag:', shouldOffsetForTag, 'beforeHasTag:', beforeHasTag, 'isSimilarSize:', isSimilarSize);
-              
+              const shouldOffsetForTag = beforeHasTag && isSimilarSize;              
               
               // Position verticale forcée (superposition)
               // Si l'événement est dans un groupe non étendu, on utilise la position du premier rendez-vous
