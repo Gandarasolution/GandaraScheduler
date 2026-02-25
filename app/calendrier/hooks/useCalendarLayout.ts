@@ -49,7 +49,7 @@ export const useCalendarLayout = ({
           });
       }
 
-      const calculatedHeight = (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + (tagPlacement === 'fixed' ? 18 : 10);
+      const calculatedHeight = maxOverallOverlap > 0 ? (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + (tagPlacement === 'fixed' ? 18 : 10) : CELL_HEIGHT;
 
       return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
     });

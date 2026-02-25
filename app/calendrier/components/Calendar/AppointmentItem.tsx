@@ -589,7 +589,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
 
       {/* Étiquette/Tag sous forme d'indicateur en bas à droite */}
-      {appointment.tag && (
+      {appointment.tag && !isGhost && (
         <AppointmentTag 
           tagName={appointment?.tag.name}
           tagShortName={appointment?.tag.shortName}

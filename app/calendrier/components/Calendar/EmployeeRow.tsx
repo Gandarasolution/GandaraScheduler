@@ -210,6 +210,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
   const isInactive = employee.actif === false;
   const gridOpacity = isInactive ? 0.4 : 0.9;
+  const STEP_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
 
   return (
     <div 
@@ -225,10 +226,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         backgroundColor: 'transparent',
         backgroundImage: `repeating-linear-gradient(
           to right,
-          rgba(229,231,235,${gridOpacity}) 0px,
-          rgba(229,231,235,${gridOpacity}) 1px,
-          transparent 1px,
-          transparent ${isFullDay ? CELL_WIDTH : CELL_WIDTH / 2}px
+          transparent 0px,
+          transparent ${STEP_WIDTH - 1}px, /* L'espace vide prend presque toute la largeur */
+          rgba(229,231,235,${gridOpacity}) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
+          rgba(229,231,235,${gridOpacity}) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
         )`
       }}
     >
@@ -270,7 +271,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               const isGhost = !isExpanded && (app.priority ?? 0) !== 0;
               
               const beforeApp = index > 0 ? group.apps[index - 1] : null;
-              const beforeHasTag = beforeApp && (beforeApp.priority ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.tag;
+              const beforeHasTag = beforeApp && (app.priority ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.tag;
               const widthDiff = beforeApp ? Math.abs(app.width - beforeApp.width) : Infinity;
               const isSimilarSize = widthDiff <= CELL_WIDTH; // À une case près
               const shouldOffsetForTag = beforeHasTag && isSimilarSize;
