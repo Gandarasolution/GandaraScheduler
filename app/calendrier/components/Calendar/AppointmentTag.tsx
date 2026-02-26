@@ -90,30 +90,47 @@ const AppointmentTag: React.FC<AppointmentTagProps> = ({
 
   // Mode hover : comportement par défaut avec animation
   return (
-    <div className="absolute right-1 bottom-1 z-30">
+    <div className="absolute right-1 bottom-0 z-30">
       <div 
-        className={`flex items-center shadow-md overflow-hidden transition-all duration-300 ease-out ${
-          isHovered && !isResizing ? `px-2 py-1` : 'px-0 py-0'
-        }`}
+        className="flex items-center gap-1 overflow-hidden transition-all duration-300 ease-in-out"
         style={{
-          backgroundColor: isHovered ? color : textColor,
-          borderRadius: isHovered ? '6px' : '50%',
-          width: isHovered ? 'auto' : `${indicatorSize}px`,
-          height: isHovered ? 'auto' : `${indicatorSize}px`,
-          minHeight: isHovered ? '20px' : `${indicatorSize}px`,
-          maxWidth: isHovered ? `${maxBadgeWidth}px` : `${indicatorSize}px`,
-          opacity: isSmallAppointment && !isHovered ? 0.7 : 1,
+          backgroundColor: isHovered ? color : 'transparent',
+          borderRadius: '6px',
+          paddingLeft: isHovered ? '8px' : '0px',
+          paddingRight: isHovered ? '8px' : '0px',
+          paddingTop: isHovered ? '4px' : '0px',
+          paddingBottom: isHovered ? '4px' : '0px',
+          minHeight: isHovered ? '24px' : 'auto',
+          maxWidth: isHovered ? `${maxBadgeWidth}px` : '16px',
         }}
-        title={`Tag: ${tagName}${tagShortName ? ` (${tagShortName})` : ''}`}
+        title={`${tagName}${tagShortName ? ` (${tagShortName})` : ''}`}
       >
+        {/* Icône étiquette - visible uniquement quand non hover */}
+        <svg 
+          width="16" 
+          height="16" 
+          viewBox="0 0 16 16" 
+          fill="currentColor" 
+          className="transition-all duration-300 ease-in-out flex-shrink-0"
+          style={{
+            display: isHovered ? 'none' : 'block',
+            width: isHovered ? '0px' : '16px',
+            color: textColor,
+          }}
+        >
+          <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+        </svg>
+
+        {/* Texte de l'étiquette - visible uniquement au hover */}
         <span 
-          className={`font-bold uppercase whitespace-nowrap transition-all duration-300 ${
-            isHovered ? 'opacity-100' : 'opacity-0'
-          }`}
+          className="font-bold uppercase whitespace-nowrap transition-all duration-300 ease-in-out"
           style={{ 
             fontSize: isSmallAppointment ? '8px' : isMediumAppointment ? '8.5px' : '9px',
             color: textColor,
-            textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+            textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+            opacity: isHovered ? 1 : 0,
+            width: isHovered ? 'auto' : '0px',
+            overflow: 'hidden',
           }}
         >
           {isSmallAppointment && isHovered ? displayText.slice(0, 6) : displayText}
