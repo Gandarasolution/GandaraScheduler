@@ -3,7 +3,7 @@ import { Appointment, Item, User } from '../../types';
 import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
-import { countWeekends } from '../../utils/dates';
+import { calculateWidthPx, calculateLeftPx } from '../../hooks';
 import { isSameDay } from 'date-fns';
 
 interface EmployeeRowProps {
@@ -72,26 +72,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       .map((app) => {
         const start = app.startDate;
         const end = app.endDate;
-        const msDiffStart = Math.max(0, start - timelineStart);
-        const totalDaysDiff = msDiffStart / DAY_MS;
 
-        let weekendsToRemove = 0;
-        if (!isDisplayWeekend) {
-          weekendsToRemove = countWeekends(timelineStart, start);
-        }
-
-        const visualDaysOffset = totalDaysDiff - weekendsToRemove;
-        const left = visualDaysOffset * CELL_WIDTH;
-
-        const durationMs = end - start;
-        const durationDays = durationMs / DAY_MS;
-
-        let weekendsInDuration = 0;
-        if (!isDisplayWeekend) {
-          weekendsInDuration = countWeekends(start, end);
-        }
-        const visualDurationDays = Math.max(0.1, durationDays - weekendsInDuration);
-        const width = visualDurationDays * CELL_WIDTH;        
+        // Utilisation des fonctions utilitaires pour les calculs de position
+        const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
+        const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
         const topPx = (app.top * CELL_HEIGHT) + (2 * app.top);
 
         return { ...app, left, width, topPx } as Appointment & {
@@ -101,7 +85,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           topPx: number;
         };
       });
-  }, [appointments, employee.id, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart]);
+  }, [appointments, employee.id, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart, isFullDay]);
 
   const overlappingGroups = useMemo(() => {
     if (!positionedAppointments.length) return [] as { key: number; apps: (typeof positionedAppointments) }[];

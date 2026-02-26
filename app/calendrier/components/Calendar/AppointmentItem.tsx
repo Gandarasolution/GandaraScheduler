@@ -6,11 +6,11 @@
 "use client";
 import React, { useState, useRef, memo, useEffect, useCallback, useMemo } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
-import { Appointment, HalfDayInterval, Item } from '../../types';
 import { isWeekend } from 'date-fns';
+import { Appointment, HalfDayInterval, Item } from '../../types';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS, HOUR_MS } from '../../utils/constants';
 import AppointmentTag from './AppointmentTag';
-import { countWeekends } from '../../utils/dates';
+import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
 
 interface AppointmentItemProps {
   appointment: Appointment;
@@ -62,23 +62,38 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   onResize,
   handleContextMenu,
 }) => {
-
-  //console.log(tagPlacement);
-  
-  const [isResizingLeft, setIsResizingLeft] = useState(false);
-  const [isResizingRight, setIsResizingRight] = useState(false);
-  const [dragStart, setDragStart] = useState<number>(appointment.startDate);
-  const [dragEnd, setDragEnd] = useState<number>(appointment.endDate);
-  
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isHovered, setIsHovered] = useState(false);
-  const dragStartRef = useRef<number>(appointment.startDate);
-  const dragEndRef = useRef<number>(appointment.endDate);
-  const initialX = useRef(0);
-  const [ghostWidthPx, setGhostWidthPx] = useState<{widthGhost: number, widthNoGhost: number}[]>([{widthGhost: 0, widthNoGhost: 0}]);
 
   const startDate = React.useMemo(() => appointment.startDate, [appointment.startDate]);
   const endDate = React.useMemo(() => appointment.endDate, [appointment.endDate]);
+
+  // Hook de gestion du resize
+  const {
+    isResizingLeft,
+    isResizingRight,
+    dragStart,
+    dragEnd,
+    handleMouseDown,
+  } = useAppointmentResize({
+    appointmentId: appointment.id,
+    startDate,
+    endDate,
+    priority: appointment.priority ?? 0,
+    isFullDay,
+    isDisplayWeekend: isDisplayWeekend ?? false,
+    onResize,
+  });
+
+  // Hook de calcul des segments Ghost
+  const ghostSegments = useGhostSegments({
+    isGhost: isGhost ?? false,
+    ghostInterval,
+    dragStart,
+    dragEnd,
+    isFullDay,
+    isDisplayWeekend: isDisplayWeekend ?? false,
+  });
 
   // Calculer la durée du rendez-vous en jours
   const appointmentDurationDays = React.useMemo(() => {
@@ -87,68 +102,15 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   }, [startDate, endDate]);
 
   const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
-  const INTERVAL_DURATION = isFullDay 
-    ? (DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 60 * 60 * 1000 
-    : (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * 60 * 60 * 1000;
-    
-  // --- Fonctions utilitaires ---
-  const getIntervalCount = useCallback((start: number, end: number) => {
-    const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-    let count = 0;
-    let currentTs = start;
-    const forward = end >= start;
-    
-    while (forward ? currentTs < end : currentTs > end) {
-      if (isDisplayWeekend || !isWeekend(currentTs)) {
-        count++;
-      }
-      const currentHour = new Date(currentTs).getHours();
-      let idx = intervals.findIndex(interval => 
-        currentHour >= interval.startHour && currentHour < interval.endHour
-      );
-      if (idx === -1) idx = 0;
 
-      if (forward) {
-        idx++;
-        if (idx >= intervals.length) {
-          idx = 0;
-          currentTs = new Date(currentTs + DAY_MS).setHours(intervals[idx].startHour, 0, 0, 0);
-        } else {
-          currentTs = new Date(currentTs).setHours(intervals[idx].startHour, 0, 0, 0);
-        }
-      } else {
-        idx--;
-        if (idx < 0) {
-          idx = intervals.length - 1;
-          currentTs = new Date(currentTs - DAY_MS).setHours(intervals[idx].startHour, 0, 0, 0);
-        } else {
-          currentTs = new Date(currentTs).setHours(intervals[idx].startHour, 0, 0, 0);
-        }
-      }
-    }
-    return forward ? Math.max(0, count) : -Math.max(0, count);
-  }, [isDisplayWeekend, isFullDay]);
-
-  const intervalCount = getIntervalCount(dragStart, dragEnd);
-  const isSmallAppointment = intervalCount <= 1;
-  const appointmentWidthPx = intervalCount * INTERVAL_WIDTH;
-  const hasSpaceForBothHandles = appointmentWidthPx >= 60;
-
-  const offsetIntervals = isDisplayWeekend 
-    ? Math.floor((dragStart - startDate) / INTERVAL_DURATION)
-    : getIntervalCount(startDate, dragStart);
-
+  // Calcul de la largeur et position avec les fonctions utilitaires
   const [computedWidth, setComputedWidth] = useState<string>(
     absoluteWidth !== undefined 
     ? `${absoluteWidth}px` 
-    : isMobile 
-      ? (intervalCount >= 2 && !isFullDay ? '200%' : '100%') 
-      : `${intervalCount * INTERVAL_WIDTH}px`
+    : `${INTERVAL_WIDTH}px`
   );
-  const [computedLeft, setComputedLeft] = useState<number>(absoluteLeft !== undefined ? absoluteLeft : offsetIntervals * INTERVAL_WIDTH);
+  const [computedLeft, setComputedLeft] = useState<number>(absoluteLeft ?? 0);
   
-  
-
   // --- Drag & Drop ---
   const [{ isDragging }, drag] = useDrag({
     type: 'appointment',
@@ -167,220 +129,41 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   const isAnyDragging = useDragLayer((monitor) => monitor.isDragging());
   const computedTop = `${absoluteTop}px`;
-  // --- Handlers (Resize/Drag) ---
+  
+  // --- Handlers (Drag) ---
   const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setDragOffset(e.clientX - rect.left);
   }, []);
 
-  const setDragStartSafe = useCallback((date: number) => {
-    dragStartRef.current = date;
-    setDragStart(date);
-  }, []);
+  // Calcul de la largeur et position lors du resize
+  useEffect(() => {
+    // Calcul de la largeur totale
+    const widthPx = calculateWidthPx(dragStart, dragEnd, isFullDay, isDisplayWeekend ?? false);
+    setComputedWidth(widthPx + 'px');
 
-  const setDragEndSafe = useCallback((date: number) => {
-    dragEndRef.current = date;
-    setDragEnd(date);
-  }, []);
-
-  const addInterval = useCallback((date: number, n: number, intervals: HalfDayInterval[]): number => {      
-      let currentTs = date;
-      let currentHour = new Date(currentTs).getHours();
-      let idx = intervals.findIndex(interval => 
-          currentHour >= interval.startHour && currentHour < interval.endHour
-      );
-      if (idx === -1) idx = 0;
-      const step = n >= 0 ? 1 : -1;
-      let remaining = Math.abs(n);
-
-      while (remaining > 0) {
-          idx += step;
-          if (idx > 0 ) {
-              idx = 0;
-              currentTs += isFullDay ? DAY_MS : DAY_MS/2; 
-          } else if (idx <= 0) {
-              idx = intervals.length - 1;
-              currentTs -= isFullDay ? DAY_MS : DAY_MS/2; 
-          }
-          if (!isDisplayWeekend) {
-              while (isWeekend(currentTs)) {
-                  currentTs += (step * (isFullDay ? DAY_MS : DAY_MS/2));
-              }
-          }
-          remaining--;
-      }
-      return currentTs;
-  }, [isDisplayWeekend, isFullDay]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent, handleType: 'left' | 'right') => {
-    e.stopPropagation();
-    initialX.current = e.clientX;
-    setDragStart(startDate);
-    setDragEnd(endDate);
-    if (handleType === 'left') setIsResizingLeft(true);
-    else setIsResizingRight(true);
-  }, [startDate, endDate]);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    e.preventDefault();
-    if (!isResizingLeft && !isResizingRight) return;
-    
-    const currentDx = (e.clientX - initialX.current) ;
-    let intervalsMoved = Math.round(currentDx / INTERVAL_WIDTH);
-    const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-
+    // Calcul du Left en cas de resize gauche
     if (isResizingLeft) {
-      let newStartDate = addInterval(startDate, intervalsMoved, intervals);
-      if (newStartDate > dragEndRef.current) {
-        newStartDate = addInterval(dragEndRef.current, 0, intervals);
-      }
-      setDragStartSafe(newStartDate);
+      const leftPx = calculateLeftPx(dragStart, timelineStart, isFullDay, isDisplayWeekend ?? false);
+      setComputedLeft(leftPx);
     }
-    if (isResizingRight) {
-      let newEndDate = addInterval(endDate, intervalsMoved, intervals);
-      if (newEndDate < dragStartRef.current) {
-        newEndDate = addInterval(dragStartRef.current, 1, intervals);
-      }
-      setDragEndSafe(new Date(newEndDate).setHours(new Date(newEndDate).getHours() - 1, 59, 59, 999));
-    }    
-  }, [isResizingLeft, isResizingRight, startDate, endDate, isFullDay, addInterval, setDragStartSafe, setDragEndSafe, INTERVAL_WIDTH]);
-
-  const handleMouseUp = useCallback(() => {
-    
-    if (isResizingRight) {
-      onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'right', (appointment.priority ?? 0));
-    }
-    if (isResizingLeft) {      
-      onResize && onResize(appointment.id, dragStartRef.current, dragEndRef.current, 'left', (appointment.priority ?? 0));
-    }
-    setIsResizingLeft(false);
-    setIsResizingRight(false);
-  }, [isResizingLeft, isResizingRight, onResize, appointment.id]);
-
-  useEffect(() => {
-    if (isResizingLeft || isResizingRight) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizingLeft, isResizingRight, handleMouseMove, handleMouseUp]);
-
-  useEffect(() => {
-    setDragStartSafe(startDate);
-    setDragEndSafe(endDate);
-  }, [startDate, endDate, setDragStartSafe, setDragEndSafe]);
-
-  useEffect(() => {
-    // 1. Calcul de la largeur totale
-    const durationMs = dragEndRef.current - dragStartRef.current;
-    const durationInterval = Math.round(durationMs / (isFullDay ? DAY_MS : DAY_MS / 2)); 
-    let NbDayWeekends = 0;
-    if (!isDisplayWeekend) {
-      NbDayWeekends = countWeekends(dragStartRef.current, dragEndRef.current);
-    }
-    const visualDurationDays = Math.max(0.1, durationInterval - (NbDayWeekends * (isFullDay ? 1 : 2)));
-    setComputedWidth((visualDurationDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2)) + 'px');
-
-    // 2. Calcul de la largeur de la zone Ghost (si activée)
-    if (isGhost && ghostInterval) {
-        const intervals = Array.isArray(ghostInterval) ? ghostInterval : [ghostInterval];
-        // Trier les intervalles par date de début
-        const sortedIntervals = intervals
-            .filter(gi => gi && gi.end > dragStart && gi.start < dragEnd)
-            .sort((a, b) => a.start - b.start);
-        
-        const ghostWidths: {widthGhost: number, widthNoGhost: number}[] = [];
-        let currentPos = dragStart;
-        
-        sortedIntervals.forEach((gi, index) => {
-            const overlapStart = Math.max(gi.start, dragStart);
-            const overlapEnd = Math.min(gi.end, dragEnd);
-            
-            // Zone visible AVANT le chevauchement (si il y a un espace)
-            if (overlapStart > currentPos) {
-                const visibleDurationMs = overlapStart - currentPos;
-                const visibleIntervals = Math.round(visibleDurationMs / (isFullDay ? DAY_MS : DAY_MS / 2));
-                
-                let visibleWeekends = 0;
-                if (!isDisplayWeekend) {
-                    visibleWeekends = countWeekends(currentPos, overlapStart);
-                }
-                
-                const visualVisibleDays = Math.max(0, visibleIntervals - (visibleWeekends * (isFullDay ? 1 : 2)));
-                const visibleWidthPx = visualVisibleDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2);
-                
-                if (visibleWidthPx > 0) {
-                    ghostWidths.push({ widthGhost: 0, widthNoGhost: visibleWidthPx });
-                }
-            }
-            
-            // Zone hachurée (chevauchement)
-            const ghostDurationMs = overlapEnd - overlapStart;
-            const ghostIntervals = Math.round(ghostDurationMs / (isFullDay ? DAY_MS : DAY_MS / 2));
-            
-            let ghostWeekends = 0;
-            if (!isDisplayWeekend) {
-                ghostWeekends = countWeekends(overlapStart, overlapEnd);
-            }
-            
-            const visualGhostDays = Math.max(0, ghostIntervals - (ghostWeekends * (isFullDay ? 1 : 2)));
-            const ghostWidthPx = visualGhostDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2);
-            
-            if (ghostWidthPx > 0) {
-                ghostWidths.push({ widthGhost: ghostWidthPx, widthNoGhost: 0 });
-            }
-            
-            currentPos = overlapEnd;
-        });
-        
-        // Zone visible APRÈS le dernier chevauchement
-        if (currentPos < dragEnd) {
-            const visibleDurationMs = dragEnd - currentPos;
-            const visibleIntervals = Math.round(visibleDurationMs / (isFullDay ? DAY_MS : DAY_MS / 2));
-            
-            let visibleWeekends = 0;
-            if (!isDisplayWeekend) {
-                visibleWeekends = countWeekends(currentPos, dragEnd);
-            }
-            
-            const visualVisibleDays = Math.max(0, visibleIntervals - (visibleWeekends * (isFullDay ? 1 : 2)));
-            const visibleWidthPx = visualVisibleDays * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2);
-            
-            if (visibleWidthPx > 0) {
-                ghostWidths.push({ widthGhost: 0, widthNoGhost: visibleWidthPx });
-            }
-        }
-        
-        setGhostWidthPx(ghostWidths.length > 0 ? ghostWidths : [{widthGhost: 0, widthNoGhost: 0}]);
-    } else {
-        setGhostWidthPx([{widthGhost: 0, widthNoGhost: 0}]);
-    }
-
-    // 3. Calcul du Left en cas de resize
-    if (isResizingLeft) {
-      const startFromTimelineOrigin = dragStartRef.current - timelineStart;
-      const intervalFromOrigin = Math.round(startFromTimelineOrigin / (isFullDay ? DAY_MS : (DAY_MS / 2)));
-      let weekendsToRemove = 0;
-      if (!isDisplayWeekend) {
-        weekendsToRemove = countWeekends(timelineStart, dragStartRef.current);
-      }
-      const visualInstervalsOffset = intervalFromOrigin - (weekendsToRemove * (isFullDay ? 1 : 2));
-      const newLeftPixel = Math.max(0, visualInstervalsOffset * (isFullDay ? CELL_WIDTH : CELL_WIDTH / 2));
-      setComputedLeft(newLeftPixel);
-    }
-  }, [absoluteWidth, isMobile, intervalCount, INTERVAL_WIDTH, isResizingLeft, timelineStart, isFullDay, isDisplayWeekend, isGhost, ghostInterval, dragStart, dragEnd]); 
+  }, [dragStart, dragEnd, isResizingLeft, timelineStart, isFullDay, isDisplayWeekend]); 
   
+  // Synchroniser la position left avec les props
   useEffect(() => {
     if (isResizingLeft) return; 
     if (absoluteLeft !== undefined) {
       setComputedLeft(absoluteLeft);
-    } else {
-      setComputedLeft(offsetIntervals * INTERVAL_WIDTH);
     }
-  }, [absoluteLeft, offsetIntervals, isResizingLeft, INTERVAL_WIDTH]);
+  }, [absoluteLeft, isResizingLeft]);
+
+  // Calcul de l'appointmentWidthPx pour les handles
+  const appointmentWidthPx = useMemo(() => {
+    return parseFloat(computedWidth) || INTERVAL_WIDTH;
+  }, [computedWidth, INTERVAL_WIDTH]);
+
+  const hasSpaceForBothHandles = appointmentWidthPx >= 60;
+  const isSmallAppointment = appointmentWidthPx < (INTERVAL_WIDTH * 1.5);
 
   // --- Styles ---
   
@@ -430,7 +213,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
          const rect = e.currentTarget.getBoundingClientRect();
          const mouseX = e.clientX - rect.left;
          const intervalIndex = Math.floor(mouseX / INTERVAL_WIDTH);
-         const totalIntervals =getIntervalCount(startDate, endDate);
+         const totalIntervals = getIntervalCount(startDate, endDate, isFullDay, isDisplayWeekend ?? false);
          const clampedIntervalIndex = Math.max(0, Math.min(intervalIndex, totalIntervals - 1));
          
          const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
@@ -486,10 +269,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       */}
       {isGhost && (
           <>
-            {ghostWidthPx.map((segment, index) => {
-              const leftOffset = ghostWidthPx.slice(0, index).reduce((acc, g) => acc + g.widthGhost + g.widthNoGhost, 0);
+            {ghostSegments.map((segment, index) => {
+              const leftOffset = ghostSegments.slice(0, index).reduce((acc, g) => acc + g.widthGhost + g.widthNoGhost, 0);
               const isFirst = index === 0;
-              const isLast = index === ghostWidthPx.length - 1;
+              const isLast = index === ghostSegments.length - 1;
               
               return (
                 <React.Fragment key={index}>

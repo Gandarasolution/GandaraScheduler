@@ -30,3 +30,9 @@ export { useCalendarView } from './useCalendarView';
 export { useDataLayer } from './useDataLayer';
 export { useTimeline } from './useTimeline';
 
+// Hooks de positionnement et rendering des rendez-vous
+export { useAppointmentPositioning, calculateWidthPx, calculateLeftPx, getIntervalCount } from './useAppointmentPositioning';
+export { useGhostSegments } from './useGhostSegments';
+export type { GhostSegment } from './useGhostSegments';
+export { useAppointmentResize } from './useAppointmentResize';
+
