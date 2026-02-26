@@ -35,13 +35,16 @@ const DataTableFrame = lazy(() => import('@/app/calendrier/components').then(mod
 const ManualEventsManager = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.ManualEventsManager })));
 
 // --- CUSTOM HOOKS ---
-import { useCalendarView } from "../hooks/useCalendarView";
-import { useTimeline } from "../hooks/useTimeline";
-import { useDataLayer } from "../hooks/useDataLayer";
-import { useAppointmentLogic } from "../hooks/useAppointmentLogic";
-import { useInteraction } from "../hooks/useInteraction";
+import { 
+  useCalendarView, 
+  useTimeline,
+  useDataLayer,
+  useAppointmentLogic,
+  useInteraction,
+  useNotifications
+ } from "@/app/calendrier/hooks";
+
 import { useTheme } from '../utils/themeManager';
-import { useNotifications } from "../hooks";
 
 // --- CONTEXTES & SERVICES ---
 import { notificationService } from "../services";

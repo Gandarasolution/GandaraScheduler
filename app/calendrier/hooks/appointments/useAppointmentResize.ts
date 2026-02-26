@@ -10,8 +10,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { isWeekend } from 'date-fns';
-import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS } from '../utils/constants';
-import { HalfDayInterval } from '../types';
+import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
+import { HalfDayInterval } from '../../types';
 
 interface UseAppointmentResizeParams {
   appointmentId: number;

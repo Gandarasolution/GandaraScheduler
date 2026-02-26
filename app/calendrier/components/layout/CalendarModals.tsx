@@ -11,7 +11,7 @@ import {
 } from '@/app/calendrier/components';
 import { Appointment, Item, CalendarConfig, Image, User } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
-import { RepeatData } from '../../hooks/useAppointmentLogic';
+import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
 
 interface CalendarModalsProps {

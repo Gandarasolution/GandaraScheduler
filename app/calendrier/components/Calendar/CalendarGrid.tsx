@@ -22,8 +22,9 @@
 "use client";
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Appointment, HalfDayInterval, Groupe, CalendarConfig, Item, User } from '../../types';
-import { useCalendarLayout } from '../../hooks/useCalendarLayout';
-import { useCalendarInteractions } from '../../hooks/useCalendarInteractions';
+import { 
+  useCalendarInteractions
+ } from '@/app/calendrier/hooks';
 import { DesktopCalendarGrid, MobileCalendar } from '@/app/calendrier/components';
 import { CELL_WIDTH } from '../../utils/constants';
 

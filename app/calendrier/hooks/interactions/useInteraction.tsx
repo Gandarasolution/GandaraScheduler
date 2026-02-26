@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Appointment, User, Item, type Image } from '../types';
+import { Appointment, User, type Image } from '@/app/calendrier';
 
 // Interface complète des props
 interface InteractionProps {

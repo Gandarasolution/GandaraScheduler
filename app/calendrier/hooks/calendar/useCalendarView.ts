@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { CalendarConfig, User } from '../types'; // Assumed type
-import { ActiveFilters } from '../utils/searchAndFilterUtils';
-import { useCalendarConfig } from './useCalendarConfig'; // Le hook existant
-import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../utils/constants';
+import { CalendarConfig, User } from '../../types'; // Assumed type
+import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
+import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
+import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
 
 export const useCalendarView = (employeesRef: any, user: User) => {
   // --- Préférences persistantes (localStorage) ---

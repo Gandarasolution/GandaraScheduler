@@ -11,9 +11,9 @@
 
 import { useMemo, useCallback } from 'react';
 import { isWeekend } from 'date-fns';
-import { CELL_WIDTH, CELL_HEIGHT, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS } from '../utils/constants';
-import { HalfDayInterval } from '../types';
-import { countWeekends } from '../utils/dates';
+import { CELL_WIDTH, CELL_HEIGHT, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
+import { HalfDayInterval } from '../../types';
+import { countWeekends } from '../../utils/dates';
 
 interface UseAppointmentPositioningParams {
   startDate: number;

@@ -15,8 +15,10 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, Clock, Users } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { User } from '../../../types';
-import { useDebounce } from '../../../hooks';
-import { useRecentEmployees } from '../../../hooks/useRecentEmployees';
+import { 
+  useDebounce,
+  useRecentEmployees
+} from '@/app/calendrier/hooks';
 
 interface EmployeeSelectorProps {
   employees: User[];

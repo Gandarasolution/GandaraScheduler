@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { addHours, eachDayOfInterval } from "date-fns";
-import { Appointment, User, HistoryAction, Item } from '../types';
-import { createAppointmentUtils } from '../utils/appointmentUtils';
-import { notificationService } from "../services";
-import { getWorkedDayIntervals, isWeekend } from "../utils/dates";
-import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../utils/constants";
+import { Appointment, User, HistoryAction, Item } from '../../types';
+import { createAppointmentUtils } from '../../utils/appointmentUtils';
+import { notificationService } from "../../services";
+import { getWorkedDayIntervals, isWeekend } from "../../utils/dates";
+import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
 
 // Type pour les données de répétition
 export type RepeatData = {

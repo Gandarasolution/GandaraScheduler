@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Appointment, User, Item, CalendarConfig, Image, UserRole } from '../types';
-import { ActiveFilters, createSearchAndFilterUtils } from '../utils/searchAndFilterUtils';
+import { Appointment, User, Item, CalendarConfig, Image, UserRole } from '../../types';
+import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
 import { 
   getAppointments, 
   getEvenements, 
   initialTeams, 
   getImages
-} from "../../datasource";
-import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../utils/filters";
-import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../utils/constants';
+} from "../../../datasource";
+import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../../utils/filters";
+import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../../utils/constants';
 import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
-import { useCalendarWorker } from './useCalendarWorker';
+import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
 
 
 interface DataLayerProps {

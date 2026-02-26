@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
-import { Appointment, User } from '../types';
-import { CELL_HEIGHT, DAY_MS, ROW_HEIGHT } from '../utils/constants';
+import { Appointment, User } from '@/app/calendrier/types';
+import { CELL_HEIGHT } from '@/app/calendrier/utils/constants';
 
 interface UseCalendarLayoutParams {
   employees: User[];

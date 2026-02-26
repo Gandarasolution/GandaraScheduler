@@ -9,8 +9,8 @@
  */
 
 import { useMemo } from 'react';
-import { CELL_WIDTH, DAY_MS } from '../utils/constants';
-import { countWeekends } from '../utils/dates';
+import { CELL_WIDTH, DAY_MS } from '../../utils/constants';
+import { countWeekends } from '../../utils/dates';
 
 export interface GhostSegment {
   widthGhost: number;
