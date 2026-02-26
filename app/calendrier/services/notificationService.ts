@@ -12,7 +12,7 @@
  * @version 1.0.0
  */
 
-import { Notification } from '../hooks/useNotifications';
+import { Notification } from '../hooks/utils/useNotifications';
 
 export interface NotificationTemplate {
   type: Notification['type'];

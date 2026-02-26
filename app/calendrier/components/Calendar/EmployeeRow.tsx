@@ -3,7 +3,7 @@ import { Appointment, Item, User } from '../../types';
 import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
-import { countWeekends } from '../../utils/dates';
+import { calculateWidthPx, calculateLeftPx } from '../../hooks';
 import { isSameDay } from 'date-fns';
 
 interface EmployeeRowProps {
@@ -14,6 +14,7 @@ interface EmployeeRowProps {
   isFullDay: boolean;
   events: Item[];
   isDisplayWeekend: boolean;
+  tagPlacement?: 'hover' | 'fixed';
   visibleWindowStart: number;
   visibleWindowEnd: number;
   onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
@@ -40,6 +41,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   visibleWindowEnd,
   visibleWindowStart,
   isDisplayWeekend,
+  tagPlacement = 'hover',
   onAppointmentMoved,
   onAppointmentDoubleClick,
   handleContextMenu,
@@ -70,26 +72,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       .map((app) => {
         const start = app.startDate;
         const end = app.endDate;
-        const msDiffStart = Math.max(0, start - timelineStart);
-        const totalDaysDiff = msDiffStart / DAY_MS;
 
-        let weekendsToRemove = 0;
-        if (!isDisplayWeekend) {
-          weekendsToRemove = countWeekends(timelineStart, start);
-        }
-
-        const visualDaysOffset = totalDaysDiff - weekendsToRemove;
-        const left = visualDaysOffset * CELL_WIDTH;
-
-        const durationMs = end - start;
-        const durationDays = durationMs / DAY_MS;
-
-        let weekendsInDuration = 0;
-        if (!isDisplayWeekend) {
-          weekendsInDuration = countWeekends(start, end);
-        }
-        const visualDurationDays = Math.max(0.1, durationDays - weekendsInDuration);
-        const width = visualDurationDays * CELL_WIDTH;        
+        // Utilisation des fonctions utilitaires pour les calculs de position
+        const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
+        const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
         const topPx = (app.top * CELL_HEIGHT) + (2 * app.top);
 
         return { ...app, left, width, topPx } as Appointment & {
@@ -99,7 +85,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           topPx: number;
         };
       });
-  }, [appointments, employee.id, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart]);
+  }, [appointments, employee.id, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart, isFullDay]);
 
   const overlappingGroups = useMemo(() => {
     if (!positionedAppointments.length) return [] as { key: number; apps: (typeof positionedAppointments) }[];
@@ -206,6 +192,9 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   }, [dayInTimeline, employee.id, isFullDay, onSelectAppointment, onSelectCell]);
 
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
+  const isInactive = employee.actif === false;
+  const gridOpacity = isInactive ? 0.4 : 0.9;
+  const STEP_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
 
   return (
     <div 
@@ -221,10 +210,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         backgroundColor: 'transparent',
         backgroundImage: `repeating-linear-gradient(
           to right,
-          rgba(229,231,235,0.9) 0px,
-          rgba(229,231,235,0.9) 1px,
-          transparent 1px,
-          transparent ${isFullDay ? CELL_WIDTH : CELL_WIDTH / 2}px
+          transparent 0px,
+          transparent ${STEP_WIDTH - 1}px, /* L'espace vide prend presque toute la largeur */
+          rgba(229,231,235,${gridOpacity}) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
+          rgba(229,231,235,${gridOpacity}) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
         )`
       }}
     >
@@ -265,10 +254,18 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
               const isGhost = !isExpanded && (app.priority ?? 0) !== 0;
               
+              const beforeApp = index > 0 ? group.apps[index - 1] : null;
+              const beforeHasTag = beforeApp && (app.priority ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.tag;
+              const widthDiff = beforeApp ? Math.abs(app.width - beforeApp.width) : Infinity;
+              const isSimilarSize = widthDiff <= CELL_WIDTH; // À une case près
+              const shouldOffsetForTag = beforeHasTag && isSimilarSize;              
+              
               // Position verticale forcée (superposition)
               // Si l'événement est dans un groupe non étendu, on utilise la position du premier rendez-vous
-              // Sinon, on utilise sa propre position
-              const forcedTopPx = !isExpanded ? baseTopPx : app.topPx;
+              // Sinon, on utilise sa propre position (+ décalage si l'événement précédent a un tag et taille similaire)
+              const forcedTopPx = !isExpanded ? baseTopPx : shouldOffsetForTag ? app.topPx + 18 : app.topPx;
+
+
 
               // Calcul des intervalles de chevauchement avec les RDV de priorité 0
               // Pour chaque RDV de priorité 0, on calcule l'intersection temporelle
@@ -291,9 +288,11 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 <AppointmentItem
                   key={`${app.id}-${app.startDate}-${app.endDate}-${index}`}
                   appointment={app as Appointment}
+                  isInactive={isInactive}
                   isFullDay={isFullDay}
                   isMobile={false}
                   isDisplayWeekend={isDisplayWeekend}
+                  tagPlacement={tagPlacement}
                   event={event as Item}
                   timelineStart={timelineStart}
                   chargeeAffaire={(event && event.type === 'chantier' ? event.chargeAffaire : '') || ''}
@@ -372,6 +371,7 @@ export default memo(EmployeeRow, (prev, next) => {
       prev.isFullDay !== next.isFullDay ||
       prev.events !== next.events ||
       prev.isDisplayWeekend !== next.isDisplayWeekend ||
+      prev.tagPlacement !== next.tagPlacement ||
       prev.todayIndex !== next.todayIndex ||
       prev.isOverlapExpanded !== next.isOverlapExpanded ||
       prev.visibleWindowStart !== next.visibleWindowStart ||

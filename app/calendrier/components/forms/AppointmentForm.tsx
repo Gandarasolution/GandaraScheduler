@@ -16,11 +16,14 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect } from 'react';
-import {Appointment, HalfDayInterval, Item, Tags, CommonPaieAttributs, User } from '../../types';
+import {Appointment, HalfDayInterval, Item, Tags, CommonPaieAttributs, User, SocialItemPermission } from '../../types';
 import { format, startOfDay, isSameDay, isSameYear, isSameMonth } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
+import { getSocialItemPermission, setSocialItemPermission } from '@/app/datasource';
 
 import { AppointmentItem } from '../index';
+import TagCreationForm from './TagCreationForm';
+import DeleteModal from '../modals/DeleteModal';
 
 const MAX_LENGTH_TAG = 20; // Longueur maximale pour les étiquettes
 const MAX_LENGTH_SHORT_TAG = 4; // Longueur maximale pour les versions courtes
@@ -54,6 +57,8 @@ interface AppointmentFormProps {
   isMobile?: boolean;
   /** Mode d'édition de ressource: 'create' pour créer, 'edit' pour modifier, null pour un rendez-vous normal */
   resourceEditMode?: 'create' | 'edit' | null;
+    /** Placement des étiquettes : 'hover' pour les afficher au survol, 'fixed' pour les afficher en permanence */
+  tagPlacement?: 'hover' | 'fixed';
   /** Callback appelé lors de la sauvegarde */
   onSave: (
     appointment: Appointment,
@@ -68,6 +73,8 @@ interface AppointmentFormProps {
   onDirtyChange?: (isDirty: boolean) => void;
   handleAddDimension: (dimension: Item) => void;
   handleEditDimension: (dimension: Item) => void;
+  /** Callback pour supprimer une étiquette de tous les rendez-vous associés */
+  onRemoveTagFromAppointments?: (tagId: number) => void;
 }
 
 
@@ -105,6 +112,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   appointment,
   item,
   items,
+  tagPlacement = 'hover',
   employees,
   HALF_DAY_INTERVALS,
   isFullDay,
@@ -118,6 +126,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   handleEditDimension,
   isMobile,
   resourceEditMode = null,
+  onRemoveTagFromAppointments,
 }) => {
 
   // Variables dérivées pour améliorer la lisibilité
@@ -197,6 +206,59 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    */
   const [newTag, setNewTag] = useState<Tags>({id: 0, name: '', shortName: ''});
   const [showTagCreation, setShowTagCreation] = useState(false);
+  const [tagDuplicateError, setTagDuplicateError] = useState(false);
+  const [deleteTagModal, setDeleteTagModal] = useState<{ isOpen: boolean; tagId: number | null; tagName: string; affectedCount: number }>({ 
+    isOpen: false, 
+    tagId: null, 
+    tagName: '',
+    affectedCount: 0 
+  });
+
+  /**
+   * États pour la gestion des permissions par employé (rubriques sociales uniquement)
+   */
+  const [employeePermissions, setEmployeePermissions] = useState<Map<number, SocialItemPermission>>(new Map());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isPermissionsPanelOpen, setIsPermissionsPanelOpen] = useState(false);
+
+  // Charger les permissions existantes au montage ou lors du changement d'item
+  useEffect(() => {
+    if (isEditingResource && formDataItemType.id && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
+      // Charger les permissions existantes pour cet item
+      const permissions = new Map<number, SocialItemPermission>();
+      employees.forEach(emp => {
+        const perm = getSocialItemPermission(emp.id, formDataItemType.id);
+        if (perm) {
+          permissions.set(emp.id, perm);
+        } else {
+          // Permissions par défaut
+          permissions.set(emp.id, {
+            userId: emp.id,
+            itemId: formDataItemType.id,
+            canView: true,
+            canCreate: true,
+            canEdit: true,
+            canDelete: true,
+          });
+        }
+      });
+      setEmployeePermissions(permissions);
+    } else if (isCreatingResource && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
+      // Pour la création, initialiser avec tous les droits
+      const permissions = new Map<number, SocialItemPermission>();
+      employees.forEach(emp => {
+        permissions.set(emp.id, {
+          userId: emp.id,
+          itemId: formDataItemType.id || -1,
+          canView: true,
+          canCreate: true,
+          canEdit: true,
+          canDelete: true,
+        });
+      });
+      setEmployeePermissions(permissions);
+    }
+  }, [isEditingResource, isCreatingResource, formDataItemType.id, formDataItemType.type, employees]);
 
   /**
    * Détection des changements non sauvegardés
@@ -305,14 +367,35 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         setCodeValidationError(true);
         return;
       }
+      
+      const newItemId = Date.now();
+      
+      // Sauvegarde des permissions pour les rubriques sociales et événements manuels
+      if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
+        employeePermissions.forEach((perm) => {
+          setSocialItemPermission({
+            ...perm,
+            itemId: newItemId, // Utiliser le nouvel ID
+          });
+        });
+      }
+      
       // Ajout du nouvel événement
-      handleAddDimension({...formDataItemType, id: Date.now()});
+      handleAddDimension({...formDataItemType, id: newItemId});
       return;
     }
     
     // Gestion de la modification d'une ressource existante
     if (isEditingResource) {
       console.log('Modification de ressource');
+      
+      // Sauvegarde des permissions pour les rubriques sociales et événements manuels
+      if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
+        employeePermissions.forEach((perm) => {
+          setSocialItemPermission(perm);
+        });
+      }
+      
       // Mise à jour de l'événement existant
       handleEditDimension(formDataItemType);
       return;
@@ -339,21 +422,70 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * Gestion des étiquettes
    */
   const handleAddTag = () => {
-    if (newTag.name.trim() && !formDataItemType.tags?.some(tag => tag.name === newTag.name.trim())) {
-      setFormDataItemType(prev => ({
-        ...prev,
-        tags: prev.tags ? [...prev.tags, { id: Date.now(), name: newTag.name.trim(), shortName: newTag.shortName?.trim() || undefined }] : [{ id: Date.now(), name: newTag.name.trim(), shortName: newTag.shortName?.trim() || undefined }]
-      }));
-      setNewTag({id: 0, name: '', shortName: ''});
-      setShowTagCreation(false);
+    if (!newTag.name.trim()) return;
+    
+    // Vérifier si l'étiquette existe déjà
+    if (formDataItemType.tags?.some(tag => tag.name === newTag.name.trim())) {
+      setTagDuplicateError(true);
+      return;
     }
+    
+    // Ajouter la nouvelle étiquette
+    setFormDataItemType(prev => ({
+      ...prev,
+      tags: prev.tags ? [...prev.tags, { id: Date.now(), name: newTag.name.trim(), shortName: newTag.shortName?.trim() || undefined }] : [{ id: Date.now(), name: newTag.name.trim(), shortName: newTag.shortName?.trim() || undefined }]
+    }));
+    setNewTag({id: 0, name: '', shortName: ''});
+    setShowTagCreation(false);
+    setTagDuplicateError(false);
   };
 
   const handleRemoveTag = (tagToRemove: number) => {
+    // Vérifier si l'étiquette est utilisée par des rendez-vous
+    const affectedAppointments = appointments.filter(app => app.tag && app.tag.id === tagToRemove);
+    
+    if (affectedAppointments.length > 0) {
+      // Ouvrir la modale de confirmation
+      const tagToDelete = formDataItemType.tags?.find(tag => tag.id === tagToRemove);
+      setDeleteTagModal({
+        isOpen: true,
+        tagId: tagToRemove,
+        tagName: tagToDelete?.name || '',
+        affectedCount: affectedAppointments.length
+      });
+    } else {
+      // Supprimer directement si non utilisée
+      setFormDataItemType(prev => ({
+        ...prev,
+        tags: prev.tags ? prev.tags.filter(tag => tag.id !== tagToRemove) : []
+      }));
+    }
+  };
+
+  const confirmRemoveTag = () => {
+    if (!deleteTagModal.tagId) return;
+    
+    // Supprimer l'étiquette de la liste
     setFormDataItemType(prev => ({
       ...prev,
-      tags: prev.tags ? prev.tags.filter(tag => tag.id !== tagToRemove) : []
+      tags: prev.tags ? prev.tags.filter(tag => tag.id !== deleteTagModal.tagId) : []
     }));
+    
+    // Si le rendez-vous actuel utilise cette étiquette, la retirer
+    if (formDataAppointment.tag && formDataAppointment.tag.id === deleteTagModal.tagId) {
+      setFormDataAppointment(prev => ({
+        ...prev,
+        tag: undefined
+      }));
+    }
+    
+    // Notifier le parent pour mettre à jour tous les rendez-vous concernés
+    if (onRemoveTagFromAppointments) {
+      onRemoveTagFromAppointments(deleteTagModal.tagId);
+    }
+    
+    // Fermer la modale
+    setDeleteTagModal({ isOpen: false, tagId: null, tagName: '', affectedCount: 0 });
   };
 
   const handleTagKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -361,6 +493,17 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       e.preventDefault();
       handleAddTag();
     }
+  };
+
+  const handleTagChange = (tag: Tags) => {
+    setNewTag(tag);
+    if (tagDuplicateError) setTagDuplicateError(false);
+  };
+
+  const handleToggleTagCreation = () => {
+    setShowTagCreation(!showTagCreation);
+    setTagDuplicateError(false);
+    setNewTag({id: 0, name: '', shortName: ''});
   };
 
   const handleItemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -605,9 +748,213 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               onDoubleClick={() => {}}
               onResize={() => {}}
               handleContextMenu={() => {}}
+              tagPlacement={tagPlacement}
             />
           </div>
         
+          {/* Section Permissions par employé (Rubriques sociales et événements manuels) */}
+          {(isCreatingResource || isEditingResource) && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) && (
+            <div className="mt-4 border border-primary rounded-xl overflow-hidden bg-bg-secondary">
+              {/* En-tête cliquable pour ouvrir/fermer */}
+              <button
+                type="button"
+                onClick={() => setIsPermissionsPanelOpen(!isPermissionsPanelOpen)}
+                className="w-full flex items-center justify-between p-4 hover:bg-primary-ultra-light transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`transition-transform duration-200 ${isPermissionsPanelOpen ? 'rotate-90' : ''}`}>
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" className="text-primary">
+                      <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                  </div>
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" className="text-primary">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                  </svg>
+                  <h3 className="text-sm font-semibold text-primary">
+                    Gestion des permissions
+                  </h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-tertiary">{employees.length} employé(s)</span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-primary-ultra-light text-primary font-medium">
+                    {isPermissionsPanelOpen ? 'Masquer' : 'Afficher'}
+                  </span>
+                </div>
+              </button>
+
+              {/* Contenu dépliable */}
+              {isPermissionsPanelOpen && (
+                <div className="px-4 pb-4 animate-in slide-in-from-top duration-200">
+
+                  {/* Barre de recherche */}
+                  <div className="relative mb-3">
+                    <input
+                      type="text"
+                      placeholder="Rechercher un employé..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-9 py-2 text-sm border border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 20 20">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                    </svg>
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+              {/* Tableau des permissions */}
+              <div className="max-h-[350px] overflow-y-auto border border-default rounded-lg shadow-sm">
+                <table className="w-full text-xs">
+                  <thead className="bg-bg-primary sticky top-0 z-10 shadow-sm">
+                    <tr>
+                      <th className="text-left py-3 px-3 font-semibold text-primary border-b border-default">
+                        Employé
+                      </th>
+                      <th className="text-center py-3 px-2 font-semibold text-primary border-b border-default">
+                        <div className="flex flex-col items-center gap-1">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
+                          </svg>
+                          <span className="text-[10px] font-normal">Voir</span>
+                        </div>
+                      </th>
+                      <th className="text-center py-3 px-2 font-semibold text-primary border-b border-default">
+                        <div className="flex flex-col items-center gap-1">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd"/>
+                          </svg>
+                          <span className="text-[10px] font-normal">Créer</span>
+                        </div>
+                      </th>
+                      <th className="text-center py-3 px-2 font-semibold text-primary border-b border-default">
+                        <div className="flex flex-col items-center gap-1">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                          </svg>
+                          <span className="text-[10px] font-normal">Éditer</span>
+                        </div>
+                      </th>
+                      <th className="text-center py-3 px-2 font-semibold text-primary border-b border-default">
+                        <div className="flex flex-col items-center gap-1">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
+                          </svg>
+                          <span className="text-[10px] font-normal">Supprimer</span>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                      <tbody>
+                        {employees
+                          .filter(emp => 
+                            emp.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            emp.prenom.toLowerCase().includes(searchQuery.toLowerCase())
+                          )
+                          .map((emp, index) => {
+                            const perm = employeePermissions.get(emp.id) || {
+                              userId: emp.id,
+                              itemId: formDataItemType.id || -1,
+                              canView: true,
+                              canCreate: true,
+                              canEdit: true,
+                              canDelete: true,
+                            };
+                            return (
+                              <tr key={emp.id} className={`hover:bg-primary-ultra-light transition-colors border-b border-default ${index % 2 === 0 ? 'bg-white' : 'bg-bg-secondary'}`}>
+                                <td className="py-2.5 px-3 text-primary font-medium">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                                      {emp.prenom.charAt(0)}{emp.nom.charAt(0)}
+                                    </div>
+                                    {emp.nom} {emp.prenom}
+                                  </div>
+                                </td>
+                                <td className="text-center py-2.5 px-2">
+                                  <label className="inline-flex items-center justify-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={perm.canView}
+                                      onChange={(e) => {
+                                        const updated = { ...perm, canView: e.target.checked };
+                                        setEmployeePermissions(new Map(employeePermissions.set(emp.id, updated)));
+                                      }}
+                                      className="w-4 h-4 cursor-pointer accent-primary rounded"
+                                    />
+                                  </label>
+                                </td>
+                                <td className="text-center py-2.5 px-2">
+                                  <label className="inline-flex items-center justify-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={perm.canCreate}
+                                      onChange={(e) => {
+                                        const updated = { ...perm, canCreate: e.target.checked };
+                                        setEmployeePermissions(new Map(employeePermissions.set(emp.id, updated)));
+                                      }}
+                                      className="w-4 h-4 cursor-pointer accent-primary rounded"
+                                    />
+                                  </label>
+                                </td>
+                                <td className="text-center py-2.5 px-2">
+                                  <label className="inline-flex items-center justify-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={perm.canEdit}
+                                      onChange={(e) => {
+                                        const updated = { ...perm, canEdit: e.target.checked };
+                                        setEmployeePermissions(new Map(employeePermissions.set(emp.id, updated)));
+                                      }}
+                                      className="w-4 h-4 cursor-pointer accent-primary rounded"
+                                    />
+                                  </label>
+                                </td>
+                                <td className="text-center py-2.5 px-2">
+                                  <label className="inline-flex items-center justify-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={perm.canDelete}
+                                      onChange={(e) => {
+                                        const updated = { ...perm, canDelete: e.target.checked };
+                                        setEmployeePermissions(new Map(employeePermissions.set(emp.id, updated)));
+                                      }}
+                                      className="w-4 h-4 cursor-pointer accent-primary rounded"
+                                    />
+                                  </label>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        {employees.filter(emp => 
+                          emp.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          emp.prenom.toLowerCase().includes(searchQuery.toLowerCase())
+                        ).length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-tertiary">
+                              <div className="flex flex-col items-center gap-2">
+                                <svg className="w-8 h-8 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"/>
+                                </svg>
+                                <span className="text-sm">Aucun employé trouvé</span>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {!isReducedVersion && (
             <>
@@ -768,52 +1115,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             <h3 className="text-sm font-semibold text-primary">Étiquettes</h3>
             
             {/* Formulaire d'ajout d'étiquette */}
-            <div className="flex flex-col gap-3">
-              {/* Version longue */}
-              <div className="relative flex-1">
-                <label className="text-xs text-gray-600 mb-1 block">Nom complet</label>
-                <input
-                  type="text"
-                  value={newTag.name}
-                  onChange={(e) => setNewTag(prev => ({...prev, name: e.target.value}))}
-                  onKeyPress={handleTagKeyPress}
-                  placeholder="Ex: Béton coulé"
-                  className="w-full px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                  maxLength={MAX_LENGTH_TAG}
-                />
-                <span className="absolute right-3 top-8 text-xs text-gray-400">{newTag.name.length}/{MAX_LENGTH_TAG}</span>
-              </div>
-              
-              {/* Version courte (optionnelle) */}
-              <div className="relative flex-1">
-                <label className="text-xs text-gray-600 mb-1 block">
-                  Version courte <span className="text-gray-400 italic">(pour RDV ≤ 2 jours)</span>
-                </label>
-                <input
-                  type="text"
-                  value={newTag.shortName || ''}
-                  onChange={(e) => setNewTag(prev => ({...prev, shortName: e.target.value}))}
-                  onKeyPress={handleTagKeyPress}
-                  placeholder="Ex: BÉT"
-                  className="w-full px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                  maxLength={MAX_LENGTH_SHORT_TAG}
-                />
-                <span className="absolute right-3 top-8 text-xs text-gray-400">{(newTag.shortName?.length || 0)}/{MAX_LENGTH_SHORT_TAG}</span>
-              </div>
-              
-              <button
-                type="button"
-                onClick={handleAddTag}
-                disabled={!newTag.name.trim()}
-                className="w-full px-3 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                title="Ajouter l'étiquette"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-                </svg>
-                <span>Ajouter</span>
-              </button>
-            </div>
+            <TagCreationForm
+              newTag={newTag}
+              onTagChange={handleTagChange}
+              onAdd={handleAddTag}
+              onKeyPress={handleTagKeyPress}
+              duplicateError={tagDuplicateError}
+              variant="compact"
+            />
 
             {/* Liste des étiquettes */}
             <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto">
@@ -826,11 +1135,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tag.id)}
-                      className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors"
+                      className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
                       title="Supprimer l'étiquette"
                     >
-                      <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
                       </svg>
                     </button>
                   </div>
@@ -901,7 +1210,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                         {/* Petit bouton pour créer une étiquette */}
                         <button
                           type="button"
-                          onClick={() => setShowTagCreation(!showTagCreation)}
+                          onClick={handleToggleTagCreation}
                           className="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors shadow-sm"
                           title={showTagCreation ? "Annuler" : "Créer une étiquette"}
                         >
@@ -939,49 +1248,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                   
                   {/* Formulaire de création d'étiquette */}
                   {showTagCreation && (
-                    <div className="p-4 border border-primary rounded-xl bg-primary-ultra-light space-y-3 animate-in slide-in-from-top duration-200">
-                      <h4 className="text-sm font-semibold text-primary">Nouvelle étiquette</h4>
-                      
-                      <div className="relative">
-                        <label className="text-xs text-gray-600 mb-1 block">Nom complet</label>
-                        <input
-                          type="text"
-                          value={newTag.name}
-                          onChange={(e) => setNewTag(prev => ({...prev, name: e.target.value}))}
-                          placeholder="Ex: Béton coulé"
-                          className="w-full px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                          maxLength={MAX_LENGTH_TAG}
-                        />
-                        <span className="absolute right-3 top-8 text-xs text-gray-400">{newTag.name.length}/{MAX_LENGTH_TAG}</span>
-                      </div>
-                      
-                      <div className="relative">
-                        <label className="text-xs text-gray-600 mb-1 block">
-                          Version courte <span className="text-gray-400 italic">(pour RDV ≤ 2 jours)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={newTag.shortName || ''}
-                          onChange={(e) => setNewTag(prev => ({...prev, shortName: e.target.value}))}
-                          placeholder="Ex: BÉT"
-                          className="w-full px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                          maxLength={MAX_LENGTH_SHORT_TAG}
-                        />
-                        <span className="absolute right-3 top-8 text-xs text-gray-400">{(newTag.shortName?.length || 0)}/{MAX_LENGTH_SHORT_TAG}</span>
-                      </div>
-                      
-                      <button
-                        type="button"
-                        onClick={handleAddTag}
-                        disabled={!newTag.name.trim()}
-                        className="w-full px-3 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                          <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-                        </svg>
-                        <span>Ajouter l'étiquette</span>
-                      </button>
-                    </div>
+                    <TagCreationForm
+                      newTag={newTag}
+                      onTagChange={handleTagChange}
+                      onAdd={handleAddTag}
+                      duplicateError={tagDuplicateError}
+                      variant="extended"
+                    />
                   )}
                 </div>
               </>
@@ -990,6 +1263,46 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           </div>
         )}
       </div>
+
+      {/* Modale de confirmation de suppression d'étiquette */}
+      <DeleteModal
+        isOpen={deleteTagModal.isOpen}
+        onClose={() => setDeleteTagModal({ isOpen: false, tagId: null, tagName: '', affectedCount: 0 })}
+        title="Supprimer l'étiquette"
+        scenario={{
+          title: "Étiquette utilisée",
+          description: (
+            <>
+              L'étiquette <strong>{deleteTagModal.tagName}</strong> est actuellement utilisée par{' '}
+              <strong>{deleteTagModal.affectedCount}</strong> rendez-vous.
+              <br />
+              <br />
+              Si vous supprimez cette étiquette, elle sera retirée de tous les rendez-vous associés.
+            </>
+          ),
+          iconColor: "orange",
+          iconType: "warning",
+          infoMessages: [
+            { 
+              text: "⚠️ Cette action ne peut pas être annulée.", 
+              type: "warning" 
+            }
+          ],
+          actions: [
+            { 
+              label: "Supprimer de tous les RDV", 
+              onClick: confirmRemoveTag, 
+              variant: "primary",
+              requiresConfirm: false
+            },
+            { 
+              label: "Annuler", 
+              onClick: () => setDeleteTagModal({ isOpen: false, tagId: null, tagName: '', affectedCount: 0 }), 
+              variant: "cancel" 
+            }
+          ]
+        }}
+      />
     </>
   );
 });

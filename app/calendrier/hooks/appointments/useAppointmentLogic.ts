@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { addHours, eachDayOfInterval } from "date-fns";
-import { Appointment, User, HistoryAction, Item } from '../types';
-import { createAppointmentUtils } from '../utils/appointmentUtils';
-import { notificationService } from "../services";
-import { getWorkedDayIntervals, isWeekend } from "../utils/dates";
-import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../utils/constants";
+import { Appointment, User, HistoryAction, Item } from '../../types';
+import { createAppointmentUtils } from '../../utils/appointmentUtils';
+import { notificationService } from "../../services";
+import { getWorkedDayIntervals, isWeekend } from "../../utils/dates";
+import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
 
 // Type pour les données de répétition
 export type RepeatData = {
@@ -213,7 +213,7 @@ export const useAppointmentLogic = ({
 
       appointmentsRef.current = appointmentsRef.current.map((app) =>
         app.id === id
-          ? { ...app, startDate: newStartDate, endDate: newEndDate, employeeId: newEmployeeId || app.employee.id, priority: newPriority !== undefined ? newPriority : app.priority }
+          ? { ...app, startDate: newStartDate, endDate: newEndDate, employee: employeesRef.current.find(emp => emp.id === newEmployeeId) || app.employee, priority: newPriority !== undefined ? newPriority : app.priority }
           : app
       );
       if (newPriority !== undefined && newEmployeeId !== undefined) {
@@ -778,6 +778,26 @@ export const useAppointmentLogic = ({
     };
   }, []);
 
+  /**
+   * Supprime une étiquette de tous les rendez-vous qui l'utilisent
+   */
+  const removeTagFromAppointments = useCallback((tagId: number) => {
+    let updatedCount = 0;
+    appointmentsRef.current = appointmentsRef.current.map(app => {
+      if (app.tag && app.tag.id === tagId) {
+        updatedCount++;
+        return { ...app, tag: undefined };
+      }
+      return app;
+    });
+    
+    onUpdate();
+    notificationService.info(
+      'Étiquette supprimée', 
+      `L'étiquette a été retirée de ${updatedCount} rendez-vous.`
+    );
+  }, [onUpdate]);
+
   return {
     // États exposés
     selectedAppointment, setSelectedAppointment,
@@ -801,6 +821,7 @@ export const useAppointmentLogic = ({
     handleEditDimension,
     handleDeleteDimension,
     handleDeactivateDimension,
+    removeTagFromAppointments,
 
     // Actions Spécifiques
     handleDeleteAppointmentConfirm,

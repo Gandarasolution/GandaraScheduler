@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { format, isWeekend } from 'date-fns';
-import { CELL_WIDTH, WINDOW_SIZE, DAY_MS } from '../utils/constants';
+import { CELL_WIDTH, WINDOW_SIZE, DAY_MS } from '@/app/calendrier/utils/constants';
 
 interface UseTimelineProps {
   isDisplayWeekend: boolean;

@@ -10,7 +10,7 @@ import { ErrorBoundary } from "./calendrier/components/ui/ErrorBoundary";
 
 export default function Home() {
 
-  const [user, setUser] = useState<User>(() => getUserById(1));
+  const [user, setUser] = useState<User>(() => getUserById(2));
 
   const { setTheme } = useTheme(user);
   

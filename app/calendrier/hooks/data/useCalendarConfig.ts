@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useMemo, MutableRefObject } from 'react';
-import { CalendarConfig, User } from '../types';
+import { CalendarConfig, User } from '@/app/calendrier';
 import { getCalendarConfigsByUserId } from '@/app/datasource';
 
 interface UseCalendarConfigProps {

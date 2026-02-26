@@ -11,7 +11,7 @@ import {
 } from '@/app/calendrier/components';
 import { Appointment, Item, CalendarConfig, Image, User } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
-import { RepeatData } from '../../hooks/useAppointmentLogic';
+import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
 
 interface CalendarModalsProps {
@@ -27,6 +27,7 @@ interface CalendarModalsProps {
     modalInfo: { message: string, color: string } | null;
     selectedAppointmentForm: Appointment | null;
     deleteConfirmData: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null;
+    tagPlacement: 'hover' | 'fixed';
   };
   handlers: {
     closeModal: () => void;
@@ -36,6 +37,7 @@ interface CalendarModalsProps {
     handleDeleteDimension?: (dimensionId: number, forceDelete?: boolean) => any;
     handleDeactivateDimension?: (dimensionId: number) => any;
     setDeleteConfirmData?: (data: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null) => void;
+    removeTagFromAppointments?: (tagId: number) => void;
     
     // Repeat Handlers
     setRepeatData: (data: RepeatData | null) => void;
@@ -96,6 +98,8 @@ interface CalendarModalsProps {
     setRespectNonWorkingDays: (v: boolean) => void;
     nonWorkingDates: number[];
     setNonWorkingDates: (dates: number[]) => void;
+    tagPlacement: 'hover' | 'fixed';
+    setTagPlacement: (v: 'hover' | 'fixed') => void;
     
     // Constants
     HALF_DAY_INTERVALS: any[];
@@ -141,8 +145,24 @@ export const CalendarModals = memo(({
           setNonWorkingDates: config.setNonWorkingDates,
         }
       ]
+    },
+    {
+      category: "Affichage des étiquettes",
+      items: [
+        {
+          id: "tagPlacement",
+          label: "Placement de l'étiquette",
+          type: "select",
+          value: config.tagPlacement,
+          onChange: config.setTagPlacement,
+          options: [
+            { value: 'hover', label: 'Au survol (animation)' },
+            { value: 'fixed', label: 'Toujours visible (bord inférieur)' }
+          ]
+        }
+      ]
     }
-  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates]);  
+  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement]);  
 
   // Détermination du mode d'édition de ressource
   const resourceEditMode: 'create' | 'edit' | null = useMemo(() => {
@@ -344,6 +364,7 @@ export const CalendarModals = memo(({
           /* CAS 3: Formulaire de RDV */
           <AppointmentForm
             appointments={data.appointments}
+            tagPlacement={modalsState.tagPlacement}
             appointment={modalsState.selectedAppointmentForm as Appointment}
             item={data.selectedItem!}
             items={data.items}
@@ -359,6 +380,7 @@ export const CalendarModals = memo(({
             onDirtyChange={setIsFormDirty}
             handleAddDimension={handlers.handleAddDimension}
             handleEditDimension={handlers.handleEditDimension}
+            onRemoveTagFromAppointments={handlers.removeTagFromAppointments}
           />
         )}
       </Modal>

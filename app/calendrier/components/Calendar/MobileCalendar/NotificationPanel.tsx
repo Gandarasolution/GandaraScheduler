@@ -136,7 +136,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 className="px-6 py-4 transition-colors cursor-pointer"
                 style={{
                   borderBottom: '1px solid var(--bg-secondary)',
-                  backgroundColor: !notif.isRead ? 'var(--color-primary-lighter)' : 'transparent'
+                  backgroundColor: !notif.isRead ? 'var(--bg-primary)' : 'transparent'
                 }}
                 onClick={() => !notif.isRead && onMarkAsRead(notif.id)}
                 onMouseEnter={(e) => {

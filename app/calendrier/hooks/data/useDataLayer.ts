@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Appointment, User, Item, CalendarConfig, Image } from '../types';
-import { ActiveFilters, createSearchAndFilterUtils } from '../utils/searchAndFilterUtils';
+import { Appointment, User, Item, CalendarConfig, Image, UserRole } from '../../types';
+import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
 import { 
   getAppointments, 
   getEvenements, 
   initialTeams, 
   getImages
-} from "../../datasource";
-import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../utils/filters";
-import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../utils/constants';
+} from "../../../datasource";
+import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../../utils/filters";
+import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../../utils/constants';
 import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
-import { useCalendarWorker } from './useCalendarWorker';
+import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
 
 
 interface DataLayerProps {
@@ -20,12 +20,14 @@ interface DataLayerProps {
   calendarConfig: CalendarConfig | null;
   globalEmployeesRef: React.RefObject<User[]>;
   userId: string;
+  userIdNumber: number;
+  userRole: UserRole;
   userName: string;
   enableCollaboration: boolean;
   isSearchOverlayOpen: boolean;
 }
 
-export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, globalEmployeesRef, userId, userName, enableCollaboration, isSearchOverlayOpen }: DataLayerProps) => {
+export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, globalEmployeesRef, userId, userIdNumber, userRole, userName, enableCollaboration, isSearchOverlayOpen }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const worker = useCalendarWorker();
   
@@ -47,8 +49,15 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     if (!calendarConfig || viewType === 'chantier-table' || viewType === 'paie-table') return globalEmployeesRef.current;
 
     if (viewType === 'calendar') {
+      let employees = globalEmployeesRef.current.filter(emp => emp.type === 'employee' || emp.type === 'interim');
+      
+      // Filtrer par rôle : users et viewers ne voient que leur propre employé
+      if (userRole === 'user' || userRole === 'viewer') {
+        employees = employees.filter(emp => emp.id === userIdNumber);
+      }
+      
       return applyFiltersToEmployees(
-        globalEmployeesRef.current.filter(emp => emp.type === 'employee' || emp.type === 'interim'), 
+        employees, 
         getFlatFilters(calendarConfig.filterCategories)
       );
     }
@@ -60,7 +69,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
     );
 
    
-  }, [calendarConfig, searchQuery, appointmentsVersion]);
+  }, [calendarConfig, searchQuery, appointmentsVersion, userRole, userIdNumber]);
 
   const filteredItems = useMemo(() => {
     if (!calendarConfig) return itemsRef.current;
@@ -82,6 +91,11 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
       filtered = workerFilteredAppointments;
     }
     
+    // Filtre par rôle utilisateur - users et viewers ne voient que leurs propres RDV
+    if (userRole === 'user' || userRole === 'viewer') {
+      filtered = filtered.filter(app => app.employee.id === userIdNumber);
+    }
+    
     // Filtre par type de RDV (logique métier)
     const selectedRdvTypes = calendarConfig.filterCategories?.evenements && 
       typeof calendarConfig.filterCategories.evenements === 'object' &&
@@ -100,7 +114,7 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
          }
     }
     return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), searchQuery, globalEmployeesRef.current);
-  }, [calendarConfig, searchQuery, appointmentsVersion, workerFilteredAppointments]); // Dépend de la version pour rafraichir
+  }, [calendarConfig, searchQuery, appointmentsVersion, workerFilteredAppointments, userRole, userIdNumber]); // Dépend de la version pour rafraichir
   
   // Pré-filtrage avec Web Worker pour améliorer les performances (gros volumes)
   useEffect(() => {

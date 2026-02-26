@@ -103,23 +103,26 @@ export const customRenderersFactory = (
   };
 
   // 3. Renderer pour l'image des employés (Avatar rond)
-  const imageRendererEmployee = (value: any, item: any) => (
-    <div className="relative inline-block">
-      <img
-        src={item.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`}
-        alt={item.nom + ' ' + item.prenom}
-        className={`cursor-pointer w-8 h-8 rounded-full border-1 shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'}`}
-        onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`; }}
-        onClick={(e) => {
-            e.stopPropagation();
-            onImageClick(employees.find(emp => emp.id === item.id)!);
-        }}
-      />
-      {item.type === 'interim' && (
-        <span className="absolute -bottom-1 -right-1 block h-3 w-3 rounded-full bg-interim border-2 border-white"></span>
-      )}
-    </div>
-  );
+  const imageRendererEmployee = (value: any, item: any) => {
+    const isInactive = item.actif === false;
+    return (
+      <div className="relative inline-block" style={{ opacity: isInactive ? 0.5 : 1 }}>
+        <img
+          src={item.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`}
+          alt={item.nom + ' ' + item.prenom}
+          className={`cursor-pointer w-8 h-8 rounded-full border-1 shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`; }}
+          onClick={(e) => {
+              e.stopPropagation();
+              onImageClick(employees.find(emp => emp.id === item.id)!);
+          }}
+        />
+        {item.type === 'interim' && (
+          <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
+        )}
+      </div>
+    );
+  };
 
 
   // --- RETOUR SELON LE VIEW TYPE ---

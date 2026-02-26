@@ -22,8 +22,9 @@
 "use client";
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Appointment, HalfDayInterval, Groupe, CalendarConfig, Item, User } from '../../types';
-import { useCalendarLayout } from '../../hooks/useCalendarLayout';
-import { useCalendarInteractions } from '../../hooks/useCalendarInteractions';
+import { 
+  useCalendarInteractions
+ } from '@/app/calendrier/hooks';
 import { DesktopCalendarGrid, MobileCalendar } from '@/app/calendrier/components';
 import { CELL_WIDTH } from '../../utils/constants';
 
@@ -40,6 +41,7 @@ interface CalendarGridProps {
   nonWorkingDates: number[];
   isMobile: boolean;
   isDisplayWeekend: boolean;
+  tagPlacement?: 'hover' | 'fixed';
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   calendarConfig: CalendarConfig;
   onCalendarConfigChange: (config: CalendarConfig) => void;
@@ -55,6 +57,7 @@ interface CalendarGridProps {
   onSelectAppointment: (appointment: Appointment | null) => void;
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
   mouseUpAfterScroll: () => void;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -70,6 +73,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   nonWorkingDates,
   isMobile,
   isDisplayWeekend,
+  tagPlacement = 'hover',
   mainScrollRef,
   calendarConfig,
   onCalendarConfigChange,
@@ -85,6 +89,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onSelectAppointment,
   onLoadAppointmentsInRange,
   mouseUpAfterScroll,
+  onAddAppointment,
 }) => {
 
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
@@ -92,13 +97,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const hasAutoScrolled = useRef(false);
   
 
-  // Use custom hooks for logic
-  const { employeeHeights, appointmentsWithTop } = useCalendarLayout({
-    employees,
-    appointments,
-    dayInTimeline,
-    isMobile
-  });
 
   const handleHoverMove = useCallback(({ colLeft }: { colLeft: number }) => {
     setHoverColumnLeft(colLeft >= 0 ? colLeft : null);
@@ -143,6 +141,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         appointments={appointments}
         user={user}
         items={events}
+        onAddAppointment={onAddAppointment}
       />
     );
   }
@@ -150,9 +149,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   return (
       <DesktopCalendarGrid 
         employees={employees}
-        appointmentsWithTop={appointmentsWithTop}
-        appointmentsDefault={appointmentsDefault}
-        employeeHeights={employeeHeights}
+        appointments={appointmentsDefault}
         dayInTimeline={dayInTimeline}
         initialTeams={initialTeams}
         calendarConfig={calendarConfig}
@@ -163,6 +160,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         events={events}
         nonWorkingDates={nonWorkingDates}
         isDisplayWeekend={isDisplayWeekend}
+        tagPlacement={tagPlacement}
         mainScrollRef={mainScrollRef}
         handleScrollY={handleScrollY}
         columnEmployeeRef={columnEmployeeRef}

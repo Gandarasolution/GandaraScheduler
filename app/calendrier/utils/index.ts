@@ -39,3 +39,6 @@ export * from './searchAndFilterUtils';
 
 // Gestionnaire de thèmes
 export * from './themeManager';
+
+// Gestionnaire de permissions
+export * from './permissions';

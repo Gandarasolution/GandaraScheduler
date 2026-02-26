@@ -28,6 +28,7 @@ import SearchOverlay from '../../modals/SearchOverlay';
 import { useNotifications, useCalendarWorker } from '../../../hooks';
 import { getNotificationsByUserId } from '@/app/datasource';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
+import { canCreateEvent, getUserPermissions } from '../../../utils/permissions';
 
 // Lazy loading des composants lourds
 
@@ -70,14 +71,40 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
   // ----- GESTION DES DROITS D'ACCÈS -----
   const isAdmin = user.role === 'admin';
+  const isManager = user.role === 'manager';
+  const userPermissions = getUserPermissions(user.role);
   
-  const visibleEmployees = isAdmin 
-    ? employees 
-    : employees.filter(emp => emp.id === user.id);
+  // Filtrer les items selon les permissions de l'utilisateur
+  const allowedItems = useMemo(() => {
+    return items.filter(item => canCreateEvent(user.role, item.type));
+  }, [items, user.role]);
+  
+  // Les admins et managers peuvent voir tous les employés
+  // Les users voient seulement leur propre calendrier  
+  const visibleEmployees = useMemo(() => {
+    const baseEmployees = (isAdmin || isManager)
+      ? employees 
+      : employees.filter(emp => emp.id === user.id);
+    
+    // Filtrer les employés inactifs qui n'ont pas de rdv dans le mois visible
+    return baseEmployees.filter(emp => {
+      // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
+      if (emp.actif !== false) {
+        return true;
+      }
+      
+      // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
+      const hasMonthlyAppointments = monthlyAppointments.some(app => 
+        app.employee.id === emp.id
+      );
+      
+      return hasMonthlyAppointments;
+    });
+  }, [employees, isAdmin, isManager, user.id, monthlyAppointments]);
   
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(() => {
-    if (!isAdmin) {
-      return visibleEmployees.find(emp => emp.id === user.id) || null;
+    if (!isAdmin && !isManager) {
+      return employees.find(emp => emp.id === user.id) || null;
     }
     return employees[0] || null;
   });
@@ -93,7 +120,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       let filteredApps = appointments;
       
-      if (!isAdmin) {
+      // Filtrer par rôle : users et viewers ne voient que leurs propres RDV
+      if (user.role === 'user' || user.role === 'viewer') {
         filteredApps = appointments.filter(app => app.employee.id === user.id);
       }
       
@@ -115,7 +143,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         appointments,
         currentDate,
         selectedEmployee,
-        isAdmin,
+        user.role || 'viewer',
         user.id
       );
       
@@ -127,7 +155,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     };
     
     filterAppointments();
-  }, [worker.isReady, appointments, currentDate, selectedEmployee, isAdmin, user.id]);
+  }, [worker.isReady, appointments, currentDate, selectedEmployee, user.role, user.id]);
 
   // Filtrage journalier avec Web Worker
   useEffect(() => {
@@ -181,12 +209,22 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   };
 
   const handleOpenAddAppointment = () => {
-    if (isAdmin) {
+    // Seulement les admins et managers peuvent ajouter des événements
+    if (isAdmin || isManager) {
       setShowSearchModal(true);
     }
   };
 
   const handleSelectItem = (item: Item) => {
+    // Vérifier les permissions selon le type d'événement
+    const canCreate = canCreateEvent(user.role, item.type);
+    
+    if (!canCreate) {
+      // Afficher une notification d'erreur
+      addNotification('error', 'Permission refusée', `Vous n'avez pas les droits pour créer des événements de type "${item.type}"`);
+      return;
+    }
+    
     setSelectedItem(item);
     setShowSearchModal(false);
     setShowAppointmentForm(true);
@@ -211,7 +249,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     if (!searchInput.trim()) return [];
     
     const search = searchInput.toLowerCase();
-    return items.filter(item => {
+    // Utiliser allowedItems qui contient déjà les items filtrés par permissions
+    return allowedItems.filter(item => {
       const matchLabel = item.label?.toLowerCase().includes(search);
       const matchCode = item.code?.toLowerCase().includes(search);
       
@@ -225,7 +264,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       return matchLabel || matchCode;
     });
-  }, [items, searchInput]);
+  }, [allowedItems, searchInput]);
 
   // ----- FACTORIES -----
   
@@ -288,15 +327,15 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       <div 
         className="w-full max-w-[400px] h-full rounded-[3rem] sm:border-[8px] sm:shadow-2xl overflow-hidden relative flex flex-col"
         style={{
-          backgroundColor: 'var(--bg-card)',
-          borderColor: 'var(--bg-card)'
+          backgroundColor: 'var(--bg-secondary)',
+          borderColor: 'var(--bg-secondary)'
         }}
       >
         
         {/* Header */}
         <header 
           className="pt-8 px-6 pb-2 flex items-center justify-between z-10 relative"
-          style={{ backgroundColor: 'var(--bg-card)' }}
+          style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           {/* User Menu */}
           <div className="relative">
@@ -389,7 +428,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                     backgroundColor: 'var(--color-error)',
                     color: 'var(--text-inverse)',
                     borderWidth: '2px',
-                    borderColor: 'var(--bg-card)'
+                    borderColor: 'var(--bg-secondary)'
                   }}
                 >
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -430,8 +469,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           
-          {/* Employee Selector - visible seulement pour les admins */}
-          {isAdmin && (
+          {/* Employee Selector - visible seulement pour les admins et managers */}
+          {(isAdmin || isManager) && (
             <EmployeeSelector 
               employees={visibleEmployees}
               selectedEmployee={selectedEmployee}
@@ -456,18 +495,18 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
           />
         </main>
 
-        {/* Floating Action Button - Visible uniquement pour les admins */}
-        {isAdmin && (
+        {/* Floating Action Button - Visible pour les admins et managers */}
+        {(isAdmin || isManager) && (
           <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none flex justify-center items-end h-32"
             style={{
-              backgroundImage: `linear-gradient(to top, var(--bg-card), transparent)`
+              backgroundImage: `linear-gradient(to top, var(--bg-secondary), transparent)`
             }}
           >
             <div 
               className="pointer-events-auto flex items-center justify-center px-8 w-full rounded-full p-2 mb-2"
               style={{
-                backgroundColor: 'var(--bg-card)',
-                boxShadow: 'var(--shadow-md)'
+                //backgroundColor: 'var(--bg-secondary)',
+                //boxShadow: 'var(--shadow-md)'
               }}
             >
               <button 
@@ -491,7 +530,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal de recherche d'événement */}
-        {isAdmin && showSearchModal && (
+        {(isAdmin || isManager) && showSearchModal && (
           <SearchOverlay
             isOpen={showSearchModal}
             onClose={() => {
@@ -563,7 +602,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal d'ajout de rendez-vous */}
-        {isAdmin && showAppointmentForm && (
+        {(isAdmin || isManager) && showAppointmentForm && (
           <div 
             className="fixed inset-0 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200"
             style={{ backgroundColor: 'var(--bg-overlay)' }}
@@ -618,7 +657,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   appointments={appointments}
                   appointment={createEmptyAppointment(0)}
                   item={createEmptyItem()}
-                  items={items}
+                  items={allowedItems}
                   employees={visibleEmployees}
                   HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
                   isFullDay={true}
@@ -644,4 +683,4 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   );
 };
 
-export default MobileCalendarGrid;
+export default MobileCalendar;

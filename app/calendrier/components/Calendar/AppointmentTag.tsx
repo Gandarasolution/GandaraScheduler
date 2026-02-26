@@ -9,6 +9,7 @@ interface AppointmentTagProps {
   isResizing: boolean;
   appointmentWidth?: number; // Largeur du rendez-vous en pixels
   appointmentDurationDays?: number; // Durée du rendez-vous en jours
+  placement?: 'hover' | 'fixed'; // Mode d'affichage de l'étiquette
 }
 
 const AppointmentTag: React.FC<AppointmentTagProps> = ({
@@ -20,6 +21,7 @@ const AppointmentTag: React.FC<AppointmentTagProps> = ({
   isResizing,
   appointmentWidth = 100,
   appointmentDurationDays = 1,
+  placement = 'hover',
 }) => {
   // Adapter la taille de l'indicateur en fonction de la largeur du rendez-vous
   const isSmallAppointment = appointmentWidth < 60;
@@ -53,7 +55,40 @@ const AppointmentTag: React.FC<AppointmentTagProps> = ({
     return (yiq >= 128) ? '#000000' : '#FFFFFF';
   }
 
+  // Mode fixe : étiquette toujours visible en bas, peut dépasser du rendez-vous
+  if (placement === 'fixed') {
+    return (
+      <div 
+        className="absolute -right-5  -bottom-5 z-50" 
+        style={{
+          transform: 'translateX(-50%)',
+          overflow: 'visible'
+        }}
+      >
+        <div 
+          className="flex items-center px-2 py-1 shadow-lg rounded-md"
+          style={{
+            backgroundColor: color,
+            maxWidth: `${Math.min(appointmentWidth * 0.9, 200)}px`,
+            overflow: 'visible'
+          }}
+          title={`${tagName}${tagShortName ? ` (${tagShortName})` : ''}`}
+        >
+          <span 
+            className="font-bold uppercase whitespace-nowrap text-xs"
+            style={{ 
+              color: getContrastColor(color),
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+            }}
+          >
+            {shouldUseShortName ? tagShortName : tagName}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
+  // Mode hover : comportement par défaut avec animation
   return (
     <div className="absolute right-1 bottom-1 z-30">
       <div 

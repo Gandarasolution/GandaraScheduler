@@ -27,6 +27,8 @@ export const CELL_WIDTH = 45;
 /** Hauteur d'une cellule dans la grille (en pixels) */
 export const CELL_HEIGHT = 40;
 
+export const ROW_HEIGHT = CELL_HEIGHT + 25;
+
 /** Marge entre les groupes d'employés (en pixels) */
 export const MARGIN_BETWEEN_TEAMS = 20;
 

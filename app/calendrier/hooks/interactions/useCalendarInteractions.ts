@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { CELL_WIDTH } from '../utils/constants';
-import { getRowId, parseRowId } from '../utils/domIds';
+import { CELL_WIDTH } from '@/app/calendrier/utils/constants';
+import { getRowId, parseRowId } from '@/app/calendrier/utils/domIds';
 
 interface UseCalendarInteractionsParams {
   dayInTimeline: number[];

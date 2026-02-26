@@ -1,32 +1,9 @@
-/**
- * @fileoverview Index des hooks personnalisés
- * 
- * Ce fichier exporte tous les hooks personnalisés utilisés dans l'application calendrier.
- * 
- * @author Gandara Solutions
- * @version 1.0.0
- */
+export * from './appointments';
 
-// Hooks de notifications
-export { useNotifications } from './useNotifications';
-export type { Notification, NotificationsState } from './useNotifications';
+export * from './calendar';
 
-// Hooks de configuration
-export { useCalendarConfig } from './useCalendarConfig';
+export * from './interactions';
 
-// Hooks d'interaction et UI
-export { useAutoScrollOnDrag } from './useAutoScrollOnDrag';
-export { useDebounce } from './useDebounce';
-export { useRecentEmployees } from './useRecentEmployees';
-export { useInteraction } from './useInteraction';
-export { useSmartScroll } from './useSmartScroll';
-export { useCalendarWorker } from './useCalendarWorker';
+export * from './data';
 
-// Hooks de logique métier
-export { useAppointmentLogic } from './useAppointmentLogic';
-export { useCalendarInteractions } from './useCalendarInteractions';
-export { useCalendarLayout } from './useCalendarLayout';
-export { useCalendarView } from './useCalendarView';
-export { useDataLayer } from './useDataLayer';
-export { useTimeline } from './useTimeline';
-
+export * from './utils';

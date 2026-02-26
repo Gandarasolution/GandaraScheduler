@@ -35,13 +35,16 @@ const DataTableFrame = lazy(() => import('@/app/calendrier/components').then(mod
 const ManualEventsManager = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.ManualEventsManager })));
 
 // --- CUSTOM HOOKS ---
-import { useCalendarView } from "../hooks/useCalendarView";
-import { useTimeline } from "../hooks/useTimeline";
-import { useDataLayer } from "../hooks/useDataLayer";
-import { useAppointmentLogic } from "../hooks/useAppointmentLogic";
-import { useInteraction } from "../hooks/useInteraction";
+import { 
+  useCalendarView, 
+  useTimeline,
+  useDataLayer,
+  useAppointmentLogic,
+  useInteraction,
+  useNotifications
+ } from "@/app/calendrier/hooks";
+
 import { useTheme } from '../utils/themeManager';
-import { useNotifications } from "../hooks";
 
 // --- CONTEXTES & SERVICES ---
 import { notificationService } from "../services";
@@ -51,6 +54,7 @@ import { getEmployees } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
 import { User, Item, CommonPaieAttributs } from '../types';
+import { canCreateEvent } from '../utils/permissions';
 
 // Composant de chargement réutilisable
 const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
@@ -107,8 +111,17 @@ export default function HomePage({
     // Activer la collaboration
     enableCollaboration: true,
     userId: user?.id ? String(user.id) : 'anonymous',
+    userIdNumber: user?.id || 0,
+    userRole: user?.role || 'viewer',
     userName: user?.nom ? `${user.nom} ${user.prenom}` : 'Utilisateur'
   });
+
+  // Filtrer les items selon les permissions de l'utilisateur
+  const allowedItems = useMemo(() => {
+    return dataLayer.itemsRef.current.filter(item => 
+      canCreateEvent(user.role, item.type)
+    );
+  }, [dataLayer.itemsRef.current, user.role]);
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
   const timeline = useTimeline({
@@ -315,6 +328,7 @@ export default function HomePage({
                         isFullDay={viewState.isFullDay}
                         isMobile={viewState.isMobile}
                         nonWorkingDates={viewState.nonWorkingDates}
+                        tagPlacement={viewState.tagPlacement}
                         HALF_DAY_INTERVALS={viewState.constants.intervals}
                         
                         /* Config Calendrier */
@@ -330,6 +344,7 @@ export default function HomePage({
                         handleContextMenu={interaction.handleContextMenu}
                         onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
                         mouseUpAfterScroll={timeline.getFirstDayAppearing}
+                        onAddAppointment={appointmentLogic.handleSaveAppointment}
                         
                         /* Sélection Optimisée */
                         selectedCell={appointmentLogic.selectedCell}
@@ -425,6 +440,7 @@ export default function HomePage({
               modalInfo: viewState.modalInfo,
               selectedAppointmentForm: appointmentLogic.selectedAppointmentForm,
               deleteConfirmData: deleteConfirmData,
+              tagPlacement: viewState.tagPlacement,
             }}
             handlers={{
               closeModal: () => appointmentLogic.setIsModalOpen(false),
@@ -508,10 +524,13 @@ export default function HomePage({
 
               // Correction : Setter pour l'item sélectionné
               setSelectedItem: appointmentLogic.setSelectedItem,
+              
+              // Suppression d'étiquette de tous les rendez-vous
+              removeTagFromAppointments: appointmentLogic.removeTagFromAppointments,
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,
-              items: dataLayer.itemsRef.current,
+              items: allowedItems,
               employees: globalEmployeesRef.current,
               selectedItem: appointmentLogic.selectedItem,
               selectedEmployee: appointmentLogic.selectedEmployee,
@@ -534,6 +553,8 @@ export default function HomePage({
               setRespectNonWorkingDays: viewState.setRespectNonWorkingDays,
               nonWorkingDates: viewState.nonWorkingDates,
               setNonWorkingDates: viewState.setNonWorkingDates,
+              tagPlacement: viewState.tagPlacement,
+              setTagPlacement: viewState.setTagPlacement,
               HALF_DAY_INTERVALS: viewState.constants.intervals,
               isFullDay: viewState.isFullDay,
               isDisplayWeekend: viewState.isDisplayWeekend,
@@ -565,7 +586,12 @@ export default function HomePage({
             searchInput={viewState.dimensionSearchInput}
             setSearchInput={viewState.setDimensionsSearchInput}
             items={dataLayer.filteredItems.filter(item => {
-              // Filtrer les items désactivés (pour les types absence/autre)
+              // 1. Vérifier les permissions - Ne montrer que les items que l'utilisateur peut créer
+              if (!canCreateEvent(user.role, item.type)) {
+                return false;
+              }
+              
+              // 2. Filtrer les items désactivés (pour les types absence/autre)
               if ('actif' in item) {
                 return item.actif !== false;
               }

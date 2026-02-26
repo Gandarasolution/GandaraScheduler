@@ -71,9 +71,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           Définissez les congés d'entreprise
                         </p>
                       )}
+                      {setting.id === "tagPlacement" && (
+                        <p className="text-xs text-secondary mt-1 poppins">
+                          Choisissez comment afficher l'étiquette sur les rendez-vous
+                        </p>
+                      )}
                     </div>
                     
-                    {setting.type === "custom-non-working-dates" ? (
+                    {setting.type === "select" ? (
+                      <select
+                        id={setting.id}
+                        className="border border-default rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-color transition-all duration-200 poppins text-sm bg-transparent shadow-sm hover:shadow-md"
+                        value={setting.value}
+                        onChange={e => setting.onChange(e.target.value)}
+                      >
+                        {setting.options?.map((option: any) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : setting.type === "custom-non-working-dates" ? (
                       <div className="flex flex-col gap-4 w-full max-w-lg">
                         <div className="flex gap-3 items-center">
                           <input

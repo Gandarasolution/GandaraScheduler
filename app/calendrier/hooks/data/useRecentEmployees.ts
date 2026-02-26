@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { User } from '../types';
+import { User } from '@/app/calendrier';
 
 const STORAGE_KEY = 'recentEmployees';
 const MAX_RECENT = 3;
