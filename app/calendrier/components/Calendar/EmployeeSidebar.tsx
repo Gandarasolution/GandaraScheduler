@@ -86,7 +86,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     >
       {/* Header avec sélecteur de calendrier */}
       <div 
-        className={`sticky top-0 z-40 flex bg-bg-primary justify-center flex-shrink-0`}
+        className={`sticky top-0 z-40 flex bg-page justify-center flex-shrink-0`}
         style={{
           height: TIMELINE_HEADERITEMS_CELL_HEIGHT + CONTAINER_PADDING
         }}
@@ -146,7 +146,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
         return (
           <div
             key={item.id}
-            className="rounded-4xl border-default bg-bg-primary text-primary"
+            className="rounded-4xl border-default bg-primary-bg text-primary"
             style={style}
           >
             {/* Header du groupe */}
@@ -159,13 +159,13 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             >
               {isOpen && (
                 <>
-                  <div className="absolute top-0 -left-1 w-8 h-7 bg-bg-primary" />
-                  <div className="absolute top-0 -right-1 w-7 h-7 bg-bg-primary" />
+                  <div className="absolute top-0 -left-1 w-8 h-7 bg-page" />
+                  <div className="absolute top-0 -right-1 w-7 h-7 bg-page" />
                 </>
               )}
 
               <button
-                className={`relative flex justify-between items-center px-4 ${isOpen ? 'rounded-t-4xl -ml-px border-default border-t border-r border-l w-[284px]' : 'rounded-4xl w-full'} focus:outline-none cursor-pointer bg-bg-secondary`}
+                className={`relative flex justify-between items-center px-4 ${isOpen ? 'rounded-t-4xl -ml-px border-default border-t border-r border-l w-[284px]' : 'rounded-4xl w-full'} focus:outline-none cursor-pointer bg-primary-bg`}
                 style={{ 
                   paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y, 
                   paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y,
@@ -198,7 +198,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
               return (
                 <div
                   key={employee.id}
-                  className="flex px-4 cursor-pointer bg-bg-secondary"
+                  className="flex px-4 cursor-pointer bg-primary-bg"
                   style={{ 
                     height: employeeRowHeight, 
                     alignItems: 'center',
@@ -208,7 +208,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   }}                    
                 >
                   <div 
-                    className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-ultra-light employee-row-item"
+                    className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-50 employee-row-item"
                     data-employee-id={employee.id}
                     onMouseOver={() => {
                       updateHighlightedEmployeeRow(employee.id);
@@ -218,7 +218,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                       <img
                         src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`}
                         alt={employee.nom}
-                        className={`w-8 h-8 rounded-full border-1 shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+                        className={`w-8 h-8 rounded-full border shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
                         onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`; }}
                       />
                       {employee.type === 'interim' && (
@@ -256,10 +256,10 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   marginBottom: -EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
                 }}
               >
-                <div className="absolute bottom-0 left-0 w-6 h-7 bg-bg-primary" />
-                <div className="absolute bottom-0 right-0 w-6 h-7 bg-bg-primary" />
+                <div className="absolute bottom-0 left-0 w-6 h-7 bg-page" />
+                <div className="absolute bottom-0 right-0 w-6 h-7 bg-page" />
                 <div 
-                  className="relative w-full h-full bg-bg-secondary border-b border-l border-r border-default rounded-b-4xl"
+                  className="relative w-full h-full bg-primary-bg border-b border-l border-r border-default rounded-b-4xl"
                 />
               </div>
             )}

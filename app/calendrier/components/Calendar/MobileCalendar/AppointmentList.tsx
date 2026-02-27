@@ -30,7 +30,7 @@ const AppointmentCard: React.FC<{ app: Appointment, colorClass: string, items: I
           className="font-semibold text-base mb-1 transition-colors"
           style={{ color: 'var(--text-primary)' }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--color-primary)';
+            e.currentTarget.style.color = 'var(--color-primary-500)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.color = 'var(--text-primary)';

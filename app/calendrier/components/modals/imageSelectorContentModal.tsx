@@ -122,7 +122,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
           <div
             className={`relative border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
               dragActive 
-                ? 'border-primary bg-primary-ultra-light' 
+                ? 'border-primary bg-primary-50' 
                 : 'border-gray-300 hover:border-primary'
             }`}
             onDrop={handleDrop}
@@ -244,7 +244,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                     <div 
                       className={`border-2 rounded-lg p-2 hover:border-primary hover:shadow-md transition-all relative ${
                         index === 0 && currentPage === 1 && actualImage !== null
-                          ? 'border-primary shadow-lg bg-primary-ultra-light' 
+                          ? 'border-primary shadow-lg bg-primary-50' 
                           : 'border-gray-200 hover:border-primary'
                       }`}
                       title={image.name}
@@ -293,7 +293,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                   onClick={() => onImageSelect(image)}
                   className={`flex items-center p-3 border-2 rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all group relative ${
                     index === 0 
-                      ? 'border-primary shadow-md bg-primary-ultra-light' 
+                      ? 'border-primary shadow-md bg-primary-50' 
                       : 'border-gray-200'
                   }`}
                   title={image.name}

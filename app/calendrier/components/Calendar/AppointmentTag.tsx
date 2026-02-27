@@ -1,4 +1,4 @@
-import React, { memo, use, useMemo } from 'react';
+import React, { memo, use, useMemo, useState } from 'react';
 
 interface AppointmentTagProps {
   tagName: string;
@@ -10,6 +10,7 @@ interface AppointmentTagProps {
   appointmentWidth?: number; // Largeur du rendez-vous en pixels
   appointmentDurationDays?: number; // Durée du rendez-vous en jours
   placement?: 'hover' | 'fixed'; // Mode d'affichage de l'étiquette
+  annotation?: string; // Annotation/note du rendez-vous
 }
 
 const AppointmentTag: React.FC<AppointmentTagProps> = ({
@@ -22,6 +23,7 @@ const AppointmentTag: React.FC<AppointmentTagProps> = ({
   appointmentWidth = 100,
   appointmentDurationDays = 1,
   placement = 'hover',
+  annotation,
 }) => {
   // Adapter la taille de l'indicateur en fonction de la largeur du rendez-vous
   const isSmallAppointment = appointmentWidth < 60;
@@ -38,88 +40,137 @@ const AppointmentTag: React.FC<AppointmentTagProps> = ({
   // Largeur maximale du badge
   const maxBadgeWidth = Math.min(appointmentWidth - 20, 150);
 
-  function getContrastColor(hexColor: string) {
-    // Enlever le # si présent
-    const hex = hexColor.replace('#', '');
-    
-    // 2. Convertir en RGB
-    var r = parseInt(hex.substr(0, 2), 16);
-    var g = parseInt(hex.substr(2, 2), 16);
-    var b = parseInt(hex.substr(4, 2), 16);
-    
-    // 3. Calculer la luminosité (formule YIQ standard)
-    var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    
-    // 4. Retourner Noir ou Blanc selon le seuil (128 est le milieu)
-    // Vous pouvez changer 'black' par une couleur sombre de votre choix (ex: #333333)
-    return (yiq >= 128) ? '#000000' : '#FFFFFF';
-  }
-
-  // Mode fixe : étiquette toujours visible en bas, peut dépasser du rendez-vous
+  // Mode fixe : même comportement que le mode hover
   if (placement === 'fixed') {
     return (
-      <div 
-        className="absolute -right-5  -bottom-5 z-50" 
-        style={{
-          transform: 'translateX(-50%)',
-          overflow: 'visible'
-        }}
-      >
-        <div 
-          className="flex items-center px-2 py-1 shadow-lg rounded-md"
-          style={{
-            backgroundColor: color,
-            maxWidth: `${Math.min(appointmentWidth * 0.9, 200)}px`,
-            overflow: 'visible'
-          }}
-          title={`${tagName}${tagShortName ? ` (${tagShortName})` : ''}`}
-        >
+      <>
+        <div className="absolute right-1 bottom-0 z-30 flex items-center gap-1">
+          {/* Icône d'annotation - visible si annotation présente */}
+          {annotation && (
+            <div 
+              className="relative"
+              title={annotation}
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 16 16" 
+                fill="currentColor"
+                className=""
+                style={{ color: isHovered ? color : textColor }}
+              >
+                <path d="M2.5 1A1.5 1.5 0 0 0 1 2.5v11A1.5 1.5 0 0 0 2.5 15h6.086a1.5 1.5 0 0 0 1.06-.44l4.915-4.914A1.5 1.5 0 0 0 15 8.586V2.5A1.5 1.5 0 0 0 13.5 1h-11zM2 2.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 .5.5V8H9.5A1.5 1.5 0 0 0 8 9.5V14H2.5a.5.5 0 0 1-.5-.5v-11zm7 11.293V9.5a.5.5 0 0 1 .5-.5h4.293L9 13.793z"/>
+              </svg>          
+            </div>
+          )}
+        
+          {/* Étiquette avec animation */}
+          {tagName && (
+            <div 
+              className="flex items-center gap-1 overflow-hidden transition-all duration-300 ease-in-out"
+              style={{
+                backgroundColor: isHovered ? color : 'transparent',
+                borderRadius: '6px',
+                paddingLeft: isHovered ? '8px' : '0px',
+                paddingRight: isHovered ? '8px' : '0px',
+                paddingTop: isHovered ? '4px' : '0px',
+                paddingBottom: isHovered ? '4px' : '0px',
+                minHeight: isHovered ? '24px' : 'auto',
+                maxWidth: isHovered ? `${maxBadgeWidth}px` : '16px',
+              }}
+              title={`${tagName}${tagShortName ? ` (${tagShortName})` : ''}`}
+            >
+              {/* Icône étiquette - visible uniquement quand non hover */}
+              <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 16 16" 
+              fill="currentColor" 
+              className="transition-all duration-300 ease-in-out flex-shrink-0"
+              style={{
+                display: isHovered ? 'none' : 'block',
+                width: isHovered ? '0px' : '16px',
+                color: textColor,
+              }}
+            >
+              <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+            </svg>
+
+          {/* Texte de l'étiquette - visible uniquement au hover */}
           <span 
-            className="font-bold uppercase whitespace-nowrap text-xs"
+            className="font-bold uppercase whitespace-nowrap transition-all duration-300 ease-in-out"
             style={{ 
-              color: getContrastColor(color),
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+              fontSize: isSmallAppointment ? '8px' : isMediumAppointment ? '8.5px' : '9px',
+              color: textColor,
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+              opacity: isHovered ? 1 : 0,
+              width: isHovered ? 'auto' : '0px',
+              overflow: 'hidden',
             }}
           >
-            {shouldUseShortName ? tagShortName : tagName}
+            {isSmallAppointment && isHovered ? displayText.slice(0, 6) : displayText}
           </span>
         </div>
+          )}
       </div>
+      </>
     );
   }
 
   // Mode hover : comportement par défaut avec animation
   return (
-    <div className="absolute right-1 bottom-0 z-30">
-      <div 
-        className="flex items-center gap-1 overflow-hidden transition-all duration-300 ease-in-out"
-        style={{
-          backgroundColor: isHovered ? color : 'transparent',
-          borderRadius: '6px',
-          paddingLeft: isHovered ? '8px' : '0px',
-          paddingRight: isHovered ? '8px' : '0px',
-          paddingTop: isHovered ? '4px' : '0px',
-          paddingBottom: isHovered ? '4px' : '0px',
-          minHeight: isHovered ? '24px' : 'auto',
-          maxWidth: isHovered ? `${maxBadgeWidth}px` : '16px',
-        }}
-        title={`${tagName}${tagShortName ? ` (${tagShortName})` : ''}`}
-      >
-        {/* Icône étiquette - visible uniquement quand non hover */}
-        <svg 
-          width="16" 
-          height="16" 
-          viewBox="0 0 16 16" 
-          fill="currentColor" 
-          className="transition-all duration-300 ease-in-out flex-shrink-0"
-          style={{
-            display: isHovered ? 'none' : 'block',
-            width: isHovered ? '0px' : '16px',
-            color: textColor,
-          }}
-        >
-          <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
-        </svg>
+    <>
+      <div className="absolute right-1 bottom-0 z-30 flex items-center gap-1">
+        {/* Icône d'annotation - visible si annotation présente */}
+        {annotation && (
+          <div 
+            className="relative"
+            title={annotation}
+          >
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 16 16" 
+              fill="currentColor"
+              className=""
+              style={{ color: isHovered ? color : textColor }}
+            >
+              <path d="M2.5 1A1.5 1.5 0 0 0 1 2.5v11A1.5 1.5 0 0 0 2.5 15h6.086a1.5 1.5 0 0 0 1.06-.44l4.915-4.914A1.5 1.5 0 0 0 15 8.586V2.5A1.5 1.5 0 0 0 13.5 1h-11zM2 2.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 .5.5V8H9.5A1.5 1.5 0 0 0 8 9.5V14H2.5a.5.5 0 0 1-.5-.5v-11zm7 11.293V9.5a.5.5 0 0 1 .5-.5h4.293L9 13.793z"/>
+            </svg>          
+          </div>
+        )}
+      
+        {/* Étiquette avec animation */}
+        {tagName && (
+          <div 
+            className="flex items-center gap-1 overflow-hidden transition-all duration-300 ease-in-out"
+            style={{
+              backgroundColor: isHovered ? color : 'transparent',
+              borderRadius: '6px',
+              paddingLeft: isHovered ? '8px' : '0px',
+              paddingRight: isHovered ? '8px' : '0px',
+              paddingTop: isHovered ? '4px' : '0px',
+              paddingBottom: isHovered ? '4px' : '0px',
+              minHeight: isHovered ? '24px' : 'auto',
+              maxWidth: isHovered ? `${maxBadgeWidth}px` : '16px',
+            }}
+            title={`${tagName}${tagShortName ? ` (${tagShortName})` : ''}`}
+          >
+            {/* Icône étiquette - visible uniquement quand non hover */}
+            <svg 
+            width="16" 
+            height="16" 
+            viewBox="0 0 16 16" 
+            fill="currentColor" 
+            className="transition-all duration-300 ease-in-out flex-shrink-0"
+            style={{
+              display: isHovered ? 'none' : 'block',
+              width: isHovered ? '0px' : '16px',
+              color: textColor,
+            }}
+          >
+            <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+          </svg>
 
         {/* Texte de l'étiquette - visible uniquement au hover */}
         <span 
@@ -136,7 +187,9 @@ const AppointmentTag: React.FC<AppointmentTagProps> = ({
           {isSmallAppointment && isHovered ? displayText.slice(0, 6) : displayText}
         </span>
       </div>
+        )}
     </div>
+    </>
   );
 };
 

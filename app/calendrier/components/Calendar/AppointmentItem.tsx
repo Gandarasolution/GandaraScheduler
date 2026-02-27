@@ -165,6 +165,26 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const hasSpaceForBothHandles = appointmentWidthPx >= 60;
   const isSmallAppointment = appointmentWidthPx < (INTERVAL_WIDTH * 1.5);
 
+  // Calculer le padding nécessaire pour éviter le chevauchement avec les icônes (tag + annotation)
+  const contentPaddingRight = useMemo(() => {
+    const hasAnnotation = !!appointment.description;
+    const hasTag = !!appointment.tag;
+    
+    if (!hasAnnotation && !hasTag) return 8; // Padding minimal par défaut
+    
+    // Calculer l'espace nécessaire : chaque icône fait ~16px + gap de 4px
+    let iconSpace = 0;
+    if (hasAnnotation) iconSpace += 20; // 16px icône + 4px marge
+    if (hasTag) iconSpace += 20; // 16px icône + 4px marge
+    
+    // Sur les petits événements, on réduit légèrement le padding
+    if (isSmallAppointment) {
+      return Math.max(iconSpace * 0.8, 20); // Au minimum 20px sur les petits événements
+    }
+    
+    return iconSpace + 8; // + 8px de marge de sécurité
+  }, [appointment.description, appointment.tag, isSmallAppointment]);
+
   // --- Styles ---
   
   const appointmentColor = event?.color || '#1E40AF';
@@ -347,7 +367,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>
           )}
 
-          <div className='flex flex-col min-w-0 flex-1'>
+          <div 
+            className='flex flex-col min-w-0 flex-1'
+            style={{ paddingRight: `${contentPaddingRight}px` }}
+          >
               <span 
               className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200`}
               style={{ 
@@ -372,10 +395,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
 
       {/* Étiquette/Tag sous forme d'indicateur en bas à droite */}
-      {appointment.tag && !isGhost && (
+      {((appointment.tag && !isGhost) || appointment.description) && (
         <AppointmentTag 
-          tagName={appointment?.tag.name}
-          tagShortName={appointment?.tag.shortName}
+          tagName={appointment?.tag?.name || ''}
+          tagShortName={appointment?.tag?.shortName}
           color={isGhost ? '#333' : appointmentColor}
           textColor={isGhost ? '#000' : appointmentTextColor}
           isHovered={isHovered}
@@ -383,6 +406,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           appointmentWidth={appointmentWidthPx}
           appointmentDurationDays={appointmentDurationDays}
           placement={tagPlacement}
+          annotation={appointment.description}
         />
       )}
 

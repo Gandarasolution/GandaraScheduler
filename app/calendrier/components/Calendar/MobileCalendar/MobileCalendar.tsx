@@ -414,7 +414,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
               className="transition-colors relative"
               style={{ color: 'var(--text-tertiary)' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-primary)';
+                e.currentTarget.style.color = 'var(--color-primary-500)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = 'var(--text-tertiary)';
@@ -441,7 +441,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
               className="transition-colors"
               style={{ color: 'var(--text-tertiary)' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-primary)';
+                e.currentTarget.style.color = 'var(--color-primary-500)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = 'var(--text-tertiary)';
@@ -513,7 +513,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 onClick={handleOpenAddAppointment}
                 className="w-14 h-14 rounded-full text-white flex items-center justify-center transform -translate-y-6 transition-transform active:scale-95"
                 style={{
-                  backgroundColor: 'var(--color-primary)',
+                  backgroundColor: 'var(--color-primary-500)',
                   boxShadow: 'var(--shadow-lg)'
                 }}
                 onMouseEnter={(e) => {

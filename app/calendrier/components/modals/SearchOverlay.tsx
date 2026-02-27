@@ -230,7 +230,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
             <input
               type="text"
               placeholder={placeholder}
-              className="block bg-bg-secondary placeholder:text-primary text-primary w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-sm sm:text-base"
+              className="block bg-secondary-bg placeholder:text-primary text-primary w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-sm sm:text-base"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               autoFocus
@@ -249,7 +249,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
         {/* Liste des items */}
         <div 
-          className="flex-1 overflow-y-auto px-2 sm:px-2 py-2 bg-bg-secondary rounded-2xl shadow-lg border border-light text-primary"
+          className="flex-1 overflow-y-auto px-2 sm:px-2 py-2 bg-secondary-bg rounded-2xl shadow-lg border border-light text-primary"
           style={{ maxHeight }}
         >
           {searchInput.trim() === '' ? (
@@ -272,7 +272,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
               {items.map((item, index) => (
                 <div 
                   key={`${item.id}-${index}`} 
-                  className="w-full flex justify-between hover:bg-primary-ultra-light rounded-xl transition-colors px-1 sm:px-2"
+                  className="w-full flex justify-between hover:bg-primary-50 rounded-xl transition-colors px-1 sm:px-2"
                 >
                   {/* Rendu personnalisé ou rendu par défaut */}
                   {renderItem ? (
@@ -287,7 +287,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
                   {onItemAction && (
                     <div className="h-full">
                       <button
-                        className="px-1.5 sm:px-2 py-1 text-lg sm:text-xl cursor-pointer h-full hover:text-color-primary transition-colors"
+                        className="px-1.5 sm:px-2 py-1 text-lg sm:text-xl cursor-pointer h-full hover:text-primary-500 transition-colors"
                         onClick={() => {
                           onItemAction(item);
                           onClose();

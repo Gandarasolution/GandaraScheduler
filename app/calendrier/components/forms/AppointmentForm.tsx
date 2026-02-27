@@ -754,12 +754,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         
           {/* Section Permissions par employé (Rubriques sociales et événements manuels) */}
           {(isCreatingResource || isEditingResource) && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) && (
-            <div className="mt-4 border border-primary rounded-xl overflow-hidden bg-bg-secondary">
+            <div className="mt-4 border border-primary rounded-xl overflow-hidden bg-secondary-bg">
               {/* En-tête cliquable pour ouvrir/fermer */}
               <button
                 type="button"
                 onClick={() => setIsPermissionsPanelOpen(!isPermissionsPanelOpen)}
-                className="w-full flex items-center justify-between p-4 hover:bg-primary-ultra-light transition-colors"
+                className="w-full flex items-center justify-between p-4 hover:bg-primary-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <div className={`transition-transform duration-200 ${isPermissionsPanelOpen ? 'rotate-90' : ''}`}>
@@ -776,7 +776,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-tertiary">{employees.length} employé(s)</span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-primary-ultra-light text-primary font-medium">
+                  <span className="text-xs px-2 py-1 rounded-full bg-primary-50 text-primary font-medium">
                     {isPermissionsPanelOpen ? 'Masquer' : 'Afficher'}
                   </span>
                 </div>
@@ -814,7 +814,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               {/* Tableau des permissions */}
               <div className="max-h-[350px] overflow-y-auto border border-default rounded-lg shadow-sm">
                 <table className="w-full text-xs">
-                  <thead className="bg-bg-primary sticky top-0 z-10 shadow-sm">
+                  <thead className="bg-primary-bg sticky top-0 z-10 shadow-sm">
                     <tr>
                       <th className="text-left py-3 px-3 font-semibold text-primary border-b border-default">
                         Employé
@@ -869,7 +869,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                               canDelete: true,
                             };
                             return (
-                              <tr key={emp.id} className={`hover:bg-primary-ultra-light transition-colors border-b border-default ${index % 2 === 0 ? 'bg-white' : 'bg-bg-secondary'}`}>
+                              <tr key={emp.id} className={`hover:bg-primary-50 transition-colors border-b border-default ${index % 2 === 0 ? 'bg-white' : 'bg-secondary-bg'}`}>
                                 <td className="py-2.5 px-3 text-primary font-medium">
                                   <div className="flex items-center gap-2">
                                     <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
@@ -1080,7 +1080,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                 name="employeeId"
                 value={formDataAppointment.employee.id || ''}
                 onChange={handleChange}
-                className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-bg-secondary text-sm"
+                className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-secondary-bg text-sm"
               >
                 {employees.map(employee => (
                   <option key={employee.id} value={employee.id}>
@@ -1129,7 +1129,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               {formDataItemType?.tags?.map((tag, index) => (
                   <div
                     key={index}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-primary-ultra-light text-primary rounded-full text-xs group hover:bg-red-50 hover:text-red-600 transition-colors"
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary rounded-full text-xs group hover:bg-red-50 hover:text-red-600 transition-colors"
                   >
                     <span>{tag.name}</span>
                     <button
@@ -1197,7 +1197,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                             ...prev,
                             tag: e.target.value ? formDataItemType.tags?.find(tag => tag.id === Number(e.target.value)) || undefined : undefined
                           }))}
-                          className="flex-1 p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-bg-secondary"
+                          className="flex-1 p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-secondary-bg"
                         >
                           <option value="">Aucune étiquette</option>
                           {formDataItemType.tags?.map((tag) => (
@@ -1211,7 +1211,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                         <button
                           type="button"
                           onClick={handleToggleTagCreation}
-                          className="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors shadow-sm"
+                          className="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-xl hover:bg-primary-600 transition-colors shadow-sm"
                           title={showTagCreation ? "Annuler" : "Créer une étiquette"}
                         >
                           {showTagCreation ? (
@@ -1228,7 +1228,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                     
                       {/* Aperçu de l'étiquette sélectionnée */}
                       {formDataAppointment.tag && formDataItemType.tags && !showTagCreation && (
-                        <div className="flex items-center gap-2 p-3 bg-primary-ultra-light rounded-xl">
+                        <div className="flex items-center gap-2 p-3 bg-primary-50 rounded-xl">
                           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-primary">
                             <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
                           </svg>

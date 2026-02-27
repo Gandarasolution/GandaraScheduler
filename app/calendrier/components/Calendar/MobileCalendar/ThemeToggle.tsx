@@ -24,7 +24,7 @@ export const ThemeToggle: React.FC = () => {
       onClick={toggleTheme}
       className="relative w-14 h-7 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
       style={{
-        backgroundColor: isDark ? 'var(--color-primary)' : 'var(--color-gray-300)'
+        backgroundColor: isDark ? 'var(--color-primary-500)' : 'var(--color-gray-300)'
       }}
       aria-label={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
     >

@@ -110,7 +110,7 @@ export const customRenderersFactory = (
         <img
           src={item.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`}
           alt={item.nom + ' ' + item.prenom}
-          className={`cursor-pointer w-8 h-8 rounded-full border-1 shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+          className={`cursor-pointer w-8 h-8 rounded-full border shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
           onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`; }}
           onClick={(e) => {
               e.stopPropagation();

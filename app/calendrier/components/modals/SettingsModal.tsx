@@ -26,7 +26,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     >
       <div className="flex flex-col gap-6 poppins">
         {settings.map((cat: any, idx: number) => (
-          <div key={cat.category} className="border border-light text-primary rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-300">
+          <div key={cat.category} className="border border-light text-primary rounded-2xl overflow-hidden bg-secondary-bg shadow-lg hover:shadow-xl transition-all duration-300">
             <button
               type="button"
               className="w-full text-left px-6 py-5 font-semibold bg-secondary hover:bg-tertiary transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 flex items-center justify-between border-b border-light"
@@ -49,9 +49,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
             
             <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openCategory === cat.category ? 'max-h-150 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="px-6 py-6 bg-bg-secondary">
+              <div className="px-6 py-6 bg-secondary-bg">
                 {cat.items.map((setting: any, settingIdx: number) => (
-                  <div key={setting.id} className={`flex flex-col lg:flex-row lg:items-center justify-between py-4 ${settingIdx !== cat.items.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                  <div key={setting.id} className={`flex flex-col lg:flex-row lg:items-center justify-between py-4 ${settingIdx !== cat.items.length - 1 ? 'border-b border-ultra-light' : ''}`}>
                     <div className="mb-3 lg:mb-0 lg:mr-6 min-w-[200px]">
                       <label htmlFor={setting.id} className="text-base font-medium poppins block">
                         {setting.label}
@@ -129,8 +129,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="bg-secondary rounded-xl p-4 border border-light">
                           {setting.nonWorkingDates.length === 0 ? (
                             <div className="text-center py-8">
-                              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="w-16 h-16 bg-secondary-bg rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg className="w-8 h-8 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                               </div>
@@ -140,7 +140,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             <div className="space-y-2 max-h-40 overflow-y-auto">
                               <h4 className="text-sm font-semibold  mb-3 poppins">Dates non travaillées ({setting.nonWorkingDates.length})</h4>
                               {setting.nonWorkingDates.map((date: number, idx: number) => (
-                                <div key={date + idx} className="flex items-center justify-between bg-bg-secondary rounded-xl px-4 py-3 shadow-sm border border-ultra-light hover:shadow-md transition-all duration-200">
+                                <div key={date + idx} className="flex items-center justify-between bg-secondary-bg rounded-xl px-4 py-3 shadow-sm border border-ultra-light hover:shadow-md transition-all duration-200">
                                   <div className="flex items-center gap-3">
                                     <div className="w-2 h-2 bg-primary rounded-full"></div>
                                     <span className="text-sm font-medium poppins">{format(date, "dd/MM/yyyy")}</span>
@@ -179,7 +179,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 checked={setting.value}
                                 onChange={e => setting.onChange(e.target.checked)}
                               />
-                              <div className={`w-12 h-6 rounded-full transition-all duration-300 cursor-pointer ${setting.value ? 'bg-primary' : 'bg-gray-300'}`} onClick={() => setting.onChange(!setting.value)}>
+                              <div className={`w-12 h-6 rounded-full transition-all duration-300 cursor-pointer ${setting.value ? 'bg-primary' : 'bg-secondary'}`} onClick={() => setting.onChange(!setting.value)}>
                                 <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-all duration-300 ${setting.value ? 'translate-x-6' : 'translate-x-0.5'} translate-y-0.5`}></div>
                               </div>
                             </div>
@@ -188,7 +188,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           <input
                             id={setting.id}
                             type={setting.type}
-                            className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 w-48 poppins text-sm bg-white shadow-sm hover:shadow-md"
+                            className="border border-default rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 w-48 poppins text-sm bg-transparent shadow-sm hover:shadow-md"
                             value={setting.value}
                             onChange={e => setting.onChange(e.target.value)}
                           />
@@ -202,9 +202,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         ))}
         
-        <div className="flex justify-end pt-6 border-t border-gray-200">
+        <div className="flex justify-end pt-6 border-t border-ultra-light">
           <button
-            className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
+            className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
             onClick={onClose}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

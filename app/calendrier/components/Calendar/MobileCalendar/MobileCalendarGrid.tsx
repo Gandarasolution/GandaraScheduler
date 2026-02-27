@@ -136,14 +136,14 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
                   `}
                   style={{
                     backgroundColor: isSelected 
-                      ? 'var(--color-primary)' 
+                      ? 'var(--color-primary-500)' 
                       : today 
-                        ? 'var(--color-primary-lighter)'
+                        ? 'var(--color-primary-100)'
                         : 'transparent',
                     color: isSelected 
                       ? 'var(--text-inverse)' 
                       : today 
-                        ? 'var(--color-primary)'
+                        ? 'var(--color-primary-500)'
                         : 'var(--text-primary)',
                     fontWeight: today ? 'bold' : 'medium',
                     boxShadow: isSelected ? 'var(--shadow-lg)' : 'none'
@@ -174,7 +174,7 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
                             ? '#a78bfa'
                             : appCount > 1 
                               ? '#fbbf24'
-                              : 'var(--color-primary)'
+                              : 'var(--color-primary-500)'
                       }}
                     />
                   )}
@@ -187,7 +187,7 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
         <button 
           className={`absolute -bottom-3 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full text-sm hover:shadow-lg active:scale-95 transition-all duration-300 ease-in-out ${!isExpanded ? 'rotate-180' : ''}`}
           style={{
-            backgroundColor: 'var(--color-primary)',
+            backgroundColor: 'var(--color-primary-500)',
             color: 'var(--text-inverse)',
             boxShadow: 'var(--shadow-md)'
           }}

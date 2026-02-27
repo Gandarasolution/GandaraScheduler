@@ -75,7 +75,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
       />
       
       {/* Panneau de notifications */}
-      <div className="fixed top-16 right-4 w-96 max-h-[80vh] bg-bg-secondary text-primary rounded-2xl shadow-2xl border border-default z-50 flex flex-col poppins">
+      <div className="fixed top-16 right-4 w-96 max-h-[80vh] bg-secondary-bg text-primary rounded-2xl shadow-2xl border border-default z-50 flex flex-col poppins">
         {/* En-tête */}
         <div className="flex items-center justify-between p-6 border-b border-light bg-gradient-to-r from-primary to-primary-dark text-white rounded-t-2xl">
           <div className="flex items-center gap-3">
@@ -84,7 +84,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
             </svg>
             <h3 className="text-lg font-semibold">Notifications</h3>
             {notifications.length > 0 && (
-              <span className="bg-bg-secondary/20 text-xs px-2 py-1 rounded-full">
+              <span className="bg-secondary-bg/20 text-xs px-2 py-1 rounded-full">
                 {notifications.length}
               </span>
             )}
@@ -93,7 +93,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
             {notifications.length > 0 && (
               <button
                 onClick={() => onClearAll()}
-                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-bg-secondary/20 transition-colors"
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-secondary-bg/20 transition-colors"
                 title="Tout effacer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,7 +103,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
             )}
             <button
               onClick={() => onClose()}
-              className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-bg-secondary/20 transition-colors"
+              className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-secondary-bg/20 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

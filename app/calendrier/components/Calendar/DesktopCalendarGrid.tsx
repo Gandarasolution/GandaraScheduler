@@ -386,7 +386,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         )}
         
         <div 
-          className="calendar-table bg-bg-secondary relative"
+          className="calendar-table bg-secondary-bg relative"
           style={{
             width: `${dayInTimeline.length * CELL_WIDTH}px`,
             position: 'relative',

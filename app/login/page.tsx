@@ -129,7 +129,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg poppins"
+            className="w-full bg-primary hover:bg-primary-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg poppins"
           >
             {loading ? (
               <span className="flex items-center justify-center">
@@ -159,7 +159,7 @@ export default function LoginPage() {
         <div className="space-y-2">
           <button
             onClick={() => quickLogin('admin', 'admin@gandara.com')}
-            className="w-full flex items-center justify-between px-4 py-3 bg-primary-ultra-light hover:bg-primary-lighter border border-primary rounded-lg transition-all text-primary font-medium poppins"
+            className="w-full flex items-center justify-between px-4 py-3 bg-primary-50 hover:bg-primary-100 border border-primary rounded-lg transition-all text-primary font-medium poppins"
           >
             <span className="flex items-center gap-2">
               <span className="text-lg">👑</span>
@@ -203,7 +203,7 @@ export default function LoginPage() {
         </div>
 
         {/* Info */}
-        <div className="mt-6 p-4 bg-primary-ultra-light rounded-lg">
+        <div className="mt-6 p-4 bg-primary-50 rounded-lg">
           <p className="text-xs text-primary text-center poppins">
             💡 <strong>Mode démo</strong> - Aucune vérification réelle. Cliquez sur un bouton d'accès rapide ou remplissez le formulaire.
           </p>

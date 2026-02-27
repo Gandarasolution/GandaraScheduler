@@ -29,7 +29,7 @@ const TagCreationForm: React.FC<TagCreationFormProps> = ({
   const isExtended = variant === 'extended';
 
   return (
-    <div className={isExtended ? "p-4 border border-primary rounded-xl bg-primary-ultra-light space-y-3 animate-in slide-in-from-top duration-200" : "flex flex-col gap-3"}>
+    <div className={isExtended ? "p-4 border border-primary rounded-xl bg-primary-50 space-y-3 animate-in slide-in-from-top duration-200" : "flex flex-col gap-3"}>
       {isExtended && <h4 className="text-sm font-semibold text-primary">Nouvelle étiquette</h4>}
       
       {/* Version longue */}
@@ -81,7 +81,7 @@ const TagCreationForm: React.FC<TagCreationFormProps> = ({
         type="button"
         onClick={onAdd}
         disabled={!newTag.name.trim()}
-        className={`w-full px-3 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+        className={`w-full px-3 py-2 bg-primary text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
           isExtended ? '' : ''
         }`}
         title="Ajouter l'étiquette"

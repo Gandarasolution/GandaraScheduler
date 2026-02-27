@@ -100,7 +100,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
           hover:scale-110
           focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
           bg-primary text-white
-          hover:bg-primary-dark
+          hover:bg-primary-600
         `}
         aria-label="Changer le thème"
         title={`Thème actuel: ${currentThemeConfig.displayName}`}

@@ -149,9 +149,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
           <div className="max-h-[70vh] overflow-y-auto scrollbar-hide space-y-6">
         
         {/* Configuration actuelle */}
-        <div className="bg-gradient-to-r from-[#e7f4f2] to-[#f0f9f7] p-4 rounded-xl border border-[#009580]/20">
-          <h3 className="font-semibold text-[#16302C] mb-2 flex items-center gap-2">
-            <div className="w-5 h-5 bg-[#009580] rounded-full flex items-center justify-center">
+        <div className="bg-gradient-to-r from-primary-ultra-light to-primary-light p-4 rounded-xl border border-primary/20">
+          <h3 className="font-semibold text-primary mb-2 flex items-center gap-2">
+            <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
               <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
               </svg>
@@ -169,11 +169,11 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 />
               )}
               <div className="flex-1">
-                <p className="text-sm font-medium text-[#16302C] mb-1">
+                <p className="text-sm font-medium text-primary mb-1">
                   {currentConfig.name}
                 </p>
                 {currentConfig.description && (
-                  <p className="text-xs text-[#16302C]/60 mb-2">
+                  <p className="text-xs text-secondary mb-2">
                     {currentConfig.description}
                   </p>
                 )}
@@ -196,18 +196,18 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
               </div>
             </div>
           ) : (
-            <p className="text-sm text-[#16302C]/70">Aucune configuration sélectionnée</p>
+            <p className="text-sm text-secondary">Aucune configuration sélectionnée</p>
           )}
         </div>
 
         {/* Liste des configurations */}
         <div>
           <div className="flex items-center justify-between mb-4 gap-3">
-            <h3 className="font-semibold text-[#16302C] text-lg">Configurations disponibles</h3>
+            <h3 className="font-semibold text-primary text-lg">Configurations disponibles</h3>
             {user.role === 'admin' && (
               <button
                 onClick={() => setIsCreatingConfig(true)}
-                className="px-4 py-2 bg-[#009580] text-white rounded-xl text-sm hover:bg-[#007a6b] transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
+                className="px-4 py-2 bg-primary text-white rounded-xl text-sm hover:bg-primary-dark transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -223,8 +223,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 key={config.id}
                 className={`p-4 border-2 rounded-xl transition-all duration-200 ${
                   currentConfig?.id === config.id 
-                    ? 'border-[#009580] bg-gradient-to-r from-[#e7f4f2] to-[#f0f9f7] shadow-lg' 
-                    : 'border-gray-200 hover:border-[#009580]/30 hover:bg-gray-50/50'
+                    ? 'border-primary bg-gradient-to-r from-primary-ultra-light to-primary-light shadow-lg' 
+                    : 'border-ultra-light hover:border-primary/30 hover:bg-secondary-bg/50'
                 }`}
               >
                 <div className="flex items-start gap-3 mb-3">
@@ -241,15 +241,15 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       className="w-full text-left group"
                     >
                       <div className="flex items-center gap-3 mb-1">
-                        <span className="font-semibold text-[#16302C] group-hover:text-[#009580] transition-colors">
+                        <span className="font-semibold text-primary group-hover:text-primary-dark transition-colors">
                           {config.name}
                         </span>
                         {currentConfig?.id === config.id && (
-                          <div className="w-2 h-2 bg-[#009580] rounded-full animate-pulse"></div>
+                          <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                         )}
                       </div>
                       {config.description && (
-                        <p className="text-xs text-gray-500 mb-2">{config.description}</p>
+                        <p className="text-xs text-secondary mb-2">{config.description}</p>
                       )}
                       <div className="flex flex-wrap items-center gap-2">
                         {config.groupingLevels && (
@@ -287,7 +287,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setEditingConfig(config)}
-                    className="p-2 text-gray-400 hover:text-[#009580] hover:bg-[#009580]/10 rounded-lg transition-all duration-200"
+                    className="p-2 text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-all duration-200"
                     title="Modifier"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,8 +328,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         {(isCreatingConfig || editingConfig) && (
           <div className="w-1/2 border-l pl-6">
             <div className="max-h-[70vh] overflow-y-auto scrollbar-hide">
-              <div className="sticky top-0 bg-white pb-4 border-b mb-6">
-                <h3 className="font-semibold text-[#16302C] text-lg">
+              <div className="sticky top-0 bg-primary-bg pb-4 border-b mb-6">
+                <h3 className="font-semibold text-primary text-lg">
                   {editingConfig ? 'Modifier la configuration' : 'Nouvelle configuration'}
                 </h3>
               </div>
@@ -337,27 +337,27 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             <div className="space-y-4">
               {/* Nom de la configuration */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-primary mb-1">
                   Nom de la configuration
                 </label>
                 <input
                   type="text"
                   value={configName}
                   onChange={(e) => setConfigName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#009580] focus:border-[#009580]"
+                  className="w-full px-3 py-2 border border-default rounded-lg focus:ring-primary focus:border-primary bg-transparent"
                   placeholder="Ex: Vue Technique par contrats"
                 />
               </div>
 
               {/* Description de la configuration */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-primary mb-1">
                   Description
                 </label>
                 <textarea
                   value={configDescription}
                   onChange={(e) => setConfigDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#009580] focus:border-[#009580]"
+                  className="w-full px-3 py-2 border border-default rounded-lg focus:ring-primary focus:border-primary bg-transparent"
                   placeholder="Description de la vue (optionnel)"
                   rows={3}
                 />
@@ -365,10 +365,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
               {/* Image de la configuration (optionnel) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-primary mb-1">
                   Image de la vue (optionnel)
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#009580] transition-colors cursor-pointer">
+                <div className="border-2 border-dashed border-default rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer">
                   {configImage ? (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -377,7 +377,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                           alt={configImage.name} 
                           className="w-12 h-12 object-cover rounded-lg"
                         />
-                        <span className="text-sm text-gray-700">{configImage.name}</span>
+                        <span className="text-sm text-primary">{configImage.name}</span>
                       </div>
                       <button
                         onClick={() => setConfigImage(undefined)}
@@ -389,7 +389,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       </button>
                     </div>
                   ) : (
-                    <div className="text-gray-400">
+                    <div className="text-secondary">
                       <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
@@ -401,13 +401,13 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
               {/* Niveaux de groupement */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-primary mb-3">
                   Niveaux de groupement
                 </label>
-                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-3 bg-secondary-bg p-4 rounded-lg">
                   {/* Niveau 1 */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
+                    <label className="block text-xs font-medium text-secondary mb-2">
                       Niveau 1
                     </label>
                     <div className="flex gap-2">
@@ -423,8 +423,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         }}
                         className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                           groupingLevel1 === 'equipe'
-                            ? 'border-[#009580] bg-[#e7f4f2] text-[#009580]'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                            ? 'border-primary bg-primary-ultra-light text-primary'
+                            : 'border-default bg-secondary-bg text-primary hover:border-light'
                         }`}
                       >
                         Équipe
@@ -441,8 +441,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         }}
                         className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                           groupingLevel1 === 'pole'
-                            ? 'border-[#009580] bg-[#e7f4f2] text-[#009580]'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                            ? 'border-primary bg-primary-ultra-light text-primary'
+                            : 'border-default bg-secondary-bg text-primary hover:border-light'
                         }`}
                       >
                         Pôle
@@ -452,7 +452,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
                   {/* Niveau 2 */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
+                    <label className="block text-xs font-medium text-secondary mb-2">
                       Niveau 2
                     </label>
                     <div className="flex gap-2">
@@ -468,10 +468,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         disabled={groupingLevel1 === 'equipe'}
                         className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                           groupingLevel2 === 'equipe'
-                            ? 'border-[#009580] bg-[#e7f4f2] text-[#009580]'
+                            ? 'border-primary bg-primary-ultra-light text-primary'
                             : groupingLevel1 === 'equipe'
-                            ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                            ? 'border-ultra-light bg-secondary-bg text-secondary cursor-not-allowed'
+                            : 'border-default bg-secondary-bg text-primary hover:border-light'
                         }`}
                       >
                         Équipe
@@ -488,10 +488,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         disabled={groupingLevel1 === 'pole'}
                         className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
                           groupingLevel2 === 'pole'
-                            ? 'border-[#009580] bg-[#e7f4f2] text-[#009580]'
+                            ? 'border-primary bg-primary-ultra-light text-primary'
                             : groupingLevel1 === 'pole'
-                            ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                            ? 'border-ultra-light bg-secondary-bg text-secondary cursor-not-allowed'
+                            : 'border-default bg-secondary-bg text-primary hover:border-light'
                         }`}
                       >
                         Pôle
@@ -499,7 +499,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-secondary mt-2">
                     Définissez comment regrouper les données dans la vue (seulement équipe et pôle). Les deux niveaux ne peuvent pas être identiques.
                   </p>
                 </div>
@@ -507,15 +507,15 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
               {/* Section Filtres catégorisés */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-primary mb-3">
                   Filtres
                 </label>
                 
                 <div className="space-y-4">
                   {/* Filtres Personnel */}
-                  <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="border border-ultra-light rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <h4 className="font-medium text-primary flex items-center gap-2">
                         <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
@@ -525,7 +525,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         {filterCategories.personnel.length} filtre{filterCategories.personnel.length > 1 ? 's' : ''}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mb-3">
+                    <p className="text-xs text-secondary mb-3">
                       Filtres appliqués au personnel (pôle, équipe, contrat, etc.)
                     </p>
                     
@@ -551,8 +551,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-400">Aucun filtre personnel</p>
+                      <div className="text-center py-4 bg-secondary-bg rounded-lg">
+                        <p className="text-sm text-secondary">Aucun filtre personnel</p>
                       </div>
                     )}
                     
@@ -577,9 +577,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   </div>
 
                   {/* Filtres Événements */}
-                  <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="border border-ultra-light rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <h4 className="font-medium text-primary flex items-center gap-2">
                         <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
@@ -589,14 +589,14 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         {selectedRdvTypes.length} type{selectedRdvTypes.length > 1 ? 's' : ''}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mb-3">
+                    <p className="text-xs text-secondary mb-3">
                       Types d'événements à afficher dans cette vue
                     </p>
                     
                     {/* Types de RDV sous forme de checkboxes */}
                     <div className="space-y-2 mb-3">
                       {/* Chantier */}
-                      <div className="flex items-center space-x-3 p-2 border border-gray-200 rounded-lg hover:bg-purple-50/30 transition-colors">
+                      <div className="flex items-center space-x-3 p-2 border border-ultra-light rounded-lg hover:bg-primary-ultra-light/30 transition-colors">
                         <input
                           type="checkbox"
                           id="rdv-chantier"
@@ -608,7 +608,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                               setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Chantier'));
                             }
                           }}
-                          className="h-4 w-4 text-[#009580] focus:ring-[#009580] border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-default rounded"
                         />
                         <div className="flex items-center space-x-2 flex-1">
                           <div className="w-6 h-6 bg-[#FF6B6B] rounded flex items-center justify-center flex-shrink-0">
@@ -616,14 +616,14 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
                           </div>
-                          <label htmlFor="rdv-chantier" className="text-sm font-medium text-gray-900 cursor-pointer">
+                          <label htmlFor="rdv-chantier" className="text-sm font-medium text-primary cursor-pointer">
                             Chantiers
                           </label>
                         </div>
                       </div>
 
                       {/* Absence */}
-                      <div className="flex items-center space-x-3 p-2 border border-gray-200 rounded-lg hover:bg-purple-50/30 transition-colors">
+                      <div className="flex items-center space-x-3 p-2 border border-ultra-light rounded-lg hover:bg-primary-ultra-light/30 transition-colors">
                         <input
                           type="checkbox"
                           id="rdv-absence"
@@ -635,7 +635,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                               setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Absence'));
                             }
                           }}
-                          className="h-4 w-4 text-[#009580] focus:ring-[#009580] border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-default rounded"
                         />
                         <div className="flex items-center space-x-2 flex-1">
                           <div className="w-6 h-6 bg-[#FFC107] rounded flex items-center justify-center flex-shrink-0">
@@ -643,14 +643,14 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                           </div>
-                          <label htmlFor="rdv-absence" className="text-sm font-medium text-gray-900 cursor-pointer">
+                          <label htmlFor="rdv-absence" className="text-sm font-medium text-primary cursor-pointer">
                             Absences / Social
                           </label>
                         </div>
                       </div>
 
                       {/* Autre */}
-                      <div className="flex items-center space-x-3 p-2 border border-gray-200 rounded-lg hover:bg-purple-50/30 transition-colors">
+                      <div className="flex items-center space-x-3 p-2 border border-ultra-light rounded-lg hover:bg-primary-ultra-light/30 transition-colors">
                         <input
                           type="checkbox"
                           id="rdv-autre"
@@ -662,7 +662,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                               setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Autre'));
                             }
                           }}
-                          className="h-4 w-4 text-[#009580] focus:ring-[#009580] border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-default rounded"
                         />
                         <div className="flex items-center space-x-2 flex-1">
                           <div className="w-6 h-6 bg-[#6C5CE7] rounded flex items-center justify-center flex-shrink-0">
@@ -670,7 +670,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                           </div>
-                          <label htmlFor="rdv-autre" className="text-sm font-medium text-gray-900 cursor-pointer">
+                          <label htmlFor="rdv-autre" className="text-sm font-medium text-primary cursor-pointer">
                             Autres événements
                           </label>
                         </div>
@@ -679,13 +679,12 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
                     {/* Autres filtres événements personnalisés */}
                     {!Array.isArray(filterCategories.evenements) && filterCategories.evenements.filters.length > 0 && (
-                      <>
-                        <hr className="my-3" />
-                        <p className="text-xs text-gray-500 mb-2 font-medium">Filtres personnalisés</p>
+                      <>  <hr className="my-3" />
+                        <p className="text-xs text-secondary mb-2 font-medium">Filtres personnalisés</p>
                         <div className="space-y-2">
                           {filterCategories.evenements.filters.map((filter, index) => (
-                            <div key={index} className="flex items-center justify-between bg-purple-50 p-2 rounded-lg">
-                              <span className="text-sm text-gray-700">{filter.field}: {filter.value}</span>
+                            <div key={index} className="flex items-center justify-between bg-primary-ultra-light p-2 rounded-lg">
+                              <span className="text-sm text-primary">{filter.field}: {filter.value}</span>
                               <button
                                 onClick={() => {
                                   if (!Array.isArray(filterCategories.evenements)) {
@@ -744,14 +743,14 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   setEditingConfig(null);
                   resetForm();
                 }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                className="px-4 py-2 text-secondary hover:text-primary font-medium transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={handleSave}
                 disabled={!configName.trim()}
-                className="px-4 py-2 bg-[#009580] text-white rounded-lg hover:bg-[#007a6b] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {editingConfig ? 'Modifier' : 'Créer'}
               </button>

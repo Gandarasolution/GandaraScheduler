@@ -177,7 +177,7 @@ const RightClickComponent = ({
         className="
         rightClickComponent 
         fixed flex flex-col 
-        bg-white border border-gray-300 rounded-xl shadow-lg z-60 p-2
+        bg-secondary-bg border border-default rounded-xl shadow-lg z-60 p-2
         "
         style={{ 
           top: position.y, 
@@ -196,7 +196,7 @@ const RightClickComponent = ({
                 ? 'opacity-50 cursor-not-allowed pointer-events-none' 
                 : ' cursor-pointer'
               }
-              item hover:bg-[#e7f4f2]
+              item hover:bg-primary-ultra-light
               `
             }
             onClick={() => {

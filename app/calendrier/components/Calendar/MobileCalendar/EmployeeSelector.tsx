@@ -139,8 +139,8 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         <div 
           className="rounded-xl p-2.5 mr-3"
           style={{
-            backgroundColor: 'var(--color-primary-lighter)',
-            color: 'var(--color-primary)'
+            backgroundColor: 'var(--color-primary-100)',
+            color: 'var(--color-primary-500)'
           }}
         >
           <Search size={20} />
@@ -193,7 +193,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                 color: 'var(--text-primary)'
               }}
               onFocus={(e) => {
-                e.currentTarget.style.outline = '2px solid var(--color-primary)';
+                e.currentTarget.style.outline = '2px solid var(--color-primary-500)';
               }}
               onBlur={(e) => {
                 e.currentTarget.style.outline = 'none';
@@ -216,7 +216,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             {validRecentEmployees.length > 0 && !search && (
               <EmployeeGroup
                 title="Récents"
-                icon={<Clock size={14} style={{ color: 'var(--color-primary)' }} />}
+                icon={<Clock size={14} style={{ color: 'var(--color-primary-500)' }} />}
                 employees={validRecentEmployees}
                 isExpanded={expandedGroups.has('récents')}
                 onToggle={() => toggleGroup('récents')}
@@ -341,8 +341,8 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
     onClick={() => onSelect(employee)}
     className="flex items-center p-2 rounded-xl cursor-pointer transition-colors border"
     style={{
-      backgroundColor: isSelected ? 'var(--color-primary-lighter)' : 'transparent',
-      borderColor: isSelected ? 'var(--color-primary)' : 'transparent',
+      backgroundColor: isSelected ? 'var(--color-primary-100)' : 'transparent',
+      borderColor: isSelected ? 'var(--color-primary-500)' : 'transparent',
       opacity: isInactive ? 0.5 : 1
     }}
     onMouseEnter={(e) => {
@@ -374,7 +374,7 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
         <p 
           className="text-sm font-medium truncate"
           style={{ 
-            color: isInactive ? 'var(--text-tertiary)' : (isSelected ? 'var(--color-primary-dark)' : 'var(--text-primary)')
+            color: isInactive ? 'var(--text-tertiary)' : (isSelected ? 'var(--color-primary-600)' : 'var(--text-primary)')
           }}
         >
           {employee.nom} {employee.prenom}
@@ -383,8 +383,8 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
           <span 
             className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded"
             style={{
-              backgroundColor: 'var(--color-primary-lighter)',
-              color: 'var(--color-primary-dark)'
+              backgroundColor: 'var(--color-primary-100)',
+              color: 'var(--color-primary-600)'
             }}
           >
             Récent
@@ -403,7 +403,7 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
         )}
       </div>
     </div>
-    {isSelected && <Check size={18} className="flex-shrink-0" style={{ color: 'var(--color-primary)' }} />}
+    {isSelected && <Check size={18} className="flex-shrink-0" style={{ color: 'var(--color-primary-500)' }} />}
   </div>
   );
 };

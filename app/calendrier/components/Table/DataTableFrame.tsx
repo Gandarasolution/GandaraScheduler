@@ -220,7 +220,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   customRenderers = {},
   enableHighlight = true,
   showGroupHeaders = true,
-  headerClassName = 'bg-primary-ultra-light',
+  headerClassName = 'bg-primary-50',
   showColumnVisibilityToggle = true,
   withHeader = true,
   customHeader,
@@ -749,7 +749,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
             })),
             show: true,
             minHeight: '40px',
-            containerClassName: 'bg-bg-secondary border-ultra-light',
+            containerClassName: 'bg-secondary-bg border-ultra-light',
           }] : []),
           // Niveau 2: En-têtes de colonnes (si withHeader=true)
           ...(items.length === 0 ? [] : withHeader ? [{
@@ -802,7 +802,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                           title={`Afficher la colonne "${label}"`}
                         >
                           <svg 
-                            className="w-3.5 h-3.5 text-gray-400 group-hover:text-primary-dark transition-colors" 
+                            className="w-3.5 h-3.5 text-gray-400 group-hover:text-primary-600 transition-colors" 
                             fill="none" 
                             stroke="currentColor" 
                             viewBox="0 0 24 24"
@@ -865,7 +865,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                                 <svg 
                                   className={`w-2 h-2 transition-colors ${
                                     isActive && direction === 'asc' 
-                                      ? 'text-color-primary' 
+                                      ? 'text-primary-500' 
                                       : 'text-gray-300'
                                   }`}
                                   fill="currentColor" 
@@ -877,7 +877,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                                 <svg 
                                   className={`w-2 h-2 -mt-0.5 transition-colors ${
                                     isActive && direction === 'desc' 
-                                      ? 'text-color-primary' 
+                                      ? 'text-primary-500' 
                                       : 'text-gray-300'
                                   }`}
                                   fill="currentColor" 
@@ -896,7 +896,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
               }),
             show: true,
             minHeight: '56px',
-            containerClassName: 'bg-bg-secondary border-ultra-light',
+            containerClassName: 'bg-secondary-bg border-ultra-light',
           }] : [])
         ]}
       >

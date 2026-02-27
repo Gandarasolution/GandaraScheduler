@@ -208,11 +208,11 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
               maxHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
               minHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
             },
-            className: `col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-bg-secondary border-b`
+            className: `col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-secondary-bg border-b`
           })),
           show: true,
           minHeight: TIMELINE_HEADERGROUPS_CELL_HEIGHT,
-          containerClassName: 'bg-bg-secondary border-ultra-light',
+          containerClassName: 'bg-secondary-bg border-ultra-light',
         }] : []),
         // Niveau 2: Items (Jours)
         ...(showItemHeaders ? [{
@@ -224,7 +224,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
               if ((customDayLabels && customDayLabels.length > 0) || columns) {
                 return (
                   <div
-                    className="flex flex-col justify-center border-b border-r border-default text-center text-sm font-semibold text-primary p-2 bg-bg-secondary relative item-cell"
+                    className="flex flex-col justify-center border-b border-r border-light text-center text-sm font-semibold text-primary p-2 bg-secondary-bg relative item-cell"
                     style={{ 
                       width: `${CELL_WIDTH}px`,
                       height: 'auto',
@@ -252,8 +252,8 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
               return (
                 <div
                   className={`
-                    flex flex-col justify-end border-b border-r border-default text-center text-sm font-semibold text-primary p-1
-                    ${(isToday(day) && 'calendar-today') || (holiday ? 'FERIE' : (isWeekend(day) ? 'calendar-weekend' : 'bg-bg-secondary'))}
+                    flex flex-col justify-end border-b border-r border-light text-center text-sm font-semibold text-primary p-1
+                    ${(isToday(day) && 'calendar-today') || (holiday ? 'FERIE' : (isWeekend(day) ? 'calendar-weekend' : 'bg-secondary-bg'))}
                     relative
                     day-cell
                   `}
@@ -301,7 +301,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
           })),
           show: true,
           minHeight: TIMELINE_HEADERITEMS_CELL_HEIGHT,
-          containerClassName: 'bg-bg-secondary border-ultra-light',
+          containerClassName: 'bg-secondary-bg border-ultra-light',
         }] : [])
       ]}
     >

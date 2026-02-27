@@ -253,7 +253,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   // Mode normal : avec conteneurs
   return (
     <div className={`flex-1 min-w-0 flex flex-col pr-7 rounded-2xl poppins ${className}`} style={style}>
-      <div className="p-4 border rounded-4xl bg-bg-secondary w-full h-full border-ultra-light">
+      <div className="p-4 border rounded-4xl bg-secondary-bg w-full h-full border-ultra-light">
         {contentArea}
       </div>
     </div>

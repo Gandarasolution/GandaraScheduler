@@ -226,7 +226,7 @@ export const CalendarModals = memo(({
                   />
                 </label>
                 <select
-                  className="border border-default bg-bg-secondary rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition ml-2 custom-select"
+                  className="border border-default bg-secondary-bg rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition ml-2 custom-select"
                   value={modalsState.repeatData.repeatInterval || "day"}
                   onChange={(e) => {
                     const value = e.target.value as "day" | "week" | "month";

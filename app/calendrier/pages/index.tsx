@@ -284,7 +284,7 @@ export default function HomePage({
             </div>
           </div>
         )}
-        <div className="h-screen flex flex-col overflow-hidden bg-bg-primary poppins">
+        <div className="h-screen flex flex-col overflow-hidden bg-page poppins">
           
           {/* HEADER : Navigation et Contrôles */}
           {!viewState.isMobile && (

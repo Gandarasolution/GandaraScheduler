@@ -168,7 +168,7 @@ const Modal: React.FC<ModalProps> = ({
             )}
 
             {/* Modal content */}
-            <div className={`text-primary relative bg-bg-secondary rounded-${roundedSize} shadow-2xl  mx-4 p-0 animate-zoomIn border border-default z-10 modal-content ${className}`}>
+            <div className={`text-primary relative bg-secondary-bg rounded-${roundedSize} shadow-2xl  mx-4 p-0 animate-zoomIn border border-default z-10 modal-content ${className}`}>
                 <div className="flex justify-between items-center px-4 pt-3 pb-2 modal-header">
                     <h2 className="text-xl font-bold ">{title}</h2>
 

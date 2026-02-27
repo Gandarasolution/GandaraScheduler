@@ -111,7 +111,7 @@ export const CalendarHeader = memo(({
               {/* Bouton Retour Planning (visible si hors calendar) */}
               {viewType !== 'calendar' && (
                 <button
-                  className="p-3 rounded-full hover:bg-primary-lighter transition cursor-pointer"
+                  className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
                   onClick={() => {setViewType('calendar')}}
                   title="Planning"
                 >
@@ -134,7 +134,7 @@ export const CalendarHeader = memo(({
 
               {/* Bouton Paramètres */}
               <button
-                className="p-3 rounded-full hover:bg-primary-lighter transition cursor-pointer"
+                className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
                 onClick={() => setIsSettingsOpen(true)}
                 title="Paramètres"
               >
@@ -148,7 +148,7 @@ export const CalendarHeader = memo(({
               {/* Menu Sélection de Vue */}
               <div className="relative" ref={viewDropdownRef}>
                 <button
-                  className="p-3 rounded-full hover:bg-primary-lighter transition cursor-pointer"
+                  className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
                   onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
                   title="Changer de vue"
                 >
@@ -161,7 +161,7 @@ export const CalendarHeader = memo(({
 
                 {/* Dropdown Content */}
                 {isViewDropdownOpen && (
-                  <div className="absolute top-full -left-30 mt-2 w-56 bg-bg-secondary rounded-2xl shadow-2xl border-gray-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  <div className="absolute top-full -left-30 mt-2 w-56 bg-secondary-bg rounded-2xl shadow-2xl border border-light z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white">
                       <h3 className="text-sm font-semibold">Changer de vue</h3>
                       <p className="text-xs text-white/80 mt-1">Sélectionnez votre mode d'affichage</p>
@@ -170,7 +170,7 @@ export const CalendarHeader = memo(({
                     <div className="py-2">
                       {/* Option: Calendrier */}
                       <button
-                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'calendar' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
+                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'calendar' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
                         onClick={() => { setViewType('calendar'); setIsViewDropdownOpen(false); }}
                       >
                         <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'calendar' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
@@ -183,11 +183,11 @@ export const CalendarHeader = memo(({
                         {viewType === 'calendar' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
                       </button>
                       
-                      <div className="mx-4 my-2 h-px bg-primary-lighter"></div>
+                      <div className="mx-4 my-2 h-px bg-primary-100"></div>
 
                       {/* Option: Chantier Table */}
                       <button
-                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'chantier-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
+                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'chantier-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
                         onClick={() => { setViewType('chantier-table'); setIsViewDropdownOpen(false); }}
                       >
                         <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'chantier-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
@@ -203,7 +203,7 @@ export const CalendarHeader = memo(({
                       {/* Option: Paie Table - Seulement pour Admin et Manager */}
                       {(user?.role === 'admin' || user?.role === 'manager') && (
                         <button
-                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'paie-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
+                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'paie-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
                           onClick={() => { setViewType('paie-table'); setIsViewDropdownOpen(false); }}
                         >
                           <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'paie-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
@@ -219,7 +219,7 @@ export const CalendarHeader = memo(({
                       {/* Option: Événements manuels - Seulement pour Admin et Manager */}
                       {(user?.role === 'admin' || user?.role === 'manager') && (
                         <button
-                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
+                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
                           onClick={() => { setViewType('manual-event-table'); setIsViewDropdownOpen(false); }}
                         >
                           <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'manual-event-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
@@ -234,7 +234,7 @@ export const CalendarHeader = memo(({
                       )}
                       {/* Option: Employee Table */}
                       <button
-                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'employee-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
+                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'employee-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
                         onClick={() => { setViewType('employee-table'); setIsViewDropdownOpen(false); }}
                       >
                         <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'employee-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
@@ -256,7 +256,7 @@ export const CalendarHeader = memo(({
 
               {/* Bouton Notifications */}
               <button
-                className="p-3 rounded-full hover:bg-primary-lighter transition relative cursor-pointer"
+                className="p-3 rounded-full hover:bg-primary-100 transition relative cursor-pointer"
                 onClick={() => setIsNotificationsPanelOpen(!isNotificationsPanelOpen)}
                 title="Notifications"
               >
@@ -302,7 +302,7 @@ export const CalendarHeader = memo(({
               <input
                 id="date-select"
                 type="date"
-                className="date-input border w-38 border-default rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-color transition bg-bg-secondary text-base text-primary"
+                className="date-input border w-38 border-default rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-color transition bg-secondary-bg text-base text-primary"
                 value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
                 onChange={(e) => {
                   const date = new Date(e.target.value).setHours(0,0,0,0);                  
@@ -323,7 +323,7 @@ export const CalendarHeader = memo(({
                   className="transition btn-header cursor-pointer border-r border-default px-3 py-2"
                   onClick={() => setIsDisplayWeekend(!isDisplayWeekend)}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className={"bg-icon bi bi-calendar-event transition duration-200 " + (!isDisplayWeekend ? ' text-color-primary' : 'text-gray-500')} viewBox="0 0 16 16">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className={"bg-icon bi bi-calendar-event transition duration-200 " + (!isDisplayWeekend ? ' text-primary-500' : 'text-gray-500')} viewBox="0 0 16 16">
                     <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z" fillOpacity="1" stroke="none" strokeOpacity="1"/>
                     <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z" fillOpacity="1" stroke="none" strokeOpacity="1"/>
                   </svg>
@@ -367,7 +367,7 @@ export const CalendarHeader = memo(({
           {/* Bouton Ajouter Évènement */}
           {(viewType === 'calendar' || viewType === 'manual-event-table') && (
             <button
-              className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto bg-primary-light"
+              className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto bg-primary-500"
               type="button"
               onClick={() => 
                 viewType === 'calendar' 

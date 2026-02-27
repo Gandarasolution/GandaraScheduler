@@ -207,7 +207,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
       <div className="py-4 flex items-center justify-between">
         <button
           onClick={onClearAll}
-          className="text-color-primary rounded-lg cursor-pointer hover:bg-gray-100 px-4 py-2"
+          className="text-primary-500 rounded-lg cursor-pointer hover:bg-gray-100 px-4 py-2"
         >
           Réinitialiser
         </button>
@@ -218,7 +218,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
               onClose();
           }
         }
-          className="px-4 py-2 cursor-pointer bg-primary text-white rounded hover:bg-primary-dark transition rounded-lg"
+          className="px-4 py-2 cursor-pointer bg-primary text-white rounded hover:bg-primary-600 transition rounded-lg"
         >
           Appliquer les filtres
         </button>
