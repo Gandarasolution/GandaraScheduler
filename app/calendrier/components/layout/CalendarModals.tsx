@@ -1,18 +1,27 @@
-import React, { memo, useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { format } from 'date-fns';
 import { 
   Modal, 
-  AppointmentForm, 
-  ImageSelectorContentModal, 
-  SettingsModal, 
-  ConfigurationModal, 
-  FilterModal,
-  DeleteModal 
 } from '@/app/calendrier/components';
 import { Appointment, Item, CalendarConfig, Image, User } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
+
+// Lazy loading des modales lourdes
+const AppointmentForm = lazy(() => import('../forms/AppointmentForm'));
+const ImageSelectorContentModal = lazy(() => import('../modals/imageSelectorContentModal'));
+const SettingsModal = lazy(() => import('../modals/SettingsModal'));
+const ConfigurationModal = lazy(() => import('../modals/ConfigurationModal'));
+const FilterModal = lazy(() => import('../modals/FilterModal'));
+const DeleteModal = lazy(() => import('../modals/DeleteModal'));
+
+// Composant de fallback pour le chargement
+const ModalLoadingFallback = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
 
 interface CalendarModalsProps {
   user: User;
@@ -362,75 +371,93 @@ export const CalendarModals = memo(({
           </div>
         ) : (
           /* CAS 3: Formulaire de RDV */
-          <AppointmentForm
-            appointments={data.appointments}
-            tagPlacement={modalsState.tagPlacement}
-            appointment={modalsState.selectedAppointmentForm as Appointment}
-            item={data.selectedItem!}
-            items={data.items}
-            isReducedVersion={resourceEditMode !== null}
-            resourceEditMode={resourceEditMode}
-            employees={data.employees}
-            HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
-            isFullDay={config.isFullDay}
-            nonWorkingDates={config.nonWorkingDates}
-            onSave={handlers.saveAppointment}
-            onClose={() => handlers.closeModal()}
-            handleOpenImageModal={handlers.openImageModalForEvent}
-            onDirtyChange={setIsFormDirty}
-            handleAddDimension={handlers.handleAddDimension}
-            handleEditDimension={handlers.handleEditDimension}
-            onRemoveTagFromAppointments={handlers.removeTagFromAppointments}
-          />
+          <Suspense fallback={<ModalLoadingFallback />}>
+            <AppointmentForm
+              appointments={data.appointments}
+              tagPlacement={modalsState.tagPlacement}
+              appointment={modalsState.selectedAppointmentForm as Appointment}
+              item={data.selectedItem!}
+              items={data.items}
+              isReducedVersion={resourceEditMode !== null}
+              resourceEditMode={resourceEditMode}
+              employees={data.employees}
+              HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
+              isFullDay={config.isFullDay}
+              nonWorkingDates={config.nonWorkingDates}
+              onSave={handlers.saveAppointment}
+              onClose={() => handlers.closeModal()}
+              handleOpenImageModal={handlers.openImageModalForEvent}
+              onDirtyChange={setIsFormDirty}
+              handleAddDimension={handlers.handleAddDimension}
+              handleEditDimension={handlers.handleEditDimension}
+              onRemoveTagFromAppointments={handlers.removeTagFromAppointments}
+            />
+          </Suspense>
         )}
       </Modal>
 
       {/* --- SELECTEUR D'IMAGES --- */}
-      <ImageSelectorContentModal
-        images={data.availableImages}
-        actualImage={config.viewType === 'employee-table' ? data.selectedEmployee?.image! : data.selectedItem?.image!}
-        isOpen={modalsState.isImageSelectorOpen}
-        onClose={handlers.closeImageModal}
-        onImageSelect={handlers.handleImageSelect}
-        onImageUpload={handlers.handleImageUpload}
-        isUploading={data.isUploading}
-        uploadError={data.uploadError}
-      />
+      {modalsState.isImageSelectorOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <ImageSelectorContentModal
+            images={data.availableImages}
+            actualImage={config.viewType === 'employee-table' ? data.selectedEmployee?.image! : data.selectedItem?.image!}
+            isOpen={modalsState.isImageSelectorOpen}
+            onClose={handlers.closeImageModal}
+            onImageSelect={handlers.handleImageSelect}
+            onImageUpload={handlers.handleImageUpload}
+            isUploading={data.isUploading}
+            uploadError={data.uploadError}
+          />
+        </Suspense>
+      )}
 
       {/* --- PARAMETRES --- */}
-      <SettingsModal 
-        onClose={handlers.closeSettings}
-        settings={settings} 
-        isSettingsOpen={modalsState.isSettingsOpen}
-      />
+      {modalsState.isSettingsOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <SettingsModal 
+            onClose={handlers.closeSettings}
+            settings={settings} 
+            isSettingsOpen={modalsState.isSettingsOpen}
+          />
+        </Suspense>
+      )}
       
       {/* --- CONFIGURATION VUES CALENDRIER --- */}
-      <ConfigurationModal
-        user={user}
-        isOpen={modalsState.isConfigModalOpen}
-        onClose={handlers.closeConfigModal}
-        availableConfigs={data.availableConfigs}
-        currentConfig={data.currentConfig}
-        onConfigChange={handlers.setCurrentConfig}
-        onSaveConfig={handlers.saveCustomConfig}
-        onUpdateConfig={handlers.updateCustomConfig}
-        onDeleteConfig={handlers.deleteCustomConfig}
-        onDuplicateConfig={handlers.duplicateConfig}
-        editingConfig={data.editingConfig}
-        setEditingConfig={handlers.setEditingConfig}
-        isCreatingConfig={data.isCreatingConfig}
-        setIsCreatingConfig={handlers.setIsCreatingConfig}
-      />
+      {modalsState.isConfigModalOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <ConfigurationModal
+            user={user}
+            isOpen={modalsState.isConfigModalOpen}
+            onClose={handlers.closeConfigModal}
+            availableConfigs={data.availableConfigs}
+            currentConfig={data.currentConfig}
+            onConfigChange={handlers.setCurrentConfig}
+            onSaveConfig={handlers.saveCustomConfig}
+            onUpdateConfig={handlers.updateCustomConfig}
+            onDeleteConfig={handlers.deleteCustomConfig}
+            onDuplicateConfig={handlers.duplicateConfig}
+            editingConfig={data.editingConfig}
+            setEditingConfig={handlers.setEditingConfig}
+            isCreatingConfig={data.isCreatingConfig}
+            setIsCreatingConfig={handlers.setIsCreatingConfig}
+          />
+        </Suspense>
+      )}
       
       {/* --- FILTRES TABLEAUX --- */}
-      <FilterModal
-        title='Filtres avancés'
-        isOpen={modalsState.isFilterModalOpen}
-        onSubmit={handlers.submitFilters}
-        onClose={handlers.closeFilterModal}
-        filterConfig={data.filterConfig}
-        onClearAll={handlers.clearFilters}
-      />
+      {modalsState.isFilterModalOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <FilterModal
+            title='Filtres avancés'
+            isOpen={modalsState.isFilterModalOpen}
+            onSubmit={handlers.submitFilters}
+            onClose={handlers.closeFilterModal}
+            filterConfig={data.filterConfig}
+            onClearAll={handlers.clearFilters}
+          />
+        </Suspense>
+      )}
 
       {/* --- NOTIFICATION FLOTTANTE (INFO MODALE) --- */}
       {modalsState.modalInfo && (
@@ -480,12 +507,14 @@ export const CalendarModals = memo(({
           };
 
           return (
-            <DeleteModal
-              isOpen={true}
-              onClose={() => handlers.setDeleteConfirmData?.(null)}
-              title="Suppression de rubrique"
-              scenario={scenario}
-            />
+            <Suspense fallback={<ModalLoadingFallback />}>
+              <DeleteModal
+                isOpen={true}
+                onClose={() => handlers.setDeleteConfirmData?.(null)}
+                title="Suppression de rubrique"
+                scenario={scenario}
+              />
+            </Suspense>
           );
         }
 
@@ -535,12 +564,14 @@ export const CalendarModals = memo(({
           };
 
           return (
-            <DeleteModal
-              isOpen={true}
-              onClose={() => handlers.setDeleteConfirmData?.(null)}
-              title="Suppression de rubrique"
-              scenario={scenario}
-            />
+            <Suspense fallback={<ModalLoadingFallback />}>
+              <DeleteModal
+                isOpen={true}
+                onClose={() => handlers.setDeleteConfirmData?.(null)}
+                title="Suppression de rubrique"
+                scenario={scenario}
+              />
+            </Suspense>
           );
         }
 
@@ -573,12 +604,14 @@ export const CalendarModals = memo(({
         };
 
         return (
-          <DeleteModal
-            isOpen={true}
-            onClose={() => handlers.setDeleteConfirmData?.(null)}
-            title="Suppression de rubrique"
-            scenario={scenario}
-          />
+          <Suspense fallback={<ModalLoadingFallback />}>
+            <DeleteModal
+              isOpen={true}
+              onClose={() => handlers.setDeleteConfirmData?.(null)}
+              title="Suppression de rubrique"
+              scenario={scenario}
+            />
+          </Suspense>
         );
       })()}
     </>

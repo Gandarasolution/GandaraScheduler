@@ -440,6 +440,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     setTagDuplicateError(false);
   };
 
+  /**
+   * Vérifie si une étiquette est utilisée par au moins un rendez-vous
+   */
+  const isTagUsed = (tagId: number): boolean => {
+    return appointments.some(app => app.tag && app.tag.id === tagId);
+  };
+
   const handleRemoveTag = (tagToRemove: number) => {
     // Vérifier si l'étiquette est utilisée par des rendez-vous
     const affectedAppointments = appointments.filter(app => app.tag && app.tag.id === tagToRemove);
@@ -1126,25 +1133,35 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
             {/* Liste des étiquettes */}
             <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto">
-              {formDataItemType?.tags?.map((tag, index) => (
+              {formDataItemType?.tags?.map((tag, index) => {
+                const tagIsUsed = isTagUsed(tag.id);
+                return (
                   <div
                     key={index}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary rounded-full text-xs group hover:bg-red-50 hover:text-red-600 transition-colors"
+                    className={`
+                    inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs group transition-colors hover:bg-red-50 hover:text-red-600
+                    ${
+                      tagIsUsed 
+                        ? 'bg-blue-50 text-blue-600' 
+                        : 'bg-gray-100 text-gray-600'
+                    }
+                    `}
+                    title={tagIsUsed ? `Utilisée par ${appointments.filter(app => app.tag && app.tag.id === tag.id).length} rendez-vous` : 'Non utilisée - suppression directe'}
                   >
                     <span>{tag.name}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tag.id)}
-                      className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                      title="Supprimer l'étiquette"
+                      className={`w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 hidden group-hover:block`}
+                      title={tagIsUsed ? 'Supprimer l\'étiquette (confirmation requise)' : 'Supprimer l\'étiquette'}
                     >
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
                       </svg>
                     </button>
                   </div>
-                ))
-              }
+                );
+              })}
             </div>
           </div>
         )}

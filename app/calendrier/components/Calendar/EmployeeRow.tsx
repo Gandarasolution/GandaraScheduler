@@ -66,7 +66,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const positionedAppointments = useMemo(() => {
     return appointments
       .filter((app) => {
-        if (app.employee.id !== employee.id) return false;
+        if (app?.employee?.id !== employee.id) return false;
         return app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd;
       })
       .map((app) => {

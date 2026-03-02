@@ -31,7 +31,6 @@ import { CELL_WIDTH } from '../../utils/constants';
 interface CalendarGridProps {
   employees: User[];
   appointments: Appointment[];
-  appointmentsDefault: Appointment[];
   events: Item[];
   initialTeams: Groupe[];
   user: User;
@@ -63,7 +62,6 @@ interface CalendarGridProps {
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   employees,
   appointments,
-  appointmentsDefault,
   initialTeams,
   dayInTimeline,
   HALF_DAY_INTERVALS,
@@ -92,6 +90,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onAddAppointment,
 }) => {
 
+  
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
   const [hoverColumnLeft, setHoverColumnLeft] = useState<number | null>(null);
   const hasAutoScrolled = useRef(false);
@@ -149,7 +148,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   return (
       <DesktopCalendarGrid 
         employees={employees}
-        appointments={appointmentsDefault}
+        appointments={appointments}
         dayInTimeline={dayInTimeline}
         initialTeams={initialTeams}
         calendarConfig={calendarConfig}

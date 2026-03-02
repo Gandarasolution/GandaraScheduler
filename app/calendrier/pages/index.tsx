@@ -312,7 +312,6 @@ export default function HomePage({
                         /* Données */
                         employees={dataLayer.filteredEmployees}
                         appointments={dataLayer.filteredAppointments}
-                        appointmentsDefault={dataLayer.appointmentsRef.current}
                         user={user}
 
                         /* Équipes & Événements */

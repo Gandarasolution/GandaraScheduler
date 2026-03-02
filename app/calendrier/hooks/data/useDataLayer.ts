@@ -44,8 +44,10 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
   // Instanciation Utils
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
 
-  // --- Filtrage Principal (Calendrier) ---
-  const filteredEmployees = useMemo(() => {
+  // --- Filtrage de base (sans recherche) ---
+  // Ces mémos se recalculent uniquement quand les filtres changent, PAS à chaque searchQuery
+  
+  const baseFilteredEmployees = useMemo(() => {
     if (!calendarConfig || viewType === 'chantier-table' || viewType === 'paie-table') return globalEmployeesRef.current;
 
     if (viewType === 'calendar') {
@@ -62,31 +64,22 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
       );
     }
 
-    return searchUtils.applyFiltersToEmployees(
-      globalEmployeesRef.current,
-      searchQuery,
-      filters
-    );
+    // Pour les vues tableaux, retourner les données brutes (filtrage avec recherche appliqué après)
+    return globalEmployeesRef.current;
+  }, [calendarConfig, appointmentsVersion, userRole, userIdNumber, viewType]);
 
-   
-  }, [calendarConfig, searchQuery, appointmentsVersion, userRole, userIdNumber]);
-
-  const filteredItems = useMemo(() => {
+  const baseFilteredItems = useMemo(() => {
     if (!calendarConfig) return itemsRef.current;
-    return searchUtils.applyFiltersToItem(
-      itemsRef.current,
-      searchQuery,
-      filters
-    );
-  }, [calendarConfig, searchQuery, filters, searchUtils, appointmentsVersion]);
+    // Retourner les données brutes, le filtrage structurel et la recherche seront appliqués après
+    return itemsRef.current;
+  }, [calendarConfig, appointmentsVersion]);
 
-  const filteredAppointments = useMemo(() => {
+  const baseFilteredAppointments = useMemo(() => {
     if (!calendarConfig || isSearchOverlayOpen) return appointmentsRef.current;
-    // Logique de filtrage combinée (Types RDV + Filtres champs)
+    // Logique de filtrage combinée (Types RDV + Filtres champs) SANS searchQuery
     let filtered = appointmentsRef.current;
     
     // Utiliser le worker pour le pré-filtrage si disponible et si gros volume
-    // Sinon utiliser workerFilteredAppointments si déjà calculé
     if (workerFilteredAppointments.length > 0 && appointmentsRef.current.length > 500) {
       filtered = workerFilteredAppointments;
     }
@@ -113,8 +106,47 @@ export const useDataLayer = ({ viewType, filters, searchQuery, calendarConfig, g
              });
          }
     }
-    return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), searchQuery, globalEmployeesRef.current);
-  }, [calendarConfig, searchQuery, appointmentsVersion, workerFilteredAppointments, userRole, userIdNumber]); // Dépend de la version pour rafraichir
+    // Appliquer les filtres SANS searchQuery pour avoir une base stable
+    return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), '', globalEmployeesRef.current);
+  }, [calendarConfig, appointmentsVersion, workerFilteredAppointments, userRole, userIdNumber, isSearchOverlayOpen]);
+
+  // --- Filtrage avec recherche (appliqué uniquement si searchQuery existe) ---
+  // Ces mémos ne se recalculent que si searchQuery OU les données de base changent
+  
+  const filteredEmployees = useMemo(() => {
+    // En mode calendar, les filtres sont déjà appliqués dans baseFilteredEmployees
+    if (viewType === 'calendar') {
+      return baseFilteredEmployees;
+    }
+    
+    // Pour les autres vues, toujours appliquer les filtres et la recherche
+    // La fonction applyFiltersToEmployees gère elle-même le cas où searchQuery est vide
+    return searchUtils.applyFiltersToEmployees(
+      baseFilteredEmployees,
+      searchQuery,
+      filters
+    );
+  }, [baseFilteredEmployees, searchQuery, viewType, searchUtils, filters]);
+
+  const filteredItems = useMemo(() => {
+    // Toujours appliquer les filtres, même sans recherche
+    // La fonction applyFiltersToItem gère elle-même le cas où searchQuery est vide
+    return searchUtils.applyFiltersToItem(
+      baseFilteredItems,
+      searchQuery,
+      filters
+    );
+  }, [baseFilteredItems, searchQuery, searchUtils, filters]);
+
+  const filteredAppointments = useMemo(() => {
+    // Si pas de recherche, retourner la version de base
+    if (!searchQuery) {
+      return baseFilteredAppointments;
+    }
+    
+    // Appliquer la recherche sur les données déjà filtrées
+    return applyFiltersToAppointments(baseFilteredAppointments, getFlatFilters(calendarConfig?.filterCategories), searchQuery, globalEmployeesRef.current);
+  }, [baseFilteredAppointments, searchQuery, calendarConfig]);
   
   // Pré-filtrage avec Web Worker pour améliorer les performances (gros volumes)
   useEffect(() => {
