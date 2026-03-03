@@ -8,7 +8,7 @@ interface AppointmentListProps {
   items: Item[];
 }
 
-const AppointmentCard: React.FC<{ app: Appointment, colorClass: string, items: Item[], timeSlot: string }> = ({ app, colorClass, items, timeSlot }) => {
+const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, items }) => {
   return (
     <div 
       className="rounded-3xl p-5 mb-4 border flex items-start group transition-all duration-300"
@@ -24,7 +24,10 @@ const AppointmentCard: React.FC<{ app: Appointment, colorClass: string, items: I
         e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
       }}
     >
-      <div className={`w-1.5 h-12 rounded-full ${colorClass} mr-4 mt-1`}></div>
+      <div 
+        className={`w-1.5 h-12 rounded-full  mr-4 mt-1`} 
+        style={{backgroundColor : items.find(item => item.id === app.EventId)?.color}}
+      ></div>
       <div className="flex-1">
         <h3 
           className="font-semibold text-base mb-1 transition-colors"
@@ -137,7 +140,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
             Journée complète
           </h4>
           {fullDayApps.map(app => (
-            <AppointmentCard key={app.id} app={app} colorClass="bg-purple-500" items={items} timeSlot="Toute la journée" />
+            <AppointmentCard key={app.id} app={app} items={items} />
           ))}
         </div>
       )}
@@ -151,7 +154,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
             Matin
           </h4>
           {morningApps.map(app => (
-            <AppointmentCard key={app.id} app={app} colorClass="bg-teal-500" items={items} timeSlot="Matin" />
+            <AppointmentCard key={app.id} app={app} items={items} />
           ))}
         </div>
       )}
@@ -165,7 +168,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
             Après-midi
           </h4>
           {afternoonApps.map(app => (
-            <AppointmentCard key={app.id} app={app} colorClass="bg-orange-400" items={items} timeSlot="Après-midi" />
+            <AppointmentCard key={app.id} app={app} items={items} />
           ))}
         </div>
       )}

@@ -484,7 +484,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             selectedDate={selectedDate}
             appointments={monthlyAppointments}
             onDateSelect={setSelectedDate}
-            onChange={setCurrentDate}
           />
 
           {/* Appointments Detail */}
@@ -511,7 +510,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             >
               <button 
                 onClick={handleOpenAddAppointment}
-                className="w-14 h-14 rounded-full text-white flex items-center justify-center transform -translate-y-6 transition-transform active:scale-95"
+                className="w-14 h-14 rounded-full text-white flex items-center justify-center transform  transition-transform active:scale-95"
                 style={{
                   backgroundColor: 'var(--color-primary-500)',
                   boxShadow: 'var(--shadow-lg)'
