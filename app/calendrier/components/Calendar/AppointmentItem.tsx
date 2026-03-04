@@ -230,7 +230,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       }}
       onDoubleClick={(e) => {
         e.stopPropagation();
-        onDoubleClick && onDoubleClick();
+        setIsHovered(false); // Masquer le tooltip au double-clic
+        console.log(appointment.employee);
+        
+        if (appointment.employee.actif) {
+          onDoubleClick && onDoubleClick();
+        }
       }}
       onContextMenu={(e) => {
          // (Logique Context Menu inchangée)
