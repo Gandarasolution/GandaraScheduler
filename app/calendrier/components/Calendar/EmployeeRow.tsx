@@ -29,6 +29,7 @@ interface EmployeeRowProps {
   isOverlapExpanded: boolean;
   onSetExpansion: (id: number, expanded: boolean) => void;
   collapseTrigger?: number;
+  mainScrollRef: React.RefObject<HTMLDivElement>;
 }
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
@@ -54,6 +55,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   isOverlapExpanded,
   onSetExpansion,
   collapseTrigger,
+  mainScrollRef,
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
   useEffect(() => {
@@ -299,7 +301,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   absoluteLeft={app.left}
                   absoluteWidth={app.width}
                   absoluteTop={forcedTopPx} 
-                  
+                  mainScrollRef={mainScrollRef}
                   isGhost={isGhost} 
                   ghostInterval={ghostIntervals.length > 0 ? ghostIntervals : undefined}
 

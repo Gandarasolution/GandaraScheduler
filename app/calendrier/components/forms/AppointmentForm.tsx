@@ -614,6 +614,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               onResize={() => {}}
               handleContextMenu={() => {}}
               tagPlacement={tagPlacement}
+              mainScrollRef={null}
             />
           </FormPreview>
         

@@ -47,9 +47,6 @@
     "tailwindcss": "^4.1.16",
     "ts-node": "^10.9.2",
     "typescript": "^5",
-    "ws": "^8.18.0",
-    "tailwindcss": "^4.1.16",
-    "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "ws": "^8.18.0"
   }
 }

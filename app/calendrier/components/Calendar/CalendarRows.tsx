@@ -16,6 +16,7 @@ import GroupRow from './GroupRow';
 import { RowWithBoundaries } from '../../hooks';
 
 interface CalendarRowsProps {
+  mainScrollRef:React.RefObject<HTMLDivElement>;
   visibleRows: RowWithBoundaries[];
   dayInTimeline: number[];
   todayIndex: number;
@@ -45,6 +46,7 @@ interface CalendarRowsProps {
  * Utilisé avec virtualisation pour optimiser les performances
  */
 const CalendarRows: React.FC<CalendarRowsProps> = memo(({
+  mainScrollRef,
   visibleRows,
   dayInTimeline,
   todayIndex,
@@ -94,6 +96,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
         ) : (
           <EmployeeRow
             key={row.uniqueKey}
+            mainScrollRef={mainScrollRef}
             {...commonProps}
             employee={row.data}
             dayInTimeline={dayInTimeline}

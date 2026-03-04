@@ -10,6 +10,7 @@ import { isWeekend } from 'date-fns';
 import { Appointment, HalfDayInterval, Item } from '../../types';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS, HOUR_MS } from '../../utils/constants';
 import AppointmentTag from './AppointmentTag';
+import AppointmentAnnotation from './AppointmentAnnotation';
 import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
 
 interface AppointmentItemProps {
@@ -33,6 +34,7 @@ interface AppointmentItemProps {
   ghostInterval?: { start: number; end: number } | { start: number; end: number }[]; 
   /* Mode d'affichage de l'étiquette */
   tagPlacement?: 'hover' | 'fixed';
+  mainScrollRef: React.RefObject<HTMLDivElement> | null;
   onClick?: () => void;
   onDoubleClick?: () => void;
   onResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right', priority: number) => void;
@@ -44,6 +46,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   isFullDay,
   isMobile,
   event,
+  mainScrollRef,
   chargeeAffaire,
   isDisplayWeekend,
   timelineStart = 0,
@@ -62,6 +65,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   onResize,
   handleContextMenu,
 }) => {
+
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -211,7 +215,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     border: isGhost ? 'none' : `2px solid ${appointmentBorderColor}`,
     transition: 'all 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
-    zIndex: isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.priority || 0))),
+    zIndex: isHovered ? 9999 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.priority || 0)))),
     opacity: isInactive ? 0.5 : 1,
     cursor: isInactive ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' ? 'grab' : 'default')),
   }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment]);
@@ -270,7 +274,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       className={`
         appointment-item rounded-xl text-sm shadow-md
-        flex flex-shrink-0 items-center gap-2 ${tagPlacement === 'fixed' ? 'overflow-visible' : 'overflow-hidden'} whitespace-nowrap text-ellipsis
+        flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
         transition-all z-20 h-11 group duration-200
         ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
         ${source === 'calendar' && isSelected ? 'ring-3 ring-color' : ''}
@@ -394,20 +398,38 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         </div>
       )}
 
-      {/* Étiquette/Tag sous forme d'indicateur en bas à droite */}
+      {/* Étiquette/Tag et Annotation en bas à droite */}
       {((appointment.tag && !isGhost) || appointment.description) && (
-        <AppointmentTag 
-          tagName={appointment?.tag?.name || ''}
-          tagShortName={appointment?.tag?.shortName}
-          color={isGhost ? '#333' : appointmentColor}
-          textColor={isGhost ? '#000' : appointmentTextColor}
-          isHovered={isHovered}
-          isResizing={isResizingRight}
-          appointmentWidth={appointmentWidthPx}
-          appointmentDurationDays={appointmentDurationDays}
-          placement={tagPlacement}
-          annotation={appointment.description}
-        />
+        <div className="absolute right-1 bottom-0 z-30 flex items-center gap-1">
+          {/* Icône d'annotation - visible si annotation présente */}
+          {appointment.description && (
+            <AppointmentAnnotation
+              annotation={appointment.description}
+              color={isGhost ? '#333' : appointmentColor}
+              textColor={isGhost ? '#000' : appointmentTextColor}
+              isHovered={isHovered}
+              mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
+            />
+          )}
+          
+          {/* Étiquette du tag */}
+          {appointment.tag && !isGhost && (
+            <AppointmentTag
+              displayText={
+                appointmentDurationDays <= 2 && appointment.tag.shortName
+                  ? appointment.tag.shortName
+                  : appointment.tag.name
+              }
+              iconPath="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"
+              color={appointmentColor}
+              textColor={appointmentTextColor}
+              isHovered={isHovered}
+              appointmentWidth={appointmentWidthPx}
+              placement={tagPlacement}
+              title={`${appointment.tag.name}${appointment.tag.shortName ? ` (${appointment.tag.shortName})` : ''}`}
+            />
+          )}
+        </div>
       )}
 
       {/* Handle de redimensionnement à droite */}

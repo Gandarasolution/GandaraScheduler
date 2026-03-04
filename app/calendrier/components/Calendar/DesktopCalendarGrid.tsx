@@ -449,6 +449,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
             handleSetRowExpansion={handleSetRowExpansion}
             tagPlacement={tagPlacement}
             collapseTriggers={collapseTriggers}
+            mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
           />
         </div>
       </TimelineFrame>

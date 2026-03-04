@@ -56,6 +56,7 @@ export const customRenderersFactory = (
             setSelectedAppointment(newAppointment);
             handleOpenEditModal(newAppointment);
           }} 
+          mainScrollRef={null}
         />
     );
   };
