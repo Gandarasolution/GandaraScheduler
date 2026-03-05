@@ -103,7 +103,8 @@ export default function HomePage({
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
     viewType: viewState.viewType, 
-    searchQuery: viewState.searchInput || viewState.dimensionSearchInput,
+    searchInput: viewState.searchInput,
+    searchQueryDimensions: viewState.dimensionSearchInput,
     filters: viewState.activeFilters,
     calendarConfig: viewState.currentCalendarConfig,
     globalEmployeesRef,

@@ -9,8 +9,7 @@ import { useDrag, useDragLayer } from 'react-dnd';
 import { isWeekend } from 'date-fns';
 import { Appointment, HalfDayInterval, Item } from '../../types';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS, HOUR_MS } from '../../utils/constants';
-import AppointmentTag from './AppointmentTag';
-import AppointmentAnnotation from './AppointmentAnnotation';
+import AppointmentIcon from './AppointmentIcon';
 import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
 
 interface AppointmentItemProps {
@@ -169,25 +168,20 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const hasSpaceForBothHandles = appointmentWidthPx >= 60;
   const isSmallAppointment = appointmentWidthPx < (INTERVAL_WIDTH * 1.5);
 
-  // Calculer le padding nécessaire pour éviter le chevauchement avec les icônes (tag + annotation)
-  const contentPaddingRight = useMemo(() => {
+  // Calculer le padding nécessaire pour le chargé d'affaire si les icônes sont présentes
+  const chargeAffairePaddingRight = useMemo(() => {
     const hasAnnotation = !!appointment.description;
-    const hasTag = !!appointment.tag;
+    const hasTag = !!appointment.tag && !isGhost;
     
-    if (!hasAnnotation && !hasTag) return 8; // Padding minimal par défaut
+    if (!hasAnnotation && !hasTag) return 0; // Pas d'icônes, pas de padding
     
     // Calculer l'espace nécessaire : chaque icône fait ~16px + gap de 4px
     let iconSpace = 0;
     if (hasAnnotation) iconSpace += 20; // 16px icône + 4px marge
     if (hasTag) iconSpace += 20; // 16px icône + 4px marge
     
-    // Sur les petits événements, on réduit légèrement le padding
-    if (isSmallAppointment) {
-      return Math.max(iconSpace * 0.8, 20); // Au minimum 20px sur les petits événements
-    }
-    
-    return iconSpace + 8; // + 8px de marge de sécurité
-  }, [appointment.description, appointment.tag, isSmallAppointment]);
+    return iconSpace + 4; // + 4px de marge de sécurité
+  }, [appointment.description, appointment.tag, isGhost]);
 
   // --- Styles ---
   
@@ -216,9 +210,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     transition: 'all 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
     zIndex: isHovered ? 9999 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.priority || 0)))),
-    opacity: isInactive ? 0.5 : 1,
     cursor: isInactive ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' ? 'grab' : 'default')),
-  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment]);
+  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment, isInactive]);
 
   return (
     <div
@@ -313,7 +306,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                           left: `${leftOffset}px`,
                           width: `${segment.widthGhost}px`,
                           backgroundImage: `repeating-linear-gradient(45deg, ${appointmentColor} 0px, ${appointmentColor} 10px, rgba(255,255,255,0.8) 10px, rgba(255,255,255,0.8) 20px)`,
-                          opacity: 0.4,
+                          opacity: isInactive ? 0.2 : 0.4,
                           border: '2px dashed rgba(0,0,0,0.2)',
                           borderRight: segment.widthNoGhost > 0 ? 'none' : undefined,
                           borderLeft: isFirst ? undefined : 'none',
@@ -334,6 +327,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                           borderLeft: segment.widthGhost > 0 ? 'none' : (isFirst ? undefined : 'none'),
                           borderRight: isLast ? undefined : 'none',
                           borderRadius: isLast && segment.widthGhost === 0 && isFirst ? '0.75rem' : (isLast ? '0 0.75rem 0.75rem 0' : (isFirst && segment.widthGhost === 0 ? '0.75rem 0 0 0.75rem' : '0')),
+                          opacity: isInactive ? 0.5 : 1,
                           zIndex: 0
                       }}
                     />
@@ -365,7 +359,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       {/* On met z-10 et relative pour être au-dessus des backgrounds */}
       {/* Masqué si en mode Ghost (chevauchement) */}
       {!isGhost && (
-        <div className="relative z-10 flex items-center gap-2 w-full h-full">        
+        <div 
+          className="relative z-10 flex items-center gap-2 w-full h-full"
+          style={{
+            opacity: isInactive ? 0.5 : 1
+          }}
+        >        
           {event?.image ? (
               <img
               src={event?.image.image}
@@ -378,64 +377,72 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
           <div 
             className='flex flex-col min-w-0 flex-1'
-            style={{ paddingRight: `${contentPaddingRight}px` }}
           >
               <span 
-              className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200`}
+              className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-sm`}
               style={{ 
                   color: isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'
               }}
               >
-              {event?.label}
+                {event?.label}
               </span>
               
-              <div className="flex items-center gap-2 text-xs truncate max-w-full">
-              <span 
-                  className="truncate transition-colors duration-200"
-                  style={{ 
-                  color: isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'
-                  }}
+              <div 
+                className="flex items-center gap-2 text-xs truncate"
+                style={{
+                  paddingRight: chargeAffairePaddingRight > 0 ? `${chargeAffairePaddingRight}px` : undefined
+                }}
               >
-                  {chargeeAffaire}
-              </span>
+                <span 
+                    className="truncate transition-colors duration-200"
+                    style={{ 
+                    color: isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                    }}
+                >
+                    {chargeeAffaire}
+                </span>
+                {((appointment.tag && !isGhost) || appointment.description) && (
+                  <div className="absolute right-1 bottom-0.5 z-30 flex items-center gap-1">
+                    {/* Icône d'annotation - visible si annotation présente */}
+                    {appointment.description && (
+                      <AppointmentIcon
+                        type="annotation"
+                        annotation={appointment.description}
+                        color={isGhost ? '#333' : appointmentColor}
+                        textColor={isGhost ? '#000' : appointmentTextColor}
+                        isHovered={isHovered}
+                        mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
+                      />
+                    )}
+                    
+                    {/* Étiquette du tag */}
+                    {appointment.tag && !isGhost && (
+                      <AppointmentIcon
+                        type="tag"
+                        displayText={
+                          appointmentDurationDays <= 2 && appointment.tag.shortName
+                            ? appointment.tag.shortName
+                            : appointment.tag.name
+                        }
+                        iconPath="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"
+                        color={appointmentColor}
+                        textColor={appointmentTextColor}
+                        isHovered={isHovered}
+                        appointmentWidth={appointmentWidthPx}
+                        placement={tagPlacement}
+                        title={`${appointment.tag.name}${appointment.tag.shortName ? ` (${appointment.tag.shortName})` : ''}`}
+                        mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
           </div>
         </div>
       )}
 
       {/* Étiquette/Tag et Annotation en bas à droite */}
-      {((appointment.tag && !isGhost) || appointment.description) && (
-        <div className="absolute right-1 bottom-0 z-30 flex items-center gap-1">
-          {/* Icône d'annotation - visible si annotation présente */}
-          {appointment.description && (
-            <AppointmentAnnotation
-              annotation={appointment.description}
-              color={isGhost ? '#333' : appointmentColor}
-              textColor={isGhost ? '#000' : appointmentTextColor}
-              isHovered={isHovered}
-              mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
-            />
-          )}
-          
-          {/* Étiquette du tag */}
-          {appointment.tag && !isGhost && (
-            <AppointmentTag
-              displayText={
-                appointmentDurationDays <= 2 && appointment.tag.shortName
-                  ? appointment.tag.shortName
-                  : appointment.tag.name
-              }
-              iconPath="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"
-              color={appointmentColor}
-              textColor={appointmentTextColor}
-              isHovered={isHovered}
-              appointmentWidth={appointmentWidthPx}
-              placement={tagPlacement}
-              title={`${appointment.tag.name}${appointment.tag.shortName ? ` (${appointment.tag.shortName})` : ''}`}
-            />
-          )}
-        </div>
-      )}
+      
 
       {/* Handle de redimensionnement à droite */}
       {source === 'calendar' && (

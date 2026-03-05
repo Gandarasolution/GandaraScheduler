@@ -15,6 +15,7 @@ interface TagCreationFormProps {
   onAdd: () => void;
   onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   duplicateError?: boolean;
+  longVersionError?: boolean;
   variant?: 'compact' | 'extended';
 }
 
@@ -24,6 +25,7 @@ const TagCreationForm: React.FC<TagCreationFormProps> = ({
   onAdd,
   onKeyPress,
   duplicateError = false,
+  longVersionError = false,
   variant = 'compact'
 }) => {
   const isExtended = variant === 'extended';
@@ -55,6 +57,9 @@ const TagCreationForm: React.FC<TagCreationFormProps> = ({
         </span>
         {duplicateError && (
           <p className="text-xs text-red-500 mt-1">Cette étiquette existe déjà</p>
+        )}
+        {longVersionError && (
+          <p className="text-xs text-red-500 mt-1">La version longue est obligatoire</p>
         )}
       </div>
       

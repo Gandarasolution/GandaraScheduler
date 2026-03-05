@@ -297,8 +297,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    console.log(formDataAppointment);
     
     // Gestion de la création d'une nouvelle ressource
     if (isCreatingResource) {

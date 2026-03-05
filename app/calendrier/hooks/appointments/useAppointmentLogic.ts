@@ -268,7 +268,11 @@ export const useAppointmentLogic = ({
   const moveAppointment = useCallback((id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true, newPriority?: number) => {
       const appointment = appointmentsRef.current.find((app) => app.id === id);
       if (!appointment) return;
-      
+      if (employeesRef.current.find(emp => emp.id === newEmployeeId)?.actif === false) {
+        notificationService.error('Action interdite', `L'employé sélectionné est désactivé et ne peut plus être assigné à un rendez-vous.`);
+        return;
+      }
+
       const previousAppointment = saveToHistory ? { ...appointment } : undefined;
       
       // Si une nouvelle priorité est fournie, réorganiser les priorités avant d'appliquer
@@ -581,6 +585,11 @@ export const useAppointmentLogic = ({
       // Vérifier si l'événement est désactivé (pour les types absence/autre)
       if ('actif' in event && !event.actif) {
         notificationService.error('Action interdite', `La rubrique "${title}" est désactivée et ne peut plus être placée dans le planning.`);
+        return;
+      }
+
+      if (employeesRef.current.find(emp => emp.id === employeeId)?.actif === false) {
+        notificationService.error('Action interdite', `L'employé sélectionné est désactivé et ne peut plus être assigné à un rendez-vous.`);
         return;
       }
 

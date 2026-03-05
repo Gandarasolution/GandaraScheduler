@@ -48,6 +48,7 @@ interface TagsManagerState {
   showCreation: boolean;
   newTag: Tag;
   duplicateError: boolean;
+  longVersionError: boolean;
   deleteModal: {
     isOpen: boolean;
     tagId: number | null;
@@ -100,6 +101,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
     showCreation: false,
     newTag: { id: 0, name: '', shortName: '' },
     duplicateError: false,
+    longVersionError: false,
     deleteModal: {
       isOpen: false,
       tagId: null,
@@ -194,10 +196,21 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
    * Gère le changement de l'étiquette en cours de création
    */
   const handleTagChange = (tag: Tag) => {
+    
+    if (tag.shortName && !tag.name.trim()) {
+      setState(prev => ({
+        ...prev,
+        newTag: tag,
+        longVersionError: true,
+        duplicateError: false,
+      }));
+      return;
+    }
     setState(prev => ({
       ...prev,
       newTag: tag,
       duplicateError: false,
+      longVersionError: false,
     }));
   };
 
@@ -227,6 +240,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
             onAdd={handleAddTag}
             onKeyPress={handleKeyPress}
             duplicateError={state.duplicateError}
+            longVersionError={state.longVersionError}
             variant="compact"
           />
 
