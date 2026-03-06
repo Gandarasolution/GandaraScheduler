@@ -5,6 +5,7 @@ import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
 import { Appointment, User } from '../../types';
 import { memo, use, useEffect } from 'react';
+import DatePicker from '../ui/DatePicker';
 
 interface CalendarHeaderProps {
   theme: string;
@@ -299,18 +300,18 @@ export const CalendarHeader = memo(({
         <div className="flex flex-row items-center gap-4">
           <div className="flex flex-row items-center gap-2">
             {viewType === 'calendar' && (
-              <input
-                id="date-select"
-                type="date"
-                className="date-input border w-38 border-default rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-color transition bg-secondary-bg text-base text-primary"
-                value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
-                onChange={(e) => {
-                  const date = new Date(e.target.value).setHours(0,0,0,0);                  
-                  if (isNaN(date)) return;
-                  setSelectedDate(date);
-                  onNavigateDate(date);
-                }}
-              />
+              <div className="w-44">
+                <DatePicker
+                  value={selectedDate}
+                  onChange={(date) => {
+                    setSelectedDate(date);
+                    onNavigateDate(date);
+                  }}
+                  format="dd/MM/yyyy"
+                  placeholder="Sélectionner une date"
+                  inputClassName="bg-secondary-bg text-primary border-default border rounded-2xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary transition w-38"
+                />
+              </div>
             )}
           </div>
 

@@ -228,6 +228,68 @@
   --radius-xl: 0.75rem;    // 12px
   --radius-2xl: 1rem;      // 16px
   --radius-full: 9999px;   // Complètement arrondi
+
+  .rdp-root{
+    // ══════════════════════════════════════════════════════════════════════════
+    // DAYPICKER (React Day Picker)
+    // ══════════════════════════════════════════════════════════════════════════
+    --rdp-accent-color: var(--color-primary-500);                    // Couleur accent pour les jours sélectionnés
+    --rdp-accent-background-color: var(--color-primary-50);          // Background accent
+    --rdp-background-color: var(--bg-primary);                       // Background du calendrier
+    --rdp-accent-color-dark: var(--color-primary-600);               // Couleur accent hover
+    
+    // Dimensions
+    --rdp-day-height: 40px;                                          // Hauteur des cellules de jour
+    --rdp-day-width: 40px;                                           // Largeur des cellules de jour
+    --rdp-day_button-height: 38px;                                   // Hauteur des boutons de jour
+    --rdp-day_button-width: 38px;                                    // Largeur des boutons de jour
+    --rdp-day_button-border-radius: var(--radius-lg);                // Rayon des boutons
+    --rdp-day_button-border: 1px solid transparent;                  // Bordure par défaut
+    
+    // Couleurs de texte
+    --rdp-color: var(--text-primary);                                // Couleur de texte par défaut
+    --rdp-today-color: var(--color-primary-600);                     // Couleur pour aujourd'hui
+    --rdp-selected-color: var(--text-on-primary);                    // Couleur texte jour sélectionné
+    --rdp-selected-border: 2px solid var(--color-primary-500);       // Bordure jour sélectionné
+    
+    // États
+    --rdp-disabled-opacity: 0.35;                                    // Opacité éléments désactivés
+    --rdp-outside-opacity: 0.5;                                      // Opacité jours hors mois
+    
+    // Navigation
+    --rdp-nav_button-height: 32px;                                   // Hauteur boutons navigation
+    --rdp-nav_button-width: 32px;                                    // Largeur boutons navigation
+    --rdp-nav_button-disabled-opacity: 0.3;                          // Opacité boutons navigation désactivés
+    --rdp-nav-height: 40px;                                          // Hauteur barre de navigation
+    --rdp-chevron-disabled-opacity: 0.3;                             // Opacité chevron désactivé
+    
+    // Range (sélection de plage)
+    --rdp-range_middle-background-color: var(--color-primary-100);   // Background milieu de plage
+    --rdp-range_middle-color: var(--text-primary);                   // Couleur texte milieu de plage
+    --rdp-range_start-color: var(--text-on-primary);                 // Couleur début de plage
+    --rdp-range_start-background: var(--color-primary-500);          // Background début de plage
+    --rdp-range_end-background: var(--color-primary-500);            // Background fin de plage
+    --rdp-range_end-color: var(--text-on-primary);                   // Couleur fin de plage
+    
+    // Week numbers
+    --rdp-week_number-border-radius: var(--radius-md);               // Rayon numéros de semaine
+    --rdp-week_number-border: 1px solid var(--border-light);         // Bordure numéros de semaine
+    --rdp-week_number-height: 40px;                                  // Hauteur numéros de semaine
+    --rdp-week_number-width: 40px;                                   // Largeur numéros de semaine
+    
+    // Weekdays
+    --rdp-weekday-opacity: 0.7;                                      // Opacité en-têtes jour de semaine
+    --rdp-weekday-padding: 0.5rem;                                   // Padding en-têtes
+    --rdp-weekday-text-align: center;                                // Alignement texte
+    
+    // Spacing
+    --rdp-dropdown-gap: 0.5rem;                                      // Espace entre dropdowns
+    --rdp-months-gap: 1rem;                                          // Espace entre mois (multi-mois)
+    
+    // Animation
+    --rdp-animation_duration: 0.2s;                                  // Durée animation
+    --rdp-animation_timing: cubic-bezier(0.4, 0, 0.2, 1);            // Fonction timing
+  }
 }
 
 
@@ -424,6 +486,33 @@
   --shadow-dropdown: var(--shadow-lg);
   --shadow-modal: var(--shadow-2xl);
   --shadow-focus: 0 0 0 3px rgba(0, 181, 151, 0.15);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DAYPICKER - Mode Sombre
+  // ══════════════════════════════════════════════════════════════════════════
+  --rdp-accent-color: var(--color-primary-500);                    // Couleur accent plus lumineuse
+  --rdp-accent-background-color: var(--color-primary-900);         // Background accent sombre
+  --rdp-background-color: var(--bg-card);                          // Background du calendrier
+  --rdp-accent-color-dark: var(--color-primary-400);               // Couleur accent hover
+  
+  // Couleurs de texte
+  --rdp-color: var(--text-primary);                                // Couleur texte (clair en mode sombre)
+  --rdp-today-color: var(--color-primary-400);                     // Couleur aujourd'hui plus visible
+  --rdp-selected-color: var(--text-on-primary);                    // Couleur texte sélectionné
+  --rdp-selected-border: 2px solid var(--color-primary-500);       // Bordure sélectionné
+  
+  // États
+  --rdp-disabled-opacity: 0.25;                                    // Opacité réduite en mode sombre
+  --rdp-outside-opacity: 0.4;                                      // Opacité jours hors mois
+  
+  // Range
+  --rdp-range_middle-background-color: var(--color-primary-900);   // Background milieu de plage sombre
+  --rdp-range_middle-color: var(--text-secondary);                 // Couleur texte milieu
+  --rdp-range_start-background: var(--color-primary-500);          // Background début
+  --rdp-range_end-background: var(--color-primary-500);            // Background fin
+  
+  // Week numbers
+  --rdp-week_number-border: 1px solid var(--border-default);       // Bordure adaptée au mode sombre
 }
 
 
@@ -598,6 +687,11 @@ body {
 .poppins {
   font-family: 'Poppins', sans-serif;
 }
+
+
+/* Parfois utile pour chiffres (alignement/forme) */
+input[type="date"] { font-variant-numeric: tabular-nums; }
+
 
 .bg-cell-hover {
   background-color: var(--calendar-cell-hover) !important;

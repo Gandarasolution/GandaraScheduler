@@ -379,10 +379,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             className='flex flex-col min-w-0 flex-1'
           >
               <span 
-              className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-sm`}
-              style={{ 
-                  color: isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'
-              }}
+                className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-sm`}
+                style={{ 
+                    color: isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                }}
               >
                 {event?.label}
               </span>

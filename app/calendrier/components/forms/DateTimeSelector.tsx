@@ -9,6 +9,7 @@
 "use client";
 import React from 'react';
 import { format, startOfDay } from 'date-fns';
+import DatePicker from '../ui/DatePicker';
 
 /**
  * Configuration d'un intervalle horaire (matin/après-midi/etc.)
@@ -178,6 +179,14 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
       <div className="flex-1 flex flex-row gap-2 items-center justify-between">
         <label htmlFor="startDate" className="block text-sm font-medium">Début</label>
         <div className="flex flex-row gap-2 w-full justify-end">
+          <DatePicker
+            value={startDate}
+            onChange={(d) => handleDateChange('start', format(new Date(d), 'yyyy-MM-dd'))}
+            className="w-[145px]"
+            inputClassName={`w-full p-2 border ${validationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm`}
+            showIcon={true}
+          />
+          {/*
           <input
             type="date"
             id="startDate"
@@ -187,6 +196,7 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             required
             className={`w-[145px] p-2 border ${validationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm`}
           />
+          */}
     
           <div className="w-[145px]">
             {!isFullDay && intervals.length > 0 && (
@@ -217,7 +227,14 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
         <label htmlFor="endDate" className="block text-sm font-medium">Fin</label>
         <div className="flex flex-col w-full">
           <div className="flex flex-row gap-2 w-full justify-end">
-            <input
+            <DatePicker
+              value={endDate}
+              onChange={(d) => handleDateChange('end', format(new Date(d), 'yyyy-MM-dd'))}
+              className="w-[145px]"
+              inputClassName={`w-full p-2 border ${validationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm`}
+              showIcon={true}
+            />
+            {/* <input
               type="date"
               id="endDate"
               name="endDate"
@@ -225,7 +242,7 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
               onChange={(e) => handleDateChange('end', e.target.value)}
               required
               className={`w-[145px] p-2 border ${validationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm`}
-            />
+            /> */}
 
             <div className="w-[145px]">
               {!isFullDay && intervals.length > 0 && (
