@@ -98,11 +98,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     isDisplayWeekend: isDisplayWeekend ?? false,
   });
 
-  // Calculer la durée du rendez-vous en jours
-  const appointmentDurationDays = React.useMemo(() => {
-    const durationMs = endDate - startDate;
-    return Math.ceil(durationMs / DAY_MS);
-  }, [startDate, endDate]);
 
   const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
 
@@ -339,18 +334,15 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
 
       {/* Handle de redimensionnement à gauche */}
-      {source === 'calendar' && (
+      {source === 'calendar' && appointment.employee.actif && (
         <div
-          className={`absolute top-0 h-full cursor-ew-resize z-30 ${
-            isSmallAppointment || !hasSpaceForBothHandles 
-              ? 'left-0 w-1/3 bg-transparent' 
-              : '-left-1 w-3'
-          }`}
+          className={`absolute top-0 h-full cursor-ew-resize z-30`}
           title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
           onMouseDown={(e) => !isInactive && handleMouseDown(e, 'left')}
           style={{ 
             borderRadius: '4px 0 0 4px',
-            cursor: isInactive ? 'not-allowed' : 'ew-resize'
+            cursor: isInactive ? 'not-allowed' : 'ew-resize',
+            width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px` // 10% de la largeur ou max 12px
           }}
         />
       )}
@@ -402,38 +394,16 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                     {chargeeAffaire}
                 </span>
                 {((appointment.tag && !isGhost) || appointment.description) && (
-                  <div className="absolute right-1 bottom-0.5 z-30 flex items-center gap-1">
-                    {/* Icône d'annotation - visible si annotation présente */}
-                    {appointment.description && (
-                      <AppointmentIcon
-                        type="annotation"
-                        annotation={appointment.description}
-                        color={isGhost ? '#333' : appointmentColor}
-                        textColor={isGhost ? '#000' : appointmentTextColor}
-                        isHovered={isHovered}
-                        mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
-                      />
-                    )}
-                    
-                    {/* Étiquette du tag */}
-                    {appointment.tag && !isGhost && (
-                      <AppointmentIcon
-                        type="tag"
-                        displayText={
-                          appointmentDurationDays <= 2 && appointment.tag.shortName
-                            ? appointment.tag.shortName
-                            : appointment.tag.name
-                        }
-                        iconPath="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"
-                        color={appointmentColor}
-                        textColor={appointmentTextColor}
-                        isHovered={isHovered}
-                        appointmentWidth={appointmentWidthPx}
-                        placement={tagPlacement}
-                        title={`${appointment.tag.name}${appointment.tag.shortName ? ` (${appointment.tag.shortName})` : ''}`}
-                        mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
-                      />
-                    )}
+                  <div className="absolute right-1 bottom-0.5 z-40">
+                    <AppointmentIcon
+                      annotation={appointment.description}
+                      tagText={appointment.tag?.name}
+                      tagColor={event?.color}
+                      color={isGhost ? '#333' : appointmentColor}
+                      textColor={isGhost ? '#000' : appointmentTextColor}
+                      isHovered={isHovered}
+                      mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
+                    />
                   </div>
                 )}
               </div>
@@ -445,7 +415,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       
 
       {/* Handle de redimensionnement à droite */}
-      {source === 'calendar' && (
+      {source === 'calendar' && appointment.employee.actif && (
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30 ${
             isSmallAppointment || !hasSpaceForBothHandles 
@@ -456,7 +426,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           onMouseDown={(e) => !isInactive && handleMouseDown(e, 'right')}
           style={{ 
             borderRadius: '0 4px 4px 0', 
-            cursor: isInactive ? 'not-allowed' : 'ew-resize'
+            cursor: isInactive ? 'not-allowed' : 'ew-resize',
+            width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px` // 10% de la largeur ou max 12px
           }}
         />
       )}
