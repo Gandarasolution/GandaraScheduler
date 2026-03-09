@@ -27,6 +27,7 @@ import DateTimeSelector, { TimeInterval } from './DateTimeSelector';
 import PermissionsPanel, { Permission, UserWithPermissions } from './PermissionsPanel';
 import TagsManager, { Tag } from './TagsManager';
 import { FormPreview, EmployeeSelector, AnnotationsField, ExpandButton, ActionButtons, Employee } from './FormComponents';
+import { useModalContext } from '@/app/calendrier/components/modals/Modal';
 
 const MAX_LENGTH_TAG = 20; // Longueur maximale pour les étiquettes
 const MAX_LENGTH_SHORT_TAG = 4; // Longueur maximale pour les versions courtes
@@ -132,12 +133,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   onRemoveTagFromAppointments,
 }) => {
 
+  const { handleCloseWithSave } = useModalContext();
+
   // Variables dérivées pour améliorer la lisibilité
   const isCreatingResource = resourceEditMode === 'create';
   const isEditingResource = resourceEditMode === 'edit';
   const isResourceMode = isCreatingResource || isEditingResource;
 
-  //console.log(appointment);
   
     
   // ===== ÉTATS LOCAUX =====
@@ -653,8 +655,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           {/* ActionButtons - Boutons d'action */}
           <ActionButtons
             primaryLabel={isCreatingResource ? 'Créer' : 'Enregistrer'}
-            secondaryLabel="Annuler"
-            onSecondary={onClose}
+            secondaryLabel="Fermé"
+            onSecondary={() => handleCloseWithSave()}
             primaryType="submit"
           />
         </form>

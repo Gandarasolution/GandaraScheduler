@@ -2,7 +2,7 @@ import React, { memo, useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { TIMELINE_HEADERGROUPS_CELL_HEIGHT, TIMELINE_HEADERITEMS_CELL_HEIGHT } from '../..';
 
-interface AppointmentIconProps {
+interface AppointmentMetadataProps {
   color: string;
   textColor: string;
   isHovered: boolean;
@@ -10,9 +10,11 @@ interface AppointmentIconProps {
   annotation?: string;
   tagText?: string;
   tagColor?: string;
+  annotationImgSvg: React.ReactNode;
+  tagImgSvg: React.ReactNode;
 }
 
-const AppointmentIcon: React.FC<AppointmentIconProps> = ({
+const AppointmentMetadata: React.FC<AppointmentMetadataProps> = ({
   color,
   textColor,
   isHovered,
@@ -20,6 +22,8 @@ const AppointmentIcon: React.FC<AppointmentIconProps> = ({
   annotation,
   tagText,
   tagColor,
+  annotationImgSvg,
+  tagImgSvg,
 }) => {
   const [showAnnotationTooltip, setShowAnnotationTooltip] = useState(false);
   const [showTagTooltip, setShowTagTooltip] = useState(false);
@@ -91,14 +95,16 @@ const AppointmentIcon: React.FC<AppointmentIconProps> = ({
         let top = iconRect.top;
         let left = iconRect.left - 20;
         
+        // Vérifier si le tooltip dépasse du conteneur en haut, sinon le positionner en dessous de l'icône
         if (iconRect.top - tooltipRect.height - 8 < (containerRect.top + TIMELINE_HEADERITEMS_CELL_HEIGHT + TIMELINE_HEADERGROUPS_CELL_HEIGHT)) {
           vertical = 'bottom';
           top = iconRect.bottom + 8;
         } else {
           vertical = 'top';
-          top = iconRect.top - tooltipRect.height - 8;
+          top = iconRect.top - tooltipRect.height;
         }
         
+        // Vérifier si le tooltip dépasse du conteneur à droite, sinon le positionner à gauche de l'icône
         if (iconRect.right + tooltipRect.width > containerRect.right) {
           horizontal = 'left';
           left = iconRect.right - tooltipRect.width;
@@ -107,6 +113,7 @@ const AppointmentIcon: React.FC<AppointmentIconProps> = ({
           left = iconRect.left - iconRect.width;
         }
         
+        // Vérifier si le tooltip dépasse du conteneur à gauche, sinon le positionner à droite de l'icône
         if (left < containerRect.left) {
           horizontal = 'left';
           left = iconRect.left;
@@ -165,6 +172,10 @@ const AppointmentIcon: React.FC<AppointmentIconProps> = ({
   }, [showTagTooltip, mainScrollRef]);
 
 
+  useEffect(() => {
+    console.log(showTagTooltip);
+  }, [showTagTooltip]);
+    
 
 
   return (
@@ -180,15 +191,7 @@ const AppointmentIcon: React.FC<AppointmentIconProps> = ({
             }}
             onClick={handleAnnotationClick}
           >
-            <svg 
-              width="14" 
-              height="14" 
-              viewBox="0 0 16 16" 
-              fill="currentColor"
-              style={{ color: isHovered ? color : textColor }}
-            >
-              <path d={annotationIconPath} />
-            </svg>
+            {annotationImgSvg}
           </div>
         )}
 
@@ -202,15 +205,7 @@ const AppointmentIcon: React.FC<AppointmentIconProps> = ({
             }}
             onClick={handleTagClick}
           >
-            <svg 
-              width="14" 
-              height="14" 
-              viewBox="0 0 16 16" 
-              fill="currentColor"
-              style={{ color: isHovered ? (tagColor || color) : textColor }}
-            >
-              <path d={tagIconPathDefault} />
-            </svg>
+            {tagImgSvg}
           </div>
         )}
       </div>
@@ -231,57 +226,61 @@ const AppointmentIcon: React.FC<AppointmentIconProps> = ({
           <div 
             className="bg-white border-2 rounded-lg shadow-2xl p-4"
             style={{
-              borderColor: 'var(--border-400)',
+              borderColor: 'var(--contraste-max)',
               color: '#333',
               backgroundColor: 'var(--bg-card)',
             }}
           >
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <svg 
-                  width="16" 
-                  height="16" 
-                  viewBox="0 0 16 16" 
-                  fill="currentColor"
-                  style={{ color: '#000000' }}
-                >
-                  <path d={annotationIconPath} />
-                </svg>
-                <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                  Annotation
-                </span>
-              </div>
-              <div 
-                className="text-sm whitespace-pre-wrap break-words"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                {annotation}
-              </div>
-            </div>
-
-            <div className='mt-4'>
-              <div className="flex items-center gap-2 mb-2">
-                <svg 
-                  width="16" 
-                  height="16" 
-                  viewBox="0 0 16 16" 
-                  fill="currentColor"
-                  style={{ color: '#000000' }}
-                >
-                  <path d={tagIconPathDefault} />
-                </svg>
+            {annotation && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <svg 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 16 16" 
+                    fill="currentColor"
+                    style={{ color: '#000000' }}
+                  >
+                    <path d={annotationIconPath} />
+                  </svg>
+                  <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                    Annotation
+                  </span>
+                </div>
                 <div 
-                  className="px-3 py-2 rounded-md font-bold uppercase text-xs"
-                  style={{ 
-                    backgroundColor: tagColor || color,
-                    color: textColor,
-                  }}
+                  className="text-sm whitespace-pre-wrap break-words"
+                  style={{ color: 'var(--text-secondary)' }}
                 >
-                  {tagText}
+                  {annotation}
                 </div>
               </div>
-              
-            </div>
+            )}
+
+            {tagText &&(
+              <div className='mt-4'>
+                <div className="flex items-center gap-2 mb-2">
+                  <svg 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 16 16" 
+                    fill="currentColor"
+                    style={{ color: '#000000' }}
+                  >
+                    <path d={tagIconPathDefault} />
+                  </svg>
+                  <div 
+                    className="px-3 py-2 rounded-md font-bold uppercase text-xs"
+                    style={{ 
+                      backgroundColor: tagColor || color,
+                      color: textColor,
+                    }}
+                  >
+                    {tagText}
+                  </div>
+                </div>
+                
+              </div>
+            )}
           </div>
         
           <div 
@@ -294,13 +293,13 @@ const AppointmentIcon: React.FC<AppointmentIconProps> = ({
                     bottom: '-6px',
                     borderLeft: '6px solid transparent',
                     borderRight: '6px solid transparent',
-                    borderTop: `6px solid var(--border-400)`,
+                    borderTop: `6px solid var(--contraste-max)`,
                   }
                 : {
                     top: '-6px',
                     borderLeft: '6px solid transparent',
                     borderRight: '6px solid transparent',
-                    borderBottom: `6px solid var(--border-400)`,
+                    borderBottom: `6px solid var(--contraste-max)`,
                   }
               )
             }}
@@ -312,4 +311,4 @@ const AppointmentIcon: React.FC<AppointmentIconProps> = ({
   );
 };
 
-export default memo(AppointmentIcon);
+export default memo(AppointmentMetadata);

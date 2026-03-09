@@ -86,31 +86,27 @@ export const useAppointmentResize = ({
     let currentTs = date;
     let currentHour = new Date(currentTs).getHours();
     let idx = intervals.findIndex(interval => 
-      currentHour >= interval.startHour && currentHour < interval.endHour
+        currentHour >= interval.startHour && currentHour < interval.endHour
     );
     if (idx === -1) idx = 0;
-    
     const step = n >= 0 ? 1 : -1;
     let remaining = Math.abs(n);
 
     while (remaining > 0) {
-      idx += step;
-      if (idx >= intervals.length) {
-        idx = 0;
-        currentTs += isFullDay ? DAY_MS : DAY_MS / 2; 
-      } else if (idx < 0) {
-        idx = intervals.length - 1;
-        currentTs -= isFullDay ? DAY_MS : DAY_MS / 2; 
-      } else {
-        currentTs = new Date(currentTs).setHours(intervals[idx].startHour, 0, 0, 0);
-      }
-      
-      if (!isDisplayWeekend) {
-        while (isWeekend(currentTs)) {
-          currentTs += (step * (isFullDay ? DAY_MS : DAY_MS / 2));
+        idx += step;
+        if (idx > 0 ) {
+            idx = 0;
+            currentTs += isFullDay ? DAY_MS : DAY_MS/2; 
+        } else if (idx <= 0) {
+            idx = intervals.length - 1;
+            currentTs -= isFullDay ? DAY_MS : DAY_MS/2; 
         }
-      }
-      remaining--;
+        if (!isDisplayWeekend) {
+            while (isWeekend(currentTs)) {
+                currentTs += (step * (isFullDay ? DAY_MS : DAY_MS/2));
+            }
+        }
+        remaining--;
     }
     return currentTs;
   }, [isDisplayWeekend, isFullDay]);
@@ -151,8 +147,8 @@ export const useAppointmentResize = ({
       dragStartRef.current = newStartDate;
       setDragStart(newStartDate);
     }
-    
     if (isResizingRight) {
+      
       let newEndDate = addInterval(endDate, intervalsMoved, intervals);
       // Empêcher que la fin soit avant le début
       if (newEndDate < dragStartRef.current) {

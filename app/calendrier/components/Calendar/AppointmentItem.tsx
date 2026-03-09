@@ -9,7 +9,7 @@ import { useDrag, useDragLayer } from 'react-dnd';
 import { isWeekend } from 'date-fns';
 import { Appointment, HalfDayInterval, Item } from '../../types';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS, HOUR_MS } from '../../utils/constants';
-import AppointmentIcon from './AppointmentIcon';
+import AppointmentMetadata from './AppointmentIcon';
 import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
 
 interface AppointmentItemProps {
@@ -173,10 +173,23 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     // Calculer l'espace nécessaire : chaque icône fait ~16px + gap de 4px
     let iconSpace = 0;
     if (hasAnnotation) iconSpace += 20; // 16px icône + 4px marge
-    if (hasTag) iconSpace += 20; // 16px icône + 4px marge
+    
+    // Pour l'étiquette, l'espace dépend du mode d'affichage
+    if (hasTag) {
+      if (tagPlacement === 'hover') {
+        // En mode hover, juste l'icône
+        iconSpace += 20; // 16px icône + 4px marge
+      }
+      else{
+        const tag = appointment.tag?.name || '';
+        const approxTagWidth = Math.min(120, 6 * tag.length + 16);
+
+        iconSpace += approxTagWidth + 4; // largeur de l'étiquette + marge
+      }
+    }
     
     return iconSpace + 4; // + 4px de marge de sécurité
-  }, [appointment.description, appointment.tag, isGhost]);
+  }, [appointment.description, appointment.tag, isGhost, tagPlacement]);
 
   // --- Styles ---
   
@@ -395,18 +408,48 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 </span>
                 {((appointment.tag && !isGhost) || appointment.description) && (
                   <div className="absolute right-1 bottom-0.5 z-40">
-                    <AppointmentIcon
+                    <AppointmentMetadata
                       annotation={appointment.description}
-                      tagText={appointment.tag?.name}
+                      tagText={tagPlacement === 'hover' ? appointment.tag?.name : undefined}
                       tagColor={event?.color}
                       color={isGhost ? '#333' : appointmentColor}
                       textColor={isGhost ? '#000' : appointmentTextColor}
                       isHovered={isHovered}
                       mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
+                      annotationImgSvg={
+                        <svg height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg" style={{ color: isHovered ? (event.color) : event.textColor }}>
+                          <path d="m22 12c0 5.5228-4.4772 10-10 10-5.52285 0-10-4.4772-10-10 0-5.52285 4.47715-10 10-10 5.5228 0 10 4.47715 10 10z" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                strokeWidth="1.5" />
+
+                          <path d="m11 10c-.5523 0-1 .4477-1 1s.4477 1 1 1v3c-.5523 0-1.00001.4477-1.00001 1s.44771 1 1.00001 1h2c.5523 0 1-.4477 1-1s-.4477-1-1-1v-4c0-.2652-.1054-.5196-.2929-.7071s-.4419-.2929-.7071-.2929zm0-2c0-.55228.4477-1 1-1s1 .44772 1 1-.4477 1-1 1-1-.44772-1-1z" 
+                                fill="currentColor" />
+                        </svg>
+                      }
+                      tagImgSvg={
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ color: isHovered ? (event.color) : event.textColor }}>
+                          <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+                        </svg>
+                      }
                     />
                   </div>
                 )}
               </div>
+              
+              {/* Étiquette fixe en bas à droite (mode 'fixed') */}
+              {appointment.tag && tagPlacement === 'fixed' && !isGhost && (
+                <div 
+                  className="absolute right-6 -bottom-3 z-40 px-1.5 py-0.5 rounded-sm text-xs font-medium shadow-sm transition-all duration-200"
+                  style={{
+                    backgroundColor: 'var(--color-gray-300)', // Utiliser la couleur de l'événement
+                    color: 'var(--contraste-max)', // Couleur de texte à contraste maximum
+                    maxWidth: '120px',
+                  }}
+                >
+                  <span className="truncate block">{appointment.tag.name}</span>
+                </div>
+              )}
           </div>
         </div>
       )}
