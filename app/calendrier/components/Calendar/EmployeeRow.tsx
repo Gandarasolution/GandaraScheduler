@@ -66,27 +66,28 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   
   // Positionnement et calcul des dimensions
   const positionedAppointments = useMemo(() => {
-    return appointments
+    const filterred =  appointments
       .filter((app) => {
         if (app?.employee?.id !== employee.id) return false;
         return app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd;
       })
-      .map((app) => {
-        const start = app.startDate;
-        const end = app.endDate;
 
-        // Utilisation des fonctions utilitaires pour les calculs de position
-        const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
-        const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
-        const topPx = (app.top * CELL_HEIGHT) + (2 * app.top);
+    return filterred.map((app, index) => {
+      const start = app.startDate;
+      const end = app.endDate;
 
-        return { ...app, left, width, topPx } as Appointment & {
-          top: number;
-          left: number;
-          width: number;
-          topPx: number;
-        };
-      });
+      // Utilisation des fonctions utilitaires pour les calculs de position
+      const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
+      const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
+      const topPx = (app.top * CELL_HEIGHT) + (2 * app.top) + ((tagPlacement === 'fixed' && index > 0) && filterred[index - 1]?.tag ? 18 : 0); // Décalage pour les tags en placement fixe
+
+      return { ...app, left, width, topPx } as Appointment & {
+        top: number;
+        left: number;
+        width: number;
+        topPx: number;
+      };
+    });
   }, [appointments, employee.id, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart, isFullDay]);
 
   const overlappingGroups = useMemo(() => {
@@ -214,8 +215,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           to right,
           transparent 0px,
           transparent ${STEP_WIDTH - 1}px, /* L'espace vide prend presque toute la largeur */
-          rgba(229,231,235,${gridOpacity}) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
-          rgba(229,231,235,${gridOpacity}) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
+          var(--border-100) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
+          var(--border-100) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
         )`
       }}
     >

@@ -442,9 +442,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 <div 
                   className="absolute right-6 -bottom-3 z-40 px-1.5 py-0.5 rounded-sm text-xs font-medium shadow-sm transition-all duration-200"
                   style={{
-                    backgroundColor: 'var(--color-gray-300)', // Utiliser la couleur de l'événement
-                    color: 'var(--contraste-max)', // Couleur de texte à contraste maximum
+                    backgroundColor: 'var(--bg-primary)', 
+                    color: 'var(--contraste-max)', 
                     maxWidth: '120px',
+                    border: `1px solid var(--color-gray-400)`,
+                  
                   }}
                 >
                   <span className="truncate block">{appointment.tag.name}</span>
