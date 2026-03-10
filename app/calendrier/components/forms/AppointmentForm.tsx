@@ -133,7 +133,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   onRemoveTagFromAppointments,
 }) => {
 
-  const { handleCloseWithSave } = useModalContext();
+  const { handleCloseWithSave, registerSaveHandler } = useModalContext();
 
   // Variables dérivées pour améliorer la lisibilité
   const isCreatingResource = resourceEditMode === 'create';
@@ -264,6 +264,80 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
     onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
   }, [formDataAppointment, formDataItemType, includeAllNonWorkingDays, appointment, item, isAppointmentSplitByNotWorkingDay, onDirtyChange]);
+
+  /**
+   * Enregistre le gestionnaire de sauvegarde dans le contexte du Modal
+   * Cela permet au Modal de déclencher la sauvegarde du formulaire
+   * lorsque l'utilisateur confirme vouloir sauvegarder
+   */
+  useEffect(() => {
+    const handleSave = () => {
+      // Validation: gestion de la création d'une nouvelle ressource
+      if (isCreatingResource) {
+        if (formDataItemType.code && items.find(item => item.code === formDataItemType.code.toUpperCase() && item.id !== formDataItemType.id)) {
+          setCodeValidationError(true);
+          return;
+        }
+        
+        const newItemId = Date.now();
+        
+        // Sauvegarde des permissions pour les rubriques sociales et événements manuels
+        if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
+          employeePermissions.forEach((perm) => {
+            setSocialItemPermission({
+              ...perm,
+              itemId: newItemId,
+            });
+          });
+        }
+        
+        handleAddDimension({...formDataItemType, id: newItemId});
+        return;
+      }
+      
+      // Validation: gestion de la modification d'une ressource existante
+      if (isEditingResource) {
+        // Sauvegarde des permissions pour les rubriques sociales et événements manuels
+        if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
+          employeePermissions.forEach((perm) => {
+            setSocialItemPermission(perm);
+          });
+        }
+        
+        handleEditDimension(formDataItemType);
+        return;
+      }
+
+      // Validation des dates pour un rendez-vous normal
+      if (formDataAppointment.startDate >= formDataAppointment.endDate) {      
+        setDateValidationError(true);
+        return;
+      }
+
+      setDateValidationError(false);
+
+      // Appeler la fonction de sauvegarde
+      onSave(
+        formDataAppointment,
+        formDataItemType,
+        includeAllNonWorkingDays
+      );
+    };
+
+    // Enregistrer le gestionnaire de sauvegarde
+    registerSaveHandler(handleSave);
+
+    // Nettoyer lors du démontage
+    return () => {
+      registerSaveHandler(null);
+    };
+  }, [
+    formDataItemType, 
+    formDataAppointment, 
+    includeAllNonWorkingDays,
+    items,
+    employeePermissions, 
+  ]);
 
   /**
    * Gère les changements des champs texte, textarea et select du formulaire.
@@ -573,7 +647,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       <div className={`flex ${isReducedVersion ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} 
         gap-4 rounded-xl poppins transition-all duration-300 h-full items-stretch`}
       >  
-        <form onSubmit={handleSubmit} 
+        <form 
+          onSubmit={handleSubmit} 
           className="flex flex-col gap-4 w-full max-w-[380px] min-w-[320px] flex-grow" 
           noValidate
         >

@@ -211,6 +211,11 @@ export const CalendarModals = memo(({
         classNameContent='px-4 py-4'
         confirmCloseOnOverlay={true}
         hasUnsavedChanges={isFormDirty}
+        onSave={
+          !!modalsState.repeatData ? handlers.handleRepeat 
+          : !!modalsState.extendData ? handlers.handleExtend 
+          : undefined
+        }
       >
         {/* CAS 1: Répétition */}
         {!!modalsState.repeatData ? (

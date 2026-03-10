@@ -33,6 +33,11 @@ interface ModalContextType {
      *   - Annuler : ne fait rien
      */
     handleCloseWithSave: () => Promise<void>;
+    /** 
+     * Permet aux composants enfants d'enregistrer leur propre gestionnaire de sauvegarde
+     * Ce gestionnaire sera appelé lorsque l'utilisateur confirme vouloir sauvegarder
+     */
+    registerSaveHandler: (handler: (() => void | Promise<void>) | null) => void;
 }
 
 const ModalContext = createContext<ModalContextType | null>(null);
@@ -114,6 +119,14 @@ const Modal: React.FC<ModalProps> = ({
     hasUnsavedChanges
 }) => {
     const [showConfirm, setShowConfirm] = useState(false);
+    const [childSaveHandler, setChildSaveHandler] = useState<(() => void | Promise<void>) | null>(null);
+    
+    /**
+     * Permet aux composants enfants d'enregistrer leur gestionnaire de sauvegarde
+     */
+    const registerSaveHandler = (handler: (() => void | Promise<void>) | null) => {
+        setChildSaveHandler(() => handler);
+    };
     
     /**
      * Fonction centralisée pour gérer la fermeture avec sauvegarde
@@ -163,10 +176,13 @@ const Modal: React.FC<ModalProps> = ({
     const handleSaveAndClose = async () => {
         setShowConfirm(false);
         
-        // Appeler onSave si fourni
-        if (onSave) {
+        // Priorité 1: Utiliser le gestionnaire de sauvegarde enregistré par le composant enfant
+        // Priorité 2: Utiliser la prop onSave du Modal (pour compatibilité avec repeat/extend)
+        const saveHandler = childSaveHandler || onSave;
+        
+        if (saveHandler) {
             try {
-                await onSave();
+                await saveHandler();
             } catch (error) {
                 console.error('Erreur lors de la sauvegarde:', error);
                 // La modal reste ouverte en cas d'erreur
@@ -257,7 +273,7 @@ const Modal: React.FC<ModalProps> = ({
                     )}
                 </div>
                 <div className={`modal-body rounded-2xl scrollbar-hide ${classNameContent}`}>
-                    <ModalContext.Provider value={{ handleCloseWithSave }}>
+                    <ModalContext.Provider value={{ handleCloseWithSave, registerSaveHandler }}>
                         {children}
                     </ModalContext.Provider>
                 </div>
