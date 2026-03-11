@@ -32,7 +32,6 @@ interface NotificationPanelProps {
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({ 
   notifications, 
-  onClose, 
   onMarkAsRead, 
   onRemove,
   onClearAll 

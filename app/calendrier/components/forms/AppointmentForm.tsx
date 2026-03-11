@@ -16,8 +16,8 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect } from 'react';
-import {Appointment, HalfDayInterval, Item, Tags, CommonPaieAttributs, User, SocialItemPermission } from '../../types';
-import { format, startOfDay, isSameDay, isSameYear, isSameMonth } from 'date-fns';
+import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, SocialItemPermission } from '../../types';
+import { isSameDay, isSameYear, isSameMonth } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 import { getSocialItemPermission, setSocialItemPermission } from '@/app/datasource';
 
@@ -28,9 +28,6 @@ import PermissionsPanel, { Permission, UserWithPermissions } from './Permissions
 import TagsManager, { Tag } from './TagsManager';
 import { FormPreview, EmployeeSelector, AnnotationsField, ExpandButton, ActionButtons, Employee } from './FormComponents';
 import { useModalContext } from '@/app/calendrier/components/modals/Modal';
-
-const MAX_LENGTH_TAG = 20; // Longueur maximale pour les étiquettes
-const MAX_LENGTH_SHORT_TAG = 4; // Longueur maximale pour les versions courtes
 
 /**
  * Interface définissant les propriétés du composant AppointmentForm
@@ -123,7 +120,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   nonWorkingDates,
   isReducedVersion,
   onSave,
-  onClose,
   handleOpenImageModal,
   onDirtyChange,
   handleAddDimension,
@@ -138,8 +134,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // Variables dérivées pour améliorer la lisibilité
   const isCreatingResource = resourceEditMode === 'create';
   const isEditingResource = resourceEditMode === 'edit';
-  const isResourceMode = isCreatingResource || isEditingResource;
-
   
     
   // ===== ÉTATS LOCAUX =====
@@ -192,9 +186,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * État unifié pour la gestion de tous les jours non travaillés
    * (week-ends, fériés, jours configurés comme non travaillés)
    */
-  const [includeAllNonWorkingDays, setIncludeAllNonWorkingDays] = useState(
-    isAppointmentSplitByNotWorkingDay
-  );
+  const includeAllNonWorkingDays = useMemo(() => isAppointmentSplitByNotWorkingDay, [isAppointmentSplitByNotWorkingDay]);
 
   // Charger les permissions existantes au montage ou lors du changement d'item
   useEffect(() => {
@@ -338,19 +330,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     items,
     employeePermissions, 
   ]);
-
-  /**
-   * Gère les changements des champs texte, textarea et select du formulaire.
-   */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
-    if (name === 'employeeId') {
-      setFormDataAppointment((prev) => ({ ...prev, employeeId: Number(value) }));
-      return;
-    }
-    setFormDataAppointment((prev) => ({ ...prev, [name]: value }));
-  };
 
   /**
    * Gère le changement de date via les inputs de type "date".

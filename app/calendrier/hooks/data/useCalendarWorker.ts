@@ -69,6 +69,9 @@ export const useCalendarWorker = () => {
         
         return () => {
           worker.terminate();
+          // Nettoyer toutes les tâches en attente pour éviter les fuites mémoire
+          pendingTasksRef.current.clear();
+          workerRef.current = null;
         };
       } catch (error) {
         console.warn('Web Worker not supported or failed to initialize:', error);
@@ -96,14 +99,21 @@ export const useCalendarWorker = () => {
       // Envoyer la tâche au worker
       workerRef.current.postMessage({ type, payload, taskId });
       
-      // Timeout de sécurité (10 secondes)
-      setTimeout(() => {
+      // Timeout de sécurité (10 secondes) avec cleanup
+      const timeoutId = setTimeout(() => {
         if (pendingTasksRef.current.has(taskId)) {
           console.warn(`Task ${taskId} timed out`);
           pendingTasksRef.current.delete(taskId);
           resolve(null as T);
         }
       }, 10000);
+      
+      // Stocker le timeoutId avec le resolver pour le nettoyer si la tâche se termine avant
+      const originalResolver = pendingTasksRef.current.get(taskId)!;
+      pendingTasksRef.current.set(taskId, (result: any) => {
+        clearTimeout(timeoutId);
+        originalResolver(result);
+      });
     });
   }, [isReady]);
 

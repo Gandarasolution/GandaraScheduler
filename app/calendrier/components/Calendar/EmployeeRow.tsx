@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Appointment, Item, User } from '../../types';
-import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
+import { CELL_WIDTH, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
 import { calculateWidthPx, calculateLeftPx } from '../../hooks';
@@ -62,7 +62,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     setExpandedGroups({});
   }, [collapseTrigger]);
 
-  const timelineStart = useMemo(() => dayInTimeline[0], [dayInTimeline]);
+  const timelineStart = useMemo(() => dayInTimeline[0] || 0, [dayInTimeline]);
   
   // Positionnement et calcul des dimensions
   const positionedAppointments = useMemo(() => {
@@ -138,7 +138,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     setExpandedGroups(prev => {
       const cleaned: Record<number, boolean> = {};
       for (const key in prev) {
-        if (validKeys.has(Number(key))) {
+        if (validKeys.has(Number(key)) && prev[key] !== undefined) {
           cleaned[key] = prev[key];
         }
       }
@@ -164,7 +164,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     const startHour = new Date(selectedCell.date).getHours();
     const intervalIndex = isFullDay
       ? 0
-      : startHour >= HALF_DAY_INTERVALS[1].startHour ? 1 : 0;
+      : startHour >= (HALF_DAY_INTERVALS[1]?.startHour ?? 0) ? 1 : 0;
 
     return {
       left: dayIndex * CELL_WIDTH + intervalIndex * intervalWidth,
@@ -188,7 +188,9 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       ? Math.min(Math.max(rawIntervalIndex, 0), DAY_INTERVALS.length - 1)
       : Math.min(Math.max(rawIntervalIndex, 0), HALF_DAY_INTERVALS.length - 1);
     const intervalConfig = isFullDay ? DAY_INTERVALS[clampedIndex] : HALF_DAY_INTERVALS[clampedIndex];
-    const selectedDate = dayInTimeline[dayIndex] + (intervalConfig?.startHour ?? 0) * HOUR_MS;
+    const day = dayInTimeline[dayIndex];
+    if (day === undefined) return;
+    const selectedDate = day + (intervalConfig?.startHour ?? 0) * HOUR_MS;
 
     onSelectCell({ employeeId: employee.id, date: selectedDate });
     onSelectAppointment(null);
@@ -196,7 +198,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
   const isInactive = employee.actif === false;
-  const gridOpacity = isInactive ? 0.4 : 0.9;
   const STEP_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
 
   return (
@@ -241,7 +242,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       {overlappingGroups.map((group) => {
         const isExpanded = expandedGroups[group.key] === true;
         const appsToRender = group.apps;
-        const baseTopPx = group.apps[0].topPx;
+        const baseTopPx = group.apps[0]?.topPx || 0; // Position de base pour les éléments du groupe (le premier élément)
 
         // Récupérer tous les RDV avec priorité 0 (RDV de base)
         const priority0Apps = group.apps.filter(app => (app.priority ?? 0) === 0);
@@ -324,7 +325,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               );
             })}
 
-            {group.apps.length > 1 && !isExpanded && (
+            {group.apps.length > 1 && !isExpanded && group.apps[0] && (
               <button
                 type="button"
                 className="absolute z-40 text-[11px] font-semibold rounded-full px-2 py-0.5 shadow-sm border border-gray-200 bg-white/95 text-gray-700 flex items-center gap-1 transition-transform hover:-translate-y-0.5 hover:shadow-md hover:bg-white"
@@ -342,13 +343,13 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               </button>
             )}
 
-            {isExpanded && group.apps.length > 1 && (
+            {isExpanded && group.apps.length > 1 && group.apps[0] && (
               <button
                 type="button"
                 className="absolute z-40 text-[11px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
                 style={{
-                  left: (group.apps[0].left + group.apps[0].width) - 36,
-                  top: group.apps[0].topPx - 12,
+                  left: (group.apps[0]?.left + group.apps[0]?.width) - 36,
+                  top: group.apps[0]?.topPx - 12,
                 }}
                 onClick={(e) => {
                   e.stopPropagation();

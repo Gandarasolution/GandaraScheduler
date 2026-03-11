@@ -16,10 +16,10 @@
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.13.13",
-    "bootstrap": "^5.3.7",
     "date-fns": "^4.1.0",
     "date-holidays": "^3.24.3",
     "fuse.js": "^7.1.0",
+    "immer": "^11.1.4",
     "konva": "^10.0.12",
     "lucide-react": "^0.563.0",
     "next": "^16.1.1",
@@ -32,7 +32,8 @@
     "sass": "^1.89.2",
     "y-protocols": "^1.0.6",
     "y-websocket": "^2.0.4",
-    "yjs": "^13.6.23"
+    "yjs": "^13.6.23",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",

@@ -2,10 +2,6 @@
 import React, { memo } from 'react';
 import { useDrag } from 'react-dnd';
 
-import ChantierIcones from '../../image/Icones/Chantier.png';
-import AbsenceIcones from '../../image/Icones/Absences.png';
-import AutreIcones from '../../image/Icones/Autres.png';
-
 /**
  * Props du composant DraggableSource
  * Permet de rendre un élément externe draggable (ex: source de rendez-vous à glisser dans le calendrier).

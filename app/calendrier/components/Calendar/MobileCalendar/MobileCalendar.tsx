@@ -8,8 +8,8 @@
  * @version 2.0.0
  */
 
-import React, { useEffect, useState , Suspense, useMemo } from 'react';
-import { addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import React, { useEffect, useState , useMemo } from 'react';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
@@ -28,7 +28,7 @@ import SearchOverlay from '../../modals/SearchOverlay';
 import { useNotifications, useCalendarWorker } from '../../../hooks';
 import { getNotificationsByUserId } from '@/app/datasource';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
-import { canCreateEvent, getUserPermissions } from '../../../utils/permissions';
+import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
 
 // Lazy loading des composants lourds
 
@@ -52,7 +52,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   onAddAppointment 
 }) => {
   // ----- ÉTATS LOCAUX -----
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const currentDate = useMemo(() => new Date(), []); // Date actuelle, mémorisée pour éviter les recalculs
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showLogout, setShowLogout] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -62,7 +62,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
-  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
 
   // ----- HOOKS PERSONNALISÉS -----
   const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
@@ -72,7 +71,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   // ----- GESTION DES DROITS D'ACCÈS -----
   const isAdmin = user.role === 'admin';
   const isManager = user.role === 'manager';
-  const userPermissions = getUserPermissions(user.role);
+  //const userPermissions = getUserPermissions(user.role);
   
   // Filtrer les items selon les permissions de l'utilisateur
   const allowedItems = useMemo(() => {
@@ -136,9 +135,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     }
     
     // Utiliser le Web Worker pour les calculs
-    const filterAppointments = async () => {
-      setIsLoadingAppointments(true);
-      
+    const filterAppointments = async () => {      
       const filtered = await worker.filterMonthlyAppointments(
         appointments,
         currentDate,
@@ -151,7 +148,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         setMonthlyAppointments(filtered);
       }
       
-      setIsLoadingAppointments(false);
     };
     
     filterAppointments();
@@ -272,12 +268,17 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     const startOfSelectedDay = new Date(selectedDate).setHours(8, 0, 0, 0);
     const endOfSelectedDay = new Date(selectedDate).setHours(17, 0, 0, 0);
     
+    const appointmentEmployee = selectedEmployee || employees[0];
+    if (!appointmentEmployee) {
+      throw new Error('No employee available for appointment creation');
+    }
+    
     return {
       id: id ?? -1,
       description: '',
       startDate: startOfSelectedDay,
       endDate: endOfSelectedDay,
-      employee: selectedEmployee || employees[0] || null,
+      employee: appointmentEmployee,
       type: 'chantier',
       EventId: 0,
       priority: 0,

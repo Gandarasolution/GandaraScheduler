@@ -4,11 +4,11 @@
  */
 
 "use client";
-import React, { useState, useRef, memo, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, memo, useEffect, useCallback, useMemo } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
 import { isWeekend } from 'date-fns';
-import { Appointment, HalfDayInterval, Item } from '../../types';
-import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS, HOUR_MS } from '../../utils/constants';
+import { Appointment, Item } from '../../types';
+import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS } from '../../utils/constants';
 import AppointmentMetadata from './AppointmentIcon';
 import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
 
@@ -43,7 +43,6 @@ interface AppointmentItemProps {
 const AppointmentItem: React.FC<AppointmentItemProps> = ({
   appointment,
   isFullDay,
-  isMobile,
   event,
   mainScrollRef,
   chargeeAffaire,
@@ -258,12 +257,12 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
            
            currentIntervalIdx++;
            if (currentIntervalIdx >= intervals.length) {
-             targetDate = new Date(targetDate + DAY_MS).setHours(intervals[0].startHour, 0, 0, 0);
+             targetDate = new Date(targetDate + DAY_MS).setHours(intervals[0]?.startHour ?? 0, 0, 0, 0);
              while (!isDisplayWeekend && isWeekend(targetDate)) {
                targetDate = targetDate + DAY_MS;
              }
            } else {
-             targetDate = new Date(targetDate).setHours(intervals[currentIntervalIdx].startHour, 0, 0, 0);
+             targetDate = new Date(targetDate).setHours(intervals[currentIntervalIdx]?.startHour ?? 0, 0, 0, 0);
            }
            currentIntervalCount++;
          }

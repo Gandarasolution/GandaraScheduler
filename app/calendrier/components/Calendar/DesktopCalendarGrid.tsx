@@ -158,9 +158,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     const safeStartIndex = Math.max(0, Math.min(startIndex, dayInTimeline.length - 1));
     const safeEndIndex = Math.max(0, Math.min(endIndex, dayInTimeline.length - 1));
 
-    const startTs = dayInTimeline[safeStartIndex];
+    const startTs = dayInTimeline[safeStartIndex] ?? 0;
     // Pour la fin, on ajoute 24h pour être sûr d'inclure les RDV qui dépassent la journée
-    const endTs = dayInTimeline[safeEndIndex] + (24 * 60 * 60 * 1000); 
+    const endTs = (dayInTimeline[safeEndIndex] ?? 0) + (24 * 60 * 60 * 1000); 
 
     return { visibleWindowStart: startTs, visibleWindowEnd: endTs };
   }, [dayInTimeline, viewport.left, viewport.width]);
@@ -277,7 +277,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       Math.max(0, Math.floor(offsetInDay / intervalWidth))
     );
     const intervalStartHour = intervals[intervalIndex]?.startHour ?? 0;
-    const targetDate = dayInTimeline[dayIndex] + intervalStartHour * HOUR_MS;
+    const targetDate = (dayInTimeline[dayIndex] ?? 0) + intervalStartHour * HOUR_MS;
 
     handleContextMenu(e, 'cell', null, { employeeId: Number(targetRow.id), date: targetDate });
   }, [HALF_DAY_INTERVALS, dayInTimeline, handleContextMenu, isFullDay, rowBoundaries, totalContentHeight]);
@@ -290,7 +290,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     appointmentsWithTop.forEach(app => {
       // Opti: Removed window filtering to keep reference stable
       if (!map[app.employee.id]) map[app.employee.id] = [];
-      map[app.employee.id].push(app);
+      map[app.employee.id]?.push(app);
     });
 
     return map;

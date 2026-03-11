@@ -17,7 +17,6 @@ interface AppointmentMetadataProps {
 const AppointmentMetadata: React.FC<AppointmentMetadataProps> = ({
   color,
   textColor,
-  isHovered,
   mainScrollRef,
   annotation,
   tagText,
