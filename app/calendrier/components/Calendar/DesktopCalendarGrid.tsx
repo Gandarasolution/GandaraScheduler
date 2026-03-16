@@ -282,18 +282,55 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     handleContextMenu(e, 'cell', null, { employeeId: Number(targetRow.id), date: targetDate });
   }, [HALF_DAY_INTERVALS, dayInTimeline, handleContextMenu, isFullDay, rowBoundaries, totalContentHeight]);
 
+  const previousAppointmentsMapRef = React.useRef<Record<number, (Appointment & { top: number })[]>>({});
+
   const appointmentsByEmployee = useMemo(() => {
     const map: Record<number, (Appointment & { top: number })[]> = {};
 
-    employees.forEach(emp => map[emp.id] = []);
+    employees.forEach(emp => { map[emp.id] = []; });
 
     appointmentsWithTop.forEach(app => {
-      // Opti: Removed window filtering to keep reference stable
       if (!map[app.employee.id]) map[app.employee.id] = [];
-      map[app.employee.id]?.push(app);
+      map[app.employee.id].push(app);
     });
 
-    return map;
+    const prevMap = previousAppointmentsMapRef.current;
+    let hasChanges = false;
+    const finalMap: Record<number, (Appointment & { top: number })[]> = {};
+
+    employees.forEach(emp => {
+      const prevApps = prevMap[emp.id] || [];
+      const newApps = map[emp.id];
+      let rowChanged = prevApps.length !== newApps.length;
+
+      if (!rowChanged) {
+        for (let i = 0; i < newApps.length; i++) {
+          if (
+            prevApps[i].id !== newApps[i].id || 
+            prevApps[i].startDate !== newApps[i].startDate || 
+            prevApps[i].endDate !== newApps[i].endDate || 
+            prevApps[i].top !== newApps[i].top || 
+            prevApps[i].description !== newApps[i].description || 
+            prevApps[i].tag?.id !== newApps[i].tag?.id
+          ) {
+            rowChanged = true;
+            break;
+          }
+        }
+      }
+
+      if (rowChanged) {
+        finalMap[emp.id] = newApps;
+        hasChanges = true;
+      } else {
+        finalMap[emp.id] = prevApps; // Keep previous array reference!
+      }
+    });
+
+    if (hasChanges || Object.keys(prevMap).length === 0) {
+      previousAppointmentsMapRef.current = finalMap;
+    }
+    return finalMap;
   }, [appointmentsWithTop, employees]);
 
   const toggleItem = (itemId: string | number) => {

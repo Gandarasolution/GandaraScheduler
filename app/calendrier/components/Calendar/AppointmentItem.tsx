@@ -34,8 +34,8 @@ interface AppointmentItemProps {
   /* Mode d'affichage de l'étiquette */
   tagPlacement?: 'hover' | 'fixed';
   mainScrollRef: React.RefObject<HTMLDivElement> | null;
-  onClick?: () => void;
-  onDoubleClick?: () => void;
+  onClick?: (app: Appointment) => void;
+  onDoubleClick?: (app: Appointment) => void;
   onResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right', priority: number) => void;
   handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
 }
@@ -207,18 +207,19 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     height: `${CELL_HEIGHT}px`,
     minWidth: `${INTERVAL_WIDTH}px`,
     pointerEvents: isDragging ? 'none' as const : 'auto' as const,
-    left: `${computedLeft}px`,
-    willChange: 'width, left',
+    transform: `translate3d(${computedLeft}px, 0, 0)`,
+    left: 0,
+    willChange: 'transform, width',
     top: computedTop,
     // Le conteneur principal devient transparent si c'est un Ghost
     // car les backgrounds sont gérés par les enfants (Ghost Part vs Real Part)
     backgroundColor: isGhost ? 'transparent' : (isHovered ? 'white' : appointmentColor), 
     border: isGhost ? 'none' : `2px solid ${appointmentBorderColor}`,
-    transition: 'all 0.2s ease-in-out',
+    transition: isDragging ? 'none' : 'box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out, opacity 0.2s ease-in-out transform 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
     zIndex: isHovered ? 9999 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.priority || 0)))),
     cursor: isInactive ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' ? 'grab' : 'default')),
-  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment, isInactive]);
+  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment, isInactive, isResizingLeft, isResizingRight]);
 
   return (
     <div
@@ -226,7 +227,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       ref={(node) => { if (node && source === 'calendar' && !isInactive) drag(node); }}
       onClick={(e) => {
         e.stopPropagation();
-        onClick && onClick();
+        onClick && onClick(appointment);
       }}
       onDoubleClick={(e) => {
         e.stopPropagation();
@@ -234,7 +235,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         console.log(appointment.employee);
         
         if (appointment.employee.actif) {
-          onDoubleClick && onDoubleClick();
+          onDoubleClick && onDoubleClick(appointment);
         }
       }}
       onContextMenu={(e) => {
@@ -250,8 +251,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
          let currentIntervalCount = 0;
          
          while (currentIntervalCount < clampedIntervalIndex) {
+           const targetHour = new Date(targetDate).getHours();
            let currentIntervalIdx = intervals.findIndex(interval =>
-              new Date(targetDate).getHours() >= interval.startHour && new Date(targetDate).getHours() < interval.endHour
+              targetHour >= interval.startHour && targetHour < interval.endHour
            );
            if (currentIntervalIdx === -1) currentIntervalIdx = 0;
            
@@ -259,7 +261,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
            if (currentIntervalIdx >= intervals.length) {
              targetDate = new Date(targetDate + DAY_MS).setHours(intervals[0]?.startHour ?? 0, 0, 0, 0);
              while (!isDisplayWeekend && isWeekend(targetDate)) {
-               targetDate = targetDate + DAY_MS;
+               targetDate += DAY_MS;
              }
            } else {
              targetDate = new Date(targetDate).setHours(intervals[currentIntervalIdx]?.startHour ?? 0, 0, 0, 0);
@@ -280,8 +282,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       className={`
         appointment-item rounded-xl text-sm shadow-md
         flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
-        transition-all z-20 h-11 group duration-200
-        ${isDragging ? 'opacity-60 scale-95' : 'opacity-100'}
+        z-20 h-11 group
+        ${isDragging  ? 'opacity-60 scale-95 duration-0' : 'opacity-100 duration-200'}
         ${source === 'calendar' && isSelected ? 'ring-3 ring-color' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
@@ -385,7 +387,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               <span 
                 className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-sm`}
                 style={{ 
-                    color: isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                    color: (isHovered || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
                 }}
               >
                 {event?.label}
@@ -400,7 +402,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 <span 
                     className="truncate transition-colors duration-200"
                     style={{ 
-                    color: isHovered ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                    color: (isHovered || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
                     }}
                 >
                     {chargeeAffaire}
@@ -416,7 +418,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                       isHovered={isHovered}
                       mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
                       annotationImgSvg={
-                        <svg height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg" style={{ color: isHovered ? (event.color) : event.textColor }}>
+                        <svg height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.color) : event.textColor }}>
                           <path d="m22 12c0 5.5228-4.4772 10-10 10-5.52285 0-10-4.4772-10-10 0-5.52285 4.47715-10 10-10 5.5228 0 10 4.47715 10 10z" 
                                 fill="none" 
                                 stroke="currentColor" 
@@ -427,7 +429,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                         </svg>
                       }
                       tagImgSvg={
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ color: isHovered ? (event.color) : event.textColor }}>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.color) : event.textColor }}>
                           <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
                         </svg>
                       }
@@ -479,4 +481,21 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   );
 };
 
-export default memo(AppointmentItem);
+const arePropsEqual = (prevProps: AppointmentItemProps, nextProps: AppointmentItemProps) => {
+  return (
+    prevProps.appointment.id === nextProps.appointment.id &&
+    prevProps.appointment.startDate === nextProps.appointment.startDate &&
+    prevProps.appointment.endDate === nextProps.appointment.endDate &&
+    prevProps.absoluteLeft === nextProps.absoluteLeft &&
+    prevProps.absoluteWidth === nextProps.absoluteWidth &&
+    prevProps.absoluteTop === nextProps.absoluteTop &&
+    prevProps.isGhost === nextProps.isGhost &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isFullDay === nextProps.isFullDay &&
+    prevProps.isDisplayWeekend === nextProps.isDisplayWeekend &&
+    prevProps.isInactive === nextProps.isInactive &&
+    JSON.stringify(prevProps.ghostInterval) === JSON.stringify(nextProps.ghostInterval)
+  );
+};
+
+export default memo(AppointmentItem, arePropsEqual);

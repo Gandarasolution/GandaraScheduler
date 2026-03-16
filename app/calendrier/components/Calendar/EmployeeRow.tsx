@@ -62,6 +62,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     setExpandedGroups({});
   }, [collapseTrigger]);
 
+  const handleAppointmentResize = useCallback((id: number, newStartDate: number, newEndDate: number, resizeDirection: 'left' | 'right', priority: number) => {
+    onAppointmentMoved(id, newStartDate, newEndDate, employee.id as number, resizeDirection, true, priority);
+  }, [onAppointmentMoved, employee.id]);
+
   const timelineStart = useMemo(() => dayInTimeline[0] || 0, [dayInTimeline]);
   
   // Positionnement et calcul des dimensions
@@ -307,19 +311,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   isGhost={isGhost} 
                   ghostInterval={ghostIntervals.length > 0 ? ghostIntervals : undefined}
 
-                  onResize={(id, newStartDate, newEndDate, resizeDirection, priority) =>{              
-                    onAppointmentMoved(id, newStartDate, newEndDate, app.employee.id as number, resizeDirection, true, priority)}
-                  }
-                  handleContextMenu={(e, origin) =>
-                    handleContextMenu(
-                      e,
-                      origin,
-                      { ...app, startDate: app.startDate, endDate: app.endDate },
-                      { employeeId: app.employee.id as number, date: app.startDate }
-                    )
-                  }
-                  onDoubleClick={() => onAppointmentDoubleClick(app)}
-                  onClick={() => onSelectAppointment(app)}
+                  onResize={handleAppointmentResize}
+                  handleContextMenu={handleContextMenu}
+                  onDoubleClick={onAppointmentDoubleClick}
+                  onClick={onSelectAppointment}
                   isSelected={selectedAppointmentId === app.id}
                 />
               );
@@ -369,7 +364,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 export default memo(EmployeeRow, (prev, next) => {
   if (prev.employee.id !== next.employee.id ||
       prev.dayInTimeline !== next.dayInTimeline ||
-      prev.appointments !== next.appointments ||
+      prev.appointments.length !== next.appointments.length ||
+      prev.appointments.some((app, i) => app.id !== next.appointments[i].id || app.startDate !== next.appointments[i].startDate || app.endDate !== next.appointments[i].endDate || app.top !== next.appointments[i].top || app.description !== next.appointments[i].description) ||
       prev.rowHeight !== next.rowHeight ||
       prev.style?.top !== next.style?.top ||
       prev.isFullDay !== next.isFullDay ||
