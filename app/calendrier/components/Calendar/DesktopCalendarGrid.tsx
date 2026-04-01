@@ -103,7 +103,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
-    const items = getHierarchicalDimensionItems(calendarConfig.groupingLevels, employees, initialTeams);
+    const items = getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
     return items.map(i => i.id);
   });  
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
@@ -166,8 +166,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [dayInTimeline, viewport.left, viewport.width]);
 
   const dimensionItems = useMemo(() => {
-    return getHierarchicalDimensionItems(calendarConfig.groupingLevels, employees, initialTeams);
-  }, [calendarConfig.groupingLevels, employees, initialTeams]);
+    return getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
+  }, [calendarConfig.Group, employees, initialTeams]);
 
   const filteredEmployees = useMemo(() => {
     const baseFiltered = applyFiltersToEmployees(employees, getFlatFilters(calendarConfig.filterCategories));
@@ -181,9 +181,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       
       // Si l'employé est inactif, vérifier s'il a des rdv dans la fenêtre visible
       const hasVisibleAppointments = appointmentsWithTop.some(app => 
-        app.employee.id === emp.id && 
-        app.endDate > visibleWindowStart && 
-        app.startDate < visibleWindowEnd
+        app.employee.IdPersonnel === emp.IdPersonnel && 
+        app.DebutPlanningEvenement > visibleWindowStart && 
+        app.FinPlanningEvenement < visibleWindowEnd
       );
       
       return hasVisibleAppointments;
@@ -191,8 +191,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [employees, calendarConfig.filterCategories, appointmentsWithTop, visibleWindowStart, visibleWindowEnd]);
 
   const employeesByDimension = useMemo(() => {
-    return groupEmployeesHierarchically(filteredEmployees, calendarConfig.groupingLevels, initialTeams);
-  }, [filteredEmployees, calendarConfig.groupingLevels, initialTeams]);
+    return groupEmployeesHierarchically(filteredEmployees, calendarConfig.Group, initialTeams);
+  }, [filteredEmployees, calendarConfig.Group, initialTeams]);
   
 
   const todayIndex = useMemo(() => {
@@ -287,11 +287,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const appointmentsByEmployee = useMemo(() => {
     const map: Record<number, (Appointment & { top: number })[]> = {};
 
-    employees.forEach(emp => { map[emp.id] = []; });
+    employees.forEach(emp => { map[emp.IdPersonnel] = []; });
 
     appointmentsWithTop.forEach(app => {
-      if (!map[app.employee.id]) map[app.employee.id] = [];
-      map[app.employee.id].push(app);
+      if (!map[app.employee.IdPersonnel]) map[app.employee.IdPersonnel] = [];
+      map[app.employee.IdPersonnel].push(app);
     });
 
     const prevMap = previousAppointmentsMapRef.current;
@@ -299,19 +299,19 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     const finalMap: Record<number, (Appointment & { top: number })[]> = {};
 
     employees.forEach(emp => {
-      const prevApps = prevMap[emp.id] || [];
-      const newApps = map[emp.id];
+      const prevApps = prevMap[emp.IdPersonnel] || [];
+      const newApps = map[emp.IdPersonnel];
       let rowChanged = prevApps.length !== newApps.length;
 
       if (!rowChanged) {
         for (let i = 0; i < newApps.length; i++) {
           if (
-            prevApps[i].id !== newApps[i].id || 
-            prevApps[i].startDate !== newApps[i].startDate || 
-            prevApps[i].endDate !== newApps[i].endDate || 
+            prevApps[i].IdPlanningEvenement !== newApps[i].IdPlanningEvenement || 
+            prevApps[i].DebutPlanningEvenement !== newApps[i].DebutPlanningEvenement || 
+            prevApps[i].FinPlanningEvenement !== newApps[i].FinPlanningEvenement || 
             prevApps[i].top !== newApps[i].top || 
-            prevApps[i].description !== newApps[i].description || 
-            prevApps[i].tag?.id !== newApps[i].tag?.id
+            prevApps[i].AnnotationPlanningEvenement !== newApps[i].AnnotationPlanningEvenement || 
+            prevApps[i].Etiquette?.IdPlanningEtiquette !== newApps[i].Etiquette?.IdPlanningEtiquette
           ) {
             rowChanged = true;
             break;
@@ -320,10 +320,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       }
 
       if (rowChanged) {
-        finalMap[emp.id] = newApps;
+        finalMap[emp.IdPersonnel] = newApps;
         hasChanges = true;
       } else {
-        finalMap[emp.id] = prevApps; // Keep previous array reference!
+        finalMap[emp.IdPersonnel] = prevApps; // Keep previous array reference!
       }
     });
 
@@ -378,10 +378,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   useEffect(() => {
     // On recalcule les IDs basés sur la nouvelle config
-    const currentDimensionItems = getHierarchicalDimensionItems(calendarConfig.groupingLevels, employees, initialTeams);
+    const currentDimensionItems = getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
     setOpenItems(currentDimensionItems.map(item => item.id));
     
-  }, [calendarConfig.groupingLevels]);
+  }, [calendarConfig.Group]);
 
 
 

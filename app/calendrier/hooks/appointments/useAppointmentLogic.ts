@@ -34,6 +34,11 @@ interface LogicProps {
     deleteAppointment: (appointmentId: number) => void;
     setAppointments: (appointments: Appointment[]) => void;
   };
+  api?: {
+    createEvenement?: (data: any) => Promise<any>;
+    updateEvenement?: (id: string, data: any) => Promise<any>;
+    deleteEvenement?: (id: string) => Promise<any>;
+  };
 }
 
 export const useAppointmentLogic = ({ 
@@ -44,6 +49,7 @@ export const useAppointmentLogic = ({
   onUpdate,
   setIsSearchOverlayOpen,
   setDimensionsSearchInput,
+  api,
 }: LogicProps) => {
   
   // --- Initialisation des Utilitaires ---
@@ -216,11 +222,17 @@ export const useAppointmentLogic = ({
           ? { ...app, startDate: newStartDate, endDate: newEndDate, employee: employeesRef.current.find(emp => emp.id === newEmployeeId) || app.employee, priority: newPriority !== undefined ? newPriority : app.priority }
           : app
       );
+
+      const updatedAppointment = appointmentsRef.current.find(app => app.id === id);
+      if (updatedAppointment && api?.updateEvenement) {
+        void api.updateEvenement(String(id), updatedAppointment);
+      }
+
       if (newPriority !== undefined && newEmployeeId !== undefined) {
         reorganizePriorities(id, newPriority, newEmployeeId , newStartDate, newEndDate);
       }
       onUpdate();
-  }, [appointmentsRef, onUpdate, saveAppointmentState]);
+  }, [appointmentsRef, onUpdate, saveAppointmentState, api, employeesRef, reorganizePriorities]);
 
   // Création unitaire d'un RDV
   const createAppointment = useCallback((
@@ -252,6 +264,10 @@ export const useAppointmentLogic = ({
         priority: maxPriority, // Nouveau rdv au-dessus de la pile
       };
       appointmentsRef.current.push(newApp);
+
+      if (api?.createEvenement) {
+        void api.createEvenement(newApp);
+      }
       
       if (saveToHistory) {
         saveAppointmentState(newApp, 'create');
@@ -259,7 +275,7 @@ export const useAppointmentLogic = ({
       
       onUpdate();
       return newApp;
-  }, [appointmentsRef, onUpdate, saveAppointmentState]);
+  }, [appointmentsRef, onUpdate, saveAppointmentState, api, employeesRef]);
 
   // --- GESTION DES PRIORITÉS ---
 
@@ -450,6 +466,9 @@ export const useAppointmentLogic = ({
         }
         
         appointmentsRef.current = appointmentsRef.current.filter((app) => app.id !== id);
+        if (api?.deleteEvenement) {
+          void api.deleteEvenement(String(id));
+        }
                 
         onUpdate();
         setIsModalOpen(false);
@@ -457,7 +476,7 @@ export const useAppointmentLogic = ({
         setAlertState(prev => ({ ...prev, isVisible: false }));
       }
     });
-  }, [selectedAppointment, appointmentsRef, saveAppointmentState, onUpdate]);
+  }, [selectedAppointment, appointmentsRef, saveAppointmentState, onUpdate, api]);
 
   const handleDivideAppointment = useCallback((id?: number) => {
     if (!id) return;

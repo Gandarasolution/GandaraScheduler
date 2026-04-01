@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Appointment, User, Item, CalendarConfig, Image, UserRole } from '../../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
-import { 
-  getAppointments, 
-  getEvenements, 
-  initialTeams, 
-  getImages
-} from "../../../datasource";
+import evenementService from '@/app/service/evenement.service'; // NEW API SERVICE
+import equipeService from '@/app/service/equipe.service';
+import rubriqueService from '@/app/service/rubrique.service';
+import imageService from '@/app/service/image.service';
 import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../../utils/filters";
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../../utils/constants';
 import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
@@ -20,26 +18,80 @@ interface DataLayerProps {
   filters: ActiveFilters;
   calendarConfig: CalendarConfig | null;
   globalEmployeesRef: React.RefObject<User[]>;
-  userId: string;
   userIdNumber: number;
   userRole: UserRole;
-  userName: string;
-  enableCollaboration: boolean;
   isSearchOverlayOpen: boolean;
 }
 
-export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensions, calendarConfig, globalEmployeesRef, userId, userIdNumber, userRole, userName, enableCollaboration, isSearchOverlayOpen }: DataLayerProps) => {
+export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensions, calendarConfig, globalEmployeesRef, userIdNumber, userRole, isSearchOverlayOpen }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const worker = useCalendarWorker();
+  const [teams, setTeams] = useState<any[]>([]);
   
-  // Données Sources (Refs pour éviter re-renders inutiles sur grosses données)
-  const itemsRef = useRef<Item[]>(getEvenements());
+  const itemsRef = useRef<Item[]>([]);
   const appointmentsRef = useRef<Appointment[]>([]);
   
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
-  const [availableImages, setAvailableImages] = useState<Image[]>(getImages());
+  const [availableImages, setAvailableImages] = useState<Image[]>([]);
   const [workerFilteredAppointments, setWorkerFilteredAppointments] = useState<Appointment[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStaticData = async () => {
+      // const [rubriquesResponse, imagesResponse] = await Promise.all([
+      //   rubriqueService.getRubriques(),
+      //   imageService.getImages(),
+      // ]);
+
+      const imagesResponse = await imageService.getImages();
+
+      if (!isMounted) return;
+
+      // if (rubriquesResponse?.error === 0 && Array.isArray(rubriquesResponse.data)) {
+      //   itemsRef.current = rubriquesResponse.data;
+      // }
+
+      if (imagesResponse?.error === 0 && Array.isArray(imagesResponse.data)) {
+        setAvailableImages(imagesResponse.data);
+      }
+
+      setAppointmentsVersion(prev => prev + 1);
+    };
+
+    loadStaticData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTeams = async () => {
+      const response = await equipeService.getEquipes();
+      if (!isMounted) return;
+
+      if (response?.error === 0 && Array.isArray(response.data)) {
+        setTeams(response.data);
+        return;
+      }
+
+      const teamsFromEmployees = globalEmployeesRef.current
+        .map(emp => emp.equipe)
+        .filter(Boolean)
+        .filter((team, index, arr) => arr.findIndex(t => t?.id === team?.id) === index);
+      setTeams(teamsFromEmployees as any[]);
+    };
+
+    loadTeams();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [globalEmployeesRef]);
 
 
   // Instanciation Utils
@@ -56,7 +108,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
       
       // Filtrer par rôle : users et viewers ne voient que leur propre employé
       if (userRole === 'user' || userRole === 'viewer') {
-        employees = employees.filter(emp => emp.id === userIdNumber);
+        employees = employees.filter(emp => emp.IdPersonnel === userIdNumber);
       }
       
       return applyFiltersToEmployees(
@@ -87,7 +139,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
     
     // Filtre par rôle utilisateur - users et viewers ne voient que leurs propres RDV
     if (userRole === 'user' || userRole === 'viewer') {
-      filtered = filtered.filter(app => app.employee.id === userIdNumber);
+      filtered = filtered.filter(app => app.employee.IdPersonnel === userIdNumber);
     }
     
     // Filtre par type de RDV (logique métier)
@@ -172,19 +224,26 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
 
   const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
     setIsLoading(true);
-    // Simuler un appel API
-    setTimeout(() => {
-      const newAppointments = getAppointments(startDate, endDate);
+    try {
+      // APPEL API RÉEL
+      const response = await evenementService.getEvenements(startDate, endDate);
+      // Supposant que "response.data" contienne un tableau d'Appointment (ce qui vient de Axios)
+      // Ajuste si la forme de ta réponse est du style { error: 0, data: [...] }
+      const newAppointments = response.error === 0 ? response.data : [];
+
       // Fusionner les nouveaux RDV avec les existants
       const existingIds = new Set(appointmentsRef.current.map(app => app.id));
       const mergedAppointments = [
         ...appointmentsRef.current,
-        ...newAppointments.filter(app => !existingIds.has(app.id))
+        ...newAppointments.filter((app: Appointment) => !existingIds.has(app.id))
       ];
       appointmentsRef.current = mergedAppointments;
       setAppointmentsVersion(prev => prev + 1);
+    } catch (error) {
+      console.error("Erreur lors du chargement des rendez-vous:", error);
+    } finally {
       setIsLoading(false);
-    }, 500); // Simuler délai
+    }
     return true;
   }, []);
 
@@ -201,7 +260,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
      if (viewType === 'chantier-table') return filteredItems.filter(e => e.type === 'chantier');
      if (viewType === 'paie-table') return filteredItems.filter(e => e.type !== 'chantier');
      return filteredEmployees.map(emp => ({
-        id: emp.id,
+        id: emp.IdPersonnel,
         image: emp.image,
         code: emp.code,
         nom: emp.nom,
@@ -295,14 +354,15 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
 
   const updateEmployeeImage = (id: number, newImage: Image) => {
     globalEmployeesRef.current = globalEmployeesRef.current.map(emp => 
-      emp.id === id ? { ...emp, image: newImage } : emp
+      emp.IdPersonnel === id ? { ...emp, image: newImage } : emp
     );
     refreshData();
   };
 
   const updateEmployeeGroup = (empId: number, groupId: number | null) => {
+    const nextTeam = teams.find(team => team.id === groupId);
     globalEmployeesRef.current = globalEmployeesRef.current.map(emp => 
-      emp.id === empId ? { ...emp, group: initialTeams.find(team => team.id === groupId) || undefined } : emp
+      emp.IdPersonnel === empId ? { ...emp, equipe: nextTeam || undefined } : emp
     );
     refreshData();
   };
@@ -358,7 +418,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
     filteredAppointments,
     filteredItems,
     availableImages,
-    initialTeams,
+    initialTeams: teams,
     updateEmployeeGroup,
     addManualEvent,
     toggleManualEvent,

@@ -48,9 +48,10 @@ import { useTheme } from '../utils/themeManager';
 
 // --- CONTEXTES & SERVICES ---
 import { notificationService } from "../services";
+import employeeService from '@/app/service/employee.service';
+import evenementService from '@/app/service/evenement.service';
 
 // --- UTILITAIRES ---
-import { getEmployees } from "../../datasource"; // Ajout de getImages
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
 import { User, Item, CommonPaieAttributs } from '../types';
@@ -93,9 +94,34 @@ export default function HomePage({
 
   // État pour la confirmation de suppression de rubrique
   const [deleteConfirmData, setDeleteConfirmData] = useState<{ item: Item, isUsedInPlanning: boolean, isActive: boolean } | null>(null);
+  const [, setEmployeesVersion] = useState(0);
 
-  // Refs de données statiques
-  const globalEmployeesRef = useRef(getEmployees());
+  // Refs de données dynamiques (chargées via API)
+  const globalEmployeesRef = useRef<User[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEmployees = async () => {
+      const response = await employeeService.getEmployees();
+      if (!isMounted) return;
+
+      if (response?.error === 0 && Array.isArray(response.data)) {
+        globalEmployeesRef.current = response.data;
+        setEmployeesVersion(prev => prev + 1);
+        return;
+      }
+
+      globalEmployeesRef.current = [];
+      setEmployeesVersion(prev => prev + 1);
+    };
+
+    loadEmployees();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
   const viewState = useCalendarView(globalEmployeesRef, user);
@@ -109,12 +135,8 @@ export default function HomePage({
     calendarConfig: viewState.currentCalendarConfig,
     globalEmployeesRef,
     isSearchOverlayOpen: viewState.isSearchOverlayOpen,
-    // Activer la collaboration
-    enableCollaboration: true,
-    userId: user?.id ? String(user.id) : 'anonymous',
-    userIdNumber: user?.id || 0,
+    userIdNumber: user?.IdPersonnel || 0,
     userRole: user?.role || 'viewer',
-    userName: user?.nom ? `${user.nom} ${user.prenom}` : 'Utilisateur'
   });
 
   // Filtrer les items selon les permissions de l'utilisateur
@@ -148,6 +170,11 @@ export default function HomePage({
     onUpdate: dataLayer.refreshData, // Callback pour rafraichir l'UI après modification des Refs
     setIsSearchOverlayOpen: viewState.setIsSearchOverlayOpen,
     setDimensionsSearchInput: viewState.setDimensionsSearchInput,
+    api: {
+      createEvenement: evenementService.createEvenement,
+      updateEvenement: evenementService.updateEvenement,
+      deleteEvenement: evenementService.deleteEvenement,
+    },
   });
 
   
@@ -474,7 +501,7 @@ export default function HomePage({
               handleImageSelect: (newImageUrl) => {
                 // Logique de décision basée sur la vue active
                 if (viewState.viewType === 'employee-table') {
-                    const id = appointmentLogic.selectedEmployee?.id || null;
+                    const id = appointmentLogic.selectedEmployee?.IdPersonnel || null;
                     if (id === null) return;                    
                     dataLayer.updateEmployeeImage(id, newImageUrl);
                 } else {
@@ -504,18 +531,18 @@ export default function HomePage({
               saveCustomConfig: (c) => { 
                  const newConfig = {...c, id: Date.now()};
                  viewState.calendarConfigHook.addConfig(newConfig); 
-                 notificationService.configSaved(c.name);
+                 notificationService.configSaved(c.LibellePlanningVue);
                  return newConfig;
               },
               updateCustomConfig: (c) => { 
                  viewState.calendarConfigHook.updateConfig(c);
-                 notificationService.configUpdated(c.name);
+                 notificationService.configUpdated(c.LibellePlanningVue);
               },
               deleteCustomConfig: (id) => {
                  viewState.calendarConfigHook.deleteConfig(id);
               },
               duplicateConfig: (c) => {
-                 const newConfig = {...c, id: Date.now(), name: c.name + ' (copie)'};
+                 const newConfig = {...c, id: Date.now(), name: c.LibellePlanningVue + ' (copie)'};
                  viewState.calendarConfigHook.addConfig(newConfig);
                  return newConfig;
               },

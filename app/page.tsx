@@ -1,16 +1,16 @@
 "use client";
 import Calendrier from './calendrier/pages/index';
+import LoginPage from './login/page'; 
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { ThemeType, useTheme } from './calendrier/utils/themeManager';
 import { User } from './calendrier/types';
-import { getUserById } from './datasource';
 import { ErrorBoundary } from "./calendrier/components/ui/ErrorBoundary";
 
 
 export default function Home() {
 
-  const [user, setUser] = useState<User>(() => getUserById(2));
+  const [user, setUser] = useState<User>();
 
   const { setTheme } = useTheme(user);
   
@@ -61,7 +61,7 @@ export default function Home() {
     }
   }, [user, setTheme]);
 
-  if (!user) return null;
+  if (!user) return <LoginPage setUser={setUser} />;
 
   return (
      <ErrorBoundary

@@ -19,7 +19,7 @@ import React, { useState, memo, useMemo, useEffect } from 'react';
 import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, SocialItemPermission } from '../../types';
 import { isSameDay, isSameYear, isSameMonth } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
-import { getSocialItemPermission, setSocialItemPermission } from '@/app/datasource';
+import socialPermissionService from '@/app/service/socialPermission.service';
 
 import { AppointmentItem } from '../index';
 import FormHeader, { ColorConfig, ResourceField } from './FormHeader';
@@ -190,27 +190,35 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Charger les permissions existantes au montage ou lors du changement d'item
   useEffect(() => {
-    if (isEditingResource && formDataItemType.id && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
-      // Charger les permissions existantes pour cet item
-      const permissions = new Map<number, SocialItemPermission>();
-      employees.forEach(emp => {
-        const perm = getSocialItemPermission(emp.id, formDataItemType.id);
-        if (perm) {
-          permissions.set(emp.id, perm);
-        } else {
-          // Permissions par défaut
-          permissions.set(emp.id, {
-            userId: emp.id,
-            itemId: formDataItemType.id,
-            canView: true,
-            canCreate: true,
-            canEdit: true,
-            canDelete: true,
-          });
-        }
-      });
-      setEmployeePermissions(permissions);
-    } else if (isCreatingResource && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
+    let isMounted = true;
+
+    const loadPermissions = async () => {
+      if (isEditingResource && formDataItemType.id && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
+        const permissionEntries = await Promise.all(
+          employees.map(async (emp) => {
+            const response = await socialPermissionService.getSocialItemPermission(emp.id, formDataItemType.id);
+            const perm = response?.error === 0 ? response.data : null;
+
+            const safePermission: SocialItemPermission = perm || {
+              userId: emp.id,
+              itemId: formDataItemType.id,
+              canView: true,
+              canCreate: true,
+              canEdit: true,
+              canDelete: true,
+            };
+
+            return [emp.id, safePermission] as const;
+          })
+        );
+
+        if (!isMounted) return;
+
+        setEmployeePermissions(new Map<number, SocialItemPermission>(permissionEntries));
+        return;
+      }
+
+      if (isCreatingResource && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
       // Pour la création, initialiser avec tous les droits
       const permissions = new Map<number, SocialItemPermission>();
       employees.forEach(emp => {
@@ -223,8 +231,18 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           canDelete: true,
         });
       });
+
+      if (!isMounted) return;
+
       setEmployeePermissions(permissions);
-    }
+      }
+    };
+
+    loadPermissions();
+
+    return () => {
+      isMounted = false;
+    };
   }, [isEditingResource, isCreatingResource, formDataItemType.id, formDataItemType.type, employees]);
 
   /**
@@ -276,7 +294,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         // Sauvegarde des permissions pour les rubriques sociales et événements manuels
         if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
           employeePermissions.forEach((perm) => {
-            setSocialItemPermission({
+            void socialPermissionService.setSocialItemPermission({
               ...perm,
               itemId: newItemId,
             });
@@ -292,7 +310,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         // Sauvegarde des permissions pour les rubriques sociales et événements manuels
         if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
           employeePermissions.forEach((perm) => {
-            setSocialItemPermission(perm);
+            void socialPermissionService.setSocialItemPermission(perm);
           });
         }
         
@@ -366,7 +384,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
       if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
         employeePermissions.forEach((perm) => {
-          setSocialItemPermission({
+          void socialPermissionService.setSocialItemPermission({
             ...perm,
             itemId: newItemId, // Utiliser le nouvel ID
           });
@@ -385,7 +403,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
       if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
         employeePermissions.forEach((perm) => {
-          setSocialItemPermission(perm);
+          void socialPermissionService.setSocialItemPermission(perm);
         });
       }
       

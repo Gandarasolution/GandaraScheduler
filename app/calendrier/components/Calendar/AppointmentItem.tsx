@@ -164,8 +164,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   // Calculer le padding nécessaire pour le chargé d'affaire si les icônes sont présentes
   const chargeAffairePaddingRight = useMemo(() => {
-    const hasAnnotation = !!appointment.description;
-    const hasTag = !!appointment.tag && !isGhost;
+    const hasAnnotation = !!appointment.AnnotationPlanningEvenement;
+    const hasTag = !!appointment.Etiquette && !isGhost;
     
     if (!hasAnnotation && !hasTag) return 0; // Pas d'icônes, pas de padding
     
@@ -270,7 +270,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
          }
          
          const cellUnderMouse = {
-           employeeId: appointment.employee.id as number,
+           employeeId: appointment.employee.IdPersonnel as number,
            date: targetDate
          };
          

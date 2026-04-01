@@ -13,7 +13,7 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
-import { Appointment, Item, User } from '../../../types/index';
+import { Appointment, Item, MockNotification, User } from '../../../types/index';
 
 // Composants
 
@@ -26,7 +26,7 @@ import SearchOverlay from '../../modals/SearchOverlay';
 
 // Hooks & Utils
 import { useNotifications, useCalendarWorker } from '../../../hooks';
-import { getNotificationsByUserId } from '@/app/datasource';
+import notificationApiService from '@/app/service/notificationApi.service';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
 import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
 
@@ -83,7 +83,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const visibleEmployees = useMemo(() => {
     const baseEmployees = (isAdmin || isManager)
       ? employees 
-      : employees.filter(emp => emp.id === user.id);
+      : employees.filter(emp => emp.IdPersonnel === user.IdPersonnel);
     
     // Filtrer les employés inactifs qui n'ont pas de rdv dans le mois visible
     return baseEmployees.filter(emp => {
@@ -94,16 +94,16 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
       const hasMonthlyAppointments = monthlyAppointments.some(app => 
-        app.employee.id === emp.id
+        app.employee.IdPersonnel === emp.IdPersonnel
       );
       
       return hasMonthlyAppointments;
     });
-  }, [employees, isAdmin, isManager, user.id, monthlyAppointments]);
+  }, [employees, isAdmin, isManager, user.IdPersonnel, monthlyAppointments]);
   
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(() => {
     if (!isAdmin && !isManager) {
-      return employees.find(emp => emp.id === user.id) || null;
+      return employees.find(emp => emp.IdPersonnel === user.IdPersonnel) || null;
     }
     return employees[0] || null;
   });
@@ -121,11 +121,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       // Filtrer par rôle : users et viewers ne voient que leurs propres RDV
       if (user.role === 'user' || user.role === 'viewer') {
-        filteredApps = appointments.filter(app => app.employee.id === user.id);
+        filteredApps = appointments.filter(app => app.employee.IdPersonnel === user.IdPersonnel);
       }
       
       const filtered = filteredApps.filter(app => {
-        const matchesEmployee = !selectedEmployee || app.employee.id === selectedEmployee.id;
+        const matchesEmployee = !selectedEmployee || app.employee.IdPersonnel === selectedEmployee.IdPersonnel;
         const isInMonth = app.startDate <= monthEnd && app.endDate >= monthStart;
         return matchesEmployee && isInMonth;
       });
@@ -141,7 +141,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         currentDate,
         selectedEmployee,
         user.role || 'viewer',
-        user.id
+        user.IdPersonnel
       );
       
       if (filtered) {
@@ -151,7 +151,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     };
     
     filterAppointments();
-  }, [worker.isReady, appointments, currentDate, selectedEmployee, user.role, user.id]);
+  }, [worker.isReady, appointments, currentDate, selectedEmployee, user.role, user.IdPersonnel]);
 
   // Filtrage journalier avec Web Worker
   useEffect(() => {
@@ -187,16 +187,29 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   
   // Charger les notifications au montage
   useEffect(() => {
-    const userNotifications = getNotificationsByUserId(user.id);
-    
-    userNotifications.forEach(notif => {
-      addNotification(notif.type, notif.title, notif.message);
-    });
+    let isMounted = true;
+
+    const loadNotifications = async () => {
+      const response = await notificationApiService.getNotificationsByUserId(user.IdPersonnel);
+      if (!isMounted) return;
+
+      const userNotifications = response?.error === 0 && Array.isArray(response.data) ? response.data : [];
+
+      userNotifications.forEach((notif: MockNotification) => {
+        addNotification(notif.type, notif.title, notif.message);
+      });
+    };
+
+    loadNotifications();
     
     setTimeout(() => {
       addNotification('info', 'Bienvenue', `Bonjour ${user.nom} ${user.prenom} !`);
     }, 500);
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [addNotification, user.IdPersonnel, user.nom, user.prenom]);
 
   // ----- HANDLERS -----
   

@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.13.13",
+    "axios": "^1.14.0",
     "date-fns": "^4.1.0",
     "date-holidays": "^3.24.3",
     "fuse.js": "^7.1.0",

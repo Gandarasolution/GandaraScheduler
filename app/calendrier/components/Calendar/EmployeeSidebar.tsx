@@ -72,9 +72,9 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 }) => {
 
   const selectOptions: SelectOptionWithImage[] = availableConfigs.map(config => ({
-    id: config.id,
-    name: config.name,
-    value: config.id,
+    id: config.IdPlanningVue,
+    name: config.LibellePlanningVue,
+    value: config.IdPlanningVue,
   }));
 
   return (
@@ -94,9 +94,9 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
         <div className="custom-select-wrapper relative inline-block w-full">
           <CustomSelectWithImage
             options={selectOptions}
-            value={calendarConfig.id}
+            value={calendarConfig.IdPlanningVue}
             onChange={(value) => {
-              const selectedConfig = availableConfigs.find(config => config.id === value);                  
+              const selectedConfig = availableConfigs.find(config => config.IdPlanningVue === value);                  
               if (selectedConfig) {
                 onCalendarConfigChange(selectedConfig);
               }
@@ -191,13 +191,13 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             
             {/* Liste des employés */}
             {isOpen && itemEmployees.map((employee) => {
-              const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.id);
-              const employeeRowHeight = rows.find(e => e.id === employee.id)?.height ?? CELL_HEIGHT;
+              const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.IdPersonnel);
+              const employeeRowHeight = rows.find(e => e.id === employee.IdPersonnel)?.height ?? CELL_HEIGHT;
               const isInactive = employee.actif === false;
               
               return (
                 <div
-                  key={employee.id}
+                  key={employee.IdPersonnel}
                   className="flex px-4 cursor-pointer bg-primary-bg"
                   style={{ 
                     height: employeeRowHeight, 
@@ -209,9 +209,9 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                 >
                   <div 
                     className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-50 employee-row-item"
-                    data-employee-id={employee.id}
+                    data-employee-id={employee.IdPersonnel}
                     onMouseOver={() => {
-                      updateHighlightedEmployeeRow(employee.id);
+                      updateHighlightedEmployeeRow(employee.IdPersonnel);
                     }}
                   >
                     <div className="relative">
@@ -228,11 +228,11 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className={`poppins text-[16px] font-inherit group-hover:font-semibold truncate ${isInactive ? 'text-gray-400' : ''}`}>{employee.nom + ' ' + employee.prenom}</span>
                     </div>
-                    {expandedOverlapRows[employee.id] && (
+                    {expandedOverlapRows[employee.IdPersonnel] && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onCollapseRow(employee.id);
+                          onCollapseRow(employee.IdPersonnel);
                         }}
                         className="text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
                         type="button"

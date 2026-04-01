@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserRole } from '@/app/calendrier/types';
+import { User, UserRole } from '@/app/calendrier/types';
+import authService from '@/app/service/auth.service';
 
-export default function LoginPage() {
+
+type LoginPageProps = {
+  setUser: Dispatch<SetStateAction<User | undefined>>;
+};
+
+export default function LoginPage(
+  { setUser }: LoginPageProps
+) {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    email: '',
+    login: '',
     password: '',
-    role: 'admin' as UserRole
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,43 +26,26 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    // Simulation de connexion
-    setTimeout(() => {
-      const user = {
-        id: 1,
-        name: formData.email.split('@')[0] || 'Utilisateur',
-        email: formData.email,
-        role: formData.role,
-        theme: 'light',
-        image: 'https://i.pravatar.cc/40?img=1'
-      };
+    try {
+      const response = await authService.login({
+        login: formData.login,
+        password: formData.password,
+      });
+      console.log(response);
+      
 
-      // Sauvegarder dans le localStorage
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('isAuthenticated', 'true');
-
+      if (response?.error === 0 && response.user) {
+        authService.saveSession(response.user);
+        setUser(response.user);
+        router.push('/');
+      } 
       setLoading(false);
-      router.push('/');
-    }, 800);
+    } catch {
+      setLoading(false);
+    }
   };
 
-  const quickLogin = (role: UserRole, email: string) => {
-    setFormData({ ...formData, email, role });
-    setTimeout(() => {
-      const user = {
-        id: 1,
-        name: email.split('@')[0],
-        email,
-        role,
-        theme: 'light',
-        image: 'https://i.pravatar.cc/40?img=1'
-      };
 
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('isAuthenticated', 'true');
-      router.push('/');
-    }, 500);
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-ultra-light via-white to-primary-lighter">
@@ -80,16 +70,16 @@ export default function LoginPage() {
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-primary mb-2 poppins">
-              Email
+            <label htmlFor="login" className="block text-sm font-medium text-primary mb-2 poppins">
+              Login
             </label>
             <input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              id="login"
+              type="login"
+              value={formData.login}
+              onChange={(e) => setFormData({ ...formData, login: e.target.value })}
               required
-              placeholder="votre.email@exemple.com"
+              placeholder="votre login"
               className="w-full px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins"
             />
           </div>
@@ -109,23 +99,6 @@ export default function LoginPage() {
             />
           </div>
 
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-primary mb-2 poppins">
-              Rôle
-            </label>
-            <select
-              id="role"
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-              className="w-full px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all cursor-pointer poppins"
-            >
-              <option value="admin">👑 Administrateur - Tous les droits</option>
-              <option value="manager">📊 Manager - Gestion d'équipe et événements</option>
-              <option value="user">👤 Utilisateur - Édition de son calendrier uniquement</option>
-              <option value="viewer">👁️ Visiteur - Lecture seule</option>
-            </select>
-          </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -143,71 +116,7 @@ export default function LoginPage() {
               'Se connecter'
             )}
           </button>
-        </form>
-
-        {/* Séparateur */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-light"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-secondary poppins">Accès rapide démo</span>
-          </div>
-        </div>
-
-        {/* Boutons d'accès rapide */}
-        <div className="space-y-2">
-          <button
-            onClick={() => quickLogin('admin', 'admin@gandara.com')}
-            className="w-full flex items-center justify-between px-4 py-3 bg-primary-50 hover:bg-primary-100 border border-primary rounded-lg transition-all text-primary font-medium poppins"
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-lg">👑</span>
-              <span>Admin</span>
-            </span>
-            <span className="text-xs opacity-75">Tous les droits</span>
-          </button>
-          
-          <button
-            onClick={() => quickLogin('manager', 'manager@gandara.com')}
-            className="w-full flex items-center justify-between px-4 py-3 bg-info-light hover:bg-blue-100 border border-info rounded-lg transition-all text-info font-medium poppins"
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-lg">📊</span>
-              <span>Manager</span>
-            </span>
-            <span className="text-xs opacity-75">Gestion d'équipe et événements</span>
-          </button>
-          
-          <button
-            onClick={() => quickLogin('user', 'user@gandara.com')}
-            className="w-full flex items-center justify-between px-4 py-3 bg-secondary hover:bg-tertiary border border-default rounded-lg transition-all text-primary font-medium poppins"
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-lg">👤</span>
-              <span>Utilisateur</span>
-            </span>
-            <span className="text-xs opacity-75">Édition de son calendrier</span>
-          </button>
-          
-          <button
-            onClick={() => quickLogin('viewer', 'viewer@gandara.com')}
-            className="w-full flex items-center justify-between px-4 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition-all text-gray-700 font-medium poppins"
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-lg">👁️</span>
-              <span>Visiteur</span>
-            </span>
-            <span className="text-xs opacity-75">Lecture seule</span>
-          </button>
-        </div>
-
-        {/* Info */}
-        <div className="mt-6 p-4 bg-primary-50 rounded-lg">
-          <p className="text-xs text-primary text-center poppins">
-            💡 <strong>Mode démo</strong> - Aucune vérification réelle. Cliquez sur un bouton d'accès rapide ou remplissez le formulaire.
-          </p>
-        </div>
+        </form>    
       </div>
     </div>
   );

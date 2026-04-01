@@ -66,9 +66,9 @@ export interface Calendar {
 }
 
 export interface Tags {
-  id: number;
-  name: string;
-  shortName?: string; // Version courte pour les petits rendez-vous (2 jours ou moins)
+  IdPlanningEtiquette: number;
+  LibelleLongPlanningEtiquette: string;
+  LibelleCourtPlanningEtiquette?: string; // Version courte pour les petits rendez-vous (2 jours ou moins)
 }
 
 export interface BaseItemCategory{
@@ -77,12 +77,12 @@ export interface BaseItemCategory{
 }
 
 interface BaseItem {
-  id: number;
-  label: string;
+  IdPlanningRessource: number;
+  LibellePlanningRessource: string;
   color: string;
   borderColor: string;
   textColor: string;
-  code: string;
+  CodePlanningRessource: string;
   image?: Image;
   defaultDescription?: string;
   tags?: Tags[];
@@ -140,21 +140,21 @@ export type Image = {
  */
 export interface Appointment{
   /** Identifiant unique du rendez-vous */
-  id: number;
+  IdPlanningEvenement: number;
   /** Description spécifique du rendez-vous */
-  description: string;
+  AnnotationPlanningEvenement: string;
   /** Date et heure de début du rendez-vous */
-  startDate: number;
+  DebutPlanningEvenement: number;
   /** Date et heure de fin du rendez-vous */
-  endDate: number;
+  FinPlanningEvenement: number;
   /** ID de l'employé assigné au rendez-vous */
   employee: User;
   /** Type de rendez-vous */
-  type: 'chantier' | 'absence' | 'autre';
+  Type: 'chantier' | 'absence' | 'autre';
   /** ID de l'événement auquel ce RDV est lié */
-  EventId: number;
+  Ressource: BaseItem;
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
-  tag?: Tags;
+  Etiquette?: Tags;
   /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */
   priority?: number;
 }
@@ -203,24 +203,24 @@ export type GroupingLevel = 'equipe' | 'pole';
  */
 export interface GroupingLevels {
   /** Premier niveau de groupement */
-  level1?: GroupingLevel;
+  ChampsPremierGroupePlanningVue?: GroupingLevel;
   /** Deuxième niveau de groupement */
-  level2?: GroupingLevel;
+  ChampsDeuxiemeGroupePlanningVue?: GroupingLevel;
 }
 
 
 export interface CalendarConfig {
-  id: number;
-  name: string;
+  IdPlanningVue: number;
+  LibellePlanningVue: string;
   /** Image associée à la vue */
-  image?: Image;
+  IdPlanningImage?: number;
   /** Description de la vue */
-  description?: string;
+  DescriptionPlanningVue?: string;
+
   /** Configuration des niveaux de groupement (équipe et pole) */
-  groupingLevels?: GroupingLevels;
+  Group?: GroupingLevels;
   /** Filtres structurés par catégories */
   filterCategories?: FilterCategories;
-  color?: string;
 }
 
 // Interface pour les éléments de la dimension (ce qui s'affiche en colonne)
@@ -308,7 +308,7 @@ export interface UserPermissions {
  */
 export interface User{
   /** Identifiant unique de l'utilisateur (IdPersonnel) */
-  id: number;
+  IdPersonnel: number;
   /** Nom de l'utilisateur */
   nom: string;
   /** Prénom de l'utilisateur */

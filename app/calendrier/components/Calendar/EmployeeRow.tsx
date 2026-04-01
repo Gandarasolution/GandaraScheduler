@@ -63,8 +63,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   }, [collapseTrigger]);
 
   const handleAppointmentResize = useCallback((id: number, newStartDate: number, newEndDate: number, resizeDirection: 'left' | 'right', priority: number) => {
-    onAppointmentMoved(id, newStartDate, newEndDate, employee.id as number, resizeDirection, true, priority);
-  }, [onAppointmentMoved, employee.id]);
+    onAppointmentMoved(id, newStartDate, newEndDate, employee.IdPersonnel as number, resizeDirection, true, priority);
+  }, [onAppointmentMoved, employee.IdPersonnel]);
 
   const timelineStart = useMemo(() => dayInTimeline[0] || 0, [dayInTimeline]);
   
@@ -72,18 +72,18 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const positionedAppointments = useMemo(() => {
     const filterred =  appointments
       .filter((app) => {
-        if (app?.employee?.id !== employee.id) return false;
-        return app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd;
+        if (app?.employee?.IdPersonnel !== employee.IdPersonnel) return false;
+        return app.FinPlanningEvenement > visibleWindowStart && app.DebutPlanningEvenement < visibleWindowEnd;
       })
 
     return filterred.map((app, index) => {
-      const start = app.startDate;
-      const end = app.endDate;
+      const start = app.DebutPlanningEvenement;
+      const end = app.FinPlanningEvenement;
 
       // Utilisation des fonctions utilitaires pour les calculs de position
       const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
       const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
-      const topPx = (app.top * CELL_HEIGHT) + (2 * app.top) + ((tagPlacement === 'fixed' && index > 0) && filterred[index - 1]?.tag ? 18 : 0); // Décalage pour les tags en placement fixe
+      const topPx = (app.top * CELL_HEIGHT) + (2 * app.top) + ((tagPlacement === 'fixed' && index > 0) && filterred[index - 1]?.Etiquette ? 18 : 0); // Décalage pour les tags en placement fixe
 
       return { ...app, left, width, topPx } as Appointment & {
         top: number;
@@ -92,7 +92,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         topPx: number;
       };
     });
-  }, [appointments, employee.id, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart, isFullDay]);
+  }, [appointments, employee.IdPersonnel, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart, isFullDay]);
 
   const overlappingGroups = useMemo(() => {
     if (!positionedAppointments.length) return [] as { key: number; apps: (typeof positionedAppointments) }[];
@@ -100,23 +100,23 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     // DÉDUPLICATION : Supprimer les doublons basés sur l'ID
     // Si plusieurs rendez-vous ont le même ID, ne garder que le premier
     const deduplicatedAppointments = positionedAppointments.reduce((acc, app) => {
-      const existingIndex = acc.findIndex(a => a.id === app.id);
+      const existingIndex = acc.findIndex(a => a.IdPlanningEvenement === app.IdPlanningEvenement);
       if (existingIndex === -1) {
         acc.push(app);
       }
       return acc;
     }, [] as typeof positionedAppointments);
 
-    const sorted = [...deduplicatedAppointments].sort((a, b) => a.startDate - b.startDate);
+    const sorted = [...deduplicatedAppointments].sort((a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement);
     const groups: Array<{ key: number; apps: (typeof positionedAppointments)[number][]; end: number }> = [];
 
     for (const app of sorted) {
       const lastGroup = groups[groups.length - 1];
-      if (lastGroup && app.startDate < lastGroup.end) {
+      if (lastGroup && app.DebutPlanningEvenement < lastGroup.end) {
         lastGroup.apps.push(app);
-        lastGroup.end = Math.max(lastGroup.end, app.endDate);
+        lastGroup.end = Math.max(lastGroup.end, app.FinPlanningEvenement);
       } else {
-        groups.push({ key: app.id, apps: [app], end: app.endDate });
+        groups.push({ key: app.IdPlanningEvenement, apps: [app], end: app.FinPlanningEvenement });
       }
     }
 
@@ -126,7 +126,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         group.apps.sort((a, b) => {
           const pA = a.priority ?? 0;
           const pB = b.priority ?? 0;
-          return (pA - pB) || (a.startDate - b.startDate);
+          return (pA - pB) || (a.DebutPlanningEvenement - b.DebutPlanningEvenement);
         });
       }
     }
@@ -153,14 +153,14 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
   useEffect(() => {
     if (hasExpandedGroup && !isOverlapExpanded) {
-      onSetExpansion(employee.id, true);
+      onSetExpansion(employee.IdPersonnel, true);
     } else if (!hasExpandedGroup && isOverlapExpanded) {
-      onSetExpansion(employee.id, false);
+      onSetExpansion(employee.IdPersonnel, false);
     }
-  }, [hasExpandedGroup, isOverlapExpanded, onSetExpansion, employee.id]);
+  }, [hasExpandedGroup, isOverlapExpanded, onSetExpansion, employee.IdPersonnel]);
 
   const selectionOverlay = useMemo(() => {
-    if (!selectedCell || selectedCell.employeeId !== employee.id) return null;
+    if (!selectedCell || selectedCell.employeeId !== employee.IdPersonnel) return null;
     const dayIndex = dayInTimeline.findIndex((day) => isSameDay(day, selectedCell.date));
     if (dayIndex === -1) return null;
 
@@ -174,7 +174,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       left: dayIndex * CELL_WIDTH + intervalIndex * intervalWidth,
       width: intervalWidth,
     };
-  }, [dayInTimeline, employee.id, isFullDay, selectedCell]);
+  }, [dayInTimeline, employee.IdPersonnel, isFullDay, selectedCell]);
 
   const handleRowClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!dayInTimeline.length) return;
@@ -196,9 +196,9 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     if (day === undefined) return;
     const selectedDate = day + (intervalConfig?.startHour ?? 0) * HOUR_MS;
 
-    onSelectCell({ employeeId: employee.id, date: selectedDate });
+    onSelectCell({ employeeId: employee.IdPersonnel, date: selectedDate });
     onSelectAppointment(null);
-  }, [dayInTimeline, employee.id, isFullDay, onSelectAppointment, onSelectCell]);
+  }, [dayInTimeline, employee.IdPersonnel, isFullDay, onSelectAppointment, onSelectCell]);
 
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
   const isInactive = employee.actif === false;
@@ -206,9 +206,9 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
   return (
     <div 
-      id={getRowId('employee', employee.id)}
+      id={getRowId('employee', employee.IdPersonnel)}
       className="calendar-row employee-row flex w-fit relative" 
-      data-employee-id={employee.id}
+      data-employee-id={employee.IdPersonnel}
       role="row"
       onClick={handleRowClick}
       style={{
@@ -252,7 +252,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         const priority0Apps = group.apps.filter(app => (app.priority ?? 0) === 0);
         
         // Clé unique pour le groupe basée sur tous les IDs des rendez-vous
-        const groupUniqueKey = `group-${group.apps.map(a => `${a.id}-${a.startDate}-${a.endDate}`).join('_')}`;
+        const groupUniqueKey = `group-${group.apps.map(a => `${a.IdPlanningEvenement}-${a.DebutPlanningEvenement}-${a.FinPlanningEvenement}`).join('_')}`;
         
         return (
           <React.Fragment key={groupUniqueKey}>
@@ -263,7 +263,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               const isGhost = !isExpanded && (app.priority ?? 0) !== 0;
               
               const beforeApp = index > 0 ? group.apps[index - 1] : null;
-              const beforeHasTag = beforeApp && (app.priority ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.tag;
+              const beforeHasTag = beforeApp && (app.priority ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.Etiquette;
               const widthDiff = beforeApp ? Math.abs(app.width - beforeApp.width) : Infinity;
               const isSimilarSize = widthDiff <= CELL_WIDTH; // À une case près
               const shouldOffsetForTag = beforeHasTag && isSimilarSize;              
@@ -282,8 +282,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               if (isGhost) {
                 priority0Apps.forEach(baseApp => {
                   // Calculer l'intersection entre le RDV actuel et le RDV de base
-                  const overlapStart = Math.max(app.startDate, baseApp.startDate);
-                  const overlapEnd = Math.min(app.endDate, baseApp.endDate);
+                  const overlapStart = Math.max(app.DebutPlanningEvenement, baseApp.DebutPlanningEvenement);
+                  const overlapEnd = Math.min(app.FinPlanningEvenement, baseApp.FinPlanningEvenement);
                   
                   // S'il y a un chevauchement réel
                   if (overlapStart < overlapEnd) {
@@ -294,7 +294,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
               return (
                 <AppointmentItem
-                  key={`${app.id}-${app.startDate}-${app.endDate}-${index}`}
+                  key={`${app.IdPlanningEvenement}-${app.DebutPlanningEvenement}-${app.FinPlanningEvenement}-${index}`}
                   appointment={app as Appointment}
                   isInactive={isInactive}
                   isFullDay={isFullDay}
@@ -315,7 +315,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   handleContextMenu={handleContextMenu}
                   onDoubleClick={onAppointmentDoubleClick}
                   onClick={onSelectAppointment}
-                  isSelected={selectedAppointmentId === app.id}
+                  isSelected={selectedAppointmentId === app.IdPlanningEvenement}
                 />
               );
             })}
@@ -362,10 +362,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 };
 
 export default memo(EmployeeRow, (prev, next) => {
-  if (prev.employee.id !== next.employee.id ||
+  if (prev.employee.IdPersonnel !== next.employee.IdPersonnel ||
       prev.dayInTimeline !== next.dayInTimeline ||
       prev.appointments.length !== next.appointments.length ||
-      prev.appointments.some((app, i) => app.id !== next.appointments[i].id || app.startDate !== next.appointments[i].startDate || app.endDate !== next.appointments[i].endDate || app.top !== next.appointments[i].top || app.description !== next.appointments[i].description) ||
+      prev.appointments.some((app, i) => app.IdPlanningEvenement !== next.appointments[i].IdPlanningEvenement || app.DebutPlanningEvenement !== next.appointments[i].DebutPlanningEvenement || app.FinPlanningEvenement !== next.appointments[i].FinPlanningEvenement || app.top !== next.appointments[i].top || app.Etiquette !== next.appointments[i].Etiquette) ||
       prev.rowHeight !== next.rowHeight ||
       prev.style?.top !== next.style?.top ||
       prev.isFullDay !== next.isFullDay ||
@@ -381,8 +381,8 @@ export default memo(EmployeeRow, (prev, next) => {
   ) {
     return false;
   }
-  const wasSelected = prev.selectedCell?.employeeId === prev.employee.id;
-  const isSelected = next.selectedCell?.employeeId === next.employee.id;
+  const wasSelected = prev.selectedCell?.employeeId === prev.employee.IdPersonnel;
+  const isSelected = next.selectedCell?.employeeId === next.employee.IdPersonnel;
 
   if (wasSelected !== isSelected) return false;
   if (wasSelected && isSelected) {
