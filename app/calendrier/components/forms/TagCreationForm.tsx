@@ -4,14 +4,14 @@
 
 "use client";
 import React from 'react';
-import { Tags } from '../../types';
+import { Tag } from '../../types';
 
 const MAX_LENGTH_TAG = 20;
 const MAX_LENGTH_SHORT_TAG = 6;
 
 interface TagCreationFormProps {
-  newTag: Tags;
-  onTagChange: (tag: Tags) => void;
+  newTag: Tag;
+  onTagChange: (tag: Tag) => void;
   onAdd: () => void;
   onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   duplicateError?: boolean;
@@ -41,8 +41,8 @@ const TagCreationForm: React.FC<TagCreationFormProps> = ({
         </label>
         <input
           type="text"
-          value={newTag.name}
-          onChange={(e) => onTagChange({ ...newTag, name: e.target.value })}
+          value={newTag.LibelleLongPlanningEtiquette}
+          onChange={(e) => onTagChange({ ...newTag, LibelleLongPlanningEtiquette: e.target.value })}
           onKeyPress={onKeyPress}
           placeholder="Ex: Béton coulé"
           className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 ${
@@ -53,7 +53,7 @@ const TagCreationForm: React.FC<TagCreationFormProps> = ({
           maxLength={MAX_LENGTH_TAG}
         />
         <span className="absolute right-3 top-8 text-xs text-gray-400">
-          {newTag.name.length}/{MAX_LENGTH_TAG}
+          {newTag.LibelleLongPlanningEtiquette.length}/{MAX_LENGTH_TAG}
         </span>
         {duplicateError && (
           <p className="text-xs text-red-500 mt-1">Cette étiquette existe déjà</p>
@@ -70,22 +70,22 @@ const TagCreationForm: React.FC<TagCreationFormProps> = ({
         </label>
         <input
           type="text"
-          value={newTag.shortName || ''}
-          onChange={(e) => onTagChange({ ...newTag, shortName: e.target.value })}
+          value={newTag.LibelleCourtPlanningEtiquette || ''}
+          onChange={(e) => onTagChange({ ...newTag, LibelleCourtPlanningEtiquette: e.target.value })}
           onKeyPress={onKeyPress}
           placeholder="Ex: BÉT"
           className={`w-full px-3 py-2 text-sm border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary ${isExtended ? 'bg-white' : ''}`}
           maxLength={MAX_LENGTH_SHORT_TAG}
         />
         <span className="absolute right-3 top-8 text-xs text-gray-400">
-          {(newTag.shortName?.length || 0)}/{MAX_LENGTH_SHORT_TAG}
+          {(newTag.LibelleCourtPlanningEtiquette?.length || 0)}/{MAX_LENGTH_SHORT_TAG}
         </span>
       </div>
       
       <button
         type="button"
         onClick={onAdd}
-        disabled={!newTag.name.trim()}
+        disabled={!newTag.LibelleLongPlanningEtiquette.trim()}
         className={`w-full px-3 py-2 bg-primary text-white rounded-xl hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
           isExtended ? '' : ''
         }`}

@@ -69,7 +69,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     const groups: Record<string, User[]> = {};
     
     searchResults.forEach(emp => {
-      const groupName = emp.equipe?.name || 'Sans équipe';
+      const groupName = emp.Equipe?.Nom || 'Sans équipe';
       if (!groups[groupName]) {
         groups[groupName] = [];
       }
@@ -82,7 +82,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   // Filtrer les employés récents qui sont dans la liste actuelle
   const validRecentEmployees = useMemo(() => {
     return recentEmployees.filter(recent => 
-      employees.some(emp => emp.id === recent.id)
+      employees.some(emp => emp.IdPersonnel === recent.IdPersonnel)
     );
   }, [recentEmployees, employees]);
 
@@ -157,7 +157,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             className="text-sm font-semibold truncate"
             style={{ color: 'var(--text-primary)' }}
           >
-            {selectedEmployee ? `${selectedEmployee.nom} ${selectedEmployee.prenom}` : 'Sélectionner...'}
+            {selectedEmployee ? `${selectedEmployee.Nom} ${selectedEmployee.Prenom}` : 'Sélectionner...'}
           </p>
         </div>
 
@@ -313,9 +313,9 @@ const EmployeeGroup: React.FC<EmployeeGroupProps> = ({
       <div className="space-y-1 pl-1">
         {employees.map(emp => (
           <EmployeeItem 
-            key={showBadge ? `recent-${emp.id}` : emp.id}
+            key={showBadge ? `recent-${emp.IdPersonnel}` : emp.IdPersonnel}
             employee={emp}
-            isSelected={selectedEmployee?.id === emp.id}
+            isSelected={selectedEmployee?.IdPersonnel === emp.IdPersonnel}
             onSelect={onSelect}
             showBadge={showBadge}
           />
@@ -333,8 +333,8 @@ interface EmployeeItemProps {
 }
 
 const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSelect, showBadge }) => {
-  const avatarUrl = employee.image?.image || `https://ui-avatars.com/api/?name=${employee.nom}+${employee.prenom}&background=009580&color=fff`;
-  const isInactive = employee.actif === false;
+  const avatarUrl = employee.image?.image || `https://ui-avatars.com/api/?name=${employee.Nom}+${employee.Prenom}&background=009580&color=fff`;
+  const isInactive = employee.Actif === false;
   
   return (
   <div 
@@ -362,7 +362,7 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
     >
       <img 
         src={avatarUrl}
-        alt={`${employee.nom} ${employee.prenom}`}
+        alt={`${employee.Nom} ${employee.Prenom}`}
         width="36"
         height="36"
         className="object-cover"
@@ -377,7 +377,7 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
             color: isInactive ? 'var(--text-tertiary)' : (isSelected ? 'var(--color-primary-600)' : 'var(--text-primary)')
           }}
         >
-          {employee.nom} {employee.prenom}
+          {employee.Nom} {employee.Prenom}
         </p>
         {showBadge && (
           <span 
@@ -393,12 +393,12 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
       </div>
       <div className="flex items-center gap-2 mt-0.5">
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          {employee.type === 'interim' ? 'Intérimaire' : 'Employé'}
+          {employee.Type === 'Interim' ? 'Intérimaire' : 'Employé'}
         </p>
-        {employee.code && (
+        {employee.Code && (
           <>
             <span style={{ color: 'var(--border-light)' }}>•</span>
-            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{employee.code}</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{employee.Code}</p>
           </>
         )}
       </div>

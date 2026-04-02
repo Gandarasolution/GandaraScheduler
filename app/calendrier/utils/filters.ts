@@ -59,18 +59,18 @@ export function applyFiltersToAppointments(
   
   // Optimisation: Créer une Map pour O(1) lookup des employés
   const employeeMap = new Map<number, User>();
-  employees.forEach(emp => employeeMap.set(emp.id, emp));
+  employees.forEach(emp => employeeMap.set(emp.IdPersonnel, emp));
   
   return appointments.filter(appointment => {
     // Trouver l'employé associé au rendez-vous avec O(1) lookup
-    const employee = employeeMap.get(Number(appointment.employee?.id));
+    const employee = employeeMap.get(Number(appointment.employee?.IdPersonnel));
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const appointmentMatches = 
-        String(appointment.description).toLowerCase().includes(query) ||
-        String(appointment.type).toLowerCase().includes(query);
-      const employeeMatches = employee ? String(employee.nom).toLowerCase().includes(query) : false;
+        String(appointment.AnnotationPlanningEvenement).toLowerCase().includes(query) ||
+        String(appointment.Type).toLowerCase().includes(query);
+      const employeeMatches = employee ? String(employee.Nom).toLowerCase().includes(query) : false;
 
       if (!appointmentMatches && !employeeMatches) {
         return false;
@@ -126,18 +126,18 @@ export function getHierarchicalDimensionItems(
   employees: User[],
   groups: Groupe[]
 ): HierarchicalGroupItem[] {
-  if (!groupingLevels?.level1) {
+  if (!groupingLevels?.ChampsPremierGroupePlanningVue) {
     // Pas de grouping défini, retourner une liste plate d'employés
     return employees.map(emp => ({
-      id: emp.id,
-      name: emp.nom,
+      id: emp.IdPersonnel,
+      name: emp.Nom,
       level: 0,
       employees: [emp],
       data: emp
     }));
   }
 
-  const { level1, level2 } = groupingLevels;
+  const { ChampsPremierGroupePlanningVue: level1, ChampsDeuxiemeGroupePlanningVue: level2 } = groupingLevels;
 
   // Cas 1: Un seul niveau de grouping
   if (!level2 || level1 === level2) {
@@ -175,12 +175,12 @@ function getItemsByLevel(
   groups: Groupe[]
 ): HierarchicalGroupItem[] {
   if (levelType === 'pole') {
-    const poles = Array.from(new Set(employees.map(emp => emp.poleActivite?.name).filter((p): p is string => p !== undefined)));
+    const poles = Array.from(new Set(employees.map(emp => emp.PoleActivite?.Nom).filter((p): p is string => p !== undefined)));
     return poles.map(pole => {
-      const poleEmployees = employees.filter(emp => emp.poleActivite?.name === pole);
+      const poleEmployees = employees.filter(emp => emp.PoleActivite?.Nom === pole);
       return {
-        id: pole,
-        name: pole,
+        id: pole || 'Sans Pôle',
+        name: pole || 'Sans Pôle',
         level: 0, // Sera écrasé par l'appelant
         employees: poleEmployees,
         data: { pole }
@@ -188,13 +188,13 @@ function getItemsByLevel(
     });
   } else if (levelType === 'equipe') {
     return groups.map(group => {
-      const groupEmployees = employees.filter(emp => emp.equipe?.id === group.id);
+      const groupEmployees = employees.filter(emp => emp.Equipe?.Id === group.Id);
       return {
-        id: group.id,
-        name: group.name,
+        id: group.Id || 'Sans Équipe',
+        name: group.Nom || 'Sans Équipe',
         level: 0, // Sera écrasé par l'appelant
         employees: groupEmployees,
-        data: group
+        data: group 
       };
     });
   }
@@ -208,9 +208,9 @@ function filterEmployeesByLevel(
   levelId: string | number
 ): User[] {
   if (levelType === 'pole') {
-    return employees.filter(emp => emp.poleActivite?.name === levelId);
+    return employees.filter(emp => emp.PoleActivite?.Nom === levelId);
   } else if (levelType === 'equipe') {
-    return employees.filter(emp => emp.equipe?.id === levelId);
+    return employees.filter(emp => emp.Equipe?.Id === levelId);
   }
   return [];
 }
@@ -223,15 +223,16 @@ export function groupEmployeesHierarchically(
 ): { [key: string]: User[] } {
   const result: { [key: string]: User[] } = {};
   
-  if (!groupingLevels?.level1) {
+  if (!groupingLevels?.ChampsPremierGroupePlanningVue) {
     // Pas de grouping, retourner les employés individuellement
     employees.forEach(emp => {
-      result[emp.id] = [emp];
+      result[emp.IdPersonnel] = [emp];
     });
     return result;
   }
 
   const hierarchicalItems = getHierarchicalDimensionItems(groupingLevels, employees, groups);
+  
   
   // Aplatir la hiérarchie pour créer la structure Record
   function flattenHierarchy(items: HierarchicalGroupItem[]) {

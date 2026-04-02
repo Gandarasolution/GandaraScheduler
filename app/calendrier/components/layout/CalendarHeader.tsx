@@ -3,7 +3,7 @@ import { UserMenu } from '../index';
 
 import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
-import { Appointment, User } from '../../types';
+import { Appointment, Item, User } from '../../types';
 import { memo, use, useEffect } from 'react';
 import DatePicker from '../ui/DatePicker';
 
@@ -374,13 +374,15 @@ export const CalendarHeader = memo(({
                 viewType === 'calendar' 
                   ? setIsSearchOverlayOpen(true) 
                   : handleAddModal({
-                    id: -1,
-                    description: '',
-                    startDate: 0,
-                    endDate: 1,
+                    IdPlanningEvenement: -1,
+                    AnnotationPlanningEvenement: '',
+                    DebutPlanningEvenement: 0,
+                    FinPlanningEvenement: 1,
                     employee: {} as User,
-                    type: 'autre',
-                    EventId: 0,
+                    Type: 'autre',
+                    Ressource: {
+                      IdRessource: -1,
+                    }as unknown as Item,
                   })
               }
               title={viewType === 'calendar' ? "Ajouter un évènement" : "Ajouter une ressource"}

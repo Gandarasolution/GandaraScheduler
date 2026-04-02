@@ -27,8 +27,9 @@ export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
     const loadConfigs = async () => {
       const response = await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel);
       if (!isMounted) return;
-
+      
       if (response?.error === 0 && Array.isArray(response.data)) {
+
         setLoadedConfigs(response.data);
         return;
       }
@@ -47,6 +48,9 @@ export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
   const getAvailableConfigs = useMemo((): CalendarConfig[] => {
     // Ajouter les configurations personnalisées créées par l'utilisateur
     const configs = [...loadedConfigs, ...customConfigs];
+
+    console.log('loadedConfigs:', loadedConfigs);
+    console.log('customConfigs:', customConfigs);
 
     return configs;
   }, [loadedConfigs, customConfigs]);

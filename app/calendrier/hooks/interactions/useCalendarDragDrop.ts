@@ -134,10 +134,10 @@ export const useCalendarDragDrop = ({
       
       // Trouver tous les rdv qui chevauchent la nouvelle position
       const overlappingAppointments = appointmentsWithTop.filter(app => 
-        app.id !== item.id &&
-        app.employee.id === targetEmployeeId &&
-        app.startDate < newEnd &&
-        app.endDate > targetDate
+        app.IdPlanningEvenement !== item.id &&
+        app.employee.IdPersonnel === targetEmployeeId &&
+        app.DebutPlanningEvenement < newEnd &&
+        app.FinPlanningEvenement > targetDate
       );
 
       let newPriority: number | undefined = undefined;
@@ -150,27 +150,27 @@ export const useCalendarDragDrop = ({
         const targetPriorityIndex = Math.floor(employeeRowY / (CELL_HEIGHT + 2));
 
         // Récupérer l'item d'origine
-        const originalItem = appointmentsWithTop.find(a => a.id === item.id);
+        const originalItem = appointmentsWithTop.find(a => a.IdPlanningEvenement === item.id);
         const isAlreadyPresent = originalItem && 
-                               originalItem.employee.id === targetEmployeeId && 
-                               originalItem.startDate < newEnd && 
-                               originalItem.endDate > targetDate;
+                               originalItem.employee.IdPersonnel === targetEmployeeId && 
+                               originalItem.DebutPlanningEvenement < newEnd && 
+                               originalItem.FinPlanningEvenement > targetDate;
 
         // Trouver les rdv à la position cible
         const rdvAtTargetPosition = overlappingAppointments
           .sort((a, b) => (a.priority || 0) - (b.priority || 0))
           .filter(app => (app.priority ?? 0) === targetPriorityIndex);
           
-        const startDateRdvTarget = rdvAtTargetPosition[0]?.startDate;
-        const endDateRdvTarget = rdvAtTargetPosition[rdvAtTargetPosition.length - 1]?.endDate;
+        const startDateRdvTarget = rdvAtTargetPosition[0]?.DebutPlanningEvenement;
+        const endDateRdvTarget = rdvAtTargetPosition[rdvAtTargetPosition.length - 1]?.FinPlanningEvenement;
         
         // Trouver les rdv à la position originale
         const rdvatOriginalPosition = appointmentsWithTop
           .filter(app =>
-            app.id !== item.id &&
-            app.employee.id === originalItem?.employee.id &&
-            app.startDate < endDateRdvTarget &&
-            app.endDate > startDateRdvTarget &&
+            app.IdPlanningEvenement !== item.id &&
+            app.employee.IdPersonnel === originalItem?.employee.IdPersonnel &&
+            app.DebutPlanningEvenement < endDateRdvTarget &&
+            app.FinPlanningEvenement > startDateRdvTarget &&
             (app.priority ?? 0) === (originalItem?.priority ?? 0)
           );          
         
@@ -181,10 +181,10 @@ export const useCalendarDragDrop = ({
             
             rdvAtTargetPosition.forEach(appToMove => {
               onAppointmentMoved(
-                appToMove.id,
-                appToMove.startDate,
-                appToMove.endDate,
-                appToMove.employee.id,
+                appToMove.IdPlanningEvenement,
+                appToMove.DebutPlanningEvenement,
+                appToMove.FinPlanningEvenement,
+                appToMove.employee.IdPersonnel,
                 undefined,
                 false,
                 (originalItem?.priority ?? 0)
@@ -193,12 +193,12 @@ export const useCalendarDragDrop = ({
 
             if (rdvatOriginalPosition.length > 0) {
               rdvatOriginalPosition.forEach(appToAdjust => {
-                if (appToAdjust.id !== item.id) {
+                if (appToAdjust.IdPlanningEvenement !== item.id) {
                   onAppointmentMoved(
-                    appToAdjust.id,
-                    appToAdjust.startDate,
-                    appToAdjust.endDate,
-                    appToAdjust.employee.id,
+                    appToAdjust.IdPlanningEvenement,
+                    appToAdjust.DebutPlanningEvenement,
+                    appToAdjust.FinPlanningEvenement,
+                    appToAdjust.employee.IdPersonnel,
                     undefined,
                     false,
                     newPriority

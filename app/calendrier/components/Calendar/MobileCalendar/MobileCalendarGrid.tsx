@@ -56,14 +56,14 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
   const hasAppointment = (day: number) => {
     const start = new Date(day).setHours(0, 0, 0, 0);
     const end = new Date(day).setHours(23, 59, 59, 999);
-    return appointments.some(app => app.startDate <= end && app.endDate >= start);
+    return appointments.some(app => app.DebutPlanningEvenement <= end && app.FinPlanningEvenement >= start);
   };
 
   // Compter le nombre de rendez-vous pour un jour
   const getDayAppointmentCount = (day: number) => {
     const start = new Date(day).setHours(0, 0, 0, 0);
     const end = new Date(day).setHours(23, 59, 59, 999);
-    return appointments.filter(app => app.startDate <= end && app.endDate >= start).length;
+    return appointments.filter(app => app.DebutPlanningEvenement <= end && app.FinPlanningEvenement >= start).length;
   };
 
   return (

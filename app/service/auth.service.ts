@@ -6,34 +6,26 @@ type LoginPayload = {
   password: string;
 };
 
-type SessionUser = {
-  id: number;
-  nom: string;
-  prenom: string;
-  login: string;
-  theme?: string;
-  image?: any;
-};
 
-function saveSession(user: SessionUser) {
+function saveSession(token: string) {
   if (typeof window === "undefined") return;
-  localStorage.setItem("user", JSON.stringify(user));
+  localStorage.setItem("token", token);
   localStorage.setItem("isAuthenticated", "true");
 }
 
 function clearSession() {
   if (typeof window === "undefined") return;
-  localStorage.removeItem("user");
+  localStorage.removeItem("token");
   localStorage.removeItem("isAuthenticated");
 }
 
-function getSessionUser(): SessionUser | null {
+function getSessionUser(): string | null {
   if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem("user");
+  const raw = localStorage.getItem("token");
   if (!raw) return null;
 
   try {
-    return JSON.parse(raw) as SessionUser;
+    return JSON.parse(raw) as string;
   } catch {
     return null;
   }

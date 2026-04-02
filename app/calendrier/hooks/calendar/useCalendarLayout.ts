@@ -18,31 +18,31 @@ export const useCalendarLayout = ({
   // Calcule la hauteur nécessaire pour chaque cellule employé/jour
   const employeeHeights = useMemo(() => {
     return employees.map(employee => {
-      const employeeAppointments = appointments.filter(app => app.employee.id === employee.id);
+      const employeeAppointments = appointments.filter(app => app.employee.IdPersonnel === employee.IdPersonnel);
       
       let maxOverallOverlap = 0;
       if (employeeAppointments.length > 0) {
-          const sortedApps = [...employeeAppointments].sort((a, b) => a.startDate - b.startDate);
+          const sortedApps = [...employeeAppointments].sort((a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement);
           
           const activeSlots: { endDate: number, count: number }[] = [];
           sortedApps.forEach(app => {
               for (let i = activeSlots.length - 1; i >= 0; i--) {
-                  if (activeSlots[i].endDate <= app.startDate) {
+                  if (activeSlots[i].endDate <= app.DebutPlanningEvenement) {
                       activeSlots.splice(i, 1);
                   }
               }
               
               let placed = false;
               for (let i = 0; i < activeSlots.length; i++) {
-                  if (activeSlots[i].endDate <= app.startDate) {
-                      activeSlots[i].endDate = app.endDate;
+                  if (activeSlots[i].endDate <= app.DebutPlanningEvenement) {
+                      activeSlots[i].endDate = app.FinPlanningEvenement;
                       placed = true;
                       break;
                   }
               }
               
               if (!placed) {
-                  activeSlots.push({ endDate: app.endDate, count: activeSlots.length });
+                  activeSlots.push({ endDate: app.FinPlanningEvenement, count: activeSlots.length });
               }
               
               maxOverallOverlap = Math.max(maxOverallOverlap, activeSlots.length);
@@ -51,7 +51,7 @@ export const useCalendarLayout = ({
 
       const calculatedHeight = maxOverallOverlap > 0 ? (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + (tagPlacement === 'fixed' ? 18 : 10) : CELL_HEIGHT;
 
-      return { employeeId: employee.id, height: calculatedHeight, dayKey: undefined };
+      return { employeeId: employee.IdPersonnel, height: calculatedHeight, dayKey: undefined };
     });
     
   }, [employees, appointments]);
@@ -65,12 +65,12 @@ export const useCalendarLayout = ({
     const result: (Appointment & { top: number, _dayKey?: number })[] = [];
 
     employees.forEach(emp => {
-      const empAppointments = appointments.filter(app => app.employee.id === emp.id);
+      const empAppointments = appointments.filter(app => app.employee.IdPersonnel === emp.IdPersonnel);
       
       empAppointments.forEach(app => {
           // Trouver tous les rdv qui chevauchent
           const overlapping = empAppointments.filter(other => 
-              !(app.endDate <= other.startDate || app.startDate >= other.endDate)
+              !(app.FinPlanningEvenement <= other.DebutPlanningEvenement || app.DebutPlanningEvenement >= other.FinPlanningEvenement)
           );
           // Compter combien ont une priorité inférieure
           const lowerPriorityTab = overlapping.filter(other => 

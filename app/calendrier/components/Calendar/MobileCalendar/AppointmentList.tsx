@@ -26,7 +26,7 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, i
     >
       <div 
         className={`w-1.5 h-12 rounded-full  mr-4 mt-1`} 
-        style={{backgroundColor : items.find(item => item.id === app.EventId)?.color}}
+        style={{backgroundColor : app.Ressource.color}}
       ></div>
       <div className="flex-1">
         <h3 
@@ -39,10 +39,10 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, i
             e.currentTarget.style.color = 'var(--text-primary)';
           }}
         >
-          {items.find(item => item.id === app.EventId)?.label || 'Rendez-vous'}
+          {app.Ressource.LibellePlanningRessource || 'Rendez-vous'}
         </h3>
         <div className="flex items-center text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
-          <span className="capitalize">{app.type}</span>
+          <span className="capitalize">{app.Type}</span>
         </div>
       </div>
     </div>
@@ -61,8 +61,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
     const noonOfDay = new Date(targetDate);
     noonOfDay.setHours(12, 0, 0, 0);
     
-    const appStart = new Date(app.startDate);
-    const appEnd = new Date(app.endDate);
+    const appStart = new Date(app.DebutPlanningEvenement);
+    const appEnd = new Date(app.FinPlanningEvenement);
     
     // Check if appointment intersects with this day
     if (appEnd < startOfDay || appStart > endOfDay) {
@@ -140,7 +140,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
             Journée complète
           </h4>
           {fullDayApps.map(app => (
-            <AppointmentCard key={app.id} app={app} items={items} />
+            <AppointmentCard key={app.IdPlanningEvenement} app={app} items={items} />
           ))}
         </div>
       )}
@@ -154,7 +154,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
             Matin
           </h4>
           {morningApps.map(app => (
-            <AppointmentCard key={app.id} app={app} items={items} />
+            <AppointmentCard key={app.IdPlanningEvenement} app={app} items={items} />
           ))}
         </div>
       )}
@@ -168,7 +168,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
             Après-midi
           </h4>
           {afternoonApps.map(app => (
-            <AppointmentCard key={app.id} app={app} items={items} />
+            <AppointmentCard key={app.IdPlanningEvenement} app={app} items={items} />
           ))}
         </div>
       )}

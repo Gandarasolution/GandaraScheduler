@@ -201,7 +201,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   }, [dayInTimeline, employee.IdPersonnel, isFullDay, onSelectAppointment, onSelectCell]);
 
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
-  const isInactive = employee.actif === false;
+  const isInactive = employee.Actif === false;
   const STEP_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
 
   return (
@@ -257,7 +257,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         return (
           <React.Fragment key={groupUniqueKey}>
             {appsToRender.map((app, index) => {
-              const event = events.find((et) => et.id === app.EventId) as Item | undefined;
+              const event = app.Ressource as Item | undefined;
   
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
               const isGhost = !isExpanded && (app.priority ?? 0) !== 0;
@@ -303,7 +303,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   tagPlacement={tagPlacement}
                   event={event as Item}
                   timelineStart={timelineStart}
-                  chargeeAffaire={(event && event.type === 'chantier' ? event.chargeAffaire : '') || ''}
+                  chargeeAffaire={(event && event.Type === 'chantier' ? event.chargeAffaire : '') || ''}
                   absoluteLeft={app.left}
                   absoluteWidth={app.width}
                   absoluteTop={forcedTopPx} 

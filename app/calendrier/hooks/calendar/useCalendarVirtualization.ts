@@ -116,18 +116,21 @@ export const useCalendarVirtualization = ({
             processHierarchicalItem(child, childIdx, true, idx, level + 1);
           });
         } else {
+          
           // Sinon, afficher les employés
           const itemEmployees = employeesByDimension[item.id] || [];
           itemEmployees.forEach(employee => {
-            const baseHeight = employeeHeights.find(e => e.employeeId === employee.id)?.height ?? CELL_HEIGHT;
-            const adjustedHeight = expandedOverlapRows[employee.id]
+            const baseHeight = employeeHeights.find(e => e.employeeId === employee.IdPersonnel)?.height ?? CELL_HEIGHT;
+            const adjustedHeight = expandedOverlapRows[employee.IdPersonnel]
               ? baseHeight
               : Math.min(baseHeight, ROW_HEIGHT);
 
+              //console.log(employee.IdPersonnel);
+              
             rows.push({
               type: 'employee',
-              id: employee.id,
-              uniqueKey: `employee-${employee.id}`,
+              id: employee.IdPersonnel,
+              uniqueKey: `employee-${employee.IdPersonnel}`,
               data: employee,
               height: adjustedHeight
             });

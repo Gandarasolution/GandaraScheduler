@@ -108,7 +108,7 @@ export const useInteraction = ({
         });
 
         // Item: Diviser (Conditionnel)
-        const duration = appointment.endDate - appointment.startDate;
+        const duration = appointment.FinPlanningEvenement - appointment.DebutPlanningEvenement;
         const intervalDuration = isFullDay 
           ? (DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour) * 3600000 
           : (HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour) * 3600000;
@@ -212,16 +212,16 @@ export const useInteraction = ({
              // C'est un événement, on ouvre le formulaire d'édition
              // On simule un RDV temporaire pour ouvrir la modale
              const mockApp: Appointment = {
-                 id: 0,
-                 description: '',
-                 type: item.type,
-                 EventId: Number(item.id),
-                 startDate: Date.now(),
-                 endDate: Date.now(),
+                 IdPlanningEvenement: 0,
+                 AnnotationPlanningEvenement: '',
+                 Type: item.type,
+                 Ressource: item,
+                 DebutPlanningEvenement: Date.now(),
+                 FinPlanningEvenement: Date.now(),
                  employee: {
-                     id: 0,
-                     nom: '',
-                     prenom: '',
+                     IdPersonnel: 0,
+                     Nom: '',
+                     Prenom: '',
                     } as User
              };
              handleOpenEditModal(mockApp);

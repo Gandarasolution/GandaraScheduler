@@ -169,13 +169,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
   }, [calendarConfig.Group, employees, initialTeams]);
 
+  
   const filteredEmployees = useMemo(() => {
     const baseFiltered = applyFiltersToEmployees(employees, getFlatFilters(calendarConfig.filterCategories));
     
     // Filtrer les employés inactifs qui n'ont pas de rdv dans la fenêtre visible
     return baseFiltered.filter(emp => {
       // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
-      if (emp.actif !== false) {
+      if (emp.Actif !== false) {
         return true;
       }
       
@@ -193,6 +194,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const employeesByDimension = useMemo(() => {
     return groupEmployeesHierarchically(filteredEmployees, calendarConfig.Group, initialTeams);
   }, [filteredEmployees, calendarConfig.Group, initialTeams]);
+  
+  //console.log('emp', employeesByDimension);
   
 
   const todayIndex = useMemo(() => {

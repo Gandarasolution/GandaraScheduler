@@ -35,7 +35,7 @@ export default function LoginPage(
       
 
       if (response?.error === 0 && response.user) {
-        authService.saveSession(response.user);
+        authService.saveSession(response.token);
         setUser(response.user);
         router.push('/');
       } 

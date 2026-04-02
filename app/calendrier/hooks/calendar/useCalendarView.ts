@@ -71,6 +71,7 @@ export const useCalendarView = (employeesRef: any, user: User) => {
 
   // --- Auto-init configuration ---
   useEffect(() => {
+
     if (calendarConfigHook.getAvailableConfigs.length > 0 && !currentCalendarConfig) {
       setCurrentCalendarConfig(calendarConfigHook.getAvailableConfigs[0]);
     }

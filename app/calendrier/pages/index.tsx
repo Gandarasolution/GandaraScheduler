@@ -105,7 +105,7 @@ export default function HomePage({
     const loadEmployees = async () => {
       const response = await employeeService.getEmployees();
       if (!isMounted) return;
-
+      
       if (response?.error === 0 && Array.isArray(response.data)) {
         globalEmployeesRef.current = response.data;
         setEmployeesVersion(prev => prev + 1);
@@ -136,16 +136,51 @@ export default function HomePage({
     globalEmployeesRef,
     isSearchOverlayOpen: viewState.isSearchOverlayOpen,
     userIdNumber: user?.IdPersonnel || 0,
-    userRole: user?.role || 'viewer',
+    userRole: user?.role || 'admin',
   });
 
   // Filtrer les items selon les permissions de l'utilisateur
   const allowedItems = useMemo(() => {
     return dataLayer.itemsRef.current.filter(item => 
-      canCreateEvent(user.role, item.type)
+      canCreateEvent(user.role, item.Type)
     );
   }, [dataLayer.itemsRef.current, user.role]);
 
+  // DataTableFrame requiert un champ `id`; les items métier utilisent IdPlanningRessource.
+  const normalizedTableItems = useMemo(() => {
+    return dataLayer.getTableItems().map((item: any) => {
+      if ('id' in item) return item;
+
+      return {
+        ...item,
+        id: item.IdPlanningRessource,
+      };
+    });
+  }, [dataLayer]);
+
+  const searchableItems = useMemo(() => {
+    return dataLayer.filteredItems
+      .filter(item => {
+        // 1. Vérifier les permissions - Ne montrer que les items que l'utilisateur peut créer
+        if (!canCreateEvent(user.role, item.Type)) {
+          return false;
+        }
+
+        // 2. Filtrer les items désactivés (pour les types absence/autre)
+        if ('actif' in item) {
+          return item.actif !== false;
+        }
+        return true; // Les chantiers n'ont pas de champ actif, donc toujours actifs
+      })
+      .map(item => ({
+        ...item,
+        id: item.IdPlanningRessource,
+        label: item.LibellePlanningRessource,
+      }));
+  }, [dataLayer.filteredItems, user.role]);
+
+  //console.log(searchableItems);
+  
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
   const timeline = useTimeline({
     isDisplayWeekend: viewState.isDisplayWeekend,
@@ -197,7 +232,7 @@ export default function HomePage({
       repeatInterval: 'day', // "...jours"
       endDate: null,        // Pas de date de fin par défaut
     }),
-    handleExtend: () => appointmentLogic.setExtendData(appointmentLogic.selectedAppointment?.endDate || Date.now()),
+    handleExtend: () => appointmentLogic.setExtendData(appointmentLogic.selectedAppointment?.FinPlanningEvenement || Date.now()),
     handleDivide: (appointment) => appointmentLogic.handleDivideConfirm(appointment),
     
     // Constantes pour calculs d'interaction
@@ -375,7 +410,7 @@ export default function HomePage({
                         
                         /* Sélection Optimisée */
                         selectedCell={appointmentLogic.selectedCell}
-                        selectedAppointmentId={appointmentLogic.selectedAppointment?.id}
+                        selectedAppointmentId={appointmentLogic.selectedAppointment?.IdPlanningEvenement}
                         onSelectCell={appointmentLogic.setSelectedCell}
                         onSelectAppointment={appointmentLogic.setSelectedAppointment}
                       />
@@ -389,7 +424,7 @@ export default function HomePage({
                       events={dataLayer.filteredItems}
                       onDeleteRequest={(item) => {
                         // Vérifier si l'item est utilisé dans le planning
-                        const result = appointmentLogic.handleDeleteDimension(item.id);
+                        const result = appointmentLogic.handleDeleteDimension(item.IdPlanningRessource);
                         const isActive = 'actif' in item ? (item as CommonPaieAttributs).actif : true;
                         // Toujours ouvrir la modal de confirmation
                         setDeleteConfirmData({ 
@@ -400,12 +435,12 @@ export default function HomePage({
                       }}
                       onEditRequest={(item) => {
                         appointmentLogic.setSelectedAppointmentForm({
-                          id: 0,
-                          description: '',
-                          type: item.type,
-                          EventId: Number(item.id),
-                          startDate: 0,
-                          endDate: 1000,
+                          IdPlanningEvenement: 0,
+                          AnnotationPlanningEvenement: '',
+                          Type: item.Type,
+                          Ressource: item,
+                          DebutPlanningEvenement: 0,
+                          FinPlanningEvenement: 1000,
                           employee: globalEmployeesRef.current[0],
                         });
                         appointmentLogic.setSelectedItem(item);
@@ -417,7 +452,7 @@ export default function HomePage({
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
                   <Suspense fallback={<LoadingFallback message="Chargement du tableau..." />}>
                     <DataTableFrame 
-                    items={dataLayer.getTableItems()} 
+                    items={normalizedTableItems} 
                     categoriesStructure={dataLayer.getTableStructure() || []}
                     computedFields={currentComputedFields as any}
                     customRenderers={
@@ -505,7 +540,7 @@ export default function HomePage({
                     if (id === null) return;                    
                     dataLayer.updateEmployeeImage(id, newImageUrl);
                 } else {
-                    const id = appointmentLogic.selectedItem?.id || null;
+                  const id = appointmentLogic.selectedItem?.IdPlanningRessource || null;
                     if (id === null) return;                    
                     appointmentLogic.setSelectedItem(prev => {
                         if (prev) {
@@ -612,18 +647,7 @@ export default function HomePage({
             onClose={() => viewState.setIsSearchOverlayOpen(false)}
             searchInput={viewState.dimensionSearchInput}
             setSearchInput={viewState.setDimensionsSearchInput}
-            items={dataLayer.filteredItems.filter(item => {
-              // 1. Vérifier les permissions - Ne montrer que les items que l'utilisateur peut créer
-              if (!canCreateEvent(user.role, item.type)) {
-                return false;
-              }
-              
-              // 2. Filtrer les items désactivés (pour les types absence/autre)
-              if ('actif' in item) {
-                return item.actif !== false;
-              }
-              return true; // Les chantiers n'ont pas de champ actif, donc toujours actifs
-            })}
+            items={searchableItems}
             onItemAction={appointmentLogic.selectedCell ? appointmentLogic.handleSearchItemAction : undefined}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
@@ -634,7 +658,7 @@ export default function HomePage({
               <DraggableSource
                 key={`${event.label}-${event.id}-${index}`}
                 id={event.id as number}
-                imageUrl={event.image.image}
+                imageUrl={event.image?.image}
                 title={event.label}
                 type={(event as any).type as "Chantier" | "Absence" | "Autre"}
                 className="w-full"

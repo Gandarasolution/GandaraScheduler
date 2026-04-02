@@ -29,12 +29,12 @@ export const customRenderersFactory = (
     return (
         <AppointmentItem
           appointment={{
-            id: 0,
-            description: '',
-            type: chantierItem.type,
-            EventId: Number(chantierItem.id),
-            startDate: 0,
-            endDate: 1000,
+            IdPlanningEvenement: 0,
+            AnnotationPlanningEvenement: '',
+            Type: chantierItem.Type,
+            Ressource: chantierItem,
+            DebutPlanningEvenement: 0,
+            FinPlanningEvenement: 1000,
             employee: employees[0],
           }}
           isFullDay={false}
@@ -45,12 +45,12 @@ export const customRenderersFactory = (
           className='cursor-pointer'
           onDoubleClick={() => {
             const newAppointment: Appointment = {
-              id: 0,
-              description: '',
-              type: chantierItem.type,
-              EventId: Number(chantierItem.id),
-              startDate: 0,
-              endDate: 1000,
+              IdPlanningEvenement: 0,
+              AnnotationPlanningEvenement: '',
+              Type: chantierItem.Type,
+              Ressource: chantierItem,
+              DebutPlanningEvenement: 0,
+              FinPlanningEvenement: 1000,
               employee: employees[0],
             }
             setSelectedAppointment(newAppointment);
@@ -115,7 +115,7 @@ export const customRenderersFactory = (
           onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`; }}
           onClick={(e) => {
               e.stopPropagation();
-              onImageClick(employees.find(emp => emp.id === item.id)!);
+              onImageClick(employees.find(emp => emp.IdPersonnel === item.id)!);
           }}
         />
         {item.type === 'interim' && (
@@ -191,7 +191,7 @@ export const customRenderersFactory = (
       <div className="flex items-center justify-start w-full h-full">
         {/* Selecteur d'équipe */}
         <select
-          value={employees.find(emp => emp.id === item.id)?.equipe?.id || ''}
+          value={employees.find(emp => emp.IdPersonnel === item.id)?.Equipe?.Id || ''}
           onChange={(e) => {
             if (onTeamChange) {
                 const newGroupId = e.target.value ? Number(e.target.value) : null;
@@ -203,8 +203,8 @@ export const customRenderersFactory = (
         >
           <option value="">Aucune équipe</option>
           {initialTeams.map(team => (
-            <option key={team.id} value={team.id}>
-              {team.name}
+            <option key={team.Id} value={team.Id}>
+              {team.Nom}
             </option>
           ))}
         </select>
@@ -244,20 +244,20 @@ export const customComputedFieldsFactory = (
     const currentDate = new Date().setHours(0, 0, 0, 0);
 
     const relevantAppointments = appointments.filter(appointment => {
-      if (appointment.type !== 'chantier' || appointment.EventId !== chantierId) {
+      if (appointment.Type !== 'chantier' || appointment.Ressource.IdPlanningRessource !== chantierId) {
         return false;
       }
       // Prendre les RDV futurs ou en cours
-      if (appointment.startDate >= currentDate) return true;
-      if (appointment.startDate < currentDate && appointment.endDate >= currentDate) return true;
+      if (appointment.DebutPlanningEvenement >= currentDate) return true;
+      if (appointment.DebutPlanningEvenement < currentDate && appointment.FinPlanningEvenement >= currentDate) return true;
       return false;
     });
 
     let totalHours = 0;
 
     relevantAppointments.forEach((appointment: Appointment) => {
-      const startDate = appointment.startDate < currentDate ? currentDate : appointment.startDate;
-      const endDate = appointment.endDate;
+      const startDate = appointment.DebutPlanningEvenement < currentDate ? currentDate : appointment.DebutPlanningEvenement;
+      const endDate = appointment.FinPlanningEvenement;
       
       // Approximation simple (à affiner avec hoursPerDay si besoin)
       const timeDiff = endDate - startDate;

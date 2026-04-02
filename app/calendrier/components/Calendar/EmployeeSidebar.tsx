@@ -193,7 +193,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             {isOpen && itemEmployees.map((employee) => {
               const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.IdPersonnel);
               const employeeRowHeight = rows.find(e => e.id === employee.IdPersonnel)?.height ?? CELL_HEIGHT;
-              const isInactive = employee.actif === false;
+              const isInactive = employee.Actif === false;
               
               return (
                 <div
@@ -216,17 +216,17 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   >
                     <div className="relative">
                       <img
-                        src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`}
-                        alt={employee.nom}
-                        className={`w-8 h-8 rounded-full border shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
-                        onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`; }}
+                        src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`}
+                        alt={employee.Nom}
+                        className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'Interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+                        onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`; }}
                       />
-                      {employee.type === 'interim' && (
+                      {employee.Type === 'Interim' && (
                         <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
                       )}
                     </div>
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className={`poppins text-[16px] font-inherit group-hover:font-semibold truncate ${isInactive ? 'text-gray-400' : ''}`}>{employee.nom + ' ' + employee.prenom}</span>
+                      <span className={`poppins text-[16px] font-inherit group-hover:font-semibold truncate ${isInactive ? 'text-gray-400' : ''}`}>{employee.Nom + ' ' + employee.Prenom}</span>
                     </div>
                     {expandedOverlapRows[employee.IdPersonnel] && (
                       <button

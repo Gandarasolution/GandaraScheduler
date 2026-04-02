@@ -67,8 +67,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  const startDate = React.useMemo(() => appointment.startDate, [appointment.startDate]);
-  const endDate = React.useMemo(() => appointment.endDate, [appointment.endDate]);
+  const startDate = React.useMemo(() => appointment.DebutPlanningEvenement, [appointment.DebutPlanningEvenement]);
+  const endDate = React.useMemo(() => appointment.FinPlanningEvenement, [appointment.FinPlanningEvenement]);
 
   // Hook de gestion du resize
   const {
@@ -78,7 +78,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     dragEnd,
     handleMouseDown,
   } = useAppointmentResize({
-    appointmentId: appointment.id,
+    appointmentId: appointment.IdPlanningEvenement,
     startDate,
     endDate,
     priority: appointment.priority ?? 0,
@@ -112,7 +112,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const [{ isDragging }, drag] = useDrag({
     type: 'appointment',
     item: () => ({
-      id: appointment.id,
+      id: appointment.IdPlanningEvenement,
       type: 'appointment',
       startDate: startDate,
       endDate: endDate,
@@ -180,7 +180,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         iconSpace += 20; // 16px icône + 4px marge
       }
       else{
-        const tag = appointment.tag?.name || '';
+        const tag = appointment.Etiquette?.LibelleLongPlanningEtiquette || '';
         const approxTagWidth = Math.min(120, 6 * tag.length + 16);
 
         iconSpace += approxTagWidth + 4; // largeur de l'étiquette + marge
@@ -188,7 +188,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     }
     
     return iconSpace + 4; // + 4px de marge de sécurité
-  }, [appointment.description, appointment.tag, isGhost, tagPlacement]);
+  }, [appointment.AnnotationPlanningEvenement, appointment.Etiquette, isGhost, tagPlacement]);
 
   // --- Styles ---
   
@@ -223,7 +223,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   return (
     <div
-      key={appointment.id}
+      key={appointment.IdPlanningEvenement}
       ref={(node) => { if (node && source === 'calendar' && !isInactive) drag(node); }}
       onClick={(e) => {
         e.stopPropagation();
@@ -234,7 +234,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         setIsHovered(false); // Masquer le tooltip au double-clic
         console.log(appointment.employee);
         
-        if (appointment.employee.actif) {
+        if (appointment.employee.Actif) {
           onDoubleClick && onDoubleClick(appointment);
         }
       }}
@@ -292,7 +292,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         
 
       `}
-      title={event?.label}
+      title={event?.LibellePlanningRessource}
       style={containerStyle}
     >
       {/* ZONES D'ARRIÈRE-PLAN POUR LE MODE GHOST 
@@ -348,7 +348,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
 
       {/* Handle de redimensionnement à gauche */}
-      {source === 'calendar' && appointment.employee.actif && (
+      {source === 'calendar' && appointment.employee.Actif && (
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30`}
           title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
@@ -390,7 +390,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                     color: (isHovered || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
                 }}
               >
-                {event?.label}
+                {event?.LibellePlanningRessource}
               </span>
               
               <div 
@@ -407,11 +407,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 >
                     {chargeeAffaire}
                 </span>
-                {((appointment.tag && !isGhost) || appointment.description) && (
+                {((appointment.Etiquette && !isGhost) || appointment.AnnotationPlanningEvenement) && (
                   <div className="absolute right-1 bottom-0.5 z-40">
                     <AppointmentMetadata
-                      annotation={appointment.description}
-                      tagText={tagPlacement === 'hover' ? appointment.tag?.name : undefined}
+                      annotation={appointment.AnnotationPlanningEvenement}
+                      tagText={tagPlacement === 'hover' ? appointment.Etiquette?.LibelleLongPlanningEtiquette : undefined}
                       tagColor={event?.color}
                       color={isGhost ? '#333' : appointmentColor}
                       textColor={isGhost ? '#000' : appointmentTextColor}
@@ -439,7 +439,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               </div>
               
               {/* Étiquette fixe en bas à droite (mode 'fixed') */}
-              {appointment.tag && tagPlacement === 'fixed' && !isGhost && (
+              {appointment.Etiquette && tagPlacement === 'fixed' && !isGhost && (
                 <div 
                   className="absolute right-6 -bottom-3 z-40 px-1.5 py-0.5 rounded-sm text-xs font-medium shadow-sm transition-all duration-200"
                   style={{
@@ -450,7 +450,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                   
                   }}
                 >
-                  <span className="truncate block">{appointment.tag.name}</span>
+                  <span className="truncate block">{appointment.Etiquette.LibelleLongPlanningEtiquette}</span>
                 </div>
               )}
           </div>
@@ -461,7 +461,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       
 
       {/* Handle de redimensionnement à droite */}
-      {source === 'calendar' && appointment.employee.actif && (
+      {source === 'calendar' && appointment.employee.Actif && (
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30 ${
             isSmallAppointment || !hasSpaceForBothHandles 
@@ -483,9 +483,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
 const arePropsEqual = (prevProps: AppointmentItemProps, nextProps: AppointmentItemProps) => {
   return (
-    prevProps.appointment.id === nextProps.appointment.id &&
-    prevProps.appointment.startDate === nextProps.appointment.startDate &&
-    prevProps.appointment.endDate === nextProps.appointment.endDate &&
+    prevProps.appointment.IdPlanningEvenement === nextProps.appointment.IdPlanningEvenement &&
+    prevProps.appointment.DebutPlanningEvenement === nextProps.appointment.DebutPlanningEvenement &&
+    prevProps.appointment.FinPlanningEvenement === nextProps.appointment.FinPlanningEvenement &&
     prevProps.absoluteLeft === nextProps.absoluteLeft &&
     prevProps.absoluteWidth === nextProps.absoluteWidth &&
     prevProps.absoluteTop === nextProps.absoluteTop &&

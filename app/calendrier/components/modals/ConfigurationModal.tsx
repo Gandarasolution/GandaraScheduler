@@ -2,12 +2,14 @@
 import { memo, useEffect, useState } from "react";
 import { CalendarConfig, Filter, Image, GroupingLevel, FilterCategories, User } from "../../types";
 import Modal from "./Modal";
+import { Group } from "lucide-react";
 
 // Modal de gestion des configurations
 type ConfigurationModalProps = {
   user: User;
   isOpen: boolean;
   onClose: () => void;
+  availablesImages: Image[];
   availableConfigs: CalendarConfig[];
   currentConfig: CalendarConfig | null;
   onConfigChange: (config: CalendarConfig) => void;
@@ -25,6 +27,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   user,
   isOpen,
   onClose,
+  availablesImages,
   availableConfigs,
   currentConfig,
   onConfigChange,
@@ -67,11 +70,11 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   // Charger les données pour l'édition
   useEffect(() => {
     if (editingConfig) {
-      setConfigName(editingConfig.name);
-      setConfigDescription(editingConfig.description || '');
-      setConfigImage(editingConfig.image);
-      setGroupingLevel1(editingConfig.groupingLevels?.level1);
-      setGroupingLevel2(editingConfig.groupingLevels?.level2);
+      setConfigName(editingConfig.LibellePlanningVue);
+      setConfigDescription(editingConfig.DescriptionPlanningVue || '');
+      setConfigImage(editingConfig.IdPlanningImage ? availablesImages.find(img => img.id === editingConfig.IdPlanningImage) : undefined);
+      setGroupingLevel1(editingConfig.Group?.ChampsPremierGroupePlanningVue);
+      setGroupingLevel2(editingConfig.Group?.ChampsDeuxiemeGroupePlanningVue);
       setFilterCategories(editingConfig.filterCategories || {
         personnel: [],
         evenements: {
@@ -101,12 +104,13 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     if (!configName.trim()) return;
 
     const newConfig = {
-      name: configName.trim(),
-      description: configDescription.trim() || undefined,
-      image: configImage,
-      groupingLevels: (groupingLevel1 || groupingLevel2) ? {
-        level1: groupingLevel1,
-        level2: groupingLevel2
+      IdPlanningVue: editingConfig?.IdPlanningVue || 0,
+      LibellePlanningVue: configName.trim(),
+      DescriptionPlanningVue: configDescription.trim() || undefined,
+      IdPlanningImage: configImage?.id,
+      Group: (groupingLevel1 || groupingLevel2) ? {
+        ChampsPremierGroupePlanningVue: groupingLevel1,
+        ChampsDeuxiemeGroupePlanningVue: groupingLevel2
       } : undefined,
       filterCategories: {
         personnel: filterCategories.personnel,
@@ -121,7 +125,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
     if (editingConfig) {
       // Si on modifie une configuration prédéfinie (ID <= 10), créer une nouvelle config personnalisée
-      if (editingConfig.id <= 10) {
+      if (editingConfig.IdPlanningVue <= 10) {
         const savedConfig = onSaveConfig(newConfig);
         onConfigChange(savedConfig);
       } else {
@@ -161,27 +165,27 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
           
           {currentConfig ? (
             <div className="flex items-start gap-3">
-              {currentConfig.image && (
+              {currentConfig.IdPlanningImage && (
                 <img 
-                  src={currentConfig.image.image} 
-                  alt={currentConfig.image.name} 
+                  src={availablesImages.find(img => img.id === currentConfig.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
+                  alt={availablesImages.find(img => img.id === currentConfig.IdPlanningImage)?.name || 'No Image'} 
                   className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                 />
               )}
               <div className="flex-1">
                 <p className="text-sm font-medium text-primary mb-1">
-                  {currentConfig.name}
+                  {currentConfig.LibellePlanningVue}
                 </p>
-                {currentConfig.description && (
+                {currentConfig.DescriptionPlanningVue && (
                   <p className="text-xs text-secondary mb-2">
-                    {currentConfig.description}
+                    {currentConfig.DescriptionPlanningVue}
                   </p>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                  {currentConfig.groupingLevels && (
+                  {currentConfig.Group && (
                     <span className="text-xs bg-blue-50 px-2 py-1 rounded-full text-blue-600 font-medium">
-                      {currentConfig.groupingLevels.level1 && `Niv.1: ${currentConfig.groupingLevels.level1}`}
-                      {currentConfig.groupingLevels.level2 && ` | Niv.2: ${currentConfig.groupingLevels.level2}`}
+                      {currentConfig.Group.ChampsPremierGroupePlanningVue && `Niv.1: ${currentConfig.Group.ChampsPremierGroupePlanningVue}`}
+                      {currentConfig.Group.ChampsDeuxiemeGroupePlanningVue && ` | Niv.2: ${currentConfig.Group.ChampsDeuxiemeGroupePlanningVue}`}
                     </span>
                   )}
                   {currentConfig.filterCategories?.evenements && 
@@ -220,18 +224,18 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
           <div className="space-y-3">
             {availableConfigs.map((config) => (
               <div
-                key={config.id}
+                key={config.IdPlanningVue}
                 className={`p-4 border-2 rounded-xl transition-all duration-200 ${
-                  currentConfig?.id === config.id 
+                  currentConfig?.IdPlanningVue === config.IdPlanningVue 
                     ? 'border-primary bg-gradient-to-r from-primary-ultra-light to-primary-light shadow-lg' 
                     : 'border-ultra-light hover:border-primary/30 hover:bg-secondary-bg/50'
                 }`}
               >
                 <div className="flex items-start gap-3 mb-3">
-                  {config.image && (
+                  {config.IdPlanningImage && (
                     <img 
-                      src={config.image.image} 
-                      alt={config.image.name} 
+                      src={availablesImages.find(img => img.id === config.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
+                      alt={availablesImages.find(img => img.id === config.IdPlanningImage)?.name || 'No Image'} 
                       className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
                     />
                   )}
@@ -242,20 +246,20 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     >
                       <div className="flex items-center gap-3 mb-1">
                         <span className="font-semibold text-primary group-hover:text-primary-dark transition-colors">
-                          {config.name}
+                          {config.LibellePlanningVue}
                         </span>
-                        {currentConfig?.id === config.id && (
+                        {currentConfig?.IdPlanningVue === config.IdPlanningVue && (
                           <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                         )}
                       </div>
-                      {config.description && (
-                        <p className="text-xs text-secondary mb-2">{config.description}</p>
+                      {config.DescriptionPlanningVue && (
+                        <p className="text-xs text-secondary mb-2">{config.DescriptionPlanningVue}</p>
                       )}
                       <div className="flex flex-wrap items-center gap-2">
-                        {config.groupingLevels && (
+                        {config.Group && (
                           <span className="text-xs bg-blue-50 px-3 py-1 rounded-full text-blue-600 font-medium">
-                            {config.groupingLevels.level1 && `Niv.1: ${config.groupingLevels.level1}`}
-                            {config.groupingLevels.level2 && ` | Niv.2: ${config.groupingLevels.level2}`}
+                            {config.Group.ChampsPremierGroupePlanningVue && `Niv.1: ${config.Group.ChampsPremierGroupePlanningVue}`}
+                            {config.Group.ChampsDeuxiemeGroupePlanningVue && ` | Niv.2: ${config.Group.ChampsDeuxiemeGroupePlanningVue}`}
                           </span>
                         )}
                         {config.filterCategories && (
@@ -305,9 +309,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     </svg>
                   </button>
 
-                  {config.id > 10 && ( // Seules les configs personnalisées peuvent être supprimées
+                  {config.IdPlanningVue > 10 && ( // Seules les configs personnalisées peuvent être supprimées
                     <button
-                      onClick={() => onDeleteConfig(config.id)}
+                      onClick={() => onDeleteConfig(config.IdPlanningVue)}
                       className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200"
                       title="Supprimer"
                     >

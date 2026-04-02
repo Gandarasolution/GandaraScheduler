@@ -75,7 +75,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   
   // Filtrer les items selon les permissions de l'utilisateur
   const allowedItems = useMemo(() => {
-    return items.filter(item => canCreateEvent(user.role, item.type));
+    return items.filter(item => canCreateEvent(user.role, item.Type));
   }, [items, user.role]);
   
   // Les admins et managers peuvent voir tous les employés
@@ -88,7 +88,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     // Filtrer les employés inactifs qui n'ont pas de rdv dans le mois visible
     return baseEmployees.filter(emp => {
       // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
-      if (emp.actif !== false) {
+      if (emp.Actif !== false) {
         return true;
       }
       
@@ -126,7 +126,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       const filtered = filteredApps.filter(app => {
         const matchesEmployee = !selectedEmployee || app.employee.IdPersonnel === selectedEmployee.IdPersonnel;
-        const isInMonth = app.startDate <= monthEnd && app.endDate >= monthStart;
+        const isInMonth = app.DebutPlanningEvenement <= monthEnd && app.FinPlanningEvenement >= monthStart;
         return matchesEmployee && isInMonth;
       });
       
@@ -161,7 +161,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       const selectedDayEnd = new Date(selectedDate).setHours(23, 59, 59, 999);
       
       const filtered = monthlyAppointments.filter(app => 
-        app.startDate <= selectedDayEnd && app.endDate >= selectedDayStart
+        app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement >= selectedDayStart
       );
       
       setSelectedDayAppointments(filtered);
@@ -203,13 +203,13 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     loadNotifications();
     
     setTimeout(() => {
-      addNotification('info', 'Bienvenue', `Bonjour ${user.nom} ${user.prenom} !`);
+      addNotification('info', 'Bienvenue', `Bonjour ${user.Nom} ${user.Prenom} !`);
     }, 500);
 
     return () => {
       isMounted = false;
     };
-  }, [addNotification, user.IdPersonnel, user.nom, user.prenom]);
+  }, [addNotification, user.IdPersonnel, user.Nom, user.Prenom]);
 
   // ----- HANDLERS -----
   
@@ -226,11 +226,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
   const handleSelectItem = (item: Item) => {
     // Vérifier les permissions selon le type d'événement
-    const canCreate = canCreateEvent(user.role, item.type);
+    const canCreate = canCreateEvent(user.role, item.Type);
     
     if (!canCreate) {
       // Afficher une notification d'erreur
-      addNotification('error', 'Permission refusée', `Vous n'avez pas les droits pour créer des événements de type "${item.type}"`);
+      addNotification('error', 'Permission refusée', `Vous n'avez pas les droits pour créer des événements de type "${item.Type}"`);
       return;
     }
     
@@ -260,11 +260,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     const search = searchInput.toLowerCase();
     // Utiliser allowedItems qui contient déjà les items filtrés par permissions
     return allowedItems.filter(item => {
-      const matchLabel = item.label?.toLowerCase().includes(search);
-      const matchCode = item.code?.toLowerCase().includes(search);
+      const matchLabel = item.LibellePlanningRessource?.toLowerCase().includes(search);
+      const matchCode = item.CodePlanningRessource?.toLowerCase().includes(search);
       
       // Propriétés spécifiques aux ChantierItem
-      if (item.type === 'chantier') {
+      if (item.Type === 'chantier') {
         const chantierItem = item as any;
         return matchLabel || matchCode ||
           chantierItem.identifiant?.toLowerCase().includes(search) ||
@@ -272,7 +272,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       }
       
       return matchLabel || matchCode;
-    });
+    }).map(item => ({
+      ...item,
+      id: (item as any).IdPlanningRessource || (item as any).id,
+      label: item.LibellePlanningRessource || (item as any).label
+    }));
   }, [allowedItems, searchInput]);
 
   // ----- FACTORIES -----
@@ -287,13 +291,15 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     }
     
     return {
-      id: id ?? -1,
-      description: '',
-      startDate: startOfSelectedDay,
-      endDate: endOfSelectedDay,
+      IdPlanningEvenement: id ?? -1,
+      AnnotationPlanningEvenement: '',
+      DebutPlanningEvenement: startOfSelectedDay,
+      FinPlanningEvenement: endOfSelectedDay,
       employee: appointmentEmployee,
-      type: 'chantier',
-      EventId: 0,
+      Type: 'chantier',
+      Ressource: {
+        IdRessource: 0,
+      } as unknown as Item,
       priority: 0,
     };
   };
@@ -304,13 +310,13 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     }
     
     return {
-      id: 0,
-      type: 'chantier',
-      label: '',
+      IdPlanningRessource: 0,
+      Type: 'chantier',
+      LibellePlanningRessource: '',
       color: '#3953aaff',
       borderColor: '#2c4086',
       textColor: '#ffffff',
-      code: '',
+      CodePlanningRessource: '',
       identifiant: '',
       poleActivite: '',
       libelle: '',
@@ -383,7 +389,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 className="text-sm font-semibold hidden sm:inline-block"
                 style={{ color: 'var(--text-primary)' }}
               >
-                {user.nom} {user.prenom}
+                {user.Nom} {user.Prenom}
               </span>
             </button>
             
@@ -577,7 +583,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             }}
             renderItem={(item) => {
               const itemData = item as any as Item;
-              const isChantier = itemData.type === 'chantier';
+              const isChantier = itemData.Type === 'chantier';
               const chantierData = isChantier ? itemData as any : null;
               
               return (
@@ -592,7 +598,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                         className="font-semibold"
                         style={{ color: 'var(--text-primary)' }}
                       >
-                        {itemData.label}
+                        {itemData.LibellePlanningRessource}
                       </p>
                       {isChantier && (chantierData?.code || chantierData?.identifiant) && (
                         <p 

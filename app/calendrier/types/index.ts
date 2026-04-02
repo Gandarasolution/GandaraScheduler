@@ -14,9 +14,9 @@
  */
 export interface PoleActivite {
   /** Identifiant unique du pôle (IdPoleActivite) */
-  id: number;
+  Id: number;
   /** Libellé du pôle d'activité (LibellePoleActivite) */
-  name: string;
+  Nom: string;
 }
 
 /**
@@ -26,9 +26,9 @@ export interface PoleActivite {
  */
 export interface Equipe {
   /** Identifiant unique de l'équipe (IdEquipe) */
-  id: number;
+  Id: number;
   /** Libellé de l'équipe (LibelleEquipe) */
-  name: string;  
+  Nom: string;  
 }
 
 /** @deprecated Utiliser Equipe à la place */
@@ -65,10 +65,49 @@ export interface Calendar {
   color?: string;
 }
 
-export interface Tags {
+/**
+ * Définition d'une étiquette
+ */
+
+export interface Tag {
   IdPlanningEtiquette: number;
   LibelleLongPlanningEtiquette: string;
   LibelleCourtPlanningEtiquette?: string; // Version courte pour les petits rendez-vous (2 jours ou moins)
+}
+
+
+export interface TagsManagerProps {
+  /** Liste des étiquettes disponibles */
+  tags: Tag[];
+  /** Étiquette sélectionnée (optionnel) */
+  selectedTag?: Tag;
+  /** Callback pour sélection d'étiquette */
+  onSelectTag?: (tag: Tag | undefined) => void;
+  /** Callback pour ajout d'étiquette */
+  onAddTag: (tag: Tag) => void;
+  /** Callback pour suppression d'étiquette */
+  onRemoveTag: (tagId: number) => void;
+  /** Fonction pour vérifier si une étiquette es utilisée */
+  isTagUsed?: (tagId: number) => { used: boolean; count: number };
+  /** Mode d'affichage: 'compact' (liste seule) ou 'extended' (avec sélecteur) */
+  variant?: 'compact' | 'extended';
+  /** Titre de la section (pour mode extended) */
+  title?: string;
+  /** Placeholder pour la recherche/sélection */
+  placeholder?: string;
+}
+
+export interface TagsManagerState {
+  showCreation: boolean;
+  newTag: Tag;
+  duplicateError: boolean;
+  longVersionError: boolean;
+  deleteModal: {
+    isOpen: boolean;
+    tagId: number | null;
+    tagName: string;
+    affectedCount: number;
+  };
 }
 
 export interface BaseItemCategory{
@@ -85,12 +124,12 @@ interface BaseItem {
   CodePlanningRessource: string;
   image?: Image;
   defaultDescription?: string;
-  tags?: Tags[];
+  Etiquettes?: Tag[];
   isManual?: boolean;
 }
 
 export interface ChantierItem extends BaseItem {
-  type: "chantier";
+  Type: "chantier";
   identifiant: string;
   poleActivite: string;
   libelle: string;
@@ -117,11 +156,11 @@ export interface CommonPaieAttributs extends BaseItem {
 }
 
 export interface AbsenceItem extends CommonPaieAttributs {
-  type: "absence";
+  Type: "absence";
 }
 
 export interface AutreItem extends CommonPaieAttributs {
-  type: "autre";
+  Type: "autre";
 }
 
 export type SocialItem = AbsenceItem | AutreItem;
@@ -152,9 +191,9 @@ export interface Appointment{
   /** Type de rendez-vous */
   Type: 'chantier' | 'absence' | 'autre';
   /** ID de l'événement auquel ce RDV est lié */
-  Ressource: BaseItem;
+  Ressource: Item;
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
-  Etiquette?: Tags;
+  Etiquette?: Tag;
   /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */
   priority?: number;
 }
@@ -310,17 +349,17 @@ export interface User{
   /** Identifiant unique de l'utilisateur (IdPersonnel) */
   IdPersonnel: number;
   /** Nom de l'utilisateur */
-  nom: string;
+  Nom: string;
   /** Prénom de l'utilisateur */
-  prenom: string;
+  Prenom: string;
   /** Code de contrat de l'utilisateur (ex: CDI, CDD, etc.) */
-  code?: string;
+  Code?: string;
   /** Référence au pôle d'activité (relation) */
-  poleActivite?: PoleActivite;
+  PoleActivite?: PoleActivite;
   /** Type de l'utilisateur (employé ou intérimaire) */
-  type: 'employee' | 'interim';
+  Type: 'Salarie' | 'Interim';
   /** Référence à l'équipe (relation) */
-  equipe?: Equipe;
+  Equipe?: Equipe;
   /** Rôle de l'utilisateur dans l'application */
   role?: UserRole;
   /** Thème préféré de l'utilisateur */
@@ -328,9 +367,9 @@ export interface User{
   /** Image de profil de l'utilisateur */
   image?: Image;
   /** Email de l'utilisateur */
-  email?: string;
+  Email?: string;
   /** Statut actif de l'utilisateur (défaut: true) */
-  actif?: boolean;
+  Actif?: boolean;
 }
 
 

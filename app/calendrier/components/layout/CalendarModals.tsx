@@ -176,8 +176,8 @@ export const CalendarModals = memo(({
   // Détermination du mode d'édition de ressource
   const resourceEditMode: 'create' | 'edit' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;
-    if (modalsState.selectedAppointmentForm.id === -1) return 'create';
-    if (modalsState.selectedAppointmentForm.id === 0) return 'edit';
+    if (modalsState.selectedAppointmentForm.IdPlanningEvenement === -1) return 'create';
+    if (modalsState.selectedAppointmentForm.IdPlanningEvenement === 0) return 'edit';
     return null;
   }, [modalsState.selectedAppointmentForm]);
 
@@ -188,7 +188,7 @@ export const CalendarModals = memo(({
     if (modalsState.selectedAppointmentForm) {
         if (resourceEditMode === 'create') return "Création de la ressource";
         if (resourceEditMode === 'edit') return "Modification de la ressource";
-        return `Modifier l'Évènement - ${data.items.find(i => i.id === modalsState.selectedAppointmentForm?.EventId)?.code}`;
+        return `Modifier l'Évènement - ${modalsState.selectedAppointmentForm.Ressource?.CodePlanningRessource}`;
     }
     return "Ajouter un rendez-vous";
   };  
@@ -311,7 +311,7 @@ export const CalendarModals = memo(({
                   type="date"
                   className={`${modalsState.repeatData.repeatCount !== null ? 'opacity-50 cursor-not-allowed text-sm' : 'opacity-100 text-base focus:ring-2 focus:ring-color'} ml-2 border border-default rounded-xl px-3 py-2 focus:outline-none transition w-[145px]`}
                   value={modalsState.repeatData.endDate ? format(modalsState.repeatData.endDate, "yyyy-MM-dd") : ""}
-                  min={modalsState.selectedAppointmentForm?.endDate ? format(modalsState.selectedAppointmentForm.endDate, "yyyy-MM-dd") : undefined}
+                  min={modalsState.selectedAppointmentForm?.FinPlanningEvenement ? format(modalsState.selectedAppointmentForm.FinPlanningEvenement, "yyyy-MM-dd") : undefined}
                   onChange={e => {
                     const value = e.target.value;
                     const parsed = value ? new Date(value).getTime() : null;
@@ -348,7 +348,7 @@ export const CalendarModals = memo(({
                 type="date"
                 className="text-base border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[145px]"
                 value={format(modalsState.extendData, "yyyy-MM-dd")}
-                min={modalsState.selectedAppointmentForm?.endDate ? format(modalsState.selectedAppointmentForm.endDate, "yyyy-MM-dd") : undefined}
+                min={modalsState.selectedAppointmentForm?.FinPlanningEvenement ? format(modalsState.selectedAppointmentForm.FinPlanningEvenement, "yyyy-MM-dd") : undefined}
                 onChange={(e) => {
                   const date = new Date(e.target.value).setHours(23, 59, 59, 999);
                   if (!isNaN(date)) {
@@ -435,6 +435,7 @@ export const CalendarModals = memo(({
             user={user}
             isOpen={modalsState.isConfigModalOpen}
             onClose={handlers.closeConfigModal}
+            availablesImages={data.availableImages}
             availableConfigs={data.availableConfigs}
             currentConfig={data.currentConfig}
             onConfigChange={handlers.setCurrentConfig}
@@ -481,7 +482,7 @@ export const CalendarModals = memo(({
             title: "Rubrique déjà désactivée",
             description: (
               <>
-                La rubrique <span className="font-semibold text-primary">{item.label}</span> ({item.code}) est déjà désactivée.
+                La rubrique <span className="font-semibold text-primary">{item.LibellePlanningRessource}</span> ({item.CodePlanningRessource}) est déjà désactivée.
               </>
             ),
             secondaryDescription: "Voulez-vous la supprimer définitivement ?",
@@ -497,7 +498,7 @@ export const CalendarModals = memo(({
               {
                 label: "Supprimer",
                 onClick: () => {
-                  handlers.handleDeleteDimension?.(item.id, true);
+                  handlers.handleDeleteDimension?.(item.IdPlanningRessource, true);
                   handlers.setDeleteConfirmData?.(null);
                 },
                 variant: "primary",
@@ -529,7 +530,7 @@ export const CalendarModals = memo(({
             title: "Cette rubrique est actuellement utilisée dans le planning",
             description: (
               <>
-                La rubrique <span className="font-semibold text-primary">{item.label}</span> ({item.code}) est liée à des rendez-vous existants.
+                La rubrique <span className="font-semibold text-primary">{item.LibellePlanningRessource}</span> ({item.CodePlanningRessource}) est liée à des rendez-vous existants.
               </>
             ),
             iconColor: "orange",
@@ -544,7 +545,7 @@ export const CalendarModals = memo(({
               {
                 label: "Désactiver la rubrique (recommandé)",
                 onClick: () => {
-                  handlers.handleDeactivateDimension?.(item.id);
+                  handlers.handleDeactivateDimension?.(item.IdPlanningRessource);
                   handlers.setDeleteConfirmData?.(null);
                 },
                 variant: "secondary",
@@ -553,7 +554,7 @@ export const CalendarModals = memo(({
               {
                 label: "Supprimer tout (rubrique + RDV)",
                 onClick: () => {
-                  handlers.handleDeleteDimension?.(item.id, true);
+                  handlers.handleDeleteDimension?.(item.IdPlanningRessource, true);
                   handlers.setDeleteConfirmData?.(null);
                 },
                 variant: "primary",
@@ -585,7 +586,7 @@ export const CalendarModals = memo(({
           title: "Confirmer la suppression",
           description: (
             <>
-              Voulez-vous vraiment supprimer la rubrique <span className="font-semibold text-primary">{item.label}</span> ({item.code}) ?
+              Voulez-vous vraiment supprimer la rubrique <span className="font-semibold text-primary">{item.LibellePlanningRessource}</span> ({item.CodePlanningRessource}) ?
             </>
           ),
           secondaryDescription: "Cette rubrique n'est pas utilisée dans le planning.",
@@ -595,7 +596,7 @@ export const CalendarModals = memo(({
             {
               label: "Supprimer",
               onClick: () => {
-                handlers.handleDeleteDimension?.(item.id, true);
+                handlers.handleDeleteDimension?.(item.IdPlanningRessource, true);
                 handlers.setDeleteConfirmData?.(null);
               },
               variant: "primary"

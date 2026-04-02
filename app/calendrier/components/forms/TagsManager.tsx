@@ -10,52 +10,9 @@
 import React from 'react';
 import TagCreationForm from './TagCreationForm';
 import DeleteModal from '../modals/DeleteModal';
+import { Tag, TagsManagerProps, TagsManagerState } from '../../types';
 
-/**
- * Définition d'une étiquette
- */
-export interface Tag {
-  /** ID unique de l'étiquette */
-  id: number;
-  /** Nom complet de l'étiquette */
-  name: string;
-  /** Nom court (optionnel) */
-  shortName?: string;
-}
 
-export interface TagsManagerProps {
-  /** Liste des étiquettes disponibles */
-  tags: Tag[];
-  /** Étiquette sélectionnée (optionnel) */
-  selectedTag?: Tag;
-  /** Callback pour sélection d'étiquette */
-  onSelectTag?: (tag: Tag | undefined) => void;
-  /** Callback pour ajout d'étiquette */
-  onAddTag: (tag: Tag) => void;
-  /** Callback pour suppression d'étiquette */
-  onRemoveTag: (tagId: number) => void;
-  /** Fonction pour vérifier si une étiquette es utilisée */
-  isTagUsed?: (tagId: number) => { used: boolean; count: number };
-  /** Mode d'affichage: 'compact' (liste seule) ou 'extended' (avec sélecteur) */
-  variant?: 'compact' | 'extended';
-  /** Titre de la section (pour mode extended) */
-  title?: string;
-  /** Placeholder pour la recherche/sélection */
-  placeholder?: string;
-}
-
-interface TagsManagerState {
-  showCreation: boolean;
-  newTag: Tag;
-  duplicateError: boolean;
-  longVersionError: boolean;
-  deleteModal: {
-    isOpen: boolean;
-    tagId: number | null;
-    tagName: string;
-    affectedCount: number;
-  };
-}
 
 /**
  * Composant TagsManager - Gestion complète des étiquettes
@@ -99,7 +56,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
 }) => {
   const [state, setState] = React.useState<TagsManagerState>({
     showCreation: false,
-    newTag: { id: 0, name: '', shortName: '' },
+    newTag: { IdPlanningEtiquette: 0, LibelleLongPlanningEtiquette: '', LibelleCourtPlanningEtiquette: '' },
     duplicateError: false,
     longVersionError: false,
     deleteModal: {
@@ -114,25 +71,25 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
    * Gère l'ajout d'une nouvelle étiquette
    */
   const handleAddTag = () => {
-    if (!state.newTag.name.trim()) return;
+    if (!state.newTag.LibelleLongPlanningEtiquette.trim()) return;
     
     // Vérifier si l'étiquette existe déjà
-    if (tags.some(tag => tag.name.toLowerCase() === state.newTag.name.trim().toLowerCase())) {
+    if (tags.some(tag => tag.LibelleLongPlanningEtiquette.toLowerCase() === state.newTag.LibelleLongPlanningEtiquette.trim().toLowerCase())) {
       setState(prev => ({ ...prev, duplicateError: true }));
       return;
     }
     
     // Ajouter la nouvelle étiquette
     onAddTag({
-      id: Date.now(),
-      name: state.newTag.name.trim(),
-      shortName: state.newTag.shortName?.trim() || undefined,
+      IdPlanningEtiquette: Date.now(),
+      LibelleLongPlanningEtiquette: state.newTag.LibelleLongPlanningEtiquette.trim(),
+      LibelleCourtPlanningEtiquette: state.newTag.LibelleCourtPlanningEtiquette?.trim() || undefined,
     });
     
     // Réinitialiser le formulaire
     setState(prev => ({
       ...prev,
-      newTag: { id: 0, name: '', shortName: '' },
+      newTag: { IdPlanningEtiquette: 0, LibelleLongPlanningEtiquette: '', LibelleCourtPlanningEtiquette: '' },
       showCreation: false,
       duplicateError: false,
     }));
@@ -146,13 +103,13 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
     
     if (tagInfo.used) {
       // Ouvrir la modale de confirmation
-      const tagToDelete = tags.find(tag => tag.id === tagId);
+      const tagToDelete = tags.find(tag => tag.IdPlanningEtiquette === tagId);
       setState(prev => ({
         ...prev,
         deleteModal: {
           isOpen: true,
           tagId: tagId,
-          tagName: tagToDelete?.name || '',
+          tagName: tagToDelete?.LibelleLongPlanningEtiquette || '',
           affectedCount: tagInfo.count,
         },
       }));
@@ -197,7 +154,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
    */
   const handleTagChange = (tag: Tag) => {
     
-    if (tag.shortName && !tag.name.trim()) {
+    if (tag.LibelleCourtPlanningEtiquette && !tag.LibelleLongPlanningEtiquette.trim()) {
       setState(prev => ({
         ...prev,
         newTag: tag,
@@ -222,7 +179,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
       ...prev,
       showCreation: !prev.showCreation,
       duplicateError: false,
-      newTag: { id: 0, name: '', shortName: '' },
+      newTag: { IdPlanningEtiquette: 0, LibelleLongPlanningEtiquette: '', LibelleCourtPlanningEtiquette: '' },
     }));
   };
 
@@ -247,20 +204,20 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
           {/* Liste des étiquettes */}
           <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto">
             {tags.map((tag) => {
-              const tagInfo = isTagUsed ? isTagUsed(tag.id) : { used: false, count: 0 };
+              const tagInfo = isTagUsed ? isTagUsed(tag.IdPlanningEtiquette) : { used: false, count: 0 };
               return (
                 <div
-                  key={tag.id}
+                  key={tag.IdPlanningEtiquette}
                   className={`
                     inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs group transition-colors hover:bg-red-50 hover:text-red-600
                     ${tagInfo.used ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600'}
                   `}
                   title={tagInfo.used ? `Utilisée ${tagInfo.count} fois` : 'Non utilisée - suppression directe'}
                 >
-                  <span>{tag.name}</span>
+                  <span>{tag.LibelleLongPlanningEtiquette}</span>
                   <button
                     type="button"
-                    onClick={() => handleRemoveTag(tag.id)}
+                    onClick={() => handleRemoveTag(tag.IdPlanningEtiquette)}
                     className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 hidden group-hover:block"
                     title={tagInfo.used ? 'Supprimer l\'étiquette (confirmation requise)' : 'Supprimer l\'étiquette'}
                   >
@@ -329,18 +286,18 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
         {/* Ligne avec le select et le bouton d'ajout */}
         <div className="flex items-center gap-2">
           <select
-            value={selectedTag?.id || ''}
+            value={selectedTag?.IdPlanningEtiquette || ''}
             onChange={(e) => {
               const tagId = e.target.value ? Number(e.target.value) : undefined;
-              const tag = tagId ? tags.find(t => t.id === tagId) : undefined;
+              const tag = tagId ? tags.find(t => t.IdPlanningEtiquette === tagId) : undefined;
               onSelectTag?.(tag);
             }}
             className="flex-1 p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-secondary-bg"
           >
             <option value="">{placeholder}</option>
             {tags.map((tag) => (
-              <option key={tag.id} value={tag.id}>
-                {tag.name} {tag.shortName ? `(${tag.shortName})` : ''}
+              <option key={tag.IdPlanningEtiquette} value={tag.IdPlanningEtiquette}>
+                {tag.LibelleLongPlanningEtiquette} {tag.LibelleCourtPlanningEtiquette ? `(${tag.LibelleCourtPlanningEtiquette})` : ''}
               </option>
             ))}
           </select>
@@ -372,11 +329,11 @@ export const TagsManager: React.FC<TagsManagerProps> = ({
             </svg>
             <div className="flex flex-col">
               <span className="text-sm text-primary font-medium">
-                {selectedTag.name}
+                {selectedTag.LibelleLongPlanningEtiquette}
               </span>
-              {selectedTag.shortName && (
+              {selectedTag.LibelleCourtPlanningEtiquette && (
                 <span className="text-xs text-gray-500">
-                  Version courte : {selectedTag.shortName}
+                  Version courte : {selectedTag.LibelleCourtPlanningEtiquette}
                 </span>
               )}
             </div>

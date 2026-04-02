@@ -15,7 +15,10 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
   onDeleteRequest,
   onEditRequest,
 }) => {
-  const rows = useMemo(() => events.filter((e) => e.isManual), [events]);
+  const rows = useMemo(() => events.filter((e) => e.isManual).map((e) => ({
+    ...e,
+    id: e.IdPlanningRessource,
+  })), [events]);
 
   const categoriesStructure: CategoryStructure[] = useMemo(() => [
     {
@@ -32,7 +35,7 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
           renderer: (value, item) => (
             <div 
               className="flex items-center justify-center cursor-pointer"
-              onDoubleClick={() => onEditRequest && onEditRequest(item as Item)}
+              onDoubleClick={() => onEditRequest && onEditRequest({ ...item, IdPlanningRessource: item.id } as unknown as Item)}
             >
               {(item as any).image?.image ? (
                 <img
@@ -101,7 +104,7 @@ const ManualEventsManager: React.FC<ManualEventsManagerProps> = ({
     // Pour l'instant, on appelle directement onDeleteRequest
     // Le menu contextuel sera géré dans le parent ou via une modal
     if (onDeleteRequest) {
-      onDeleteRequest(item as Item);
+      onDeleteRequest(item as unknown as Item);
     }
   };
 

@@ -44,7 +44,7 @@ export function useRecentEmployees() {
   const addRecentEmployee = useCallback((employee: User) => {
     setRecentEmployees(prev => {
       // Retirer l'employé s'il existe déjà
-      const filtered = prev.filter(emp => emp.id !== employee.id);
+      const filtered = prev.filter(emp => emp.IdPersonnel !== employee.IdPersonnel);
       
       // Ajouter l'employé au début de la liste
       const updated = [employee, ...filtered].slice(0, MAX_RECENT);

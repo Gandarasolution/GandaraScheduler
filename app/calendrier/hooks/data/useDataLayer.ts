@@ -40,18 +40,16 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
     let isMounted = true;
 
     const loadStaticData = async () => {
-      // const [rubriquesResponse, imagesResponse] = await Promise.all([
-      //   rubriqueService.getRubriques(),
-      //   imageService.getImages(),
-      // ]);
-
-      const imagesResponse = await imageService.getImages();
+      const [rubriquesResponse, imagesResponse] = await Promise.all([
+        rubriqueService.getRubriques(),
+        imageService.getImages(),
+      ]);
 
       if (!isMounted) return;
 
-      // if (rubriquesResponse?.error === 0 && Array.isArray(rubriquesResponse.data)) {
-      //   itemsRef.current = rubriquesResponse.data;
-      // }
+      if (rubriquesResponse?.error === 0 && Array.isArray(rubriquesResponse.data)) {
+        itemsRef.current = rubriquesResponse.data;
+      }
 
       if (imagesResponse?.error === 0 && Array.isArray(imagesResponse.data)) {
         setAvailableImages(imagesResponse.data);
@@ -80,9 +78,9 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
       }
 
       const teamsFromEmployees = globalEmployeesRef.current
-        .map(emp => emp.equipe)
+        .map(emp => emp.Equipe)
         .filter(Boolean)
-        .filter((team, index, arr) => arr.findIndex(t => t?.id === team?.id) === index);
+        .filter((team, index, arr) => arr.findIndex(t => t?.Id === team?.Id) === index);
       setTeams(teamsFromEmployees as any[]);
     };
 
@@ -102,9 +100,9 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
   
   const baseFilteredEmployees = useMemo(() => {
     if (!calendarConfig || viewType === 'chantier-table' || viewType === 'paie-table') return globalEmployeesRef.current;
-
+    
     if (viewType === 'calendar') {
-      let employees = globalEmployeesRef.current.filter(emp => emp.type === 'employee' || emp.type === 'interim');
+      let employees = globalEmployeesRef.current.filter(emp => emp.Type === 'Salarie' || emp.Type === 'Interim');
       
       // Filtrer par rôle : users et viewers ne voient que leur propre employé
       if (userRole === 'user' || userRole === 'viewer') {
@@ -154,7 +152,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
          const isAllSelected = allTypes.every(t => selectedRdvTypes.includes(t));
          if (!isAllSelected) {
              filtered = filtered.filter(app => {
-                 const norm = app.type === 'chantier' ? 'Chantier' : app.type === 'absence' ? 'Absence' : 'Autre';
+                 const norm = app.Type === 'chantier' ? 'Chantier' : app.Type === 'absence' ? 'Absence' : 'Autre';
                  return selectedRdvTypes.includes(norm);
              });
          }
@@ -181,7 +179,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
     );
   }, [baseFilteredEmployees, searchInput, viewType, searchUtils, filters]);
 
-  const filteredItems = useMemo(() => {
+  const filteredItems = useMemo(() => {    
     // Toujours appliquer les filtres, même sans recherche
     // La fonction applyFiltersToItem gère elle-même le cas où searchQuery est vide
     return searchUtils.applyFiltersToItem(
@@ -232,10 +230,10 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
       const newAppointments = response.error === 0 ? response.data : [];
 
       // Fusionner les nouveaux RDV avec les existants
-      const existingIds = new Set(appointmentsRef.current.map(app => app.id));
+      const existingIds = new Set(appointmentsRef.current.map(app => app.IdPlanningEvenement));
       const mergedAppointments = [
         ...appointmentsRef.current,
-        ...newAppointments.filter((app: Appointment) => !existingIds.has(app.id))
+        ...newAppointments.filter((app: Appointment) => !existingIds.has(app.IdPlanningEvenement))
       ];
       appointmentsRef.current = mergedAppointments;
       setAppointmentsVersion(prev => prev + 1);
@@ -257,17 +255,17 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
   // --- Filtrage Secondaire (Tableaux) ---
   // Cette fonction prépare les données pour DataTableFrame
   const getTableItems = () => {
-     if (viewType === 'chantier-table') return filteredItems.filter(e => e.type === 'chantier');
-     if (viewType === 'paie-table') return filteredItems.filter(e => e.type !== 'chantier');
+     if (viewType === 'chantier-table') return filteredItems.filter(e => e.Type === 'chantier');
+     if (viewType === 'paie-table') return filteredItems.filter(e => e.Type !== 'chantier');
      return filteredEmployees.map(emp => ({
-        id: emp.IdPersonnel,
+        IdPersonnel: emp.IdPersonnel,
         image: emp.image,
-        code: emp.code,
-        nom: emp.nom,
-        prenom: emp.prenom,
-        type: emp.type,
-        equipe: emp.equipe?.name || ''
-     }));
+        Code: emp.Code,
+        Nom: emp.Nom,
+        Prenom: emp.Prenom,
+        Type: emp.Type,
+        Equipe: emp.Equipe
+     }) as User);
   };
 
   const getTableStructure = (): CategoryStructure[] => {
@@ -347,7 +345,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
 
   const updateEventImage = (id: number, newImage: Image) => {
     itemsRef.current = itemsRef.current.map(e => 
-      e.id === id ? { ...e, image: newImage } : e
+      e.IdPlanningRessource === id ? { ...e, image: newImage } : e
     );
     refreshData(); // Force le re-render
   };
@@ -370,15 +368,16 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
   const addManualEvent = (payload: { code: string; label: string; description: string; image?: Image; color: string; borderColor: string; textColor: string; actif: boolean; type: 'autre'; category: string; }) => {
     const newId = Date.now();
     const newItem: Item = {
-      id: newId,
-      label: payload.label,
-      defaultDescription: payload.description,
+      IdPlanningRessource: newId,
+      CodePlanningRessource: payload.code,
+      LibellePlanningRessource: payload.label,
+      AnnotationPlanningRessource: payload.description,
       color: payload.color,
       borderColor: payload.borderColor,
       textColor: payload.textColor,
       code: payload.code,
       image: payload.image,
-      type: payload.type,
+      Type: 'autre',
       verrou: false,
       actif: payload.actif,
       category: payload.category,
@@ -392,19 +391,19 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
 
   const updateManualEventCategory = (id: number, category: string) => {
     itemsRef.current = itemsRef.current.map(e =>
-      (e.id === id && e.isManual) ? ({ ...e, category, isManual: true }) : e
+      (e.IdPlanningRessource === id && e.isManual) ? ({ ...e, category, isManual: true }) : e
     );
     refreshData();
   };
 
   const deleteManualEvent = (id: number) => {
-    itemsRef.current = itemsRef.current.filter(e => !(e.id === id && e.isManual));
+    itemsRef.current = itemsRef.current.filter(e => !(e.IdPlanningRessource === id && e.isManual));
     refreshData();
   };
 
   const toggleManualEvent = (id: number) => {
     itemsRef.current = itemsRef.current.map(e =>
-      e.id === id ? ({ ...e, actif: !(e as any).actif }) : e
+      e.IdPlanningRessource === id ? ({ ...e, actif: !(e as any).actif }) : e
     );
     refreshData();
   };
