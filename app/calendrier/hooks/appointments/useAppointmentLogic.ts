@@ -264,9 +264,47 @@ export const useAppointmentLogic = ({
         priority: maxPriority, // Nouveau rdv au-dessus de la pile
       };
       appointmentsRef.current.push(newApp);
-
+      
       if (api?.createEvenement) {
-        void api.createEvenement(newApp);
+        // Appel asynchrone au backend : l'API renvoie uniquement l'ID créé.
+        // On conserve l'événement temporaire en mémoire et on mettra à jour
+        // son `IdPlanningEvenement` quand la réponse reviendra.
+        api.createEvenement(newApp)
+          .then((resp) => {
+            try {
+              if (resp && resp.error === 0) {
+                // Le backend peut renvoyer soit { error:0, data: { id: 123 } }
+                // soit { error:0, data: 123 } selon l'implémentation.
+                const maybeId = resp.data;
+                const returnedId = Number(maybeId);
+                if (!Number.isNaN(returnedId)) {
+                  // Remplacer l'ID temporaire par l'ID serveur
+                  const idx = appointmentsRef.current.findIndex(a => a.IdPlanningEvenement === newApp.IdPlanningEvenement);
+                  if (idx !== -1) {
+                    appointmentsRef.current[idx].IdPlanningEvenement = returnedId;
+                    // Mettre à jour l'historique si nécessaire
+                    // Remplacer également dans l'historique si présent
+                    history.current = history.current.map(h => {
+                      if (h.appointment && h.appointment.IdPlanningEvenement === newApp.IdPlanningEvenement) {
+                        return { ...h, appointment: { ...h.appointment, IdPlanningEvenement: returnedId } };
+                      }
+                      return h;
+                    });
+                    onUpdate();
+                    notificationService.appointmentCreated(1);
+                  }
+                }
+              } else {
+                notificationService.error('Erreur création', 'Le serveur n\'a pas créé l\'événement.');
+              }
+            } catch (e) {
+              console.error('Erreur traitement réponse createEvenement', e);
+            }
+          })
+          .catch((err) => {
+            console.error('Erreur réseau createEvenement', err);
+            notificationService.error('Erreur réseau', 'Impossible de créer l\'événement sur le serveur');
+          });
       }
       
       if (saveToHistory) {
@@ -586,7 +624,7 @@ export const useAppointmentLogic = ({
   // --- INTERACTION EXTERNE (Drag & Drop, Search) ---
 
   const createAppointmentFromDrag = useCallback(
-    (title: string, date: number, intervalName: "morning" | "afternoon" | "day", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
+    async (title: string, date: number, intervalName: "morning" | "afternoon" | "day", employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => {
       const startHour = intervalName === "day" ? DAY_INTERVALS[0].startHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[1].startHour;
       const endHour = intervalName === "day" ? DAY_INTERVALS[0].endHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].endHour : HALF_DAY_INTERVALS[1].endHour;
       
@@ -612,15 +650,18 @@ export const useAppointmentLogic = ({
         return;
       }
 
-      let eventTypeId = event.IdPlanningRessource;
+      const eventTypeId = event.IdPlanningRessource;
 
+      // Crée un RDV localement (avec id temporaire). La logique de createAppointment
+      // va déclencher l'appel API en arrière-plan et mettre à jour l'ID lorsque la
+      // réponse serveur sera reçue.
       createAppointment(
-        startDate, 
-        endDate, 
-        employeeId, 
+        startDate,
+        endDate,
+        employeeId,
         eventTypeId,
         true,
-        typeEvent.toLowerCase() as 'chantier' | 'absence' | 'autre'
+        typeEvent.toLowerCase() as 'chantier' | 'absence' | 'autre',
       );
 
       setIsSearchOverlayOpen(false);
@@ -714,7 +755,7 @@ export const useAppointmentLogic = ({
         color: '#1E40AF',
         borderColor: '#1E40AF',
         textColor: '#FFFFFF',
-        actif: true,
+        Actif: true,
         Etiquettes: [],
         Type: 'autre',
         verrou: false,

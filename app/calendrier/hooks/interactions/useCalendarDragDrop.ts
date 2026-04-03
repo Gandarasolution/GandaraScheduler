@@ -65,6 +65,8 @@ export const useCalendarDragDrop = ({
     drop: (item: DragItem, monitor) => {
       if (!tableRef.current || rowBoundaries.length === 0 || dayInTimeline.length === 0) return;
 
+      console.log(item);
+      
       const clientOffset = monitor.getClientOffset();
       if (!clientOffset) return;
 

@@ -10,7 +10,7 @@ interface DraggableSourceProps {
   id: number; // ID unique de la source
   title: string;
   imageUrl?: string | undefined; // URL de l'image associée à la source, optionnelle
-  type: 'Chantier' | 'Absence' | 'Autre'; // Type de l'élément, pour catégoriser les sources
+  type: "Projet" | "Paie" | "Rubrique Perso"; // Type de l'élément, pour catégoriser les sources
   className?: string; // Classes CSS additionnelles
 }
 

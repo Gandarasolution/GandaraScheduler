@@ -122,7 +122,7 @@ interface BaseItem {
   borderColor: string;
   textColor: string;
   CodePlanningRessource: string;
-  image?: Image;
+  IdImage?: number;
   defaultDescription?: string;
   Etiquettes?: Tag[];
   isManual?: boolean;
@@ -150,9 +150,8 @@ export interface ChantierItem extends BaseItem {
 // Interface commune pour les attributs partagés entre Absence et Autre
 export interface CommonPaieAttributs extends BaseItem {
   verrou: boolean;
-  actif: boolean;
+  Actif: boolean;
   category: BaseItemCategory["name"];
-
 }
 
 export interface AbsenceItem extends CommonPaieAttributs {

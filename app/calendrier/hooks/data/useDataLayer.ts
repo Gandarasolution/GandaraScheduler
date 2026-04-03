@@ -6,9 +6,15 @@ import equipeService from '@/app/service/equipe.service';
 import rubriqueService from '@/app/service/rubrique.service';
 import imageService from '@/app/service/image.service';
 import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../../utils/filters";
-import { INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER, INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE } from '../../utils/constants';
+import {
+  INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER,
+  INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE,
+  SEARCH_DEFAULT_LIMIT,
+  SEARCH_MIN_QUERY_LENGTH,
+} from '../../utils/constants';
 import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
 import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
+import { useResourceSearch } from '../search';
 
 
 interface DataLayerProps {
@@ -23,7 +29,17 @@ interface DataLayerProps {
   isSearchOverlayOpen: boolean;
 }
 
-export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensions, calendarConfig, globalEmployeesRef, userIdNumber, userRole, isSearchOverlayOpen }: DataLayerProps) => {
+export const useDataLayer = ({
+  viewType,
+  filters,
+  searchInput,
+  searchQueryDimensions,
+  calendarConfig,
+  globalEmployeesRef,
+  userIdNumber,
+  userRole,
+  isSearchOverlayOpen,
+}: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const worker = useCalendarWorker();
   const [teams, setTeams] = useState<any[]>([]);
@@ -34,22 +50,41 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
   const [availableImages, setAvailableImages] = useState<Image[]>([]);
-  const [workerFilteredAppointments, setWorkerFilteredAppointments] = useState<Appointment[]>([]);
+  const [workerFilteredAppointments, setWorkerFilteredAppointments] = useState<Appointment[]>([]); 
+  const itemsSnapshot = useMemo(() => itemsRef.current, [appointmentsVersion]);
+
+  const selectedRdvTypes = useMemo(() => {
+    const selected = calendarConfig?.filterCategories?.evenements &&
+      typeof calendarConfig.filterCategories.evenements === 'object' &&
+      'selectedRdvTypes' in calendarConfig.filterCategories.evenements
+      ? calendarConfig.filterCategories.evenements.selectedRdvTypes
+      : [];
+
+    return selected.map(type => type.toLowerCase());
+  }, [calendarConfig]);
+
+
+  const {
+    results: remoteSearchResults,
+    isSearching,
+    error: searchError,
+    retrySearch,
+  } = useResourceSearch({
+    query: searchQueryDimensions,
+    types: selectedRdvTypes,
+    limit: SEARCH_DEFAULT_LIMIT,
+    fallbackItems: itemsSnapshot,
+    enabled: searchQueryDimensions.trim().length >= SEARCH_MIN_QUERY_LENGTH, // Activer la recherche distante seulement si la query est suffisamment longue
+  });
 
   useEffect(() => {
     let isMounted = true;
 
     const loadStaticData = async () => {
-      const [rubriquesResponse, imagesResponse] = await Promise.all([
-        rubriqueService.getRubriques(),
-        imageService.getImages(),
-      ]);
+      const imagesResponse = await imageService.getImages();
+    
 
       if (!isMounted) return;
-
-      if (rubriquesResponse?.error === 0 && Array.isArray(rubriquesResponse.data)) {
-        itemsRef.current = rubriquesResponse.data;
-      }
 
       if (imagesResponse?.error === 0 && Array.isArray(imagesResponse.data)) {
         setAvailableImages(imagesResponse.data);
@@ -119,11 +154,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
     return globalEmployeesRef.current;
   }, [calendarConfig, appointmentsVersion, userRole, userIdNumber, viewType]);
 
-  const baseFilteredItems = useMemo(() => {
-    if (!calendarConfig) return itemsRef.current;
-    // Retourner les données brutes, le filtrage structurel et la recherche seront appliqués après
-    return itemsRef.current;
-  }, [calendarConfig, appointmentsVersion]);
+
 
   const baseFilteredAppointments = useMemo(() => {
     if (!calendarConfig || isSearchOverlayOpen) return appointmentsRef.current;
@@ -141,7 +172,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
     }
     
     // Filtre par type de RDV (logique métier)
-    const selectedRdvTypes = calendarConfig.filterCategories?.evenements && 
+    const selectedRdvTypes = calendarConfig.filterCategories?.evenements &&
       typeof calendarConfig.filterCategories.evenements === 'object' &&
       'selectedRdvTypes' in calendarConfig.filterCategories.evenements
       ? calendarConfig.filterCategories.evenements.selectedRdvTypes
@@ -179,15 +210,6 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
     );
   }, [baseFilteredEmployees, searchInput, viewType, searchUtils, filters]);
 
-  const filteredItems = useMemo(() => {    
-    // Toujours appliquer les filtres, même sans recherche
-    // La fonction applyFiltersToItem gère elle-même le cas où searchQuery est vide
-    return searchUtils.applyFiltersToItem(
-      baseFilteredItems,
-      searchQueryDimensions,
-      filters
-    );
-  }, [baseFilteredItems, searchQueryDimensions, searchUtils, filters]);
 
   const filteredAppointments = useMemo(() => {
     // Si pas de recherche, retourner la version de base
@@ -255,17 +277,27 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
   // --- Filtrage Secondaire (Tableaux) ---
   // Cette fonction prépare les données pour DataTableFrame
   const getTableItems = () => {
-     if (viewType === 'chantier-table') return filteredItems.filter(e => e.Type === 'chantier');
-     if (viewType === 'paie-table') return filteredItems.filter(e => e.Type !== 'chantier');
-     return filteredEmployees.map(emp => ({
-        IdPersonnel: emp.IdPersonnel,
-        image: emp.image,
-        Code: emp.Code,
-        Nom: emp.Nom,
-        Prenom: emp.Prenom,
-        Type: emp.Type,
-        Equipe: emp.Equipe
-     }) as User);
+    //  if (viewType === 'chantier-table') return filteredItems.filter(e => e.Type === 'projet');
+    //  if (viewType === 'paie-table') return filteredItems.filter(e => e.Type !== 'paie');
+    //  return filteredEmployees.map(emp => ({
+    //     IdPersonnel: emp.IdPersonnel,
+    //     image: emp.image,
+    //     Code: emp.Code,
+    //     Nom: emp.Nom,
+    //     Prenom: emp.Prenom,
+    //     Type: emp.Type,
+    //     Equipe: emp.Equipe
+    //  }) as User);
+
+    return filteredEmployees.map(emp => ({
+      IdPersonnel: emp.IdPersonnel,
+      image: emp.image,
+      Code: emp.Code,
+      Nom: emp.Nom,
+      Prenom: emp.Prenom,
+      Type: emp.Type,
+      Equipe: emp.Equipe
+    }) as User);
   };
 
   const getTableStructure = (): CategoryStructure[] => {
@@ -379,7 +411,7 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
       image: payload.image,
       Type: 'autre',
       verrou: false,
-      actif: payload.actif,
+      Actif: payload.actif,
       category: payload.category,
       isManual: true
     } as Item;
@@ -411,11 +443,14 @@ export const useDataLayer = ({ viewType, filters, searchInput,searchQueryDimensi
 
   return {
     isLoading,
+    isSearching,
+    searchError,
+    retrySearch,
+    searchResults: remoteSearchResults,
     itemsRef,
     appointmentsRef,
     filteredEmployees,
     filteredAppointments,
-    filteredItems,
     availableImages,
     initialTeams: teams,
     updateEmployeeGroup,

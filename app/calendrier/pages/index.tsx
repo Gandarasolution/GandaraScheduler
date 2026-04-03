@@ -159,16 +159,18 @@ export default function HomePage({
   }, [dataLayer]);
 
   const searchableItems = useMemo(() => {
-    return dataLayer.filteredItems
+    const sourceItems = dataLayer.searchResults;
+    
+    return sourceItems
       .filter(item => {
         // 1. Vérifier les permissions - Ne montrer que les items que l'utilisateur peut créer
-        if (!canCreateEvent(user.role, item.Type)) {
-          return false;
-        }
+        // if (!canCreateEvent(user.role, item.Type)) {
+        //   return false;
+        // }
 
         // 2. Filtrer les items désactivés (pour les types absence/autre)
-        if ('actif' in item) {
-          return item.actif !== false;
+        if ('Actif' in item) {
+          return item.Actif !== false || item.Actif !== null;
         }
         return true; // Les chantiers n'ont pas de champ actif, donc toujours actifs
       })
@@ -177,9 +179,7 @@ export default function HomePage({
         id: item.IdPlanningRessource,
         label: item.LibellePlanningRessource,
       }));
-  }, [dataLayer.filteredItems, user.role]);
-
-  //console.log(searchableItems);
+  }, [dataLayer.searchResults, user.role]);
   
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
   const timeline = useTimeline({
@@ -421,11 +421,11 @@ export default function HomePage({
                 ) : viewState.viewType === 'manual-event-table' ? (
                   <Suspense fallback={<LoadingFallback message="Chargement des événements..." />}>
                     <ManualEventsManager
-                      events={dataLayer.filteredItems}
+                      events={dataLayer.searchResults}
                       onDeleteRequest={(item) => {
                         // Vérifier si l'item est utilisé dans le planning
                         const result = appointmentLogic.handleDeleteDimension(item.IdPlanningRessource);
-                        const isActive = 'actif' in item ? (item as CommonPaieAttributs).actif : true;
+                        const isActive = 'Actif' in item ? (item as CommonPaieAttributs).Actif : true;
                         // Toujours ouvrir la modal de confirmation
                         setDeleteConfirmData({ 
                           item, 
@@ -648,19 +648,22 @@ export default function HomePage({
             searchInput={viewState.dimensionSearchInput}
             setSearchInput={viewState.setDimensionsSearchInput}
             items={searchableItems}
+            isLoading={dataLayer.isSearching}
+            errorMessage={dataLayer.searchError}
+            onRetry={dataLayer.retrySearch}
             onItemAction={appointmentLogic.selectedCell ? appointmentLogic.handleSearchItemAction : undefined}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
               noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
               noResults: { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
-            renderItem={(event: any, index: number) => (              
+            renderItem={(event: any, index: number) => (                            
               <DraggableSource
                 key={`${event.label}-${event.id}-${index}`}
-                id={event.id as number}
+                id={event.label as number}
                 imageUrl={event.image?.image}
                 title={event.label}
-                type={(event as any).type as "Chantier" | "Absence" | "Autre"}
+                type={(event as any).Type as "Projet" | "Paie" | "Rubrique Perso"}
                 className="w-full"
               />
             )}

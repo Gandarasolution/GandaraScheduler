@@ -121,6 +121,12 @@ type SearchOverlayProps<T extends SearchableItem = SearchableItem> = {
     right?: string;
     bottom?: string;
   };
+  /** État de chargement pour la recherche distante */
+  isLoading?: boolean;
+  /** Message d'erreur à afficher */
+  errorMessage?: string | null;
+  /** Callback de retry en cas d'erreur */
+  onRetry?: () => void;
 };
 
 /**
@@ -142,7 +148,10 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
   style,
   maxWidth = '2xl',
   maxHeight = '50vh',
-  position = { top: '35%', left: '32%' }
+  position = { top: '35%', left: '32%' },
+  isLoading = false,
+  errorMessage = null,
+  onRetry,
 }: SearchOverlayProps<T>) => {
   const dragDropManager = useDragDropManager();
   const [isDragging, setIsDragging] = useState(false);
@@ -252,12 +261,46 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
           className="flex-1 overflow-y-auto px-2 sm:px-2 py-2 bg-secondary-bg rounded-2xl shadow-lg border border-light text-primary"
           style={{ maxHeight }}
         >
+          {searchInput.trim() !== '' && (
+            <div className="px-2 pb-2 text-xs sm:text-sm text-primary/70 flex items-center justify-between">
+              <span>
+                {isLoading && 'Recherche en cours...'}
+              </span>
+              {isLoading && <span className="h-2 w-2 rounded-full bg-primary animate-ping" />}
+            </div>
+          )}
+
           {searchInput.trim() === '' ? (
             // État: aucune recherche
             <div className="text-center py-4 sm:py-8">
               {defaultEmptyStates.noInput.icon}
               <p className="text-base sm:text-lg font-medium mb-2">{defaultEmptyStates.noInput.title}</p>
               <p className="text-xs sm:text-sm">{defaultEmptyStates.noInput.description}</p>
+            </div>
+          ) : isLoading ? (
+            <div className="grid gap-2 sm:gap-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={`skeleton-${index}`}
+                  className="rounded-xl border border-light bg-primary-50/30 px-3 py-3 animate-pulse"
+                >
+                  <div className="h-3 w-1/2 bg-light rounded mb-2" />
+                  <div className="h-3 w-1/3 bg-light rounded" />
+                </div>
+              ))}
+            </div>
+          ) : errorMessage ? (
+            <div className="text-center py-6 sm:py-8">
+              <p className="text-sm sm:text-base mb-3">{errorMessage}</p>
+              {onRetry && (
+                <button
+                  type="button"
+                  className="px-3 py-1.5 rounded-lg border border-light hover:bg-primary-50 transition-colors"
+                  onClick={onRetry}
+                >
+                  Réessayer
+                </button>
+              )}
             </div>
           ) : items.length === 0 ? (
             // État: aucun résultat
@@ -271,7 +314,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
             <div className="grid gap-2 sm:gap-3">
               {items.map((item, index) => (
                 <div 
-                  key={`${item.id}-${index}`} 
+                  key={`${item.IdPlanningRessource}-${index}`} 
                   className="w-full flex justify-between hover:bg-primary-50 rounded-xl transition-colors px-1 sm:px-2"
                 >
                   {/* Rendu personnalisé ou rendu par défaut */}
@@ -279,7 +322,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
                     renderItem(item, index)
                   ) : (
                     <div className="flex-1 py-1.5 sm:py-2">
-                      <span className="poppins text-sm sm:text-base">{item.label}</span>
+                      <span className="poppins text-sm sm:text-base">{item.LibellePlanningRessource}</span>
                     </div>
                   )}
 
