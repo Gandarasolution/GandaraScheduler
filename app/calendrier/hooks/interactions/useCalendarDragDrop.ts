@@ -137,7 +137,7 @@ export const useCalendarDragDrop = ({
       // Trouver tous les rdv qui chevauchent la nouvelle position
       const overlappingAppointments = appointmentsWithTop.filter(app => 
         app.IdPlanningEvenement !== item.id &&
-        app.employee.IdPersonnel === targetEmployeeId &&
+        app.Employee.IdPersonnel === targetEmployeeId &&
         app.DebutPlanningEvenement < newEnd &&
         app.FinPlanningEvenement > targetDate
       );
@@ -154,14 +154,14 @@ export const useCalendarDragDrop = ({
         // Récupérer l'item d'origine
         const originalItem = appointmentsWithTop.find(a => a.IdPlanningEvenement === item.id);
         const isAlreadyPresent = originalItem && 
-                               originalItem.employee.IdPersonnel === targetEmployeeId && 
+                               originalItem.Employee.IdPersonnel === targetEmployeeId && 
                                originalItem.DebutPlanningEvenement < newEnd && 
                                originalItem.FinPlanningEvenement > targetDate;
 
         // Trouver les rdv à la position cible
         const rdvAtTargetPosition = overlappingAppointments
-          .sort((a, b) => (a.priority || 0) - (b.priority || 0))
-          .filter(app => (app.priority ?? 0) === targetPriorityIndex);
+          .sort((a, b) => (a.PlanningEvenementPriorite || 0) - (b.PlanningEvenementPriorite || 0))
+          .filter(app => (app.PlanningEvenementPriorite ?? 0) === targetPriorityIndex);
           
         const startDateRdvTarget = rdvAtTargetPosition[0]?.DebutPlanningEvenement;
         const endDateRdvTarget = rdvAtTargetPosition[rdvAtTargetPosition.length - 1]?.FinPlanningEvenement;
@@ -170,26 +170,26 @@ export const useCalendarDragDrop = ({
         const rdvatOriginalPosition = appointmentsWithTop
           .filter(app =>
             app.IdPlanningEvenement !== item.id &&
-            app.employee.IdPersonnel === originalItem?.employee.IdPersonnel &&
+            app.Employee.IdPersonnel === originalItem?.Employee.IdPersonnel &&
             app.DebutPlanningEvenement < endDateRdvTarget &&
             app.FinPlanningEvenement > startDateRdvTarget &&
-            (app.priority ?? 0) === (originalItem?.priority ?? 0)
+            (app.PlanningEvenementPriorite ?? 0) === (originalItem?.PlanningEvenementPriorite ?? 0)
           );          
         
         if (isAlreadyPresent) {
           if (rdvAtTargetPosition.length > 0) {
             // Interchange des priorités
-            newPriority = (rdvAtTargetPosition[0].priority ?? 0);
+            newPriority = (rdvAtTargetPosition[0].PlanningEvenementPriorite ?? 0);
             
             rdvAtTargetPosition.forEach(appToMove => {
               onAppointmentMoved(
                 appToMove.IdPlanningEvenement,
                 appToMove.DebutPlanningEvenement,
                 appToMove.FinPlanningEvenement,
-                appToMove.employee.IdPersonnel,
+                appToMove.Employee.IdPersonnel,
                 undefined,
                 false,
-                (originalItem?.priority ?? 0)
+                (originalItem?.PlanningEvenementPriorite ?? 0)
               );
             });
 
@@ -200,7 +200,7 @@ export const useCalendarDragDrop = ({
                     appToAdjust.IdPlanningEvenement,
                     appToAdjust.DebutPlanningEvenement,
                     appToAdjust.FinPlanningEvenement,
-                    appToAdjust.employee.IdPersonnel,
+                    appToAdjust.Employee.IdPersonnel,
                     undefined,
                     false,
                     newPriority
@@ -213,7 +213,7 @@ export const useCalendarDragDrop = ({
           }
         } else {
           if (rdvAtTargetPosition.length > 0) {
-            newPriority = (rdvAtTargetPosition[0].priority ?? 0) + 1;
+            newPriority = (rdvAtTargetPosition[0].PlanningEvenementPriorite ?? 0) + 1;
           } else {
             newPriority = targetPriorityIndex;
           }

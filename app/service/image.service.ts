@@ -1,7 +1,7 @@
 import { getRequest, postRequest } from "./axios.service";
 
-async function getImages() {
-  return await getRequest('/api/images', 'getImages');
+async function getImage(id: number) {
+  return await getRequest(`/api/images/${id}`, 'getImage');
 }
 
 async function uploadImage(data: any) {
@@ -9,6 +9,6 @@ async function uploadImage(data: any) {
 }
 
 export default {
-  getImages,
+  getImage,
   uploadImage,
 };

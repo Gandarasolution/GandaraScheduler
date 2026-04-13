@@ -35,7 +35,7 @@ export const customRenderersFactory = (
             Ressource: chantierItem,
             DebutPlanningEvenement: 0,
             FinPlanningEvenement: 1000,
-            employee: employees[0],
+            Employee: employees[0],
           }}
           isFullDay={false}
           isMobile={false}
@@ -51,7 +51,7 @@ export const customRenderersFactory = (
               Ressource: chantierItem,
               DebutPlanningEvenement: 0,
               FinPlanningEvenement: 1000,
-              employee: employees[0],
+              Employee: employees[0],
             }
             setSelectedAppointment(newAppointment);
             handleOpenEditModal(newAppointment);

@@ -18,7 +18,7 @@ export const useCalendarLayout = ({
   // Calcule la hauteur nécessaire pour chaque cellule employé/jour
   const employeeHeights = useMemo(() => {
     return employees.map(employee => {
-      const employeeAppointments = appointments.filter(app => app.employee.IdPersonnel === employee.IdPersonnel);
+      const employeeAppointments = appointments.filter(app => app.Employee.IdPersonnel === employee.IdPersonnel);
       
       let maxOverallOverlap = 0;
       if (employeeAppointments.length > 0) {
@@ -65,7 +65,7 @@ export const useCalendarLayout = ({
     const result: (Appointment & { top: number, _dayKey?: number })[] = [];
 
     employees.forEach(emp => {
-      const empAppointments = appointments.filter(app => app.employee.IdPersonnel === emp.IdPersonnel);
+      const empAppointments = appointments.filter(app => app.Employee.IdPersonnel === emp.IdPersonnel);
       
       empAppointments.forEach(app => {
           // Trouver tous les rdv qui chevauchent
@@ -74,12 +74,12 @@ export const useCalendarLayout = ({
           );
           // Compter combien ont une priorité inférieure
           const lowerPriorityTab = overlapping.filter(other => 
-              ((other.priority ?? 0) < (app.priority ?? 0))
+              ((other.PlanningEvenementPriorite ?? 0) < (app.PlanningEvenementPriorite ?? 0))
           )
           let lowerPriorityCount = 0;
           if (lowerPriorityTab.length > 0) {              
             lowerPriorityTab.forEach(lpApp => {
-              const priorityValue = lpApp.priority ?? 0;
+              const priorityValue = lpApp.PlanningEvenementPriorite ?? 0;
               if (priorityValue >= lowerPriorityCount) {
                 lowerPriorityCount = priorityValue + 1;
               }

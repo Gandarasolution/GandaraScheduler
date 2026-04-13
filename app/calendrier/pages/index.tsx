@@ -27,6 +27,7 @@ import {
   CalendarModals,
   DraggableSource,
 } from '@/app/calendrier/components';
+import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOverlay';
 
 
 // --- COMPOSANTS UI AVEC CODE SPLITTING ---
@@ -250,6 +251,14 @@ export default function HomePage({
     viewState.setIsSearchOverlayOpen(true);
   }, [viewState.setIsSearchOverlayOpen]);
 
+  const handleSearchOverlayItemAction = useCallback((item: SearchableItem) => {
+    if (!appointmentLogic.selectedCell) {
+      return;
+    }
+    
+    appointmentLogic.handleSearchItemAction(item as unknown as Item);
+  }, [appointmentLogic.selectedCell, appointmentLogic.handleSearchItemAction, dataLayer.itemsRef]);
+
   // --- CONFIGURATION DES FILTRES (Pour FilterModal) ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
   
@@ -441,7 +450,7 @@ export default function HomePage({
                           Ressource: item,
                           DebutPlanningEvenement: 0,
                           FinPlanningEvenement: 1000,
-                          employee: globalEmployeesRef.current[0],
+                          Employee: globalEmployeesRef.current[0],
                         });
                         appointmentLogic.setSelectedItem(item);
                         appointmentLogic.setIsModalOpen(true);
@@ -651,7 +660,7 @@ export default function HomePage({
             isLoading={dataLayer.isSearching}
             errorMessage={dataLayer.searchError}
             onRetry={dataLayer.retrySearch}
-            onItemAction={appointmentLogic.selectedCell ? appointmentLogic.handleSearchItemAction : undefined}
+            onItemAction={handleSearchOverlayItemAction}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
               noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },

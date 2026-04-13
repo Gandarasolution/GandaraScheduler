@@ -63,7 +63,7 @@ export function applyFiltersToAppointments(
   
   return appointments.filter(appointment => {
     // Trouver l'employé associé au rendez-vous avec O(1) lookup
-    const employee = employeeMap.get(Number(appointment.employee?.IdPersonnel));
+    const employee = employeeMap.get(Number(appointment.Employee?.IdPersonnel));
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();

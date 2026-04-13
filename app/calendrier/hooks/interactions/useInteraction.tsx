@@ -218,7 +218,7 @@ export const useInteraction = ({
                  Ressource: item,
                  DebutPlanningEvenement: Date.now(),
                  FinPlanningEvenement: Date.now(),
-                 employee: {
+                 Employee: {
                      IdPersonnel: 0,
                      Nom: '',
                      Prenom: '',

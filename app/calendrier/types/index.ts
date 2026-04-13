@@ -186,7 +186,7 @@ export interface Appointment{
   /** Date et heure de fin du rendez-vous */
   FinPlanningEvenement: number;
   /** ID de l'employé assigné au rendez-vous */
-  employee: User;
+  Employee: User;
   /** Type de rendez-vous */
   Type: 'chantier' | 'absence' | 'autre';
   /** ID de l'événement auquel ce RDV est lié */
@@ -194,7 +194,7 @@ export interface Appointment{
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
   Etiquette?: Tag;
   /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */
-  priority?: number;
+  PlanningEvenementPriorite?: number;
 }
 
 
@@ -364,7 +364,7 @@ export interface User{
   /** Thème préféré de l'utilisateur */
   theme?: string;
   /** Image de profil de l'utilisateur */
-  image?: Image;
+  IdImage?: number;
   /** Email de l'utilisateur */
   Email?: string;
   /** Statut actif de l'utilisateur (défaut: true) */

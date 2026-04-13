@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { User } from '../../types';
+import { Image } from '../ui/Image';
+import { getCachedImageById } from '../../utils/imageCacheStore';
 
 interface UserMenuProps {
   user: User;
@@ -9,6 +11,10 @@ interface UserMenuProps {
 
 export default function UserMenu({ user }: UserMenuProps) {
   const router = useRouter();  
+  const cachedUserImage = user.IdImage ? getCachedImageById(user.IdImage) : undefined;
+  const avatarSource = user.IdImage
+    ? (cachedUserImage?.image || user.IdImage)
+    : null;
 
   const handleLogout = () => {
     // Supprimer les données de localStorage
@@ -24,10 +30,9 @@ export default function UserMenu({ user }: UserMenuProps) {
       {/* Avatar */}
       <div className="relative group">
         <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold cursor-pointer poppins">
-          {user.image ? (
-            <img
-              src={user.image.image}
-              alt="Avatar"
+          {avatarSource ? (
+            <Image
+              image={avatarSource}
               className="h-10 w-10 rounded-full object-cover"
             />
           ) : (

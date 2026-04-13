@@ -19,6 +19,8 @@ async function getEvenementByUser(id: string, type: 'Salarie' | 'Interim') {
 
 
 async function createEvenement(data: any) {
+    console.log(data);
+    
     return await postRequest(`/api/event`, data, 'createEvenement');
 }
 

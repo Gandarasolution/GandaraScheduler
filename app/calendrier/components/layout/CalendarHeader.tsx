@@ -378,7 +378,7 @@ export const CalendarHeader = memo(({
                     AnnotationPlanningEvenement: '',
                     DebutPlanningEvenement: 0,
                     FinPlanningEvenement: 1,
-                    employee: {} as User,
+                    Employee: {} as User,
                     Type: 'autre',
                     Ressource: {
                       IdRessource: -1,

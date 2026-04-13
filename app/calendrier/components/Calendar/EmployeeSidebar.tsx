@@ -15,6 +15,7 @@
 import React, { memo } from 'react';
 import { User, CalendarConfig } from '../../types';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
+import { Image as CalendarImage } from '../ui/Image';
 import { 
   TIMELINE_HEADERITEMS_CELL_HEIGHT, 
   CONTAINER_PADDING,
@@ -215,12 +216,19 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                     }}
                   >
                     <div className="relative">
-                      <img
-                        src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`}
-                        alt={employee.Nom}
-                        className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'Interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
-                        onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`; }}
-                      />
+                      {employee.IdImage ? (
+                        <CalendarImage
+                          image={employee.IdImage}
+                          className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'Interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+                        />
+                      ) : (
+                        <img
+                          src={`https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`}
+                          alt={employee.Nom}
+                          className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'Interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+                          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`; }}
+                        />
+                      )}
                       {employee.Type === 'Interim' && (
                         <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
                       )}

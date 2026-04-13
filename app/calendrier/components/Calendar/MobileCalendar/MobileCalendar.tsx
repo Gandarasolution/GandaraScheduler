@@ -29,6 +29,8 @@ import { useNotifications, useCalendarWorker } from '../../../hooks';
 import notificationApiService from '@/app/service/notificationApi.service';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
 import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
+import { Image } from '../../ui/Image';
+import { getCachedImageById } from '../../../utils/imageCacheStore';
 
 // Lazy loading des composants lourds
 
@@ -62,6 +64,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
+  const cachedUserImage = user.IdImage ? getCachedImageById(user.IdImage) : undefined;
 
   // ----- HOOKS PERSONNALISÉS -----
   const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
@@ -94,7 +97,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
       const hasMonthlyAppointments = monthlyAppointments.some(app => 
-        app.employee.IdPersonnel === emp.IdPersonnel
+        app.Employee.IdPersonnel === emp.IdPersonnel
       );
       
       return hasMonthlyAppointments;
@@ -121,11 +124,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       // Filtrer par rôle : users et viewers ne voient que leurs propres RDV
       if (user.role === 'user' || user.role === 'viewer') {
-        filteredApps = appointments.filter(app => app.employee.IdPersonnel === user.IdPersonnel);
+        filteredApps = appointments.filter(app => app.Employee.IdPersonnel === user.IdPersonnel);
       }
       
       const filtered = filteredApps.filter(app => {
-        const matchesEmployee = !selectedEmployee || app.employee.IdPersonnel === selectedEmployee.IdPersonnel;
+        const matchesEmployee = !selectedEmployee || app.Employee.IdPersonnel === selectedEmployee.IdPersonnel;
         const isInMonth = app.DebutPlanningEvenement <= monthEnd && app.FinPlanningEvenement >= monthStart;
         return matchesEmployee && isInMonth;
       });
@@ -295,12 +298,12 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       AnnotationPlanningEvenement: '',
       DebutPlanningEvenement: startOfSelectedDay,
       FinPlanningEvenement: endOfSelectedDay,
-      employee: appointmentEmployee,
+      Employee: appointmentEmployee,
       Type: 'chantier',
       Ressource: {
         IdRessource: 0,
       } as unknown as Item,
-      priority: 0,
+      PlanningEvenementPriorite: 0,
     };
   };
 
@@ -377,12 +380,9 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 className="relative w-8 h-8 rounded-full overflow-hidden"
                 style={{ borderWidth: '1px', borderColor: 'var(--border-light)' }}
               >
-                <img 
-                  src={user.image?.image || '/default-avatar.png'}
-                  alt="User"
-                  width={32}
-                  height={32}
-                  className="object-cover"
+                <Image
+                  image={user.IdImage ? (cachedUserImage?.image || user.IdImage) : '/default-avatar.png'}
+                  className="w-8 h-8 object-cover"
                 />
               </div>
               <span 

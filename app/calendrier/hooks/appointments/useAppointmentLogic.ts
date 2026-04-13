@@ -107,15 +107,15 @@ export const useAppointmentLogic = ({
     // Trouver tous les rdv qui chevauchent (même employé et même période)
     const overlappingAppointments = appointmentsRef.current.filter(app => 
       app.IdPlanningEvenement !== movedAppointmentId &&
-      app.employee.IdPersonnel === employeeId &&
+      app.Employee.IdPersonnel === employeeId &&
       app.DebutPlanningEvenement < endDate &&
       app.FinPlanningEvenement > startDate
     );
 
     // Réorganiser : tous les rdv avec priorité >= newPriority doivent être décalés
     overlappingAppointments.forEach(app => {
-      if ((app.priority ?? 0) >= newPriority) {        
-        app.priority = (app.priority ?? 0) + 1;
+      if ((app.PlanningEvenementPriorite ?? 0) >= newPriority) {        
+        app.PlanningEvenementPriorite = (app.PlanningEvenementPriorite ?? 0) + 1;
       }
     });
   }, [appointmentsRef]);
@@ -219,7 +219,7 @@ export const useAppointmentLogic = ({
 
       appointmentsRef.current = appointmentsRef.current.map((app) =>
         app.IdPlanningEvenement === id
-          ? { ...app, DebutPlanningEvenement: newStartDate, FinPlanningEvenement: newEndDate, employee: employeesRef.current.find(emp => emp.IdPersonnel === newEmployeeId) || app.employee, priority: newPriority !== undefined ? newPriority : app.priority }
+          ? { ...app, DebutPlanningEvenement: newStartDate, FinPlanningEvenement: newEndDate, Employee: employeesRef.current.find(emp => emp.IdPersonnel === newEmployeeId) || app.Employee, priority: newPriority !== undefined ? newPriority : app.PlanningEvenementPriorite }
           : app
       );
 
@@ -241,29 +241,15 @@ export const useAppointmentLogic = ({
   ) => {
       const id = ++idCounter.current;
       
-      // Calculer la priorité par défaut basée sur les rdv existants qui chevauchent
-      const overlappingAppointments = appointmentsRef.current.filter(app =>
-        app.employee.IdPersonnel === employeeId &&
-        app.DebutPlanningEvenement < endDate &&
-        app.FinPlanningEvenement > startDate
-      );
-      const maxPriority = priority !== undefined 
-        ? priority 
-        : (overlappingAppointments.length > 0
-          ? Math.max(...overlappingAppointments.map(app => app.priority || 0)) + 1
-          : 0);
-      
-      const newApp: Appointment = {
+      const newApp  = {
         IdPlanningEvenement: id,
         AnnotationPlanningEvenement: description || `Nouveau rendez-vous`,
         DebutPlanningEvenement: startDate,
         FinPlanningEvenement: endDate,
-        employee: employeesRef.current.find(emp => emp.IdPersonnel === employeeId) as User,
+        Employee: employeesRef.current.find(emp => emp.IdPersonnel === employeeId) as User,
         Type: type,
-        Ressource: eventsRef.current.find(e => e.IdPlanningRessource === eventId) as Item,
-        priority: maxPriority, // Nouveau rdv au-dessus de la pile
+        IdPlanningRessource: eventId,
       };
-      appointmentsRef.current.push(newApp);
       
       if (api?.createEvenement) {
         // Appel asynchrone au backend : l'API renvoie uniquement l'ID créé.
@@ -275,25 +261,14 @@ export const useAppointmentLogic = ({
               if (resp && resp.error === 0) {
                 // Le backend peut renvoyer soit { error:0, data: { id: 123 } }
                 // soit { error:0, data: 123 } selon l'implémentation.
-                const maybeId = resp.data;
-                const returnedId = Number(maybeId);
-                if (!Number.isNaN(returnedId)) {
-                  // Remplacer l'ID temporaire par l'ID serveur
-                  const idx = appointmentsRef.current.findIndex(a => a.IdPlanningEvenement === newApp.IdPlanningEvenement);
-                  if (idx !== -1) {
-                    appointmentsRef.current[idx].IdPlanningEvenement = returnedId;
-                    // Mettre à jour l'historique si nécessaire
-                    // Remplacer également dans l'historique si présent
-                    history.current = history.current.map(h => {
-                      if (h.appointment && h.appointment.IdPlanningEvenement === newApp.IdPlanningEvenement) {
-                        return { ...h, appointment: { ...h.appointment, IdPlanningEvenement: returnedId } };
-                      }
-                      return h;
-                    });
-                    onUpdate();
-                    notificationService.appointmentCreated(1);
-                  }
+                const newA = resp.data;
+                appointmentsRef.current.push(newA);
+                onUpdate();
+                notificationService.appointmentCreated(1);
+                if (saveToHistory) {
+                  saveAppointmentState(newA, 'create');
                 }
+                
               } else {
                 notificationService.error('Erreur création', 'Le serveur n\'a pas créé l\'événement.');
               }
@@ -307,9 +282,7 @@ export const useAppointmentLogic = ({
           });
       }
       
-      if (saveToHistory) {
-        saveAppointmentState(newApp, 'create');
-      }
+      
       
       onUpdate();
       return newApp;
@@ -320,169 +293,169 @@ export const useAppointmentLogic = ({
   // --- LOGIQUE MÉTIER COMPLEXE (Move, Split, Save) ---
 
   const moveAppointment = useCallback((id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection: 'left' | 'right' = 'right', saveToHistory: boolean = true, newPriority?: number) => {
-      const appointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
-      if (!appointment) return;
-      if (employeesRef.current.find(emp => emp.IdPersonnel === newEmployeeId)?.Actif === false) {
-        notificationService.error('Action interdite', `L'employé sélectionné est désactivé et ne peut plus être assigné à un rendez-vous.`);
-        return;
-      }
+      // const appointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
+      // if (!appointment) return;
+      // if (employeesRef.current.find(emp => emp.IdPersonnel === newEmployeeId)?.Actif === false) {
+      //   notificationService.error('Action interdite', `L'employé sélectionné est désactivé et ne peut plus être assigné à un rendez-vous.`);
+      //   return;
+      // }
 
-      const previousAppointment = saveToHistory ? { ...appointment } : undefined;
+      // const previousAppointment = saveToHistory ? { ...appointment } : undefined;
       
-      // Si une nouvelle priorité est fournie, réorganiser les priorités avant d'appliquer
-      if (newPriority !== undefined) {
-        reorganizePriorities(id, newPriority, newEmployeeId, newStartDate, newEndDate);
-        appointment.priority = newPriority;
-      }      
+      // // Si une nouvelle priorité est fournie, réorganiser les priorités avant d'appliquer
+      // if (newPriority !== undefined) {
+      //   reorganizePriorities(id, newPriority, newEmployeeId, newStartDate, newEndDate);
+      //   appointment.PlanningEvenementPriorite = newPriority;
+      // }      
 
-      const state = timelineStateRef.current;
+      // const state = timelineStateRef.current;
 
-      // Calcul des intervalles (Jours/Demi-journées)
-      const intervalType = state.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+      // // Calcul des intervalles (Jours/Demi-journées)
+      // const intervalType = state.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
       
 
-      const days = getWorkedDayIntervals(
-        newStartDate, 
-        newEndDate,
-        intervalType,
-        state.respectNonWorkingDays,
-        (state.isDisplayWeekend && state.includeWeekend) || !state.isDisplayWeekend,
-        state.nonWorkingDates
-      );  
+      // const days = getWorkedDayIntervals(
+      //   newStartDate, 
+      //   newEndDate,
+      //   intervalType,
+      //   state.respectNonWorkingDays,
+      //   (state.isDisplayWeekend && state.includeWeekend) || !state.isDisplayWeekend,
+      //   state.nonWorkingDates
+      // );  
 
-      if (days.length === 0) return;
+      // if (days.length === 0) return;
       
-      const createdAppointments: Appointment[] = [];
+      // const createdAppointments: Appointment[] = [];
       
-      // Helper pour traiter les jours
-      const processIntervals = (startIndex: number, endIndex: number, step: number, mainIndex: number) => {
-        // 1. Modifier le RDV principal (le premier jour)
-        const mainDay = days[mainIndex];
-        const mainStart = resizeDirection === 'left' ? mainDay.start : newStartDate;
-        const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
+      // // Helper pour traiter les jours
+      // const processIntervals = (startIndex: number, endIndex: number, step: number, mainIndex: number) => {
+      //   // 1. Modifier le RDV principal (le premier jour)
+      //   const mainDay = days[mainIndex];
+      //   const mainStart = resizeDirection === 'left' ? mainDay.start : newStartDate;
+      //   const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
         
         
-        // Note: On ne sauvegarde pas l'historique ici, on le fait à la fin pour grouper
-        onResize(appointment.IdPlanningEvenement, mainStart, mainEnd, newEmployeeId, false);
+      //   // Note: On ne sauvegarde pas l'historique ici, on le fait à la fin pour grouper
+      //   onResize(appointment.IdPlanningEvenement, mainStart, mainEnd, newEmployeeId, false);
         
-        // 2. Créer des nouveaux RDV pour les jours suivants (Split)
-        for (let i = startIndex; i !== endIndex; i += step) {
-          const day = days[i];
-          const newApp = createAppointment(
-            day.start, 
-            day.end,
-            newEmployeeId, 
-            appointment.Ressource.IdPlanningRessource,
-            false, // Pas d'historique individuel
-            appointment.Type,
-          );
-          if (newApp) createdAppointments.push(newApp);
-        }
-      };
+      //   // 2. Créer des nouveaux RDV pour les jours suivants (Split)
+      //   for (let i = startIndex; i !== endIndex; i += step) {
+      //     const day = days[i];
+      //     const newApp = createAppointment(
+      //       day.start, 
+      //       day.end,
+      //       newEmployeeId, 
+      //       appointment.Ressource.IdPlanningRessource,
+      //       false, // Pas d'historique individuel
+      //       appointment.Type,
+      //     );
+      //     if (newApp) createdAppointments.push(newApp);
+      //   }
+      // };
       
-      if (resizeDirection === 'right') {
-        processIntervals(1, days.length, 1, 0);
-      } else {
-        processIntervals(days.length - 2, -1, -1, days.length - 1);
-      }
+      // if (resizeDirection === 'right') {
+      //   processIntervals(1, days.length, 1, 0);
+      // } else {
+      //   processIntervals(days.length - 2, -1, -1, days.length - 1);
+      // }
       
-      // Sauvegarde groupée dans l'historique
-      if (saveToHistory && previousAppointment) {
-        const updatedAppointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
-        if (updatedAppointment) {
-          const actionType = createdAppointments.length > 0 ? 'resize_split' : 'move';
-          saveAppointmentState(updatedAppointment, actionType, previousAppointment, createdAppointments);
-        }
-      }
-        onUpdate();
+      // // Sauvegarde groupée dans l'historique
+      // if (saveToHistory && previousAppointment) {
+      //   const updatedAppointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
+      //   if (updatedAppointment) {
+      //     const actionType = createdAppointments.length > 0 ? 'resize_split' : 'move';
+      //     saveAppointmentState(updatedAppointment, actionType, previousAppointment, createdAppointments);
+      //   }
+      // }
+      //   onUpdate();
       }, [appointmentsRef, onResize, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities]);
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
   const handleSaveAppointment = useCallback((appointment: Appointment, eventUpdate: Item, includeNonWorkingDays: boolean) => {    
-      // Vérifier si l'événement est désactivé (pour les types absence/autre)
-      if ('actif' in eventUpdate && !eventUpdate.actif) {
-        notificationService.error('Action interdite', 'Cette rubrique est désactivée et ne peut plus être utilisée pour créer ou modifier des rendez-vous.');
-        return;
-      }
+      // // Vérifier si l'événement est désactivé (pour les types absence/autre)
+      // if ('actif' in eventUpdate && !eventUpdate.actif) {
+      //   notificationService.error('Action interdite', 'Cette rubrique est désactivée et ne peut plus être utilisée pour créer ou modifier des rendez-vous.');
+      //   return;
+      // }
 
-      // Mise à jour des métadonnées de l'événement global
-      eventsRef.current = eventsRef.current.map(e =>
-        e.IdPlanningRessource === eventUpdate.IdPlanningRessource ? { ...e, ...eventUpdate } : e
-      );            
+      // // Mise à jour des métadonnées de l'événement global
+      // eventsRef.current = eventsRef.current.map(e =>
+      //   e.IdPlanningRessource === eventUpdate.IdPlanningRessource ? { ...e, ...eventUpdate } : e
+      // );            
 
-      const days = getWorkedDayIntervals(
-        appointment.DebutPlanningEvenement, 
-        appointment.FinPlanningEvenement,
-        timelineState.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-        includeNonWorkingDays || !timelineState.isDisplayWeekend,
-        timelineState.includeWeekend || !timelineState.isDisplayWeekend,
-        timelineState.nonWorkingDates
-      );        
+      // const days = getWorkedDayIntervals(
+      //   appointment.DebutPlanningEvenement, 
+      //   appointment.FinPlanningEvenement,
+      //   timelineState.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+      //   includeNonWorkingDays || !timelineState.isDisplayWeekend,
+      //   timelineState.includeWeekend || !timelineState.isDisplayWeekend,
+      //   timelineState.nonWorkingDates
+      // );        
             
-      let previousAppointment: Appointment | undefined;
-      if (appointment.IdPlanningEvenement) {
-        previousAppointment = appointmentsRef.current.find(app => app.IdPlanningEvenement === appointment.IdPlanningEvenement);
-      }
+      // let previousAppointment: Appointment | undefined;
+      // if (appointment.IdPlanningEvenement) {
+      //   previousAppointment = appointmentsRef.current.find(app => app.IdPlanningEvenement === appointment.IdPlanningEvenement);
+      // }
       
-      const createdAppointments: Appointment[] = [];
+      // const createdAppointments: Appointment[] = [];
       
-      // Création des RDV supplémentaires si le créneau s'étend sur plusieurs jours
-      const createExtraAppointments = (fromIndex = 1) => {
-        days.slice(fromIndex).forEach(day => {          
-          const newApp = createAppointment(
-            day.start,
-            day.end,
-            appointment.employee.IdPersonnel as number,
-            eventUpdate.IdPlanningRessource,
-            true,
-            appointment.Type,
-            appointment.AnnotationPlanningEvenement, 
-            appointment.priority
-          );
-          if (newApp) createdAppointments.push(newApp);
-        });
-      };
+      // // Création des RDV supplémentaires si le créneau s'étend sur plusieurs jours
+      // const createExtraAppointments = (fromIndex = 1) => {
+      //   days.slice(fromIndex).forEach(day => {          
+      //     const newApp = createAppointment(
+      //       day.start,
+      //       day.end,
+      //       appointment.Employee.IdPersonnel as number,
+      //       eventUpdate.IdPlanningRessource,
+      //       true,
+      //       appointment.Type,
+      //       appointment.AnnotationPlanningEvenement, 
+      //       appointment.PlanningEvenementPriorite
+      //     );
+      //     if (newApp) createdAppointments.push(newApp);
+      //   });
+      // };
 
-      if (appointment.IdPlanningEvenement) {        
-        // --- MODE ÉDITION ---
-        if (days.length > 0) {
-          appointmentsRef.current = appointmentsRef.current.map(app => {
-            if (app.IdPlanningEvenement === appointment.IdPlanningEvenement) {
-              return {
-                ...app,           
-                ...appointment,   
-                startDate: days[0].start,
-                endDate: days[0].end
-              };   
-            }
-            return app;
-          });
-          reorganizePriorities(appointment.IdPlanningEvenement, appointment.priority ?? 0, appointment.employee.IdPersonnel as number, days[0].start, days[0].end);
+      // if (appointment.IdPlanningEvenement) {        
+      //   // --- MODE ÉDITION ---
+      //   if (days.length > 0) {
+      //     appointmentsRef.current = appointmentsRef.current.map(app => {
+      //       if (app.IdPlanningEvenement === appointment.IdPlanningEvenement) {
+      //         return {
+      //           ...app,           
+      //           ...appointment,   
+      //           startDate: days[0].start,
+      //           endDate: days[0].end
+      //         };   
+      //       }
+      //       return app;
+      //     });
+      //     reorganizePriorities(appointment.IdPlanningEvenement, appointment.PlanningEvenementPriorite ?? 0, appointment.Employee.IdPersonnel as number, days[0].start, days[0].end);
           
-          if (days.length > 1) createExtraAppointments(1);
-        }
-      } else {
-        // --- MODE CRÉATION ---
-        createExtraAppointments(0);
-      }      
+      //     if (days.length > 1) createExtraAppointments(1);
+      //   }
+      // } else {
+      //   // --- MODE CRÉATION ---
+      //   createExtraAppointments(0);
+      // }      
 
 
-      // Gestion Historique
-      if (appointment.IdPlanningEvenement && previousAppointment) {
-        const updatedAppointment = appointmentsRef.current.find(app => app.IdPlanningEvenement === appointment.IdPlanningEvenement);
-        if (updatedAppointment) {
-          if (createdAppointments.length > 0) {
-            saveAppointmentState(updatedAppointment, 'resize_split', previousAppointment, createdAppointments);
-          } else {
-            saveAppointmentState(updatedAppointment, 'update', previousAppointment);
-          }
-        }
-      }      
+      // // Gestion Historique
+      // if (appointment.IdPlanningEvenement && previousAppointment) {
+      //   const updatedAppointment = appointmentsRef.current.find(app => app.IdPlanningEvenement === appointment.IdPlanningEvenement);
+      //   if (updatedAppointment) {
+      //     if (createdAppointments.length > 0) {
+      //       saveAppointmentState(updatedAppointment, 'resize_split', previousAppointment, createdAppointments);
+      //     } else {
+      //       saveAppointmentState(updatedAppointment, 'update', previousAppointment);
+      //     }
+      //   }
+      // }      
       
-      onUpdate();
-      setIsModalOpen(false);
-      setSelectedAppointment(null);
-      setNewAppointmentInfo(null);
+      // onUpdate();
+      // setIsModalOpen(false);
+      // setSelectedAppointment(null);
+      // setNewAppointmentInfo(null);
   }, [appointmentsRef, eventsRef, timelineState, createAppointment, saveAppointmentState, onUpdate]);
 
   // --- ACTIONS UTILISATEUR (Delete, Divide, Repeat, Extend) ---
@@ -522,7 +495,7 @@ export const useAppointmentLogic = ({
     if (!appointmentToDivide) return;
 
     const originalAppointment = { ...appointmentToDivide };
-    const { DebutPlanningEvenement: startDate, FinPlanningEvenement: endDate, employee } = appointmentToDivide;
+    const { DebutPlanningEvenement: startDate, FinPlanningEvenement: endDate, Employee: employee } = appointmentToDivide;
     
     // Calcul du milieu
     let totalDuration = (endDate - startDate) + 1;
@@ -556,7 +529,7 @@ export const useAppointmentLogic = ({
       AnnotationPlanningEvenement: appointmentToDivide.AnnotationPlanningEvenement,
       DebutPlanningEvenement: splitDate,
       FinPlanningEvenement: endDate,
-      employee: employee,
+      Employee: employee,
       Type: appointmentToDivide.Type,
       Ressource: eventsRef.current.find(e => e.IdPlanningRessource === appointmentToDivide.Ressource.IdPlanningRessource) as Item,
     };
@@ -614,7 +587,7 @@ export const useAppointmentLogic = ({
       selectedAppointment.IdPlanningEvenement, 
       selectedAppointment.DebutPlanningEvenement, 
       extendData, 
-      selectedAppointment.employee.IdPersonnel as number,
+      selectedAppointment.Employee.IdPersonnel as number,
       selectedAppointment.FinPlanningEvenement < extendData ? 'right' : 'left'
     );
 
@@ -670,12 +643,12 @@ export const useAppointmentLogic = ({
     [eventsRef, createAppointment]
   );
 
-  const handleSearchItemAction = useCallback((event: any) => {
+  const handleSearchItemAction = useCallback((event: Item) => {
       if(!selectedCell) return;
       
       // Vérifier si l'événement est désactivé (pour les types absence/autre)
       if ('actif' in event && !event.actif) {
-        notificationService.error('Action interdite', `La rubrique "${event.label}" est désactivée et ne peut plus être placée dans le planning.`);
+        notificationService.error('Action interdite', `La rubrique "${event.LibellePlanningRessource}" est désactivée et ne peut plus être placée dans le planning.`);
         return;
       }
       
@@ -685,21 +658,21 @@ export const useAppointmentLogic = ({
         selectedCell.date, 
         selectedCell.date + (timelineState.isFullDay ? 23 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000 : 11 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000),
         selectedCell.employeeId,
-        event.id,
+        event.IdPlanningRessource,
         true,
-        event.type.toLowerCase() as "chantier" | "absence" | "autre",
+        event.Type.toLowerCase() as "chantier" | "absence" | "autre",
       );
       
       // handleSaveAppointment(
       //   {
       //     id:-1,
-      //     description: event.label,
+      //     description: event.LibellePlanningRessource,
       //     startDate: selectedCell.date,
       //     endDate: (timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).getTime() + 59 * 60 * 1000 + 59 * 1000,
       //     employeeId: selectedCell.employeeId,
       //     employee: employee as User,
-      //     type: (event as any).type.toLowerCase() as "chantier" | "absence" | "autre",
-      //     EventId: event.id,
+      //     type: (event as any).Type.toLowerCase() as "chantier" | "absence" | "autre",
+      //     EventId: event.IdPlanningRessource,
       //   } as Appointment,
         
       //   event as Item,

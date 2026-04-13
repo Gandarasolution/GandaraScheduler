@@ -11,6 +11,7 @@ import { Appointment, Item } from '../../types';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS } from '../../utils/constants';
 import AppointmentMetadata from './AppointmentIcon';
 import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
+import { Image } from '../ui/Image';
 
 interface AppointmentItemProps {
   appointment: Appointment;
@@ -81,7 +82,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     appointmentId: appointment.IdPlanningEvenement,
     startDate,
     endDate,
-    priority: appointment.priority ?? 0,
+    priority: appointment.PlanningEvenementPriorite ?? 0,
     isFullDay,
     isDisplayWeekend: isDisplayWeekend ?? false,
     onResize,
@@ -217,7 +218,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     border: isGhost ? 'none' : `2px solid ${appointmentBorderColor}`,
     transition: isDragging ? 'none' : 'box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out, opacity 0.2s ease-in-out transform 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
-    zIndex: isHovered ? 9999 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.priority || 0)))),
+    zIndex: isHovered ? 9999 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0)))),
     cursor: isInactive ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' ? 'grab' : 'default')),
   }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment, isInactive, isResizingLeft, isResizingRight]);
 
@@ -232,9 +233,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onDoubleClick={(e) => {
         e.stopPropagation();
         setIsHovered(false); // Masquer le tooltip au double-clic
-        console.log(appointment.employee);
-        
-        if (appointment.employee.Actif) {
+        if (appointment.Employee.Actif) {
           onDoubleClick && onDoubleClick(appointment);
         }
       }}
@@ -270,7 +269,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
          }
          
          const cellUnderMouse = {
-           employeeId: appointment.employee.IdPersonnel as number,
+           employeeId: appointment.Employee.IdPersonnel as number,
            date: targetDate
          };
          
@@ -348,7 +347,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
 
       {/* Handle de redimensionnement à gauche */}
-      {source === 'calendar' && appointment.employee.Actif && (
+      {source === 'calendar' && appointment.Employee.Actif && (
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30`}
           title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
@@ -371,12 +370,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             opacity: isInactive ? 0.5 : 1
           }}
         >        
-          {event?.image ? (
-              <img
-              src={event?.image.image}
-              alt="Icône"
-              className="w-8 h-8 object-cover flex-shrink-0"
-              />
+          {event?.IdImage ? (
+            <Image
+              image={event.IdImage}
+              className="w-8 h-8 object-cover flex-shrink-0 rounded-full"
+            />
           ): (
               <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>
           )}
@@ -461,7 +459,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       
 
       {/* Handle de redimensionnement à droite */}
-      {source === 'calendar' && appointment.employee.Actif && (
+      {source === 'calendar' && appointment.Employee.Actif && (
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30 ${
             isSmallAppointment || !hasSpaceForBothHandles 

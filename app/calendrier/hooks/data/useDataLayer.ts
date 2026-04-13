@@ -4,7 +4,6 @@ import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAnd
 import evenementService from '@/app/service/evenement.service'; // NEW API SERVICE
 import equipeService from '@/app/service/equipe.service';
 import rubriqueService from '@/app/service/rubrique.service';
-import imageService from '@/app/service/image.service';
 import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../../utils/filters";
 import {
   INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER,
@@ -15,6 +14,7 @@ import {
 import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
 import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
 import { useResourceSearch } from '../search';
+import { getCachedImages, subscribeToImageCache, upsertCachedImage } from '../../utils/imageCacheStore';
 
 
 interface DataLayerProps {
@@ -49,7 +49,7 @@ export const useDataLayer = ({
   
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
-  const [availableImages, setAvailableImages] = useState<Image[]>([]);
+  const [availableImages, setAvailableImages] = useState<Image[]>(() => getCachedImages());
   const [workerFilteredAppointments, setWorkerFilteredAppointments] = useState<Appointment[]>([]); 
   const itemsSnapshot = useMemo(() => itemsRef.current, [appointmentsVersion]);
 
@@ -78,25 +78,12 @@ export const useDataLayer = ({
   });
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadStaticData = async () => {
-      const imagesResponse = await imageService.getImages();
-    
-
-      if (!isMounted) return;
-
-      if (imagesResponse?.error === 0 && Array.isArray(imagesResponse.data)) {
-        setAvailableImages(imagesResponse.data);
-      }
-
-      setAppointmentsVersion(prev => prev + 1);
-    };
-
-    loadStaticData();
+    const unsubscribe = subscribeToImageCache((images) => {
+      setAvailableImages(images);
+    });
 
     return () => {
-      isMounted = false;
+      unsubscribe();
     };
   }, []);
 
@@ -168,7 +155,7 @@ export const useDataLayer = ({
     
     // Filtre par rôle utilisateur - users et viewers ne voient que leurs propres RDV
     if (userRole === 'user' || userRole === 'viewer') {
-      filtered = filtered.filter(app => app.employee.IdPersonnel === userIdNumber);
+      filtered = filtered.filter(app => app.Employee.IdPersonnel === userIdNumber);
     }
     
     // Filtre par type de RDV (logique métier)
@@ -291,7 +278,7 @@ export const useDataLayer = ({
 
     return filteredEmployees.map(emp => ({
       IdPersonnel: emp.IdPersonnel,
-      image: emp.image,
+      IdImage: emp.IdImage,
       Code: emp.Code,
       Nom: emp.Nom,
       Prenom: emp.Prenom,
@@ -371,7 +358,7 @@ export const useDataLayer = ({
   const refreshData = useCallback(() => setAppointmentsVersion(prev => prev + 1), []);
 
   const addImage = (newImage: Image) => {
-    setAvailableImages([...availableImages, newImage]); // Ajout au début
+    upsertCachedImage(newImage);
     return newImage;
   };
 

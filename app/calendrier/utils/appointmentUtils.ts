@@ -108,7 +108,7 @@ export const createAppointmentUtils = (
             AnnotationPlanningEvenement: appointment.AnnotationPlanningEvenement || 'Description du rendez-vous répété',
             DebutPlanningEvenement: day.start,
             FinPlanningEvenement: day.end,
-            employee: appointment.employee,
+            Employee: appointment.Employee,
             Type: appointment.Type,
             Ressource: appointment.Ressource,
           });
@@ -141,7 +141,7 @@ export const createAppointmentUtils = (
             AnnotationPlanningEvenement: appointment.AnnotationPlanningEvenement || 'Description du rendez-vous répété',
             DebutPlanningEvenement: day.start,
             FinPlanningEvenement: day.end,
-            employee: appointment.employee,
+            Employee: appointment.Employee,
             Type: appointment.Type,
             Ressource: appointment.Ressource,
           });

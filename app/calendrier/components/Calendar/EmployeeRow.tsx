@@ -72,7 +72,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const positionedAppointments = useMemo(() => {
     const filterred =  appointments
       .filter((app) => {
-        if (app?.employee?.IdPersonnel !== employee.IdPersonnel) return false;
+        if (app?.Employee?.IdPersonnel !== employee.IdPersonnel) return false;
         return app.FinPlanningEvenement > visibleWindowStart && app.DebutPlanningEvenement < visibleWindowEnd;
       })
 
@@ -124,8 +124,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       // OPTIMISATION 5 : Ne trier que si nécessaire (plus de 1 élément)
       if (group.apps.length > 1) {
         group.apps.sort((a, b) => {
-          const pA = a.priority ?? 0;
-          const pB = b.priority ?? 0;
+          const pA = a.PlanningEvenementPriorite ?? 0;
+          const pB = b.PlanningEvenementPriorite ?? 0;
           return (pA - pB) || (a.DebutPlanningEvenement - b.DebutPlanningEvenement);
         });
       }
@@ -249,7 +249,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         const baseTopPx = group.apps[0]?.topPx || 0; // Position de base pour les éléments du groupe (le premier élément)
 
         // Récupérer tous les RDV avec priorité 0 (RDV de base)
-        const priority0Apps = group.apps.filter(app => (app.priority ?? 0) === 0);
+        const priority0Apps = group.apps.filter(app => (app.PlanningEvenementPriorite ?? 0) === 0);
         
         // Clé unique pour le groupe basée sur tous les IDs des rendez-vous
         const groupUniqueKey = `group-${group.apps.map(a => `${a.IdPlanningEvenement}-${a.DebutPlanningEvenement}-${a.FinPlanningEvenement}`).join('_')}`;
@@ -260,10 +260,10 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               const event = app.Ressource as Item | undefined;
   
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
-              const isGhost = !isExpanded && (app.priority ?? 0) !== 0;
+              const isGhost = !isExpanded && (app.PlanningEvenementPriorite ?? 0) !== 0;
               
               const beforeApp = index > 0 ? group.apps[index - 1] : null;
-              const beforeHasTag = beforeApp && (app.priority ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.Etiquette;
+              const beforeHasTag = beforeApp && (app.PlanningEvenementPriorite ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.Etiquette;
               const widthDiff = beforeApp ? Math.abs(app.width - beforeApp.width) : Infinity;
               const isSimilarSize = widthDiff <= CELL_WIDTH; // À une case près
               const shouldOffsetForTag = beforeHasTag && isSimilarSize;              
@@ -334,7 +334,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 }}
               >
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
-                +{group.apps.reduce((count, app) => (app.priority && app.priority > 0 ? count + 1 : count), 0)}
+                +{group.apps.reduce((count, app) => (app.PlanningEvenementPriorite && app.PlanningEvenementPriorite > 0 ? count + 1 : count), 0)}
               </button>
             )}
 

@@ -182,7 +182,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       
       // Si l'employé est inactif, vérifier s'il a des rdv dans la fenêtre visible
       const hasVisibleAppointments = appointmentsWithTop.some(app => 
-        app.employee.IdPersonnel === emp.IdPersonnel && 
+        app.Employee.IdPersonnel === emp.IdPersonnel && 
         app.DebutPlanningEvenement > visibleWindowStart && 
         app.FinPlanningEvenement < visibleWindowEnd
       );
@@ -293,8 +293,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     employees.forEach(emp => { map[emp.IdPersonnel] = []; });
 
     appointmentsWithTop.forEach(app => {
-      if (!map[app.employee.IdPersonnel]) map[app.employee.IdPersonnel] = [];
-      map[app.employee.IdPersonnel].push(app);
+      if (!map[app.Employee.IdPersonnel]) map[app.Employee.IdPersonnel] = [];
+      map[app.Employee.IdPersonnel].push(app);
     });
 
     const prevMap = previousAppointmentsMapRef.current;

@@ -159,10 +159,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   useEffect(() => {
     // Ne mettre à jour que si l'image a réellement changé
-    if (item?.image !== formDataItemType.image) {
-      setFormDataItemType(prev => ({ ...prev, image: item?.image }));
+    if (item?.IdImage !== formDataItemType.IdImage) {
+      setFormDataItemType(prev => ({ ...prev, IdImage: item?.IdImage }));
     }
-  }, [item?.image, formDataItemType.image]);
+  }, [item?.IdImage, formDataItemType.IdImage]);
   
 
   /**
@@ -463,7 +463,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Callback pour changement d'employé
   const handleEmployeeChange = (employeeId: number) => {
-    setFormDataAppointment(prev => ({ ...prev, employeeId, employee: employees.find(e => e.IdPersonnel === employeeId) || prev.employee }));
+    setFormDataAppointment(prev => ({ ...prev, employeeId, Employee: employees.find(e => e.IdPersonnel === employeeId) || prev.Employee }));
   };
 
   // Callback pour changement de permission
@@ -540,7 +540,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       name: 'actif',
       label: 'Actif',
       type: 'checkbox',
-      value: !!(formDataItemType as CommonPaieAttributs).actif,
+      value: !!(formDataItemType as CommonPaieAttributs).Actif,
       width: '1/6',
     },
     {
@@ -658,7 +658,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           
           {/* FormHeader - Icône + Couleurs + Ressource */}
           <FormHeader
-            icon={formDataItemType?.image?.image ? { src: formDataItemType.image.image, alt: "Icône" } : undefined}
+            icon={formDataItemType?.IdImage || undefined}
             onIconClick={() => handleOpenImageModal(formDataItemType.IdPlanningRessource)}
             colors={colors}
             onColorChange={handleColorChange}
@@ -717,7 +717,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               {/* EmployeeSelector - Sélecteur d'employé */}
               <EmployeeSelector
                 employees={employeeList}
-                selectedEmployeeId={formDataAppointment.employee.IdPersonnel}
+                selectedEmployeeId={formDataAppointment.Employee.IdPersonnel}
                 onEmployeeChange={handleEmployeeChange}
                 label="Affecté"
               />
