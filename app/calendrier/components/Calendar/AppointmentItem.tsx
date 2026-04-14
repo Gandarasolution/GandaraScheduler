@@ -71,6 +71,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const startDate = React.useMemo(() => appointment.DebutPlanningEvenement, [appointment.DebutPlanningEvenement]);
   const endDate = React.useMemo(() => appointment.FinPlanningEvenement, [appointment.FinPlanningEvenement]);
 
+  console.log(appointment);
+  
   // Hook de gestion du resize
   const {
     isResizingLeft,
@@ -97,7 +99,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     isFullDay,
     isDisplayWeekend: isDisplayWeekend ?? false,
   });
-
 
   const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
 
@@ -437,7 +438,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               </div>
               
               {/* Étiquette fixe en bas à droite (mode 'fixed') */}
-              {appointment.Etiquette && tagPlacement === 'fixed' && !isGhost && (
+              {appointment.Etiquette?.IdPlanningEtiquette && tagPlacement === 'fixed' && !isGhost && (
                 <div 
                   className="absolute right-6 -bottom-3 z-40 px-1.5 py-0.5 rounded-sm text-xs font-medium shadow-sm transition-all duration-200"
                   style={{

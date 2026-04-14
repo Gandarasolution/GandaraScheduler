@@ -14,11 +14,16 @@ export const useCalendarLayout = ({
   tagPlacement
 }: UseCalendarLayoutParams) => {
 
+  const getEmployeeId = (appointment: Appointment): number | undefined => {
+    const employee = (appointment as any).Employee ?? (appointment as any).employee;
+    return employee?.IdPersonnel;
+  };
+
 
   // Calcule la hauteur nécessaire pour chaque cellule employé/jour
   const employeeHeights = useMemo(() => {
     return employees.map(employee => {
-      const employeeAppointments = appointments.filter(app => app.Employee.IdPersonnel === employee.IdPersonnel);
+      const employeeAppointments = appointments.filter(app => getEmployeeId(app) === employee.IdPersonnel);
       
       let maxOverallOverlap = 0;
       if (employeeAppointments.length > 0) {
@@ -65,7 +70,7 @@ export const useCalendarLayout = ({
     const result: (Appointment & { top: number, _dayKey?: number })[] = [];
 
     employees.forEach(emp => {
-      const empAppointments = appointments.filter(app => app.Employee.IdPersonnel === emp.IdPersonnel);
+      const empAppointments = appointments.filter(app => getEmployeeId(app) === emp.IdPersonnel);
       
       empAppointments.forEach(app => {
           // Trouver tous les rdv qui chevauchent

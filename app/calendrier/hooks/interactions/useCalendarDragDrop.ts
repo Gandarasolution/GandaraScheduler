@@ -41,7 +41,7 @@ interface UseCalendarDragDropParams {
   nonWorkingDates: number[];
   appointmentsWithTop: (Appointment & { top: number })[];
   onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
-  onExternalDragDrop: (title: string, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
+  onExternalDragDrop: (id: number, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number) => void;
 }
 
 /**
@@ -64,8 +64,6 @@ export const useCalendarDragDrop = ({
     accept: ['appointment', 'external-item'],
     drop: (item: DragItem, monitor) => {
       if (!tableRef.current || rowBoundaries.length === 0 || dayInTimeline.length === 0) return;
-
-      console.log(item);
       
       const clientOffset = monitor.getClientOffset();
       if (!clientOffset) return;
@@ -117,12 +115,10 @@ export const useCalendarDragDrop = ({
       // Gestion des éléments externes
       if (item.sourceType === 'external') {
         onExternalDragDrop(
-          item.title || 'Nouveau rendez-vous',
+          item.id,
           targetDate,
           targetInterval,
           Number(targetRow.id),
-          item.imageUrl || '',
-          item.typeEvent
         );
         return;
       }

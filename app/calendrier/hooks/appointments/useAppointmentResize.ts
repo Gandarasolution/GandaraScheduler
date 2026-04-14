@@ -144,6 +144,7 @@ export const useAppointmentResize = ({
       if (newStartDate > dragEndRef.current) {
         newStartDate = addInterval(dragEndRef.current, 0, intervals);
       }
+      
       dragStartRef.current = newStartDate;
       setDragStart(newStartDate);
     }
@@ -177,7 +178,7 @@ export const useAppointmentResize = ({
       );
     }
     
-    if (isResizingLeft && onResize) {
+    if (isResizingLeft && onResize) {      
       onResize(
         appointmentId, 
         dragStartRef.current, 
