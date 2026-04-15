@@ -41,7 +41,7 @@ interface MobileCalendarGridProps {
   appointments: Appointment[];
   user: User;
   items: Item[];
-  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => void;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => Promise<{success: boolean}>;
 }
 
 // ===== COMPOSANT PRINCIPAL =====
@@ -242,13 +242,17 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     setShowAppointmentForm(true);
   };
 
-  const handleSaveAppointment = (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => {
+  const handleSaveAppointment = (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean): Promise<{success: boolean}> => {
     if (onAddAppointment) {
-      onAddAppointment(appointment, item, includeAllNonWorkingDays);
-      addNotification('success', 'Rendez-vous créé', 'Le rendez-vous a été ajouté avec succès');
+      return onAddAppointment(appointment, item, includeAllNonWorkingDays).then(() => {
+        addNotification('success', 'Rendez-vous créé', 'Le rendez-vous a été ajouté avec succès');
+        setShowAppointmentForm(false);
+        return { success: true };
+      });
     }
     setShowAppointmentForm(false);
     setSelectedItem(null);
+    return Promise.resolve({ success: false });
   };
 
   const handleCloseMenus = () => {
@@ -316,9 +320,9 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       IdPlanningRessource: 0,
       Type: 'chantier',
       LibellePlanningRessource: '',
-      color: '#3953aaff',
-      borderColor: '#2c4086',
-      textColor: '#ffffff',
+      CouleurFondPlanningRessource: '#3953aaff',
+      CouleurBordurePlanningRessource: '#2c4086',
+      CouleurTextePlanningRessource: '#ffffff',
       CodePlanningRessource: '',
       identifiant: '',
       poleActivite: '',
@@ -591,7 +595,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   <div className="flex items-center gap-3">
                     <div 
                       className="w-4 h-4 rounded-full flex-shrink-0" 
-                      style={{ backgroundColor: itemData.color }}
+                      style={{ backgroundColor: itemData.CouleurFondPlanningRessource }}
                     />
                     <div className="flex-1">
                       <p 

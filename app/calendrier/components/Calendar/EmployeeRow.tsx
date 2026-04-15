@@ -17,7 +17,7 @@ interface EmployeeRowProps {
   tagPlacement?: 'hover' | 'fixed';
   visibleWindowStart: number;
   visibleWindowEnd: number;
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; item: Item; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   style?: React.CSSProperties;
@@ -63,8 +63,22 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   }, [collapseTrigger]);
 
   const handleAppointmentResize = useCallback((id: number, newStartDate: number, newEndDate: number, resizeDirection: 'left' | 'right', priority: number) => {
-    onAppointmentMoved(id, newStartDate, newEndDate, employee.IdPersonnel as number, resizeDirection, true, priority);
-  }, [onAppointmentMoved, employee.IdPersonnel]);
+    const appointmentToResize = appointments.find((app) => app.IdPlanningEvenement === id);
+    if (!appointmentToResize) return;
+
+    onAppointmentMoved(
+      {
+        id,
+        newStartDate,
+        newEndDate,
+        newEmployeeId: employee.IdPersonnel as number,
+        item: appointmentToResize.Ressource,
+        resizeDirection,
+      },
+      true,
+      priority
+    );
+  }, [onAppointmentMoved, employee.IdPersonnel, appointments]);
 
   const timelineStart = useMemo(() => dayInTimeline[0] || 0, [dayInTimeline]);
   
@@ -311,7 +325,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   isGhost={isGhost} 
                   ghostInterval={ghostIntervals.length > 0 ? ghostIntervals : undefined}
 
-                  onResize={handleAppointmentResize}
+                  onAppointmentResize={handleAppointmentResize}
                   handleContextMenu={handleContextMenu}
                   onDoubleClick={onAppointmentDoubleClick}
                   onClick={onSelectAppointment}

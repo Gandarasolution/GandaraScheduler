@@ -44,10 +44,10 @@ interface DesktopCalendarGridProps {
   tableRef: React.RefObject<HTMLDivElement | null>;
   handleMouseOver: (e: React.MouseEvent<HTMLElement>) => void;
   handleMouseOut: (e: React.MouseEvent<HTMLElement>) => void;
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; item: Item; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (id: number, date: number, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
+  onExternalDragDrop: (item: Item, date: number, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   updateHighlightedEmployeeRow: (employeeId: number | null) => void;
   selectedCell: { employeeId: number; date: number } | null;

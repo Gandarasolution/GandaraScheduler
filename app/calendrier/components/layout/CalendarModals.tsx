@@ -40,7 +40,7 @@ interface CalendarModalsProps {
   };
   handlers: {
     closeModal: () => void;
-    saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean) => void;
+    saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean) => Promise<{ success: boolean; message?: string }>;
     handleAddDimension: (dimension: Item) => void;
     handleEditDimension: (dimension: Item) => void;
     handleDeleteDimension?: (dimensionId: number, forceDelete?: boolean) => any;
@@ -381,7 +381,7 @@ export const CalendarModals = memo(({
               appointments={data.appointments}
               tagPlacement={modalsState.tagPlacement}
               appointment={modalsState.selectedAppointmentForm as Appointment}
-              item={data.selectedItem!}
+              item={modalsState.selectedAppointmentForm?.Ressource as Item}
               items={data.items}
               isReducedVersion={resourceEditMode !== null}
               resourceEditMode={resourceEditMode}

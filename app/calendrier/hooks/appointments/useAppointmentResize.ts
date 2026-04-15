@@ -20,7 +20,7 @@ interface UseAppointmentResizeParams {
   priority: number;
   isFullDay: boolean;
   isDisplayWeekend: boolean;
-  onResize?: (
+  onAppointmentResize?: (
     id: number, 
     newStart: number, 
     newEnd: number, 
@@ -53,7 +53,7 @@ export const useAppointmentResize = ({
   priority,
   isFullDay,
   isDisplayWeekend,
-  onResize,
+  onAppointmentResize,
 }: UseAppointmentResizeParams): UseAppointmentResizeReturn => {
   
   const [isResizingLeft, setIsResizingLeft] = useState(false);
@@ -168,8 +168,8 @@ export const useAppointmentResize = ({
    * Gère la fin du resize
    */
   const handleMouseUp = useCallback(() => {
-    if (isResizingRight && onResize) {
-      onResize(
+    if (isResizingRight && onAppointmentResize) {
+      onAppointmentResize(
         appointmentId, 
         dragStartRef.current, 
         dragEndRef.current, 
@@ -178,8 +178,8 @@ export const useAppointmentResize = ({
       );
     }
     
-    if (isResizingLeft && onResize) {      
-      onResize(
+    if (isResizingLeft && onAppointmentResize) {      
+      onAppointmentResize(
         appointmentId, 
         dragStartRef.current, 
         dragEndRef.current, 
@@ -190,7 +190,7 @@ export const useAppointmentResize = ({
     
     setIsResizingLeft(false);
     setIsResizingRight(false);
-  }, [isResizingLeft, isResizingRight, onResize, appointmentId, priority]);
+  }, [isResizingLeft, isResizingRight, onAppointmentResize, appointmentId, priority]);
 
   /**
    * Attacher/détacher les événements souris

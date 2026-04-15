@@ -15,13 +15,14 @@
 import { RefObject } from 'react';
 import { useDrop } from 'react-dnd';
 import { isSameDay, isWeekend } from 'date-fns';
-import { Appointment, HalfDayInterval } from '../../types';
+import { Appointment, HalfDayInterval, Item } from '../../types';
 import { CELL_WIDTH, CELL_HEIGHT, HOUR_MS, DAY_INTERVALS } from '../../utils/constants';
 import { isHoliday, getNextWorkedDay } from '../../utils/dates';
 import { RowWithBoundaries } from '@/app/calendrier';
 
 interface DragItem {
   id: number;
+  item?: Item;
   type: 'appointment';
   title?: string;
   sourceType?: 'external';
@@ -40,8 +41,8 @@ interface UseCalendarDragDropParams {
   isFullDay: boolean;
   nonWorkingDates: number[];
   appointmentsWithTop: (Appointment & { top: number })[];
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
-  onExternalDragDrop: (id: number, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; item: Item; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
+  onExternalDragDrop: (item: Item, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number) => void;
 }
 
 /**
@@ -114,8 +115,11 @@ export const useCalendarDragDrop = ({
       
       // Gestion des éléments externes
       if (item.sourceType === 'external') {
+        const draggedItem = item.item;
+        if (!draggedItem) return;
+
         onExternalDragDrop(
-          item.id,
+          draggedItem,
           targetDate,
           targetInterval,
           Number(targetRow.id),
@@ -126,6 +130,7 @@ export const useCalendarDragDrop = ({
       // Calcul de la durée et nouvelle fin
       const duration = item.endDate - item.startDate;
       const newEnd = targetDate + duration;
+      const movedAppointment = appointmentsWithTop.find((a) => a.IdPlanningEvenement === item.id);
       
       // Gestion de la priorité : détecter sur quel rdv (position Y) l'utilisateur drop
       const targetEmployeeId = Number(targetRow.id);
@@ -178,29 +183,25 @@ export const useCalendarDragDrop = ({
             newPriority = (rdvAtTargetPosition[0].PlanningEvenementPriorite ?? 0);
             
             rdvAtTargetPosition.forEach(appToMove => {
-              onAppointmentMoved(
-                appToMove.IdPlanningEvenement,
-                appToMove.DebutPlanningEvenement,
-                appToMove.FinPlanningEvenement,
-                appToMove.Employee.IdPersonnel,
-                undefined,
-                false,
-                (originalItem?.PlanningEvenementPriorite ?? 0)
-              );
+              onAppointmentMoved({
+                id: appToMove.IdPlanningEvenement,
+                newStartDate: appToMove.DebutPlanningEvenement,
+                newEndDate: appToMove.FinPlanningEvenement,
+                newEmployeeId: appToMove.Employee.IdPersonnel,
+                item: appToMove.Ressource,
+              }, false, (originalItem?.PlanningEvenementPriorite ?? 0));
             });
 
             if (rdvatOriginalPosition.length > 0) {
               rdvatOriginalPosition.forEach(appToAdjust => {
                 if (appToAdjust.IdPlanningEvenement !== item.id) {
-                  onAppointmentMoved(
-                    appToAdjust.IdPlanningEvenement,
-                    appToAdjust.DebutPlanningEvenement,
-                    appToAdjust.FinPlanningEvenement,
-                    appToAdjust.Employee.IdPersonnel,
-                    undefined,
-                    false,
-                    newPriority
-                  );
+                  onAppointmentMoved({
+                    id: appToAdjust.IdPlanningEvenement,
+                    newStartDate: appToAdjust.DebutPlanningEvenement,
+                    newEndDate: appToAdjust.FinPlanningEvenement,
+                    newEmployeeId: appToAdjust.Employee.IdPersonnel,
+                    item: appToAdjust.Ressource,
+                  }, false, newPriority);
                 } 
               });
             }
@@ -216,7 +217,17 @@ export const useCalendarDragDrop = ({
         }
       }
 
-      onAppointmentMoved(item.id, targetDate, newEnd, targetEmployeeId, 'right', true, newPriority);
+      const droppedItem = item.item ?? movedAppointment?.Ressource;
+      if (!droppedItem) return;
+
+      onAppointmentMoved({
+        id: item.id,
+        newStartDate: targetDate,
+        newEndDate: newEnd,
+        newEmployeeId: targetEmployeeId,
+        item: droppedItem,
+        resizeDirection: 'right',
+      }, true, newPriority);
     },
   }), [
     DAY_INTERVALS, 

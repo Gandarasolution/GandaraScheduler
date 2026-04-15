@@ -37,7 +37,7 @@ interface AppointmentItemProps {
   mainScrollRef: React.RefObject<HTMLDivElement> | null;
   onClick?: (app: Appointment) => void;
   onDoubleClick?: (app: Appointment) => void;
-  onResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right', priority: number) => void;
+  onAppointmentResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right', priority: number) => void;
   handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
 }
 
@@ -61,7 +61,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   tagPlacement = 'hover',
   onClick,
   onDoubleClick,
-  onResize,
+  onAppointmentResize,
   handleContextMenu,
 }) => {
 
@@ -70,8 +70,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   const startDate = React.useMemo(() => appointment.DebutPlanningEvenement, [appointment.DebutPlanningEvenement]);
   const endDate = React.useMemo(() => appointment.FinPlanningEvenement, [appointment.FinPlanningEvenement]);
-
-  console.log(appointment);
   
   // Hook de gestion du resize
   const {
@@ -87,7 +85,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     priority: appointment.PlanningEvenementPriorite ?? 0,
     isFullDay,
     isDisplayWeekend: isDisplayWeekend ?? false,
-    onResize,
+    onAppointmentResize,
   });
 
   // Hook de calcul des segments Ghost
@@ -115,6 +113,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     type: 'appointment',
     item: () => ({
       id: appointment.IdPlanningEvenement,
+      item: appointment.Ressource,
       type: 'appointment',
       startDate: startDate,
       endDate: endDate,
@@ -194,9 +193,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   // --- Styles ---
   
-  const appointmentColor = event?.color || '#1E40AF';
-  const appointmentBorderColor = event?.borderColor || '#1E40AF';
-  const appointmentTextColor = event?.textColor || '#FFFFFF';
+  const appointmentColor = event?.CouleurFondPlanningRessource || '#1E40AF';
+  const appointmentBorderColor = event?.CouleurBordurePlanningRessource || '#1E40AF';
+  const appointmentTextColor = event?.CouleurTextePlanningRessource || '#FFFFFF';
 
   // if (event.label === '1052 Logements Vesoul') {
   //   console.log('appointmentColor', appointmentColor);
@@ -411,13 +410,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                     <AppointmentMetadata
                       annotation={appointment.AnnotationPlanningEvenement}
                       tagText={tagPlacement === 'hover' ? appointment.Etiquette?.LibelleLongPlanningEtiquette : undefined}
-                      tagColor={event?.color}
+                      tagColor={event?.CouleurFondPlanningRessource}
                       color={isGhost ? '#333' : appointmentColor}
                       textColor={isGhost ? '#000' : appointmentTextColor}
                       isHovered={isHovered}
                       mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
                       annotationImgSvg={
-                        <svg height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.color) : event.textColor }}>
+                        <svg height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
                           <path d="m22 12c0 5.5228-4.4772 10-10 10-5.52285 0-10-4.4772-10-10 0-5.52285 4.47715-10 10-10 5.5228 0 10 4.47715 10 10z" 
                                 fill="none" 
                                 stroke="currentColor" 
@@ -428,7 +427,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                         </svg>
                       }
                       tagImgSvg={
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.color) : event.textColor }}>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
                           <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
                         </svg>
                       }
@@ -485,6 +484,8 @@ const arePropsEqual = (prevProps: AppointmentItemProps, nextProps: AppointmentIt
     prevProps.appointment.IdPlanningEvenement === nextProps.appointment.IdPlanningEvenement &&
     prevProps.appointment.DebutPlanningEvenement === nextProps.appointment.DebutPlanningEvenement &&
     prevProps.appointment.FinPlanningEvenement === nextProps.appointment.FinPlanningEvenement &&
+    prevProps.appointment.AnnotationPlanningEvenement === nextProps.appointment.AnnotationPlanningEvenement &&
+    prevProps.appointment.Etiquette?.IdPlanningEtiquette === nextProps.appointment.Etiquette?.IdPlanningEtiquette &&
     prevProps.absoluteLeft === nextProps.absoluteLeft &&
     prevProps.absoluteWidth === nextProps.absoluteWidth &&
     prevProps.absoluteTop === nextProps.absoluteTop &&
@@ -493,6 +494,13 @@ const arePropsEqual = (prevProps: AppointmentItemProps, nextProps: AppointmentIt
     prevProps.isFullDay === nextProps.isFullDay &&
     prevProps.isDisplayWeekend === nextProps.isDisplayWeekend &&
     prevProps.isInactive === nextProps.isInactive &&
+    prevProps.tagPlacement === nextProps.tagPlacement &&
+    prevProps.chargeeAffaire === nextProps.chargeeAffaire &&
+    prevProps.event.IdImage === nextProps.event.IdImage &&
+    prevProps.event.LibellePlanningRessource === nextProps.event.LibellePlanningRessource &&
+    prevProps.event.CouleurFondPlanningRessource === nextProps.event.CouleurFondPlanningRessource &&
+    prevProps.event.CouleurBordurePlanningRessource === nextProps.event.CouleurBordurePlanningRessource &&
+    prevProps.event.CouleurTextePlanningRessource === nextProps.event.CouleurTextePlanningRessource &&
     JSON.stringify(prevProps.ghostInterval) === JSON.stringify(nextProps.ghostInterval)
   );
 };

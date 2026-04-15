@@ -18,7 +18,7 @@
  * @version 1.0.0
  */
 
-import { useEffect, memo, useState, createContext, useContext } from "react";
+import { useEffect, memo, useState, createContext, useContext, useRef, useCallback, useMemo } from "react";
 
 /**
  * Contexte pour permettre aux composants enfants de demander la fermeture du modal
@@ -119,20 +119,20 @@ const Modal: React.FC<ModalProps> = ({
     hasUnsavedChanges
 }) => {
     const [showConfirm, setShowConfirm] = useState(false);
-    const [childSaveHandler, setChildSaveHandler] = useState<(() => void | Promise<void>) | null>(null);
+    const childSaveHandlerRef = useRef<(() => void | Promise<void>) | null>(null);
     
     /**
      * Permet aux composants enfants d'enregistrer leur gestionnaire de sauvegarde
      */
-    const registerSaveHandler = (handler: (() => void | Promise<void>) | null) => {
-        setChildSaveHandler(() => handler);
-    };
+    const registerSaveHandler = useCallback((handler: (() => void | Promise<void>) | null) => {
+        childSaveHandlerRef.current = handler;
+    }, []);
     
     /**
      * Fonction centralisée pour gérer la fermeture avec sauvegarde
      * Gère automatiquement : confirmation, sauvegarde, fermeture
      */
-    const handleCloseWithSave = async () => {
+    const handleCloseWithSave = useCallback(async () => {
         if (showConfirm) return;
 
         const shouldConfirm = confirmCloseOnOverlay && (hasUnsavedChanges ?? true);
@@ -145,7 +145,12 @@ const Modal: React.FC<ModalProps> = ({
 
         // Afficher la confirmation
         setShowConfirm(true);
-    };
+    }, [showConfirm, confirmCloseOnOverlay, hasUnsavedChanges, onClose]);
+
+    const modalContextValue = useMemo(
+        () => ({ handleCloseWithSave, registerSaveHandler }),
+        [handleCloseWithSave, registerSaveHandler]
+    );
     
     // ===== GESTION DES ÉVÉNEMENTS CLAVIER =====
     
@@ -164,7 +169,7 @@ const Modal: React.FC<ModalProps> = ({
         return () => {
             document.removeEventListener('keydown', handleEscape);
         };
-    }, [onClose, confirmCloseOnOverlay, showConfirm, hasUnsavedChanges]);
+    }, [handleCloseWithSave]);
     
     const handleOverlayClick = () => {
         handleCloseWithSave();
@@ -178,7 +183,7 @@ const Modal: React.FC<ModalProps> = ({
         
         // Priorité 1: Utiliser le gestionnaire de sauvegarde enregistré par le composant enfant
         // Priorité 2: Utiliser la prop onSave du Modal (pour compatibilité avec repeat/extend)
-        const saveHandler = childSaveHandler || onSave;
+        const saveHandler = childSaveHandlerRef.current || onSave;
         
         if (saveHandler) {
             try {
@@ -197,17 +202,17 @@ const Modal: React.FC<ModalProps> = ({
     /**
      * L'utilisateur a choisi "Non" - Fermer sans sauvegarder
      */
-    const handleCloseWithoutSaving = () => {
+    const handleCloseWithoutSaving = useCallback(() => {
         setShowConfirm(false);
         onClose();
-    };
+    }, [onClose]);
 
     /**
      * L'utilisateur a annulé - Ne rien faire
      */
-    const handleCancelClose = () => {
+    const handleCancelClose = useCallback(() => {
         setShowConfirm(false);
-    };
+    }, []);
 
     if (!isOpen) return null;
 
@@ -273,7 +278,7 @@ const Modal: React.FC<ModalProps> = ({
                     )}
                 </div>
                 <div className={`modal-body rounded-2xl scrollbar-hide ${classNameContent}`}>
-                    <ModalContext.Provider value={{ handleCloseWithSave, registerSaveHandler }}>
+                    <ModalContext.Provider value={modalContextValue}>
                         {children}
                     </ModalContext.Provider>
                 </div>

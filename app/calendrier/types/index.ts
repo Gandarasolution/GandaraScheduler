@@ -118,9 +118,9 @@ export interface BaseItemCategory{
 interface BaseItem {
   IdPlanningRessource: number;
   LibellePlanningRessource: string;
-  color: string;
-  borderColor: string;
-  textColor: string;
+  CouleurFondPlanningRessource: string;
+  CouleurBordurePlanningRessource: string;
+  CouleurTextePlanningRessource: string;
   CodePlanningRessource: string;
   IdImage?: number;
   defaultDescription?: string;

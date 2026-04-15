@@ -670,6 +670,7 @@ export default function HomePage({
               <DraggableSource
                 key={`${event.label}-${event.id}-${index}`}
                 id={event.id as number}
+                item={event as Item}
                 imageUrl={event.image?.image}
                 title={event.label}
                 type={(event as any).Type as "Projet" | "Paie" | "Rubrique Perso"}

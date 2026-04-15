@@ -26,7 +26,7 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, i
     >
       <div 
         className={`w-1.5 h-12 rounded-full  mr-4 mt-1`} 
-        style={{backgroundColor : app.Ressource.color}}
+        style={{backgroundColor : app.Ressource.CouleurFondPlanningRessource}}
       ></div>
       <div className="flex-1">
         <h3 

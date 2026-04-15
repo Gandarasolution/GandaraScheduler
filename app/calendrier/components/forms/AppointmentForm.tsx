@@ -15,7 +15,7 @@
 
 "use client";
 // components/AppointmentForm.tsx
-import React, { useState, memo, useMemo, useEffect } from 'react';
+import React, { useState, memo, useMemo, useEffect, useCallback, useRef } from 'react';
 import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, SocialItemPermission, Tag } from '../../types';
 import { isSameDay, isSameYear, isSameMonth } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
@@ -65,7 +65,7 @@ interface AppointmentFormProps {
     appointment: Appointment,
     eventType: Item,
     includeAllNonWorkingDays: boolean
-  ) => void;
+  ) => Promise<{ success: boolean; message?: string }>;
   /** Callback appelé lors de la fermeture du formulaire */
   onClose: () => void;
   /** Callback appelé lors de la sauvegarde de l'événement */
@@ -120,6 +120,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   nonWorkingDates,
   isReducedVersion,
   onSave,
+  onClose,
   handleOpenImageModal,
   onDirtyChange,
   handleAddDimension,
@@ -146,6 +147,41 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveHandlerRef = useRef<(() => void | Promise<void>) | null>(null);
+    const performAppointmentSave = async (): Promise<void> => {
+      if (isSaving) return;
+
+      if (formDataAppointment.DebutPlanningEvenement >= formDataAppointment.FinPlanningEvenement) {
+        setDateValidationError(true);
+        return;
+      }
+
+      setDateValidationError(false);
+      setSaveError(null);
+      setIsSaving(true);
+
+      try {
+        const result = await onSave(
+          formDataAppointment,
+          formDataItemType,
+          includeAllNonWorkingDays
+        );
+
+        if (result.success) {
+          onClose();
+          return;
+        }
+
+        setSaveError(result.message || 'La sauvegarde a échoué.');
+      } catch (error) {
+        setSaveError((error as Error).message || 'Une erreur est survenue pendant la sauvegarde.');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
   
   /**
    * État pour contrôler l'expansion du panel d'options avancées
@@ -275,13 +311,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
   }, [formDataAppointment, formDataItemType, includeAllNonWorkingDays, appointment, item, isAppointmentSplitByNotWorkingDay, onDirtyChange]);
 
-  /**
-   * Enregistre le gestionnaire de sauvegarde dans le contexte du Modal
-   * Cela permet au Modal de déclencher la sauvegarde du formulaire
-   * lorsque l'utilisateur confirme vouloir sauvegarder
-   */
-  useEffect(() => {
-    const handleSave = () => {
+  const handleSave = useCallback(() => {
       // Validation: gestion de la création d'une nouvelle ressource
       if (isCreatingResource) {
         if (formDataItemType.CodePlanningRessource && items.find(item => item.CodePlanningRessource === formDataItemType.CodePlanningRessource?.toUpperCase() && item.IdPlanningRessource !== formDataItemType.IdPlanningRessource)) {
@@ -318,36 +348,36 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         return;
       }
 
-      // Validation des dates pour un rendez-vous normal
-      if (formDataAppointment.DebutPlanningEvenement >= formDataAppointment.FinPlanningEvenement) {      
-        setDateValidationError(true);
-        return;
-      }
+      void performAppointmentSave();
+    }, [
+      isCreatingResource,
+      isEditingResource,
+      formDataItemType,
+      items,
+      employeePermissions,
+      handleAddDimension,
+      handleEditDimension,
+      performAppointmentSave,
+    ]);
 
-      setDateValidationError(false);
+  useEffect(() => {
+    saveHandlerRef.current = handleSave;
+  }, [handleSave]);
 
-      // Appeler la fonction de sauvegarde
-      onSave(
-        formDataAppointment,
-        formDataItemType,
-        includeAllNonWorkingDays
-      );
-    };
-
-    // Enregistrer le gestionnaire de sauvegarde
-    registerSaveHandler(handleSave);
+  /**
+   * Enregistre le gestionnaire de sauvegarde dans le contexte du Modal
+   * Cela permet au Modal de déclencher la sauvegarde du formulaire
+   * lorsque l'utilisateur confirme vouloir sauvegarder
+   */
+  useEffect(() => {
+    // Enregistre un wrapper stable pour éviter les re-registers en cascade.
+    registerSaveHandler(() => saveHandlerRef.current?.());
 
     // Nettoyer lors du démontage
     return () => {
       registerSaveHandler(null);
     };
-  }, [
-    formDataItemType, 
-    formDataAppointment, 
-    includeAllNonWorkingDays,
-    items,
-    employeePermissions, 
-  ]);
+  }, [registerSaveHandler]);
 
   /**
    * Gère le changement de date via les inputs de type "date".
@@ -360,7 +390,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
     setFormDataAppointment(prev => ({ 
       ...prev, 
-      [dateType === 'start' ? 'startDate' : 'endDate']: newDate 
+      [dateType === 'start' ? 'DebutPlanningEvenement' : 'FinPlanningEvenement']: newDate 
     }));
   };
 
@@ -412,19 +442,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       return;
     }    
 
-    // Validation des dates
-    if (formDataAppointment.DebutPlanningEvenement >= formDataAppointment.FinPlanningEvenement) {      
-      setDateValidationError(true);
-      return;
-    }
-
-    setDateValidationError(false);
-
-    onSave(
-      formDataAppointment,
-      formDataItemType,
-      includeAllNonWorkingDays
-    );
+    void performAppointmentSave();
   };
 
   /**
@@ -434,12 +452,17 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // Callback pour changement de couleur
   const handleColorChange = (colorType: 'background' | 'border' | 'text', value: string) => {
     const colorMap = {
-      background: 'color',
-      border: 'borderColor',
-      text: 'textColor',
+      background: 'CouleurFondPlanningRessource',
+      border: 'CouleurBordurePlanningRessource',
+      text: 'CouleurTextePlanningRessource',
     };
     setFormDataItemType(prev => ({ ...prev, [colorMap[colorType]]: value }));
   };
+
+  useEffect(() => {
+    console.log(formDataItemType);
+  }, [formDataItemType]);
+    
 
   // Callback pour changement de champ ressource
   const handleResourceFieldChange = (fieldName: string, value: string | boolean) => {
@@ -463,7 +486,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Callback pour changement d'employé
   const handleEmployeeChange = (employeeId: number) => {
-    setFormDataAppointment(prev => ({ ...prev, employeeId, Employee: employees.find(e => e.IdPersonnel === employeeId) || prev.Employee }));
+    setFormDataAppointment(prev => ({ ...prev, Employee: employees.find(e => Number(e.IdPersonnel) === employeeId) || prev.Employee }));
   };
 
   // Callback pour changement de permission
@@ -519,9 +542,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   
   // Configuration des couleurs pour FormHeader
   const colors: ColorConfig = {
-   background: formDataItemType.color,
-    border: formDataItemType.borderColor,
-    text: formDataItemType.textColor,
+   background: formDataItemType.CouleurFondPlanningRessource,
+    border: formDataItemType.CouleurBordurePlanningRessource,
+    text: formDataItemType.CouleurTextePlanningRessource,
   };
 
   // Champs de ressource pour FormHeader (mode création/édition)
@@ -621,7 +644,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     return {
       id: emp.IdPersonnel,
       displayName: `${emp.Nom} ${emp.Prenom}`,
-      initials: `${emp.Prenom.charAt(0)}${emp.Nom.charAt(0)}`,
+      initials: `${emp.Prenom?.charAt(0)}${emp.Nom?.charAt(0)}`,
       permissions: {
         canView: perm.canView,
         canCreate: perm.canCreate,
@@ -670,20 +693,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           {/* FormPreview - Aperçu du rendez-vous */}
           <FormPreview>
             <AppointmentItem
-              appointment={{
-                ...formDataAppointment,
-                IdPlanningEvenement: formDataAppointment.IdPlanningEvenement || 0,
-                DebutPlanningEvenement: Date.now(),
-                FinPlanningEvenement: Date.now() + 86400000 * 3, // +3 jours
-              }}
+              appointment={formDataAppointment}
               event={formDataItemType}
               isFullDay={isFullDay}
-              source='demo'
+              source={'demo'}
               isMobile={false}
               isDisplayWeekend={false}
               chargeeAffaire={formDataItemType && formDataItemType.Type === 'chantier' ? formDataItemType.chargeAffaire : ''}
               onDoubleClick={() => {}}
-              onResize={() => {}}
+              onAppointmentResize={() => {}}
               handleContextMenu={() => {}}
               tagPlacement={tagPlacement}
               mainScrollRef={null}
@@ -726,11 +744,16 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
           {/* ActionButtons - Boutons d'action */}
           <ActionButtons
-            primaryLabel={isCreatingResource ? 'Créer' : 'Enregistrer'}
+            primaryLabel={isSaving ? 'Enregistrement...' : isCreatingResource ? 'Créer' : 'Enregistrer'}
             secondaryLabel="Fermé"
             onSecondary={() => handleCloseWithSave()}
             primaryType="submit"
+            disabled={isSaving}
           />
+
+          {saveError && (
+            <p className="text-sm text-red-600 mt-2">{saveError}</p>
+          )}
         </form>
 
         {/* Section étiquettes - Version réduite uniquement */}
