@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import rubriqueService from '@/app/service/rubrique.service';
+import rubriqueService from '@/app/service/ressource.service';
 import { Item } from '../../types';
 import {
   SEARCH_API_TIMEOUT_MS,

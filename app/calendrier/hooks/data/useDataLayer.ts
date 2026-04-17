@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, use } from 'react';
 import { Appointment, User, Item, CalendarConfig, Image, UserRole } from '../../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
 import evenementService from '@/app/service/evenement.service'; // NEW API SERVICE
 import equipeService from '@/app/service/equipe.service';
-import rubriqueService from '@/app/service/rubrique.service';
+import rubriqueService from '@/app/service/ressource.service';
 import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../../utils/filters";
 import {
   INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER,
@@ -117,6 +117,20 @@ export const useDataLayer = ({
   // Instanciation Utils
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
 
+  const addMissingResourcesToCache = useCallback((resources: Item[]) => {
+    if (!Array.isArray(resources) || resources.length === 0) return;
+
+    const existingIds = new Set(itemsRef.current.map(item => Number(item.IdPlanningRessource)));
+    const toAdd = resources.filter((resource) => {
+      const resourceId = Number(resource?.IdPlanningRessource);
+      return Number.isFinite(resourceId) && !existingIds.has(resourceId);
+    });
+
+    if (toAdd.length > 0) {
+      itemsRef.current = [...itemsRef.current, ...toAdd];
+    }
+  }, []);
+
   // --- Filtrage de base (sans recherche) ---
   // Ces mémos se recalculent uniquement quand les filtres changent, PAS à chaque searchQuery
   
@@ -144,7 +158,9 @@ export const useDataLayer = ({
 
 
   const baseFilteredAppointments = useMemo(() => {
-    if (!calendarConfig || isSearchOverlayOpen) return appointmentsRef.current;
+    // Toujours retourner une nouvelle instance d'array afin que les composants
+    // mémorisés (React.memo) détectent le changement et se re-render.
+    if (!calendarConfig || isSearchOverlayOpen) return appointmentsRef.current.slice();
     // Logique de filtrage combinée (Types RDV + Filtres champs) SANS searchQuery
     let filtered = appointmentsRef.current;
     
@@ -155,7 +171,7 @@ export const useDataLayer = ({
     
     // Filtre par rôle utilisateur - users et viewers ne voient que leurs propres RDV
     if (userRole === 'user' || userRole === 'viewer') {
-      filtered = filtered.filter(app => app.Employee.IdPersonnel === userIdNumber);
+      filtered = filtered.filter(app => app.IdEmploye === userIdNumber);
     }
     
     // Filtre par type de RDV (logique métier)
@@ -170,7 +186,7 @@ export const useDataLayer = ({
          const isAllSelected = allTypes.every(t => selectedRdvTypes.includes(t));
          if (!isAllSelected) {
              filtered = filtered.filter(app => {
-                 const norm = app.Type === 'chantier' ? 'Chantier' : app.Type === 'absence' ? 'Absence' : 'Autre';
+                 const norm = app.Type;
                  return selectedRdvTypes.includes(norm);
              });
          }
@@ -179,9 +195,9 @@ export const useDataLayer = ({
     return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), '', globalEmployeesRef.current);
   }, [calendarConfig, appointmentsVersion, workerFilteredAppointments, userRole, userIdNumber, isSearchOverlayOpen]);
 
+    
   // --- Filtrage avec recherche (appliqué uniquement si searchQuery existe) ---
   // Ces mémos ne se recalculent que si searchQuery OU les données de base changent
-  
   const filteredEmployees = useMemo(() => {
     // En mode calendar, les filtres sont déjà appliqués dans baseFilteredEmployees
     if (viewType === 'calendar') {
@@ -208,6 +224,7 @@ export const useDataLayer = ({
     return applyFiltersToAppointments(baseFilteredAppointments, getFlatFilters(calendarConfig?.filterCategories), searchInput, globalEmployeesRef.current);
   }, [baseFilteredAppointments, searchInput, calendarConfig]);
   
+  
   // Pré-filtrage avec Web Worker pour améliorer les performances (gros volumes)
   useEffect(() => {
     if (!worker.isReady || !calendarConfig || appointmentsRef.current.length <= 500) {
@@ -232,19 +249,24 @@ export const useDataLayer = ({
   const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // APPEL API RÉEL
       const response = await evenementService.getEvenements(startDate, endDate);
-      // Supposant que "response.data" contienne un tableau d'Appointment (ce qui vient de Axios)
-      // Ajuste si la forme de ta réponse est du style { error: 0, data: [...] }
-      const newAppointments = response.error === 0 ? response.data : [];
+      const payloadData = response?.data;
+      const newAppointments = response?.error === 0
+        ? (Array.isArray(payloadData?.appointments)
+            ? payloadData.appointments
+            : []
+          )
+        : [];
 
-      // Fusionner les nouveaux RDV avec les existants
-      const existingIds = new Set(appointmentsRef.current.map(app => app.IdPlanningEvenement));
-      const mergedAppointments = [
-        ...appointmentsRef.current,
-        ...newAppointments.filter((app: Appointment) => !existingIds.has(app.IdPlanningEvenement))
-      ];
-      appointmentsRef.current = mergedAppointments;
+      const newResources = response?.error === 0 && Array.isArray(payloadData?.ressources)
+        ? payloadData.ressources
+        : [];
+
+
+      // Ajouter au cache uniquement les ressources absentes.
+      addMissingResourcesToCache(newResources);
+
+      appointmentsRef.current = newAppointments;
       setAppointmentsVersion(prev => prev + 1);
     } catch (error) {
       console.error("Erreur lors du chargement des rendez-vous:", error);
@@ -252,14 +274,14 @@ export const useDataLayer = ({
       setIsLoading(false);
     }
     return true;
-  }, []);
+  }, [addMissingResourcesToCache]);
 
   // Effet pour charger les RDV initiaux
   useEffect(() => {
     const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
     const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
     loadAppointmentsInRange(startDate, endDate);
-  }, [loadAppointmentsInRange]);
+  }, []);
 
   // --- Filtrage Secondaire (Tableaux) ---
   // Cette fonction prépare les données pour DataTableFrame
@@ -396,7 +418,7 @@ export const useDataLayer = ({
       CouleurTextePlanningRessource: payload.textColor,
       code: payload.code,
       image: payload.image,
-      Type: 'autre',
+      Type: 'Rubrique Perso',
       verrou: false,
       Actif: payload.actif,
       category: payload.category,

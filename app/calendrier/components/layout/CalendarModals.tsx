@@ -40,7 +40,7 @@ interface CalendarModalsProps {
   };
   handlers: {
     closeModal: () => void;
-    saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean) => Promise<{ success: boolean; message?: string }>;
+    saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean, type: 'create' | 'update') => Promise<{ success: boolean; message?: string }>;
     handleAddDimension: (dimension: Item) => void;
     handleEditDimension: (dimension: Item) => void;
     handleDeleteDimension?: (dimensionId: number, forceDelete?: boolean) => any;
@@ -188,7 +188,7 @@ export const CalendarModals = memo(({
     if (modalsState.selectedAppointmentForm) {
         if (resourceEditMode === 'create') return "Création de la ressource";
         if (resourceEditMode === 'edit') return "Modification de la ressource";
-        return `Modifier l'Évènement - ${modalsState.selectedAppointmentForm.Ressource?.CodePlanningRessource}`;
+        return `Modifier l'Évènement - ${data.items.find(item => Number(item.IdPlanningRessource) === Number(modalsState.selectedAppointmentForm?.IdPlanningRessource))?.LibellePlanningRessource || 'Ressource inconnue'}`;
     }
     return "Ajouter un rendez-vous";
   };  
@@ -381,7 +381,7 @@ export const CalendarModals = memo(({
               appointments={data.appointments}
               tagPlacement={modalsState.tagPlacement}
               appointment={modalsState.selectedAppointmentForm as Appointment}
-              item={modalsState.selectedAppointmentForm?.Ressource as Item}
+              item={data.items.find(item => Number(item.IdPlanningRessource) === Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)) as Item}
               items={data.items}
               isReducedVersion={resourceEditMode !== null}
               resourceEditMode={resourceEditMode}

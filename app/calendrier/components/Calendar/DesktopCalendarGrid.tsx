@@ -44,7 +44,7 @@ interface DesktopCalendarGridProps {
   tableRef: React.RefObject<HTMLDivElement | null>;
   handleMouseOver: (e: React.MouseEvent<HTMLElement>) => void;
   handleMouseOut: (e: React.MouseEvent<HTMLElement>) => void;
-  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; item: Item; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (item: Item, date: number, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
@@ -169,6 +169,25 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
   }, [calendarConfig.Group, employees, initialTeams]);
 
+  const visibleEmployeeIdsInWindow = useMemo(() => {
+    const ids = new Set<number>();
+
+    appointmentsWithTop.forEach((app) => {
+      // Overlap test avec la fenêtre visible
+      if (app.DebutPlanningEvenement < visibleWindowEnd && app.FinPlanningEvenement > visibleWindowStart) {
+        ids.add(app.IdEmploye);
+      }
+    });
+
+    return ids;
+  }, [appointmentsWithTop, visibleWindowStart, visibleWindowEnd]);
+
+  const appointmentsInHorizontalWindow = useMemo(() => {
+  return appointmentsWithTop.filter((app) =>
+    app.FinPlanningEvenement > visibleWindowStart &&
+    app.DebutPlanningEvenement < visibleWindowEnd
+  );
+}, [appointmentsWithTop, visibleWindowStart, visibleWindowEnd]);
   
   const filteredEmployees = useMemo(() => {
     const baseFiltered = applyFiltersToEmployees(employees, getFlatFilters(calendarConfig.filterCategories));
@@ -179,23 +198,16 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       if (emp.Actif !== false) {
         return true;
       }
-      
-      // Si l'employé est inactif, vérifier s'il a des rdv dans la fenêtre visible
-      const hasVisibleAppointments = appointmentsWithTop.some(app => 
-        app.Employee.IdPersonnel === emp.IdPersonnel && 
-        app.DebutPlanningEvenement > visibleWindowStart && 
-        app.FinPlanningEvenement < visibleWindowEnd
-      );
-      
-      return hasVisibleAppointments;
+
+      // Si inactif, on garde seulement s'il a au moins un RDV visible.
+      return visibleEmployeeIdsInWindow.has(emp.IdPersonnel);
     });
-  }, [employees, calendarConfig.filterCategories, appointmentsWithTop, visibleWindowStart, visibleWindowEnd]);
+  }, [employees, calendarConfig.filterCategories, visibleEmployeeIdsInWindow]);
 
   const employeesByDimension = useMemo(() => {
     return groupEmployeesHierarchically(filteredEmployees, calendarConfig.Group, initialTeams);
   }, [filteredEmployees, calendarConfig.Group, initialTeams]);
   
-  //console.log('emp', employeesByDimension);
   
 
   const todayIndex = useMemo(() => {
@@ -285,56 +297,27 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     handleContextMenu(e, 'cell', null, { employeeId: Number(targetRow.id), date: targetDate });
   }, [HALF_DAY_INTERVALS, dayInTimeline, handleContextMenu, isFullDay, rowBoundaries, totalContentHeight]);
 
-  const previousAppointmentsMapRef = React.useRef<Record<number, (Appointment & { top: number })[]>>({});
 
   const appointmentsByEmployee = useMemo(() => {
     const map: Record<number, (Appointment & { top: number })[]> = {};
+    const employeeRowIds = new Set<number>();
 
-    employees.forEach(emp => { map[emp.IdPersonnel] = []; });
-
-    appointmentsWithTop.forEach(app => {
-      if (!map[app.Employee.IdPersonnel]) map[app.Employee.IdPersonnel] = [];
-      map[app.Employee.IdPersonnel].push(app);
-    });
-
-    const prevMap = previousAppointmentsMapRef.current;
-    let hasChanges = false;
-    const finalMap: Record<number, (Appointment & { top: number })[]> = {};
-
-    employees.forEach(emp => {
-      const prevApps = prevMap[emp.IdPersonnel] || [];
-      const newApps = map[emp.IdPersonnel];
-      let rowChanged = prevApps.length !== newApps.length;
-
-      if (!rowChanged) {
-        for (let i = 0; i < newApps.length; i++) {
-          if (
-            prevApps[i].IdPlanningEvenement !== newApps[i].IdPlanningEvenement || 
-            prevApps[i].DebutPlanningEvenement !== newApps[i].DebutPlanningEvenement || 
-            prevApps[i].FinPlanningEvenement !== newApps[i].FinPlanningEvenement || 
-            prevApps[i].top !== newApps[i].top || 
-            prevApps[i].AnnotationPlanningEvenement !== newApps[i].AnnotationPlanningEvenement || 
-            prevApps[i].Etiquette?.IdPlanningEtiquette !== newApps[i].Etiquette?.IdPlanningEtiquette
-          ) {
-            rowChanged = true;
-            break;
-          }
-        }
-      }
-
-      if (rowChanged) {
-        finalMap[emp.IdPersonnel] = newApps;
-        hasChanges = true;
-      } else {
-        finalMap[emp.IdPersonnel] = prevApps; // Keep previous array reference!
+    flatRows.forEach(row => {
+      if (row.type === 'employee') {
+        const rowId = row.id as number;
+        employeeRowIds.add(rowId);
+        map[rowId] = [];
       }
     });
 
-    if (hasChanges || Object.keys(prevMap).length === 0) {
-      previousAppointmentsMapRef.current = finalMap;
-    }
-    return finalMap;
-  }, [appointmentsWithTop, employees]);
+    appointmentsInHorizontalWindow.forEach(app => {
+      if (employeeRowIds.has(app.IdEmploye)) {
+        map[app.IdEmploye].push(app);
+      }
+    });
+    
+    return map;
+  }, [appointmentsInHorizontalWindow, flatRows]);
 
   const toggleItem = (itemId: string | number) => {
     setOpenItems(open =>

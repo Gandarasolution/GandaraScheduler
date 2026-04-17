@@ -8,7 +8,7 @@
  * @version 2.0.0
  */
 
-import React, { useEffect, useState , useMemo } from 'react';
+import React, { useCallback, useEffect, useState , useMemo } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
@@ -23,6 +23,7 @@ import {
 
 import { EmployeeSelector, MobileCalendarGrid, NotificationPanel, AppointmentList} from './index';
 import SearchOverlay from '../../modals/SearchOverlay';
+import type { SearchableItem } from '../../modals/SearchOverlay';
 
 // Hooks & Utils
 import { useNotifications, useCalendarWorker } from '../../../hooks';
@@ -41,7 +42,7 @@ interface MobileCalendarGridProps {
   appointments: Appointment[];
   user: User;
   items: Item[];
-  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => Promise<{success: boolean}>;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
 }
 
 // ===== COMPOSANT PRINCIPAL =====
@@ -60,7 +61,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
@@ -97,7 +97,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
       const hasMonthlyAppointments = monthlyAppointments.some(app => 
-        app.Employee.IdPersonnel === emp.IdPersonnel
+        app.IdEmploye === emp.IdPersonnel
       );
       
       return hasMonthlyAppointments;
@@ -124,11 +124,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       // Filtrer par rôle : users et viewers ne voient que leurs propres RDV
       if (user.role === 'user' || user.role === 'viewer') {
-        filteredApps = appointments.filter(app => app.Employee.IdPersonnel === user.IdPersonnel);
+        filteredApps = appointments.filter(app => app.IdEmploye === user.IdPersonnel);
       }
       
       const filtered = filteredApps.filter(app => {
-        const matchesEmployee = !selectedEmployee || app.Employee.IdPersonnel === selectedEmployee.IdPersonnel;
+        const matchesEmployee = !selectedEmployee || app.IdEmploye === selectedEmployee.IdPersonnel;
         const isInMonth = app.DebutPlanningEvenement <= monthEnd && app.FinPlanningEvenement >= monthStart;
         return matchesEmployee && isInMonth;
       });
@@ -244,7 +244,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
   const handleSaveAppointment = (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean): Promise<{success: boolean}> => {
     if (onAddAppointment) {
-      return onAddAppointment(appointment, item, includeAllNonWorkingDays).then(() => {
+      return onAddAppointment(appointment, item, includeAllNonWorkingDays, appointment.IdPlanningEvenement <= 0 ? 'create' : 'update').then(() => {
         addNotification('success', 'Rendez-vous créé', 'Le rendez-vous a été ajouté avec succès');
         setShowAppointmentForm(false);
         return { success: true };
@@ -260,31 +260,31 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     setShowNotifications(false);
   };
 
-  // Filtrage des items pour la recherche
-  const filteredItems = useMemo(() => {
-    if (!searchInput.trim()) return [];
-    
-    const search = searchInput.toLowerCase();
-    // Utiliser allowedItems qui contient déjà les items filtrés par permissions
-    return allowedItems.filter(item => {
-      const matchLabel = item.LibellePlanningRessource?.toLowerCase().includes(search);
-      const matchCode = item.CodePlanningRessource?.toLowerCase().includes(search);
-      
-      // Propriétés spécifiques aux ChantierItem
-      if (item.Type === 'chantier') {
+  const searchOverlayItems = useCallback(async (query: string): Promise<{ error: number; data: SearchableItem[]; message?: string }> => {
+    const trimmedQuery = query.trim().toLowerCase();
+    if (!trimmedQuery) {
+      return { error: 0, data: [] };
+    }
+
+    const data = allowedItems.filter(item => {
+      const matchLabel = item.LibellePlanningRessource?.toLowerCase().includes(trimmedQuery);
+      const matchCode = item.CodePlanningRessource?.toLowerCase().includes(trimmedQuery);
+
+      if (item.Type === 'Projet') {
         const chantierItem = item as any;
         return matchLabel || matchCode ||
-          chantierItem.identifiant?.toLowerCase().includes(search) ||
-          chantierItem.libelle?.toLowerCase().includes(search);
+          chantierItem.identifiant?.toLowerCase().includes(trimmedQuery) ||
+          chantierItem.libelle?.toLowerCase().includes(trimmedQuery);
       }
-      
+
       return matchLabel || matchCode;
     }).map(item => ({
       ...item,
       id: (item as any).IdPlanningRessource || (item as any).id,
       label: item.LibellePlanningRessource || (item as any).label
     }));
-  }, [allowedItems, searchInput]);
+    return { error: 0, data };
+  }, [allowedItems]);
 
   // ----- FACTORIES -----
   
@@ -302,11 +302,9 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       AnnotationPlanningEvenement: '',
       DebutPlanningEvenement: startOfSelectedDay,
       FinPlanningEvenement: endOfSelectedDay,
-      Employee: appointmentEmployee,
-      Type: 'chantier',
-      Ressource: {
-        IdRessource: 0,
-      } as unknown as Item,
+      IdEmploye: appointmentEmployee.IdPersonnel,
+      Type: 'Projet',
+      IdPlanningRessource: 0,
       PlanningEvenementPriorite: 0,
     };
   };
@@ -318,7 +316,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     
     return {
       IdPlanningRessource: 0,
-      Type: 'chantier',
+      Type: 'Projet',
       LibellePlanningRessource: '',
       CouleurFondPlanningRessource: '#3953aaff',
       CouleurBordurePlanningRessource: '#2c4086',
@@ -558,11 +556,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             isOpen={showSearchModal}
             onClose={() => {
               setShowSearchModal(false);
-              setSearchInput('');
             }}
-            searchInput={searchInput}
-            setSearchInput={setSearchInput}
-            items={filteredItems}
+            onSearch={searchOverlayItems}
             placeholder="Rechercher un chantier, paie, congé..."
             emptyStateConfig={{
               noInput: {
@@ -587,7 +582,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             }}
             renderItem={(item) => {
               const itemData = item as any as Item;
-              const isChantier = itemData.Type === 'chantier';
+              const isChantier = itemData.Type === 'Projet';
               const chantierData = isChantier ? itemData as any : null;
               
               return (

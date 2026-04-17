@@ -32,10 +32,10 @@ export const customRenderersFactory = (
             IdPlanningEvenement: 0,
             AnnotationPlanningEvenement: '',
             Type: chantierItem.Type,
-            Ressource: chantierItem,
+            IdPlanningRessource: chantierItem.IdPlanningRessource,
             DebutPlanningEvenement: 0,
             FinPlanningEvenement: 1000,
-            Employee: employees[0],
+            IdEmploye: employees[0].IdPersonnel,
           }}
           isFullDay={false}
           isMobile={false}
@@ -48,10 +48,10 @@ export const customRenderersFactory = (
               IdPlanningEvenement: 0,
               AnnotationPlanningEvenement: '',
               Type: chantierItem.Type,
-              Ressource: chantierItem,
+              IdPlanningRessource: chantierItem.IdPlanningRessource,
               DebutPlanningEvenement: 0,
               FinPlanningEvenement: 1000,
-              Employee: employees[0],
+              IdEmploye: employees[0].IdPersonnel,
             }
             setSelectedAppointment(newAppointment);
             handleOpenEditModal(newAppointment);
@@ -244,7 +244,7 @@ export const customComputedFieldsFactory = (
     const currentDate = new Date().setHours(0, 0, 0, 0);
 
     const relevantAppointments = appointments.filter(appointment => {
-      if (appointment.Type !== 'chantier' || appointment.Ressource.IdPlanningRessource !== chantierId) {
+      if (appointment.Type !== 'Projet' || appointment.IdPlanningRessource !== chantierId) {
         return false;
       }
       // Prendre les RDV futurs ou en cours

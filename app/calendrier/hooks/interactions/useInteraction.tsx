@@ -215,14 +215,10 @@ export const useInteraction = ({
                  IdPlanningEvenement: 0,
                  AnnotationPlanningEvenement: '',
                  Type: item.type,
-                 Ressource: item,
+                 IdPlanningRessource: item.IdPlanningRessource,
                  DebutPlanningEvenement: Date.now(),
                  FinPlanningEvenement: Date.now(),
-                 Employee: {
-                     IdPersonnel: 0,
-                     Nom: '',
-                     Prenom: '',
-                    } as User
+                IdEmploye: item.IdEmploye,
              };
              handleOpenEditModal(mockApp);
           }

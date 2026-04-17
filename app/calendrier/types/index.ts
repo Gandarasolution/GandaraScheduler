@@ -129,7 +129,7 @@ interface BaseItem {
 }
 
 export interface ChantierItem extends BaseItem {
-  Type: "chantier";
+  Type: "Projet";
   identifiant: string;
   poleActivite: string;
   libelle: string;
@@ -155,11 +155,11 @@ export interface CommonPaieAttributs extends BaseItem {
 }
 
 export interface AbsenceItem extends CommonPaieAttributs {
-  Type: "absence";
+  Type: "Paie";
 }
 
 export interface AutreItem extends CommonPaieAttributs {
-  Type: "autre";
+  Type: "Rubrique Perso";
 }
 
 export type SocialItem = AbsenceItem | AutreItem;
@@ -186,11 +186,11 @@ export interface Appointment{
   /** Date et heure de fin du rendez-vous */
   FinPlanningEvenement: number;
   /** ID de l'employé assigné au rendez-vous */
-  Employee: User;
+  IdEmploye: User["IdPersonnel"];
   /** Type de rendez-vous */
-  Type: 'chantier' | 'absence' | 'autre';
+  Type: 'Projet' | 'Paie' | 'Rubrique Perso';
   /** ID de l'événement auquel ce RDV est lié */
-  Ressource: Item;
+  IdPlanningRessource: Item["IdPlanningRessource"];
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
   Etiquette?: Tag;
   /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */

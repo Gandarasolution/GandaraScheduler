@@ -205,7 +205,7 @@ export const ExpandButton: React.FC<ExpandButtonProps> = ({
  */
 export interface ActionButtonsProps {
   /** Label du bouton primaire */
-  primaryLabel?: string;
+  primaryLabel?: string | React.ReactNode;
   /** Label du bouton secondaire */
   secondaryLabel?: string;
   /** Callback pour action primaire */
@@ -231,23 +231,14 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
 }) => {
   return (
     <div className="flex flex-col sm:flex-row justify-between gap-3 mt-auto pt-5">
-      {primaryType === 'submit' ? (
-        <input
-          type="submit"
-          className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
-          value={primaryLabel}
-          disabled={disabled}
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={onPrimary}
-          disabled={disabled}
-          className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {primaryLabel}
-        </button>
-      )}
+      <button
+        type={primaryType}
+        className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={disabled}
+      >
+        {primaryLabel}
+      </button>
+    
       <button
         type="button"
         onClick={onSecondary}

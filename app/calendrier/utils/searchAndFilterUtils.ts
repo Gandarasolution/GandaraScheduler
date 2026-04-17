@@ -154,7 +154,7 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
     return appointments
       .map(app => {
         // Récupérer les informations selon le type de rendez-vous
-        const event = events.find(e => e.IdPlanningRessource === app.Ressource.IdPlanningRessource);
+        const event = events.find(e => e.IdPlanningRessource === app.IdPlanningRessource);
         const title = event?.LibellePlanningRessource || '';
         const description = app.AnnotationPlanningEvenement || '';
         
@@ -176,8 +176,8 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
     keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } }
   ): FilterConfig => {
     const eventsToProcess = viewtype === 'chantier'
-      ? events.filter(e => e.Type === 'chantier') as ChantierItem[]
-      : events.filter(e => e.Type !== 'chantier') as SocialItem[];
+      ? events.filter(e => e.Type === 'Projet') as ChantierItem[]
+      : events.filter(e => e.Type !== 'Projet') as SocialItem[];
     
     // Initialiser la structure avec label, type et options vides
     const result: FilterConfig = Object.entries(keyOfFilter).reduce((acc, [key, config]) => {

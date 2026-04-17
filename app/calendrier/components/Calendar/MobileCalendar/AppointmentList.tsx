@@ -9,6 +9,7 @@ interface AppointmentListProps {
 }
 
 const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, items }) => {
+  const item = items.find(i => i.IdPlanningRessource === app.IdPlanningRessource);
   return (
     <div 
       className="rounded-3xl p-5 mb-4 border flex items-start group transition-all duration-300"
@@ -26,7 +27,7 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, i
     >
       <div 
         className={`w-1.5 h-12 rounded-full  mr-4 mt-1`} 
-        style={{backgroundColor : app.Ressource.CouleurFondPlanningRessource}}
+        style={{backgroundColor : item?.CouleurFondPlanningRessource}}
       ></div>
       <div className="flex-1">
         <h3 
@@ -39,7 +40,7 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, i
             e.currentTarget.style.color = 'var(--text-primary)';
           }}
         >
-          {app.Ressource.LibellePlanningRessource || 'Rendez-vous'}
+          {item?.LibellePlanningRessource || 'Rendez-vous'}
         </h3>
         <div className="flex items-center text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
           <span className="capitalize">{app.Type}</span>

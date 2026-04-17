@@ -51,6 +51,7 @@ import { useTheme } from '../utils/themeManager';
 import { notificationService } from "../services";
 import employeeService from '@/app/service/employee.service';
 import evenementService from '@/app/service/evenement.service';
+import ressourceService from '@/app/service/ressource.service';
 
 // --- UTILITAIRES ---
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
@@ -139,13 +140,7 @@ export default function HomePage({
     userIdNumber: user?.IdPersonnel || 0,
     userRole: user?.role || 'admin',
   });
-
-  // Filtrer les items selon les permissions de l'utilisateur
-  const allowedItems = useMemo(() => {
-    return dataLayer.itemsRef.current.filter(item => 
-      canCreateEvent(user.role, item.Type)
-    );
-  }, [dataLayer.itemsRef.current, user.role]);
+  
 
   // DataTableFrame requiert un champ `id`; les items métier utilisent IdPlanningRessource.
   const normalizedTableItems = useMemo(() => {
@@ -159,29 +154,6 @@ export default function HomePage({
     });
   }, [dataLayer]);
 
-  const searchableItems = useMemo(() => {
-    const sourceItems = dataLayer.searchResults;
-    
-    return sourceItems
-      .filter(item => {
-        // 1. Vérifier les permissions - Ne montrer que les items que l'utilisateur peut créer
-        // if (!canCreateEvent(user.role, item.Type)) {
-        //   return false;
-        // }
-
-        // 2. Filtrer les items désactivés (pour les types absence/autre)
-        if ('Actif' in item) {
-          return item.Actif !== false || item.Actif !== null;
-        }
-        return true; // Les chantiers n'ont pas de champ actif, donc toujours actifs
-      })
-      .map(item => ({
-        ...item,
-        id: item.IdPlanningRessource,
-        label: item.LibellePlanningRessource,
-      }));
-  }, [dataLayer.searchResults, user.role]);
-  
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
   const timeline = useTimeline({
     isDisplayWeekend: viewState.isDisplayWeekend,
@@ -207,6 +179,7 @@ export default function HomePage({
     setIsSearchOverlayOpen: viewState.setIsSearchOverlayOpen,
     setDimensionsSearchInput: viewState.setDimensionsSearchInput,
     api: {
+      updateEvenementAndRessource: evenementService.updateEvenementAndRessource,
       createEvenement: evenementService.createEvenement,
       updateEvenement: evenementService.updateEvenement,
       deleteEvenement: evenementService.deleteEvenement,
@@ -258,6 +231,39 @@ export default function HomePage({
     
     appointmentLogic.handleSearchItemAction(item as unknown as Item);
   }, [appointmentLogic.selectedCell, appointmentLogic.handleSearchItemAction, dataLayer.itemsRef]);
+
+  const searchOverlayItems = useCallback(async (query: string): Promise<{ error: number; data: SearchableItem[]; message?: string }> => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      return { error: 0, data: [] };
+    }
+
+    const response = await ressourceService.searchRessources(trimmedQuery, [], 20);
+    if (response?.error !== 0 || !Array.isArray(response.data)) {
+      return { error: 1, data: [], message: 'Erreur lors de la recherche. Veuillez réessayer.' };
+    }
+
+    
+    const data = (response.data as Item[])
+      .filter((item) => {
+        // if (!canCreateEvent(user.role, item.Type)) {
+        //   return false;
+        // }
+
+        if ('Actif' in item) {
+          return item.Actif !== false && item.Actif !== null;
+        }
+
+        return true;
+      })
+      .map((item) => ({
+        ...item,
+        id: item.IdPlanningRessource,
+        label: item.LibellePlanningRessource,
+      }));
+    
+    return { error: 0, data };
+  }, [user.role]);
 
   // --- CONFIGURATION DES FILTRES (Pour FilterModal) ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -447,10 +453,10 @@ export default function HomePage({
                           IdPlanningEvenement: 0,
                           AnnotationPlanningEvenement: '',
                           Type: item.Type,
-                          Ressource: item,
+                          IdPlanningRessource: item.IdPlanningRessource,
                           DebutPlanningEvenement: 0,
                           FinPlanningEvenement: 1000,
-                          Employee: globalEmployeesRef.current[0],
+                          IdEmploye: globalEmployeesRef.current[0].IdPersonnel,
                         });
                         appointmentLogic.setSelectedItem(item);
                         appointmentLogic.setIsModalOpen(true);
@@ -601,7 +607,7 @@ export default function HomePage({
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,
-              items: allowedItems,
+              items: dataLayer.itemsRef.current,
               employees: globalEmployeesRef.current,
               selectedItem: appointmentLogic.selectedItem,
               selectedEmployee: appointmentLogic.selectedEmployee,
@@ -654,12 +660,7 @@ export default function HomePage({
           <SearchOverlay
             isOpen={viewState.isSearchOverlayOpen}
             onClose={() => viewState.setIsSearchOverlayOpen(false)}
-            searchInput={viewState.dimensionSearchInput}
-            setSearchInput={viewState.setDimensionsSearchInput}
-            items={searchableItems}
-            isLoading={dataLayer.isSearching}
-            errorMessage={dataLayer.searchError}
-            onRetry={dataLayer.retrySearch}
+            onSearch={searchOverlayItems}
             onItemAction={handleSearchOverlayItemAction}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{

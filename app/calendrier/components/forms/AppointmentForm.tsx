@@ -64,7 +64,8 @@ interface AppointmentFormProps {
   onSave: (
     appointment: Appointment,
     eventType: Item,
-    includeAllNonWorkingDays: boolean
+    includeAllNonWorkingDays: boolean,
+    type: 'create' | 'update'
   ) => Promise<{ success: boolean; message?: string }>;
   /** Callback appelé lors de la fermeture du formulaire */
   onClose: () => void;
@@ -135,7 +136,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // Variables dérivées pour améliorer la lisibilité
   const isCreatingResource = resourceEditMode === 'create';
   const isEditingResource = resourceEditMode === 'edit';
-  
+    
     
   // ===== ÉTATS LOCAUX =====
   
@@ -149,6 +150,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [codeValidationError, setCodeValidationError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  
   const saveHandlerRef = useRef<(() => void | Promise<void>) | null>(null);
     const performAppointmentSave = async (): Promise<void> => {
       if (isSaving) return;
@@ -166,7 +168,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         const result = await onSave(
           formDataAppointment,
           formDataItemType,
-          includeAllNonWorkingDays
+          includeAllNonWorkingDays,
+          formDataAppointment.IdPlanningEvenement <= 0 ? 'create' : 'update'
         );
 
         if (result.success) {
@@ -229,7 +232,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     let isMounted = true;
 
     const loadPermissions = async () => {
-      if (isEditingResource && formDataItemType.IdPlanningRessource && (formDataItemType.Type === 'absence' || formDataItemType.Type === 'autre' || formDataItemType.isManual)) {
+      if (isEditingResource && formDataItemType.IdPlanningRessource && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual)) {
         const permissionEntries = await Promise.all(
           employees.map(async (emp) => {
             const response = await socialPermissionService.getSocialItemPermission(emp.IdPersonnel, formDataItemType.IdPlanningRessource);
@@ -254,7 +257,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         return;
       }
 
-      if (isCreatingResource && (formDataItemType.Type === 'absence' || formDataItemType.Type === 'autre' || formDataItemType.isManual)) {
+      if (isCreatingResource && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual)) {
       // Pour la création, initialiser avec tous les droits
       const permissions = new Map<number, SocialItemPermission>();
       employees.forEach(emp => {
@@ -322,7 +325,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         const newItemId = Date.now();
         
         // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-        if (formDataItemType.Type === 'absence' || formDataItemType.Type === 'autre' || formDataItemType.isManual) {
+        if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) {
           employeePermissions.forEach((perm) => {
             void socialPermissionService.setSocialItemPermission({
               ...perm,
@@ -338,7 +341,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       // Validation: gestion de la modification d'une ressource existante
       if (isEditingResource) {
         // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-        if (formDataItemType.Type === 'absence' || formDataItemType.Type === 'autre' || formDataItemType.isManual) {
+        if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) {
           employeePermissions.forEach((perm) => {
             void socialPermissionService.setSocialItemPermission(perm);
           });
@@ -412,7 +415,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       const newItemId = Date.now();
       
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      if (formDataItemType.Type === 'absence' || formDataItemType.Type === 'autre' || formDataItemType.isManual) {
+      if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) {
         employeePermissions.forEach((perm) => {
           void socialPermissionService.setSocialItemPermission({
             ...perm,
@@ -431,7 +434,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       console.log('Modification de ressource');
       
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      if (formDataItemType.Type === 'absence' || formDataItemType.Type === 'autre' || formDataItemType.isManual) {
+      if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) {
         employeePermissions.forEach((perm) => {
           void socialPermissionService.setSocialItemPermission(perm);
         });
@@ -459,11 +462,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     setFormDataItemType(prev => ({ ...prev, [colorMap[colorType]]: value }));
   };
 
-  useEffect(() => {
-    console.log(formDataItemType);
-  }, [formDataItemType]);
-    
-
   // Callback pour changement de champ ressource
   const handleResourceFieldChange = (fieldName: string, value: string | boolean) => {
     if (fieldName === 'code') {
@@ -486,7 +484,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Callback pour changement d'employé
   const handleEmployeeChange = (employeeId: number) => {
-    setFormDataAppointment(prev => ({ ...prev, Employee: employees.find(e => Number(e.IdPersonnel) === employeeId) || prev.Employee }));
+    setFormDataAppointment(prev => ({ ...prev, IdEmploye: employeeId }));
   };
 
   // Callback pour changement de permission
@@ -533,7 +531,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Callback pour changement de description/annotations
   const handleDescriptionChange = (value: string) => {
-    setFormDataAppointment(prev => ({ ...prev, description: value }));
+    setFormDataAppointment(prev => ({ ...prev, AnnotationPlanningEvenement: value }));
   };
 
   /**
@@ -699,7 +697,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               source={'demo'}
               isMobile={false}
               isDisplayWeekend={false}
-              chargeeAffaire={formDataItemType && formDataItemType.Type === 'chantier' ? formDataItemType.chargeAffaire : ''}
+              chargeeAffaire={formDataItemType && formDataItemType.Type === 'Projet' ? formDataItemType.chargeAffaire : ''}
               onDoubleClick={() => {}}
               onAppointmentResize={() => {}}
               handleContextMenu={() => {}}
@@ -709,7 +707,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           </FormPreview>
         
           {/* PermissionsPanel - Gestion des permissions par employé */}
-          {(isCreatingResource || isEditingResource) && (formDataItemType.Type === 'absence' || formDataItemType.Type === 'autre' || formDataItemType.isManual) && (
+          {(isCreatingResource || isEditingResource) && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) && (
             <PermissionsPanel
               users={usersWithPermissions}
               availablePermissions={availablePermissions}
@@ -735,7 +733,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               {/* EmployeeSelector - Sélecteur d'employé */}
               <EmployeeSelector
                 employees={employeeList}
-                selectedEmployeeId={formDataAppointment.Employee.IdPersonnel}
+                selectedEmployeeId={formDataAppointment.IdEmploye}
                 onEmployeeChange={handleEmployeeChange}
                 label="Affecté"
               />
@@ -744,7 +742,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
           {/* ActionButtons - Boutons d'action */}
           <ActionButtons
-            primaryLabel={isSaving ? 'Enregistrement...' : isCreatingResource ? 'Créer' : 'Enregistrer'}
+            primaryLabel={
+              isSaving ? 
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg> 
+              : isCreatingResource ? 'Créer' : 'Enregistrer'}
             secondaryLabel="Fermé"
             onSecondary={() => handleCloseWithSave()}
             primaryType="submit"
@@ -757,7 +761,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         </form>
 
         {/* Section étiquettes - Version réduite uniquement */}
-        {isReducedVersion && formDataItemType.Type === 'chantier' && (
+        {isReducedVersion && formDataItemType.Type === 'Projet' && (
           <div className="w-full lg:w-[320px] px-4 flex flex-col gap-4 border-l border-light">
             <TagsManager
               tags={availableTags}
@@ -784,7 +788,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             />
 
             {/* TagsManager - Sélecteur d'étiquette (version étendue pour chantiers) */}
-            {formDataItemType.Type === 'chantier' && (
+            {formDataItemType.Type === 'Projet' && (
               <TagsManager
                 tags={availableTags}
                 selectedTag={formDataAppointment.Etiquette}

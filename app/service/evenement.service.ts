@@ -6,17 +6,33 @@ function normalizeEvent(rawEvent: any) {
     }
 
     const employee = rawEvent.Employee ?? rawEvent.employee ?? null;
-    const ressource = rawEvent.Ressource ?? rawEvent.ressource ?? rawEvent.resource ?? null;
 
     return {
         ...rawEvent,
         Employee: employee,
-        Ressource: ressource,
         PlanningEvenementPriorite: rawEvent.PlanningEvenementPriorite ?? rawEvent.priority ?? 0,
     };
 }
 
 function normalizeEventListResponse(response: any) {
+    if (response?.error === 0 && response?.data && typeof response.data === 'object') {
+        const appointments = Array.isArray(response.data.appointments)
+            ? response.data.appointments.map(normalizeEvent)
+            : [];
+        const ressources = Array.isArray(response.data.ressources)
+            ? response.data.ressources
+            : [];
+
+        return {
+            ...response,
+            data: {
+                ...response.data,
+                appointments,
+                ressources,
+            },
+        };
+    }
+
     if (Array.isArray(response)) {
         return {
             error: 0,
@@ -35,6 +51,24 @@ function normalizeEventListResponse(response: any) {
 }
 
 function normalizeSingleEventResponse(response: any) {
+    if (response?.error === 0 && response?.data && typeof response.data === 'object') {
+        const appointments = Array.isArray(response.data.appointments)
+            ? response.data.appointments.map(normalizeEvent)
+            : [];
+        const ressources = Array.isArray(response.data.ressources)
+            ? response.data.ressources
+            : [];
+
+        return {
+            ...response,
+            data: {
+                ...response.data,
+                appointments,
+                ressources,
+            },
+        };
+    }
+
     if (Array.isArray(response)) {
         return {
             error: 0,
@@ -111,6 +145,20 @@ async function deleteEvenement(id: string) {
     return await deleteRequest(`/api/event/${id}`, 'deleteEvenement', {});
 }
 
+async function updateEvenementAndRessource(id: string, data: any) {
+    const payload = {
+        ...toApiEventPayload(data),
+        Ressource: {
+            CouleurFondPlanningRessource: data?.CouleurFondPlanningRessource ?? data?.Ressource?.CouleurFondPlanningRessource ?? null,
+            CouleurBordurePlanningRessource: data?.CouleurBordurePlanningRessource ?? data?.Ressource?.CouleurBordurePlanningRessource ?? null,
+            CouleurTextePlanningRessource: data?.CouleurTextePlanningRessource ?? data?.Ressource?.CouleurTextePlanningRessource ?? null,
+            IdImage: data?.IdImage ?? data?.Ressource?.IdImage ?? null,
+        },
+    };
+    return await putRequest(`/api/event/updateRessourceAndEvent/${id}`, payload, 'updateEvenementAndRessource');
+}
+
+
 export default {
 
     getEvenements,
@@ -118,5 +166,6 @@ export default {
     getEvenementByUser,
     createEvenement,
     updateEvenement,
-    deleteEvenement
+    deleteEvenement,
+    updateEvenementAndRessource
 }

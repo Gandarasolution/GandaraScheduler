@@ -17,7 +17,7 @@ interface EmployeeRowProps {
   tagPlacement?: 'hover' | 'fixed';
   visibleWindowStart: number;
   visibleWindowEnd: number;
-  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; item: Item; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   style?: React.CSSProperties;
@@ -61,6 +61,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   useEffect(() => {
     setExpandedGroups({});
   }, [collapseTrigger]);
+  
 
   const handleAppointmentResize = useCallback((id: number, newStartDate: number, newEndDate: number, resizeDirection: 'left' | 'right', priority: number) => {
     const appointmentToResize = appointments.find((app) => app.IdPlanningEvenement === id);
@@ -72,7 +73,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         newStartDate,
         newEndDate,
         newEmployeeId: employee.IdPersonnel as number,
-        item: appointmentToResize.Ressource,
+        idRessource: appointmentToResize.IdPlanningRessource as number,
         resizeDirection,
       },
       true,
@@ -86,7 +87,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const positionedAppointments = useMemo(() => {
     const filterred =  appointments
       .filter((app) => {
-        if (app?.Employee?.IdPersonnel !== employee.IdPersonnel) return false;
+        if (app?.IdEmploye !== employee.IdPersonnel) return false;
         return app.FinPlanningEvenement > visibleWindowStart && app.DebutPlanningEvenement < visibleWindowEnd;
       })
 
@@ -267,11 +268,12 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         
         // Clé unique pour le groupe basée sur tous les IDs des rendez-vous
         const groupUniqueKey = `group-${group.apps.map(a => `${a.IdPlanningEvenement}-${a.DebutPlanningEvenement}-${a.FinPlanningEvenement}`).join('_')}`;
-        
+      
         return (
           <React.Fragment key={groupUniqueKey}>
             {appsToRender.map((app, index) => {
-              const event = app.Ressource as Item | undefined;
+              const ressource = events.find((e) => e.IdPlanningRessource === app.IdPlanningRessource);
+              if (!ressource) return null;
   
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
               const isGhost = !isExpanded && (app.PlanningEvenementPriorite ?? 0) !== 0;
@@ -315,9 +317,9 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   isMobile={false}
                   isDisplayWeekend={isDisplayWeekend}
                   tagPlacement={tagPlacement}
-                  event={event as Item}
+                  event={ressource}
                   timelineStart={timelineStart}
-                  chargeeAffaire={(event && event.Type === 'chantier' ? event.chargeAffaire : '') || ''}
+                  chargeeAffaire={(ressource && ressource.Type === 'Projet' ? ressource.chargeAffaire : '') || ''}
                   absoluteLeft={app.left}
                   absoluteWidth={app.width}
                   absoluteTop={forcedTopPx} 
@@ -379,7 +381,7 @@ export default memo(EmployeeRow, (prev, next) => {
   if (prev.employee.IdPersonnel !== next.employee.IdPersonnel ||
       prev.dayInTimeline !== next.dayInTimeline ||
       prev.appointments.length !== next.appointments.length ||
-      prev.appointments.some((app, i) => app.IdPlanningEvenement !== next.appointments[i].IdPlanningEvenement || app.DebutPlanningEvenement !== next.appointments[i].DebutPlanningEvenement || app.FinPlanningEvenement !== next.appointments[i].FinPlanningEvenement || app.top !== next.appointments[i].top || app.Etiquette !== next.appointments[i].Etiquette) ||
+      prev.appointments === next.appointments ||
       prev.rowHeight !== next.rowHeight ||
       prev.style?.top !== next.style?.top ||
       prev.isFullDay !== next.isFullDay ||

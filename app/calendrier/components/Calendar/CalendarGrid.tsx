@@ -45,7 +45,7 @@ interface CalendarGridProps {
   calendarConfig: CalendarConfig;
   onCalendarConfigChange: (config: CalendarConfig) => void;
   availableConfigs: CalendarConfig[];
-  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; item: Item; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (item: Item, date: number, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
@@ -56,7 +56,7 @@ interface CalendarGridProps {
   onSelectAppointment: (appointment: Appointment | null) => void;
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
   mouseUpAfterScroll: () => void;
-  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => Promise<{success: boolean}>;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({

@@ -41,7 +41,7 @@ interface UseCalendarDragDropParams {
   isFullDay: boolean;
   nonWorkingDates: number[];
   appointmentsWithTop: (Appointment & { top: number })[];
-  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; item: Item; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onExternalDragDrop: (item: Item, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number) => void;
 }
 
@@ -131,6 +131,8 @@ export const useCalendarDragDrop = ({
       const duration = item.endDate - item.startDate;
       const newEnd = targetDate + duration;
       const movedAppointment = appointmentsWithTop.find((a) => a.IdPlanningEvenement === item.id);
+
+      if (!movedAppointment) return;
       
       // Gestion de la priorité : détecter sur quel rdv (position Y) l'utilisateur drop
       const targetEmployeeId = Number(targetRow.id);
@@ -138,7 +140,7 @@ export const useCalendarDragDrop = ({
       // Trouver tous les rdv qui chevauchent la nouvelle position
       const overlappingAppointments = appointmentsWithTop.filter(app => 
         app.IdPlanningEvenement !== item.id &&
-        app.Employee.IdPersonnel === targetEmployeeId &&
+        app.IdEmploye === targetEmployeeId &&
         app.DebutPlanningEvenement < newEnd &&
         app.FinPlanningEvenement > targetDate
       );
@@ -155,7 +157,7 @@ export const useCalendarDragDrop = ({
         // Récupérer l'item d'origine
         const originalItem = appointmentsWithTop.find(a => a.IdPlanningEvenement === item.id);
         const isAlreadyPresent = originalItem && 
-                               originalItem.Employee.IdPersonnel === targetEmployeeId && 
+                               originalItem.IdEmploye === targetEmployeeId && 
                                originalItem.DebutPlanningEvenement < newEnd && 
                                originalItem.FinPlanningEvenement > targetDate;
 
@@ -171,7 +173,7 @@ export const useCalendarDragDrop = ({
         const rdvatOriginalPosition = appointmentsWithTop
           .filter(app =>
             app.IdPlanningEvenement !== item.id &&
-            app.Employee.IdPersonnel === originalItem?.Employee.IdPersonnel &&
+            app.IdEmploye === originalItem?.IdEmploye &&
             app.DebutPlanningEvenement < endDateRdvTarget &&
             app.FinPlanningEvenement > startDateRdvTarget &&
             (app.PlanningEvenementPriorite ?? 0) === (originalItem?.PlanningEvenementPriorite ?? 0)
@@ -187,8 +189,8 @@ export const useCalendarDragDrop = ({
                 id: appToMove.IdPlanningEvenement,
                 newStartDate: appToMove.DebutPlanningEvenement,
                 newEndDate: appToMove.FinPlanningEvenement,
-                newEmployeeId: appToMove.Employee.IdPersonnel,
-                item: appToMove.Ressource,
+                newEmployeeId: appToMove.IdEmploye,
+                idRessource: appToMove.IdPlanningRessource,
               }, false, (originalItem?.PlanningEvenementPriorite ?? 0));
             });
 
@@ -199,8 +201,8 @@ export const useCalendarDragDrop = ({
                     id: appToAdjust.IdPlanningEvenement,
                     newStartDate: appToAdjust.DebutPlanningEvenement,
                     newEndDate: appToAdjust.FinPlanningEvenement,
-                    newEmployeeId: appToAdjust.Employee.IdPersonnel,
-                    item: appToAdjust.Ressource,
+                    newEmployeeId: appToAdjust.IdEmploye,
+                    idRessource: appToAdjust.IdPlanningRessource,
                   }, false, newPriority);
                 } 
               });
@@ -217,15 +219,12 @@ export const useCalendarDragDrop = ({
         }
       }
 
-      const droppedItem = item.item ?? movedAppointment?.Ressource;
-      if (!droppedItem) return;
-
       onAppointmentMoved({
         id: item.id,
         newStartDate: targetDate,
         newEndDate: newEnd,
         newEmployeeId: targetEmployeeId,
-        item: droppedItem,
+        idRessource: movedAppointment?.IdPlanningRessource,
         resizeDirection: 'right',
       }, true, newPriority);
     },

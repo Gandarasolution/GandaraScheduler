@@ -113,7 +113,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     type: 'appointment',
     item: () => ({
       id: appointment.IdPlanningEvenement,
-      item: appointment.Ressource,
       type: 'appointment',
       startDate: startDate,
       endDate: endDate,
@@ -233,7 +232,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onDoubleClick={(e) => {
         e.stopPropagation();
         setIsHovered(false); // Masquer le tooltip au double-clic
-        if (appointment.Employee.Actif) {
+        if (!isInactive) {
           onDoubleClick && onDoubleClick(appointment);
         }
       }}
@@ -269,7 +268,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
          }
          
          const cellUnderMouse = {
-           employeeId: appointment.Employee.IdPersonnel as number,
+           employeeId: appointment.IdEmploye as number,
            date: targetDate
          };
          
@@ -347,7 +346,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
 
       {/* Handle de redimensionnement à gauche */}
-      {source === 'calendar' && appointment.Employee.Actif && (
+      {source === 'calendar' && !isInactive && (
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30`}
           title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
@@ -459,7 +458,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       
 
       {/* Handle de redimensionnement à droite */}
-      {source === 'calendar' && appointment.Employee.Actif && (
+      {source === 'calendar' && !isInactive && (
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30 ${
             isSmallAppointment || !hasSpaceForBothHandles 

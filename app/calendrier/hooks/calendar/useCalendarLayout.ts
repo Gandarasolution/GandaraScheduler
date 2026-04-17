@@ -14,16 +14,11 @@ export const useCalendarLayout = ({
   tagPlacement
 }: UseCalendarLayoutParams) => {
 
-  const getEmployeeId = (appointment: Appointment): number | undefined => {
-    const employee = (appointment as any).Employee ?? (appointment as any).employee;
-    return employee?.IdPersonnel;
-  };
-
 
   // Calcule la hauteur nécessaire pour chaque cellule employé/jour
   const employeeHeights = useMemo(() => {
     return employees.map(employee => {
-      const employeeAppointments = appointments.filter(app => getEmployeeId(app) === employee.IdPersonnel);
+      const employeeAppointments = appointments.filter(app => app.IdEmploye === employee.IdPersonnel);
       
       let maxOverallOverlap = 0;
       if (employeeAppointments.length > 0) {
@@ -54,7 +49,7 @@ export const useCalendarLayout = ({
           });
       }
 
-      const calculatedHeight = maxOverallOverlap > 0 ? (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + (tagPlacement === 'fixed' ? 18 : 10) : CELL_HEIGHT;
+      const calculatedHeight = maxOverallOverlap > 0 ? (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + (tagPlacement === 'fixed' ? 18 : 10) : CELL_HEIGHT + 12 ;
 
       return { employeeId: employee.IdPersonnel, height: calculatedHeight, dayKey: undefined };
     });
@@ -66,11 +61,11 @@ export const useCalendarLayout = ({
    * Le top est calculé automatiquement : priorité basse = top bas (visuellement en bas)
    * Pour les rdv sans priorité ou priorité 0, on les place en bas
    */
-  const assignAppointmentTops = useCallback((appointments: Appointment[]) => {
+   const appointmentsWithTop = useMemo(() => {
     const result: (Appointment & { top: number, _dayKey?: number })[] = [];
 
     employees.forEach(emp => {
-      const empAppointments = appointments.filter(app => getEmployeeId(app) === emp.IdPersonnel);
+      const empAppointments = appointments.filter(app => app.IdEmploye === emp.IdPersonnel);
       
       empAppointments.forEach(app => {
           // Trouver tous les rdv qui chevauchent
@@ -94,11 +89,7 @@ export const useCalendarLayout = ({
       });
     });
     return result;
-  }, [employees]);
-
-  const appointmentsWithTop = useMemo(() => {
-    return assignAppointmentTops(appointments);
-  }, [assignAppointmentTops, appointments]);
+  }, [employees, appointments]);
 
   return {
     employeeHeights,

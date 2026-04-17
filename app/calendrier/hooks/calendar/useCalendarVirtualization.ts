@@ -124,8 +124,6 @@ export const useCalendarVirtualization = ({
             const adjustedHeight = expandedOverlapRows[employee.IdPersonnel]
               ? baseHeight
               : Math.min(baseHeight, ROW_HEIGHT);
-
-              //console.log(employee.IdPersonnel);
               
             rows.push({
               type: 'employee',

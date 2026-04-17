@@ -28,7 +28,7 @@ interface CalendarRowsProps {
   visibleWindowStart: number;
   visibleWindowEnd: number;
   isDisplayWeekend: boolean;
-  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; item: Item; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   selectedCell: { employeeId: number; date: number } | null;
@@ -70,9 +70,13 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   collapseTriggers,
   tagPlacement
 }) => {
+  //console.log(appointmentsByEmployee);
+  
   return (
     <>
-      {visibleRows.map((row) => {
+      {visibleRows.map((row) => { 
+        //console.log(row);
+               
         const commonProps = {
           style: {
             width: '100%',
