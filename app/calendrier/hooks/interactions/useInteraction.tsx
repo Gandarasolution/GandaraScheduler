@@ -65,6 +65,8 @@ export const useInteraction = ({
     e.preventDefault();
     e.stopPropagation();
 
+    console.log(cell);
+    
     const items: any[] = [];
 
     // 1. Clic Droit sur un RENDEZ-VOUS

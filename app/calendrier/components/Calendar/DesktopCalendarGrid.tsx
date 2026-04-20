@@ -101,6 +101,21 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     tagPlacement
   });
 
+  // appointmentsWithTop.forEach(app => {
+  //   if (app.IdEmploye === 5404) { 
+  //     console.log(app);
+  //   }
+  // });
+
+  //console.log(appointmentsWithTop);
+  
+  // appointments.forEach(app => {
+  //   if (app.IdEmploye === 5404) { 
+  //     console.log(app);
+  //   }
+  // });
+  
+
   
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
     const items = getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
@@ -183,12 +198,18 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [appointmentsWithTop, visibleWindowStart, visibleWindowEnd]);
 
   const appointmentsInHorizontalWindow = useMemo(() => {
-  return appointmentsWithTop.filter((app) =>
-    app.FinPlanningEvenement > visibleWindowStart &&
+  return appointmentsWithTop.filter((app) =>{
+    // if (app.IdEmploye === 5404) { 
+    //   console.log(app.FinPlanningEvenement > visibleWindowStart &&
+    // app.DebutPlanningEvenement < visibleWindowEnd);
+    // }
+    return app.FinPlanningEvenement > visibleWindowStart &&
     app.DebutPlanningEvenement < visibleWindowEnd
-  );
+  });
 }, [appointmentsWithTop, visibleWindowStart, visibleWindowEnd]);
   
+ 
+
   const filteredEmployees = useMemo(() => {
     const baseFiltered = applyFiltersToEmployees(employees, getFlatFilters(calendarConfig.filterCategories));
     
@@ -301,18 +322,22 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const appointmentsByEmployee = useMemo(() => {
     const map: Record<number, (Appointment & { top: number })[]> = {};
     const employeeRowIds = new Set<number>();
-
-    flatRows.forEach(row => {
+      
+  
+    visibleRows.forEach(row => {
       if (row.type === 'employee') {
         const rowId = row.id as number;
-        employeeRowIds.add(rowId);
+        employeeRowIds.add(Number(rowId));
         map[rowId] = [];
       }
     });
-
+    //console.log(employeeRowIds);
+    
     appointmentsInHorizontalWindow.forEach(app => {
-      if (employeeRowIds.has(app.IdEmploye)) {
-        map[app.IdEmploye].push(app);
+      //console.log(app.IdEmploye, employeeRowIds.has(Number(app.IdEmploye)));
+      
+      if (employeeRowIds.has(Number(app.IdEmploye))) {
+        map[Number(app.IdEmploye)].push(app);
       }
     });
     

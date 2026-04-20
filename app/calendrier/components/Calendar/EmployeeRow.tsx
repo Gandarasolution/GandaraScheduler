@@ -62,7 +62,13 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     setExpandedGroups({});
   }, [collapseTrigger]);
   
-
+  // if (employee.Nom === 'CABESTANT') {
+  //   console.log(employee);
+  //   console.log(appointments);
+  // }
+  
+  
+  
   const handleAppointmentResize = useCallback((id: number, newStartDate: number, newEndDate: number, resizeDirection: 'left' | 'right', priority: number) => {
     const appointmentToResize = appointments.find((app) => app.IdPlanningEvenement === id);
     if (!appointmentToResize) return;
@@ -87,7 +93,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const positionedAppointments = useMemo(() => {
     const filterred =  appointments
       .filter((app) => {
-        if (app?.IdEmploye !== employee.IdPersonnel) return false;
+        if (Number(app?.IdEmploye) !== Number(employee.IdPersonnel)) return false;
         return app.FinPlanningEvenement > visibleWindowStart && app.DebutPlanningEvenement < visibleWindowEnd;
       })
 
@@ -148,6 +154,13 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
     return groups.map(({ key, apps }) => ({ key, apps }));
   }, [positionedAppointments]);
+
+  // if (Number(employee.IdPersonnel) === 5404) {
+  // console.log(overlappingGroups);
+  // console.log(positionedAppointments);
+  // }
+  //console.log(employee.IdPersonnel, (Number(employee.IdPersonnel) === 5404));
+  
 
   const hasExpandedGroup = useMemo(() => overlappingGroups.some((g) => expandedGroups[g.key]), [overlappingGroups, expandedGroups]);
   
@@ -263,6 +276,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         const appsToRender = group.apps;
         const baseTopPx = group.apps[0]?.topPx || 0; // Position de base pour les éléments du groupe (le premier élément)
 
+        
         // Récupérer tous les RDV avec priorité 0 (RDV de base)
         const priority0Apps = group.apps.filter(app => (app.PlanningEvenementPriorite ?? 0) === 0);
         
@@ -272,7 +286,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         return (
           <React.Fragment key={groupUniqueKey}>
             {appsToRender.map((app, index) => {
-              const ressource = events.find((e) => e.IdPlanningRessource === app.IdPlanningRessource);
+            
+              const ressource = events.find((e) => Number(e.IdPlanningRessource) === Number(app.IdPlanningRessource));
               if (!ressource) return null;
   
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
@@ -307,6 +322,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   }
                 });
               }
+          
 
               return (
                 <AppointmentItem
@@ -381,7 +397,7 @@ export default memo(EmployeeRow, (prev, next) => {
   if (prev.employee.IdPersonnel !== next.employee.IdPersonnel ||
       prev.dayInTimeline !== next.dayInTimeline ||
       prev.appointments.length !== next.appointments.length ||
-      prev.appointments === next.appointments ||
+    prev.appointments !== next.appointments ||
       prev.rowHeight !== next.rowHeight ||
       prev.style?.top !== next.style?.top ||
       prev.isFullDay !== next.isFullDay ||

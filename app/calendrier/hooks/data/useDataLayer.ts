@@ -50,7 +50,6 @@ export const useDataLayer = ({
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
   const [availableImages, setAvailableImages] = useState<Image[]>(() => getCachedImages());
-  const [workerFilteredAppointments, setWorkerFilteredAppointments] = useState<Appointment[]>([]); 
   const itemsSnapshot = useMemo(() => itemsRef.current, [appointmentsVersion]);
 
   const selectedRdvTypes = useMemo(() => {
@@ -164,11 +163,6 @@ export const useDataLayer = ({
     // Logique de filtrage combinée (Types RDV + Filtres champs) SANS searchQuery
     let filtered = appointmentsRef.current;
     
-    // Utiliser le worker pour le pré-filtrage si disponible et si gros volume
-    if (workerFilteredAppointments.length > 0 && appointmentsRef.current.length > 500) {
-      filtered = workerFilteredAppointments;
-    }
-    
     // Filtre par rôle utilisateur - users et viewers ne voient que leurs propres RDV
     if (userRole === 'user' || userRole === 'viewer') {
       filtered = filtered.filter(app => app.IdEmploye === userIdNumber);
@@ -193,7 +187,7 @@ export const useDataLayer = ({
     }
     // Appliquer les filtres SANS searchQuery pour avoir une base stable
     return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), '', globalEmployeesRef.current);
-  }, [calendarConfig, appointmentsVersion, workerFilteredAppointments, userRole, userIdNumber, isSearchOverlayOpen]);
+  }, [calendarConfig, appointmentsVersion, userRole, userIdNumber, isSearchOverlayOpen]);
 
     
   // --- Filtrage avec recherche (appliqué uniquement si searchQuery existe) ---
@@ -224,27 +218,7 @@ export const useDataLayer = ({
     return applyFiltersToAppointments(baseFilteredAppointments, getFlatFilters(calendarConfig?.filterCategories), searchInput, globalEmployeesRef.current);
   }, [baseFilteredAppointments, searchInput, calendarConfig]);
   
-  
-  // Pré-filtrage avec Web Worker pour améliorer les performances (gros volumes)
-  useEffect(() => {
-    if (!worker.isReady || !calendarConfig || appointmentsRef.current.length <= 500) {
-      // Pas besoin du worker pour petits volumes
-      return;
-    }
-    
-    const preFilterWithWorker = async () => {
-      // Le worker peut faire un pré-filtrage basique
-      // La logique métier complète est appliquée après
-      const stats = await worker.calculateStats(appointmentsRef.current);
-      
-      // Pour l'instant, on stocke juste les données brutes
-      // Le filtrage fin est fait dans le useMemo ci-dessus
-      setWorkerFilteredAppointments(appointmentsRef.current);
-    };
-    
-    preFilterWithWorker();
-  }, [worker.isReady, appointmentsVersion, calendarConfig]);
-    
+
 
   const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
     setIsLoading(true);

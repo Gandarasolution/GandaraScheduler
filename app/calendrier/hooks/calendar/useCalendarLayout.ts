@@ -65,8 +65,9 @@ export const useCalendarLayout = ({
     const result: (Appointment & { top: number, _dayKey?: number })[] = [];
 
     employees.forEach(emp => {
-      const empAppointments = appointments.filter(app => app.IdEmploye === emp.IdPersonnel);
-      
+      const empAppointments = appointments.filter(app => Number(app.IdEmploye) === Number(emp.IdPersonnel));
+
+    
       empAppointments.forEach(app => {
           // Trouver tous les rdv qui chevauchent
           const overlapping = empAppointments.filter(other => 
@@ -86,6 +87,9 @@ export const useCalendarLayout = ({
           });
           }   
           result.push({ ...app, top: lowerPriorityCount});
+      //     if (Number(emp.IdPersonnel) === 5404) {
+      //   console.log(result);
+      // }
       });
     });
     return result;

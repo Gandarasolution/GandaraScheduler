@@ -29,10 +29,10 @@ interface LogicProps {
   setIsSearchOverlayOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setDimensionsSearchInput: React.Dispatch<React.SetStateAction<string>>;
   api?: {
-    createEvenement?: (data: any) => Promise<any>;
-    updateEvenement?: (id: string, data: any) => Promise<any>;
-    deleteEvenement?: (id: string) => Promise<any>;
-    updateEvenementAndRessource?: (id: string, data: any) => Promise<any>;
+    createEvenement: (data: any) => Promise<any>;
+    updateEvenement: (id: string, data: any) => Promise<any>;
+    deleteEvenement: (id: string) => Promise<any>;
+    updateEvenementAndRessource: (id: string, data: any) => Promise<any>;
   };
 }
 
@@ -52,7 +52,6 @@ export const useAppointmentLogic = ({
   
   // --- Refs pour la persistance hors rendu ---
   const history = useRef<HistoryAction[]>([]);
-  const idCounter = useRef(10000);
   const clipboardAppointment = useRef<Appointment | null>(null);
   const timestampCounter = useRef(1000);
   const timelineStateRef = useRef(timelineState);
@@ -296,8 +295,6 @@ export const useAppointmentLogic = ({
     syncWithApi: boolean = true
   ): Appointment | null => {
       const { startDate, endDate, employeeId, ressource } = data;
-      const id = ++idCounter.current;
-
       const employee = employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
 
       if (!employee) {
@@ -307,7 +304,6 @@ export const useAppointmentLogic = ({
 
 
       const payload = {
-        IdPlanningEvenement: id,
         AnnotationPlanningEvenement: description || `Nouveau rendez-vous`,
         DebutPlanningEvenement: startDate,
         FinPlanningEvenement: endDate,
@@ -318,7 +314,7 @@ export const useAppointmentLogic = ({
 
       const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
       const localAppointment: Appointment = {
-        IdPlanningEvenement: id,
+        IdPlanningEvenement: -1, // ID temporaire pour le rendu local
         AnnotationPlanningEvenement: description || `Nouveau rendez-vous`,
         DebutPlanningEvenement: startDate,
         FinPlanningEvenement: endDate,
@@ -366,7 +362,7 @@ export const useAppointmentLogic = ({
 
               const createdAppointment: Appointment = {
                 ...apiCreated,
-                IdPlanningEvenement: apiCreated.IdPlanningEvenement ?? id,
+                IdPlanningEvenement: apiCreated.IdPlanningEvenement ?? -1,
                 AnnotationPlanningEvenement: apiCreated.AnnotationPlanningEvenement ?? (description || `Nouveau rendez-vous`),
                 DebutPlanningEvenement: apiCreated.DebutPlanningEvenement ?? startDate,
                 FinPlanningEvenement: apiCreated.FinPlanningEvenement ?? endDate,
@@ -376,7 +372,7 @@ export const useAppointmentLogic = ({
               };
 
               appointmentsRef.current = appointmentsRef.current.map((app) =>
-                Number(app.IdPlanningEvenement) === Number(id) ? createdAppointment : app
+                Number(app.IdPlanningEvenement) === Number(-1) ? createdAppointment : app
               );
               onUpdate();
               if (saveToHistory) {
@@ -563,9 +559,7 @@ export const useAppointmentLogic = ({
     includeNonWorkingDays: boolean,
     type: 'create' | 'update'
   ): Promise<{ success: boolean; message?: string }> => {
-      // Vérifier si l'événement est désactivé (pour les types absence/autre)
-      console.log(eventUpdate);
-      
+      // Vérifier si l'événement est désactivé (pour les types absence/autre)      
       if ('Actif' in eventUpdate && !eventUpdate.Actif) {
         notificationService.error('Action interdite', 'Cette rubrique est désactivée et ne peut plus être utilisée pour créer ou modifier des rendez-vous.');
         return { success: false, message: 'Cette rubrique est désactivée.' };
@@ -1012,30 +1006,96 @@ export const useAppointmentLogic = ({
     return null;
   }, [appointmentUtils]);
 
-  const pasteAppointment = useCallback((targetCell?: { employeeId: number; date: number } | null) => {
+  const pasteAppointment = useCallback( async (targetCell?: { employeeId: number; date: number } | null) => {
     const cell = targetCell || selectedCell;
     if (!clipboardAppointment.current || !cell) return;
 
-    try {
-      const newAppointments = appointmentUtils.pasteAppointment({
-        clipboardAppointment: clipboardAppointment.current,
-        targetCell: cell,
-        isFullDay: timelineState.isFullDay,
-        nonWorkingDates: timelineState.nonWorkingDates,
-        includeWeekend: timelineState.includeWeekend,
-        includeNonWorkingDays: timelineState.respectNonWorkingDays,
-      });
-
-      newAppointments.forEach(app => {
-        saveAppointmentState(app, 'create');
-      });
-      appointmentsRef.current = [...appointmentsRef.current, ...newAppointments];
-      onUpdate();
-      notificationService.appointmentCreated(1);
-    } catch (error) {
-      notificationService.error('Erreur', (error as Error).message);
+    const a = clipboardAppointment.current;
+    const startDate = a.DebutPlanningEvenement;
+    const endDate = a.FinPlanningEvenement;
+    const diff = endDate - startDate;
+    
+    const newStartDate = cell.date;
+    const newEndDate = newStartDate + diff;
+  
+    const days = getWorkedDayIntervals(
+      newStartDate, 
+      newEndDate,
+      timelineState.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+      timelineState.respectNonWorkingDays,
+      timelineState.includeWeekend,
+      timelineState.nonWorkingDates
+    );
+    
+    if (days.length === 0) {
+      return;
     }
-  }, [appointmentUtils, selectedCell, timelineState, appointmentsRef, onUpdate]);
+
+    const payload = {
+      DebutPlanningEvenement: cell.date,
+      FinPlanningEvenement: cell.date + (a.FinPlanningEvenement - a.DebutPlanningEvenement),
+      Type: employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(cell.employeeId))?.Type,
+      IdEmploye: cell.employeeId,
+      AnnotationPlanningEvenement: a.AnnotationPlanningEvenement,
+      IdPlanningRessource: a.IdPlanningRessource,
+    };
+
+    if (!api?.createEvenement) {
+      notificationService.error('Erreur API', 'API de création indisponible. Le collage est annulé.');
+      return;
+    }
+
+    
+    await api.createEvenement({ ...payload })
+    .then((resp) => {;
+
+    if (!isApiSuccess(resp)) {
+      const apiMessage = resp?.message || 'Le serveur a refusé la création du rendez-vous.';
+      notificationService.error('Création annulée', apiMessage);
+      return;
+    }
+
+    const apiData = resp?.data;
+    const apiResources = Array.isArray(apiData?.ressources) ? apiData.ressources : [];
+    addMissingResourcesToCache(apiResources);
+
+    const responseAppointments = Array.isArray(apiData?.appointments)
+      ? apiData.appointments
+      : Array.isArray(resp?.data)
+        ? resp.data
+        : (apiData ? [apiData] : []);
+
+    const createdAppointments: Appointment[] = responseAppointments
+      .filter((app: any) => app && typeof app === 'object')
+      .map((app: any) => ({
+        ...app,
+        IdPlanningEvenement: Number(app.IdPlanningEvenement),
+        DebutPlanningEvenement: app.DebutPlanningEvenement ?? payload.DebutPlanningEvenement,
+        FinPlanningEvenement: app.FinPlanningEvenement ?? payload.FinPlanningEvenement,
+        IdEmploye: Number(app.IdEmploye ?? payload.IdEmploye),
+        IdPlanningRessource: Number(app.IdPlanningRessource ?? payload.IdPlanningRessource),
+        Type: app.Type ?? a.Type,
+        AnnotationPlanningEvenement: app.AnnotationPlanningEvenement ?? a.AnnotationPlanningEvenement,
+      }));
+
+    if (createdAppointments.length === 0) {
+      notificationService.error('Création annulée', 'Réponse serveur invalide : aucun rendez-vous créé.');
+      return;
+    }
+
+    createdAppointments.forEach((app) => {
+      saveAppointmentState(app, 'create');
+    });
+
+    appointmentsRef.current = [...appointmentsRef.current, ...createdAppointments];
+    onUpdate();
+    notificationService.appointmentCreated(createdAppointments.length);
+    })
+    .catch((err) => {
+      console.error('Erreur réseau pasteAppointment/createEvenement', err);
+      notificationService.error('Erreur réseau', 'Impossible de coller le rendez-vous sur le serveur');
+    });
+  }, [selectedCell, timelineState, appointmentsRef, onUpdate, api, isApiSuccess, addMissingResourcesToCache]);
 
   // Handler pour ouvrir la modal d'édition
   const handleOpenEditModal = useCallback((appointment: Appointment) => {

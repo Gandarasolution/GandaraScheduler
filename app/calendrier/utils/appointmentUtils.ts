@@ -19,9 +19,9 @@ import { getIntervals, getNextWorkedDay, getWorkedDayIntervals } from './dates';
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from './constants';
 
 export interface AppointmentUtils {
-  idGenerator: () => number;
+  //idGenerator: () => number;
   createRepeatedAppointments: (params: RepeatAppointmentParams) => Appointment[];
-  pasteAppointment: (params: PasteAppointmentParams) => Appointment[];
+  //pasteAppointment: (params: PasteAppointmentParams) => Appointment[];
 }
 
 
@@ -59,11 +59,6 @@ export interface PasteAppointmentParams {
 export const createAppointmentUtils = (
   employees: User[],
 ): AppointmentUtils => {
-  let idCounter = 10000; // Compteur pour générer des IDs uniques
-
-  const idGenerator = (): number => {
-    return ++idCounter;
-  };
 
 
   const createRepeatedAppointments = (params: RepeatAppointmentParams): Appointment[] => {
@@ -104,7 +99,7 @@ export const createAppointmentUtils = (
 
         days.forEach(day => {
           newAppointments.push({
-            IdPlanningEvenement: idGenerator(),
+            IdPlanningEvenement: 0,
             AnnotationPlanningEvenement: appointment.AnnotationPlanningEvenement || 'Description du rendez-vous répété',
             DebutPlanningEvenement: day.start,
             FinPlanningEvenement: day.end,
@@ -137,7 +132,7 @@ export const createAppointmentUtils = (
 
         days.forEach(day => {
           newAppointments.push({
-            IdPlanningEvenement: idGenerator(),
+            IdPlanningEvenement: 0,
             AnnotationPlanningEvenement: appointment.AnnotationPlanningEvenement || 'Description du rendez-vous répété',
             DebutPlanningEvenement: day.start,
             FinPlanningEvenement: day.end,
@@ -160,39 +155,39 @@ export const createAppointmentUtils = (
 
 
 
-  const pasteAppointment = (params: PasteAppointmentParams): Appointment[] => {
-    const { clipboardAppointment, targetCell, isFullDay, nonWorkingDates, includeWeekend, includeNonWorkingDays } = params;
+  // const pasteAppointment = (params: PasteAppointmentParams): Appointment[] => {
+  //   const { clipboardAppointment, targetCell, isFullDay, nonWorkingDates, includeWeekend, includeNonWorkingDays } = params;
     
-    const startDate = clipboardAppointment.DebutPlanningEvenement;
-    const endDate = clipboardAppointment.FinPlanningEvenement;
-    const diff = endDate - startDate;
+  //   const startDate = clipboardAppointment.DebutPlanningEvenement;
+  //   const endDate = clipboardAppointment.FinPlanningEvenement;
+  //   const diff = endDate - startDate;
     
-    const newStartDate = targetCell.date;
-    const newEndDate = newStartDate + diff;
+  //   const newStartDate = targetCell.date;
+  //   const newEndDate = newStartDate + diff;
   
-    const days = getWorkedDayIntervals(
-      newStartDate, 
-      newEndDate,
-      isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-      includeNonWorkingDays,
-      includeWeekend,
-      nonWorkingDates
-    );
+  //   const days = getWorkedDayIntervals(
+  //     newStartDate, 
+  //     newEndDate,
+  //     isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+  //     includeNonWorkingDays,
+  //     includeWeekend,
+  //     nonWorkingDates
+  //   );
     
-    return days.map(day => ({
-      ...clipboardAppointment,
-      id: idGenerator(),
-      startDate: day.start,
-      endDate: day.end,
-      employeeId: targetCell.employeeId,
-    }));
-  };
+  //   return days.map(day => ({
+  //     ...clipboardAppointment,
+  //     id: idGenerator(),
+  //     startDate: day.start,
+  //     endDate: day.end,
+  //     IdEmploye: targetCell.employeeId,
+  //   }));
+  // };
 
 
 
   return {
-    idGenerator,
+    //idGenerator,
     createRepeatedAppointments,
-    pasteAppointment,
+    //pasteAppointment,
   };
 };

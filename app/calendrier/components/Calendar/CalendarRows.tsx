@@ -87,6 +87,10 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             right: 0,
           },
         };
+        // if (row.data.Nom === 'CABESTANT') {
+        //   console.log(row.data);
+        //   console.log(appointmentsByEmployee);
+        // }
 
         return row.type === 'group' ? (
           <GroupRow

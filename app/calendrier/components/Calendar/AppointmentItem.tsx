@@ -71,6 +71,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const startDate = React.useMemo(() => appointment.DebutPlanningEvenement, [appointment.DebutPlanningEvenement]);
   const endDate = React.useMemo(() => appointment.FinPlanningEvenement, [appointment.FinPlanningEvenement]);
   
+  if (Number(appointment.IdEmploye) === 5404) {
+    console.log('AppointmentItem render', appointment);
+  }
+
   // Hook de gestion du resize
   const {
     isResizingLeft,
@@ -268,7 +272,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
          }
          
          const cellUnderMouse = {
-           employeeId: appointment.IdEmploye as number,
+           employeeId:  Number(appointment.IdEmploye),
            date: targetDate
          };
          
