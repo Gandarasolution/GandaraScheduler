@@ -71,9 +71,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const startDate = React.useMemo(() => appointment.DebutPlanningEvenement, [appointment.DebutPlanningEvenement]);
   const endDate = React.useMemo(() => appointment.FinPlanningEvenement, [appointment.FinPlanningEvenement]);
   
-  if (Number(appointment.IdEmploye) === 5404) {
-    console.log('AppointmentItem render', appointment);
-  }
+  
+  // console.log('AppointmentItem render', appointment);
+  // console.log('top', absoluteTop);
+  
 
   // Hook de gestion du resize
   const {

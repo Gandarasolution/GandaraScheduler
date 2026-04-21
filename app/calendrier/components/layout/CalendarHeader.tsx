@@ -379,7 +379,6 @@ export const CalendarHeader = memo(({
                     DebutPlanningEvenement: 0,
                     FinPlanningEvenement: 1,
                     IdEmploye: -1,
-                    Type: 'Rubrique Perso',
                     IdPlanningRessource: -1,
                   })
               }

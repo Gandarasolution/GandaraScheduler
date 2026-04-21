@@ -33,6 +33,7 @@ interface LogicProps {
     updateEvenement: (id: string, data: any) => Promise<any>;
     deleteEvenement: (id: string) => Promise<any>;
     updateEvenementAndRessource: (id: string, data: any) => Promise<any>;
+    divideEvenement: (id: string, data: any) => Promise<any>;
   };
 }
 
@@ -64,7 +65,6 @@ export const useAppointmentLogic = ({
 
   // --- États UI nécessaires à la logique ---
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [selectedAppointmentForm, setSelectedAppointmentForm] = useState<Appointment | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: number } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: number; employeeId: number } | null>(null);
@@ -319,7 +319,6 @@ export const useAppointmentLogic = ({
         DebutPlanningEvenement: startDate,
         FinPlanningEvenement: endDate,
         IdEmploye: employeeId,
-        Type: ressource.Type,
         IdPlanningRessource: ressource.IdPlanningRessource,
       };
 
@@ -523,7 +522,7 @@ export const useAppointmentLogic = ({
         return;
       }
 
-      void api.updateEvenement(String(id), {
+      const payload = {
         DebutPlanningEvenement: newStartDate,
         FinPlanningEvenement: newEndDate,
         Type: employee.Type,
@@ -532,7 +531,11 @@ export const useAppointmentLogic = ({
         AnnotationPlanningEvenement: appointment.AnnotationPlanningEvenement,
         PlanningEvenementPriorite: newPriority !== undefined ? newPriority : appointment.PlanningEvenementPriorite,
         IdPlanningEtiquette: appointment.Etiquette?.IdPlanningEtiquette,
-      }).then((resp) => {
+      };
+
+      console.log(payload);
+      
+      void api.updateEvenement(String(id), payload).then((resp) => {
         if (!isApiSuccess(resp)) {
           appointmentsRef.current = previousAppointments;
           onUpdate();
@@ -789,11 +792,12 @@ export const useAppointmentLogic = ({
     });
   }, [selectedAppointment, appointmentsRef, saveAppointmentState, onUpdate, api, isApiSuccess]);
 
-  const handleDivideAppointment = useCallback((id?: number) => {
+  const handleDivideAppointment = useCallback(async (id?: number) => {
     if (!id) return;
     const appointmentToDivide = appointmentsRef.current.find(app => app.IdPlanningEvenement === id);
     if (!appointmentToDivide) return;
 
+    const previousAppointments = { ...appointmentsRef.current };
     const originalAppointment = { ...appointmentToDivide };
     const { DebutPlanningEvenement: startDate, FinPlanningEvenement: endDate, IdEmploye: employeeId } = appointmentToDivide;
     
@@ -840,7 +844,7 @@ export const useAppointmentLogic = ({
     );
     
     // 2. Créer le nouveau
-    createAppointment(
+    const newAppointment = createAppointment(
       {
         startDate: splitDate,
         endDate,
@@ -850,23 +854,46 @@ export const useAppointmentLogic = ({
       false,
       appointmentToDivide.AnnotationPlanningEvenement,
     );
-    // const newAppointmentId = Date.now() + Math.floor(Math.random() * 1000);
-    // const newAppointment: Appointment = {
-    //   IdPlanningEvenement : newAppointmentId,
-    //   AnnotationPlanningEvenement: appointmentToDivide.AnnotationPlanningEvenement,
-    //   DebutPlanningEvenement: splitDate,
-    //   FinPlanningEvenement: endDate,
-    //   Employee: employee,
-    //   Type: appointmentToDivide.Type,
-    //   Ressource: eventsRef.current.find(e => e.IdPlanningRessource === appointmentToDivide.Ressource.IdPlanningRessource) as Item,
-    // };
-    // appointmentsRef.current.push(newAppointment);
+
+    if (!newAppointment) {
+      appointmentsRef.current = previousAppointments;
+      onUpdate();
+      notificationService.error('Division annulée', 'Impossible de créer le rendez-vous divisé localement.');
+      return;
+    }
+
+    await api?.divideEvenement?.(String(id), {
+      DateCoupure: splitDate,
+    }).then((resp) => {
+      if (isApiSuccess(resp)) {
+        const newid = resp?.data?.NouvelIdEvenement;
+
+        if (newid) {
+          appointmentsRef.current = appointmentsRef.current.map(app => 
+            app.IdPlanningEvenement === -1 ? { ...app, IdPlanningEvenement: newid } : app
+          );
+        }
+
+        notificationService.appointmentUpdated();
+        return;
+      }
+      appointmentsRef.current = previousAppointments;
+      onUpdate();
+      notificationService.error('Division annulée', 'Le serveur a refusé la division.');
+    })
+    .catch((err) => {
+      console.error('Erreur réseau divideEvenement', err);
+      appointmentsRef.current = previousAppointments;
+      onUpdate();
+      notificationService.error('Erreur réseau', 'Impossible de diviser l\'événement sur le serveur');
+    });
+    
 
     // // 3. Sauvegarder l'action complète
-    // const modifiedOriginal = appointmentsRef.current.find(app => app.IdPlanningEvenement === id);
-    // if (modifiedOriginal) {
-    //   saveAppointmentState(originalAppointment, 'resize_split', originalAppointment, [newAppointment]);
-    // }
+    const modifiedOriginal = appointmentsRef.current.find(app => app.IdPlanningEvenement === id);
+    if (modifiedOriginal) {
+      saveAppointmentState(originalAppointment, 'resize_split', originalAppointment, [newAppointment]);
+    }
 
     setIsModalOpen(false);
     setSelectedAppointment(null);
@@ -914,7 +941,7 @@ export const useAppointmentLogic = ({
       notificationService.error('Action interdite', 'Ressource introuvable. Le rendez-vous ne peut pas être étendu.');
       return;
     }
-
+    
     moveAppointment({
       id: selectedAppointment.IdPlanningEvenement,
       newStartDate: selectedAppointment.DebutPlanningEvenement,
@@ -1074,7 +1101,6 @@ export const useAppointmentLogic = ({
         FinPlanningEvenement: app.FinPlanningEvenement ?? payload.FinPlanningEvenement,
         IdEmploye: Number(app.IdEmploye ?? payload.IdEmploye),
         IdPlanningRessource: Number(app.IdPlanningRessource ?? payload.IdPlanningRessource),
-        Type: app.Type ?? a.Type,
         AnnotationPlanningEvenement: app.AnnotationPlanningEvenement ?? a.AnnotationPlanningEvenement,
       }));
 
@@ -1099,7 +1125,7 @@ export const useAppointmentLogic = ({
 
   // Handler pour ouvrir la modal d'édition
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
-    setSelectedAppointmentForm(appointment);
+    setSelectedAppointment(appointment);
     setSelectedAppointment(appointment);
     setSelectedItem(eventsRef.current.find(e => e.IdPlanningRessource === appointment.IdPlanningRessource) || 
       {
@@ -1146,9 +1172,6 @@ export const useAppointmentLogic = ({
     const isUsedInPlanning = appointmentsRef.current.some(
       appointment => appointment.IdPlanningRessource === dimensionId
     );
-
-    console.log("isUsedInPlanning:", isUsedInPlanning);
-    console.log(forceDelete);
     
     
 
@@ -1224,7 +1247,6 @@ export const useAppointmentLogic = ({
   return {
     // États exposés
     selectedAppointment, setSelectedAppointment,
-    selectedAppointmentForm, setSelectedAppointmentForm,
     selectedCell, setSelectedCell,
     isModalOpen, setIsModalOpen,
     repeatData, setRepeatData,

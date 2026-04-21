@@ -43,7 +43,7 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, i
           {item?.LibellePlanningRessource || 'Rendez-vous'}
         </h3>
         <div className="flex items-center text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
-          <span className="capitalize">{app.Type}</span>
+          <span className="capitalize">{item?.Type}</span>
         </div>
       </div>
     </div>

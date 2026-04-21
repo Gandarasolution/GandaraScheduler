@@ -40,7 +40,7 @@ interface UseCalendarDragDropParams {
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   nonWorkingDates: number[];
-  appointmentsWithTop: (Appointment & { top: number })[];
+  appointments: Appointment[];
   onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onExternalDragDrop: (item: Item, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number) => void;
 }
@@ -56,7 +56,7 @@ export const useCalendarDragDrop = ({
   HALF_DAY_INTERVALS,
   isFullDay,
   nonWorkingDates,
-  appointmentsWithTop,
+  appointments,
   onAppointmentMoved,
   onExternalDragDrop,
 }: UseCalendarDragDropParams) => {
@@ -130,7 +130,7 @@ export const useCalendarDragDrop = ({
       // Calcul de la durée et nouvelle fin
       const duration = item.endDate - item.startDate;
       const newEnd = targetDate + duration;
-      const movedAppointment = appointmentsWithTop.find((a) => a.IdPlanningEvenement === item.id);
+      const movedAppointment = appointments.find((a) => a.IdPlanningEvenement === item.id);
 
       if (!movedAppointment) return;
       
@@ -138,7 +138,7 @@ export const useCalendarDragDrop = ({
       const targetEmployeeId = Number(targetRow.id);
       
       // Trouver tous les rdv qui chevauchent la nouvelle position
-      const overlappingAppointments = appointmentsWithTop.filter(app => 
+      const overlappingAppointments = appointments.filter(app => 
         app.IdPlanningEvenement !== item.id &&
         app.IdEmploye === targetEmployeeId &&
         app.DebutPlanningEvenement < newEnd &&
@@ -155,7 +155,7 @@ export const useCalendarDragDrop = ({
         const targetPriorityIndex = Math.floor(employeeRowY / (CELL_HEIGHT + 2));
 
         // Récupérer l'item d'origine
-        const originalItem = appointmentsWithTop.find(a => a.IdPlanningEvenement === item.id);
+        const originalItem = appointments.find(a => a.IdPlanningEvenement === item.id);
         const isAlreadyPresent = originalItem && 
                                originalItem.IdEmploye === targetEmployeeId && 
                                originalItem.DebutPlanningEvenement < newEnd && 
@@ -170,7 +170,7 @@ export const useCalendarDragDrop = ({
         const endDateRdvTarget = rdvAtTargetPosition[rdvAtTargetPosition.length - 1]?.FinPlanningEvenement;
         
         // Trouver les rdv à la position originale
-        const rdvatOriginalPosition = appointmentsWithTop
+        const rdvatOriginalPosition = appointments
           .filter(app =>
             app.IdPlanningEvenement !== item.id &&
             app.IdEmploye === originalItem?.IdEmploye &&
@@ -237,7 +237,7 @@ export const useCalendarDragDrop = ({
     onAppointmentMoved, 
     onExternalDragDrop, 
     rowBoundaries, 
-    appointmentsWithTop,
+    appointments,
     tableRef
   ]);
 

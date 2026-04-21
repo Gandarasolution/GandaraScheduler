@@ -9,7 +9,7 @@ import { isSameDay } from 'date-fns';
 interface EmployeeRowProps {
   employee: User;
   dayInTimeline: number[];
-  appointments: (Appointment & { top: number})[];
+  appointments: Appointment[];
   rowHeight: number;
   isFullDay: boolean;
   events: Item[];
@@ -104,10 +104,11 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       // Utilisation des fonctions utilitaires pour les calculs de position
       const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
       const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
-      const topPx = (app.top * CELL_HEIGHT) + (2 * app.top) + ((tagPlacement === 'fixed' && index > 0) && filterred[index - 1]?.Etiquette ? 18 : 0); // Décalage pour les tags en placement fixe
+      const topPx = ((app.PlanningEvenementPriorite ?? 0) * CELL_HEIGHT) + (2 * (app.PlanningEvenementPriorite ?? 0)) + ((tagPlacement === 'fixed' && index > 0) && filterred[index - 1]?.Etiquette?.IdPlanningEtiquette ? 18 : 0); // Décalage pour les tags en placement fixe
 
+      //console.log(topPx);
+      
       return { ...app, left, width, topPx } as Appointment & {
-        top: number;
         left: number;
         width: number;
         topPx: number;
@@ -278,7 +279,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
         
         // Récupérer tous les RDV avec priorité 0 (RDV de base)
-        const priority0Apps = group.apps.filter(app => (app.PlanningEvenementPriorite ?? 0) === 0);
+        const priority0Apps = group.apps.filter(app => Number(app.PlanningEvenementPriorite ?? 0) === 0);
         
         // Clé unique pour le groupe basée sur tous les IDs des rendez-vous
         const groupUniqueKey = `group-${group.apps.map(a => `${a.IdPlanningEvenement}-${a.DebutPlanningEvenement}-${a.FinPlanningEvenement}`).join('_')}`;
@@ -291,10 +292,12 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               if (!ressource) return null;
   
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
-              const isGhost = !isExpanded && (app.PlanningEvenementPriorite ?? 0) !== 0;
+              const isGhost = !isExpanded && (Number(app.PlanningEvenementPriorite ?? 0)) !== 0;
+
+              
               
               const beforeApp = index > 0 ? group.apps[index - 1] : null;
-              const beforeHasTag = beforeApp && (app.PlanningEvenementPriorite ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.Etiquette;
+              const beforeHasTag = beforeApp && Number((app.PlanningEvenementPriorite ?? 0)) > 0 && tagPlacement === 'fixed' && !!beforeApp.Etiquette?.IdPlanningEtiquette;
               const widthDiff = beforeApp ? Math.abs(app.width - beforeApp.width) : Infinity;
               const isSimilarSize = widthDiff <= CELL_WIDTH; // À une case près
               const shouldOffsetForTag = beforeHasTag && isSimilarSize;              
@@ -304,6 +307,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               // Sinon, on utilise sa propre position (+ décalage si l'événement précédent a un tag et taille similaire)
               const forcedTopPx = !isExpanded ? baseTopPx : shouldOffsetForTag ? app.topPx + 18 : app.topPx;
 
+              //console.log('top', shouldOffsetForTag, forcedTopPx );
 
 
               // Calcul des intervalles de chevauchement avec les RDV de priorité 0
@@ -322,8 +326,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   }
                 });
               }
-          
-
+                          
               return (
                 <AppointmentItem
                   key={`${app.IdPlanningEvenement}-${app.DebutPlanningEvenement}-${app.FinPlanningEvenement}-${index}`}
@@ -335,7 +338,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   tagPlacement={tagPlacement}
                   event={ressource}
                   timelineStart={timelineStart}
-                  chargeeAffaire={(ressource && ressource.Type === 'Projet' ? ressource.chargeAffaire : '') || ''}
+                  chargeeAffaire={(ressource && ressource.Type === 'Projet' ? ressource.ChargeAffaire : '') || ''}
                   absoluteLeft={app.left}
                   absoluteWidth={app.width}
                   absoluteTop={forcedTopPx} 

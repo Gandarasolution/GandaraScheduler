@@ -1,6 +1,6 @@
 import React from 'react';
 import { addHours } from "date-fns";
-import { Appointment, User, ChantierItem, Groupe } from "../types";
+import { Appointment, User, ChantierItem, Groupe, Item } from "../types";
 import { HOURS_PER_DAY } from "./constants";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
 
@@ -31,7 +31,6 @@ export const customRenderersFactory = (
           appointment={{
             IdPlanningEvenement: 0,
             AnnotationPlanningEvenement: '',
-            Type: chantierItem.Type,
             IdPlanningRessource: chantierItem.IdPlanningRessource,
             DebutPlanningEvenement: 0,
             FinPlanningEvenement: 1000,
@@ -47,7 +46,6 @@ export const customRenderersFactory = (
             const newAppointment: Appointment = {
               IdPlanningEvenement: 0,
               AnnotationPlanningEvenement: '',
-              Type: chantierItem.Type,
               IdPlanningRessource: chantierItem.IdPlanningRessource,
               DebutPlanningEvenement: 0,
               FinPlanningEvenement: 1000,
@@ -234,7 +232,8 @@ export const customRenderersFactory = (
 
 export const customComputedFieldsFactory = (
   viewType: string, 
-  appointments: Appointment[]
+  appointments: Appointment[],
+  ressources: Item[]
 ) => {
   
   if (viewType !== 'chantier-table') return {};
@@ -244,7 +243,9 @@ export const customComputedFieldsFactory = (
     const currentDate = new Date().setHours(0, 0, 0, 0);
 
     const relevantAppointments = appointments.filter(appointment => {
-      if (appointment.Type !== 'Projet' || appointment.IdPlanningRessource !== chantierId) {
+      const ressource = ressources.find(r => r.IdPlanningRessource === appointment.IdPlanningRessource);
+      if (!ressource) return false;
+      if (ressource?.Type !== 'Projet' || appointment.IdPlanningRessource !== chantierId) {
         return false;
       }
       // Prendre les RDV futurs ou en cours

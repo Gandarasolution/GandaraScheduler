@@ -303,7 +303,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       DebutPlanningEvenement: startOfSelectedDay,
       FinPlanningEvenement: endOfSelectedDay,
       IdEmploye: appointmentEmployee.IdPersonnel,
-      Type: 'Projet',
       IdPlanningRessource: 0,
       PlanningEvenementPriorite: 0,
     };
@@ -326,7 +325,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       poleActivite: '',
       libelle: '',
       etat: 'En cours',
-      chargeAffaire: '',
+      ChargeAffaire: '',
       chefChantier: '',
       dateOS: '',
       dateFin: '',

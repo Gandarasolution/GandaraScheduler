@@ -68,8 +68,7 @@ export function applyFiltersToAppointments(
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const appointmentMatches = 
-        String(appointment.AnnotationPlanningEvenement).toLowerCase().includes(query) ||
-        String(appointment.Type).toLowerCase().includes(query);
+        String(appointment.AnnotationPlanningEvenement).toLowerCase().includes(query)
       const employeeMatches = employee ? String(employee.Nom).toLowerCase().includes(query) : false;
 
       if (!appointmentMatches && !employeeMatches) {

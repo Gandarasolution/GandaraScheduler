@@ -64,8 +64,6 @@ export const useInteraction = ({
   const handleContextMenu = useCallback((e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => {
     e.preventDefault();
     e.stopPropagation();
-
-    console.log(cell);
     
     const items: any[] = [];
 
@@ -216,7 +214,6 @@ export const useInteraction = ({
              const mockApp: Appointment = {
                  IdPlanningEvenement: 0,
                  AnnotationPlanningEvenement: '',
-                 Type: item.type,
                  IdPlanningRessource: item.IdPlanningRessource,
                  DebutPlanningEvenement: Date.now(),
                  FinPlanningEvenement: Date.now(),

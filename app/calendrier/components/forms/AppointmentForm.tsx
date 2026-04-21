@@ -697,7 +697,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               source={'demo'}
               isMobile={false}
               isDisplayWeekend={false}
-              chargeeAffaire={formDataItemType && formDataItemType.Type === 'Projet' ? formDataItemType.chargeAffaire : ''}
+              chargeeAffaire={formDataItemType && formDataItemType.Type === 'Projet' ? formDataItemType.ChargeAffaire : ''}
               onDoubleClick={() => {}}
               onAppointmentResize={() => {}}
               handleContextMenu={() => {}}

@@ -188,7 +188,7 @@ export const CalendarModals = memo(({
     if (modalsState.selectedAppointmentForm) {
         if (resourceEditMode === 'create') return "Création de la ressource";
         if (resourceEditMode === 'edit') return "Modification de la ressource";
-        return `Modifier l'Évènement - ${data.items.find(item => Number(item.IdPlanningRessource) === Number(modalsState.selectedAppointmentForm?.IdPlanningRessource))?.LibellePlanningRessource || 'Ressource inconnue'}`;
+        return `Modifier l'Évènement - ${data.items.find(item => Number(item.IdPlanningRessource) === Number(modalsState.selectedAppointmentForm?.IdPlanningRessource))?.CodePlanningRessource || 'Ressource inconnue'}`;
     }
     return "Ajouter un rendez-vous";
   };  
@@ -339,7 +339,7 @@ export const CalendarModals = memo(({
               </button>
             </div>
           </div>
-        ) : modalsState.extendData ? (
+        ) : modalsState.extendData ? (          
           /* CAS 2: Prolongation */
           <div>
             <div className="flex flex-row items-center mb-4 poppins">
@@ -348,7 +348,7 @@ export const CalendarModals = memo(({
                 type="date"
                 className="text-base border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[145px]"
                 value={format(modalsState.extendData, "yyyy-MM-dd")}
-                min={modalsState.selectedAppointmentForm?.FinPlanningEvenement ? format(modalsState.selectedAppointmentForm.FinPlanningEvenement, "yyyy-MM-dd") : undefined}
+                min={modalsState.selectedAppointmentForm?.FinPlanningEvenement ? format(new Date(modalsState.selectedAppointmentForm.FinPlanningEvenement), "yyyy-MM-dd") : undefined}
                 onChange={(e) => {
                   const date = new Date(e.target.value).setHours(23, 59, 59, 999);
                   if (!isNaN(date)) {

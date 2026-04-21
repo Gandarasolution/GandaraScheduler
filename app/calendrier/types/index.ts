@@ -134,7 +134,7 @@ export interface ChantierItem extends BaseItem {
   poleActivite: string;
   libelle: string;
   etat: string;
-  chargeAffaire: string;
+  ChargeAffaire: string;
   chefChantier: string;
   dateOS: string;
   dateFin: string;
@@ -187,8 +187,6 @@ export interface Appointment{
   FinPlanningEvenement: number;
   /** ID de l'employé assigné au rendez-vous */
   IdEmploye: User["IdPersonnel"];
-  /** Type de rendez-vous */
-  Type: 'Projet' | 'Paie' | 'Rubrique Perso';
   /** ID de l'événement auquel ce RDV est lié */
   IdPlanningRessource: Item["IdPlanningRessource"];
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */

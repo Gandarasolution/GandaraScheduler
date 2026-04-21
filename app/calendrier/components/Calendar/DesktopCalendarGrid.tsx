@@ -11,18 +11,19 @@ import {
   CONTAINER_PADDING,
   DAY_INTERVALS,
   HOUR_MS,
+  CELL_HEIGHT,
 } from '../../utils/constants';
 import { applyFiltersToEmployees, getHierarchicalDimensionItems, groupEmployeesHierarchically, getFlatFilters } from '../../utils/filters';
 import { isSameDay } from 'date-fns';
 import { useSmartScroll } from '../../hooks/interactions/useSmartScroll';
 import { useAutoScrollOnDrag } from '../../hooks/interactions/useAutoScrollOnDrag';
 import { 
-  useCalendarLayout, 
   useCalendarVirtualization, 
   useCalendarColumns, 
   useCalendarDragDrop, 
   useCalendarDataLoader 
 } from '../../hooks';
+import { log } from 'node:console';
 
 interface DesktopCalendarGridProps {
   employees: User[];
@@ -94,27 +95,48 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   mouseUpAfterScroll
 }) => {
   
- // Use custom hooks for logic
-  const { employeeHeights, appointmentsWithTop } = useCalendarLayout({
-    employees,
-    appointments,
-    tagPlacement
-  });
 
-  // appointmentsWithTop.forEach(app => {
-  //   if (app.IdEmploye === 5404) { 
-  //     console.log(app);
-  //   }
-  // });
+ const employeeHeights = useMemo(() => {
+    return employees.map(employee => {
+      const employeeAppointments = appointments.filter(app => Number(app.IdEmploye) === Number(employee.IdPersonnel));
+      
+      let maxOverallOverlap = 0;
+      if (employeeAppointments.length > 0) {
+          const sortedApps = [...employeeAppointments].sort((a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement);
+          
+          const activeSlots: { endDate: number, count: number }[] = [];
+          sortedApps.forEach(app => {
+              for (let i = activeSlots.length - 1; i >= 0; i--) {
+                  if (activeSlots[i].endDate <= app.DebutPlanningEvenement) {
+                      activeSlots.splice(i, 1);
+                  }
+              }
+              
+              let placed = false;
+              for (let i = 0; i < activeSlots.length; i++) {
+                  if (activeSlots[i].endDate <= app.DebutPlanningEvenement) {
+                      activeSlots[i].endDate = app.FinPlanningEvenement;
+                      placed = true;
+                      break;
+                  }
+              }
+              
+              if (!placed) {
+                  activeSlots.push({ endDate: app.FinPlanningEvenement, count: activeSlots.length });
+              }
+              
+              maxOverallOverlap = Math.max(maxOverallOverlap, activeSlots.length);
+          });
+      }
+      
 
-  //console.log(appointmentsWithTop);
-  
-  // appointments.forEach(app => {
-  //   if (app.IdEmploye === 5404) { 
-  //     console.log(app);
-  //   }
-  // });
-  
+      const calculatedHeight = maxOverallOverlap > 0 ? (maxOverallOverlap * CELL_HEIGHT) + (2 * maxOverallOverlap) + (tagPlacement === 'fixed' ? 18 : 10) : CELL_HEIGHT + 12 ;
+
+      return { employeeId: employee.IdPersonnel, height: calculatedHeight, dayKey: undefined };
+    });
+    
+  }, [employees, appointments]);
+
 
   
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
@@ -184,10 +206,17 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
   }, [calendarConfig.Group, employees, initialTeams]);
 
+  const appointmentsInHorizontalWindow = useMemo(() => {
+    return appointments.filter((app) =>{
+      return app.FinPlanningEvenement > visibleWindowStart &&
+      app.DebutPlanningEvenement < visibleWindowEnd
+    });
+  }, [appointments, visibleWindowStart, visibleWindowEnd]);
+
   const visibleEmployeeIdsInWindow = useMemo(() => {
     const ids = new Set<number>();
 
-    appointmentsWithTop.forEach((app) => {
+    appointmentsInHorizontalWindow.forEach((app) => {
       // Overlap test avec la fenêtre visible
       if (app.DebutPlanningEvenement < visibleWindowEnd && app.FinPlanningEvenement > visibleWindowStart) {
         ids.add(app.IdEmploye);
@@ -195,18 +224,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     });
 
     return ids;
-  }, [appointmentsWithTop, visibleWindowStart, visibleWindowEnd]);
+  }, [appointmentsInHorizontalWindow, visibleWindowStart, visibleWindowEnd]);
 
-  const appointmentsInHorizontalWindow = useMemo(() => {
-  return appointmentsWithTop.filter((app) =>{
-    // if (app.IdEmploye === 5404) { 
-    //   console.log(app.FinPlanningEvenement > visibleWindowStart &&
-    // app.DebutPlanningEvenement < visibleWindowEnd);
-    // }
-    return app.FinPlanningEvenement > visibleWindowStart &&
-    app.DebutPlanningEvenement < visibleWindowEnd
-  });
-}, [appointmentsWithTop, visibleWindowStart, visibleWindowEnd]);
+  
   
  
 
@@ -267,7 +287,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     HALF_DAY_INTERVALS,
     isFullDay,
     nonWorkingDates,
-    appointmentsWithTop,
+    appointments: appointmentsInHorizontalWindow,
     onAppointmentMoved,
     onExternalDragDrop,
   });
@@ -320,7 +340,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
 
   const appointmentsByEmployee = useMemo(() => {
-    const map: Record<number, (Appointment & { top: number })[]> = {};
+    const map: Record<number, Appointment[]> = {};
     const employeeRowIds = new Set<number>();
       
   

@@ -183,6 +183,7 @@ export default function HomePage({
       createEvenement: evenementService.createEvenement,
       updateEvenement: evenementService.updateEvenement,
       deleteEvenement: evenementService.deleteEvenement,
+      divideEvenement: evenementService.divideEvenement,
     },
   });
 
@@ -315,7 +316,7 @@ export default function HomePage({
   
   // Calcul des champs calculés spécifiques à la vue actuelle
   const currentComputedFields = useMemo(() => {
-    const allFields = customComputedFieldsFactory(viewState.viewType, dataLayer.appointmentsRef.current);
+    const allFields = customComputedFieldsFactory(viewState.viewType, dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     if (viewState.viewType === 'chantier-table') return allFields.chantierTable;
     if (viewState.viewType === 'paie-table') return allFields.paieTable;
     return undefined;
@@ -449,10 +450,9 @@ export default function HomePage({
                         });
                       }}
                       onEditRequest={(item) => {
-                        appointmentLogic.setSelectedAppointmentForm({
+                        appointmentLogic.setSelectedAppointment({
                           IdPlanningEvenement: 0,
                           AnnotationPlanningEvenement: '',
-                          Type: item.Type,
                           IdPlanningRessource: item.IdPlanningRessource,
                           DebutPlanningEvenement: 0,
                           FinPlanningEvenement: 1000,
@@ -515,7 +515,7 @@ export default function HomePage({
               repeatData: appointmentLogic.repeatData,
               extendData: appointmentLogic.extendData,
               modalInfo: viewState.modalInfo,
-              selectedAppointmentForm: appointmentLogic.selectedAppointmentForm,
+              selectedAppointmentForm: appointmentLogic.selectedAppointment,
               deleteConfirmData: deleteConfirmData,
               tagPlacement: viewState.tagPlacement,
             }}

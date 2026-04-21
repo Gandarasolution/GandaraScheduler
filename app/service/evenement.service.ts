@@ -108,6 +108,7 @@ function toApiEventPayload(data: any) {
         IdPlanningRessource: ressourceId,
         IdPlanningEtiquette: etiquetteId,
         PlanningEvenementPriorite: data?.PlanningEvenementPriorite ?? 0,
+        DateCoupure: data?.DateCoupure ?? null,
     };
 }
 
@@ -158,6 +159,13 @@ async function updateEvenementAndRessource(id: string, data: any) {
     return await putRequest(`/api/event/updateRessourceAndEvent/${id}`, payload, 'updateEvenementAndRessource');
 }
 
+async function divideEvenement(id: string, data: any) {
+    const payload = {
+        ...toApiEventPayload(data),
+    };
+    return await putRequest(`/api/event/divide/${id}`, payload, 'divideEvenement');
+}
+
 
 export default {
 
@@ -167,5 +175,6 @@ export default {
     createEvenement,
     updateEvenement,
     deleteEvenement,
-    updateEvenementAndRessource
+    updateEvenementAndRessource,
+    divideEvenement,
 }

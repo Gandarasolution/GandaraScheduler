@@ -104,7 +104,6 @@ export const createAppointmentUtils = (
             DebutPlanningEvenement: day.start,
             FinPlanningEvenement: day.end,
             IdEmploye: appointment.IdEmploye,
-            Type: appointment.Type,
             IdPlanningRessource: appointment.IdPlanningRessource,
           });
         });
@@ -137,7 +136,6 @@ export const createAppointmentUtils = (
             DebutPlanningEvenement: day.start,
             FinPlanningEvenement: day.end,
             IdEmploye: appointment.IdEmploye,
-            Type: appointment.Type,
             IdPlanningRessource: appointment.IdPlanningRessource,
           });
         });

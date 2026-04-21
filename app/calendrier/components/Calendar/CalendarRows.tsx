@@ -22,8 +22,8 @@ interface CalendarRowsProps {
   todayIndex: number;
   isFullDay: boolean;
   isGrabbing: boolean;
-  appointmentsByEmployee: Record<number, (Appointment & { top: number })[]>;
-  EMPTY_APPOINTMENTS: (Appointment & { top: number })[];
+  appointmentsByEmployee: Record<number, Appointment[]>;
+  EMPTY_APPOINTMENTS: Appointment[];
   events: Item[];
   visibleWindowStart: number;
   visibleWindowEnd: number;
@@ -70,7 +70,6 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   collapseTriggers,
   tagPlacement
 }) => {
-  //console.log(appointmentsByEmployee);
   
   return (
     <>

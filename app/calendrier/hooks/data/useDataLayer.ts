@@ -180,8 +180,10 @@ export const useDataLayer = ({
          const isAllSelected = allTypes.every(t => selectedRdvTypes.includes(t));
          if (!isAllSelected) {
              filtered = filtered.filter(app => {
-                 const norm = app.Type;
-                 return selectedRdvTypes.includes(norm);
+                const item = itemsSnapshot.find(i => i.IdPlanningRessource === app.IdPlanningRessource);
+                  if (!item) return false; // Si pas de ressource associée, on exclut le RDV (ou on peut choisir de l'inclure)
+                const norm = item?.Type;
+                return selectedRdvTypes.includes(norm);
              });
          }
     }
