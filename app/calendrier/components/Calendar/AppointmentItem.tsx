@@ -228,7 +228,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   return (
     <div
-      key={appointment.IdPlanningEvenement}
+      key={`${appointment.IdPlanningEvenement}-${appointment.DebutPlanningEvenement}-${appointment.FinPlanningEvenement}-${appointment.AnnotationPlanningEvenement}`} // Clé unique basée sur les propriétés de l'appointment 
       ref={(node) => { if (node && source === 'calendar' && !isInactive) drag(node); }}
       onClick={(e) => {
         e.stopPropagation();

@@ -125,6 +125,7 @@ export const useAppointmentResize = ({
     } else {
       setIsResizingRight(true);
     }
+    
   }, [startDate, endDate]);
 
   /**
@@ -154,13 +155,9 @@ export const useAppointmentResize = ({
       // Empêcher que la fin soit avant le début
       if (newEndDate < dragStartRef.current) {
         newEndDate = addInterval(dragStartRef.current, 1, intervals);
-      }
-      // Ajuster à la fin de l'heure
-      const adjustedEndDate = new Date(newEndDate).setHours(
-        new Date(newEndDate).getHours() - 1, 59, 59, 999
-      );
-      dragEndRef.current = adjustedEndDate;
-      setDragEnd(adjustedEndDate);
+      }    
+      dragEndRef.current = newEndDate;
+      setDragEnd(newEndDate);
     }
   }, [isResizingLeft, isResizingRight, startDate, endDate, isFullDay, addInterval, INTERVAL_WIDTH]);
 

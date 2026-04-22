@@ -97,11 +97,21 @@ function toApiEventPayload(data: any) {
     const employeeId = data?.IdEmploye ?? data?.Employee?.IdPersonnel ?? data?.employee?.IdPersonnel ?? null;
     const ressourceId = data?.IdPlanningRessource ?? data?.Ressource?.IdPlanningRessource ?? null;
     const etiquetteId = data?.IdPlanningEtiquette ?? data?.Etiquette?.IdPlanningEtiquette ?? null;
-    const eventType = data?.Type ?? data?.Ressource?.Type ?? data?.ressource?.Type ?? null;
+    const employeeType = data?.Type ?? data?.Employee?.Type ?? data?.employee?.Type ?? null;
+
+    if ('Date' in data) {
+        return {
+            IdEmploye: employeeId,
+            Type: employeeType,
+            Date: data.Date,
+            AnnotationPlanningEvenement: data?.AnnotationPlanningEvenement ?? null,
+            IdPlanningRessource: ressourceId,
+        };
+    }
 
     return {
         IdEmploye: employeeId,
-        Type: eventType,
+        Type: employeeType,
         DebutPlanningEvenement: data?.DebutPlanningEvenement ?? null,
         FinPlanningEvenement: data?.FinPlanningEvenement ?? null,
         AnnotationPlanningEvenement: data?.AnnotationPlanningEvenement ?? null,
@@ -166,6 +176,13 @@ async function divideEvenement(id: string, data: any) {
     return await putRequest(`/api/event/divide/${id}`, payload, 'divideEvenement');
 }
 
+async function repeatEvenement(repeatData: any) {
+    const payload = {
+       ...toApiEventPayload(repeatData)
+    };
+    return await postRequest(`/api/event/repeat`, payload, 'repeatEvenement');
+}
+
 
 export default {
 
@@ -177,4 +194,5 @@ export default {
     deleteEvenement,
     updateEvenementAndRessource,
     divideEvenement,
+    repeatEvenement,
 }

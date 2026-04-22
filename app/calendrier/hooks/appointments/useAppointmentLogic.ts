@@ -5,6 +5,7 @@ import { createAppointmentUtils } from '../../utils/appointmentUtils';
 import { notificationService } from "../../services";
 import { getWorkedDayIntervals, isWeekend } from "../../utils/dates";
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
+import { on } from 'events';
 
 // Type pour les données de répétition
 export type RepeatData = {
@@ -13,6 +14,8 @@ export type RepeatData = {
   repeatInterval: "day" | "week" | "month";
   endDate: number | null;
 };
+
+type ActionResult = { success: boolean; message?: string };
 
 interface LogicProps {
   employeesRef: React.MutableRefObject<User[]>;
@@ -34,6 +37,7 @@ interface LogicProps {
     deleteEvenement: (id: string) => Promise<any>;
     updateEvenementAndRessource: (id: string, data: any) => Promise<any>;
     divideEvenement: (id: string, data: any) => Promise<any>;
+    repeatEvenement: (data: any) => Promise<any>;
   };
 }
 
@@ -289,12 +293,12 @@ export const useAppointmentLogic = ({
 
   // Création unitaire d'un RDV
   const createAppointment = useCallback((
-    data: { startDate: number; endDate: number; employeeId: number; ressource: Item },
+    data: { startDate: number; endDate: number; employeeId: number; ressource: Item; priority: number },
     saveToHistory: boolean = true,
     description?: string,
     syncWithApi: boolean = true
   ): Appointment | null => {
-      const { startDate, endDate, employeeId, ressource } = data;
+      const { startDate, endDate, employeeId, ressource, priority } = data;
       const employee = employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
 
       if (!employee) {
@@ -320,10 +324,10 @@ export const useAppointmentLogic = ({
         FinPlanningEvenement: endDate,
         IdEmploye: employeeId,
         IdPlanningRessource: ressource.IdPlanningRessource,
+        PlanningEvenementPriorite: priority,
       };
 
       appointmentsRef.current.push(localAppointment);
-      notificationService.appointmentCreated(1);
 
       // Mode local uniquement : pas de synchronisation BDD.
       if (!syncWithApi || !api?.createEvenement) {
@@ -334,13 +338,13 @@ export const useAppointmentLogic = ({
       }
 
       
-      
       api.createEvenement(payload)
         .then((resp) => {
           try {
             if (resp && resp.error === 0) {
               const apiData = resp?.data;
               const apiResources = Array.isArray(apiData?.ressources) ? apiData.ressources : [];
+              
               addMissingResourcesToCache(apiResources);
 
               const apiCreated = Array.isArray(apiData?.appointments)
@@ -354,29 +358,18 @@ export const useAppointmentLogic = ({
                 return;
               }
 
-              const resolvedResource = getCachedResourceById(
-                apiCreated?.Ressource?.IdPlanningRessource ?? apiCreated?.IdPlanningRessource ?? ressource.IdPlanningRessource,
-                apiCreated.Ressource ?? ressource
-              );
-
-              const createdAppointment: Appointment = {
-                ...apiCreated,
-                IdPlanningEvenement: apiCreated.IdPlanningEvenement ?? -1,
-                AnnotationPlanningEvenement: apiCreated.AnnotationPlanningEvenement ?? (description || `Nouveau rendez-vous`),
-                DebutPlanningEvenement: apiCreated.DebutPlanningEvenement ?? startDate,
-                FinPlanningEvenement: apiCreated.FinPlanningEvenement ?? endDate,
-                Employee: apiCreated.Employee ?? employee,
-                Ressource: resolvedResource ?? ressource,
-                Type: apiCreated.Type ?? ressource.Type,
-              };
-
-              appointmentsRef.current = appointmentsRef.current.map((app) =>
-                Number(app.IdPlanningEvenement) === Number(-1) ? createdAppointment : app
-              );
+              appointmentsRef.current = appointmentsRef.current.map((app) =>{
+                if (Number(app.IdPlanningEvenement) === Number(-1)) {
+                  const a = {...app, IdPlanningEvenement: apiCreated.IdPlanningEvenement, PlanningEvenementPriorite: apiCreated.PlanningEvenementPriorite };
+                  if (saveToHistory) {
+                    saveAppointmentState(a, 'create');
+                  }
+                  return a;
+                }
+                return app;
+              });
               onUpdate();
-              if (saveToHistory) {
-                saveAppointmentState(createdAppointment, 'create');
-              }
+              
               return;
             }
 
@@ -402,7 +395,7 @@ export const useAppointmentLogic = ({
 
   // --- LOGIQUE MÉTIER COMPLEXE (Move, Split, Save) ---
 
-  const moveAppointment = useCallback((
+  const moveAppointment = useCallback(async (
     data: {
       id: number;
       newStartDate: number;
@@ -413,7 +406,7 @@ export const useAppointmentLogic = ({
     },
     saveToHistory: boolean = true,
     newPriority?: number
-  ) => {
+  ): Promise<ActionResult> => {
       const {
         id,
         newStartDate,
@@ -423,17 +416,19 @@ export const useAppointmentLogic = ({
         resizeDirection = 'right',
       } = data;
       const appointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
-      if (!appointment) return;
+      if (!appointment) {
+        return { success: false, message: 'Rendez-vous introuvable.' };
+      }
       const employee = employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(newEmployeeId));
       if (!employee) {
         notificationService.error('Action interdite', 'Employé introuvable. Le rendez-vous ne peut pas être déplacé.');
-        return;
+        return { success: false, message: 'Employé introuvable.' };
       }
 
       const ressource = eventsRef.current.find(item => Number(item.IdPlanningRessource) === Number(idRessource));
       if (!ressource) {
         notificationService.error('Action interdite', 'Ressource introuvable. Le rendez-vous ne peut pas être déplacé.');
-        return;
+        return { success: false, message: 'Ressource introuvable.' };
       }
 
       const previousAppointment = saveToHistory ? { ...appointment } : undefined;
@@ -454,7 +449,9 @@ export const useAppointmentLogic = ({
         state.nonWorkingDates
       );  
 
-      if (days.length === 0) return;
+      if (days.length === 0) {
+        return { success: false, message: 'Aucun créneau valide pour effectuer cette action.' };
+      }
 
       const applyLocalMove = () => {
         const createdAppointments: Appointment[] = [];
@@ -490,6 +487,7 @@ export const useAppointmentLogic = ({
                 endDate: day.end,
                 employeeId: newEmployeeId,
                 ressource: ressource,
+                priority: newPriority !== undefined ? newPriority + 1 : (appointment.PlanningEvenementPriorite ?? 0) + 1,
               },
               false,
               appointment.AnnotationPlanningEvenement,
@@ -519,7 +517,7 @@ export const useAppointmentLogic = ({
       applyLocalMove();
 
       if (!api?.updateEvenement) {
-        return;
+        return { success: true };
       }
 
       const payload = {
@@ -533,23 +531,26 @@ export const useAppointmentLogic = ({
         IdPlanningEtiquette: appointment.Etiquette?.IdPlanningEtiquette,
       };
 
-      console.log(payload);
-      
-      void api.updateEvenement(String(id), payload).then((resp) => {
+      try {
+        const resp = await api.updateEvenement(String(id), payload);
         if (!isApiSuccess(resp)) {
           appointmentsRef.current = previousAppointments;
           onUpdate();
-          notificationService.error('Déplacement annulé', 'Le serveur a refusé la mise à jour.');
-          return;
+          const message = 'Le serveur a refusé la mise à jour.';
+          notificationService.error('Déplacement annulé', message);
+          return { success: false, message };
         }
 
         notificationService.appointmentUpdated();
-      }).catch((err) => {
+        return { success: true };
+      } catch (err) {
         console.error('Erreur réseau moveAppointment/updateEvenement', err);
         appointmentsRef.current = previousAppointments;
         onUpdate();
-        notificationService.error('Erreur réseau', 'Impossible de déplacer l\'événement sur le serveur');
-      });
+        const message = 'Impossible de déplacer l\'événement sur le serveur';
+        notificationService.error('Erreur réseau', message);
+        return { success: false, message };
+      }
     }, [appointmentsRef, employeesRef, timelineStateRef, updateAppointmentBounds, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities, api, isApiSuccess]);
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
@@ -638,6 +639,7 @@ export const useAppointmentLogic = ({
                 endDate: day.end,
                 employeeId: appointment.IdEmploye as number,
                 ressource: eventUpdate,
+                priority: appointment.PlanningEvenementPriorite ?? 0,
               },
               false,
               appointment.AnnotationPlanningEvenement,
@@ -692,6 +694,8 @@ export const useAppointmentLogic = ({
               endDate: days[0].end,
               employeeId: appointment.IdEmploye as number,
               ressource: eventUpdate,
+              priority: appointment.PlanningEvenementPriorite ?? 0,
+
             },
             false,
             appointment.AnnotationPlanningEvenement,
@@ -792,14 +796,13 @@ export const useAppointmentLogic = ({
     });
   }, [selectedAppointment, appointmentsRef, saveAppointmentState, onUpdate, api, isApiSuccess]);
 
-  const handleDivideAppointment = useCallback(async (id?: number) => {
-    if (!id) return;
-    const appointmentToDivide = appointmentsRef.current.find(app => app.IdPlanningEvenement === id);
-    if (!appointmentToDivide) return;
+  const handleDivideAppointment = useCallback(async (appointment: Appointment) => {
+    const id = appointment.IdPlanningEvenement;
+
 
     const previousAppointments = { ...appointmentsRef.current };
-    const originalAppointment = { ...appointmentToDivide };
-    const { DebutPlanningEvenement: startDate, FinPlanningEvenement: endDate, IdEmploye: employeeId } = appointmentToDivide;
+    const originalAppointment = { ...appointment };
+    const { DebutPlanningEvenement: startDate, FinPlanningEvenement: endDate, IdEmploye: employeeId } = appointment;
     
     // Calcul du milieu
     let totalDuration = (endDate - startDate) + 1;
@@ -824,7 +827,7 @@ export const useAppointmentLogic = ({
 
     const employee = employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
 
-    const ressource = eventsRef.current.find(e => Number(e.IdPlanningRessource) === Number(appointmentToDivide.IdPlanningRessource));
+    const ressource = eventsRef.current.find(e => Number(e.IdPlanningRessource) === Number(appointment.IdPlanningRessource));
 
     if (!employee || !ressource) {
       notificationService.error('Action interdite', 'Employé ou ressource introuvable. Le rendez-vous ne peut pas être divisé.');
@@ -835,11 +838,13 @@ export const useAppointmentLogic = ({
     // 1. Redimensionner l'original
     updateAppointmentBounds(
       {
-        id,
+        id: appointment.IdPlanningEvenement,
         newStartDate: startDate,
         newEndDate: splitDate,
         newEmployee: employee,
       },
+      false,
+      appointment.PlanningEvenementPriorite,
       false
     );
     
@@ -850,17 +855,22 @@ export const useAppointmentLogic = ({
         endDate,
         employeeId: employee?.IdPersonnel as number,
         ressource: ressource,
+        priority: appointment.PlanningEvenementPriorite ?? 0,
       },
       false,
-      appointmentToDivide.AnnotationPlanningEvenement,
+      appointment.AnnotationPlanningEvenement,
+      false
     );
-
+    
     if (!newAppointment) {
       appointmentsRef.current = previousAppointments;
       onUpdate();
       notificationService.error('Division annulée', 'Impossible de créer le rendez-vous divisé localement.');
       return;
     }
+
+    onUpdate();
+
 
     await api?.divideEvenement?.(String(id), {
       DateCoupure: splitDate,
@@ -890,6 +900,8 @@ export const useAppointmentLogic = ({
     
 
     // // 3. Sauvegarder l'action complète
+    
+    
     const modifiedOriginal = appointmentsRef.current.find(app => app.IdPlanningEvenement === id);
     if (modifiedOriginal) {
       saveAppointmentState(originalAppointment, 'resize_split', originalAppointment, [newAppointment]);
@@ -899,19 +911,22 @@ export const useAppointmentLogic = ({
     setSelectedAppointment(null);
   }, [appointmentsRef, timelineState, updateAppointmentBounds, saveAppointmentState, onUpdate, createAppointment]);
 
-  const handleDivideConfirm = useCallback((appointment: Appointment) => {
+  const handleDivideConfirm = useCallback( async (appointment: Appointment) => {
       setAlertState({
           isVisible: true,
           title: "Êtes-vous sûr de vouloir diviser ce rendez-vous ?",
           onConfirm: () => {
-              handleDivideAppointment(appointment.IdPlanningEvenement);
+              handleDivideAppointment(appointment);
               setAlertState(prev => ({ ...prev, isVisible: false }));
           }
       });
   }, [selectedAppointment, handleDivideAppointment]);
 
-  const handleRepeat = useCallback(() => {
-    if (!repeatData || !selectedAppointment) return;
+  const handleRepeat = useCallback(async (): Promise<ActionResult> => {
+    if (!repeatData || !selectedAppointment) {
+      return { success: false, message: 'Aucun rendez-vous sélectionné pour la répétition.' };
+    }
+    
 
     const { repeatCount, endDate, repeatInterval, numberCount } = repeatData;
     
@@ -926,23 +941,83 @@ export const useAppointmentLogic = ({
       includeWeekend: timelineState.includeWeekend,
       includeNonWorkingDays: timelineState.respectNonWorkingDays,
     });
+    
+    const payloads = {
+      Type: employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(selectedAppointment.IdEmploye))?.Type,
+      IdEmploye: Number(selectedAppointment.IdEmploye),
+      IdPlanningRessource: Number(selectedAppointment.IdPlanningRessource),
+      AnnotationPlanningEvenement: selectedAppointment.AnnotationPlanningEvenement,
+      Date: newAppointments.map(app => {
+        return {
+          DebutPlanningEvenement: app.DebutPlanningEvenement,
+          FinPlanningEvenement: app.FinPlanningEvenement,
+        }
+      }),
+    }
+     
+    const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
 
-    appointmentsRef.current = [...appointmentsRef.current, ...newAppointments];
-    onUpdate();
+    if (!api?.repeatEvenement) {
+      const message = 'API de répétition indisponible.';
+      notificationService.error('Erreur API', message);
+      return { success: false, message };
+    }
+
+    const result = await api.repeatEvenement(payloads)
+    .then((resp) => {
+      if (isApiSuccess(resp)) {
+        const createdIds = resp?.data;
+        if (Array.isArray(createdIds) && createdIds.length === newAppointments.length) {
+            newAppointments.forEach((app, index) => {
+              app.IdPlanningEvenement = createdIds[index];
+            });
+            appointmentsRef.current.push(...newAppointments);
+      
+          onUpdate();
+          return { success: true } as ActionResult;
+        }
+
+        const message = 'Réponse serveur invalide lors de la répétition.';
+        notificationService.error('Répétition annulée', message);
+        return { success: false, message } as ActionResult;
+      }else {
+        appointmentsRef.current = previousAppointments;
+        onUpdate();
+        const message = 'Le serveur a refusé la création des rendez-vous répétés.';
+        notificationService.error('Répétition annulée', message);
+        return { success: false, message } as ActionResult;
+      }
+    })
+    .catch((err) => {      
+      console.error('Erreur réseau repeatEvenement', err);
+      appointmentsRef.current = previousAppointments;
+      onUpdate();
+      const message = 'Impossible de créer les rendez-vous répétés sur le serveur';
+      notificationService.error('Erreur réseau', message);
+      return { success: false, message } as ActionResult;
+    });
+
+    if (!result.success) {
+      return result;
+    }
+
     notificationService.appointmentRepeated(newAppointments.length);
     setRepeatData(null);
+    return { success: true };
   }, [repeatData, selectedAppointment, appointmentUtils, timelineState, appointmentsRef, onUpdate]);
 
-  const handleExtend = useCallback(() => {
-    if (!extendData || !selectedAppointment) return;
+  const handleExtend = useCallback(async (): Promise<ActionResult> => {
+    if (!extendData || !selectedAppointment) {
+      return { success: false, message: 'Aucun rendez-vous sélectionné pour la prolongation.' };
+    }
 
     const ressource = eventsRef.current.find(e => Number(e.IdPlanningRessource) === Number(selectedAppointment.IdPlanningRessource));
     if (!ressource) {
       notificationService.error('Action interdite', 'Ressource introuvable. Le rendez-vous ne peut pas être étendu.');
-      return;
+      return { success: false, message: 'Ressource introuvable. Le rendez-vous ne peut pas être étendu.' };
     }
     
-    moveAppointment({
+    const result = await moveAppointment({
       id: selectedAppointment.IdPlanningEvenement,
       newStartDate: selectedAppointment.DebutPlanningEvenement,
       newEndDate: extendData,
@@ -951,20 +1026,25 @@ export const useAppointmentLogic = ({
       resizeDirection: selectedAppointment.FinPlanningEvenement < extendData ? 'right' : 'left',
     });
 
+    if (!result.success) {
+      return result;
+    }
+
     setExtendData(null);
+    return { success: true };
   }, [extendData, selectedAppointment, moveAppointment]);
 
   // --- INTERACTION EXTERNE (Drag & Drop, Search) ---
 
   const createAppointmentFromDrag = useCallback(
-    async (item: Item, date: number, intervalName: "morning" | "afternoon" | "day", employeeId: number) => {
+    async (item: Item, date: number, intervalName: "morning" | "afternoon" | "day", employeeId: number, priority: number) => {
       
       const startHour = intervalName === "day" ? DAY_INTERVALS[0].startHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[1].startHour;
       const endHour = intervalName === "day" ? DAY_INTERVALS[0].endHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].endHour : HALF_DAY_INTERVALS[1].endHour;
       
 
       const startDate =  new Date(date).setHours(startHour, 0, 0, 0);
-      const endDate = new Date(date).setHours(endHour - 1, 59, 59 , 999);      
+      const endDate = new Date(date).setHours(endHour);      
 
       // Crée un RDV localement (avec id temporaire). La logique de createAppointment
       // va déclencher l'appel API en arrière-plan et mettre à jour l'ID lorsque la
@@ -975,6 +1055,7 @@ export const useAppointmentLogic = ({
           endDate,
           employeeId,
           ressource: item,
+          priority,
         },
         true,
       );
@@ -1001,6 +1082,7 @@ export const useAppointmentLogic = ({
           endDate: selectedCell.date + (timelineState.isFullDay ? 23 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000 : 11 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000),
           employeeId: selectedCell.employeeId,
           ressource: event,
+          priority: 0, // Valeur par défaut, à remplacer si nécessaire
         },
         true,
       );

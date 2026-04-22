@@ -99,7 +99,7 @@ export const createAppointmentUtils = (
 
         days.forEach(day => {
           newAppointments.push({
-            IdPlanningEvenement: 0,
+            IdPlanningEvenement: -1,
             AnnotationPlanningEvenement: appointment.AnnotationPlanningEvenement || 'Description du rendez-vous répété',
             DebutPlanningEvenement: day.start,
             FinPlanningEvenement: day.end,
@@ -131,7 +131,7 @@ export const createAppointmentUtils = (
 
         days.forEach(day => {
           newAppointments.push({
-            IdPlanningEvenement: 0,
+            IdPlanningEvenement: -1,
             AnnotationPlanningEvenement: appointment.AnnotationPlanningEvenement || 'Description du rendez-vous répété',
             DebutPlanningEvenement: day.start,
             FinPlanningEvenement: day.end,

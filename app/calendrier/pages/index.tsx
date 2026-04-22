@@ -184,6 +184,7 @@ export default function HomePage({
       updateEvenement: evenementService.updateEvenement,
       deleteEvenement: evenementService.deleteEvenement,
       divideEvenement: evenementService.divideEvenement,
+      repeatEvenement: evenementService.repeatEvenement,
     },
   });
 

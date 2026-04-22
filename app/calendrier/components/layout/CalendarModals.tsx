@@ -8,6 +8,8 @@ import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
 
+type ModalActionResult = { success: boolean; message?: string };
+
 // Lazy loading des modales lourdes
 const AppointmentForm = lazy(() => import('../forms/AppointmentForm'));
 const ImageSelectorContentModal = lazy(() => import('../modals/imageSelectorContentModal'));
@@ -50,11 +52,11 @@ interface CalendarModalsProps {
     
     // Repeat Handlers
     setRepeatData: (data: RepeatData | null) => void;
-    handleRepeat: () => void;
+    handleRepeat: () => Promise<ModalActionResult>;
     
     // Extend Handlers
     setExtendData: (date: number | null) => void;
-    handleExtend: () => void;
+    handleExtend: () => Promise<ModalActionResult>;
     
     // Image Handlers
     closeImageModal: () => void;
@@ -126,6 +128,43 @@ export const CalendarModals = memo(({
   config 
 }: CalendarModalsProps) => {
   const [isFormDirty, setIsFormDirty] = useState(false);
+  const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
+  const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
+
+  const handleRepeatSubmit = async () => {
+    if (isSubmittingModalAction) return;
+    setModalSubmitError(null);
+    setIsSubmittingModalAction(true);
+    try {
+      const result = await handlers.handleRepeat();
+      if (!result.success && result.message) {
+        setModalSubmitError(result.message);
+      }
+    } finally {
+      setIsSubmittingModalAction(false);
+    }
+  };
+
+  const handleExtendSubmit = async () => {
+    if (isSubmittingModalAction) return;
+    setModalSubmitError(null);
+    setIsSubmittingModalAction(true);
+    try {
+      const result = await handlers.handleExtend();
+      if (!result.success && result.message) {
+        setModalSubmitError(result.message);
+      }
+    } finally {
+      setIsSubmittingModalAction(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!modalsState.repeatData && !modalsState.extendData) {
+      setIsSubmittingModalAction(false);
+      setModalSubmitError(null);
+    }
+  }, [modalsState.repeatData, modalsState.extendData]);
 
   // Reconstitution de la structure des paramètres pour SettingsModal
   const settings = useMemo(() => [
@@ -212,8 +251,8 @@ export const CalendarModals = memo(({
         confirmCloseOnOverlay={true}
         hasUnsavedChanges={isFormDirty}
         onSave={
-          !!modalsState.repeatData ? handlers.handleRepeat 
-          : !!modalsState.extendData ? handlers.handleExtend 
+          !!modalsState.repeatData ? handleRepeatSubmit 
+          : !!modalsState.extendData ? handleExtendSubmit 
           : undefined
         }
       >
@@ -224,7 +263,7 @@ export const CalendarModals = memo(({
               <span className="text-base underline">{'Rythme de répétition'}</span>
               <div className="flex items-center gap-7">
                 <label className="flex items-center gap-2 font-medium">
-                  <span className="">{'Tous les'}</span>
+                  <span className="">{modalsState.repeatData.repeatInterval === 'week' ? 'Toutes les' : 'Tous les'}</span>
                   <input
                     required
                     type="number"
@@ -321,21 +360,33 @@ export const CalendarModals = memo(({
                 />
               </div>
             </div>
+
+            {modalSubmitError && (
+              <p className="text-red-500 text-sm mt-1">{modalSubmitError}</p>
+            )}
             
             <div className="flex justify-between mt-2">
               <button
                 type="button"
                 onClick={() => handlers.setRepeatData(null)}
-                className="px-4 py-2 bg-primary text-white rounded-xl transition-colors cursor-pointer"
+                disabled={isSubmittingModalAction}
+                className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors ${isSubmittingModalAction ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 Annuler
               </button>
               <button
                 type="button"
-                onClick={handlers.handleRepeat}
-                className="px-4 py-2 bg-primary text-white rounded-xl transition-colors cursor-pointer"
+                onClick={handleRepeatSubmit}
+                disabled={isSubmittingModalAction}
+                className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors flex items-center justify-center min-w-[120px] ${isSubmittingModalAction ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
               >
-                {'Enregistrer'}
+                {isSubmittingModalAction && (
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {isSubmittingModalAction ? 'Enregistrement...' : 'Enregistrer'}
               </button>
             </div>
           </div>
@@ -357,20 +408,31 @@ export const CalendarModals = memo(({
                 }}
               />
             </div>
+            {modalSubmitError && (
+              <p className="text-red-500 text-sm mt-1">{modalSubmitError}</p>
+            )}
             <div className="flex gap-3 mt-4">
               <button
                 type="button"
                 onClick={() => handlers.setExtendData(null)}
-                className="px-4 py-2 bg-primary text-white rounded-xl cursor-pointer transition-colors w-[110px] mr-[89px]"
+                disabled={isSubmittingModalAction}
+                className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors w-[110px] mr-[89px] ${isSubmittingModalAction ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 Annuler
               </button>
               <button
                 type="button"
-                onClick={handlers.handleExtend}
-                className="px-4 py-2 bg-primary text-white rounded-xl cursor-pointer transition-colors w-[110px]"
+                onClick={handleExtendSubmit}
+                disabled={isSubmittingModalAction}
+                className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors w-[140px] flex items-center justify-center ${isSubmittingModalAction ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
               >
-                {'Valider'}
+                {isSubmittingModalAction && (
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {isSubmittingModalAction ? 'Validation...' : 'Valider'}
               </button>
             </div>
           </div>

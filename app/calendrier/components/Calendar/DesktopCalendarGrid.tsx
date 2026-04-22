@@ -48,7 +48,7 @@ interface DesktopCalendarGridProps {
   onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (item: Item, date: number, intervalName: 'morning' | 'afternoon', employeeId: number) => void;
+  onExternalDragDrop: (item: Item, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, priority: number) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   updateHighlightedEmployeeRow: (employeeId: number | null) => void;
   selectedCell: { employeeId: number; date: number } | null;

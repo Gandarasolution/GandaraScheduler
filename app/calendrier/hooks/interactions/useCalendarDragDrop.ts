@@ -42,7 +42,7 @@ interface UseCalendarDragDropParams {
   nonWorkingDates: number[];
   appointments: Appointment[];
   onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
-  onExternalDragDrop: (item: Item, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number) => void;
+  onExternalDragDrop: (item: Item, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number, priority: number) => void;
 }
 
 /**
@@ -112,6 +112,22 @@ export const useCalendarDragDrop = ({
         targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);
         targetInterval = 'morning';
       }
+
+      // Calcul de la durée et nouvelle fin
+      const duration = item.endDate - item.startDate;
+      const newEnd = targetDate + duration;
+
+      // Gestion de la priorité : détecter sur quel rdv (position Y) l'utilisateur drop
+      const targetEmployeeId = Number(targetRow.id);
+      
+      // Trouver tous les rdv qui chevauchent la nouvelle position
+      const overlappingAppointments = appointments.filter(app => 
+        app.IdPlanningEvenement !== item.id &&
+        app.IdEmploye === targetEmployeeId &&
+        app.DebutPlanningEvenement < newEnd &&
+        app.FinPlanningEvenement > targetDate
+      );
+
       
       // Gestion des éléments externes
       if (item.sourceType === 'external') {
@@ -123,27 +139,17 @@ export const useCalendarDragDrop = ({
           targetDate,
           targetInterval,
           Number(targetRow.id),
+          overlappingAppointments.length
         );
         return;
       }
 
-      // Calcul de la durée et nouvelle fin
-      const duration = item.endDate - item.startDate;
-      const newEnd = targetDate + duration;
+      
       const movedAppointment = appointments.find((a) => a.IdPlanningEvenement === item.id);
 
       if (!movedAppointment) return;
       
-      // Gestion de la priorité : détecter sur quel rdv (position Y) l'utilisateur drop
-      const targetEmployeeId = Number(targetRow.id);
       
-      // Trouver tous les rdv qui chevauchent la nouvelle position
-      const overlappingAppointments = appointments.filter(app => 
-        app.IdPlanningEvenement !== item.id &&
-        app.IdEmploye === targetEmployeeId &&
-        app.DebutPlanningEvenement < newEnd &&
-        app.FinPlanningEvenement > targetDate
-      );
 
       let newPriority: number | undefined = undefined;
       
