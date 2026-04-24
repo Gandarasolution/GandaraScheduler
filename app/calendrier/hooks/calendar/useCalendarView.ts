@@ -3,6 +3,7 @@ import { CalendarConfig, User } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
+import loadConfig from 'next/dist/server/config';
 
 export const useCalendarView = (employeesRef: any, user: User) => {
   // --- Préférences persistantes (localStorage) ---
@@ -72,7 +73,7 @@ export const useCalendarView = (employeesRef: any, user: User) => {
   // --- Auto-init configuration ---
   useEffect(() => {
 
-    if (calendarConfigHook.getAvailableConfigs.length > 0 && !currentCalendarConfig) {
+    if (calendarConfigHook.getAvailableConfigs.length > 0 && !currentCalendarConfig) {      
       setCurrentCalendarConfig(calendarConfigHook.getAvailableConfigs[0]);
     }
   }, [calendarConfigHook.getAvailableConfigs, currentCalendarConfig]);
@@ -160,6 +161,9 @@ export const useCalendarView = (employeesRef: any, user: User) => {
     currentCalendarConfig,
     setCurrentCalendarConfig,
     availableConfigs: calendarConfigHook.getAvailableConfigs,
+
+
+    loadConfigs: calendarConfigHook.loadConfigs,
 
     // Helpers pour constants
     constants: {

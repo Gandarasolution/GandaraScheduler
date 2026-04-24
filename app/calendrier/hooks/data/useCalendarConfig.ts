@@ -19,11 +19,8 @@ export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
   const [editingConfig, setEditingConfig] = useState<CalendarConfig | null>(null);
   const [isCreatingConfig, setIsCreatingConfig] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;    
-    const loadConfigs = async () => {
+  const loadConfigs = async () => {
       const response = await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel);
-      if (!isMounted) return;
       
       if (response?.error === 0 && Array.isArray(response.data)) {
 
@@ -32,14 +29,7 @@ export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
       }
 
       setLoadedConfigs([]);
-    };
-
-    loadConfigs();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user.IdPersonnel]);
+  }; 
 
   // Fonction pour obtenir les configurations disponibles depuis la base de données
   const getAvailableConfigs = useMemo((): CalendarConfig[] => {
@@ -135,6 +125,7 @@ export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
     updateConfig,
     setIsConfigModalOpen,
     setEditingConfig,
-    setIsCreatingConfig
+    setIsCreatingConfig,
+    loadConfigs,
   };
 }

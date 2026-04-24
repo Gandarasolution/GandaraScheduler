@@ -58,6 +58,7 @@ import { customRenderersFactory, customComputedFieldsFactory } from "../utils/fa
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
 import { User, Item, CommonPaieAttributs } from '../types';
 import { canCreateEvent } from '../utils/permissions';
+import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
 
 // Composant de chargement réutilisable
 const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
@@ -97,33 +98,10 @@ export default function HomePage({
   // État pour la confirmation de suppression de rubrique
   const [deleteConfirmData, setDeleteConfirmData] = useState<{ item: Item, isUsedInPlanning: boolean, isActive: boolean } | null>(null);
   const [, setEmployeesVersion] = useState(0);
+  const hasInitializedPlanningRef = useRef(false);
 
   // Refs de données dynamiques (chargées via API)
   const globalEmployeesRef = useRef<User[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadEmployees = async () => {
-      const response = await employeeService.getEmployees();
-      if (!isMounted) return;
-      
-      if (response?.error === 0 && Array.isArray(response.data)) {
-        globalEmployeesRef.current = response.data;
-        setEmployeesVersion(prev => prev + 1);
-        return;
-      }
-
-      globalEmployeesRef.current = [];
-      setEmployeesVersion(prev => prev + 1);
-    };
-
-    loadEmployees();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
   const viewState = useCalendarView(globalEmployeesRef, user);
@@ -153,6 +131,60 @@ export default function HomePage({
       };
     });
   }, [dataLayer]);
+
+  const [chantierSearchResults, setChantierSearchResults] = useState<any[] | null>(null);
+  const [isChantierSearchLoading, setIsChantierSearchLoading] = useState(false);
+  const chantierSearchQuery = useMemo(() => {
+    if (viewState.viewType !== 'chantier-table') {
+      return '';
+    }
+
+    return viewState.searchInput.trim();
+  }, [viewState.viewType, viewState.searchInput]);
+  const isChantierSearchActive = chantierSearchQuery.length > 0;
+
+  useEffect(() => {
+    if (viewState.viewType !== 'chantier-table') {
+      setChantierSearchResults(null);
+      setIsChantierSearchLoading(false);
+      return;
+    }
+
+    if (!chantierSearchQuery) {
+      setChantierSearchResults(null);
+      setIsChantierSearchLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const timeoutId = setTimeout(async () => {
+      setIsChantierSearchLoading(true);
+      const response = await ressourceService.getRessourcesProjet(20, 1, chantierSearchQuery);
+      if (isCancelled) return;
+
+      if (response?.error !== 0 || !Array.isArray(response.data)) {
+        setChantierSearchResults([]);
+        setIsChantierSearchLoading(false);
+        return;
+      }
+
+      const normalized = (response.data as Item[])
+        .filter((item) => !('Type' in item) || item.Type === 'Projet')
+        .map((item) => ({
+          ...item,
+          id: item.IdPlanningRessource,
+        }));
+
+      setChantierSearchResults(normalized);
+      setIsChantierSearchLoading(false);
+    }, 250);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+      setIsChantierSearchLoading(false);
+    };
+  }, [viewState.viewType, chantierSearchQuery]);
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
   const timeline = useTimeline({
@@ -325,11 +357,52 @@ export default function HomePage({
 
   // --- EFFETS DE BORD ---
 
-  // Init: Services & Thème
+  // Init global: notifications + theme (indépendant de la vue)
   useEffect(() => {
     notificationService.setNotificationCallback(notifications.addNotification);
-    if (user.theme) setTheme(user.theme as any);
+    if (user.theme) {
+      setTheme(user.theme as any);
+    }
   }, [notifications.addNotification, user.theme, setTheme]);
+
+  // Init unique: configuration utilisateur + données planning (employés, équipes, RDV)
+  useEffect(() => {
+    if (viewState.viewType !== 'calendar' || hasInitializedPlanningRef.current) {
+      return;
+    }
+
+    hasInitializedPlanningRef.current = true;
+    let isMounted = true;
+
+    const initializePlanning = async () => {
+      if (!isMounted) return;
+      await viewState.loadConfigs();
+      const employeesResponse = await employeeService.getEmployees();
+
+      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+        globalEmployeesRef.current = employeesResponse.data;
+      } else {
+        globalEmployeesRef.current = [];
+      }
+      setEmployeesVersion(prev => prev + 1);
+
+      await dataLayer.loadTeams();
+
+      const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
+      const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
+      await dataLayer.loadAppointmentsInRange(startDate, endDate);
+    };
+
+    initializePlanning();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    viewState.viewType,
+    dataLayer.loadTeams,
+    dataLayer.loadAppointmentsInRange,
+  ]);
 
   // Init: Raccourcis Clavier Globaux
   useEffect(() => {
@@ -468,9 +541,17 @@ export default function HomePage({
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
                   <Suspense fallback={<LoadingFallback message="Chargement du tableau..." />}>
                     <DataTableFrame 
-                    items={normalizedTableItems} 
+                    items={
+                      isChantierSearchActive
+                        ? (chantierSearchResults ?? [])
+                        : (viewState.viewType !== 'employee-table' ? null : normalizedTableItems)
+                    }
                     categoriesStructure={dataLayer.getTableStructure() || []}
                     computedFields={currentComputedFields as any}
+                    enablePagination={viewState.viewType !== 'employee-table' && !isChantierSearchActive}
+                    paginatedSearchFunction={isChantierSearchActive ? undefined : (ressourceService.getRessourcesProjet as any)}
+                    loadingElement={<LoadingFallback message="Chargement des données..." />}
+                    isRowsLoading={isChantierSearchLoading}
                     customRenderers={
                       customRenderersFactory(
                         viewState.viewType, 
@@ -483,6 +564,7 @@ export default function HomePage({
                       ) as any}
                     showGroupHeaders={viewState.viewType === 'chantier-table'}
                     onRightClick={interaction.handleDataTableContextMenu}
+                    heightCell={60}
                   />
                   </Suspense>
                 )}

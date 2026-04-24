@@ -2,9 +2,9 @@ import { getRequest, postRequest, putRequest, deleteRequest } from "./axios.serv
 
 
 
-async function searchRessources(query: string, types: string[] = [], limit: number = 20, timeoutMs: number = 5000) {
+async function searchRessources(query: string = '', types: string[] = [], limit: number = 20, timeoutMs: number = 5000) {
   const params = new URLSearchParams();
-  params.set('q', query);
+  params.set('q', query ?? '');
   if (types.length > 0) {
     params.set('types', types.join(','));
   }
@@ -19,8 +19,21 @@ async function searchRessources(query: string, types: string[] = [], limit: numb
 }
 
 
+async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, query: string = '', timeoutMs: number = 15000) {
+  const params = new URLSearchParams();
+  params.set('limit', String(limit));
+  params.set('pageNum', String(pageNum));
+  params.set('q', query);
+
+  return await getRequest(
+    `/api/ressources/projets?${params.toString()}`,
+    'getRessourcesProjet',
+    { timeout: timeoutMs }
+  );
+}
+
 
 export default {
   searchRessources,
-
+  getRessourcesProjet,
 };

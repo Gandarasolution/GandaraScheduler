@@ -32,6 +32,7 @@ const axiosAgent = axios.create({
     },
 })
 
+
 /* Pour la démonstration, décommenter l'instruction suivnante.
   Cela permet d'ajouter à toutes les requêtes une entête api-key.
   Malheureusement, cette entête n'est pas autorisée par l'API

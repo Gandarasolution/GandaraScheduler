@@ -40,7 +40,7 @@ export const useDataLayer = ({
   userRole,
   isSearchOverlayOpen,
 }: DataLayerProps) => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const worker = useCalendarWorker();
   const [teams, setTeams] = useState<any[]>([]);
   
@@ -86,30 +86,20 @@ export const useDataLayer = ({
     };
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadTeams = useCallback(async () => {
+    const response = await equipeService.getEquipes();
 
-    const loadTeams = async () => {
-      const response = await equipeService.getEquipes();
-      if (!isMounted) return;
+    if (response?.error === 0 && Array.isArray(response.data)) {
+      setTeams(response.data);
+      return response.data;
+    }
 
-      if (response?.error === 0 && Array.isArray(response.data)) {
-        setTeams(response.data);
-        return;
-      }
-
-      const teamsFromEmployees = globalEmployeesRef.current
-        .map(emp => emp.Equipe)
-        .filter(Boolean)
-        .filter((team, index, arr) => arr.findIndex(t => t?.Id === team?.Id) === index);
-      setTeams(teamsFromEmployees as any[]);
-    };
-
-    loadTeams();
-
-    return () => {
-      isMounted = false;
-    };
+    const teamsFromEmployees = globalEmployeesRef.current
+      .map(emp => emp.Equipe)
+      .filter(Boolean)
+      .filter((team, index, arr) => arr.findIndex(t => t?.Id === team?.Id) === index);
+    setTeams(teamsFromEmployees as any[]);
+    return teamsFromEmployees;
   }, [globalEmployeesRef]);
 
 
@@ -224,6 +214,8 @@ export const useDataLayer = ({
 
   const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
     setIsLoading(true);
+    console.log('appel');
+    
     try {
       const response = await evenementService.getEvenements(startDate, endDate);
       const payloadData = response?.data;
@@ -251,13 +243,6 @@ export const useDataLayer = ({
     }
     return true;
   }, [addMissingResourcesToCache]);
-
-  // Effet pour charger les RDV initiaux
-  useEffect(() => {
-    const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
-    const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
-    loadAppointmentsInRange(startDate, endDate);
-  }, []);
 
   // --- Filtrage Secondaire (Tableaux) ---
   // Cette fonction prépare les données pour DataTableFrame
@@ -292,16 +277,16 @@ export const useDataLayer = ({
                   key: 'IG',
                   label: 'Informations Générales', 
                   attributes: [
-                      { key: 'image', label: '', sortable: false , width:50 },
-                      { key: 'poleActivite',   label: 'Pôle', type:'string', width:120 },
-                      { key: 'code',  label: 'Code', type:'string', width:85 },
-                      { key: 'identifiant',  label: 'Identifiant', type:'string', width:125 },
-                      { key: 'libelle' , label: 'Libellé', type:'string' },
-                      { key: 'etat', label: 'État', type:'string', width:90 },
-                      { key: 'chargeAffaire',  label: 'Chargé d\'Affaires', type:'string', width:140 },
-                      { key: 'chefChantier',  label: 'Chef de Chantier', type:'string', width:140 },
-                      { key: 'dateOS' , label: 'Date OS', type:'date', width:100 },
-                      { key: 'dateFin', label: 'Date Fin', type:'date', width:100 }
+                      { key: 'IdImage', label: '', sortable: false , width:50 },
+                      { key: 'PoleActivite',   label: 'Pôle', type:'string', width:120 },
+                      { key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
+                      { key: 'Identifiant',  label: 'Identifiant', type:'string', width:125 },
+                      { key: 'LibellePlanningRessource' , label: 'Libellé', type:'string' },
+                      { key: 'Etat', label: 'État', type:'string', width:90 },
+                      { key: 'ChargeAffaire',  label: 'Chargé d\'Affaires', type:'string', width:140 },
+                      { key: 'ChefChantier',  label: 'Chef de Chantier', type:'string', width:140 },
+                      { key: 'DateOS' , label: 'Date OS', type:'date', width:100 },
+                      { key: 'DateFin', label: 'Date Fin', type:'date', width:100 }
                   ]
               },
               {
@@ -450,5 +435,6 @@ export const useDataLayer = ({
     updateEventImage,
     updateEmployeeImage,
     loadAppointmentsInRange,
+    loadTeams,
   };
 };

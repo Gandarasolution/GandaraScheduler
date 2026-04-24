@@ -83,6 +83,7 @@
 
 import React, { useMemo, useState, useCallback, memo, useRef, useEffect } from 'react';
 import FlexibleFrame from '../dnd/FlexibleFrame';
+import type { ChantierItem, AbsenceItem, AutreItem } from '@/app/calendrier/types';
 
 /**
  * Type générique pour un élément de données
@@ -102,6 +103,29 @@ export type CellRenderer<T = GenericDataItem> = (
   item: T,
   attributeKey: string
 ) => React.ReactNode;
+
+export type PaginatedSearchResponse<T = GenericDataItem> = {
+  error?: number;
+  data?:
+    | T[]
+    | {
+        data?: T[];
+        rows?: T[];
+        items?: T[];
+        TotalLignes?: number;
+      };
+  TotalLignes?: number;
+  message?: string;
+};
+
+export type PaginatedSearchFunction<T = GenericDataItem> = (
+  limit?: number,
+  pageNum?: number,
+  query?: string,
+  timeoutMs?: number,
+) => Promise<PaginatedSearchResponse<T>>;
+
+export type PaginatedInitialItem = ChantierItem | AbsenceItem | AutreItem;
 
 /**
  * Interface pour la structure des attributs
@@ -166,7 +190,11 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   /** Structure des catégories et colonnes */
   categoriesStructure: CategoryStructure[];
   /** Données à afficher */
-  items: T[];
+  items?: T[] | null;
+  /** Élément à afficher pendant le chargement des données */
+  loadingElement?: React.ReactNode;
+  /** Indique si des lignes sont en cours de chargement */
+  isRowsLoading?: boolean;
   /** Largeur du conteneur (auto-détectée si non fournie) */
   containerWidth?: number;
   /** Fonctions de calcul pour les champs dynamiques */
@@ -202,6 +230,10 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
     key: string;
     direction: 'asc' | 'desc';
   };
+  /** Active la pagination */
+  enablePagination?: boolean;
+  /** Fonction de recherche distante utilisée par la pagination */
+  paginatedSearchFunction?: PaginatedSearchFunction<T>;
 }
 
 /**
@@ -212,6 +244,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   style,
   categoriesStructure: categoriesStructureSource,
   items,
+  loadingElement,
+  isRowsLoading = false,
   FontSize = 14,
   cellPadding = 8,
   heightCell = 60,
@@ -228,7 +262,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   onRightClick,
   onCellDoubleClick,
   defaultSort,
+  enablePagination = false,
+  paginatedSearchFunction
 }: DataTableFrameProps<T>) => {
+  const DEFAULT_PAGE_SIZE = 20;
   
   
   // État pour la largeur du conteneur (pour réagir aux changements de taille de fenêtre)
@@ -277,6 +314,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   const [itemHoveredId, setItemHoveredId] = useState<string | number | null>(null);
   const [columnHoveredKey, setColumnHoveredKey] = useState<string | null>(null);
   const [categoriesStructure, setCategoriesStructure] = useState<CategoryStructure[]>(categoriesStructureSource);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isPaginationLoading, setIsPaginationLoading] = useState(false);
+  const [remotePageItems, setRemotePageItems] = useState<T[] | null>(null);
+  const [remoteTotalPages, setRemoteTotalPages] = useState(1);
 
   // État pour les colonnes cachées
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
@@ -326,6 +367,100 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       })
     )
   }, [hiddenColumns, categoriesStructureSource]);
+
+  const normalizeItemsWithId = useCallback((data: T[]): T[] => {
+    return data.map((item, index) => {
+      if (item && item.id !== undefined && item.id !== null) {
+        return item;
+      }
+
+      const source = item as any;
+      return {
+        ...item,
+        id: source?.IdPlanningRessource ?? source?.Id ?? `generated-${index}`,
+      } as T;
+    });
+  }, []);
+
+  const extractPaginatedPayload = useCallback((response?: PaginatedSearchResponse<T>) => {
+    const responseData = response?.data;
+    let pageData: T[] = [];
+
+    if (Array.isArray(responseData)) {
+      pageData = responseData;
+    } else if (responseData && typeof responseData === 'object') {
+      const nested = responseData.data ?? responseData.rows ?? responseData.items;
+      pageData = Array.isArray(nested) ? nested : [];
+    }
+
+    const totalFromDataObject =
+      !Array.isArray(responseData) && responseData && typeof responseData === 'object'
+        ? Number(responseData.TotalLignes)
+        : NaN;
+    const totalFromRoot = Number(response?.TotalLignes);
+    const totalLines = Number.isFinite(totalFromDataObject)
+      ? totalFromDataObject
+      : Number.isFinite(totalFromRoot)
+        ? totalFromRoot
+        : pageData.length;
+
+    return {
+      pageData,
+      totalLines,
+    };
+  }, []);
+
+  const fetchPage = useCallback(async (targetPage: number) => {
+    if (!enablePagination || !paginatedSearchFunction) {
+      return;
+    }
+
+    setIsPaginationLoading(true);
+    try {
+      const callSearch = () => paginatedSearchFunction(DEFAULT_PAGE_SIZE, targetPage, '', 15000);
+      let response: PaginatedSearchResponse<T> | undefined;
+
+      response  = await callSearch();
+
+      if (response?.error && response.error !== 0) {
+        setRemotePageItems([]);
+        setRemoteTotalPages(1);
+        return;
+      }
+      
+      const { pageData, totalLines } = extractPaginatedPayload(response);
+      const totalPages = Math.max(1, Math.ceil(totalLines / DEFAULT_PAGE_SIZE));
+
+      setRemotePageItems(normalizeItemsWithId(pageData));
+      setRemoteTotalPages(totalPages);
+      setCurrentPage(targetPage);
+    } catch {
+      setRemotePageItems([]);
+      setRemoteTotalPages(1);
+    } finally {
+      setIsPaginationLoading(false);
+    }
+  }, [enablePagination, paginatedSearchFunction, extractPaginatedPayload, normalizeItemsWithId]);
+
+  useEffect(() => {
+    if (!enablePagination) {
+      setCurrentPage(1);
+      setRemotePageItems(null);
+      setRemoteTotalPages(1);
+      setIsPaginationLoading(false);
+      return;
+    }
+
+    if (!paginatedSearchFunction) {
+      setCurrentPage(1);
+      setRemotePageItems(null);
+      setRemoteTotalPages(1);
+      return;
+    }
+
+    setRemotePageItems(normalizeItemsWithId(([]) as unknown as T[]));
+    fetchPage(1);
+  }, [enablePagination, paginatedSearchFunction, fetchPage, normalizeItemsWithId]);
     
 
   // Configuration des groupes
@@ -375,10 +510,19 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   }, [computedFields]);
 
   // Fonction de tri générique
-  const sortedItems = useMemo(() => {
-    if (!sortConfig.key) return items;
+  const sourceItems = useMemo(() => {
+    if (enablePagination && paginatedSearchFunction) {
+      return remotePageItems ?? [];
+    }
+
+    return items ?? [];
+  }, [enablePagination, paginatedSearchFunction, remotePageItems, items]);
     
-    const sorted = [...items].sort((a, b) => {
+
+  const sortedItems = useMemo(() => {
+    if (!sortConfig.key) return sourceItems;
+    
+    const sorted = [...sourceItems].sort((a, b) => {
       if (!a || !b) return 0;
       
       // Trouver la configuration de l'attribut pour obtenir son subKey
@@ -415,12 +559,44 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     });
     
     return sorted;
-  }, [items, sortConfig, getAttributeValue, categoriesStructure]);
+  }, [sourceItems, sortConfig, getAttributeValue, categoriesStructure]);
+
+  const localTotalPages = useMemo(() => {
+    if (!enablePagination || paginatedSearchFunction) {
+      return 1;
+    }
+
+    return Math.max(1, Math.ceil(sortedItems.length / DEFAULT_PAGE_SIZE));
+  }, [enablePagination, paginatedSearchFunction, sortedItems]);
+
+  const displayedItems = useMemo(() => {
+    if (!enablePagination) {
+      return sortedItems;
+    }
+
+    if (paginatedSearchFunction) {
+      return sortedItems;
+    }
+
+    const safePage = Math.min(currentPage, localTotalPages);
+    const start = (safePage - 1) * DEFAULT_PAGE_SIZE;
+    return sortedItems.slice(start, start + DEFAULT_PAGE_SIZE);
+  }, [enablePagination, paginatedSearchFunction, sortedItems, currentPage, localTotalPages]);
+
+  useEffect(() => {
+    if (!enablePagination || paginatedSearchFunction) {
+      return;
+    }
+
+    if (currentPage > localTotalPages) {
+      setCurrentPage(localTotalPages);
+    }
+  }, [enablePagination, paginatedSearchFunction, currentPage, localTotalPages]);
 
   // Fonctions utilitaires pour le surlignage
   const getItemIndex = useCallback((itemId: string | number): number => {
-    return sortedItems.findIndex(item => item && item.id === itemId);
-  }, [sortedItems]);
+    return displayedItems.findIndex(item => item && item.id === itemId);
+  }, [displayedItems]);
 
   const isItemBeforeHovered = useCallback((currentItemId: string | number, hoveredItemId: string | number | null): boolean => {
     if (!hoveredItemId || currentItemId === hoveredItemId) return false;
@@ -509,7 +685,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     const HIDDEN_COLUMN_WIDTH = 20; // Largeur fine pour colonnes cachées
     const PADDING = 10; // Padding supplémentaire pour l'espacement
     
-    if (!sortedItems.length) return attributeLabels.map(() => MIN_WIDTH);
+    if (!displayedItems.length) return attributeLabels.map(() => containerWidth/attributeLabels.length);
 
     // Calculer la largeur max pour chaque colonne
     const columnWidths = attributeKeys.map((key, columnIndex) => {
@@ -541,7 +717,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       // Mesurer la largeur maximale du contenu
       let maxContentWidth = MIN_WIDTH;
       
-      sortedItems.forEach(item => {
+      displayedItems.forEach(item => {
         if (!item) return;
         
         const value = getAttributeValue(item, attributeConfig || { key, label: '' });
@@ -653,7 +829,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     tableWidth.current = adjustedWidths.reduce((sum, width) => sum + width, 0);
 
     return adjustedWidths;
-  }, [attributeLabels, attributeKeys, containerWidth, sortedItems, categoriesStructure, getAttributeValue, measureTextWidth, FontSize]);
+  }, [attributeLabels, attributeKeys, containerWidth, displayedItems, categoriesStructure, getAttributeValue, measureTextWidth, FontSize]);
 
   
   // Style CSS Grid
@@ -714,16 +890,42 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       })
     }));
   }, [categoriesStructure, getAttributeValue]);
+  
+  const effectiveTotalPages = paginatedSearchFunction ? remoteTotalPages : localTotalPages;
+  const safeCurrentPage = Math.max(1, Math.min(currentPage, effectiveTotalPages));
+  const visiblePageSquares = [safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1]
+    .filter((pageNum) => pageNum >= 1 && pageNum <= effectiveTotalPages);
 
+  const handlePageSquareClick = (targetPage: number) => {
+    if (isPaginationLoading || targetPage === currentPage) {
+      return;
+    }
+
+    if (paginatedSearchFunction) {
+      fetchPage(targetPage);
+      return;
+    }
+
+    setCurrentPage(targetPage);
+  };
+
+  const showRowSkeletons = (isPaginationLoading && enablePagination) || isRowsLoading;
+  const skeletonRowCount = Math.min(10, Math.max(4, displayedItems.length || 10));
 
   return (
     <div 
-      className="relative h-full"
+      className="relative h-full flex flex-col"
       style={style}
     >
+      <style>{`
+        @keyframes dtfSkeletonSlide {
+          0% { transform: translateX(-120%); }
+          100% { transform: translateX(320%); }
+        }
+      `}</style>
       <FlexibleFrame
         mainRef={containerRef}
-        className={`data-table-frame h-full px-7 ${className}`}
+        className={`data-table-frame flex-1 min-h-0 px-7 ${className}`}
         contentClassName='overflow-x-hidden'
         gridConfig={{
           mode: 'custom',
@@ -734,7 +936,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
         }}
         headers={[
           // Niveau 1: Groupes (si fournis)
-          ...(items.length === 0 ? [] : groups && showGroupHeaders ? [{
+          ...(groups && showGroupHeaders ? [{
             items: groups.map(g => ({
               span: g.span,
               key: g.key,
@@ -752,7 +954,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
             containerClassName: 'bg-secondary-bg border-ultra-light',
           }] : []),
           // Niveau 2: En-têtes de colonnes (si withHeader=true)
-          ...(items.length === 0 ? [] : withHeader ? [{
+          ...(withHeader ? [{
             items: customHeader ? 
               // Si customHeader fourni, l'utiliser
               attributeLabels.map((label, index) => ({
@@ -900,14 +1102,52 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
           }] : [])
         ]}
       >
-        {items.length === 0 ? (
+         {displayedItems.length === 0 && !showRowSkeletons ? (
           <div className="w-full h-full flex items-center justify-center text-gray-500">
-            Aucun élément à afficher.
+              {'Aucun élément à afficher.'}
+          </div>
+        ) : showRowSkeletons ? (
+          <div className="relative flex flex-col w-full min-w-max overflow-hidden">
+            <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-12 bg-gradient-to-r from-white/90 to-transparent" />
+            <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-12 bg-gradient-to-l from-white/90 to-transparent" />
+            {Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
+              <div
+                key={`skeleton-row-${rowIndex}`}
+                className="relative overflow-hidden border-b border-default bg-gray-200"
+                style={{
+                  width: `${containerWidth}px`,
+                  height: `${heightCell}px`,
+                  //gridTemplateColumns: gridTemplateColumns.length > 0 ? gridTemplateColumns : 'repeat(auto-fit, minmax(100px, 1fr))'
+                }}
+              >
+                <div
+                  className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/85 to-transparent"
+                  style={{ animation: 'dtfSkeletonSlide 1.05s linear infinite' }}
+                />
+                {/* {attributeKeys.map((attributeKey) => (
+                  <div
+                    key={`skeleton-cell-${rowIndex}-${attributeKey}`}
+                    className="border-r border-default flex items-center"
+                    style={{
+                      height: `${heightCell}px`,
+                      padding: `${cellPadding}px`,
+                    }}
+                  >
+                    <div className="relative w-full h-4 rounded-full bg-gray-200 overflow-hidden">
+                      <div
+                        className="absolute inset-y-0 w-1/3 rounded-full bg-white/80"
+                        style={{ animation: 'dtfSkeletonSlide 1.05s linear infinite' }}
+                      />
+                    </div>
+                  </div>
+                ))} */}
+              </div>
+            ))}
           </div>
         ) : 
         (
           <div className="flex flex-col w-full min-w-max"> 
-            {sortedItems
+            {displayedItems
               .filter(item => !!item)
               .map((item, rowIndex) => {
                 const itemByCategories = getValuesByCategory(item);
@@ -946,7 +1186,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                         const isNextHidden = nextAttributeConfig?.type === 'hidden-column';
 
                         return (
-                          <div // Remplacé <td> par <div>
+                          <div
                             key={`${item.id}-${attributeKey}`}
                             className="bg-gradient-to-r from-gray-50 to-gray-100"
                             style={{
@@ -998,6 +1238,30 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
         )}
        
       </FlexibleFrame>
+      {enablePagination && effectiveTotalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 px-7 py-3 ">
+          {visiblePageSquares.map((pageNum) => {
+            const isCurrent = pageNum === safeCurrentPage;
+
+            return (
+              <button
+                key={`pagination-square-${pageNum}`}
+                type="button"
+                className={`w-7 h-7 rounded-sm border text-xs font-medium transition-colors ${
+                  isCurrent
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-primary border-default hover:bg-primary-ultra-light'
+                } ${isPaginationLoading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                disabled={isPaginationLoading}
+                onClick={() => handlePageSquareClick(pageNum)}
+                title={`Aller a la page ${pageNum}`}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
