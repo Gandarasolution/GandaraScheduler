@@ -213,9 +213,7 @@ export const useDataLayer = ({
 
 
   const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
-    setIsLoading(true);
-    console.log('appel');
-    
+    setIsLoading(true);    
     try {
       const response = await evenementService.getEvenements(startDate, endDate);
       const payloadData = response?.data;
@@ -229,7 +227,7 @@ export const useDataLayer = ({
       const newResources = response?.error === 0 && Array.isArray(payloadData?.ressources)
         ? payloadData.ressources
         : [];
-
+        
 
       // Ajouter au cache uniquement les ressources absentes.
       addMissingResourcesToCache(newResources);

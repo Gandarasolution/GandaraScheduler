@@ -165,7 +165,7 @@ async function updateEvenementAndRessource(id: string, data: any) {
             CouleurTextePlanningRessource: data?.CouleurTextePlanningRessource ?? data?.Ressource?.CouleurTextePlanningRessource ?? null,
             IdImage: data?.IdImage ?? data?.Ressource?.IdImage ?? null,
         },
-    };
+    };    
     return await putRequest(`/api/event/updateRessourceAndEvent/${id}`, payload, 'updateEvenementAndRessource');
 }
 
@@ -179,7 +179,7 @@ async function divideEvenement(id: string, data: any) {
 async function repeatEvenement(repeatData: any) {
     const payload = {
        ...toApiEventPayload(repeatData)
-    };
+    };    
     return await postRequest(`/api/event/repeat`, payload, 'repeatEvenement');
 }
 

@@ -7,3 +7,4 @@ export { default as notificationApiService } from './notificationApi.service';
 export { default as ressourceService } from './ressource.service';
 export { default as imageService } from './image.service';
 export { default as authService } from './auth.service';
+export { default as etiquetteService } from './etiquette.service';

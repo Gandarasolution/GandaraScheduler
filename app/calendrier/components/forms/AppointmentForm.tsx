@@ -77,6 +77,8 @@ interface AppointmentFormProps {
   handleEditDimension: (dimension: Item) => void;
   /** Callback pour supprimer une étiquette de tous les rendez-vous associés */
   onRemoveTagFromAppointments?: (tagId: number) => void;
+  onAddTagToResource?: (tag: any) => Promise<any>;
+  onFetchTagsForResource?: (idRessource: number) => Promise<any>;
 }
 
 
@@ -129,6 +131,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   isMobile,
   resourceEditMode = null,
   onRemoveTagFromAppointments,
+  onAddTagToResource,
+  onFetchTagsForResource,
 }) => {
 
   const { handleCloseWithSave, registerSaveHandler } = useModalContext();
@@ -148,9 +152,54 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);
+  
+  // Nouveaux états pour gérer les étiquettes asynchrones
+  const [resourceTags, setResourceTags] = useState<Tag[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [tagError, setTagError] = useState<string | null>(null);
+
+  // Charger les étiquettes au chargement
+  useEffect(() => {
+    if (onFetchTagsForResource && item?.IdPlanningRessource) {
+      setIsLoadingTags(true);
+      onFetchTagsForResource(item.IdPlanningRessource)
+        .then(response => {
+          // Assume response.data is the array of tags, adjust if necessary
+          setResourceTags(response.data || response || []);
+        })
+        .catch(err => {
+          console.error("Failed to load tags", err);
+          setTagError("Erreur lors de la récupération des étiquettes");
+        })
+        .finally(() => {
+          setIsLoadingTags(false);
+        });
+    }
+  }, [item?.IdPlanningRessource, onFetchTagsForResource]);
+
+  const handleCreateTag = async (tagData: Partial<Tag>) => {
+    if (!onAddTagToResource) return;
+    
+    setIsCreatingTag(true);
+    setTagError(null);
+    
+    try {
+      const response = await onAddTagToResource({ ...tagData, IdPlanningRessource: item?.IdPlanningRessource || -1 });
+      const newTagId = response.data || response;
+      setResourceTags(prev => [...prev, { ...tagData, IdPlanningEtiquette: newTagId } as Tag]);
+      return newTagId;
+    } catch (err) {
+      console.error("Failed to create tag", err);
+      setTagError("Erreur lors de la création de l'étiquette");
+      throw err;
+    } finally {
+      setIsCreatingTag(false);
+    }
+  };
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  
+    
   const saveHandlerRef = useRef<(() => void | Promise<void>) | null>(null);
     const performAppointmentSave = async (): Promise<void> => {
       if (isSaving) return;
@@ -653,7 +702,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   });
 
   // Tags pour TagsManager
-  const availableTags: Tag[] = formDataItemType.Etiquettes || [];
   const isTagUsedCheck = (tagId: number) => {
     const count = appointments.filter(app => app.Etiquette && app.Etiquette.IdPlanningEtiquette === tagId).length;
     return { used: count > 0, count };
@@ -764,12 +812,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         {isReducedVersion && formDataItemType.Type === 'Projet' && (
           <div className="w-full lg:w-[320px] px-4 flex flex-col gap-4 border-l border-light">
             <TagsManager
-              tags={availableTags}
-              onAddTag={handleAddTag}
-              onRemoveTag={handleRemoveTag}
+              tags={resourceTags}
+              onAddTag={handleCreateTag}
+              onRemoveTag={onRemoveTagFromAppointments || (() => {})}
               isTagUsed={isTagUsedCheck}
               variant="compact"
               title="Étiquettes"
+              isLoading={isLoadingTags}
+              isCreating={isCreatingTag}
+              error={tagError}
             />
           </div>
         )}
@@ -790,15 +841,25 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             {/* TagsManager - Sélecteur d'étiquette (version étendue pour chantiers) */}
             {formDataItemType.Type === 'Projet' && (
               <TagsManager
-                tags={availableTags}
+                tags={resourceTags}
                 selectedTag={formDataAppointment.Etiquette}
                 onSelectTag={handleSelectTag}
-                onAddTag={handleAddTag}
-                onRemoveTag={handleRemoveTag}
+                onAddTag={async (newTag) => {
+                  try {
+                      const createdTag = await handleCreateTag(newTag);
+                      handleSelectTag(createdTag);
+                  } catch (e) {
+                      // err is handled via tagError
+                  }
+                }}
+                onRemoveTag={onRemoveTagFromAppointments || (() => {})}
                 isTagUsed={isTagUsedCheck}
                 variant="extended"
                 title="Étiquette associée"
                 placeholder="Aucune étiquette"
+                isLoading={isLoadingTags}
+                isCreating={isCreatingTag}
+                error={tagError}
               />
             )}
           </div>

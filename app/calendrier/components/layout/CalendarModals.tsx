@@ -7,6 +7,7 @@ import { Appointment, Item, CalendarConfig, Image, User } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
+import etiquetteService from '@/app/service/etiquette.service';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -458,6 +459,8 @@ export const CalendarModals = memo(({
               handleAddDimension={handlers.handleAddDimension}
               handleEditDimension={handlers.handleEditDimension}
               onRemoveTagFromAppointments={handlers.removeTagFromAppointments}
+              onFetchTagsForResource={etiquetteService.getEtiquettes}
+              onAddTagToResource={etiquetteService.createEtiquette}
             />
           </Suspense>
         )}
