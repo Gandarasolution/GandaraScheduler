@@ -14,7 +14,7 @@
 
 import { RefObject } from 'react';
 import { useDrop } from 'react-dnd';
-import { isSameDay, isWeekend } from 'date-fns';
+import { format, isSameDay, isWeekend } from 'date-fns';
 import { Appointment, HalfDayInterval, Item } from '../../types';
 import { CELL_WIDTH, CELL_HEIGHT, HOUR_MS, DAY_INTERVALS } from '../../utils/constants';
 import { isHoliday, getNextWorkedDay } from '../../utils/dates';
@@ -39,7 +39,7 @@ interface UseCalendarDragDropParams {
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: number[];
+  nonWorkingDates: Record<string, number>;
   appointments: Appointment[];
   onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onExternalDragDrop: (item: Item, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number, priority: number) => void;
@@ -106,7 +106,7 @@ export const useCalendarDragDrop = ({
 
       const weekend = isWeekend(targetDayTs);
       const holiday = isHoliday(targetDayTs);
-      const isNonWorking = nonWorkingDates.some((date) => isSameDay(date, targetDayTs));
+      const isNonWorking = nonWorkingDates[format(targetDayTs, 'yyyy-MM-dd')] !== undefined;
 
       if (weekend || holiday || isNonWorking) {
         targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);

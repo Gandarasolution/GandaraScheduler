@@ -5,9 +5,13 @@ function getEtiquettes(idRessource: number) {
 }
 
 function createEtiquette(data: any) {
-    console.log(data);
     
-    return postRequest('/api/etiquettes', data);
+    const payload = {
+        IdPlanningRessource: data.IdPlanningRessource,
+        LibelleCourtPlanningEtiquette: data.LibelleCourtPlanningEtiquette ?? null,
+        LibelleLongPlanningEtiquette: data.LibelleLongPlanningEtiquette ?? "BPE"
+    }    
+    return postRequest('/api/etiquettes', payload);
 }
 
 export default {

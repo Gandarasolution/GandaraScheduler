@@ -42,6 +42,7 @@ interface MobileCalendarGridProps {
   appointments: Appointment[];
   user: User;
   items: Item[];
+  nonWorkingDates: Record<string, number>;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
 }
 
@@ -52,6 +53,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   appointments, 
   user, 
   items, 
+  nonWorkingDates,
   onAddAppointment 
 }) => {
   // ----- ÉTATS LOCAUX -----
@@ -677,7 +679,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   employees={visibleEmployees}
                   HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
                   isFullDay={true}
-                  nonWorkingDates={[]}
+                  nonWorkingDates={nonWorkingDates}
                   isReducedVersion={false}
                   isMobile={true}
                   onSave={handleSaveAppointment}

@@ -36,7 +36,7 @@ interface DesktopCalendarGridProps {
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   events: Item[];
-  nonWorkingDates: number[];
+  nonWorkingDates: Record<string, number>;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
@@ -441,6 +441,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           handleScrollY(e);              
         }}
         todayLineColor="#ffcdde"
+        nonworkingDates={nonWorkingDates}
       >
         {isGrabbing && (
           <div 

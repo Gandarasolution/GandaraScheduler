@@ -12,7 +12,7 @@
  */
 
 import { useMemo } from 'react';
-import { isSameDay, isWeekend } from 'date-fns';
+import { format, isSameDay, isWeekend } from 'date-fns';
 import { isHoliday } from '../../utils/dates';
 import { CELL_WIDTH } from '../../utils/constants';
 
@@ -23,7 +23,7 @@ export interface ColumnOverlay {
 
 interface UseCalendarColumnsParams {
   dayInTimeline: number[];
-  nonWorkingDates: number[];
+  nonWorkingDates: Record<string, number>;
 }
 
 interface UseCalendarColumnsResult {
@@ -53,7 +53,7 @@ export const useCalendarColumns = ({
       const left = index * CELL_WIDTH;
       const isFerie = isHoliday(day);
       const isWk = isWeekend(day);
-      const isNonWorking = nonWorkingDates.some((d) => isSameDay(d, day));
+      const isNonWorking = nonWorkingDates[format(day, 'yyyy-MM-dd')] !== undefined;
 
       // Priorité: férié > week-end > non-working custom
       if (isFerie) {

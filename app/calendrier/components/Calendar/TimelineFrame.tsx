@@ -36,6 +36,7 @@ interface TimelineFrameProps {
     /** Labels pour les colonnes individuelles */
     items: string[];
   };
+  nonworkingDates?: Record<string, number>; // Clé: date au format "yyyy-MM-dd"
   /** Référence pour le scroll principal */
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   /** Gestionnaire d'événement scroll */
@@ -74,6 +75,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   mainScrollRef,
   onScroll,
   children,
+  nonworkingDates,
   showGroupHeaders = true,
   showItemHeaders = true,
   contentClassName = '',
@@ -245,12 +247,14 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
               const day = dayInTimeline[index];
               const holiday = isHoliday(day);
               const weekNumber = getWeekNumber(day);
+              const dayKey = format(day, 'yyyy-MM-dd');
+              const isNonWorking = nonworkingDates && nonworkingDates[dayKey];
               
               return (
                 <div
                   className={`
                     flex flex-col justify-end border-b border-r border-light text-center text-sm font-semibold text-primary p-1
-                    ${(isToday(day) && 'calendar-today') || (holiday ? 'FERIE' : (isWeekend(day) ? 'calendar-weekend' : 'bg-secondary-bg'))}
+                    ${(isToday(day) && 'calendar-today') || (holiday ? 'FERIE' : (isWeekend(day) ? 'calendar-weekend' : (isNonWorking ? 'NON-WORKING' : 'bg-secondary-bg')))}
                     relative
                     day-cell
                   `}

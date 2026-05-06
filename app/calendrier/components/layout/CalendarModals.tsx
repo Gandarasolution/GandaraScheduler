@@ -79,9 +79,11 @@ interface CalendarModalsProps {
     deleteCustomConfig: (id: number) => void;
     duplicateConfig: (config: CalendarConfig) => CalendarConfig;
     
-    // Configuration Editing State (from hook)
+    // Config Configuration Editing State (from hook)
     setEditingConfig: (config: any) => void;
     setIsCreatingConfig: (val: boolean) => void;
+    addNonWorkingDatesToPlanning: (idPlanning: number, date: number) => Promise<any>;
+    removeNonWorkingDatesFromPlanning: (idPlanning: number, date: number) => Promise<any>;
 
     setSelectedItem: (item: Item | null) => void;
   };
@@ -108,8 +110,8 @@ interface CalendarModalsProps {
     setIncludeWeekend: (v: boolean) => void;
     respectNonWorkingDays: boolean;
     setRespectNonWorkingDays: (v: boolean) => void;
-    nonWorkingDates: number[];
-    setNonWorkingDates: (dates: number[]) => void;
+    nonWorkingDates: Record<string, number>;
+    setNonWorkingDates: (dates: Record<string, number>) => void;
     tagPlacement: 'hover' | 'fixed';
     setTagPlacement: (v: 'hover' | 'fixed') => void;
     
@@ -192,6 +194,8 @@ export const CalendarModals = memo(({
           type: "custom-non-working-dates",
           nonWorkingDates: config.nonWorkingDates,
           setNonWorkingDates: config.setNonWorkingDates,
+          addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
+          removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
         }
       ]
     },
@@ -211,7 +215,7 @@ export const CalendarModals = memo(({
         }
       ]
     }
-  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement]);  
+  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
 
   // Détermination du mode d'édition de ressource
   const resourceEditMode: 'create' | 'edit' | null = useMemo(() => {
@@ -439,30 +443,29 @@ export const CalendarModals = memo(({
           </div>
         ) : (
           /* CAS 3: Formulaire de RDV */
-          <Suspense fallback={<ModalLoadingFallback />}>
-            <AppointmentForm
-              appointments={data.appointments}
-              tagPlacement={modalsState.tagPlacement}
-              appointment={modalsState.selectedAppointmentForm as Appointment}
-              item={data.items.find(item => Number(item.IdPlanningRessource) === Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)) as Item}
-              items={data.items}
-              isReducedVersion={resourceEditMode !== null}
-              resourceEditMode={resourceEditMode}
-              employees={data.employees}
-              HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
-              isFullDay={config.isFullDay}
-              nonWorkingDates={config.nonWorkingDates}
-              onSave={handlers.saveAppointment}
-              onClose={() => handlers.closeModal()}
-              handleOpenImageModal={handlers.openImageModalForEvent}
-              onDirtyChange={setIsFormDirty}
-              handleAddDimension={handlers.handleAddDimension}
-              handleEditDimension={handlers.handleEditDimension}
-              onRemoveTagFromAppointments={handlers.removeTagFromAppointments}
-              onFetchTagsForResource={etiquetteService.getEtiquettes}
-              onAddTagToResource={etiquetteService.createEtiquette}
-            />
-          </Suspense>
+          <AppointmentForm
+            appointments={data.appointments}
+            tagPlacement={modalsState.tagPlacement}
+            appointment={modalsState.selectedAppointmentForm as Appointment}
+            item={data.items.find(item => Number(item.IdPlanningRessource) === Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)) as Item}
+            items={data.items}
+            isReducedVersion={resourceEditMode !== null}
+            resourceEditMode={resourceEditMode}
+            employees={data.employees}
+            HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
+            isFullDay={config.isFullDay}
+            nonWorkingDates={config.nonWorkingDates}
+            onSave={handlers.saveAppointment}
+            onClose={() => handlers.closeModal()}
+            handleOpenImageModal={handlers.openImageModalForEvent}
+            onDirtyChange={setIsFormDirty}
+            handleAddDimension={handlers.handleAddDimension}
+            handleEditDimension={handlers.handleEditDimension}
+            onRemoveTagFromAppointments={handlers.removeTagFromAppointments}
+            onFetchTagsForResource={etiquetteService.getEtiquettes}
+            onAddTagToResource={etiquetteService.createEtiquette}
+            loadingFallback={<ModalLoadingFallback />}
+          />
         )}
       </Modal>
 
@@ -484,13 +487,11 @@ export const CalendarModals = memo(({
 
       {/* --- PARAMETRES --- */}
       {modalsState.isSettingsOpen && (
-        <Suspense fallback={<ModalLoadingFallback />}>
-          <SettingsModal 
-            onClose={handlers.closeSettings}
-            settings={settings} 
-            isSettingsOpen={modalsState.isSettingsOpen}
-          />
-        </Suspense>
+        <SettingsModal 
+          onClose={handlers.closeSettings}
+          settings={settings} 
+          isSettingsOpen={modalsState.isSettingsOpen}
+        />
       )}
       
       {/* --- CONFIGURATION VUES CALENDRIER --- */}

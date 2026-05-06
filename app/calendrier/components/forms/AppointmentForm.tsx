@@ -17,7 +17,7 @@
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect, useCallback, useRef } from 'react';
 import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, SocialItemPermission, Tag } from '../../types';
-import { isSameDay, isSameYear, isSameMonth } from 'date-fns';
+import { isSameDay, isSameYear, isSameMonth, format } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 import socialPermissionService from '@/app/service/socialPermission.service';
 
@@ -51,7 +51,7 @@ interface AppointmentFormProps {
   /** Indique si le rendez-vous occupe une journée complète */
   isFullDay: boolean;
   /** Liste des dates non-travaillées (week-ends, fériés) */
-  nonWorkingDates: number[];
+  nonWorkingDates: Record<string, number>;
   /** Version réduite du formulaire (moins de champs) */
   isReducedVersion?: boolean;
   /** Indique si l'application est utilisée sur un appareil mobile */
@@ -79,6 +79,7 @@ interface AppointmentFormProps {
   onRemoveTagFromAppointments?: (tagId: number) => void;
   onAddTagToResource?: (tag: any) => Promise<any>;
   onFetchTagsForResource?: (idRessource: number) => Promise<any>;
+  loadingFallback?: React.ReactNode;
 }
 
 
@@ -133,6 +134,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   onRemoveTagFromAppointments,
   onAddTagToResource,
   onFetchTagsForResource,
+  loadingFallback,
 }) => {
 
   const { handleCloseWithSave, registerSaveHandler } = useModalContext();
@@ -262,11 +264,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     if (!app) return false;
     const days = eachDayOfInterval({ start: app.DebutPlanningEvenement, end: app.FinPlanningEvenement });
     return days.some((date) =>
-      (nonWorkingDates.some(nd => 
-        isSameDay(nd, date)
-        && isSameMonth(nd, date)
-        && isSameYear(nd, date)
-      ) || isHoliday(date) || isWeekend(date)) // Vérifie jours non travaillés, fériés ou week-ends
+      (nonWorkingDates[format(date, 'yyyy-MM-dd')] !== undefined) || isHoliday(date) || isWeekend(date) // Vérifie jours non travaillés, fériés ou week-ends
     );
   }, [appointments, formDataAppointment.IdPlanningEvenement, nonWorkingDates]);
 
@@ -707,6 +705,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     return { used: count > 0, count };
   };
     
+  if (isLoadingTags && loadingFallback) {
+    return <>{loadingFallback}</>;
+  }
+
   // Rendu du formulaire
   return (
     <>

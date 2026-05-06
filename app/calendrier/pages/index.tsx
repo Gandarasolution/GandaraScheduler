@@ -52,6 +52,7 @@ import { notificationService } from "../services";
 import employeeService from '@/app/service/employee.service';
 import evenementService from '@/app/service/evenement.service';
 import ressourceService from '@/app/service/ressource.service';
+import calendarConfigService from '@/app/service/calendarConfig.service';
 
 // --- UTILITAIRES ---
 import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
@@ -376,7 +377,7 @@ export default function HomePage({
 
     const initializePlanning = async () => {
       if (!isMounted) return;
-      await viewState.loadConfigs();
+      const configResponse = await viewState.loadConfigs();
       const employeesResponse = await employeeService.getEmployees();
 
       if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
@@ -385,6 +386,18 @@ export default function HomePage({
         globalEmployeesRef.current = [];
       }
       setEmployeesVersion(prev => prev + 1);
+
+      if (configResponse?.error === 0 && configResponse.data?.JoursNonTravailles) {
+        const recordData = Object.fromEntries(
+          configResponse.data.JoursNonTravailles.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [
+              item.DatePlanningJourNontravaille, // La clé (string)
+              Number(item.IdPlanningJourNontravaille) // La valeur (number)
+          ])
+        );
+
+// 2. On met à jour le state
+viewState.setNonWorkingDates(recordData);
+      }
 
       await dataLayer.loadTeams();
 
@@ -687,6 +700,9 @@ export default function HomePage({
               
               // Suppression d'étiquette de tous les rendez-vous
               removeTagFromAppointments: appointmentLogic.removeTagFromAppointments,
+
+              addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
+              removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,

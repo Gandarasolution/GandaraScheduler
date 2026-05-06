@@ -8,11 +8,10 @@ import { CalendarConfig, User } from '@/app/calendrier';
 import calendarConfigService from '@/app/service/calendarConfig.service';
 
 interface UseCalendarConfigProps {
-  employees: MutableRefObject<User[]>;
   user: User;
 }
 
-export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
+export function useCalendarConfig({ user }: UseCalendarConfigProps) {
   const [customConfigs, setCustomConfigs] = useState<CalendarConfig[]>([]);
   const [loadedConfigs, setLoadedConfigs] = useState<CalendarConfig[]>([]);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -22,10 +21,10 @@ export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
   const loadConfigs = async () => {
       const response = await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel);
       
-      if (response?.error === 0 && Array.isArray(response.data)) {
+      if (response?.error === 0 && Array.isArray(response.data.Configs)) {
 
-        setLoadedConfigs(response.data);
-        return;
+        setLoadedConfigs(response.data.Configs);
+        return response;
       }
 
       setLoadedConfigs([]);

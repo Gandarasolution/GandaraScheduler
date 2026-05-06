@@ -4,7 +4,17 @@ async function getCalendarConfigsByUserId(userId: number, idPlanning?: number) {
     if (!idPlanning) {
         idPlanning = 3; // Valeur par défaut pour idPlanning si non fourni
     }
-  return await getRequest(`/api/configs/user/${userId}?idPlanning=${idPlanning}`, 'getCalendarConfigsByUserId');
+  return await getRequest(`/api/planning/vue/user/${userId}?idPlanning=${idPlanning}`, 'getCalendarConfigsByUserId');
+}
+
+async function addNonWorkingDatesToPlanning(idPlanning: number, nonWorkingDate: number) {
+  console.log(idPlanning);
+  
+  return await postRequest(`/api/planning/${idPlanning}/non-working-dates`, { nonWorkingDate }, 'addNonWorkingDatesToPlanning');
+}
+
+async function removeNonWorkingDatesFromPlanning(idDate: number) {
+  return await deleteRequest(`/api/planning/${idDate}/non-working-dates`, 'removeNonWorkingDatesFromPlanning');
 }
 
 async function createCalendarConfig(data: any) {
@@ -24,4 +34,6 @@ export default {
   createCalendarConfig,
   updateCalendarConfig,
   deleteCalendarConfig,
+  addNonWorkingDatesToPlanning,
+  removeNonWorkingDatesFromPlanning
 };

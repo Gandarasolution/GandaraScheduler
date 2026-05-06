@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { addHours, eachDayOfInterval } from "date-fns";
-import { Appointment, User, HistoryAction, Item } from '../../types';
+import { Appointment, User, HistoryAction, Item, Tag } from '../../types';
 import { createAppointmentUtils } from '../../utils/appointmentUtils';
 import { notificationService } from "../../services";
 import { getWorkedDayIntervals, isWeekend } from "../../utils/dates";
@@ -26,7 +26,7 @@ interface LogicProps {
     isDisplayWeekend: boolean;
     includeWeekend: boolean;
     respectNonWorkingDays: boolean;
-    nonWorkingDates: number[];
+    nonWorkingDates: Record<string, number>;
   };
   onUpdate: () => void; // Callback pour forcer le rafraîchissement de l'UI
   setIsSearchOverlayOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -232,12 +232,12 @@ export const useAppointmentLogic = ({
 
   // Resize interne (mise à jour simple)
   const updateAppointmentBounds = useCallback((
-    data: { id: number; newStartDate: number; newEndDate: number; newEmployee?: User, annotation?: string },
+    data: { id: number; newStartDate: number; newEndDate: number; newEmployee?: User, annotation?: string, Etiquette?: Tag },
     saveToHistory: boolean = true,
     newPriority?: number,
     syncWithApi: boolean = true,
   ) => {
-      const { id, newStartDate, newEndDate, newEmployee, annotation } = data;
+      const { id, newStartDate, newEndDate, newEmployee, annotation, Etiquette } = data;
       const appointmentToResize = appointmentsRef.current.find(app => Number(app.IdPlanningEvenement) === Number(id));
       if (!appointmentToResize) return;
 
@@ -257,6 +257,7 @@ export const useAppointmentLogic = ({
               IdEmploye: newEmployee ? newEmployee.IdPersonnel : app.IdEmploye,
               PlanningEvenementPriorite: newPriority !== undefined ? newPriority : app.PlanningEvenementPriorite,
               AnnotationPlanningEvenement: annotation !== undefined ? annotation : app.AnnotationPlanningEvenement,
+              Etiquette: Etiquette
             }
           : app
       );
@@ -657,6 +658,7 @@ export const useAppointmentLogic = ({
               newEndDate: days[0].end,
               newEmployee: employee,
               annotation: appointment.AnnotationPlanningEvenement,
+              Etiquette: appointment.Etiquette,
             },
             false,
             appointment.PlanningEvenementPriorite,

@@ -37,7 +37,7 @@ interface CalendarGridProps {
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: number[];
+  nonWorkingDates: Record<string, number>;
   isMobile: boolean;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
@@ -140,6 +140,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         appointments={appointments}
         user={user}
         items={events}
+        nonWorkingDates={nonWorkingDates}
         onAddAppointment={onAddAppointment}
       />
     );

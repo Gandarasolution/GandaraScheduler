@@ -298,7 +298,7 @@ export const TagsManager: React.FC<ExtendedTagsManagerProps> = ({
             value={selectedTag?.IdPlanningEtiquette || ''}
             onChange={(e) => {
               const tagId = e.target.value ? Number(e.target.value) : undefined;
-              const tag = tagId ? tags.find(t => t.IdPlanningEtiquette === tagId) : undefined;
+              const tag = tagId ? tags.find(t => Number(t.IdPlanningEtiquette) === Number(tagId)) : undefined;
               onSelectTag?.(tag);
             }}
             className="flex-1 p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-secondary-bg"
