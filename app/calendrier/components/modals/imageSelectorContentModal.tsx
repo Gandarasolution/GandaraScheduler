@@ -8,13 +8,16 @@ import { Image } from "../../types";
  */
 interface ImageSelectorContentProps {
   isOpen: boolean;
-  images: Image[];
+  images?: Image[];
   actualImage: Image | null;
   onImageSelect: (image: Image) => void;
   onClose: () => void;
   onImageUpload: (file: File) => Promise<Image>;
   isUploading: boolean;
   uploadError: string | null;
+  fetchPaginatedImages?: (page: number, limit?: number) => Promise<void>;
+  addImageToDatabase?: (file: File) => Promise<void>;
+  totalPages?: number; // Suggéré d'ajouter ce prop pour rendre la pagination serveur propre
 }
 
 /**
@@ -28,23 +31,26 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
   onClose,
   onImageUpload,
   isUploading,
-  uploadError
+  uploadError,
+  fetchPaginatedImages,
+  addImageToDatabase
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [dragActive, setDragActive] = useState(false);
   const itemsPerPage = 8;
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  
-  // Filtrer les images selon le terme de recherche
-  const filteredImages = useMemo(() => {
-     let result = searchTerm.trim() 
-      ? images.filter(image => 
-          image.name.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      : images;
+  // Effet pour la pagination serveur
+  useEffect(() => {
+    if (fetchPaginatedImages) {
+      fetchPaginatedImages(currentPage, itemsPerPage);
+    }
+  }, [currentPage, fetchPaginatedImages]);
+
+  // Si on utilise la pagination serveur, on affiche directement 'images' en les triant.
+  const displayImages = useMemo(() => {
+    let result = images || [];
     
     // **PLACER L'IMAGE ACTUELLE EN PREMIER**
     if (actualImage) {
@@ -56,17 +62,14 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
     }
     
     return result;
-  }, [images, searchTerm, actualImage]);
+  }, [images, actualImage]);
 
-    // Pagination
-    const totalPages = Math.ceil(filteredImages.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedImages = viewMode === 'grid' ? filteredImages.slice(startIndex, startIndex + itemsPerPage) : filteredImages;
-
-    // Reset page quand on change le filtre
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm]);
+  // Pagination calculation
+  const totalPages = fetchPaginatedImages ? Math.ceil((images?.length || 0) / itemsPerPage) : Math.ceil(displayImages.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  // Si serveur on prend tout `displayImages`, sinon on slice
+  const paginatedImages = fetchPaginatedImages ? displayImages : (viewMode === 'grid' ? displayImages.slice(startIndex, startIndex + itemsPerPage) : displayImages);
+   
 
   // Fonctions pour gérer l'upload de fichiers
   const handleFiles = async (files: FileList) => {
@@ -169,29 +172,11 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
           )}
         </div>
 
-        {/* Barre de recherche et contrôles */}
+        {/* Barre de recherche et contrôles (Recherche retirée) */}
         <div className="mb-4 space-y-3">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Rechercher une image..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full placeholder:text-primary pl-10 pr-4 py-2 border border-gray-300 rounded-lg  focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent"
-            />
-            <svg
-              className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-
           <div className="flex justify-between items-center">
             <span className="text-sm text-primary">
-              {filteredImages.length} image{filteredImages.length !== 1 ? 's' : ''} trouvée{filteredImages.length !== 1 ? 's' : ''}
+              {displayImages.length} image{displayImages.length !== 1 ? 's' : ''} trouvée{displayImages.length !== 1 ? 's' : ''}
             </span>
             
             <div className="flex items-center gap-2">
@@ -227,10 +212,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
         <div className="mb-4 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 gap-4">
           {paginatedImages.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {searchTerm ? 
-                `Aucune image trouvée pour "${searchTerm}"` :
-                'Aucune image disponible'
-              }
+              'Aucune image disponible'
             </div>
           ) : viewMode === 'grid' ? (
             <>
@@ -247,11 +229,11 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                           ? 'border-primary shadow-lg bg-primary-50' 
                           : 'border-gray-200 hover:border-primary'
                       }`}
-                      title={image.name}
+                      title={`Image ${image.id}`}
                     >
                       <img 
                         src={image.image} 
-                        alt={image.name} 
+                        alt={`Image ${image.id}`} 
                         className={`w-full h-20 object-contain mb-2 group-hover:scale-105 transition-transform ${
                           index === 0 && currentPage === 1 ? 'opacity-100' : 'opacity-90 hover:opacity-100'
                         }`}
@@ -296,17 +278,17 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                       ? 'border-primary shadow-md bg-primary-50' 
                       : 'border-gray-200'
                   }`}
-                  title={image.name}
+                  title={`Image ${image.id}`}
                 >
                   <img 
                     src={image.image} 
-                    alt={image.name} 
+                    alt={`Image ${image.id}`} 
                     className={`w-12 h-12 object-contain mr-3 group-hover:scale-105 transition-transform ${
                       index === 0 ? 'opacity-100' : 'opacity-90 hover:opacity-100'
                     }`}
                   />
                   <div>
-                    <div className="font-medium text-gray-900 group-hover:text-primary">{image.name.length > 15 ? `${image.name.slice(0, 15)}...` : image.name}</div>
+                    <div className="font-medium text-gray-900 group-hover:text-primary">Image {image.id}</div>
                   </div>
                 </div>
               ))}

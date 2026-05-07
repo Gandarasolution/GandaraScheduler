@@ -167,7 +167,6 @@ export type Item = ChantierItem | SocialItem;
 export type Image = {
   id: number;
   image: string;
-  name: string;
 };
 
 /**

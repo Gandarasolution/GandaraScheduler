@@ -178,8 +178,8 @@ export const useDataLayer = ({
          }
     }
     // Appliquer les filtres SANS searchQuery pour avoir une base stable
-    return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), '', globalEmployeesRef.current);
-  }, [calendarConfig, appointmentsVersion, userRole, userIdNumber, isSearchOverlayOpen]);
+    return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), globalEmployeesRef.current);
+  }, [calendarConfig, appointmentsVersion, userRole, userIdNumber, isSearchOverlayOpen, itemsSnapshot]);
 
     
   // --- Filtrage avec recherche (appliqué uniquement si searchQuery existe) ---
@@ -205,11 +205,19 @@ export const useDataLayer = ({
     if (!searchInput) {
       return baseFilteredAppointments;
     }
-    
-    // Appliquer la recherche sur les données déjà filtrées
-    return applyFiltersToAppointments(baseFilteredAppointments, getFlatFilters(calendarConfig?.filterCategories), searchInput, globalEmployeesRef.current);
-  }, [baseFilteredAppointments, searchInput, calendarConfig]);
-  
+
+    return baseFilteredAppointments.filter(appointment => {
+      if (searchInput) {
+        const query = searchInput.toLowerCase();
+        const appointmentMatches = 
+        String(appointment.AnnotationPlanningEvenement).toLowerCase().includes(query)
+        if (!appointmentMatches) {
+          return false;
+        }
+      }
+    });
+  }, [baseFilteredAppointments, searchInput, calendarConfig, itemsSnapshot]);
+
 
 
   const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {

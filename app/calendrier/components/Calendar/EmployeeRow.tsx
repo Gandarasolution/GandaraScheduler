@@ -104,7 +104,14 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       // Utilisation des fonctions utilitaires pour les calculs de position
       const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
       const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
-      const topPx = ((app.PlanningEvenementPriorite ?? 0) * CELL_HEIGHT) + (2 * (app.PlanningEvenementPriorite ?? 0)) + ((tagPlacement === 'fixed' && index > 0) && filterred[index - 1]?.Etiquette?.IdPlanningEtiquette ? 18 : 0); // Décalage pour les tags en placement fixe
+      const topPx = 
+        ((app.PlanningEvenementPriorite ?? 0) * CELL_HEIGHT) // Empilement vertical selon la priorité (0 = base, 1 = premier niveau de chevauchement, etc.)
+        + (2 * (app.PlanningEvenementPriorite ?? 0)) // Espacement de 2px entre les niveaux de chevauchement
+        + (
+            (tagPlacement === 'fixed' && index > 0) // Si placement fixe, ajouter un décalage de 18px pour les événements suivants qui ont une étiquette
+            && Number(app.PlanningEvenementPriorite ?? 0) > 0 // Seulement pour les événements de priorité > 0 (chevauchements)
+            && filterred[index - 1]?.Etiquette?.IdPlanningEtiquette ? 18 : 0
+        ); // Décalage pour les tags en placement fixe
 
       //console.log(topPx);
       
@@ -396,7 +403,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   );
 };
 
-export default memo(EmployeeRow, (prev, next) => {
+ export default memo(EmployeeRow, (prev, next) => {
   if (prev.employee.IdPersonnel !== next.employee.IdPersonnel ||
       prev.dayInTimeline !== next.dayInTimeline ||
       prev.appointments.length !== next.appointments.length ||

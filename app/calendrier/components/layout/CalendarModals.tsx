@@ -481,6 +481,14 @@ export const CalendarModals = memo(({
             onImageUpload={handlers.handleImageUpload}
             isUploading={data.isUploading}
             uploadError={data.uploadError}
+            fetchPaginatedImages={async (page, limit) => {
+              // TODO: Gérer l'état des images au niveau du parent via imageService.getImagesPaginated(page, limit || 8)
+              console.log('Appel de fetchPaginatedImages', { page, limit });
+            }}
+            addImageToDatabase={async (file) => {
+              // TODO: Appeler imageService.uploadImage(file)
+              console.log('Appel de addImageToDatabase', { file });
+            }}
           />
         </Suspense>
       )}

@@ -1,4 +1,4 @@
-import { User, Appointment, Filter, DimensionItem, Groupe, GroupingLevel, GroupingLevels, FilterCategories } from '../types';
+import { User, Appointment, Filter, DimensionItem, Groupe, GroupingLevel, GroupingLevels, FilterCategories, Item } from '../types';
 
 // Types pour l'accès sécurisé aux propriétés
 type UserField = keyof User;
@@ -53,10 +53,9 @@ export function applyFiltersToEmployees(employees: User[], filters: Filter[]): U
 export function applyFiltersToAppointments(
   appointments: Appointment[], 
   filters: Filter[], 
-  searchQuery: string,
-  employees: User[]
+  employees: User[],
 ): Appointment[] {
-  
+    
   // Optimisation: Créer une Map pour O(1) lookup des employés
   const employeeMap = new Map<number, User>();
   employees.forEach(emp => employeeMap.set(emp.IdPersonnel, emp));
@@ -64,17 +63,6 @@ export function applyFiltersToAppointments(
   return appointments.filter(appointment => {
     // Trouver l'employé associé au rendez-vous avec O(1) lookup
     const employee = employeeMap.get(Number(appointment.IdEmploye));
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const appointmentMatches = 
-        String(appointment.AnnotationPlanningEvenement).toLowerCase().includes(query)
-      const employeeMatches = employee ? String(employee.Nom).toLowerCase().includes(query) : false;
-
-      if (!appointmentMatches && !employeeMatches) {
-        return false;
-      }
-    }
     
     return filters.every(filter => {
       switch (filter.type) {
