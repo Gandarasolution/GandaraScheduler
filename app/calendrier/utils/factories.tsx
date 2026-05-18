@@ -19,7 +19,13 @@ export const customRenderersFactory = (
   onTeamChange: (empId: number, groupId: number | null) => void
 ) => {
 
-  const getWithSeparator = (num: string): string => {
+  const getWithSeparator = (num: string, colonne: string): string => {
+    if (colonne === 'TM' || colonne === 'HR' || colonne === 'DPF' || colonne === 'RPF' || colonne === 'SH' || colonne === 'SP') {
+      num = num + 'h';
+    }
+    if (colonne === 'AP' ) {
+      num = num + '%';
+    }
     return num.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   };
 
@@ -90,13 +96,13 @@ export const customRenderersFactory = (
               strokeLinejoin="round"
             />
           </svg>
-          <span className="text-red-600 poppins font-medium">{getWithSeparator(value)}</span>
+          <span className="text-red-600 poppins font-medium">{getWithSeparator(String(value), attributeKey)}</span>
         </div>
       );
     }
     return (
       <div className='flex items-center justify-end w-full h-full'>
-        <span className="poppins">{getWithSeparator(value)}</span>
+        <span className="poppins">{getWithSeparator(String(value), attributeKey)}</span>
       </div>
     );
   };
@@ -225,96 +231,5 @@ export const customRenderersFactory = (
         </div>
       );
     }
-  };
-};
-
-// --- FACTORY DES CHAMPS CALCULÉS (MATHÉMATIQUES) ---
-
-export const customComputedFieldsFactory = (
-  viewType: string, 
-  appointments: Appointment[],
-  ressources: Item[]
-) => {
-  
-  if (viewType !== 'chantier-table') return {};
-
-  // Calcul de la Durée Planifiée (DPF)
-  const calculateDPF = (chantierId: number): string => {
-    const currentDate = new Date().setHours(0, 0, 0, 0);
-
-    const relevantAppointments = appointments.filter(appointment => {
-      const ressource = ressources.find(r => r.IdPlanningRessource === appointment.IdPlanningRessource);
-      if (!ressource) return false;
-      if (ressource?.Type !== 'Projet' || appointment.IdPlanningRessource !== chantierId) {
-        return false;
-      }
-      // Prendre les RDV futurs ou en cours
-      if (appointment.DebutPlanningEvenement >= currentDate) return true;
-      if (appointment.DebutPlanningEvenement < currentDate && appointment.FinPlanningEvenement >= currentDate) return true;
-      return false;
-    });
-
-    let totalHours = 0;
-
-    relevantAppointments.forEach((appointment: Appointment) => {
-      const startDate = appointment.DebutPlanningEvenement < currentDate ? currentDate : appointment.DebutPlanningEvenement;
-      const endDate = appointment.FinPlanningEvenement;
-      
-      // Approximation simple (à affiner avec hoursPerDay si besoin)
-      const timeDiff = endDate - startDate;
-      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + (timeDiff > 0 ? 0 : 1); // +1 pour inclure le jour même si nécessaire
-      
-      // Utilisation de la constante globale HOURS_PER_DAY
-      totalHours += daysDiff * (HOURS_PER_DAY || 7); 
-    });
-
-    return `${Math.round(totalHours)}h`;
-  };
-
-  // Calcul du Reste à Faire + Réalisé (RPF)
-  const calculateRPF = (chantier: any): string => {
-    const hrValue = parseFloat((chantier.HR || '0')) || 0;
-    const dpfString = calculateDPF(chantier.id);
-    const dpfValue = parseFloat(dpfString) || 0;
-
-    const totalRPF = hrValue + dpfValue;
-    return `${Math.round(totalRPF)}h`;
-  };
-
-  // Calcul de l'Avancement % (AP)
-  const calculateAP = (chantier: any): string => {
-    const tmValue = parseFloat((chantier.TM || '0')) || 0;
-    if (tmValue === 0) return '0%';
-
-    const rpfString = calculateRPF(chantier);
-    const rpfValue = parseFloat(rpfString) || 0;
-
-    const percentage = Math.round((rpfValue / tmValue) * 100);
-    return `${percentage}%`;
-  };
-
-  // Calcul du Solde Prévu (SP)
-  const calculateSP = (chantier: any): string => {
-    const tmValue = parseFloat(chantier.TM || '0') || 0;
-    const rpfString = calculateRPF(chantier);
-    const rpfValue = parseFloat(rpfString) || 0;
-
-    const soldeHeures = tmValue - rpfValue;
-    return `${Math.round(soldeHeures)}h`;
-  };
-
-  return {
-    chantierTable: {
-      DPF: (item: any) => calculateDPF(item.id),
-      HR: (item: any) => `${Math.round(parseFloat(item?.HR || '0'))}h` || '0h',
-      RPF: (item: any) => calculateRPF(item),
-      SH: (item: any) => `${Math.round(parseFloat(item?.SH || '0'))}h` || '0h',
-      AP: (item: any) => calculateAP(item),
-      SP: (item: any) => calculateSP(item),
-      TM: (item: any) => `${Math.round(parseFloat(item?.TM || '0'))}h` || '0h',
-    },
-    // Ajout vide pour typescript safety
-    paieTable: {}, 
-    employeeTable: {}
   };
 };

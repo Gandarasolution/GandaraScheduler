@@ -24,7 +24,7 @@ interface CalendarRowsProps {
   isGrabbing: boolean;
   appointmentsByEmployee: Record<number, Appointment[]>;
   EMPTY_APPOINTMENTS: Appointment[];
-  events: Item[];
+  events: Record<number, Item>;
   visibleWindowStart: number;
   visibleWindowEnd: number;
   isDisplayWeekend: boolean;

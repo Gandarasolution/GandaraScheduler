@@ -74,10 +74,10 @@ interface CalendarModalsProps {
     // Config Calendar
     closeConfigModal: () => void;
     setCurrentConfig: (config: CalendarConfig) => void;
-    saveCustomConfig: (config: Omit<CalendarConfig, "id">) => CalendarConfig;
+    saveCustomConfig: (config: Omit<CalendarConfig, "id">) => Promise<CalendarConfig | void> | CalendarConfig | void;
     updateCustomConfig: (config: CalendarConfig) => void;
     deleteCustomConfig: (id: number) => void;
-    duplicateConfig: (config: CalendarConfig) => CalendarConfig;
+    duplicateConfig: (config: CalendarConfig) => Promise<CalendarConfig | void> | CalendarConfig | void;
     
     // Config Configuration Editing State (from hook)
     setEditingConfig: (config: any) => void;
@@ -89,7 +89,7 @@ interface CalendarModalsProps {
   };
   data: {
     appointments: Appointment[];
-    items: Item[];
+    items: Record<number, Item>;
     employees: User[];
     selectedItem: Item | null;
     selectedEmployee: User | null;
@@ -232,7 +232,7 @@ export const CalendarModals = memo(({
     if (modalsState.selectedAppointmentForm) {
         if (resourceEditMode === 'create') return "Création de la ressource";
         if (resourceEditMode === 'edit') return "Modification de la ressource";
-        return `Modifier l'Évènement - ${data.items.find(item => Number(item.IdPlanningRessource) === Number(modalsState.selectedAppointmentForm?.IdPlanningRessource))?.CodePlanningRessource || 'Ressource inconnue'}`;
+        return `Modifier l'Évènement - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource || 'Ressource inconnue'}`;
     }
     return "Ajouter un rendez-vous";
   };  
@@ -447,8 +447,8 @@ export const CalendarModals = memo(({
             appointments={data.appointments}
             tagPlacement={modalsState.tagPlacement}
             appointment={modalsState.selectedAppointmentForm as Appointment}
-            item={data.items.find(item => Number(item.IdPlanningRessource) === Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)) as Item}
-            items={data.items}
+            item={data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)] as Item}
+            items={Object.values(data.items)}
             isReducedVersion={resourceEditMode !== null}
             resourceEditMode={resourceEditMode}
             employees={data.employees}
@@ -504,25 +504,23 @@ export const CalendarModals = memo(({
       
       {/* --- CONFIGURATION VUES CALENDRIER --- */}
       {modalsState.isConfigModalOpen && (
-        <Suspense fallback={<ModalLoadingFallback />}>
-          <ConfigurationModal
-            user={user}
-            isOpen={modalsState.isConfigModalOpen}
-            onClose={handlers.closeConfigModal}
-            availablesImages={data.availableImages}
-            availableConfigs={data.availableConfigs}
-            currentConfig={data.currentConfig}
-            onConfigChange={handlers.setCurrentConfig}
-            onSaveConfig={handlers.saveCustomConfig}
-            onUpdateConfig={handlers.updateCustomConfig}
-            onDeleteConfig={handlers.deleteCustomConfig}
-            onDuplicateConfig={handlers.duplicateConfig}
-            editingConfig={data.editingConfig}
-            setEditingConfig={handlers.setEditingConfig}
-            isCreatingConfig={data.isCreatingConfig}
-            setIsCreatingConfig={handlers.setIsCreatingConfig}
-          />
-        </Suspense>
+        <ConfigurationModal
+          user={user}
+          isOpen={modalsState.isConfigModalOpen}
+          onClose={handlers.closeConfigModal}
+          availablesImages={data.availableImages}
+          availableConfigs={data.availableConfigs}
+          currentConfig={data.currentConfig}
+          onConfigChange={handlers.setCurrentConfig}
+          onSaveConfig={handlers.saveCustomConfig}
+          onUpdateConfig={handlers.updateCustomConfig}
+          onDeleteConfig={handlers.deleteCustomConfig}
+          onDuplicateConfig={handlers.duplicateConfig}
+          editingConfig={data.editingConfig}
+          setEditingConfig={handlers.setEditingConfig}
+          isCreatingConfig={data.isCreatingConfig}
+          setIsCreatingConfig={handlers.setIsCreatingConfig}
+        />
       )}
       
       {/* --- FILTRES TABLEAUX --- */}
@@ -535,6 +533,7 @@ export const CalendarModals = memo(({
             onClose={handlers.closeFilterModal}
             filterConfig={data.filterConfig}
             onClearAll={handlers.clearFilters}
+            viewType={config.viewType}
           />
         </Suspense>
       )}

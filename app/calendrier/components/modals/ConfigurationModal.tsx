@@ -13,10 +13,10 @@ type ConfigurationModalProps = {
   availableConfigs: CalendarConfig[];
   currentConfig: CalendarConfig | null;
   onConfigChange: (config: CalendarConfig) => void;
-  onSaveConfig: (config: Omit<CalendarConfig, 'id'>) => CalendarConfig;
+  onSaveConfig: (config: Omit<CalendarConfig, 'id'>) => Promise<CalendarConfig | void> | CalendarConfig | void;
   onUpdateConfig: (config: CalendarConfig) => void;
   onDeleteConfig: (configId: number) => void;
-  onDuplicateConfig: (config: CalendarConfig) => CalendarConfig;
+  onDuplicateConfig: (config: CalendarConfig) => Promise<CalendarConfig | void> | CalendarConfig | void;
   editingConfig: CalendarConfig | null;
   setEditingConfig: (config: CalendarConfig | null) => void;
   isCreatingConfig: boolean;
@@ -100,7 +100,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     }
   }, [editingConfig]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!configName.trim()) return;
 
     const newConfig = {
@@ -126,16 +126,16 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     if (editingConfig) {
       // Si on modifie une configuration prédéfinie (ID <= 10), créer une nouvelle config personnalisée
       if (editingConfig.IdPlanningVue <= 10) {
-        const savedConfig = onSaveConfig(newConfig);
-        onConfigChange(savedConfig);
+        const savedConfig = await onSaveConfig(newConfig);
+        if (savedConfig) onConfigChange(savedConfig as CalendarConfig);
       } else {
         // Sinon, mettre à jour la configuration existante
         onUpdateConfig({ ...editingConfig, ...newConfig });
       }
       setEditingConfig(null);
     } else {
-      const savedConfig = onSaveConfig(newConfig);
-      onConfigChange(savedConfig);
+      const savedConfig = await onSaveConfig(newConfig);
+      if (savedConfig) onConfigChange(savedConfig as CalendarConfig);
     }
 
     resetForm();
@@ -168,7 +168,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
               {currentConfig.IdPlanningImage && (
                 <img 
                   src={availablesImages.find(img => img.id === currentConfig.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
-                  alt={availablesImages.find(img => img.id === currentConfig.IdPlanningImage)?.name || 'No Image'} 
                   className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                 />
               )}
@@ -235,7 +234,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   {config.IdPlanningImage && (
                     <img 
                       src={availablesImages.find(img => img.id === config.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
-                      alt={availablesImages.find(img => img.id === config.IdPlanningImage)?.name || 'No Image'} 
                       className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
                     />
                   )}
@@ -300,7 +298,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   </button>
                   
                   <button
-                    onClick={() => onDuplicateConfig(config)}
+                    onClick={async () => {
+                      const duplicated = await onDuplicateConfig(config);
+                      if (duplicated) onConfigChange(duplicated as CalendarConfig);
+                    }}
                     className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all duration-200"
                     title="Dupliquer"
                   >
@@ -378,10 +379,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       <div className="flex items-center gap-3">
                         <img 
                           src={configImage.image} 
-                          alt={configImage.name} 
+                          alt={"Image de la configuration"} 
                           className="w-12 h-12 object-cover rounded-lg"
                         />
-                        <span className="text-sm text-primary">{configImage.name}</span>
                       </div>
                       <button
                         onClick={() => setConfigImage(undefined)}

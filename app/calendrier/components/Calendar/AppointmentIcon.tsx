@@ -171,11 +171,6 @@ const AppointmentMetadata: React.FC<AppointmentMetadataProps> = ({
   }, [showTagTooltip, mainScrollRef]);
 
 
-  useEffect(() => {
-    console.log(showTagTooltip);
-  }, [showTagTooltip]);
-    
-
 
   return (
     <>

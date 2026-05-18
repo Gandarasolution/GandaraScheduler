@@ -18,6 +18,20 @@ async function searchRessources(query: string = '', types: string[] = [], limit:
   );
 }
 
+async function getFilterOptionsDynamic(types: string, keys: string[]) {
+
+  console.log(keys.join(','));
+  
+  const params = new URLSearchParams();
+  if (types.length > 0) {
+    params.set('types', types);
+  }
+  if (keys.length > 0) {
+    params.set('keys', keys.join(','));
+  }
+  return await getRequest(`/api/filters-options?${params.toString()}`, 'getFilterOptionsDynamic');
+}
+
 
 async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, query: string = '', timeoutMs: number = 15000) {
   const params = new URLSearchParams();
@@ -36,4 +50,5 @@ async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, quer
 export default {
   searchRessources,
   getRessourcesProjet,
+  getFilterOptionsDynamic,
 };

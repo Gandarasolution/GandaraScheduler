@@ -26,6 +26,8 @@ export function Image({ image, className }: ImageProps) {
     }
 
     const cachedImage = getCachedImageById(image as number);
+    console.log(cachedImage);
+    
     if (cachedImage?.image) {
       setImageSrc(toDataUrl(cachedImage.image));
       setIsLoading(false);
@@ -45,7 +47,6 @@ export function Image({ image, className }: ImageProps) {
         upsertCachedImage({
           id: image as number,
           image: imageData,
-          name: `image-${image}`,
         });
         
         // Cas B : Ton getRequest renvoie l'URL magique (si c'est géré côté wrapper)

@@ -44,13 +44,13 @@ export const useDataLayer = ({
   const worker = useCalendarWorker();
   const [teams, setTeams] = useState<any[]>([]);
   
-  const itemsRef = useRef<Item[]>([]);
+  const itemsRef = useRef<Record<number, Item>>({});
   const appointmentsRef = useRef<Appointment[]>([]);
   
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
   const [availableImages, setAvailableImages] = useState<Image[]>(() => getCachedImages());
-  const itemsSnapshot = useMemo(() => itemsRef.current, [appointmentsVersion]);
+  const itemsSnapshot = useMemo(() => Object.values(itemsRef.current), [appointmentsVersion]);
 
   const selectedRdvTypes = useMemo(() => {
     const selected = calendarConfig?.filterCategories?.evenements &&
@@ -109,14 +109,18 @@ export const useDataLayer = ({
   const addMissingResourcesToCache = useCallback((resources: Item[]) => {
     if (!Array.isArray(resources) || resources.length === 0) return;
 
-    const existingIds = new Set(itemsRef.current.map(item => Number(item.IdPlanningRessource)));
+    const existingIds = new Set(Object.values(itemsRef.current).map(item => Number(item.IdPlanningRessource)));
     const toAdd = resources.filter((resource) => {
       const resourceId = Number(resource?.IdPlanningRessource);
       return Number.isFinite(resourceId) && !existingIds.has(resourceId);
     });
 
     if (toAdd.length > 0) {
-      itemsRef.current = [...itemsRef.current, ...toAdd];
+      const newItems = { ...itemsRef.current };
+      toAdd.forEach(item => {
+        newItems[Number(item.IdPlanningRessource)] = item;
+      });
+      itemsRef.current = newItems;
     }
   }, []);
 
@@ -210,7 +214,7 @@ export const useDataLayer = ({
       if (searchInput) {
         const query = searchInput.toLowerCase();
         const appointmentMatches = 
-        String(appointment.AnnotationPlanningEvenement).toLowerCase().includes(query)
+        String(itemsRef.current[appointment.IdPlanningRessource]?.LibellePlanningRessource).toLowerCase().includes(query)
         if (!appointmentMatches) {
           return false;
         }
@@ -249,32 +253,6 @@ export const useDataLayer = ({
     }
     return true;
   }, [addMissingResourcesToCache]);
-
-  // --- Filtrage Secondaire (Tableaux) ---
-  // Cette fonction prépare les données pour DataTableFrame
-  const getTableItems = () => {
-    //  if (viewType === 'chantier-table') return filteredItems.filter(e => e.Type === 'projet');
-    //  if (viewType === 'paie-table') return filteredItems.filter(e => e.Type !== 'paie');
-    //  return filteredEmployees.map(emp => ({
-    //     IdPersonnel: emp.IdPersonnel,
-    //     image: emp.image,
-    //     Code: emp.Code,
-    //     Nom: emp.Nom,
-    //     Prenom: emp.Prenom,
-    //     Type: emp.Type,
-    //     Equipe: emp.Equipe
-    //  }) as User);
-
-    return filteredEmployees.map(emp => ({
-      IdPersonnel: emp.IdPersonnel,
-      IdImage: emp.IdImage,
-      Code: emp.Code,
-      Nom: emp.Nom,
-      Prenom: emp.Prenom,
-      Type: emp.Type,
-      Equipe: emp.Equipe
-    }) as User);
-  };
 
   const getTableStructure = (): CategoryStructure[] => {
       if (viewType === 'chantier-table') 
@@ -352,9 +330,7 @@ export const useDataLayer = ({
   };
 
   const updateEventImage = (id: number, newImage: Image) => {
-    itemsRef.current = itemsRef.current.map(e => 
-      e.IdPlanningRessource === id ? { ...e, image: newImage } : e
-    );
+    itemsRef.current[id] = { ...itemsRef.current[id], IdImage: newImage.id };
     refreshData(); // Force le re-render
   };
 
@@ -375,7 +351,7 @@ export const useDataLayer = ({
 
   const addManualEvent = (payload: { code: string; label: string; description: string; image?: Image; color: string; borderColor: string; textColor: string; actif: boolean; type: 'autre'; category: string; }) => {
     const newId = Date.now();
-    const newItem: Item = {
+    const newItem = {
       IdPlanningRessource: newId,
       CodePlanningRessource: payload.code,
       LibellePlanningRessource: payload.label,
@@ -392,27 +368,31 @@ export const useDataLayer = ({
       isManual: true
     } as Item;
 
-    itemsRef.current = [newItem, ...itemsRef.current];
+    itemsRef.current = { [newId]: newItem, ...itemsRef.current };
     refreshData();
     return newItem;
   };
 
   const updateManualEventCategory = (id: number, category: string) => {
-    itemsRef.current = itemsRef.current.map(e =>
-      (e.IdPlanningRessource === id && e.isManual) ? ({ ...e, category, isManual: true }) : e
-    );
+    itemsRef.current[id] = {
+      ...itemsRef.current[id],
+      category,
+      isManual: true
+    } as Item;
     refreshData();
   };
 
   const deleteManualEvent = (id: number) => {
-    itemsRef.current = itemsRef.current.filter(e => !(e.IdPlanningRessource === id && e.isManual));
+    delete itemsRef.current[id];
     refreshData();
   };
 
   const toggleManualEvent = (id: number) => {
-    itemsRef.current = itemsRef.current.map(e =>
-      e.IdPlanningRessource === id ? ({ ...e, actif: !(e as any).actif }) : e
-    );
+    itemsRef.current[id] = {
+      ...itemsRef.current[id],
+      Actif: !(itemsRef.current[id] as any).Actif,
+      isManual: true
+    } as Item;
     refreshData();
   };
 
@@ -434,7 +414,6 @@ export const useDataLayer = ({
     toggleManualEvent,
     updateManualEventCategory,
     deleteManualEvent,
-    getTableItems,
     getTableStructure,
     refreshData,
     addImage,

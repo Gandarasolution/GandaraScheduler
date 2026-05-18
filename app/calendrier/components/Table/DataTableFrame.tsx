@@ -197,8 +197,6 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   isRowsLoading?: boolean;
   /** Largeur du conteneur (auto-détectée si non fournie) */
   containerWidth?: number;
-  /** Fonctions de calcul pour les champs dynamiques */
-  computedFields?: Record<string, ComputedField<T>>;
   /** Renderers personnalisés pour des colonnes spécifiques */
   customRenderers?: Record<string, CellRenderer<T>>;
   /** Active/désactive le surlignage en L au survol */
@@ -250,7 +248,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   cellPadding = 8,
   heightCell = 60,
   containerWidth: customContainerWidth,
-  computedFields = {},
   customRenderers = {},
   enableHighlight = true,
   showGroupHeaders = true,
@@ -490,11 +487,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   const getAttributeValue = useCallback((item: T, attribute: AttributeConfig): any => {
     const { key, subKey } = attribute;
     
-    // Si c'est un champ calculé
-    if (computedFields && computedFields[key]) {
-      return computedFields[key](item);
-    }
-    
     // Si subKey est défini, accéder à la propriété imbriquée
     if (subKey) {
       // Accès à item[subKey][key]
@@ -504,10 +496,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       }
       return undefined;
     }
-    
+
     // Sinon, accès direct à la propriété
     return item[key];
-  }, [computedFields]);
+  }, []);
 
   // Fonction de tri générique
   const sourceItems = useMemo(() => {

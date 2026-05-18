@@ -55,7 +55,7 @@ import ressourceService from '@/app/service/ressource.service';
 import calendarConfigService from '@/app/service/calendarConfig.service';
 
 // --- UTILITAIRES ---
-import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
+import { customRenderersFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
 import { User, Item, CommonPaieAttributs } from '../types';
 import { canCreateEvent } from '../utils/permissions';
@@ -92,6 +92,9 @@ export default function HomePage({
   user: User;
   onThemeChange?: (theme: any) => void;
 }) {
+
+  const [loadCalendar, setLoadCalendar] = useState(true); 
+
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
   const notifications = useNotifications();
@@ -119,73 +122,8 @@ export default function HomePage({
     userIdNumber: user?.IdPersonnel || 0,
     userRole: user?.role || 'admin',
   });
-  
 
-  // DataTableFrame requiert un champ `id`; les items métier utilisent IdPlanningRessource.
-  const normalizedTableItems = useMemo(() => {
-    return dataLayer.getTableItems().map((item: any) => {
-      if ('id' in item) return item;
 
-      return {
-        ...item,
-        id: item.IdPlanningRessource,
-      };
-    });
-  }, [dataLayer]);
-
-  const [chantierSearchResults, setChantierSearchResults] = useState<any[] | null>(null);
-  const [isChantierSearchLoading, setIsChantierSearchLoading] = useState(false);
-  const chantierSearchQuery = useMemo(() => {
-    if (viewState.viewType !== 'chantier-table') {
-      return '';
-    }
-
-    return viewState.searchInput.trim();
-  }, [viewState.viewType, viewState.searchInput]);
-  const isChantierSearchActive = chantierSearchQuery.length > 0;
-
-  useEffect(() => {
-    if (viewState.viewType !== 'chantier-table') {
-      setChantierSearchResults(null);
-      setIsChantierSearchLoading(false);
-      return;
-    }
-
-    if (!chantierSearchQuery) {
-      setChantierSearchResults(null);
-      setIsChantierSearchLoading(false);
-      return;
-    }
-
-    let isCancelled = false;
-    const timeoutId = setTimeout(async () => {
-      setIsChantierSearchLoading(true);
-      const response = await ressourceService.getRessourcesProjet(20, 1, chantierSearchQuery);
-      if (isCancelled) return;
-
-      if (response?.error !== 0 || !Array.isArray(response.data)) {
-        setChantierSearchResults([]);
-        setIsChantierSearchLoading(false);
-        return;
-      }
-
-      const normalized = (response.data as Item[])
-        .filter((item) => !('Type' in item) || item.Type === 'Projet')
-        .map((item) => ({
-          ...item,
-          id: item.IdPlanningRessource,
-        }));
-
-      setChantierSearchResults(normalized);
-      setIsChantierSearchLoading(false);
-    }, 250);
-
-    return () => {
-      isCancelled = true;
-      clearTimeout(timeoutId);
-      setIsChantierSearchLoading(false);
-    };
-  }, [viewState.viewType, chantierSearchQuery]);
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
   const timeline = useTimeline({
@@ -332,7 +270,7 @@ export default function HomePage({
   const filterConfig = useMemo(() => {
       // Génération des options de filtre basées sur les données actuelles
       const baseConfig = searchUtils.getFilterOptions(
-        dataLayer.itemsRef.current, 
+        Object.values(dataLayer.itemsRef.current),
         viewState.viewType === 'chantier-table' ? 'chantier' : null,
         keyOfFilter
       );
@@ -345,17 +283,8 @@ export default function HomePage({
   }, [searchUtils, dataLayer.itemsRef.current, viewState.viewType, keyOfFilter, viewState.activeFilters]);
       
 
-
-  // --- PREPARATION DES TABLEAUX (Correction TS) ---
+  console.log('Filter Config:', filterConfig);
   
-  // Calcul des champs calculés spécifiques à la vue actuelle
-  const currentComputedFields = useMemo(() => {
-    const allFields = customComputedFieldsFactory(viewState.viewType, dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
-    if (viewState.viewType === 'chantier-table') return allFields.chantierTable;
-    if (viewState.viewType === 'paie-table') return allFields.paieTable;
-    return undefined;
-  }, [viewState.viewType, dataLayer.appointmentsRef]);
-
   // --- EFFETS DE BORD ---
 
   // Init global: notifications + theme (indépendant de la vue)
@@ -374,6 +303,7 @@ export default function HomePage({
 
     hasInitializedPlanningRef.current = true;
     let isMounted = true;
+    
 
     const initializePlanning = async () => {
       if (!isMounted) return;
@@ -395,8 +325,8 @@ export default function HomePage({
           ])
         );
 
-// 2. On met à jour le state
-viewState.setNonWorkingDates(recordData);
+        // 2. On met à jour le state
+        viewState.setNonWorkingDates(recordData);
       }
 
       await dataLayer.loadTeams();
@@ -404,6 +334,8 @@ viewState.setNonWorkingDates(recordData);
       const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
       const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
       await dataLayer.loadAppointmentsInRange(startDate, endDate);
+
+      setLoadCalendar(false);
     };
 
     initializePlanning();
@@ -442,15 +374,11 @@ viewState.setNonWorkingDates(recordData);
     <NoSSR>
       <DndProvider backend={HTML5Backend}>
         {/* Overlay de loading pendant le centrage initial */}
-        {viewState.viewType === 'calendar' && timeline.isLoading && (
+        {viewState.viewType === 'calendar' && loadCalendar && (
           <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-gray-600">Chargement du calendrier...</p>
-            </div>
+            <LoadingFallback message="Chargement du calendrier..." />
           </div>
-        )}
-        <div className="h-screen flex flex-col overflow-hidden bg-page poppins">
+        )}        <div className="h-screen flex flex-col overflow-hidden bg-page poppins">
           
           {/* HEADER : Navigation et Contrôles */}
           {!viewState.isMobile && (
@@ -473,7 +401,6 @@ viewState.setNonWorkingDates(recordData);
                 {viewState.viewType === 'calendar' ? (
                   /* VUE PLANNING */
                   viewState.currentCalendarConfig ? (
-                    <Suspense fallback={<LoadingFallback message="Chargement du calendrier..." />}>
                       <CalendarGrid
                         /* Données */
                         employees={dataLayer.filteredEmployees}
@@ -517,7 +444,6 @@ viewState.setNonWorkingDates(recordData);
                         onSelectCell={appointmentLogic.setSelectedCell}
                         onSelectAppointment={appointmentLogic.setSelectedAppointment}
                       />
-                    </Suspense>
                   ) : (
                     <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>
                   )
@@ -554,30 +480,23 @@ viewState.setNonWorkingDates(recordData);
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
                   <Suspense fallback={<LoadingFallback message="Chargement du tableau..." />}>
                     <DataTableFrame 
-                    items={
-                      isChantierSearchActive
-                        ? (chantierSearchResults ?? [])
-                        : (viewState.viewType !== 'employee-table' ? null : normalizedTableItems)
-                    }
-                    categoriesStructure={dataLayer.getTableStructure() || []}
-                    computedFields={currentComputedFields as any}
-                    enablePagination={viewState.viewType !== 'employee-table' && !isChantierSearchActive}
-                    paginatedSearchFunction={isChantierSearchActive ? undefined : (ressourceService.getRessourcesProjet as any)}
-                    loadingElement={<LoadingFallback message="Chargement des données..." />}
-                    isRowsLoading={isChantierSearchLoading}
-                    customRenderers={
-                      customRenderersFactory(
-                        viewState.viewType, 
-                        globalEmployeesRef.current, 
-                        interaction.handleOpenImageModal,
-                        appointmentLogic.setSelectedAppointment,
-                        appointmentLogic.handleOpenEditModal,
-                        dataLayer.initialTeams,
-                        dataLayer.updateEmployeeGroup
-                      ) as any}
-                    showGroupHeaders={viewState.viewType === 'chantier-table'}
-                    onRightClick={interaction.handleDataTableContextMenu}
-                    heightCell={60}
+                      categoriesStructure={dataLayer.getTableStructure() || []}
+                      enablePagination={true}
+                      paginatedSearchFunction={viewState.viewType === 'chantier-table' ? (ressourceService.getRessourcesProjet as any) : viewState.viewType === 'employee-table' ? (employeeService.getEmployeesPag as any) : undefined}
+                      loadingElement={<LoadingFallback message="Chargement des données..." />}
+                      customRenderers={
+                        customRenderersFactory(
+                          viewState.viewType, 
+                          globalEmployeesRef.current, 
+                          interaction.handleOpenImageModal,
+                          appointmentLogic.setSelectedAppointment,
+                          appointmentLogic.handleOpenEditModal,
+                          dataLayer.initialTeams,
+                          dataLayer.updateEmployeeGroup
+                        ) as any}
+                      showGroupHeaders={viewState.viewType === 'chantier-table'}
+                      onRightClick={interaction.handleDataTableContextMenu}
+                      heightCell={60}
                   />
                   </Suspense>
                 )}
@@ -674,10 +593,13 @@ viewState.setNonWorkingDates(recordData);
               
               closeConfigModal: viewState.calendarConfigHook.closeConfigModal,
               setCurrentConfig: viewState.setCurrentCalendarConfig,
-              saveCustomConfig: (c) => { 
-                 const newConfig = {...c, id: Date.now()};
-                 viewState.calendarConfigHook.addConfig(newConfig); 
-                 notificationService.configSaved(c.LibellePlanningVue);
+              saveCustomConfig: async (c) => { 
+                 const newConfig = {...c};
+                 const savedConfig = await viewState.calendarConfigHook.addConfig(newConfig); 
+                 if (savedConfig) {
+                   notificationService.configSaved(savedConfig.LibellePlanningVue);
+                   return savedConfig;
+                 }
                  return newConfig;
               },
               updateCustomConfig: (c) => { 
@@ -686,10 +608,15 @@ viewState.setNonWorkingDates(recordData);
               },
               deleteCustomConfig: (id) => {
                  viewState.calendarConfigHook.deleteConfig(id);
+                 notificationService.info('Configuration supprimée', 'La vue a été supprimée avec succès');
               },
-              duplicateConfig: (c) => {
-                 const newConfig = {...c, id: Date.now(), name: c.LibellePlanningVue + ' (copie)'};
-                 viewState.calendarConfigHook.addConfig(newConfig);
+              duplicateConfig: async (c) => {
+                 const newConfig = {...c, name: c.LibellePlanningVue + ' (copie)'};
+                 const savedConfig = await viewState.calendarConfigHook.addConfig(newConfig);
+                 if (savedConfig) {
+                   notificationService.configSaved(savedConfig.LibellePlanningVue);
+                   return savedConfig;
+                 }
                  return newConfig;
               },
               setEditingConfig: viewState.calendarConfigHook.setEditingConfig,

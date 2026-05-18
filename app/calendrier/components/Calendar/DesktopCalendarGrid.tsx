@@ -23,7 +23,6 @@ import {
   useCalendarDragDrop, 
   useCalendarDataLoader 
 } from '../../hooks';
-import { log } from 'node:console';
 
 interface DesktopCalendarGridProps {
   employees: User[];
@@ -35,7 +34,7 @@ interface DesktopCalendarGridProps {
   availableConfigs: CalendarConfig[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  events: Item[];
+  events: Record<number, Item>;
   nonWorkingDates: Record<string, number>;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';

@@ -20,7 +20,7 @@ type ActionResult = { success: boolean; message?: string };
 interface LogicProps {
   employeesRef: React.MutableRefObject<User[]>;
   appointmentsRef: React.MutableRefObject<Appointment[]>;
-  eventsRef: React.MutableRefObject<Item[]>;
+  eventsRef: React.MutableRefObject<Record<number, Item>>;
   timelineState: {
     isFullDay: boolean;
     isDisplayWeekend: boolean;
@@ -98,20 +98,20 @@ export const useAppointmentLogic = ({
   const addMissingResourcesToCache = useCallback((resources: Item[]) => {
     if (!Array.isArray(resources) || resources.length === 0) return;
 
-    const existingIds = new Set(eventsRef.current.map((item) => Number(item.IdPlanningRessource)));
+    const existingIds = new Set(Object.values(eventsRef.current).map((item) => Number(item.IdPlanningRessource)));
     const toAdd = resources.filter((resource) => {
       const resourceId = Number(resource?.IdPlanningRessource);
       return Number.isFinite(resourceId) && !existingIds.has(resourceId);
     });
 
     if (toAdd.length > 0) {
-      eventsRef.current = [...eventsRef.current, ...toAdd];
+      eventsRef.current = { ...eventsRef.current, ...toAdd.reduce((acc, item) => ({ ...acc, [item.IdPlanningRessource]: item }), {}) };
     }
   }, [eventsRef]);
 
   const getCachedResourceById = useCallback((resourceId?: number, fallback?: Item) => {
     if (!resourceId) return fallback;
-    return eventsRef.current.find((item) => Number(item.IdPlanningRessource) === Number(resourceId)) || fallback;
+    return eventsRef.current[resourceId] || fallback;
   }, [eventsRef]);
   
 
@@ -426,7 +426,7 @@ export const useAppointmentLogic = ({
         return { success: false, message: 'Employé introuvable.' };
       }
 
-      const ressource = eventsRef.current.find(item => Number(item.IdPlanningRessource) === Number(idRessource));
+      const ressource = eventsRef.current[Number(idRessource)] ;
       if (!ressource) {
         notificationService.error('Action interdite', 'Ressource introuvable. Le rendez-vous ne peut pas être déplacé.');
         return { success: false, message: 'Ressource introuvable.' };
@@ -665,18 +665,14 @@ export const useAppointmentLogic = ({
             false
           );
 
-          eventsRef.current = eventsRef.current.map((item) =>
-            Number(item.IdPlanningRessource) === Number(eventUpdate.IdPlanningRessource)
-              ? {
-                  ...item,
-                  CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
-                  CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
-                  CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
-                  IdImage: eventUpdate.IdImage,
-                }
-              : item
-          );
-   
+          eventsRef.current[Number(eventUpdate.IdPlanningRessource)] = {
+              ...eventsRef.current[Number(eventUpdate.IdPlanningRessource)],
+              CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
+              CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
+              CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
+              IdImage: eventUpdate.IdImage,
+          };
+
           reorganizePriorities(
             appointment.IdPlanningEvenement,
             appointment.PlanningEvenementPriorite ?? 0,
@@ -829,7 +825,7 @@ export const useAppointmentLogic = ({
 
     const employee = employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
 
-    const ressource = eventsRef.current.find(e => Number(e.IdPlanningRessource) === Number(appointment.IdPlanningRessource));
+    const ressource = eventsRef.current[Number(appointment.IdPlanningRessource)];
 
     if (!employee || !ressource) {
       notificationService.error('Action interdite', 'Employé ou ressource introuvable. Le rendez-vous ne peut pas être divisé.');
@@ -1013,7 +1009,7 @@ export const useAppointmentLogic = ({
       return { success: false, message: 'Aucun rendez-vous sélectionné pour la prolongation.' };
     }
 
-    const ressource = eventsRef.current.find(e => Number(e.IdPlanningRessource) === Number(selectedAppointment.IdPlanningRessource));
+    const ressource = eventsRef.current[Number(selectedAppointment.IdPlanningRessource)];
     if (!ressource) {
       notificationService.error('Action interdite', 'Ressource introuvable. Le rendez-vous ne peut pas être étendu.');
       return { success: false, message: 'Ressource introuvable. Le rendez-vous ne peut pas être étendu.' };
@@ -1211,7 +1207,7 @@ export const useAppointmentLogic = ({
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setSelectedAppointment(appointment);
-    setSelectedItem(eventsRef.current.find(e => e.IdPlanningRessource === appointment.IdPlanningRessource) || 
+    setSelectedItem(eventsRef.current[Number(appointment.IdPlanningRessource)] || 
       {
         IdPlanningRessource: -1,
         CodePlanningRessource: '',
@@ -1237,15 +1233,16 @@ export const useAppointmentLogic = ({
     const newItem = dimension.Type === 'Rubrique Perso' 
       ? { ...dimension, isManual: true } 
       : dimension;
-    eventsRef.current.push(newItem);
+    eventsRef.current[Number(dimension.IdPlanningRessource)] = newItem;
     setIsModalOpen(false);
     onUpdate();
   }, []);
 
   const handleEditDimension = useCallback((dimension: Item) => {
-    eventsRef.current = eventsRef.current.map(e =>
-      e.IdPlanningRessource === dimension.IdPlanningRessource ? { ...e, ...dimension } : e
-    );
+    eventsRef.current[Number(dimension.IdPlanningRessource)] = {
+      ...eventsRef.current[Number(dimension.IdPlanningRessource)],
+      ...dimension,
+    };
     setIsModalOpen(false);
     onUpdate();
   }, []);
@@ -1274,7 +1271,7 @@ export const useAppointmentLogic = ({
       console.log("oui on force delete");
       
       // Suppression forcée : supprimer la rubrique et tous les RDV associés
-      eventsRef.current = eventsRef.current.filter(e => e.IdPlanningRessource !== dimensionId);
+      delete eventsRef.current[Number(dimensionId)];
       appointmentsRef.current = appointmentsRef.current.filter(
         appointment => appointment.IdPlanningRessource !== dimensionId
       );
@@ -1298,9 +1295,10 @@ export const useAppointmentLogic = ({
 
   const handleDeactivateDimension = useCallback((dimensionId: number) => {
     // Désactiver la rubrique au lieu de la supprimer
-    eventsRef.current = eventsRef.current.map(e =>
-      e.IdPlanningRessource === dimensionId ? { ...e, actif: false } : e
-    );
+    eventsRef.current[Number(dimensionId)] = {
+      ...eventsRef.current[Number(dimensionId)],
+      Actif: false
+    } as Item;
     onUpdate();
     return {
       success: true,

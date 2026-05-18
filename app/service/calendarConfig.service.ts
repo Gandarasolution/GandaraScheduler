@@ -18,15 +18,15 @@ async function removeNonWorkingDatesFromPlanning(idDate: number) {
 }
 
 async function createCalendarConfig(data: any) {
-  return await postRequest('/api/calendar-configs', data, 'createCalendarConfig');
+  return await postRequest('/api/planning/vue', data, 'createCalendarConfig');
 }
 
 async function updateCalendarConfig(id: number, data: any) {
-  return await putRequest(`/api/calendar-configs/${id}`, data, 'updateCalendarConfig');
+  return await putRequest(`/api/planning/vue/${id}`, data, 'updateCalendarConfig');
 }
 
 async function deleteCalendarConfig(id: number) {
-  return await deleteRequest(`/api/calendar-configs/${id}`, 'deleteCalendarConfig', {});
+  return await deleteRequest(`/api/planning/vue/${id}`, 'deleteCalendarConfig', {});
 }
 
 export default {

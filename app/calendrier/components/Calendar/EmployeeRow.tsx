@@ -12,7 +12,7 @@ interface EmployeeRowProps {
   appointments: Appointment[];
   rowHeight: number;
   isFullDay: boolean;
-  events: Item[];
+  events: Record<number, Item>;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
   visibleWindowStart: number;
@@ -295,7 +295,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           <React.Fragment key={groupUniqueKey}>
             {appsToRender.map((app, index) => {
             
-              const ressource = events.find((e) => Number(e.IdPlanningRessource) === Number(app.IdPlanningRessource));
+              const ressource = events[Number(app.IdPlanningRessource)];
               if (!ressource) return null;
   
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)

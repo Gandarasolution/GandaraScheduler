@@ -1,7 +1,8 @@
-import { memo, use, useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import Modal from "./Modal";
 import { FilterCategory, FilterConfigWithActive, ActiveFilters } from "../../utils/searchAndFilterUtils";
 import { Combobox } from "../ui/Combobox";
+import ressourceService from "@/app/service/ressource.service";
 
 type FilterModalProps = {
   isOpen: boolean;
@@ -10,6 +11,7 @@ type FilterModalProps = {
   filterConfig: FilterConfigWithActive;
   onClearAll: () => void;
   title?: string;
+  viewType?: string;
 };
 
 const FilterModal: React.FC<FilterModalProps> = ({
@@ -18,9 +20,12 @@ const FilterModal: React.FC<FilterModalProps> = ({
   onSubmit,
   filterConfig,
   onClearAll,
-  title
+  title,
+  viewType
 }) => {
     
+  // On gère localement la config pour pouvoir la mettre à jour via l'API
+  const [localFilterConfig, setLocalFilterConfig] = useState<FilterConfigWithActive>(filterConfig);
 
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>(
     filterConfig.activeFilters  || {}
@@ -105,7 +110,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
           </div>
         );
 
-      case 'select':
+      case 'select':        
         return (
           <select
             value={activeFilters[categoryKey][0] || ''}
@@ -137,6 +142,8 @@ const FilterModal: React.FC<FilterModalProps> = ({
           </div>
         );
       case 'combobox':
+                console.log(category);
+
         return (
           <Combobox
             options={category.options.map(option => ({ label: option, value: option }))}
@@ -160,6 +167,34 @@ const FilterModal: React.FC<FilterModalProps> = ({
     setActiveFilters(filterConfig.activeFilters || {});
   }, [filterConfig.activeFilters]);
 
+  // Récupérer les options dynamiquement depuis l'API à l'ouverture
+  useEffect(() => {
+    if (isOpen) {
+      const keys = Object.keys(filterConfig).filter(k => k !== 'activeFilters');
+      if (keys.length === 0) return;
+
+
+      ressourceService.getFilterOptionsDynamic(viewType || '', keys)
+        .then(response => {
+          if (response?.error === 0 && response.data) {
+            setLocalFilterConfig(prev => {
+              const updatedConfig = { ...prev };
+              for (const key of Object.keys(response.data)) {
+                if (updatedConfig[key] && typeof updatedConfig[key] === 'object' && 'options' in updatedConfig[key]!) {
+                  updatedConfig[key] = {
+                    ...updatedConfig[key],
+                    options: response.data[key]
+                  } as FilterCategory;
+                }
+              }
+              return updatedConfig;
+            });
+          }
+        })
+        .catch(err => console.error("Erreur lors de la récupération des options de filtres :", err));
+    }
+  }, [isOpen, filterConfig, viewType]);
+
   return (
     <Modal 
       isOpen={isOpen} 
@@ -173,7 +208,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
     >
       <div className="flex flex-col gap-6 poppins text-primary py-4">
         {/* Rendu dynamique des filtres */}
-        {Object.entries(filterConfig)
+        {Object.entries(localFilterConfig)
           .filter(([key]) => key !== 'activeFilters') // Exclure la propriété activeFilters
           .map(([key, category]) => {
             // Type guard pour assurer que category est bien FilterCategory
@@ -181,26 +216,26 @@ const FilterModal: React.FC<FilterModalProps> = ({
             const filterCategory = category as FilterCategory;
             
             return (
-          <div key={key} className="space-y-3">
-            <div className="flex items-center justify-between w-full">
-              <h3 className="font-semibold">{filterCategory.label}</h3>
-              <button 
-                onClick={() => {
-                  setActiveFilters(prev => ({
-                    ...prev,
-                    [key]: []
-                  }));
-                }}
-                className="mr-3 p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors duration-200  cursor-pointer"
-                title="Réinitialiser ce filtre"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash3-fill" viewBox="0 0 16 16">
-                  <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
-                </svg>
-              </button>
-            </div>
-            {renderFilterInput(key, filterCategory)}
-          </div>
+              <div key={key} className="space-y-3">
+                <div className="flex items-center justify-between w-full">
+                  <h3 className="font-semibold">{filterCategory.label}</h3>
+                  <button 
+                    onClick={() => {
+                      setActiveFilters(prev => ({
+                        ...prev,
+                        [key]: []
+                      }));
+                    }}
+                    className="mr-3 p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors duration-200  cursor-pointer"
+                    title="Réinitialiser ce filtre"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash3-fill" viewBox="0 0 16 16">
+                      <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
+                    </svg>
+                  </button>
+                </div>
+                {renderFilterInput(key, filterCategory)}
+              </div>
             );
           })}
       </div>

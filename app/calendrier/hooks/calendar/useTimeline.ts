@@ -187,6 +187,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
     mainScrollRef,
     goToDate,
     isLoading,
+    setIsLoading,
     handleKeyboardScroll,
     getFirstDayAppearing,
   };

@@ -31,7 +31,7 @@ import { CELL_WIDTH } from '../../utils/constants';
 interface CalendarGridProps {
   employees: User[];
   appointments: Appointment[];
-  events: Item[];
+  events: Record<number, Item>;
   initialTeams: Groupe[];
   user: User;
   dayInTimeline: number[];
@@ -139,7 +139,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         employees={employees}
         appointments={appointments}
         user={user}
-        items={events}
+        items={Object.values(events)}
         nonWorkingDates={nonWorkingDates}
         onAddAppointment={onAddAppointment}
       />
