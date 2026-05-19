@@ -394,7 +394,7 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
       </div>
       <div className="flex items-center gap-2 mt-0.5">
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          {employee.Type === 'Interim' ? 'Intérimaire' : 'Employé'}
+          {employee.Type === 'INTERIM' ? 'Intérimaire' : 'Employé'}
         </p>
         {employee.Code && (
           <>

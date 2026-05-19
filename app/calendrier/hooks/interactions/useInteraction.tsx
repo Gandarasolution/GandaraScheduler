@@ -275,7 +275,7 @@ export const useInteraction = ({
             const dataURL = canvas.toDataURL('image/png');
 
             const newImageId = Date.now();
-            const result = addImage({ id: newImageId, image: dataURL, name: file.name });
+            const result = addImage({ id: newImageId, image: dataURL });
         
             setIsUploading(false);
             resolve(result);

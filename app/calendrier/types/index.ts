@@ -352,7 +352,7 @@ export interface User{
   /** Référence au pôle d'activité (relation) */
   PoleActivite?: PoleActivite;
   /** Type de l'utilisateur (employé ou intérimaire) */
-  Type: 'Salarie' | 'Interim';
+  Type: 'SALARIE' | 'INTERIM';
   /** Référence à l'équipe (relation) */
   Equipe?: Equipe;
   /** Rôle de l'utilisateur dans l'application */

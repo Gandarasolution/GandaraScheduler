@@ -55,6 +55,7 @@ export const useCalendarView = (employeesRef: any, user: User) => {
   const [searchInput, setSearchInput] = useState<string>('');
   const [dimensionSearchInput, setDimensionsSearchInput] = useState<string>('');
 
+
   // --- Hook de configuration existant ---
   const calendarConfigHook = useCalendarConfig({ user });
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);

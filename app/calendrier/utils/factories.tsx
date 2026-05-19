@@ -1,7 +1,4 @@
-import React from 'react';
-import { addHours } from "date-fns";
 import { Appointment, User, ChantierItem, Groupe, Item } from "../types";
-import { HOURS_PER_DAY } from "./constants";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
 
 
@@ -13,8 +10,6 @@ export const customRenderersFactory = (
   onImageClick: (employee: User) => void,
   setSelectedAppointment: (appointment: Appointment) => void,
   handleOpenEditModal: (appointment: Appointment) => void,
-  // Ces deux derniers arguments sont optionnels pour la compatibilité, 
-  // mais nécessaires pour le sélecteur d'équipe dans le tableau employé
   initialTeams: Groupe[],
   onTeamChange: (empId: number, groupId: number | null) => void
 ) => {
@@ -108,21 +103,21 @@ export const customRenderersFactory = (
   };
 
   // 3. Renderer pour l'image des employés (Avatar rond)
-  const imageRendererEmployee = (value: any, item: any) => {
-    const isInactive = item.actif === false;
+  const imageRendererEmployee = (value: any, item: User) => {
+    const isInactive = item.Actif === false;
     return (
       <div className="relative inline-block" style={{ opacity: isInactive ? 0.5 : 1 }}>
         <img
-          src={item.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`}
-          alt={item.nom + ' ' + item.prenom}
-          className={`cursor-pointer w-8 h-8 rounded-full border shadow ${item.type === 'interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
-          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.nom?.charAt(0) || '?'}`; }}
+          src={/*item.IdImage ??*/ `https://placehold.co/32x32/cccccc/333333?text=${item.Nom?.charAt(0) || '?'}`}
+          alt={item.Nom + ' ' + item.Prenom}
+          className={`cursor-pointer w-8 h-8 rounded-full border shadow ${item.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.Nom?.charAt(0) || '?'}`; }}
           onClick={(e) => {
               e.stopPropagation();
-              onImageClick(employees.find(emp => emp.IdPersonnel === item.id)!);
+              onImageClick(employees.find(emp => emp.IdPersonnel === item.IdPersonnel)!);
           }}
         />
-        {item.type === 'interim' && (
+        {item.Type === 'INTERIM' && (
           <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
         )}
       </div>
@@ -190,16 +185,16 @@ export const customRenderersFactory = (
 
   // Default: Employee Table
   return {
-    image: imageRendererEmployee,
-    equipe: (value: any, item: any) => (  
+    Image: imageRendererEmployee,
+    Equipe: (value: any, item: User) => (  
       <div className="flex items-center justify-start w-full h-full">
         {/* Selecteur d'équipe */}
         <select
-          value={employees.find(emp => emp.IdPersonnel === item.id)?.Equipe?.Id || ''}
+          value={employees.find(emp => Number(emp.IdPersonnel) === Number(item.IdPersonnel))?.Equipe?.Id || ''}
           onChange={(e) => {
             if (onTeamChange) {
                 const newGroupId = e.target.value ? Number(e.target.value) : null;
-                onTeamChange(item.id, newGroupId);
+                onTeamChange(item.IdPersonnel, newGroupId);
             }
           }}
           onClick={(e) => e.stopPropagation()}
@@ -214,10 +209,10 @@ export const customRenderersFactory = (
         </select>
       </div>
     ),
-    type: (value: string) => {
+    Type: (value: string) => {
       const typeColors: Record<string, string> = {
-        'interim': 'bg-interim text-white',
-        'employee': 'bg-employee text-white',
+        'INTERIM': 'bg-interim text-white',
+        'SALARIE': 'bg-employee text-white',
       };
       const colorClass = typeColors[value] || 'bg-gray-100 text-gray-800';
       // Capitalize first letter

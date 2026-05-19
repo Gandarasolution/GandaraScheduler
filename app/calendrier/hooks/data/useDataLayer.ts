@@ -131,7 +131,7 @@ export const useDataLayer = ({
     if (!calendarConfig || viewType === 'chantier-table' || viewType === 'paie-table') return globalEmployeesRef.current;
     
     if (viewType === 'calendar') {
-      let employees = globalEmployeesRef.current.filter(emp => emp.Type === 'Salarie' || emp.Type === 'Interim');
+      let employees = globalEmployeesRef.current.filter(emp => emp.Type === 'SALARIE' || emp.Type === 'INTERIM');
       
       // Filtrer par rôle : users et viewers ne voient que leur propre employé
       if (userRole === 'user' || userRole === 'viewer') {
@@ -308,12 +308,12 @@ export const useDataLayer = ({
               key: 'all',
               label: '',
               attributes: [
-                  { key: 'image', label: '', sortable: false, width:50 },
-                  { key: 'code', label: 'Code' },
-                  { key: 'nom', label: 'Nom' },
-                  { key: 'prenom', label: 'Prénom'}, 
-                  { key: 'equipe', label: 'Équipe' },
-                  { key: 'type', label: 'Type'}
+                  { key: 'Image', label: '', sortable: false, width:50 },
+                  { key: 'Code', label: 'Code' },
+                  { key: 'Nom', label: 'Nom' },
+                  { key: 'Prenom', label: 'Prénom'}, 
+                  { key: 'Equipe', label: 'Équipe' },
+                  { key: 'Type', label: 'Type'}
               ]
               }
           ]

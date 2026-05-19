@@ -20,7 +20,7 @@ async function searchRessources(query: string = '', types: string[] = [], limit:
 
 async function getFilterOptionsDynamic(types: string, keys: string[]) {
 
-  console.log(keys.join(','));
+  //console.log(keys.join(','));
   
   const params = new URLSearchParams();
   if (types.length > 0) {
@@ -33,11 +33,23 @@ async function getFilterOptionsDynamic(types: string, keys: string[]) {
 }
 
 
-async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, query: string = '', timeoutMs: number = 15000) {
+async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, query: string = '', activeFilters: { [key: string]: string[] } = {}, timeoutMs: number = 15000) {
   const params = new URLSearchParams();
   params.set('limit', String(limit));
   params.set('pageNum', String(pageNum));
   params.set('q', query);
+  
+  for (const filterKey in activeFilters) {
+    //console.log(activeFilters[filterKey], activeFilters[filterKey].length);
+    
+    if (activeFilters[filterKey].length > 0) {
+      //console.log(`Filtering by ${filterKey}:`, activeFilters[filterKey].join(','));
+      
+      params.set(filterKey, activeFilters[filterKey].join(','));
+    }
+  }
+  console.log(params.toString());
+  
 
   return await getRequest(
     `/api/ressources/projets?${params.toString()}`,

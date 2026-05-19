@@ -136,7 +136,7 @@ async function getEvenement(id: string) {
     return normalizeSingleEventResponse(response);
 }
 
-async function getEvenementByUser(id: string, type: 'Salarie' | 'Interim') {
+async function getEvenementByUser(id: string, type: 'SALARIE' | 'INTERIM') {
     const response = await getRequest(`/api/event?employee=${id}&type=${type}`, 'getEvenementByUser');
     return normalizeEventListResponse(response);
 }

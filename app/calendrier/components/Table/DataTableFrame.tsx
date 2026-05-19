@@ -840,6 +840,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     const attributeConfig = categoriesStructure
       .flatMap(cat => cat.attributes)
       .find(attr => attr.key === attributeKey);
+
+    
     
     // 3. Utiliser le renderer de la configuration si disponible
     if (attributeConfig?.renderer) {
@@ -1194,7 +1196,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                       const cellClasses = isExactHoveredCell 
                         ? 'bg-cell-hover' 
                         : getCellPositionClasses(item.id, attributeKey, columnIndex);
-                      
+                                              
                       return (
                         <div // Remplacé <td> par <div>
                           key={`${item.id}-${attributeKey}`}
@@ -1217,7 +1219,9 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                         >
                           {/* Le contenu doit prendre toute la largeur pour l'alignement */}
                           <div className="w-full">
-                            {renderAttributeValue(value, attributeKey, item)}
+                            {
+                            renderAttributeValue(value, attributeKey, item)
+                            }
                           </div>
                         </div>
                       );

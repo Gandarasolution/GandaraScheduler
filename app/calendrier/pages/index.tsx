@@ -103,6 +103,7 @@ export default function HomePage({
   const [deleteConfirmData, setDeleteConfirmData] = useState<{ item: Item, isUsedInPlanning: boolean, isActive: boolean } | null>(null);
   const [, setEmployeesVersion] = useState(0);
   const hasInitializedPlanningRef = useRef(false);
+  const hasInitializedTeamsRef = useRef(false);
 
   // Refs de données dynamiques (chargées via API)
   const globalEmployeesRef = useRef<User[]>([]);
@@ -238,7 +239,18 @@ export default function HomePage({
     return { error: 0, data };
   }, [user.role]);
 
-  // --- CONFIGURATION DES FILTRES (Pour FilterModal) ---
+  // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
+  const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, query: string = '', timeoutMs: number = 15000) => {
+    console.log(limit, pageNum, query, timeoutMs);
+    
+    return viewState.viewType === 'chantier-table' 
+      ? (ressourceService.getRessourcesProjet as any)(limit, pageNum, query, viewState.activeFilters, timeoutMs) 
+      : viewState.viewType === 'employee-table' 
+        ? (employeeService.getEmployeesPag as any)(limit, pageNum, query) 
+        : undefined;
+  }, [viewState.viewType, viewState.activeFilters]);
+
+  // --- FILTRES ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
   
   const keyOfFilter = useMemo((): { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } } => {
@@ -281,10 +293,7 @@ export default function HomePage({
         activeFilters: viewState.activeFilters
       };
   }, [searchUtils, dataLayer.itemsRef.current, viewState.viewType, keyOfFilter, viewState.activeFilters]);
-      
-
-  console.log('Filter Config:', filterConfig);
-  
+        
   // --- EFFETS DE BORD ---
 
   // Init global: notifications + theme (indépendant de la vue)
@@ -297,16 +306,13 @@ export default function HomePage({
 
   // Init unique: configuration utilisateur + données planning (employés, équipes, RDV)
   useEffect(() => {
-    if (viewState.viewType !== 'calendar' || hasInitializedPlanningRef.current) {
-      return;
-    }
-
-    hasInitializedPlanningRef.current = true;
     let isMounted = true;
     
-
     const initializePlanning = async () => {
-      if (!isMounted) return;
+      if (!isMounted || hasInitializedPlanningRef.current) return;
+      hasInitializedPlanningRef.current = true;
+      hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
+      
       const configResponse = await viewState.loadConfigs();
       const employeesResponse = await employeeService.getEmployees();
 
@@ -338,7 +344,17 @@ export default function HomePage({
       setLoadCalendar(false);
     };
 
-    initializePlanning();
+    const initializeTeams = async () => {
+      if (!isMounted || hasInitializedTeamsRef.current) return;
+      hasInitializedTeamsRef.current = true;
+      await dataLayer.loadTeams();
+    };
+
+    if (viewState.viewType === 'calendar') {
+      initializePlanning();
+    } else if (viewState.viewType === 'employee-table') {
+      initializeTeams();
+    }
 
     return () => {
       isMounted = false;
@@ -482,7 +498,7 @@ export default function HomePage({
                     <DataTableFrame 
                       categoriesStructure={dataLayer.getTableStructure() || []}
                       enablePagination={true}
-                      paginatedSearchFunction={viewState.viewType === 'chantier-table' ? (ressourceService.getRessourcesProjet as any) : viewState.viewType === 'employee-table' ? (employeeService.getEmployeesPag as any) : undefined}
+                      paginatedSearchFunction={handlePaginatedSearch}
                       loadingElement={<LoadingFallback message="Chargement des données..." />}
                       customRenderers={
                         customRenderersFactory(

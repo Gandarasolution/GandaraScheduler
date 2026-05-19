@@ -525,17 +525,15 @@ export const CalendarModals = memo(({
       
       {/* --- FILTRES TABLEAUX --- */}
       {modalsState.isFilterModalOpen && (
-        <Suspense fallback={<ModalLoadingFallback />}>
-          <FilterModal
-            title='Filtres avancés'
-            isOpen={modalsState.isFilterModalOpen}
-            onSubmit={handlers.submitFilters}
-            onClose={handlers.closeFilterModal}
-            filterConfig={data.filterConfig}
-            onClearAll={handlers.clearFilters}
-            viewType={config.viewType}
-          />
-        </Suspense>
+        <FilterModal
+          title='Filtres avancés'
+          isOpen={modalsState.isFilterModalOpen}
+          onSubmit={handlers.submitFilters}
+          onClose={handlers.closeFilterModal}
+          filterConfig={data.filterConfig}
+          onClearAll={handlers.clearFilters}
+          viewType={config.viewType}
+        />
       )}
 
       {/* --- NOTIFICATION FLOTTANTE (INFO MODALE) --- */}
