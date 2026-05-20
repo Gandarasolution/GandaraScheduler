@@ -16,17 +16,17 @@ async function getEmployeesPag(limit: number = 20, pageNum: number = 1, query: s
     );
 }
 
-async function getEmployee(id: string) {
+async function getEmployee(id: number) {
     return await getRequest(`/api/employees/${id}`, 'getEmployee');
 }
 
-async function updateEmployee(id: string, data: any) {
-    return await putRequest(`/api/employees/${id}`, data, 'updateEmployee');
+async function updateEquipeEmployee(id: number, data: any) {
+    return await putRequest(`/api/employees/équipe/${id}`, data, 'updateEquipeEmployee');
 }
 
 export default {
     getEmployees,
     getEmployee,
-    updateEmployee,
+    updateEquipeEmployee,
     getEmployeesPag,
 }

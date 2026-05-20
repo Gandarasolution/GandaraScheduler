@@ -1,4 +1,4 @@
-import { User, Appointment, Filter, DimensionItem, Groupe, GroupingLevel, GroupingLevels, FilterCategories, Item } from '../types';
+import { User, Appointment, Filter, DimensionItem, Equipe, GroupingLevel, GroupingLevels, FilterCategories, Item, PoleActivite } from '../types';
 
 // Types pour l'accès sécurisé aux propriétés
 type UserField = keyof User;
@@ -111,7 +111,8 @@ export interface HierarchicalGroupItem {
 export function getHierarchicalDimensionItems(
   groupingLevels: GroupingLevels | undefined,
   employees: User[],
-  groups: Groupe[]
+  groups: Record<number, Equipe>,
+  poleActivites: Record<number, PoleActivite>
 ): HierarchicalGroupItem[] {
   if (!groupingLevels?.ChampsPremierGroupePlanningVue) {
     // Pas de grouping défini, retourner une liste plate d'employés
@@ -128,21 +129,21 @@ export function getHierarchicalDimensionItems(
 
   // Cas 1: Un seul niveau de grouping
   if (!level2 || level1 === level2) {
-    return getItemsByLevel(level1, employees, groups).map(item => ({
+    return getItemsByLevel(level1, employees, groups, poleActivites).map(item => ({
       ...item,
       level: 1
     }));
   }
 
   // Cas 2: Deux niveaux de grouping (level1 !== level2)
-  const level1Items = getItemsByLevel(level1, employees, groups);
+  const level1Items = getItemsByLevel(level1, employees, groups, poleActivites);
   
   return level1Items.map(level1Item => {
     // Filtrer les employés appartenant à ce groupe de niveau 1
     const level1Employees = filterEmployeesByLevel(employees, level1, level1Item.id);
     
     // Obtenir les sous-groupes de niveau 2
-    const level2Items = getItemsByLevel(level2, level1Employees, groups);
+    const level2Items = getItemsByLevel(level2, level1Employees, groups, poleActivites);
     
     return {
       ...level1Item,
@@ -159,23 +160,28 @@ export function getHierarchicalDimensionItems(
 function getItemsByLevel(
   levelType: GroupingLevel,
   employees: User[],
-  groups: Groupe[]
-): HierarchicalGroupItem[] {
+  groups: Record<number, Equipe>,
+  poleActivites: Record<number, PoleActivite>
+): HierarchicalGroupItem[] {  
   if (levelType === 'pole') {
-    const poles = Array.from(new Set(employees.map(emp => emp.PoleActivite?.Nom).filter((p): p is string => p !== undefined)));
-    return poles.map(pole => {
-      const poleEmployees = employees.filter(emp => emp.PoleActivite?.Nom === pole);
+          console.log(employees);
+
+    return Object.values(poleActivites).map(pole => {      
+      
+      const poleEmployees = employees.filter(emp => Number(emp.PoleActivite) === Number(pole.Id));
+      console.log(poleEmployees);
+
       return {
-        id: pole || 'Sans Pôle',
-        name: pole || 'Sans Pôle',
+        id: pole.Id || 'Sans Pôle',
+        name: pole.Nom || 'Sans Pôle',
         level: 0, // Sera écrasé par l'appelant
         employees: poleEmployees,
         data: { pole }
       };
     });
   } else if (levelType === 'equipe') {
-    return groups.map(group => {
-      const groupEmployees = employees.filter(emp => emp.Equipe?.Id === group.Id);
+    return Object.values(groups).map(group => {
+      const groupEmployees = employees.filter(emp => Number(emp.Equipe) === Number(group.Id));
       return {
         id: group.Id || 'Sans Équipe',
         name: group.Nom || 'Sans Équipe',
@@ -195,9 +201,9 @@ function filterEmployeesByLevel(
   levelId: string | number
 ): User[] {
   if (levelType === 'pole') {
-    return employees.filter(emp => emp.PoleActivite?.Nom === levelId);
+    return employees.filter(emp => Number(emp.PoleActivite) === Number(levelId));
   } else if (levelType === 'equipe') {
-    return employees.filter(emp => emp.Equipe?.Id === levelId);
+    return employees.filter(emp => Number(emp.Equipe) === Number(levelId));
   }
   return [];
 }
@@ -206,7 +212,8 @@ function filterEmployeesByLevel(
 export function groupEmployeesHierarchically(
   employees: User[],
   groupingLevels: GroupingLevels | undefined,
-  groups: Groupe[]
+  groups: Record<number, Equipe>,
+  poleActivites: Record<number, PoleActivite>
 ): { [key: string]: User[] } {
   const result: { [key: string]: User[] } = {};
   
@@ -218,7 +225,7 @@ export function groupEmployeesHierarchically(
     return result;
   }
 
-  const hierarchicalItems = getHierarchicalDimensionItems(groupingLevels, employees, groups);
+  const hierarchicalItems = getHierarchicalDimensionItems(groupingLevels, employees, groups, poleActivites);
   
   
   // Aplatir la hiérarchie pour créer la structure Record

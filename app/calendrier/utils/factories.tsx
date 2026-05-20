@@ -1,4 +1,4 @@
-import { Appointment, User, ChantierItem, Groupe, Item } from "../types";
+import { Appointment, User, ChantierItem, Item, Equipe } from "../types";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
 
 
@@ -10,8 +10,8 @@ export const customRenderersFactory = (
   onImageClick: (employee: User) => void,
   setSelectedAppointment: (appointment: Appointment) => void,
   handleOpenEditModal: (appointment: Appointment) => void,
-  initialTeams: Groupe[],
-  onTeamChange: (empId: number, groupId: number | null) => void
+  initialTeams: Record<number, Equipe>,
+  onTeamChange: (Employee: User, groupId: number | null) => void
 ) => {
 
   const getWithSeparator = (num: string, colonne: string): string => {
@@ -187,21 +187,23 @@ export const customRenderersFactory = (
   return {
     Image: imageRendererEmployee,
     Equipe: (value: any, item: User) => (  
+      console.log(initialTeams),
+      
       <div className="flex items-center justify-start w-full h-full">
         {/* Selecteur d'équipe */}
         <select
-          value={employees.find(emp => Number(emp.IdPersonnel) === Number(item.IdPersonnel))?.Equipe?.Id || ''}
+          value={item.Equipe || ''} // Valeur actuelle de l'équipe, ou vide si aucune
           onChange={(e) => {
             if (onTeamChange) {
                 const newGroupId = e.target.value ? Number(e.target.value) : null;
-                onTeamChange(item.IdPersonnel, newGroupId);
+                onTeamChange(item, newGroupId);
             }
           }}
           onClick={(e) => e.stopPropagation()}
           className="w-full px-2 py-1 text-sm border border-default rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all cursor-pointer"
         >
           <option value="">Aucune équipe</option>
-          {initialTeams.map(team => (
+          {Object.values(initialTeams).map(team => (
             <option key={team.Id} value={team.Id}>
               {team.Nom}
             </option>

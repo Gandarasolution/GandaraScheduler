@@ -21,7 +21,7 @@
 
 "use client";
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Appointment, HalfDayInterval, Groupe, CalendarConfig, Item, User } from '../../types';
+import { Appointment, HalfDayInterval, Equipe, CalendarConfig, Item, User, PoleActivite } from '../../types';
 import { 
   useCalendarInteractions
  } from '@/app/calendrier/hooks';
@@ -32,7 +32,8 @@ interface CalendarGridProps {
   employees: User[];
   appointments: Appointment[];
   events: Record<number, Item>;
-  initialTeams: Groupe[];
+  initialTeams: Record<number, Equipe>;
+  poleActivites: Record<number, PoleActivite>;
   user: User;
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
@@ -63,6 +64,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   employees,
   appointments,
   initialTeams,
+  poleActivites,
   dayInTimeline,
   HALF_DAY_INTERVALS,
   isFullDay,
@@ -137,6 +139,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return (
       <MobileCalendar
         employees={employees}
+        teams={initialTeams}
         appointments={appointments}
         user={user}
         items={Object.values(events)}
@@ -152,6 +155,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         appointments={appointments}
         dayInTimeline={dayInTimeline}
         initialTeams={initialTeams}
+        poleActivites={poleActivites}
         calendarConfig={calendarConfig}
         onCalendarConfigChange={onCalendarConfigChange}
         availableConfigs={availableConfigs}

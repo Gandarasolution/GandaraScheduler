@@ -14,7 +14,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, Clock, Users } from 'lucide-react';
 import Fuse from 'fuse.js';
-import { User } from '../../../types';
+import { Equipe, User } from '../../../types';
 import { Image } from '../../ui/Image';
 import { getCachedImageById } from '../../../utils/imageCacheStore';
 import { 
@@ -25,11 +25,13 @@ import {
 interface EmployeeSelectorProps {
   employees: User[];
   selectedEmployee: User | null;
+  teams: Record<number, Equipe>;
   onSelect: (employee: User) => void;
 }
 
 export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({ 
   employees, 
+  teams,
   selectedEmployee, 
   onSelect 
 }) => {
@@ -71,7 +73,8 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     const groups: Record<string, User[]> = {};
     
     searchResults.forEach(emp => {
-      const groupName = emp.Equipe?.Nom || 'Sans équipe';
+      const equipeKey = typeof emp.Equipe === 'number' ? emp.Equipe : undefined;
+      const groupName = (equipeKey !== undefined ? teams[equipeKey]?.Nom : undefined) || 'Sans équipe';
       if (!groups[groupName]) {
         groups[groupName] = [];
       }

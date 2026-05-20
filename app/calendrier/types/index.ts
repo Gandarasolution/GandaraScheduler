@@ -31,8 +31,6 @@ export interface Equipe {
   Nom: string;  
 }
 
-/** @deprecated Utiliser Equipe à la place */
-export type Groupe = Equipe;
 
 /** @deprecated Utiliser PoleActivite à la place */
 export type poleActivite = PoleActivite;
@@ -350,11 +348,11 @@ export interface User{
   /** Code de contrat de l'utilisateur (ex: CDI, CDD, etc.) */
   Code?: string;
   /** Référence au pôle d'activité (relation) */
-  PoleActivite?: PoleActivite;
+  PoleActivite: PoleActivite['Id'] | null;
   /** Type de l'utilisateur (employé ou intérimaire) */
   Type: 'SALARIE' | 'INTERIM';
   /** Référence à l'équipe (relation) */
-  Equipe?: Equipe;
+  Equipe: Equipe['Id'] | null;
   /** Rôle de l'utilisateur dans l'application */
   role?: UserRole;
   /** Thème préféré de l'utilisateur */

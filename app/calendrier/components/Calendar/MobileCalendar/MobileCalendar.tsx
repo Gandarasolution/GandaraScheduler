@@ -13,7 +13,7 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
-import { Appointment, Item, MockNotification, User } from '../../../types/index';
+import { Appointment, Equipe, Item, MockNotification, User } from '../../../types/index';
 
 // Composants
 
@@ -39,6 +39,7 @@ import { getCachedImageById } from '../../../utils/imageCacheStore';
 
 interface MobileCalendarGridProps {
   employees: User[];
+  teams: Record<number, Equipe>;
   appointments: Appointment[];
   user: User;
   items: Item[];
@@ -50,6 +51,7 @@ interface MobileCalendarGridProps {
 
 export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({ 
   employees, 
+  teams,
   appointments, 
   user, 
   items, 
@@ -495,6 +497,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
           {(isAdmin || isManager) && (
             <EmployeeSelector 
               employees={visibleEmployees}
+              teams={teams}
               selectedEmployee={selectedEmployee}
               onSelect={setSelectedEmployee}
             />

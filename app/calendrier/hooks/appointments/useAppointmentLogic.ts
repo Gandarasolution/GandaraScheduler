@@ -18,7 +18,7 @@ export type RepeatData = {
 type ActionResult = { success: boolean; message?: string };
 
 interface LogicProps {
-  employeesRef: React.MutableRefObject<User[]>;
+  employees:User[];
   appointmentsRef: React.MutableRefObject<Appointment[]>;
   eventsRef: React.MutableRefObject<Record<number, Item>>;
   timelineState: {
@@ -42,7 +42,7 @@ interface LogicProps {
 }
 
 export const useAppointmentLogic = ({ 
-  employeesRef,
+  employees,
   appointmentsRef, 
   eventsRef, 
   timelineState, 
@@ -53,7 +53,7 @@ export const useAppointmentLogic = ({
 }: LogicProps) => {
   
   // --- Initialisation des Utilitaires ---
-  const appointmentUtils = useMemo(() => createAppointmentUtils(employeesRef.current), []);
+  const appointmentUtils = useMemo(() => createAppointmentUtils(employees), []);
   
   // --- Refs pour la persistance hors rendu ---
   const history = useRef<HistoryAction[]>([]);
@@ -290,7 +290,7 @@ export const useAppointmentLogic = ({
         appointmentsRef.current = previousAppointments;
         notificationService.error('Erreur réseau', 'Impossible de mettre à jour l\'événement sur le serveur');
       });
-  }, [appointmentsRef, onUpdate, saveAppointmentState, api, employeesRef, reorganizePriorities, isApiSuccess]);
+  }, [appointmentsRef, onUpdate, saveAppointmentState, api, employees, reorganizePriorities, isApiSuccess]);
 
   // Création unitaire d'un RDV
   const createAppointment = useCallback((
@@ -300,7 +300,7 @@ export const useAppointmentLogic = ({
     syncWithApi: boolean = true
   ): Appointment | null => {
       const { startDate, endDate, employeeId, ressource, priority } = data;
-      const employee = employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
+      const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
 
       if (!employee) {
         notificationService.error('Création impossible', 'Employé introuvable.');
@@ -390,7 +390,7 @@ export const useAppointmentLogic = ({
         });
 
       return localAppointment;
-    }, [appointmentsRef, onUpdate, saveAppointmentState, api, employeesRef, eventsRef, addMissingResourcesToCache, getCachedResourceById]);
+    }, [appointmentsRef, onUpdate, saveAppointmentState, api, employees, eventsRef, addMissingResourcesToCache, getCachedResourceById]);
 
   // --- GESTION DES PRIORITÉS ---
 
@@ -420,7 +420,7 @@ export const useAppointmentLogic = ({
       if (!appointment) {
         return { success: false, message: 'Rendez-vous introuvable.' };
       }
-      const employee = employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(newEmployeeId));
+      const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(newEmployeeId));
       if (!employee) {
         notificationService.error('Action interdite', 'Employé introuvable. Le rendez-vous ne peut pas être déplacé.');
         return { success: false, message: 'Employé introuvable.' };
@@ -552,7 +552,7 @@ export const useAppointmentLogic = ({
         notificationService.error('Erreur réseau', message);
         return { success: false, message };
       }
-    }, [appointmentsRef, employeesRef, timelineStateRef, updateAppointmentBounds, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities, api, isApiSuccess]);
+    }, [appointmentsRef, employees, timelineStateRef, updateAppointmentBounds, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities, api, isApiSuccess]);
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
 
@@ -579,7 +579,7 @@ export const useAppointmentLogic = ({
         return { success: false, message: 'API de création indisponible.' };
       }
 
-      const employee = employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(appointment.IdEmploye));
+      const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(appointment.IdEmploye));
 
       try {
         const payload = {
@@ -823,7 +823,7 @@ export const useAppointmentLogic = ({
     const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000));
     const splitDate = startDate + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000));
 
-    const employee = employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
+    const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
 
     const ressource = eventsRef.current[Number(appointment.IdPlanningRessource)];
 
@@ -941,7 +941,7 @@ export const useAppointmentLogic = ({
     });
     
     const payloads = {
-      Type: employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(selectedAppointment.IdEmploye))?.Type,
+      Type: employees.find(emp => Number(emp.IdPersonnel) === Number(selectedAppointment.IdEmploye))?.Type,
       IdEmploye: Number(selectedAppointment.IdEmploye),
       IdPlanningRessource: Number(selectedAppointment.IdPlanningRessource),
       AnnotationPlanningEvenement: selectedAppointment.AnnotationPlanningEvenement,
@@ -1100,7 +1100,7 @@ export const useAppointmentLogic = ({
       //   event as Item,
       //   false
       // );
-  }, [selectedCell, timelineState.isFullDay, handleSaveAppointment, employeesRef]);
+  }, [selectedCell, timelineState.isFullDay, handleSaveAppointment, employees]);
 
   // --- PRESSE-PAPIER ---
 
@@ -1141,7 +1141,7 @@ export const useAppointmentLogic = ({
     const payload = {
       DebutPlanningEvenement: cell.date,
       FinPlanningEvenement: cell.date + (a.FinPlanningEvenement - a.DebutPlanningEvenement),
-      Type: employeesRef.current.find(emp => Number(emp.IdPersonnel) === Number(cell.employeeId))?.Type,
+      Type: employees.find(emp => Number(emp.IdPersonnel) === Number(cell.employeeId))?.Type,
       IdEmploye: cell.employeeId,
       AnnotationPlanningEvenement: a.AnnotationPlanningEvenement,
       IdPlanningRessource: a.IdPlanningRessource,

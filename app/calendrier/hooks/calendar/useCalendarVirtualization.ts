@@ -12,7 +12,7 @@
  */
 
 import { useMemo } from 'react';
-import { User, Groupe } from '../../types';
+import { User } from '../../types';
 import { 
   CELL_HEIGHT, 
   ROW_HEIGHT, 

@@ -12,8 +12,13 @@ async function deleteEquipe(id: number) {
     return await deleteRequest(`/api/equipes/${id}`, 'deleteEquipe', {});
 }
 
+async function getPoleActivites() {
+    return await getRequest(`/api/pole-activites`, 'getPoleActivites');
+}
+
 export default {
     getEquipes,
     createEquipe,
-    deleteEquipe
+    deleteEquipe,
+    getPoleActivites
 }

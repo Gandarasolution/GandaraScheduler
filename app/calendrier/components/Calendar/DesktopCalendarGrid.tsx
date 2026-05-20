@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, memo, useCallback } from 'react';
-import { Appointment, Groupe, CalendarConfig, Item, HalfDayInterval, User } from '../../types';
+import { Appointment, CalendarConfig, Item, HalfDayInterval, User, PoleActivite, Equipe } from '../../types';
 import { TimelineFrame } from './index';
 import CalendarRows from './CalendarRows';
 import EmployeeSidebar from './EmployeeSidebar';
@@ -28,7 +28,8 @@ interface DesktopCalendarGridProps {
   employees: User[];
   appointments: Appointment[];
   dayInTimeline: number[];
-  initialTeams: Groupe[];
+  initialTeams: Record<number, Equipe>;
+  poleActivites: Record<number, PoleActivite>;
   calendarConfig: CalendarConfig;
   onCalendarConfigChange: (config: CalendarConfig) => void;
   availableConfigs: CalendarConfig[];
@@ -84,6 +85,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   columnEmployeeRef,
   tableRef,
   initialTeams,
+  poleActivites,
   onLoadAppointmentsInRange,
   updateHighlightedEmployeeRow,
   handleMouseOver,
@@ -137,10 +139,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [employees, appointments]);
 
 
+  const dimensionItems = useMemo(() => {
+    return getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams, poleActivites);
+  }, [calendarConfig.Group, employees, initialTeams, poleActivites]);
+
   
+
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
-    const items = getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
-    return items.map(i => i.id);
+    return dimensionItems.map(i => i.id);
   });  
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
@@ -201,9 +207,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return { visibleWindowStart: startTs, visibleWindowEnd: endTs };
   }, [dayInTimeline, viewport.left, viewport.width]);
 
-  const dimensionItems = useMemo(() => {
-    return getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
-  }, [calendarConfig.Group, employees, initialTeams]);
 
   const appointmentsInHorizontalWindow = useMemo(() => {
     return appointments.filter((app) =>{
@@ -245,10 +248,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [employees, calendarConfig.filterCategories, visibleEmployeeIdsInWindow]);
 
   const employeesByDimension = useMemo(() => {
-    return groupEmployeesHierarchically(filteredEmployees, calendarConfig.Group, initialTeams);
-  }, [filteredEmployees, calendarConfig.Group, initialTeams]);
-  
-  
+    return groupEmployeesHierarchically(filteredEmployees, calendarConfig.Group, initialTeams, poleActivites);
+  }, [filteredEmployees, calendarConfig.Group, initialTeams, poleActivites]);
 
   const todayIndex = useMemo(() => {
     if (!todayTs) return -1;
@@ -406,12 +407,12 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return () => node.removeEventListener('scroll', handleViewport);
   }, [mainScrollRef]);
 
-  useEffect(() => {
-    // On recalcule les IDs basés sur la nouvelle config
-    const currentDimensionItems = getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
-    setOpenItems(currentDimensionItems.map(item => item.id));
+  // useEffect(() => {
+  //   // On recalcule les IDs basés sur la nouvelle config
+  //   const currentDimensionItems = getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
+  //   setOpenItems(currentDimensionItems.map(item => item.id));
     
-  }, [calendarConfig.Group]);
+  // }, [calendarConfig.Group]);
 
 
 

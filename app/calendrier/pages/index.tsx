@@ -106,10 +106,10 @@ export default function HomePage({
   const hasInitializedTeamsRef = useRef(false);
 
   // Refs de données dynamiques (chargées via API)
-  const globalEmployeesRef = useRef<User[]>([]);
+  const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
-  const viewState = useCalendarView(globalEmployeesRef, user);
+  const viewState = useCalendarView(globalEmployees, user);
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
@@ -118,7 +118,8 @@ export default function HomePage({
     searchQueryDimensions: viewState.dimensionSearchInput,
     filters: viewState.activeFilters,
     calendarConfig: viewState.currentCalendarConfig,
-    globalEmployeesRef,
+    globalEmployees: globalEmployees,
+    setGlobalEmployees,
     isSearchOverlayOpen: viewState.isSearchOverlayOpen,
     userIdNumber: user?.IdPersonnel || 0,
     userRole: user?.role || 'admin',
@@ -143,7 +144,7 @@ export default function HomePage({
   }), [viewState.isFullDay, viewState.isDisplayWeekend, viewState.includeWeekend, viewState.respectNonWorkingDays, viewState.nonWorkingDates]);
 
   const appointmentLogic = useAppointmentLogic({
-    employeesRef: globalEmployeesRef,
+    employees: globalEmployees,
     appointmentsRef: dataLayer.appointmentsRef,
     eventsRef: dataLayer.itemsRef,
     timelineState,
@@ -317,9 +318,9 @@ export default function HomePage({
       const employeesResponse = await employeeService.getEmployees();
 
       if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
-        globalEmployeesRef.current = employeesResponse.data;
+        setGlobalEmployees(employeesResponse.data);
       } else {
-        globalEmployeesRef.current = [];
+        setGlobalEmployees([]);
       }
       setEmployeesVersion(prev => prev + 1);
 
@@ -336,6 +337,7 @@ export default function HomePage({
       }
 
       await dataLayer.loadTeams();
+      await dataLayer.loadPoleActivites();
 
       const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
       const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
@@ -425,6 +427,7 @@ export default function HomePage({
 
                         /* Équipes & Événements */
                         initialTeams={dataLayer.initialTeams}
+                        poleActivites={dataLayer.poleActivites}
                         events={dataLayer.itemsRef.current}
                         
                         /* État Temporel */
@@ -485,7 +488,7 @@ export default function HomePage({
                           IdPlanningRessource: item.IdPlanningRessource,
                           DebutPlanningEvenement: 0,
                           FinPlanningEvenement: 1000,
-                          IdEmploye: globalEmployeesRef.current[0].IdPersonnel,
+                          IdEmploye: globalEmployees[0].IdPersonnel,
                         });
                         appointmentLogic.setSelectedItem(item);
                         appointmentLogic.setIsModalOpen(true);
@@ -503,7 +506,7 @@ export default function HomePage({
                       customRenderers={
                         customRenderersFactory(
                           viewState.viewType, 
-                          globalEmployeesRef.current, 
+                          globalEmployees, 
                           interaction.handleOpenImageModal,
                           appointmentLogic.setSelectedAppointment,
                           appointmentLogic.handleOpenEditModal,
@@ -650,7 +653,7 @@ export default function HomePage({
             data={{
               appointments: dataLayer.appointmentsRef.current,
               items: dataLayer.itemsRef.current,
-              employees: globalEmployeesRef.current,
+              employees: globalEmployees,
               selectedItem: appointmentLogic.selectedItem,
               selectedEmployee: appointmentLogic.selectedEmployee,
               // Correction : Passer les images disponibles

@@ -1,13 +1,9 @@
 import { useState, useRef, useEffect, useMemo, useCallback, use } from 'react';
-import { Appointment, User, Item, CalendarConfig, Image, UserRole } from '../../types';
+import { Appointment, User, Item, CalendarConfig, Image, UserRole, Equipe, PoleActivite } from '../../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
-import evenementService from '@/app/service/evenement.service'; // NEW API SERVICE
-import equipeService from '@/app/service/equipe.service';
-import rubriqueService from '@/app/service/ressource.service';
+import { employeeService, equipeService, evenementService } from '@/app/service';
 import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../../utils/filters";
 import {
-  INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER,
-  INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE,
   SEARCH_DEFAULT_LIMIT,
   SEARCH_MIN_QUERY_LENGTH,
 } from '../../utils/constants';
@@ -23,7 +19,8 @@ interface DataLayerProps {
   searchInput: string;
   filters: ActiveFilters;
   calendarConfig: CalendarConfig | null;
-  globalEmployeesRef: React.RefObject<User[]>;
+  globalEmployees: User[];
+  setGlobalEmployees: React.Dispatch<React.SetStateAction<User[]>>;
   userIdNumber: number;
   userRole: UserRole;
   isSearchOverlayOpen: boolean;
@@ -35,14 +32,16 @@ export const useDataLayer = ({
   searchInput,
   searchQueryDimensions,
   calendarConfig,
-  globalEmployeesRef,
+  globalEmployees,
+  setGlobalEmployees,
   userIdNumber,
   userRole,
   isSearchOverlayOpen,
 }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const worker = useCalendarWorker();
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<Record<number, Equipe>>({});
+  const [poleActivites, setPoleActivites] = useState<Record<number, PoleActivite>>({});
   
   const itemsRef = useRef<Record<number, Item>>({});
   const appointmentsRef = useRef<Appointment[]>([]);
@@ -86,22 +85,30 @@ export const useDataLayer = ({
     };
   }, []);
 
-  const loadTeams = useCallback(async () => {
+  const loadTeams = useCallback(async () => {    
     const response = await equipeService.getEquipes();
-
+    
     if (response?.error === 0 && Array.isArray(response.data)) {
-      setTeams(response.data);
+      const teamsRecord: Record<number, Equipe> = {};
+      response.data.forEach((team: Equipe) => {
+        teamsRecord[team.Id] = team;
+      });
+      setTeams(teamsRecord);
       return response.data;
     }
+  }, []);
 
-    const teamsFromEmployees = globalEmployeesRef.current
-      .map(emp => emp.Equipe)
-      .filter(Boolean)
-      .filter((team, index, arr) => arr.findIndex(t => t?.Id === team?.Id) === index);
-    setTeams(teamsFromEmployees as any[]);
-    return teamsFromEmployees;
-  }, [globalEmployeesRef]);
-
+  const loadPoleActivites = useCallback(async () => {
+    const response = await equipeService.getPoleActivites();
+    if (response?.error === 0 && Array.isArray(response.data)) {
+      const poleActivitesRecord: Record<number, PoleActivite> = {};
+      response.data.forEach((pole: PoleActivite) => {
+        poleActivitesRecord[pole.Id] = pole;
+      });
+      setPoleActivites(poleActivitesRecord);
+      return response.data;
+    }
+  }, []);
 
   // Instanciation Utils
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -128,10 +135,10 @@ export const useDataLayer = ({
   // Ces mémos se recalculent uniquement quand les filtres changent, PAS à chaque searchQuery
   
   const baseFilteredEmployees = useMemo(() => {
-    if (!calendarConfig || viewType === 'chantier-table' || viewType === 'paie-table') return globalEmployeesRef.current;
+    if (!calendarConfig || viewType === 'chantier-table' || viewType === 'paie-table') return globalEmployees;
     
     if (viewType === 'calendar') {
-      let employees = globalEmployeesRef.current.filter(emp => emp.Type === 'SALARIE' || emp.Type === 'INTERIM');
+      let employees = globalEmployees.filter(emp => emp.Type === 'SALARIE' || emp.Type === 'INTERIM');
       
       // Filtrer par rôle : users et viewers ne voient que leur propre employé
       if (userRole === 'user' || userRole === 'viewer') {
@@ -145,7 +152,7 @@ export const useDataLayer = ({
     }
 
     // Pour les vues tableaux, retourner les données brutes (filtrage avec recherche appliqué après)
-    return globalEmployeesRef.current;
+    return globalEmployees;
   }, [calendarConfig, appointmentsVersion, userRole, userIdNumber, viewType]);
 
 
@@ -182,7 +189,7 @@ export const useDataLayer = ({
          }
     }
     // Appliquer les filtres SANS searchQuery pour avoir une base stable
-    return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), globalEmployeesRef.current);
+    return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), globalEmployees);
   }, [calendarConfig, appointmentsVersion, userRole, userIdNumber, isSearchOverlayOpen, itemsSnapshot]);
 
     
@@ -335,18 +342,27 @@ export const useDataLayer = ({
   };
 
   const updateEmployeeImage = (id: number, newImage: Image) => {
-    globalEmployeesRef.current = globalEmployeesRef.current.map(emp => 
-      emp.IdPersonnel === id ? { ...emp, image: newImage } : emp
+    setGlobalEmployees(prevEmployees => 
+      prevEmployees.map(emp => 
+        emp.IdPersonnel === id ? { ...emp, IdImage: newImage.id } : emp
+      )
     );
-    refreshData();
   };
 
-  const updateEmployeeGroup = (empId: number, groupId: number | null) => {
-    const nextTeam = teams.find(team => team.id === groupId);
-    globalEmployeesRef.current = globalEmployeesRef.current.map(emp => 
-      emp.IdPersonnel === empId ? { ...emp, equipe: nextTeam || undefined } : emp
+  const updateEmployeeGroup = (employee: User, groupId: number | null) => {
+      const prevEmployees = globalEmployees;
+      setGlobalEmployees(prevEmployees => 
+        prevEmployees.map(emp => 
+          emp.IdPersonnel === employee.IdPersonnel ? { ...emp, Equipe: groupId } : emp
+        )
+      );
+      
+      employeeService.updateEquipeEmployee(employee.IdPersonnel, { Type: employee.Type, IdEquipe: groupId }).catch(error => {
+        console.error("Erreur lors de la mise à jour de l'équipe de l'employé:", error);
+        // Revert en cas d'erreur
+        setGlobalEmployees(prevEmployees);
+      }
     );
-    refreshData();
   };
 
   const addManualEvent = (payload: { code: string; label: string; description: string; image?: Image; color: string; borderColor: string; textColor: string; actif: boolean; type: 'autre'; category: string; }) => {
@@ -409,6 +425,7 @@ export const useDataLayer = ({
     filteredAppointments,
     availableImages,
     initialTeams: teams,
+    poleActivites,
     updateEmployeeGroup,
     addManualEvent,
     toggleManualEvent,
@@ -420,6 +437,6 @@ export const useDataLayer = ({
     updateEventImage,
     updateEmployeeImage,
     loadAppointmentsInRange,
-    loadTeams,
+    loadTeams, loadPoleActivites
   };
 };
