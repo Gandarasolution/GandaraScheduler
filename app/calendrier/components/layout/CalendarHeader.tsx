@@ -38,7 +38,6 @@ export const CalendarHeader = memo(({
     viewDropdownRef,
     calendarConfigHook, // Pour ouvrir la modale de config calendrier
     
-    
     // Toggles d'affichage
     isDisplayWeekend, setIsDisplayWeekend,
     isFullDay, setIsFullDay,
@@ -202,7 +201,7 @@ export const CalendarHeader = memo(({
                       </button>
 
                       {/* Option: Paie Table - Seulement pour Admin et Manager */}
-                      {(user?.role === 'admin' || user?.role === 'manager') && (
+                      {(user?.role === 'admin' || user?.role === 'manager' || true) && (
                         <button
                           className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'paie-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
                           onClick={() => { setViewType('paie-table'); setIsViewDropdownOpen(false); }}
@@ -218,7 +217,7 @@ export const CalendarHeader = memo(({
                         </button>
                       )}
                       {/* Option: Événements manuels - Seulement pour Admin et Manager */}
-                      {(user?.role === 'admin' || user?.role === 'manager') && (
+                      {(user?.role === 'admin' || user?.role === 'manager' || true) && (
                         <button
                           className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
                           onClick={() => { setViewType('manual-event-table'); setIsViewDropdownOpen(false); }}

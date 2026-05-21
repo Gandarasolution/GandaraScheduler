@@ -374,9 +374,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             opacity: isInactive ? 0.5 : 1
           }}
         >        
-          {event?.IdImage ? (
+          {event?.Image ? (
             <Image
-              image={event.IdImage}
+              image={event.Image}
               className="w-8 h-8 object-cover flex-shrink-0 rounded-full"
             />
           ): (
@@ -500,7 +500,7 @@ const arePropsEqual = (prevProps: AppointmentItemProps, nextProps: AppointmentIt
     prevProps.isInactive === nextProps.isInactive &&
     prevProps.tagPlacement === nextProps.tagPlacement &&
     prevProps.chargeeAffaire === nextProps.chargeeAffaire &&
-    prevProps.event.IdImage === nextProps.event.IdImage &&
+    prevProps.event.Image === nextProps.event.Image &&
     prevProps.event.LibellePlanningRessource === nextProps.event.LibellePlanningRessource &&
     prevProps.event.CouleurFondPlanningRessource === nextProps.event.CouleurFondPlanningRessource &&
     prevProps.event.CouleurBordurePlanningRessource === nextProps.event.CouleurBordurePlanningRessource &&

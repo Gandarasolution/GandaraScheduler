@@ -48,7 +48,8 @@ async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, quer
       params.set(filterKey, activeFilters[filterKey].join(','));
     }
   }
-  console.log(params.toString());
+  //console.log(activeFilters);
+
   
 
   return await getRequest(
@@ -58,9 +59,51 @@ async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, quer
   );
 }
 
+async function getManualEvents(limit: number = 20, pageNum: number = 1, query: string = '', activeFilters: { [key: string]: string[] } = {}, timeoutMs: number = 15000) {
+  const params = new URLSearchParams();
+  params.set('limit', String(limit));
+  params.set('pageNum', String(pageNum));
+  params.set('q', query);
+
+  for (const filterKey in activeFilters) {
+    if (activeFilters[filterKey].length > 0) {
+      params.set(filterKey, activeFilters[filterKey].join(','));
+    }
+  }
+
+  return await getRequest(
+    `/api/ressources/manual-events?${params.toString()}`,
+    'getManualEvents',
+    { timeout: timeoutMs }
+  );
+}
+
+
+async function getRubriquePaie(limit: number = 20, pageNum: number = 1, query: string = '', activeFilters: { [key: string]: string[] } = {}, timeoutMs: number = 15000) {
+  const params = new URLSearchParams();
+  params.set('limit', String(limit));
+  params.set('pageNum', String(pageNum));
+  params.set('q', query);
+
+  for (const filterKey in activeFilters) {
+    if (activeFilters[filterKey].length > 0) {
+      params.set(filterKey, activeFilters[filterKey].join(','));
+    }
+  }
+
+  console.log(activeFilters);
+
+  return await getRequest(
+    `/api/ressources/rubrique-paie?${params.toString()}`,
+    'getRubriquePaie',
+    { timeout: timeoutMs }
+  );
+}
 
 export default {
   searchRessources,
   getRessourcesProjet,
+  getManualEvents,
+  getRubriquePaie,
   getFilterOptionsDynamic,
 };

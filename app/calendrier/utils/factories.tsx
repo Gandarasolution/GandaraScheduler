@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Appointment, User, ChantierItem, Item, Equipe } from "../types";
 import { AppointmentItem } from '@/app/calendrier/components'; // Assurez-vous que le chemin est bon
 
@@ -11,7 +12,7 @@ export const customRenderersFactory = (
   setSelectedAppointment: (appointment: Appointment) => void,
   handleOpenEditModal: (appointment: Appointment) => void,
   initialTeams: Record<number, Equipe>,
-  onTeamChange: (Employee: User, groupId: number | null) => void
+  onTeamChange: (Employee: User, groupId: number | null) => Promise<{ success: boolean }>
 ) => {
 
   const getWithSeparator = (num: string, colonne: string): string => {
@@ -35,7 +36,7 @@ export const customRenderersFactory = (
             IdPlanningRessource: chantierItem.IdPlanningRessource,
             DebutPlanningEvenement: 0,
             FinPlanningEvenement: 1000,
-            IdEmploye: employees[0].IdPersonnel,
+            IdEmploye: 0,
           }}
           isFullDay={false}
           isMobile={false}
@@ -50,7 +51,7 @@ export const customRenderersFactory = (
               IdPlanningRessource: chantierItem.IdPlanningRessource,
               DebutPlanningEvenement: 0,
               FinPlanningEvenement: 1000,
-              IdEmploye: employees[0].IdPersonnel,
+              IdEmploye: 0,
             }
             setSelectedAppointment(newAppointment);
             handleOpenEditModal(newAppointment);
@@ -114,7 +115,7 @@ export const customRenderersFactory = (
           onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.Nom?.charAt(0) || '?'}`; }}
           onClick={(e) => {
               e.stopPropagation();
-              onImageClick(employees.find(emp => emp.IdPersonnel === item.IdPersonnel)!);
+              onImageClick(item);
           }}
         />
         {item.Type === 'INTERIM' && (
@@ -161,8 +162,8 @@ export const customRenderersFactory = (
 
   if (viewType === 'paie-table') {
     return {
-      image: imageRendererChantierAndPaie,
-      verrou: (value: boolean) => (          
+      Image: imageRendererChantierAndPaie,
+      Verrou: (value: boolean) => (          
         <div className="flex items-center justify-center">
           {value ? (
             <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
@@ -175,7 +176,7 @@ export const customRenderersFactory = (
           )}
         </div>
       ),
-      actif: (value: boolean) => (
+      Actif: (value: boolean) => (
         <div className="flex items-center justify-center">
           <span className={`w-3 h-3 rounded-full ${value ? 'bg-green-600' : 'bg-red-600'}`}></span>
         </div>
@@ -187,29 +188,11 @@ export const customRenderersFactory = (
   return {
     Image: imageRendererEmployee,
     Equipe: (value: any, item: User) => (  
-      console.log(initialTeams),
-      
-      <div className="flex items-center justify-start w-full h-full">
-        {/* Selecteur d'équipe */}
-        <select
-          value={item.Equipe || ''} // Valeur actuelle de l'équipe, ou vide si aucune
-          onChange={(e) => {
-            if (onTeamChange) {
-                const newGroupId = e.target.value ? Number(e.target.value) : null;
-                onTeamChange(item, newGroupId);
-            }
-          }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full px-2 py-1 text-sm border border-default rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all cursor-pointer"
-        >
-          <option value="">Aucune équipe</option>
-          {Object.values(initialTeams).map(team => (
-            <option key={team.Id} value={team.Id}>
-              {team.Nom}
-            </option>
-          ))}
-        </select>
-      </div>
+      <TeamSelectCell
+        item={item}
+        initialTeams={initialTeams}
+        onTeamChange={onTeamChange}
+      />
     ),
     Type: (value: string) => {
       const typeColors: Record<string, string> = {
@@ -229,4 +212,61 @@ export const customRenderersFactory = (
       );
     }
   };
+};
+
+
+
+
+type TeamSelectCellProps = {
+  item: User;
+  initialTeams: Record<number, Equipe>;
+  onTeamChange: (employee: User, groupId: number | null) => Promise<{ success: boolean }>;
+};
+
+const TeamSelectCell = ({ item, initialTeams, onTeamChange }: TeamSelectCellProps) => {
+  // On crée un état local qui prend la valeur de départ
+  const [localValue, setLocalValue] = useState(item.Equipe || '');
+
+  // Si jamais la donnée d'origine change depuis le serveur, on met à jour
+  useEffect(() => {
+    setLocalValue(item.Equipe || '');
+  }, [item.Equipe]);
+
+  return (
+    <div className="flex items-center justify-start w-full h-full">
+      <select
+        value={localValue} // 👈 Le select écoute l'état local, pas la prop
+        onChange={(e) => {
+          const newValue = e.target.value;
+          const newGroupId = newValue ? Number(newValue) : null;
+          
+          // 1. On met à jour l'affichage instantanément
+          setLocalValue(newValue); 
+          
+          // 2. ENSUITE, on appelle ta fonction parent (API, etc.)
+          if (onTeamChange) {
+            onTeamChange(item, newGroupId).then(response => {
+              if (!response.success) {
+                // Si la mise à jour a échoué, on revert l'affichage
+                setLocalValue(item.Equipe || '');
+                alert('Erreur lors de la mise à jour de l’équipe. Veuillez réessayer.');
+              }
+            }).catch(() => {
+              setLocalValue(item.Equipe || '');
+              alert('Erreur lors de la mise à jour de l’équipe. Veuillez réessayer.');
+            });
+          }
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full px-2 py-1 text-sm border border-default rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all cursor-pointer"
+      >
+        <option value="">Aucune équipe</option>
+        {Object.values(initialTeams).map((team: any) => (
+          <option key={team.Id} value={team.Id}>
+            {team.Nom}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 };

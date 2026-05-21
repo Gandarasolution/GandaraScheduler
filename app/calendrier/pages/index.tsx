@@ -241,15 +241,17 @@ export default function HomePage({
   }, [user.role]);
 
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
-  const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, query: string = '', timeoutMs: number = 15000) => {
-    console.log(limit, pageNum, query, timeoutMs);
-    
+  const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
     return viewState.viewType === 'chantier-table' 
-      ? (ressourceService.getRessourcesProjet as any)(limit, pageNum, query, viewState.activeFilters, timeoutMs) 
+      ? (ressourceService.getRessourcesProjet as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
       : viewState.viewType === 'employee-table' 
-        ? (employeeService.getEmployeesPag as any)(limit, pageNum, query) 
-        : undefined;
-  }, [viewState.viewType, viewState.activeFilters]);
+        ? (employeeService.getEmployeesPag as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
+        : viewState.viewType === 'manual-event-table' 
+          ? (ressourceService.getManualEvents as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
+          : viewState.viewType === 'paie-table'
+            ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs)
+            : undefined;
+  }, [viewState.viewType, viewState.activeFilters, viewState.searchInput]);
 
   // --- FILTRES ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -469,7 +471,7 @@ export default function HomePage({
                 ) : viewState.viewType === 'manual-event-table' ? (
                   <Suspense fallback={<LoadingFallback message="Chargement des événements..." />}>
                     <ManualEventsManager
-                      events={dataLayer.searchResults}
+                      events={[]}
                       onDeleteRequest={(item) => {
                         // Vérifier si l'item est utilisé dans le planning
                         const result = appointmentLogic.handleDeleteDimension(item.IdPlanningRessource);

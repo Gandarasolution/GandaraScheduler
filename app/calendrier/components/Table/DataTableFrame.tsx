@@ -121,7 +121,6 @@ export type PaginatedSearchResponse<T = GenericDataItem> = {
 export type PaginatedSearchFunction<T = GenericDataItem> = (
   limit?: number,
   pageNum?: number,
-  query?: string,
   timeoutMs?: number,
 ) => Promise<PaginatedSearchResponse<T>>;
 
@@ -414,7 +413,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
 
     setIsPaginationLoading(true);
     try {
-      const callSearch = () => paginatedSearchFunction(DEFAULT_PAGE_SIZE, targetPage, '', 15000);
+      const callSearch = () => paginatedSearchFunction(DEFAULT_PAGE_SIZE, targetPage, 15000);
       let response: PaginatedSearchResponse<T> | undefined;
 
       response  = await callSearch();
@@ -424,9 +423,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
         setRemoteTotalPages(1);
         return;
       }
-      
+            
       const { pageData, totalLines } = extractPaginatedPayload(response);
       const totalPages = Math.max(1, Math.ceil(totalLines / DEFAULT_PAGE_SIZE));
+
 
       setRemotePageItems(normalizeItemsWithId(pageData));
       setRemoteTotalPages(totalPages);
@@ -455,8 +455,14 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       return;
     }
 
-    setRemotePageItems(normalizeItemsWithId(([]) as unknown as T[]));
-    fetchPage(1);
+    setIsPaginationLoading(true);
+
+    const timeoutId = setTimeout(() => {
+      setRemotePageItems(normalizeItemsWithId(([]) as unknown as T[]));
+      fetchPage(1);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [enablePagination, paginatedSearchFunction, fetchPage, normalizeItemsWithId]);
     
 
@@ -1261,5 +1267,6 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     </div>
   );
 };
+
 
 export default memo(DataTableFrame);

@@ -447,7 +447,20 @@ export const CalendarModals = memo(({
             appointments={data.appointments}
             tagPlacement={modalsState.tagPlacement}
             appointment={modalsState.selectedAppointmentForm as Appointment}
-            item={data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)] as Item}
+            item={modalsState.selectedAppointmentForm?.IdPlanningRessource === -1 
+              ? {
+                  IdPlanningRessource: -1,
+                  CodePlanningRessource: '',
+                  LibellePlanningRessource: '',
+                  Type: 'Rubrique Perso',
+                  CouleurFondPlanningRessource: '#ffffff',
+                  CouleurBordurePlanningRessource: '#000000',
+                  CouleurTextePlanningRessource: '#000000',
+                  Actif: false,
+                  Verrou: false,
+                  Category: 'dimension',
+              } 
+              : data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)] as Item}
             items={Object.values(data.items)}
             isReducedVersion={resourceEditMode !== null}
             resourceEditMode={resourceEditMode}
@@ -474,7 +487,7 @@ export const CalendarModals = memo(({
         <Suspense fallback={<ModalLoadingFallback />}>
           <ImageSelectorContentModal
             images={data.availableImages}
-            actualImage={data.availableImages.find(img => img.id === (config.viewType === 'employee-table' ? data.selectedEmployee?.IdImage : data.selectedItem?.IdImage)) ?? null}
+            actualImage={data.availableImages.find(img => img.id === (config.viewType === 'employee-table' ? data.selectedEmployee?.IdImage : data.selectedItem?.Image)) ?? null}
             isOpen={modalsState.isImageSelectorOpen}
             onClose={handlers.closeImageModal}
             onImageSelect={handlers.handleImageSelect}

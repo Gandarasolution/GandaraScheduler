@@ -249,10 +249,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   useEffect(() => {
     // Ne mettre à jour que si l'image a réellement changé
-    if (item?.IdImage !== formDataItemType.IdImage) {
-      setFormDataItemType(prev => ({ ...prev, IdImage: item?.IdImage }));
+    if (item?.Image !== formDataItemType.Image) {
+      setFormDataItemType(prev => ({ ...prev, Image: item?.Image }));
     }
-  }, [item?.IdImage, formDataItemType.IdImage]);
+  }, [item?.Image, formDataItemType.Image]);
   
 
   /**
@@ -279,7 +279,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     let isMounted = true;
 
     const loadPermissions = async () => {
-      if (isEditingResource && formDataItemType.IdPlanningRessource && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual)) {
+      if (isEditingResource && formDataItemType.IdPlanningRessource && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso')) {
         const permissionEntries = await Promise.all(
           employees.map(async (emp) => {
             const response = await socialPermissionService.getSocialItemPermission(emp.IdPersonnel, formDataItemType.IdPlanningRessource);
@@ -304,7 +304,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         return;
       }
 
-      if (isCreatingResource && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual)) {
+      if (isCreatingResource && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso')) {
       // Pour la création, initialiser avec tous les droits
       const permissions = new Map<number, SocialItemPermission>();
       employees.forEach(emp => {
@@ -372,7 +372,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         const newItemId = Date.now();
         
         // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-        if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) {
+        if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
           employeePermissions.forEach((perm) => {
             void socialPermissionService.setSocialItemPermission({
               ...perm,
@@ -388,7 +388,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       // Validation: gestion de la modification d'une ressource existante
       if (isEditingResource) {
         // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-        if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) {
+        if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
           employeePermissions.forEach((perm) => {
             void socialPermissionService.setSocialItemPermission(perm);
           });
@@ -462,7 +462,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       const newItemId = Date.now();
       
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) {
+      if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
         employeePermissions.forEach((perm) => {
           void socialPermissionService.setSocialItemPermission({
             ...perm,
@@ -481,7 +481,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       console.log('Modification de ressource');
       
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) {
+      if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
         employeePermissions.forEach((perm) => {
           void socialPermissionService.setSocialItemPermission(perm);
         });
@@ -593,7 +593,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   };
 
   // Champs de ressource pour FormHeader (mode création/édition)
-  const resourceFields: ResourceField[] | undefined = (isCreatingResource || (isEditingResource && formDataItemType.isManual)) ? [
+  const resourceFields: ResourceField[] | undefined = (isCreatingResource || (isEditingResource && formDataItemType.Type === 'Rubrique Perso')) ? [
     {
       name: 'code',
       label: 'Code',
@@ -729,7 +729,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           
           {/* FormHeader - Icône + Couleurs + Ressource */}
           <FormHeader
-            icon={formDataItemType?.IdImage || undefined}
+            icon={formDataItemType?.Image || undefined}
             onIconClick={() => handleOpenImageModal(formDataItemType.IdPlanningRessource)}
             colors={colors}
             onColorChange={handleColorChange}
@@ -757,7 +757,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           </FormPreview>
         
           {/* PermissionsPanel - Gestion des permissions par employé */}
-          {(isCreatingResource || isEditingResource) && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso' || formDataItemType.isManual) && (
+          {(isCreatingResource || isEditingResource) && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') && (
             <PermissionsPanel
               users={usersWithPermissions}
               availablePermissions={availablePermissions}

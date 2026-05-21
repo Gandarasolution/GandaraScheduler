@@ -9,7 +9,6 @@ import {
 } from '../../utils/constants';
 import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
 import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
-import { useResourceSearch } from '../search';
 import { getCachedImages, subscribeToImageCache, upsertCachedImage } from '../../utils/imageCacheStore';
 
 
@@ -62,19 +61,7 @@ export const useDataLayer = ({
   }, [calendarConfig]);
 
 
-  const {
-    results: remoteSearchResults,
-    isSearching,
-    error: searchError,
-    retrySearch,
-  } = useResourceSearch({
-    query: searchQueryDimensions,
-    types: selectedRdvTypes,
-    limit: SEARCH_DEFAULT_LIMIT,
-    fallbackItems: itemsSnapshot,
-    enabled: searchQueryDimensions.trim().length >= SEARCH_MIN_QUERY_LENGTH, // Activer la recherche distante seulement si la query est suffisamment longue
-  });
-
+ 
   useEffect(() => {
     const unsubscribe = subscribeToImageCache((images) => {
       setAvailableImages(images);
@@ -268,7 +255,7 @@ export const useDataLayer = ({
                   key: 'IG',
                   label: 'Informations Générales', 
                   attributes: [
-                      { key: 'IdImage', label: '', sortable: false , width:50 },
+                      { key: 'Image', label: '', sortable: false , width:50 },
                       { key: 'PoleActivite',   label: 'Pôle', type:'string', width:120 },
                       { key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
                       { key: 'Identifiant',  label: 'Identifiant', type:'string', width:125 },
@@ -300,12 +287,12 @@ export const useDataLayer = ({
               key: 'all',
               label: '', 
               attributes: [
-                  { key: 'verrou', label: 'Verrou', width: 80},
-                  { key: 'image', label: '', sortable: false, width:50 },
-                  { key: 'code', label: 'Code', width: 150},
-                  { key: 'label', label: 'Libellé' },
-                  { key: 'actif', label: 'ACTF', width: 70 },
-                  { key: 'category', label: 'Catégorie', width: 300}
+                  { key: 'Verrou', label: 'Verrou', width: 80},
+                  { key: 'Image', label: '', sortable: false, width:50 },
+                  { key: 'CodePlanningRessource', label: 'Code', width: 150},
+                  { key: 'LibellePlanningRessource', label: 'Libellé' },
+                  { key: 'Actif', label: 'ACTF', width: 70 },
+                  { key: 'Category', label: 'Catégorie', width: 300}
               ]
               }
           ]
@@ -337,7 +324,7 @@ export const useDataLayer = ({
   };
 
   const updateEventImage = (id: number, newImage: Image) => {
-    itemsRef.current[id] = { ...itemsRef.current[id], IdImage: newImage.id };
+    itemsRef.current[id] = { ...itemsRef.current[id], Image: newImage.id };
     refreshData(); // Force le re-render
   };
 
@@ -349,20 +336,27 @@ export const useDataLayer = ({
     );
   };
 
-  const updateEmployeeGroup = (employee: User, groupId: number | null) => {
-      const prevEmployees = globalEmployees;
-      setGlobalEmployees(prevEmployees => 
-        prevEmployees.map(emp => 
-          emp.IdPersonnel === employee.IdPersonnel ? { ...emp, Equipe: groupId } : emp
-        )
-      );
-      
-      employeeService.updateEquipeEmployee(employee.IdPersonnel, { Type: employee.Type, IdEquipe: groupId }).catch(error => {
-        console.error("Erreur lors de la mise à jour de l'équipe de l'employé:", error);
-        // Revert en cas d'erreur
-        setGlobalEmployees(prevEmployees);
-      }
+  const updateEmployeeGroup = async (employee: User, groupId: number | null): Promise<{ success: boolean }> => {
+    const prevEmployees = globalEmployees;
+    setGlobalEmployees(prev => 
+      prev.map(emp => emp.IdPersonnel === employee.IdPersonnel ? { ...emp, Equipe: groupId } : emp)
     );
+
+    try {
+      const response = await employeeService.updateEquipeEmployee(employee.IdPersonnel, { Type: employee.Type, IdEquipe: groupId });
+      if (response?.error === 0) {
+        return { success: true };
+      }
+      console.error("Erreur lors de la mise à jour de l'équipe de l'employé:", response?.message || "Erreur inconnue");
+      // Revert en cas d'erreur
+      setGlobalEmployees(prevEmployees);
+      return { success: false };
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de l'équipe de l'employé:", error);
+      // Revert en cas d'erreur
+      setGlobalEmployees(prevEmployees);
+      return { success: false };
+    }
   };
 
   const addManualEvent = (payload: { code: string; label: string; description: string; image?: Image; color: string; borderColor: string; textColor: string; actif: boolean; type: 'autre'; category: string; }) => {
@@ -378,9 +372,9 @@ export const useDataLayer = ({
       code: payload.code,
       image: payload.image,
       Type: 'Rubrique Perso',
-      verrou: false,
+      Verrou: false,
       Actif: payload.actif,
-      category: payload.category,
+      Category: payload.category,
       isManual: true
     } as Item;
 
@@ -392,8 +386,7 @@ export const useDataLayer = ({
   const updateManualEventCategory = (id: number, category: string) => {
     itemsRef.current[id] = {
       ...itemsRef.current[id],
-      category,
-      isManual: true
+      Category: category,
     } as Item;
     refreshData();
   };
@@ -407,7 +400,7 @@ export const useDataLayer = ({
     itemsRef.current[id] = {
       ...itemsRef.current[id],
       Actif: !(itemsRef.current[id] as any).Actif,
-      isManual: true
+      
     } as Item;
     refreshData();
   };
@@ -415,10 +408,6 @@ export const useDataLayer = ({
 
   return {
     isLoading,
-    isSearching,
-    searchError,
-    retrySearch,
-    searchResults: remoteSearchResults,
     itemsRef,
     appointmentsRef,
     filteredEmployees,

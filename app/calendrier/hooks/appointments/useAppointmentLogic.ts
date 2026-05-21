@@ -595,7 +595,7 @@ export const useAppointmentLogic = ({
             CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
             CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
             CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
-            IdImage: eventUpdate.IdImage,
+            IdImage: eventUpdate.Image,
           },
         };
 
@@ -670,7 +670,7 @@ export const useAppointmentLogic = ({
               CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
               CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
               CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
-              IdImage: eventUpdate.IdImage,
+              Image: eventUpdate.Image,
           };
 
           reorganizePriorities(

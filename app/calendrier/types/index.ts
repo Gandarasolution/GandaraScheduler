@@ -120,10 +120,9 @@ interface BaseItem {
   CouleurBordurePlanningRessource: string;
   CouleurTextePlanningRessource: string;
   CodePlanningRessource: string;
-  IdImage?: number;
+  Image?: number;
   defaultDescription?: string;
   Etiquettes?: Tag[];
-  isManual?: boolean;
 }
 
 export interface ChantierItem extends BaseItem {
@@ -146,9 +145,9 @@ export interface ChantierItem extends BaseItem {
 
 // Interface commune pour les attributs partagés entre Absence et Autre
 export interface CommonPaieAttributs extends BaseItem {
-  verrou: boolean;
+  Verrou: boolean;
   Actif: boolean;
-  category: BaseItemCategory["name"];
+  Category: BaseItemCategory["name"];
 }
 
 export interface AbsenceItem extends CommonPaieAttributs {
