@@ -1,6 +1,6 @@
 import { memo, use, useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
-import { Image } from "../../types";
+import { ImageType } from "../../types";
 
 
 /**
@@ -8,11 +8,11 @@ import { Image } from "../../types";
  */
 interface ImageSelectorContentProps {
   isOpen: boolean;
-  images?: Image[];
-  actualImage: Image | null;
-  onImageSelect: (image: Image) => void;
+  images?: ImageType[];
+  actualImage: ImageType | null;
+  onImageSelect: (image: ImageType) => void;
   onClose: () => void;
-  onImageUpload: (file: File) => Promise<Image>;
+  onImageUpload: (file: File) => Promise<ImageType>;
   isUploading: boolean;
   uploadError: string | null;
   fetchPaginatedImages?: (page: number, limit?: number) => Promise<void>;

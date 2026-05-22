@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Appointment, User, type Image } from '@/app/calendrier';
+import { Appointment, ImageType, User } from '@/app/calendrier';
 
 // Interface complète des props
 interface InteractionProps {
@@ -30,7 +30,7 @@ interface InteractionProps {
   HALF_DAY_INTERVALS: { startHour: number; endHour: number }[];
 
   viewType: string;
-  addImage: (newImage: Image) => Image;
+  addImage: (newImage: ImageType) => ImageType;
 
   setIsViewDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -239,7 +239,7 @@ export const useInteraction = ({
       setUploadError(null);
   }, []);
 
-  const handleImageUpload = async (file: File): Promise<Image> => {
+  const handleImageUpload = async (file: File): Promise<ImageType> => {
       setIsUploading(true);
       setUploadError(null);
   

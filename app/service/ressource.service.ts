@@ -100,10 +100,27 @@ async function getRubriquePaie(limit: number = 20, pageNum: number = 1, query: s
   );
 }
 
+async function verifyUniqueCode(code: string) {
+
+  const params = new URLSearchParams();
+  params.set('code', code);
+  const response = await getRequest(
+    `/api/ressources/verify-code?${params.toString()}`,
+    'verifyUniqueCode'
+  );
+  return response
+}
+
+async function addRessourceManual(ressourceData: any) {
+  return await postRequest('/api/ressources/manual-events/create', ressourceData, 'addRessourceManual');
+}
+
 export default {
   searchRessources,
   getRessourcesProjet,
   getManualEvents,
   getRubriquePaie,
   getFilterOptionsDynamic,
+  verifyUniqueCode,
+  addRessourceManual,
 };

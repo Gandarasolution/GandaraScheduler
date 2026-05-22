@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { addHours, eachDayOfInterval } from "date-fns";
-import { Appointment, User, HistoryAction, Item, Tag } from '../../types';
+import { Appointment, User, HistoryAction, Item, Tag, AutreItem } from '../../types';
 import { createAppointmentUtils } from '../../utils/appointmentUtils';
 import { notificationService } from "../../services";
 import { getWorkedDayIntervals, isWeekend } from "../../utils/dates";
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
 import { on } from 'events';
+import ressourceService from '@/app/service/ressource.service';
 
 // Type pour les données de répétition
 export type RepeatData = {
@@ -1226,7 +1227,7 @@ export const useAppointmentLogic = ({
     setIsModalOpen(true);
   }, []);
 
-  const handleAddDimension = useCallback((dimension: Item) => {
+  const handleAddManualRessource = useCallback( async (dimension: AutreItem): Promise<{ success: boolean, message?: string }> => {
     // Marquer les Items de type 'Rubrique Perso' comme manuels
 
     dimension.IdPlanningRessource = Date.now(); // Générer un ID unique temporaire
@@ -1234,11 +1235,49 @@ export const useAppointmentLogic = ({
       ? { ...dimension, isManual: true } 
       : dimension;
     eventsRef.current[Number(dimension.IdPlanningRessource)] = newItem;
+
+    try {
+      const apiPayload = {
+        CodePlanningRessource: dimension.CodePlanningRessource,
+        LibellePlanningRessource: dimension.LibellePlanningRessource,
+        CouleurFondPlanningRessource: dimension.CouleurFondPlanningRessource,
+        CouleurBordurePlanningRessource: dimension.CouleurBordurePlanningRessource,
+        CouleurTextePlanningRessource: dimension.CouleurTextePlanningRessource,
+        Actif: dimension.Actif,
+        IdImage: dimension.Image,
+      };
+      const result = await ressourceService.addRessourceManual(apiPayload);
+      if (isApiSuccess(result) && result.data?.IdPlanningRessource) {
+        const newId = result.data;
+        // Mettre à jour l'ID de la ressource dans le cache et tous les rendez-vous qui l'utilisent
+        const oldId = dimension.IdPlanningRessource;
+        if (oldId !== newId) {
+          // Mettre à jour la ressource dans le cache
+          eventsRef.current[Number(newId)] = {
+            ...eventsRef.current[Number(oldId)],
+            IdPlanningRessource: newId,
+          };
+          delete eventsRef.current[Number(oldId)];
+        }
+      } else {
+        const message = result?.message || 'Le serveur a refusé l\'ajout de la ressource.';
+        notificationService.error('Ajout annulé', message);
+          // Nettoyer la ressource ajoutée localement en cas d'échec
+        delete eventsRef.current[Number(dimension.IdPlanningRessource)];
+        return { success: false, message: message };
+      }
+    } catch (error) {
+      console.error('Erreur réseau lors de l\'ajout de la ressource', error);
+      notificationService.error('Erreur réseau', 'Impossible d\'ajouter la ressource sur le serveur');
+      return { success: false, message: error instanceof Error ? error.message : 'Erreur inconnue' };
+    }
+
     setIsModalOpen(false);
     onUpdate();
+    return { success: true };
   }, []);
 
-  const handleEditDimension = useCallback((dimension: Item) => {
+  const handleEditManualRessource = useCallback((dimension: Item) => {
     eventsRef.current[Number(dimension.IdPlanningRessource)] = {
       ...eventsRef.current[Number(dimension.IdPlanningRessource)],
       ...dimension,
@@ -1247,7 +1286,7 @@ export const useAppointmentLogic = ({
     onUpdate();
   }, []);
 
-  const handleDeleteDimension = useCallback((dimensionId: number, forceDelete: boolean = false) => {
+  const handleDeleteManualRessource = useCallback((dimensionId: number, forceDelete: boolean = false) => {
     
     // Vérifier si la rubrique est utilisée dans le planning
     const isUsedInPlanning = appointmentsRef.current.some(
@@ -1344,9 +1383,9 @@ export const useAppointmentLogic = ({
     moveAppointment,
     createAppointmentFromDrag,
     handleOpenEditModal,
-    handleAddDimension,
-    handleEditDimension,
-    handleDeleteDimension,
+    handleAddManualRessource,
+    handleEditManualRessource,
+    handleDeleteManualRessource,
     handleDeactivateDimension,
     removeTagFromAppointments,
 

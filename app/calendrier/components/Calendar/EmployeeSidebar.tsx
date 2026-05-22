@@ -15,7 +15,7 @@
 import React, { memo } from 'react';
 import { User, CalendarConfig } from '../../types';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
-import { Image as CalendarImage } from '../ui/Image';
+import { Image as CalendarImage } from '../ui';
 import { 
   TIMELINE_HEADERITEMS_CELL_HEIGHT, 
   CONTAINER_PADDING,

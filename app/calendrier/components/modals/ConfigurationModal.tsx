@@ -1,6 +1,6 @@
 
 import { memo, useEffect, useState } from "react";
-import { CalendarConfig, Filter, Image, GroupingLevel, FilterCategories, User } from "../../types";
+import { CalendarConfig, Filter, ImageType, GroupingLevel, FilterCategories, User } from "../../types";
 import Modal from "./Modal";
 import { Group } from "lucide-react";
 
@@ -9,7 +9,7 @@ type ConfigurationModalProps = {
   user: User;
   isOpen: boolean;
   onClose: () => void;
-  availablesImages: Image[];
+  availablesImages: ImageType[];
   availableConfigs: CalendarConfig[];
   currentConfig: CalendarConfig | null;
   onConfigChange: (config: CalendarConfig) => void;
@@ -42,7 +42,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 }) => {
   const [configName, setConfigName] = useState('');
   const [configDescription, setConfigDescription] = useState('');
-  const [configImage, setConfigImage] = useState<Image | undefined>(undefined);
+  const [configImage, setConfigImage] = useState<ImageType | undefined>(undefined);
   const [groupingLevel1, setGroupingLevel1] = useState<GroupingLevel | undefined>(undefined);
   const [groupingLevel2, setGroupingLevel2] = useState<GroupingLevel | undefined>(undefined);
   const [configFilters, setConfigFilters] = useState<Filter[]>([]);

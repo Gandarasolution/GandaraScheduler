@@ -28,12 +28,12 @@ import {
   DraggableSource,
 } from '@/app/calendrier/components';
 import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOverlay';
+import { getTableStructure } from '../components/Table/tableConfig';
 
 
 // --- COMPOSANTS UI AVEC CODE SPLITTING ---
 const CalendarGrid = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.CalendarGrid })));
 const DataTableFrame = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.DataTableFrame })));
-const ManualEventsManager = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.ManualEventsManager })));
 
 // --- CUSTOM HOOKS ---
 import { 
@@ -55,7 +55,6 @@ import ressourceService from '@/app/service/ressource.service';
 import calendarConfigService from '@/app/service/calendarConfig.service';
 
 // --- UTILITAIRES ---
-import { customRenderersFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
 import { User, Item, CommonPaieAttributs } from '../types';
 import { canCreateEvent } from '../utils/permissions';
@@ -468,53 +467,24 @@ export default function HomePage({
                   ) : (
                     <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>
                   )
-                ) : viewState.viewType === 'manual-event-table' ? (
-                  <Suspense fallback={<LoadingFallback message="Chargement des événements..." />}>
-                    <ManualEventsManager
-                      events={[]}
-                      onDeleteRequest={(item) => {
-                        // Vérifier si l'item est utilisé dans le planning
-                        const result = appointmentLogic.handleDeleteDimension(item.IdPlanningRessource);
-                        const isActive = 'Actif' in item ? (item as CommonPaieAttributs).Actif : true;
-                        // Toujours ouvrir la modal de confirmation
-                        setDeleteConfirmData({ 
-                          item, 
-                          isUsedInPlanning: result.isUsedInPlanning || false, 
-                          isActive 
-                        });
-                      }}
-                      onEditRequest={(item) => {
-                        appointmentLogic.setSelectedAppointment({
-                          IdPlanningEvenement: 0,
-                          AnnotationPlanningEvenement: '',
-                          IdPlanningRessource: item.IdPlanningRessource,
-                          DebutPlanningEvenement: 0,
-                          FinPlanningEvenement: 1000,
-                          IdEmploye: globalEmployees[0].IdPersonnel,
-                        });
-                        appointmentLogic.setSelectedItem(item);
-                        appointmentLogic.setIsModalOpen(true);
-                      }}
-                    />
-                  </Suspense>
                 ) : (
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
                   <Suspense fallback={<LoadingFallback message="Chargement du tableau..." />}>
                     <DataTableFrame 
-                      categoriesStructure={dataLayer.getTableStructure() || []}
+                      categoriesStructure={getTableStructure(
+                        viewState.viewType, 
+                        {
+                          setSelectedAppointment: appointmentLogic.setSelectedAppointment,
+                          handleOpenEditModal: appointmentLogic.handleOpenEditModal,
+                          onImageClick: interaction.handleOpenImageModal,
+                          initialTeams: dataLayer.initialTeams,
+                          onTeamChange: dataLayer.updateEmployeeGroup,
+                          onEditManuelRessourceRequest: appointmentLogic.handleOpenEditModal
+                        }
+                      ) || []}
                       enablePagination={true}
                       paginatedSearchFunction={handlePaginatedSearch}
                       loadingElement={<LoadingFallback message="Chargement des données..." />}
-                      customRenderers={
-                        customRenderersFactory(
-                          viewState.viewType, 
-                          globalEmployees, 
-                          interaction.handleOpenImageModal,
-                          appointmentLogic.setSelectedAppointment,
-                          appointmentLogic.handleOpenEditModal,
-                          dataLayer.initialTeams,
-                          dataLayer.updateEmployeeGroup
-                        ) as any}
                       showGroupHeaders={viewState.viewType === 'chantier-table'}
                       onRightClick={interaction.handleDataTableContextMenu}
                       heightCell={60}
@@ -558,10 +528,10 @@ export default function HomePage({
             handlers={{
               closeModal: () => appointmentLogic.setIsModalOpen(false),
               saveAppointment: appointmentLogic.handleSaveAppointment,
-              handleAddDimension: appointmentLogic.handleAddDimension,
-              handleEditDimension: appointmentLogic.handleEditDimension,
-              handleDeleteDimension: (dimensionId: number, forceDelete: boolean = false) => {
-                const result = appointmentLogic.handleDeleteDimension(dimensionId, forceDelete);
+              handleAddManualRessource: appointmentLogic.handleAddManualRessource,
+              handleEditManualRessource: appointmentLogic.handleEditManualRessource,
+              handleDeleteManualRessource: (dimensionId: number, forceDelete: boolean = false) => {
+                const result = appointmentLogic.handleDeleteManualRessource(dimensionId, forceDelete);
                 if (result.success) {
                   notificationService.info('Suppression réussie', result.message);
                 }

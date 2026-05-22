@@ -1,8 +1,8 @@
-import { Image } from '../types';
+import { ImageType } from '../types';
 
-type ImageCacheListener = (images: Image[]) => void;
+type ImageCacheListener = (images: ImageType[]) => void;
 
-const imageCache = new Map<number, Image>();
+const imageCache = new Map<number, ImageType>();
 const listeners = new Set<ImageCacheListener>();
 
 function emit() {
@@ -10,15 +10,15 @@ function emit() {
   listeners.forEach(listener => listener(images));
 }
 
-export function getCachedImages(): Image[] {
+export function getCachedImages(): ImageType[] {
   return Array.from(imageCache.values());
 }
 
-export function getCachedImageById(id: number): Image | undefined {
+export function getCachedImageById(id: number): ImageType | undefined {
   return imageCache.get(id);
 }
 
-export function upsertCachedImage(image: Image): void {
+export function upsertCachedImage(image: ImageType): void {
   if (!image || typeof image.id !== 'number') {
     return;
   }

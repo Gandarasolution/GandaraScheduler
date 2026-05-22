@@ -11,7 +11,7 @@ import { Appointment, Item } from '../../types';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS } from '../../utils/constants';
 import AppointmentMetadata from './AppointmentIcon';
 import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
-import { Image } from '../ui/Image';
+import { Image } from '../ui';
 
 interface AppointmentItemProps {
   appointment: Appointment;

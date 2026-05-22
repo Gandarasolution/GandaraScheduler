@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { User } from '../../types';
-import { Image } from '../ui/Image';
+import { Image } from '../ui';
 import { getCachedImageById } from '../../utils/imageCacheStore';
 
 interface UserMenuProps {

@@ -30,7 +30,7 @@ import { useNotifications, useCalendarWorker } from '../../../hooks';
 import notificationApiService from '@/app/service/notificationApi.service';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
 import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
-import { Image } from '../../ui/Image';
+import { Image } from '../../ui';
 import { getCachedImageById } from '../../../utils/imageCacheStore';
 
 // Lazy loading des composants lourds
@@ -691,8 +691,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                     setSelectedItem(null);
                   }}
                   handleOpenImageModal={() => {}}
-                  handleAddDimension={() => {}}
-                  handleEditDimension={() => {}}
+                  handleEditManualRessource={() => {}}
+                  handleAddManualRessource={async (_dimension) => ({ success: true })}
                 />
               </div>
             </div>

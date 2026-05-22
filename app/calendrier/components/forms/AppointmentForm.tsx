@@ -16,7 +16,7 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect, useCallback, useRef } from 'react';
-import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, SocialItemPermission, Tag } from '../../types';
+import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, SocialItemPermission, Tag, AutreItem } from '../../types';
 import { isSameDay, isSameYear, isSameMonth, format } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 import socialPermissionService from '@/app/service/socialPermission.service';
@@ -28,7 +28,8 @@ import PermissionsPanel, { Permission, UserWithPermissions } from './Permissions
 import TagsManager from './TagsManager';
 import { FormPreview, EmployeeSelector, AnnotationsField, ExpandButton, ActionButtons, Employee } from './FormComponents';
 import { useModalContext } from '@/app/calendrier/components/modals/Modal';
-
+import ressourceService from '@/app/service/ressource.service';
+import { notificationService } from '../..';
 /**
  * Interface définissant les propriétés du composant AppointmentForm
  * @interface AppointmentFormProps
@@ -73,8 +74,10 @@ interface AppointmentFormProps {
   handleOpenImageModal: (itemId: number) => void;
   /** Callback pour notifier si le formulaire a des modifications non enregistrées */
   onDirtyChange?: (isDirty: boolean) => void;
-  handleAddDimension: (dimension: Item) => void;
-  handleEditDimension: (dimension: Item) => void;
+  /** Callback pour ajouter une ressource manuelle */
+  handleAddManualRessource: (dimension: AutreItem) => Promise<{ success: boolean, message?: string }>;
+  /** Callback pour éditer une ressource manuelle */
+  handleEditManualRessource: (dimension: Item) => void;
   /** Callback pour supprimer une étiquette de tous les rendez-vous associés */
   onRemoveTagFromAppointments?: (tagId: number) => void;
   onAddTagToResource?: (tag: any) => Promise<any>;
@@ -127,8 +130,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   onClose,
   handleOpenImageModal,
   onDirtyChange,
-  handleAddDimension,
-  handleEditDimension,
+  handleAddManualRessource,
+  handleEditManualRessource,
   isMobile,
   resourceEditMode = null,
   onRemoveTagFromAppointments,
@@ -163,7 +166,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Charger les étiquettes au chargement
   useEffect(() => {
-    if (onFetchTagsForResource && item?.IdPlanningRessource) {
+    if (onFetchTagsForResource && item?.IdPlanningRessource && isEditingResource) {
       setIsLoadingTags(true);
       onFetchTagsForResource(item.IdPlanningRessource)
         .then(response => {
@@ -361,58 +364,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
   }, [formDataAppointment, formDataItemType, includeAllNonWorkingDays, appointment, item, isAppointmentSplitByNotWorkingDay, onDirtyChange]);
 
-  const handleSave = useCallback(() => {
-      // Validation: gestion de la création d'une nouvelle ressource
-      if (isCreatingResource) {
-        if (formDataItemType.CodePlanningRessource && items.find(item => item.CodePlanningRessource === formDataItemType.CodePlanningRessource?.toUpperCase() && item.IdPlanningRessource !== formDataItemType.IdPlanningRessource)) {
-          setCodeValidationError(true);
-          return;
-        }
-        
-        const newItemId = Date.now();
-        
-        // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-        if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
-          employeePermissions.forEach((perm) => {
-            void socialPermissionService.setSocialItemPermission({
-              ...perm,
-              itemId: newItemId,
-            });
-          });
-        }
-        
-        handleAddDimension({...formDataItemType, IdPlanningRessource: newItemId});
-        return;
-      }
-      
-      // Validation: gestion de la modification d'une ressource existante
-      if (isEditingResource) {
-        // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-        if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
-          employeePermissions.forEach((perm) => {
-            void socialPermissionService.setSocialItemPermission(perm);
-          });
-        }
-        
-        handleEditDimension(formDataItemType);
-        return;
-      }
-
-      void performAppointmentSave();
-    }, [
-      isCreatingResource,
-      isEditingResource,
-      formDataItemType,
-      items,
-      employeePermissions,
-      handleAddDimension,
-      handleEditDimension,
-      performAppointmentSave,
-    ]);
-
-  useEffect(() => {
-    saveHandlerRef.current = handleSave;
-  }, [handleSave]);
 
   /**
    * Enregistre le gestionnaire de sauvegarde dans le contexte du Modal
@@ -448,31 +399,31 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   /**
    * Soumet le formulaire de rendez-vous.
    */
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Gestion de la création d'une nouvelle ressource
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    // Gestion de la crÃ©ation d'une nouvelle ressource
     if (isCreatingResource) {
-      // Validation du code avant la création
-      if (formDataItemType.CodePlanningRessource && items.find(item => item.CodePlanningRessource === formDataItemType.CodePlanningRessource?.toUpperCase() && item.IdPlanningRessource !== formDataItemType.IdPlanningRessource)) {
-        setCodeValidationError(true);
-        return;
-      }
-      
-      const newItemId = Date.now();
-      
+      setIsSaving(true);
+            
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
-        employeePermissions.forEach((perm) => {
-          void socialPermissionService.setSocialItemPermission({
-            ...perm,
-            itemId: newItemId, // Utiliser le nouvel ID
-          });
-        });
-      }
+      // if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
+      //   employeePermissions.forEach((perm) => {
+      //     void socialPermissionService.setSocialItemPermission({
+      //       ...perm,
+      //       itemId: newItemId, // Utiliser le nouvel ID
+      //     });
+      //   });
+      // }
       
+    
       // Ajout du nouvel événement
-      handleAddDimension({...formDataItemType, IdPlanningRessource: newItemId});
+      const result = await handleAddManualRessource({...formDataItemType} as AutreItem);
+      if (!result.success) {
+        notificationService.error('Erreur', result.message || 'Erreur lors de l\'ajout de la ressource.');
+      }
+      setIsSaving(false);
       return;
     }
     
@@ -488,7 +439,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       }
       
       // Mise à jour de l'événement existant
-      handleEditDimension(formDataItemType);
+      handleEditManualRessource (formDataItemType);
       return;
     }    
 
@@ -510,19 +461,38 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   };
 
   // Callback pour changement de champ ressource
-  const handleResourceFieldChange = (fieldName: string, value: string | boolean) => {
-    if (fieldName === 'code') {
+  const handleResourceFieldChange = async (fieldName: string, value: string | boolean) => {
+    if (fieldName === 'CodePlanningRessource') {
       // Réinitialiser l'erreur lors de la modification
       if (codeValidationError) {
         setCodeValidationError(false);
       }
-      
       // Forcer les majuscules pour le champ code
       const upperCode = (value as string).toUpperCase();
-      if (items.find(item => item.CodePlanningRessource === upperCode && item.IdPlanningRessource !== formDataItemType.IdPlanningRessource)) {
-        setCodeValidationError(true);
-      }
+      
+      console.log("Vérification de l'unicité du code :", upperCode);
       setFormDataItemType(prev => ({ ...prev, CodePlanningRessource: upperCode }));
+
+      if (upperCode.length > 0) {
+        try {
+          const result = await ressourceService.verifyUniqueCode(upperCode);
+          console.log("Résultat de la vérification d'unicité du code :", result);
+
+          if(result.error === 1) {
+            console.error("Erreur lors de la vérification du code :", result.message);
+            return;
+          }
+
+          if (result.exists) {
+            setCodeValidationError(true);
+            return;
+          }
+        } catch (error) {
+            console.error("Erreur lors de la vérification de l'unicité du code :", error);
+            return;
+        }
+      
+      }
       return;
     }
     
@@ -547,31 +517,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     setEmployeePermissions(new Map(employeePermissions.set(userId, { ...perm, [permissionId]: value })));
   };
 
-  // Callback pour ajout/suppression d'étiquettes
-  const handleAddTag = (tag: Tag) => {
-    setFormDataItemType(prev => ({
-      ...prev,
-      Etiquette: prev.Etiquettes ? [...prev.Etiquettes, tag] : [tag]
-    }));
-  };
-
-  const handleRemoveTag = (tagId: number) => {
-    setFormDataItemType(prev => ({
-      ...prev,
-      Etiquette: prev.Etiquettes ? prev.Etiquettes.filter(tag => tag.IdPlanningEtiquette !== tagId) : []
-    }));
-    
-    // Si le rendez-vous actuel utilise cette étiquette, la retirer
-    if (formDataAppointment.Etiquette && formDataAppointment.Etiquette.IdPlanningEtiquette === tagId) {
-      setFormDataAppointment(prev => ({ ...prev, Etiquette: undefined }));
-    }
-    
-    // Notifier le parent pour mettre à jour tous les rendez-vous concernés
-    if (onRemoveTagFromAppointments) {
-      onRemoveTagFromAppointments(tagId);
-    }
-  };
-
   const handleSelectTag = (tag: Tag | undefined) => {
     setFormDataAppointment(prev => ({ ...prev, Etiquette: tag }));
   };
@@ -580,6 +525,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const handleDescriptionChange = (value: string) => {
     setFormDataAppointment(prev => ({ ...prev, AnnotationPlanningEvenement: value }));
   };
+
+  useEffect(() => {
+    saveHandlerRef.current = handleSubmit;
+  }, [handleSubmit]);
+
 
   /**
    * Préparation des données pour les composants génériques
@@ -595,7 +545,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // Champs de ressource pour FormHeader (mode création/édition)
   const resourceFields: ResourceField[] | undefined = (isCreatingResource || (isEditingResource && formDataItemType.Type === 'Rubrique Perso')) ? [
     {
-      name: 'code',
+      name: 'CodePlanningRessource',
       label: 'Code',
       type: 'text',
       value: formDataItemType.CodePlanningRessource || '',
@@ -605,14 +555,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       error: codeValidationError ? 'Ce code est déjà utilisé' : undefined,
     },
     {
-      name: 'actif',
+      name: 'Actif',
       label: 'Actif',
       type: 'checkbox',
       value: !!(formDataItemType as CommonPaieAttributs).Actif,
       width: '1/6',
     },
     {
-      name: 'label',
+      name: 'LibellePlanningRessource',
       label: 'Description',
       type: 'text',
       value: formDataItemType.LibellePlanningRessource || '',

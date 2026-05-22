@@ -19,9 +19,6 @@ export * from './dates';
 // IDs des éléments DOM
 export * from './domIds';
 
-// Factories pour créer des objets
-export * from './factories';
-
 // Utilitaires de filtrage
 export * from './filters';
 

@@ -7,7 +7,7 @@ interface ImageProps {
   className?: string;
 }
 
-export function Image({ image, className }: ImageProps) {
+const Image = ({ image, className }: ImageProps) => {
   const toDataUrl = (value: string) => value.startsWith('data:') ? value : `data:image/jpeg;base64,${value}`;
 
   // 1. On prépare nos "boîtes" pour stocker le résultat
@@ -105,3 +105,5 @@ export function Image({ image, className }: ImageProps) {
     />
   );
 }
+
+export default Image;

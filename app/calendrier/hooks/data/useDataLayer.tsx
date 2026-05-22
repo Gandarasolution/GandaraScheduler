@@ -1,13 +1,8 @@
 import { useState, useRef, useEffect, useMemo, useCallback, use } from 'react';
-import { Appointment, User, Item, CalendarConfig, Image, UserRole, Equipe, PoleActivite } from '../../types';
+import { Appointment, User, Item, CalendarConfig, ImageType, UserRole, Equipe, PoleActivite, ChantierItem } from '../../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
 import { employeeService, equipeService, evenementService } from '@/app/service';
 import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../../utils/filters";
-import {
-  SEARCH_DEFAULT_LIMIT,
-  SEARCH_MIN_QUERY_LENGTH,
-} from '../../utils/constants';
-import { CategoryStructure } from '@/app/calendrier/components/Table/DataTableFrame';
 import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
 import { getCachedImages, subscribeToImageCache, upsertCachedImage } from '../../utils/imageCacheStore';
 
@@ -47,7 +42,7 @@ export const useDataLayer = ({
   
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
-  const [availableImages, setAvailableImages] = useState<Image[]>(() => getCachedImages());
+  const [availableImages, setAvailableImages] = useState<ImageType[]>(() => getCachedImages());
   const itemsSnapshot = useMemo(() => Object.values(itemsRef.current), [appointmentsVersion]);
 
   const selectedRdvTypes = useMemo(() => {
@@ -248,87 +243,22 @@ export const useDataLayer = ({
     return true;
   }, [addMissingResourcesToCache]);
 
-  const getTableStructure = (): CategoryStructure[] => {
-      if (viewType === 'chantier-table') 
-          return [
-              {
-                  key: 'IG',
-                  label: 'Informations Générales', 
-                  attributes: [
-                      { key: 'Image', label: '', sortable: false , width:50 },
-                      { key: 'PoleActivite',   label: 'Pôle', type:'string', width:120 },
-                      { key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
-                      { key: 'Identifiant',  label: 'Identifiant', type:'string', width:125 },
-                      { key: 'LibellePlanningRessource' , label: 'Libellé', type:'string' },
-                      { key: 'Etat', label: 'État', type:'string', width:90 },
-                      { key: 'ChargeAffaire',  label: 'Chargé d\'Affaires', type:'string', width:140 },
-                      { key: 'ChefChantier',  label: 'Chef de Chantier', type:'string', width:140 },
-                      { key: 'DateOS' , label: 'Date OS', type:'date', width:100 },
-                      { key: 'DateFin', label: 'Date Fin', type:'date', width:100 }
-                  ]
-              },
-              {
-                  key: 'analyse',
-                  label: 'Analyse Chantier',
-                  attributes: [
-                      { key: 'TM',  label: 'Temps Marché', type:'string', width:80},      // Temps Marché
-                      { key: 'HR',  label: 'Heures Réalisées', type:'string' , width:90},       // Heures Réalisées
-                      { key: 'SH',  label: 'Solde Heures', type:'string', width:80 },       // Solde Heure
-                      { key: 'DPF',  label: 'Durée Planifiée', type:'string', width:85 },    // Durée Planifiée
-                      { key: 'RPF',  label: 'Réalisé + Futur', type:'string', width:80 },  // Réalisé + Future
-                      { key: 'AP',  label: 'Avancement Prévisionnel', type:'string', width:110 },       // Avancement Prév.
-                      { key: 'SP',  label: 'Solde P.', type:'string', width:80}        // Solde Prév.
-                  ]
-              }
-          ] 
-      if (viewType === 'paie-table') 
-          return [
-              {
-              key: 'all',
-              label: '', 
-              attributes: [
-                  { key: 'Verrou', label: 'Verrou', width: 80},
-                  { key: 'Image', label: '', sortable: false, width:50 },
-                  { key: 'CodePlanningRessource', label: 'Code', width: 150},
-                  { key: 'LibellePlanningRessource', label: 'Libellé' },
-                  { key: 'Actif', label: 'ACTF', width: 70 },
-                  { key: 'Category', label: 'Catégorie', width: 300}
-              ]
-              }
-          ]
-      if (viewType === 'employee-table') 
-          return [
-              {
-              key: 'all',
-              label: '',
-              attributes: [
-                  { key: 'Image', label: '', sortable: false, width:50 },
-                  { key: 'Code', label: 'Code' },
-                  { key: 'Nom', label: 'Nom' },
-                  { key: 'Prenom', label: 'Prénom'}, 
-                  { key: 'Equipe', label: 'Équipe' },
-                  { key: 'Type', label: 'Type'}
-              ]
-              }
-          ]
-      // Default: return empty structure when no matching viewType
-      return [];
-  };
+  
 
   // --- Trigger de refresh ---
   const refreshData = useCallback(() => setAppointmentsVersion(prev => prev + 1), []);
 
-  const addImage = (newImage: Image) => {
+  const addImage = (newImage: ImageType) => {
     upsertCachedImage(newImage);
     return newImage;
   };
 
-  const updateEventImage = (id: number, newImage: Image) => {
+  const updateEventImage = (id: number, newImage: ImageType) => {
     itemsRef.current[id] = { ...itemsRef.current[id], Image: newImage.id };
     refreshData(); // Force le re-render
   };
 
-  const updateEmployeeImage = (id: number, newImage: Image) => {
+  const updateEmployeeImage = (id: number, newImage: ImageType) => {
     setGlobalEmployees(prevEmployees => 
       prevEmployees.map(emp => 
         emp.IdPersonnel === id ? { ...emp, IdImage: newImage.id } : emp
@@ -359,7 +289,7 @@ export const useDataLayer = ({
     }
   };
 
-  const addManualEvent = (payload: { code: string; label: string; description: string; image?: Image; color: string; borderColor: string; textColor: string; actif: boolean; type: 'autre'; category: string; }) => {
+  const addManualEvent = (payload: { code: string; label: string; description: string; image?: ImageType; color: string; borderColor: string; textColor: string; actif: boolean; type: 'autre'; category: string; }) => {
     const newId = Date.now();
     const newItem = {
       IdPlanningRessource: newId,
@@ -420,7 +350,6 @@ export const useDataLayer = ({
     toggleManualEvent,
     updateManualEventCategory,
     deleteManualEvent,
-    getTableStructure,
     refreshData,
     addImage,
     updateEventImage,

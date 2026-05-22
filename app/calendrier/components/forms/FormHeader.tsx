@@ -9,7 +9,7 @@
 
 "use client";
 import React from 'react';
-import { Image } from '../ui/Image';
+import { Image } from '../ui';
 
 /**
  * Configuration des couleurs personnalisables

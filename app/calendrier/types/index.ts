@@ -161,7 +161,7 @@ export interface AutreItem extends CommonPaieAttributs {
 export type SocialItem = AbsenceItem | AutreItem;
 export type Item = ChantierItem | SocialItem;
 
-export type Image = {
+export type ImageType = {
   id: number;
   image: string;
 };

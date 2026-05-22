@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { 
   Modal, 
 } from '@/app/calendrier/components';
-import { Appointment, Item, CalendarConfig, Image, User } from '../../types';
+import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
@@ -44,9 +44,9 @@ interface CalendarModalsProps {
   handlers: {
     closeModal: () => void;
     saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean, type: 'create' | 'update') => Promise<{ success: boolean; message?: string }>;
-    handleAddDimension: (dimension: Item) => void;
-    handleEditDimension: (dimension: Item) => void;
-    handleDeleteDimension?: (dimensionId: number, forceDelete?: boolean) => any;
+    handleAddManualRessource: (dimension: AutreItem) => Promise<{ success: boolean; message?: string }>;
+    handleEditManualRessource: (dimension: Item) => void;
+    handleDeleteManualRessource?: (dimensionId: number, forceDelete?: boolean) => any;
     handleDeactivateDimension?: (dimensionId: number) => any;
     setDeleteConfirmData?: (data: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null) => void;
     removeTagFromAppointments?: (tagId: number) => void;
@@ -61,8 +61,8 @@ interface CalendarModalsProps {
     
     // Image Handlers
     closeImageModal: () => void;
-    handleImageSelect: (image: Image) => void;
-    handleImageUpload: (file: File) => Promise<Image>;
+    handleImageSelect: (image: ImageType) => void;
+    handleImageUpload: (file: File) => Promise<ImageType>;
     openImageModalForEvent: (id: number) => void;
 
     // Settings & Config Handlers
@@ -93,7 +93,7 @@ interface CalendarModalsProps {
     employees: User[];
     selectedItem: Item | null;
     selectedEmployee: User | null;
-    availableImages: Image[];
+    availableImages: ImageType[];
     filterConfig: any; // Options pour le filtre
     isUploading: boolean;
     uploadError: string | null;
@@ -472,8 +472,8 @@ export const CalendarModals = memo(({
             onClose={() => handlers.closeModal()}
             handleOpenImageModal={handlers.openImageModalForEvent}
             onDirtyChange={setIsFormDirty}
-            handleAddDimension={handlers.handleAddDimension}
-            handleEditDimension={handlers.handleEditDimension}
+            handleAddManualRessource={handlers.handleAddManualRessource}
+            handleEditManualRessource={handlers.handleEditManualRessource}
             onRemoveTagFromAppointments={handlers.removeTagFromAppointments}
             onFetchTagsForResource={etiquetteService.getEtiquettes}
             onAddTagToResource={etiquetteService.createEtiquette}
@@ -582,7 +582,7 @@ export const CalendarModals = memo(({
               {
                 label: "Supprimer",
                 onClick: () => {
-                  handlers.handleDeleteDimension?.(item.IdPlanningRessource, true);
+                  handlers.handleDeleteManualRessource?.(item.IdPlanningRessource, true);
                   handlers.setDeleteConfirmData?.(null);
                 },
                 variant: "primary",
@@ -638,7 +638,7 @@ export const CalendarModals = memo(({
               {
                 label: "Supprimer tout (rubrique + RDV)",
                 onClick: () => {
-                  handlers.handleDeleteDimension?.(item.IdPlanningRessource, true);
+                  handlers.handleDeleteManualRessource?.(item.IdPlanningRessource, true);
                   handlers.setDeleteConfirmData?.(null);
                 },
                 variant: "primary",
@@ -680,7 +680,7 @@ export const CalendarModals = memo(({
             {
               label: "Supprimer",
               onClick: () => {
-                handlers.handleDeleteDimension?.(item.IdPlanningRessource, true);
+                handlers.handleDeleteManualRessource?.(item.IdPlanningRessource, true);
                 handlers.setDeleteConfirmData?.(null);
               },
               variant: "primary"

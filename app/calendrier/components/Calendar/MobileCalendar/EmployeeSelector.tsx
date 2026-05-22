@@ -15,7 +15,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, Clock, Users } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { Equipe, User } from '../../../types';
-import { Image } from '../../ui/Image';
+import { Image } from '../../ui';
 import { getCachedImageById } from '../../../utils/imageCacheStore';
 import { 
   useDebounce,
