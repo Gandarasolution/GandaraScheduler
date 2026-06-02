@@ -6,6 +6,7 @@ import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
 import { Appointment, Item, User } from '../../types';
 import { memo, use, useEffect } from 'react';
 import DatePicker from '../ui/DatePicker';
+import { useAuth } from '../../hooks/utils/AuthContext';
 
 interface CalendarHeaderProps {
   theme: string;
@@ -46,6 +47,7 @@ export const CalendarHeader = memo(({
     selectedDate, setSelectedDate
   } = viewState;
 
+  const { hasPermission } = useAuth();
 
 
   return (
@@ -201,7 +203,7 @@ export const CalendarHeader = memo(({
                       </button>
 
                       {/* Option: Paie Table - Seulement pour Admin et Manager */}
-                      {(user?.role === 'admin' || user?.role === 'manager' || true) && (
+                      {hasPermission(23) && (
                         <button
                           className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'paie-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
                           onClick={() => { setViewType('paie-table'); setIsViewDropdownOpen(false); }}
@@ -216,8 +218,7 @@ export const CalendarHeader = memo(({
                           {viewType === 'paie-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
                         </button>
                       )}
-                      {/* Option: Événements manuels - Seulement pour Admin et Manager */}
-                      {(user?.role === 'admin' || user?.role === 'manager' || true) && (
+                      {hasPermission(23) && (
                         <button
                           className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
                           onClick={() => { setViewType('manual-event-table'); setIsViewDropdownOpen(false); }}
@@ -232,20 +233,22 @@ export const CalendarHeader = memo(({
                           {viewType === 'manual-event-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}                     
                         </button>
                       )}
-                      {/* Option: Employee Table */}
-                      <button
-                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'employee-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
-                        onClick={() => { setViewType('employee-table'); setIsViewDropdownOpen(false); }}
-                      >
-                        <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'employee-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">Liste des employées</div>
-                          <div className="text-xs text-primary mt-0.5">Gestion des employée</div>
-                        </div>
-                        {viewType === 'employee-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
-                      </button>
+                      
+                      {hasPermission(23) && (
+                        <button
+                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'employee-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
+                          onClick={() => { setViewType('employee-table'); setIsViewDropdownOpen(false); }}
+                        >
+                          <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'employee-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium">Liste des employées</div>
+                            <div className="text-xs text-primary mt-0.5">Gestion des employée</div>
+                          </div>
+                          {viewType === 'employee-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
+                        </button>
+                      )}
                     </div>
                     <div className="px-4 py-2 bg-transparent border-t border-light">
                       <p className="text-xs text-primary text-center">Raccourci : <span className="font-mono bg-transparent px-1 rounded">Ctrl + Q</span></p>

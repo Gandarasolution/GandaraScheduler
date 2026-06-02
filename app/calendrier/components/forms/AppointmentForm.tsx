@@ -145,6 +145,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // Variables dérivées pour améliorer la lisibilité
   const isCreatingResource = resourceEditMode === 'create';
   const isEditingResource = resourceEditMode === 'edit';
+  const isEditingAppointment = resourceEditMode === null;
+
+  // On simplifie la logique d'affichage 
+  // - Les options de ressources (couleurs, code, ect.) sont toujours affichées dans tous les modes pour les rubriques perso
+  // - Les selecteurs de Date et d'Employé sont cachés si on créer ou si on edite une ressource (isEditingAppointment == false)
+  const isResourceMode = isCreatingResource || isEditingResource;
     
     
   // ===== ÉTATS LOCAUX =====
@@ -422,6 +428,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       const result = await handleAddManualRessource({...formDataItemType} as AutreItem);
       if (!result.success) {
         notificationService.error('Erreur', result.message || 'Erreur lors de l\'ajout de la ressource.');
+      } else if (onClose) {
+        onClose();
       }
       setIsSaving(false);
       return;
@@ -542,6 +550,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     text: formDataItemType.CouleurTextePlanningRessource,
   };
 
+  console.log(formDataItemType);
+  
   // Champs de ressource pour FormHeader (mode création/édition)
   const resourceFields: ResourceField[] | undefined = (isCreatingResource || (isEditingResource && formDataItemType.Type === 'Rubrique Perso')) ? [
     {
@@ -662,7 +672,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // Rendu du formulaire
   return (
     <>
-      <div className={`flex ${isReducedVersion ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} 
+      <div className={`flex ${isResourceMode ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} 
         gap-4 rounded-xl poppins transition-all duration-300 h-full items-stretch`}
       >  
         <form 
@@ -670,7 +680,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           className="flex flex-col gap-4 w-full max-w-[380px] min-w-[320px] flex-grow" 
           noValidate
         >
-          {!isReducedVersion && (
+          {!isResourceMode && (
             <ExpandButton
               isExpanded={isExpanded}
               onToggle={() => setIsExpanded(!isExpanded)}
@@ -707,7 +717,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           </FormPreview>
         
           {/* PermissionsPanel - Gestion des permissions par employé */}
-          {(isCreatingResource || isEditingResource) && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') && (
+          {isResourceMode && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') && (
             <PermissionsPanel
               users={usersWithPermissions}
               availablePermissions={availablePermissions}
@@ -718,7 +728,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             />
           )}
 
-          {!isReducedVersion && (
+          {!isResourceMode && (
             <>
               {/* DateTimeSelector - Dates et créneaux */}
               <DateTimeSelector
@@ -761,7 +771,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         </form>
 
         {/* Section étiquettes - Version réduite uniquement */}
-        {isReducedVersion && formDataItemType.Type === 'Projet' && (
+        {isResourceMode && formDataItemType.Type === 'Projet' && (
           <div className="w-full lg:w-[320px] px-4 flex flex-col gap-4 border-l border-light">
             <TagsManager
               tags={resourceTags}

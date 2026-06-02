@@ -351,6 +351,7 @@ export const useDataLayer = ({
     updateManualEventCategory,
     deleteManualEvent,
     refreshData,
+    appointmentsVersion,
     addImage,
     updateEventImage,
     updateEmployeeImage,

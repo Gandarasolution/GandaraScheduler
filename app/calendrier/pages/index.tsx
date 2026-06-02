@@ -59,6 +59,7 @@ import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilter
 import { User, Item, CommonPaieAttributs } from '../types';
 import { canCreateEvent } from '../utils/permissions';
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
+import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 
 // Composant de chargement réutilisable
 const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
@@ -85,13 +86,14 @@ function NoSSR({ children }: { children: React.ReactNode }) {
  * Composant Principal HomePage
  */
 export default function HomePage({
-  user,
   onThemeChange,
 }: {
-  user: User;
   onThemeChange?: (theme: any) => void;
 }) {
 
+  const { hasPermission } = useAuth();
+  const user = useCurrentUser();
+  
   const [loadCalendar, setLoadCalendar] = useState(true); 
 
   // 1. SERVICES GLOBAUX
@@ -108,7 +110,7 @@ export default function HomePage({
   const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
-  const viewState = useCalendarView(globalEmployees, user);
+  const viewState = useCalendarView(globalEmployees, user );
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
@@ -243,14 +245,14 @@ export default function HomePage({
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
     return viewState.viewType === 'chantier-table' 
       ? (ressourceService.getRessourcesProjet as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
-      : viewState.viewType === 'employee-table' 
+      : viewState.viewType === 'employee-table' && hasPermission(23) 
         ? (employeeService.getEmployeesPag as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
-        : viewState.viewType === 'manual-event-table' 
+        : viewState.viewType === 'manual-event-table' && hasPermission(23) 
           ? (ressourceService.getManualEvents as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
-          : viewState.viewType === 'paie-table'
+          : viewState.viewType === 'paie-table' && hasPermission(23) 
             ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs)
             : undefined;
-  }, [viewState.viewType, viewState.activeFilters, viewState.searchInput]);
+  }, [viewState.viewType, viewState.activeFilters, viewState.searchInput, ]);
 
   // --- FILTRES ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -316,8 +318,9 @@ export default function HomePage({
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
       
       const configResponse = await viewState.loadConfigs();
-      const employeesResponse = await employeeService.getEmployees();
+      const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
 
+      console.log('Employees Response:', employeesResponse);
       if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
       } else {
@@ -484,6 +487,7 @@ export default function HomePage({
                       ) || []}
                       enablePagination={true}
                       paginatedSearchFunction={handlePaginatedSearch}
+                      refreshKey={dataLayer.appointmentsVersion}
                       loadingElement={<LoadingFallback message="Chargement des données..." />}
                       showGroupHeaders={viewState.viewType === 'chantier-table'}
                       onRightClick={interaction.handleDataTableContextMenu}

@@ -4,13 +4,13 @@ import LoginPage from './login/page';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { ThemeType, useTheme } from './calendrier/utils/themeManager';
-import { User } from './calendrier/types';
 import { ErrorBoundary } from "./calendrier/components/ui/ErrorBoundary";
+import { useAuth } from './calendrier/hooks/utils/AuthContext';
 
 
 export default function Home() {
 
-  const [user, setUser] = useState<User>();
+  const {user, login, isLoading, isAuthenticated, setUser} = useAuth();
 
   const { setTheme } = useTheme(user);
   
@@ -61,7 +61,8 @@ export default function Home() {
     }
   }, [user, setTheme]);
 
-  if (!user) return <LoginPage setUser={setUser} />;
+
+  if (!isAuthenticated) return <LoginPage login={login} />;
 
   return (
      <ErrorBoundary
@@ -72,7 +73,7 @@ export default function Home() {
           console.error('[Error Boundary]', error, errorInfo);
         }}
       >
-        <Calendrier user={user} onThemeChange={handleThemeChange} />
+        <Calendrier onThemeChange={handleThemeChange} />
       </ErrorBoundary>
   );
 }

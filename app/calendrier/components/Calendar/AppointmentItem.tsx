@@ -12,6 +12,7 @@ import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS } fr
 import AppointmentMetadata from './AppointmentIcon';
 import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
 import { Image } from '../ui';
+import { useAuth } from '../../hooks/utils/AuthContext';
 
 interface AppointmentItemProps {
   appointment: Appointment;
@@ -64,6 +65,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   onAppointmentResize,
   handleContextMenu,
 }) => {
+
+  const { hasPermission } = useAuth();
 
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -279,7 +282,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
          
          handleContextMenu && handleContextMenu(e, 'appointment', appointment, cellUnderMouse);
       }}
-      onMouseDown={handleDragStart}
+      onMouseDown={hasPermission(23) ? handleDragStart : undefined}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
@@ -355,10 +358,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30`}
           title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
-          onMouseDown={(e) => !isInactive && handleMouseDown(e, 'left')}
+          onMouseDown={(e) => !isInactive && hasPermission(23) && handleMouseDown(e, 'left')}
           style={{ 
             borderRadius: '4px 0 0 4px',
-            cursor: isInactive ? 'not-allowed' : 'ew-resize',
+            cursor: isInactive || !hasPermission(23) ? 'not-allowed' : 'ew-resize',
             width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px` // 10% de la largeur ou max 12px
           }}
         />
@@ -471,10 +474,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               : '-right-1 w-3'
           }`}
           title={isSmallAppointment ? "Redimensionner (côté droit)" : "Redimensionner"}
-          onMouseDown={(e) => !isInactive && handleMouseDown(e, 'right')}
+          onMouseDown={(e) => !isInactive && hasPermission(23) && handleMouseDown(e, 'right')}
           style={{ 
             borderRadius: '0 4px 4px 0', 
-            cursor: isInactive ? 'not-allowed' : 'ew-resize',
+            cursor: isInactive || !hasPermission(23) ? 'not-allowed' : 'ew-resize',
             width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px` // 10% de la largeur ou max 12px
           }}
         />

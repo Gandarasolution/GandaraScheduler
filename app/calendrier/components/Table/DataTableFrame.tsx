@@ -231,6 +231,8 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   enablePagination?: boolean;
   /** Fonction de recherche distante utilisée par la pagination */
   paginatedSearchFunction?: PaginatedSearchFunction<T>;
+  /** Clé pour forcer le rafraîchissement des données (si pagination) */
+  refreshKey?: number;
 }
 
 /**
@@ -259,7 +261,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   onCellDoubleClick,
   defaultSort,
   enablePagination = false,
-  paginatedSearchFunction
+  paginatedSearchFunction,
+  refreshKey
 }: DataTableFrameProps<T>) => {
   const DEFAULT_PAGE_SIZE = 20;
   
@@ -463,7 +466,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [enablePagination, paginatedSearchFunction, fetchPage, normalizeItemsWithId]);
+  }, [enablePagination, paginatedSearchFunction, fetchPage, normalizeItemsWithId, refreshKey]);
     
 
   // Configuration des groupes

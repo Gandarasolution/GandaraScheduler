@@ -2,16 +2,15 @@
 
 import { Dispatch, SetStateAction, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, UserRole } from '@/app/calendrier/types';
 import authService from '@/app/service/auth.service';
 
 
 type LoginPageProps = {
-  setUser: Dispatch<SetStateAction<User | undefined>>;
+  login: (login: string, password: string) => Promise<{ success: boolean; message?: string }>;
 };
 
 export default function LoginPage(
-  { setUser }: LoginPageProps
+  { login }: LoginPageProps
 ) {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -27,19 +26,13 @@ export default function LoginPage(
     setError('');
 
     try {
-      const response = await authService.login({
-        login: formData.login,
-        password: formData.password,
-      });
-      console.log(response);
-      
-
-      if (response?.error === 0 && response.user) {
-        authService.saveSession(response.token);
-        setUser(response.user);
-        router.push('/');
-      } 
+      const result = await login(formData.login, formData.password);
       setLoading(false);
+      if (!result.success) {
+        setError(result.message || 'Échec de la connexion');
+        return;
+      }
+      router.push('/');
     } catch {
       setLoading(false);
     }

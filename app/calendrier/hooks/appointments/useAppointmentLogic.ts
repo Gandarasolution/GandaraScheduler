@@ -1247,7 +1247,8 @@ export const useAppointmentLogic = ({
         IdImage: dimension.Image,
       };
       const result = await ressourceService.addRessourceManual(apiPayload);
-      if (isApiSuccess(result) && result.data?.IdPlanningRessource) {
+      console.log('Résultat de l\'ajout de ressource', result);
+      if (isApiSuccess(result) && result.data) {
         const newId = result.data;
         // Mettre à jour l'ID de la ressource dans le cache et tous les rendez-vous qui l'utilisent
         const oldId = dimension.IdPlanningRessource;
@@ -1259,6 +1260,7 @@ export const useAppointmentLogic = ({
           };
           delete eventsRef.current[Number(oldId)];
         }
+        console.log('Ressource ajoutée avec succès, ID:', newId);
       } else {
         const message = result?.message || 'Le serveur a refusé l\'ajout de la ressource.';
         notificationService.error('Ajout annulé', message);
@@ -1272,10 +1274,16 @@ export const useAppointmentLogic = ({
       return { success: false, message: error instanceof Error ? error.message : 'Erreur inconnue' };
     }
 
+    console.log('Ressource ajoutée avec succès');
+    
     setIsModalOpen(false);
     onUpdate();
     return { success: true };
   }, []);
+
+  useEffect(() => {
+    console.log('isModalOpen', isModalOpen);
+  }, [isModalOpen]);
 
   const handleEditManualRessource = useCallback((dimension: Item) => {
     eventsRef.current[Number(dimension.IdPlanningRessource)] = {
