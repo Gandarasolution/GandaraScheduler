@@ -18,8 +18,8 @@ export function useCalendarConfig({ user }: UseCalendarConfigProps) {
   const [editingConfig, setEditingConfig] = useState<CalendarConfig | null>(null);
   const [isCreatingConfig, setIsCreatingConfig] = useState(false);
 
-  const loadConfigs = async () => {
-      const response = await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel);
+  const loadConfigs = async (hasPermission: boolean) => {
+      const response = hasPermission ? await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel) : null;
       
       if (response?.error === 0 && Array.isArray(response.data.Configs)) {
 

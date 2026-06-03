@@ -57,8 +57,8 @@ interface AppointmentFormProps {
   isReducedVersion?: boolean;
   /** Indique si l'application est utilisée sur un appareil mobile */
   isMobile?: boolean;
-  /** Mode d'édition de ressource: 'create' pour créer, 'edit' pour modifier, null pour un rendez-vous normal */
-  resourceEditMode?: 'create' | 'edit' | null;
+  /** Mode d'édition de ressource: 'createRessource' pour créer, 'editRessource' pour modifier, 'editAppointment' pour un rendez-vous normal */
+  resourceEditMode?: 'createRessource' | 'editRessource' | 'editAppointment' | null;
     /** Placement des étiquettes : 'hover' pour les afficher au survol, 'fixed' pour les afficher en permanence */
   tagPlacement?: 'hover' | 'fixed';
   /** Callback appelé lors de la sauvegarde */
@@ -143,9 +143,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const { handleCloseWithSave, registerSaveHandler } = useModalContext();
 
   // Variables dérivées pour améliorer la lisibilité
-  const isCreatingResource = resourceEditMode === 'create';
-  const isEditingResource = resourceEditMode === 'edit';
-  const isEditingAppointment = resourceEditMode === null;
+  const isCreatingResource = resourceEditMode === 'createRessource';
+  const isEditingResource = resourceEditMode === 'editRessource';
 
   // On simplifie la logique d'affichage 
   // - Les options de ressources (couleurs, code, ect.) sont toujours affichées dans tous les modes pour les rubriques perso
@@ -163,6 +162,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);
+
   
   // Nouveaux états pour gérer les étiquettes asynchrones
   const [resourceTags, setResourceTags] = useState<Tag[]>([]);
@@ -174,7 +174,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   useEffect(() => {
     if (onFetchTagsForResource && item?.IdPlanningRessource && isEditingResource) {
       setIsLoadingTags(true);
-      onFetchTagsForResource(item.IdPlanningRessource)
+      onFetchTagsForResource(item?.IdPlanningRessource)
         .then(response => {
           // Assume response.data is the array of tags, adjust if necessary
           setResourceTags(response.data || response || []);
@@ -258,10 +258,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   useEffect(() => {
     // Ne mettre à jour que si l'image a réellement changé
-    if (item?.Image !== formDataItemType.Image) {
+    if (item?.Image !== formDataItemType?.Image) {
       setFormDataItemType(prev => ({ ...prev, Image: item?.Image }));
     }
-  }, [item?.Image, formDataItemType.Image]);
+  }, [item?.Image, formDataItemType?.Image]);
   
 
   /**
@@ -288,15 +288,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     let isMounted = true;
 
     const loadPermissions = async () => {
-      if (isEditingResource && formDataItemType.IdPlanningRessource && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso')) {
+      if (isEditingResource && formDataItemType?.IdPlanningRessource && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso')) {
         const permissionEntries = await Promise.all(
           employees.map(async (emp) => {
-            const response = await socialPermissionService.getSocialItemPermission(emp.IdPersonnel, formDataItemType.IdPlanningRessource);
+            const response = await socialPermissionService.getSocialItemPermission(emp.IdPersonnel, formDataItemType?.IdPlanningRessource);
             const perm = response?.error === 0 ? response.data : null;
 
             const safePermission: SocialItemPermission = perm || {
               userId: emp.IdPersonnel,
-              itemId: formDataItemType.IdPlanningRessource,
+              itemId: formDataItemType?.IdPlanningRessource,
               canView: true,
               canCreate: true,
               canEdit: true,
@@ -313,13 +313,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         return;
       }
 
-      if (isCreatingResource && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso')) {
+      if (isCreatingResource && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso')) {
       // Pour la création, initialiser avec tous les droits
       const permissions = new Map<number, SocialItemPermission>();
       employees.forEach(emp => {
         permissions.set(emp.IdPersonnel, {
           userId: emp.IdPersonnel,
-          itemId: formDataItemType.IdPlanningRessource || -1,
+          itemId: formDataItemType?.IdPlanningRessource || -1,
           canView: true,
           canCreate: true,
           canEdit: true,
@@ -338,7 +338,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     return () => {
       isMounted = false;
     };
-  }, [isEditingResource, isCreatingResource, formDataItemType.IdPlanningRessource, formDataItemType.Type, employees]);
+  }, [isEditingResource, isCreatingResource, formDataItemType?.IdPlanningRessource, formDataItemType?.Type, employees]);
 
   /**
    * Détection des changements non sauvegardés
@@ -440,7 +440,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       console.log('Modification de ressource');
       
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
+      if (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') {
         employeePermissions.forEach((perm) => {
           void socialPermissionService.setSocialItemPermission(perm);
         });
@@ -516,7 +516,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const handlePermissionChange = (userId: number, permissionId: string, value: boolean) => {
     const perm = employeePermissions.get(userId) || {
       userId,
-      itemId: formDataItemType.IdPlanningRessource || -1,
+      itemId: formDataItemType?.IdPlanningRessource || -1,
       canView: true,
       canCreate: true,
       canEdit: true,
@@ -545,20 +545,18 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   
   // Configuration des couleurs pour FormHeader
   const colors: ColorConfig = {
-   background: formDataItemType.CouleurFondPlanningRessource,
-    border: formDataItemType.CouleurBordurePlanningRessource,
-    text: formDataItemType.CouleurTextePlanningRessource,
+   background: formDataItemType?.CouleurFondPlanningRessource,
+    border: formDataItemType?.CouleurBordurePlanningRessource,
+    text: formDataItemType?.CouleurTextePlanningRessource,
   };
-
-  console.log(formDataItemType);
   
   // Champs de ressource pour FormHeader (mode création/édition)
-  const resourceFields: ResourceField[] | undefined = (isCreatingResource || (isEditingResource && formDataItemType.Type === 'Rubrique Perso')) ? [
+  const resourceFields: ResourceField[] | undefined = (isCreatingResource || (isEditingResource && formDataItemType?.Type === 'Rubrique Perso')) ? [
     {
       name: 'CodePlanningRessource',
       label: 'Code',
       type: 'text',
-      value: formDataItemType.CodePlanningRessource || '',
+      value: formDataItemType?.CodePlanningRessource || '',
       placeholder: 'EX: CH',
       required: true,
       width: '1/3',
@@ -568,14 +566,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       name: 'Actif',
       label: 'Actif',
       type: 'checkbox',
-      value: !!(formDataItemType as CommonPaieAttributs).Actif,
+      value: !!(formDataItemType as CommonPaieAttributs)?.Actif,
       width: '1/6',
     },
     {
       name: 'LibellePlanningRessource',
       label: 'Description',
       type: 'text',
-      value: formDataItemType.LibellePlanningRessource || '',
+      value: formDataItemType?.LibellePlanningRessource || '',
       placeholder: 'Nom de la rubrique...',
       required: true,
       width: 'full',
@@ -640,7 +638,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const usersWithPermissions: UserWithPermissions[] = employees.map(emp => {
     const perm = employeePermissions.get(emp.IdPersonnel) || {
       userId: emp.IdPersonnel,
-      itemId: formDataItemType.IdPlanningRessource || -1,
+      itemId: formDataItemType?.IdPlanningRessource || -1,
       canView: true,
       canCreate: true,
       canEdit: true,
@@ -690,7 +688,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           {/* FormHeader - Icône + Couleurs + Ressource */}
           <FormHeader
             icon={formDataItemType?.Image || undefined}
-            onIconClick={() => handleOpenImageModal(formDataItemType.IdPlanningRessource)}
+            onIconClick={() => handleOpenImageModal(formDataItemType?.IdPlanningRessource)}
             colors={colors}
             onColorChange={handleColorChange}
             resourceFields={resourceFields}
@@ -707,7 +705,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               source={'demo'}
               isMobile={false}
               isDisplayWeekend={false}
-              chargeeAffaire={formDataItemType && formDataItemType.Type === 'Projet' ? formDataItemType.ChargeAffaire : ''}
+              chargeeAffaire={formDataItemType && formDataItemType?.Type === 'Projet' ? formDataItemType?.ChargeAffaire : ''}
               onDoubleClick={() => {}}
               onAppointmentResize={() => {}}
               handleContextMenu={() => {}}
@@ -717,7 +715,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           </FormPreview>
         
           {/* PermissionsPanel - Gestion des permissions par employé */}
-          {isResourceMode && (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') && (
+          {isResourceMode && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') && (
             <PermissionsPanel
               users={usersWithPermissions}
               availablePermissions={availablePermissions}
@@ -771,7 +769,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         </form>
 
         {/* Section étiquettes - Version réduite uniquement */}
-        {isResourceMode && formDataItemType.Type === 'Projet' && (
+        {isResourceMode && formDataItemType?.Type === 'Projet' && (
           <div className="w-full lg:w-[320px] px-4 flex flex-col gap-4 border-l border-light">
             <TagsManager
               tags={resourceTags}
@@ -801,7 +799,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             />
 
             {/* TagsManager - Sélecteur d'étiquette (version étendue pour chantiers) */}
-            {formDataItemType.Type === 'Projet' && (
+            {formDataItemType?.Type === 'Projet' && (
               <TagsManager
                 tags={resourceTags}
                 selectedTag={formDataAppointment.Etiquette}

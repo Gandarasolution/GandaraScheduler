@@ -141,6 +141,19 @@ export const useCalendarVirtualization = ({
     dimensionItems.forEach((item, idx) => {
       processHierarchicalItem(item, idx);
     });
+
+    // Ajouter des lignes "Non assignés" si nécessaire pour remplir l'espace
+    if (rows.length < 10 ) {
+      for (let i = rows.length; i < 10; i++) {
+        rows.push({
+          type: 'group',
+          id: 'unassigned' + i,
+          uniqueKey: 'group-unassigned' + i,
+          data: { name: 'Non assignés' },
+          height: EMPLOYEE_GROUP_HEADER_HEIGHT + MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2
+        });
+      }
+    }
     
     return rows;
   }, [dimensionItems, openItems, employeesByDimension, employeeHeights, expandedOverlapRows]);

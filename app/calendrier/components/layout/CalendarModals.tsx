@@ -8,6 +8,7 @@ import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
 import etiquetteService from '@/app/service/etiquette.service';
+import { useAuth } from '../../hooks/utils/AuthContext';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -130,6 +131,7 @@ export const CalendarModals = memo(({
   data, 
   config 
 }: CalendarModalsProps) => {
+  const { hasPermission } = useAuth();
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
@@ -171,7 +173,8 @@ export const CalendarModals = memo(({
 
   // Reconstitution de la structure des paramètres pour SettingsModal
   const settings = useMemo(() => [
-    {
+    ...(hasPermission(23) ? [
+      {
       category: "Gestion des jours travaillés",
       items: [
         // {
@@ -198,7 +201,7 @@ export const CalendarModals = memo(({
           removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
         }
       ]
-    },
+    }] : []), // Seule la permission 23 peut gérer les jours non travaillés
     {
       category: "Affichage des étiquettes",
       items: [
@@ -218,11 +221,11 @@ export const CalendarModals = memo(({
   ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
 
   // Détermination du mode d'édition de ressource
-  const resourceEditMode: 'create' | 'edit' | null = useMemo(() => {
+  const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;
-    if (modalsState.selectedAppointmentForm.IdPlanningEvenement === -1) return 'create';
-    if (modalsState.selectedAppointmentForm.IdPlanningEvenement === 0) return 'edit';
-    return null;
+    if (modalsState.selectedAppointmentForm.IdPlanningEvenement === -1) return 'createRessource';
+    if (modalsState.selectedAppointmentForm.IdPlanningEvenement === 0) return 'editRessource';
+    return 'editAppointment';
   }, [modalsState.selectedAppointmentForm]);
 
   // Titre dynamique de la modale principale
@@ -230,8 +233,8 @@ export const CalendarModals = memo(({
     if (modalsState.repeatData) return "Répéter ce rendez-vous";
     if (modalsState.extendData) return "Prolonger le rendez-vous";
     if (modalsState.selectedAppointmentForm) {
-        if (resourceEditMode === 'create') return "Création de la ressource";
-        if (resourceEditMode === 'edit') return "Modification de la ressource";
+        if (resourceEditMode === 'createRessource') return "Création de la ressource";
+        if (resourceEditMode === 'editRessource') return "Modification de la ressource";
         return `Modifier l'Évènement - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource || 'Ressource inconnue'}`;
     }
     return "Ajouter un rendez-vous";

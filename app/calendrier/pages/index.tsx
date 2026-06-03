@@ -92,6 +92,7 @@ export default function HomePage({
 }) {
 
   const { hasPermission } = useAuth();
+  
   const user = useCurrentUser();
   
   const [loadCalendar, setLoadCalendar] = useState(true); 
@@ -317,7 +318,7 @@ export default function HomePage({
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
       
-      const configResponse = await viewState.loadConfigs();
+      const configResponse = await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
       const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
 
       console.log('Employees Response:', employeesResponse);
@@ -422,7 +423,7 @@ export default function HomePage({
                 {/* Injection des contextes pour les composants enfants */}          
                 {viewState.viewType === 'calendar' ? (
                   /* VUE PLANNING */
-                  viewState.currentCalendarConfig ? (
+                  (viewState.currentCalendarConfig || hasPermission(21)) ? (
                       <CalendarGrid
                         /* Données */
                         employees={dataLayer.filteredEmployees}
@@ -482,7 +483,9 @@ export default function HomePage({
                           onImageClick: interaction.handleOpenImageModal,
                           initialTeams: dataLayer.initialTeams,
                           onTeamChange: dataLayer.updateEmployeeGroup,
-                          onEditManuelRessourceRequest: appointmentLogic.handleOpenEditModal
+                          onEditManuelRessourceRequest: appointmentLogic.handleOpenEditModal,
+                          ressources: dataLayer.itemsRef.current
+
                         }
                       ) || []}
                       enablePagination={true}

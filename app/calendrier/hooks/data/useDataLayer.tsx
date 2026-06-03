@@ -45,16 +45,6 @@ export const useDataLayer = ({
   const [availableImages, setAvailableImages] = useState<ImageType[]>(() => getCachedImages());
   const itemsSnapshot = useMemo(() => Object.values(itemsRef.current), [appointmentsVersion]);
 
-  const selectedRdvTypes = useMemo(() => {
-    const selected = calendarConfig?.filterCategories?.evenements &&
-      typeof calendarConfig.filterCategories.evenements === 'object' &&
-      'selectedRdvTypes' in calendarConfig.filterCategories.evenements
-      ? calendarConfig.filterCategories.evenements.selectedRdvTypes
-      : [];
-
-    return selected.map(type => type.toLowerCase());
-  }, [calendarConfig]);
-
 
  
   useEffect(() => {

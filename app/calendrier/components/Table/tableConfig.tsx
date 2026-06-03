@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { CategoryStructure } from ".";
-import { Appointment, ChantierItem, Equipe, User } from "../../types";
+import { Appointment, AutreItem, ChantierItem, Equipe, Item, User } from "../../types";
 import { AppointmentItem } from "../Calendar";
 import { GenericDataItem } from "./DataTableFrame";
 import Image from "../ui/Image";
@@ -23,32 +23,34 @@ export interface TableConfigDeps {
   initialTeams?: Record<number, Equipe>;
   onTeamChange?: (employee: User, groupId: number | null) => Promise<{ success: boolean }>;
   onEditManuelRessourceRequest?: (item: any) => void;
+  ressources?: Record<number, Item>;
 }
 
 // 1. Renderer pour les images de Chantiers / Paie (Affiche un mini AppointmentItem)
 const imageRendererChantierAndPaie = (value: any, item: any, deps: TableConfigDeps) => {
-    const chantierItem = item as ChantierItem;
+    const Item = { ...item, IdPlanningRessource: Number(item.IdSocialRubriquePaie)}
     return (
         <AppointmentItem
           appointment={{
             IdPlanningEvenement: 0,
             AnnotationPlanningEvenement: '',
-            IdPlanningRessource: chantierItem.IdPlanningRessource,
+            IdPlanningRessource: Item.IdPlanningRessource,
             DebutPlanningEvenement: 0,
             FinPlanningEvenement: 1000,
             IdEmploye: 0,
           }}
           isFullDay={false}
           isMobile={false}
-          event={chantierItem}
+          event={Item}
           chargeeAffaire=''
           source='demo'
           className='cursor-pointer'
           onDoubleClick={() => {
+            if (deps.ressources) deps.ressources[Item.IdPlanningRessource] = Item; // Assurer que la ressource est à jour
             const newAppointment: Appointment = {
               IdPlanningEvenement: 0,
               AnnotationPlanningEvenement: '',
-              IdPlanningRessource: chantierItem.IdPlanningRessource,
+              IdPlanningRessource: Item.IdPlanningRessource,
               DebutPlanningEvenement: 0,
               FinPlanningEvenement: 1000,
               IdEmploye: 0,

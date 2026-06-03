@@ -43,7 +43,7 @@ interface CalendarGridProps {
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
-  calendarConfig: CalendarConfig;
+  calendarConfig: CalendarConfig | null;
   onCalendarConfigChange: (config: CalendarConfig) => void;
   availableConfigs: CalendarConfig[];
   onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;

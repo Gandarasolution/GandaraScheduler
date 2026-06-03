@@ -30,7 +30,7 @@ interface DesktopCalendarGridProps {
   dayInTimeline: number[];
   initialTeams: Record<number, Equipe>;
   poleActivites: Record<number, PoleActivite>;
-  calendarConfig: CalendarConfig;
+  calendarConfig: CalendarConfig | null;
   onCalendarConfigChange: (config: CalendarConfig) => void;
   availableConfigs: CalendarConfig[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
@@ -140,8 +140,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
 
   const dimensionItems = useMemo(() => {
-    return getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams, poleActivites);
-  }, [calendarConfig.Group, employees, initialTeams, poleActivites]);
+    return getHierarchicalDimensionItems(calendarConfig?.Group, employees, initialTeams, poleActivites);
+  }, [calendarConfig?.Group, employees, initialTeams, poleActivites]);
 
   
 
@@ -233,7 +233,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
  
 
   const filteredEmployees = useMemo(() => {
-    const baseFiltered = applyFiltersToEmployees(employees, getFlatFilters(calendarConfig.filterCategories));
+    if (!calendarConfig) return employees;
+    const baseFiltered = applyFiltersToEmployees(employees, getFlatFilters( calendarConfig?.filterCategories));
     
     // Filtrer les employés inactifs qui n'ont pas de rdv dans la fenêtre visible
     return baseFiltered.filter(emp => {
@@ -245,11 +246,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       // Si inactif, on garde seulement s'il a au moins un RDV visible.
       return visibleEmployeeIdsInWindow.has(emp.IdPersonnel);
     });
-  }, [employees, calendarConfig.filterCategories, visibleEmployeeIdsInWindow]);
+  }, [employees, calendarConfig?.filterCategories, visibleEmployeeIdsInWindow]);
 
   const employeesByDimension = useMemo(() => {
-    return groupEmployeesHierarchically(filteredEmployees, calendarConfig.Group, initialTeams, poleActivites);
-  }, [filteredEmployees, calendarConfig.Group, initialTeams, poleActivites]);
+    return groupEmployeesHierarchically(filteredEmployees, calendarConfig?.Group, initialTeams, poleActivites);
+  }, [filteredEmployees, calendarConfig?.Group, initialTeams, poleActivites]);
 
   const todayIndex = useMemo(() => {
     if (!todayTs) return -1;

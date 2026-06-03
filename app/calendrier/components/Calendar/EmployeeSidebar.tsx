@@ -35,7 +35,7 @@ interface EmployeeSidebarProps {
   expandedOverlapRows: Record<number, boolean>;
   onToggleItem: (itemId: string | number) => void;
   onCollapseRow: (employeeId: number) => void;
-  calendarConfig: CalendarConfig;
+  calendarConfig: CalendarConfig | null;
   availableConfigs: CalendarConfig[];
   onCalendarConfigChange: (config: CalendarConfig) => void;
   updateHighlightedEmployeeRow: (employeeId: number) => void;
@@ -86,45 +86,49 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
       ref={columnEmployeeRef}
     >
       {/* Header avec sélecteur de calendrier */}
+      
       <div 
         className={`sticky top-0 z-40 flex bg-page justify-center flex-shrink-0`}
         style={{
           height: TIMELINE_HEADERITEMS_CELL_HEIGHT + CONTAINER_PADDING
         }}
       >
-        <div className="custom-select-wrapper relative inline-block w-full">
-          <CustomSelectWithImage
-            options={selectOptions}
-            value={calendarConfig.IdPlanningVue}
-            onChange={(value) => {
-              const selectedConfig = availableConfigs.find(config => config.IdPlanningVue === value);                  
-              if (selectedConfig) {
-                onCalendarConfigChange(selectedConfig);
+        {calendarConfig && (
+          <div className="custom-select-wrapper relative inline-block w-full">
+            <CustomSelectWithImage
+              options={selectOptions}
+              value={calendarConfig.IdPlanningVue}
+              onChange={(value) => {
+                const selectedConfig = availableConfigs.find(config => config.IdPlanningVue === value);                  
+                if (selectedConfig) {
+                  onCalendarConfigChange(selectedConfig);
+                }
+              }}
+              illustrationImage={
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 80 80" width="25" height="25">
+                  <defs>
+                    <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#00c6ff"/>
+                      <stop offset="100%" stopColor="#0072ff"/>
+                    </linearGradient>
+                    <linearGradient id="gradPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#8e2de2"/>
+                      <stop offset="100%" stopColor="#4a00e0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M20 40 Q50 10 80 40 L60 50 Q40 60 20 40 Z" fill="url(#gradBlue)"/>
+                  <path d="M20 60 Q50 90 80 60 L60 50 Q40 40 20 60 Z" fill="url(#gradPurple)"/>
+                </svg>
               }
-            }}
-            illustrationImage={
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 80 80" width="25" height="25">
-                <defs>
-                  <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#00c6ff"/>
-                    <stop offset="100%" stopColor="#0072ff"/>
-                  </linearGradient>
-                  <linearGradient id="gradPurple" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#8e2de2"/>
-                    <stop offset="100%" stopColor="#4a00e0"/>
-                  </linearGradient>
-                </defs>
-                <path d="M20 40 Q50 10 80 40 L60 50 Q40 60 20 40 Z" fill="url(#gradBlue)"/>
-                <path d="M20 60 Q50 90 80 60 L60 50 Q40 40 20 60 Z" fill="url(#gradPurple)"/>
-              </svg>
-            }
-            placeholder="Sélectionner un calendrier"
-            customArrow={<CustomArrow isOpen={false} />}
-            className='py-3 px-4 w-full'
-          />
-        </div>
-      </div>
+              placeholder="Sélectionner un calendrier"
+              customArrow={<CustomArrow isOpen={false} />}
+              className='py-3 px-4 w-full'
+            />
+          </div>
+        )}
 
+      </div>
+      
       {/* Liste des groupes d'employés */}
       {dimensionItems.map((item, index) => {
         const isOpen = openItems.includes(item.id);

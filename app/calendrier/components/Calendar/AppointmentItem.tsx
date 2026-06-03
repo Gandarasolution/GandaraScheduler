@@ -67,7 +67,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 }) => {
 
   const { hasPermission } = useAuth();
-
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -226,13 +225,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     transition: isDragging ? 'none' : 'box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out, opacity 0.2s ease-in-out transform 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
     zIndex: isHovered ? 9999 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0)))),
-    cursor: isInactive ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' ? 'grab' : 'default')),
+    cursor: isInactive ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' && hasPermission(23) ? 'grab' : 'default')),
   }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment, isInactive, isResizingLeft, isResizingRight]);
 
   return (
     <div
       key={`${appointment.IdPlanningEvenement}-${appointment.DebutPlanningEvenement}-${appointment.FinPlanningEvenement}-${appointment.AnnotationPlanningEvenement}`} // Clé unique basée sur les propriétés de l'appointment 
-      ref={(node) => { if (node && source === 'calendar' && !isInactive) drag(node); }}
+      ref={(node) => { if (node && source === 'calendar' && !isInactive && hasPermission(23)) drag(node); }}
       onClick={(e) => {
         e.stopPropagation();
         onClick && onClick(appointment);
@@ -240,7 +239,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onDoubleClick={(e) => {
         e.stopPropagation();
         setIsHovered(false); // Masquer le tooltip au double-clic
-        if (!isInactive) {
+        if ((!isInactive && hasPermission(23)) || source === 'demo') {
           onDoubleClick && onDoubleClick(appointment);
         }
       }}
@@ -361,7 +360,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           onMouseDown={(e) => !isInactive && hasPermission(23) && handleMouseDown(e, 'left')}
           style={{ 
             borderRadius: '4px 0 0 4px',
-            cursor: isInactive || !hasPermission(23) ? 'not-allowed' : 'ew-resize',
+            cursor: isInactive  ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',
             width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px` // 10% de la largeur ou max 12px
           }}
         />
@@ -477,7 +476,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           onMouseDown={(e) => !isInactive && hasPermission(23) && handleMouseDown(e, 'right')}
           style={{ 
             borderRadius: '0 4px 4px 0', 
-            cursor: isInactive || !hasPermission(23) ? 'not-allowed' : 'ew-resize',
+            cursor: isInactive  ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',
             width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px` // 10% de la largeur ou max 12px
           }}
         />
