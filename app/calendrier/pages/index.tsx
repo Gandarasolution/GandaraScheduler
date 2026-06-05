@@ -158,6 +158,7 @@ export default function HomePage({
       createEvenement: evenementService.createEvenement,
       updateEvenement: evenementService.updateEvenement,
       deleteEvenement: evenementService.deleteEvenement,
+      deleteEvenements: evenementService.deleteEvenements,
       divideEvenement: evenementService.divideEvenement,
       repeatEvenement: evenementService.repeatEvenement,
     },
@@ -478,14 +479,11 @@ export default function HomePage({
                       categoriesStructure={getTableStructure(
                         viewState.viewType, 
                         {
-                          setSelectedAppointment: appointmentLogic.setSelectedAppointment,
                           handleOpenEditModal: appointmentLogic.handleOpenEditModal,
                           onImageClick: interaction.handleOpenImageModal,
                           initialTeams: dataLayer.initialTeams,
                           onTeamChange: dataLayer.updateEmployeeGroup,
-                          onEditManuelRessourceRequest: appointmentLogic.handleOpenEditModal,
                           ressources: dataLayer.itemsRef.current
-
                         }
                       ) || []}
                       enablePagination={true}
@@ -536,7 +534,7 @@ export default function HomePage({
               closeModal: () => appointmentLogic.setIsModalOpen(false),
               saveAppointment: appointmentLogic.handleSaveAppointment,
               handleAddManualRessource: appointmentLogic.handleAddManualRessource,
-              handleEditManualRessource: appointmentLogic.handleEditManualRessource,
+              handleEditManualRessource: appointmentLogic.handleEditRessource,
               handleDeleteManualRessource: (dimensionId: number, forceDelete: boolean = false) => {
                 const result = appointmentLogic.handleDeleteManualRessource(dimensionId, forceDelete);
                 if (result.success) {
@@ -623,9 +621,6 @@ export default function HomePage({
               // Correction : Setter pour l'item sélectionné
               setSelectedItem: appointmentLogic.setSelectedItem,
               
-              // Suppression d'étiquette de tous les rendez-vous
-              removeTagFromAppointments: appointmentLogic.removeTagFromAppointments,
-
               addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
               removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,
             }}

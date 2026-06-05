@@ -115,6 +115,11 @@ async function addRessourceManual(ressourceData: any) {
   return await postRequest('/api/ressources/manual-events/create', ressourceData, 'addRessourceManual');
 }
 
+async function editRessource(ressourceId: number, ressourceData: any) {
+  return await putRequest(`/api/ressources/${ressourceId}`, ressourceData, 'editRessource');
+}
+
+
 export default {
   searchRessources,
   getRessourcesProjet,
@@ -123,4 +128,5 @@ export default {
   getFilterOptionsDynamic,
   verifyUniqueCode,
   addRessourceManual,
+  editRessource
 };

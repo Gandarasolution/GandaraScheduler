@@ -16,7 +16,7 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect, useCallback, useRef } from 'react';
-import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, SocialItemPermission, Tag, AutreItem } from '../../types';
+import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, Tag, AutreItem } from '../../types';
 import { isSameDay, isSameYear, isSameMonth, format } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 import socialPermissionService from '@/app/service/socialPermission.service';
@@ -77,9 +77,9 @@ interface AppointmentFormProps {
   /** Callback pour ajouter une ressource manuelle */
   handleAddManualRessource: (dimension: AutreItem) => Promise<{ success: boolean, message?: string }>;
   /** Callback pour éditer une ressource manuelle */
-  handleEditManualRessource: (dimension: Item) => void;
+  handleEditManualRessource: (dimension: Item) => Promise<{ success: boolean, message?: string }>;
   /** Callback pour supprimer une étiquette de tous les rendez-vous associés */
-  onRemoveTagFromAppointments?: (tagId: number) => void;
+  onRemoveTagFromAppointments?: (tagId: number) => Promise<any>;
   onAddTagToResource?: (tag: any) => Promise<any>;
   onFetchTagsForResource?: (idRessource: number) => Promise<any>;
   loadingFallback?: React.ReactNode;
@@ -150,8 +150,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // - Les options de ressources (couleurs, code, ect.) sont toujours affichées dans tous les modes pour les rubriques perso
   // - Les selecteurs de Date et d'Employé sont cachés si on créer ou si on edite une ressource (isEditingAppointment == false)
   const isResourceMode = isCreatingResource || isEditingResource;
-    
-    
+        
+
   // ===== ÉTATS LOCAUX =====
   
   /**
@@ -163,12 +163,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);
 
-  
   // Nouveaux états pour gérer les étiquettes asynchrones
   const [resourceTags, setResourceTags] = useState<Tag[]>([]);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [DeletingTag, setDeletingTag] = useState<number | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
+
+  console.log("Ressource actuelle :", formDataItemType);
+  console.log("isResourceMode :", isResourceMode);
 
   // Charger les étiquettes au chargement
   useEffect(() => {
@@ -208,6 +211,27 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       setIsCreatingTag(false);
     }
   };
+
+  const handleDeleteTag = async (tagId: number) => {
+    if (!onRemoveTagFromAppointments) return;
+    setDeletingTag(tagId);
+    setTagError(null);
+    try {
+      const result = await onRemoveTagFromAppointments(tagId);
+      if (result?.error === 1) {
+        setTagError(result.message || "Erreur lors de la suppression de l'étiquette");
+        return;
+      }
+      setResourceTags(prev => prev.filter(tag => tag.IdPlanningEtiquette !== tagId));
+    } catch (err) {
+      console.error("Failed to delete tag", err);
+      setTagError("Erreur lors de la suppression de l'étiquette");
+    } finally {
+      setDeletingTag(null);
+    }
+  };
+
+
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
     
@@ -254,7 +278,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   /**
    * États pour la gestion des permissions par employé (rubriques sociales uniquement)
    */
-  const [employeePermissions, setEmployeePermissions] = useState<Map<number, SocialItemPermission>>(new Map());
+  const [employeePermissions, setEmployeePermissions] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
     // Ne mettre à jour que si l'image a réellement changé
@@ -294,37 +318,30 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             const response = await socialPermissionService.getSocialItemPermission(emp.IdPersonnel, formDataItemType?.IdPlanningRessource);
             const perm = response?.error === 0 ? response.data : null;
 
-            const safePermission: SocialItemPermission = perm || {
-              userId: emp.IdPersonnel,
-              itemId: formDataItemType?.IdPlanningRessource,
-              canView: true,
-              canCreate: true,
-              canEdit: true,
-              canDelete: true,
-            };
+            // const safePermission: SocialItemPermission = perm || {
+            //   userId: emp.IdPersonnel,
+            //   itemId: formDataItemType?.IdPlanningRessource,
+            //   canView: true,
+            //   canCreate: true,
+            //   canEdit: true,
+            //   canDelete: true,
+            // };
 
-            return [emp.IdPersonnel, safePermission] as const;
+            return [emp.IdPersonnel, perm] as const;
           })
         );
 
         if (!isMounted) return;
 
-        setEmployeePermissions(new Map<number, SocialItemPermission>(permissionEntries));
+        setEmployeePermissions(new Map<number, number>(permissionEntries));
         return;
       }
 
       if (isCreatingResource && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso')) {
       // Pour la création, initialiser avec tous les droits
-      const permissions = new Map<number, SocialItemPermission>();
+      const permissions = new Map<number, number>();
       employees.forEach(emp => {
-        permissions.set(emp.IdPersonnel, {
-          userId: emp.IdPersonnel,
-          itemId: formDataItemType?.IdPlanningRessource || -1,
-          canView: true,
-          canCreate: true,
-          canEdit: true,
-          canDelete: true,
-        });
+        permissions.set(emp.IdPersonnel, 23);
       });
 
       if (!isMounted) return;
@@ -406,6 +423,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * Soumet le formulaire de rendez-vous.
    */
   const handleSubmit = async (e?: React.FormEvent) => {
+    setSaveError(null);
     if (e && e.preventDefault) {
       e.preventDefault();
     }
@@ -428,17 +446,18 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       const result = await handleAddManualRessource({...formDataItemType} as AutreItem);
       if (!result.success) {
         notificationService.error('Erreur', result.message || 'Erreur lors de l\'ajout de la ressource.');
+        setSaveError(result.message || 'Erreur lors de l\'ajout de la ressource.');
       } else if (onClose) {
         onClose();
       }
       setIsSaving(false);
       return;
     }
-    
     // Gestion de la modification d'une ressource existante
     if (isEditingResource) {
       console.log('Modification de ressource');
-      
+      setIsSaving(true);
+
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
       if (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') {
         employeePermissions.forEach((perm) => {
@@ -447,7 +466,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       }
       
       // Mise à jour de l'événement existant
-      handleEditManualRessource (formDataItemType);
+      const result = await handleEditManualRessource(formDataItemType);
+      if (!result.success) {
+        notificationService.error('Erreur', result.message || 'Erreur lors de la mise à jour de la ressource.');
+        setSaveError(result.message || 'Erreur lors de la mise à jour de la ressource.');
+      }else if (onClose) {
+        onClose();
+      }
+
+      setIsSaving(false);
       return;
     }    
 
@@ -514,15 +541,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Callback pour changement de permission
   const handlePermissionChange = (userId: number, permissionId: string, value: boolean) => {
-    const perm = employeePermissions.get(userId) || {
-      userId,
-      itemId: formDataItemType?.IdPlanningRessource || -1,
-      canView: true,
-      canCreate: true,
-      canEdit: true,
-      canDelete: true,
-    };
-    setEmployeePermissions(new Map(employeePermissions.set(userId, { ...perm, [permissionId]: value })));
+    const perm = employeePermissions.get(userId) 
+    setEmployeePermissions(new Map(employeePermissions.set(userId, 23)));
   };
 
   const handleSelectTag = (tag: Tag | undefined) => {
@@ -636,23 +656,16 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Users avec permissions pour PermissionsPanel
   const usersWithPermissions: UserWithPermissions[] = employees.map(emp => {
-    const perm = employeePermissions.get(emp.IdPersonnel) || {
-      userId: emp.IdPersonnel,
-      itemId: formDataItemType?.IdPlanningRessource || -1,
-      canView: true,
-      canCreate: true,
-      canEdit: true,
-      canDelete: true,
-    };
+    const perm = employeePermissions.get(emp.IdPersonnel)
     return {
       id: emp.IdPersonnel,
       displayName: `${emp.Nom} ${emp.Prenom}`,
       initials: `${emp.Prenom?.charAt(0)}${emp.Nom?.charAt(0)}`,
       permissions: {
-        canView: perm.canView,
-        canCreate: perm.canCreate,
-        canEdit: perm.canEdit,
-        canDelete: perm.canDelete,
+        canView: perm === 23,
+        canCreate: perm === 23,
+        canEdit: perm === 23,
+        canDelete: perm === 23,
       },
     };
   });
@@ -774,11 +787,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             <TagsManager
               tags={resourceTags}
               onAddTag={handleCreateTag}
-              onRemoveTag={onRemoveTagFromAppointments || (() => {})}
+              onRemoveTag={handleDeleteTag}
               isTagUsed={isTagUsedCheck}
               variant="compact"
               title="Étiquettes"
-              isLoading={isLoadingTags}
+              isDeleting={DeletingTag}
               isCreating={isCreatingTag}
               error={tagError}
             />
@@ -812,12 +825,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                       // err is handled via tagError
                   }
                 }}
-                onRemoveTag={onRemoveTagFromAppointments || (() => {})}
+                onRemoveTag={handleDeleteTag}
                 isTagUsed={isTagUsedCheck}
                 variant="extended"
                 title="Étiquette associée"
                 placeholder="Aucune étiquette"
-                isLoading={isLoadingTags}
+                isDeleting={DeletingTag}
                 isCreating={isCreatingTag}
                 error={tagError}
               />

@@ -39,6 +39,7 @@ interface LogicProps {
     updateEvenementAndRessource: (id: string, data: any) => Promise<any>;
     divideEvenement: (id: string, data: any) => Promise<any>;
     repeatEvenement: (data: any) => Promise<any>;
+    deleteEvenements: (ids: string[]) => Promise<any>;
   };
 }
 
@@ -173,7 +174,7 @@ export const useAppointmentLogic = ({
     }
   }, [appointmentsRef]);
 
-  const undoLastAction = useCallback(() => {    
+  const undoLastAction = useCallback(async () => {    
     if (history.current.length === 0) {
       notificationService.warning('Aucune action', 'Aucune action à annuler');
       return;
@@ -182,11 +183,18 @@ export const useAppointmentLogic = ({
     const lastAction = history.current.pop();
     if (!lastAction) return;
 
+    const before =  appointmentsRef.current
+
     switch (lastAction.type) {
       case 'create':
         // Annuler une création = supprimer le rendez-vous
         if (lastAction.appointment) {
           appointmentsRef.current = appointmentsRef.current.filter(app => app.IdPlanningEvenement !== lastAction.appointment!.IdPlanningEvenement);
+
+          const result = await api?.deleteEvenement(String(lastAction.appointment.IdPlanningEvenement));
+          if (result.error === 1) {
+            appointmentsRef.current = before;
+          }
           notificationService.undoSuccess('Création');
         }
         break;
@@ -195,6 +203,21 @@ export const useAppointmentLogic = ({
         // Annuler une suppression = restaurer le rendez-vous
         if (lastAction.appointment) {
           appointmentsRef.current.push({ ...lastAction.appointment });
+
+          const payload = {
+            DebutPlanningEvenement: lastAction.appointment.DebutPlanningEvenement,
+            FinPlanningEvenement: lastAction.appointment.FinPlanningEvenement,
+            IdEmploye: lastAction.appointment.IdEmploye,
+            IdPlanningRessource: lastAction.appointment.IdPlanningRessource,
+            AnnotationPlanningEvenement: lastAction.appointment.AnnotationPlanningEvenement,
+            PlanningEvenementPriorite: lastAction.appointment.PlanningEvenementPriorite,
+            IdPlanningEtiquette: lastAction.appointment.Etiquette?.IdPlanningEtiquette,
+          };
+
+          const result = await api?.createEvenement(payload);
+          if (result.error === 1) {
+            appointmentsRef.current = before;
+          }
           notificationService.undoSuccess('Suppression');
         }
         break;
@@ -206,6 +229,21 @@ export const useAppointmentLogic = ({
           appointmentsRef.current = appointmentsRef.current.map(app =>
             app.IdPlanningEvenement === lastAction.previousAppointment!.IdPlanningEvenement ? { ...lastAction.previousAppointment! } : app
           );
+          const payload = {
+            DebutPlanningEvenement: lastAction.previousAppointment.DebutPlanningEvenement,
+            FinPlanningEvenement: lastAction.previousAppointment.FinPlanningEvenement,
+            IdEmploye: lastAction.previousAppointment.IdEmploye,
+            IdPlanningRessource: lastAction.previousAppointment.IdPlanningRessource,
+            AnnotationPlanningEvenement: lastAction.previousAppointment.AnnotationPlanningEvenement,
+            PlanningEvenementPriorite: lastAction.previousAppointment.PlanningEvenementPriorite,
+            IdPlanningEtiquette: lastAction.previousAppointment.Etiquette?.IdPlanningEtiquette,
+          };
+
+          const result = await api?.createEvenement(payload);
+          if (result.error === 1) {
+            appointmentsRef.current = before;
+          }
+
           notificationService.undoSuccess(lastAction.type === 'move' ? 'Déplacement' : 'Modification');
         }
         break;
@@ -221,7 +259,30 @@ export const useAppointmentLogic = ({
           // Supprimer les RDV créés par le split
           const createdIds = lastAction.createdAppointments.map(app => app.IdPlanningEvenement);
           appointmentsRef.current = appointmentsRef.current.filter(app => !createdIds.includes(app.IdPlanningEvenement));
-          
+
+          try {
+            const result = await Promise.all([
+              // Restaurer le RDV principal
+              api?.updateEvenement(String(lastAction.previousAppointment.IdPlanningEvenement), {
+                DebutPlanningEvenement: lastAction.previousAppointment.DebutPlanningEvenement,
+                FinPlanningEvenement: lastAction.previousAppointment.FinPlanningEvenement,
+                IdEmploye: lastAction.previousAppointment.IdEmploye,
+                IdPlanningRessource: lastAction.previousAppointment.IdPlanningRessource,
+                AnnotationPlanningEvenement: lastAction.previousAppointment.AnnotationPlanningEvenement,
+                PlanningEvenementPriorite: lastAction.previousAppointment.PlanningEvenementPriorite,
+                IdPlanningEtiquette: lastAction.previousAppointment.Etiquette?.IdPlanningEtiquette,
+              }),
+
+              api?.deleteEvenements(lastAction.createdAppointments.map(app => String(app.IdPlanningEvenement)))
+            ]);
+            if (result.some(res => res?.error === 1)) {
+              appointmentsRef.current = before;
+            }
+            
+          } catch (error) {
+            console.error('Error occurred while undoing resize_split:', error);
+          }
+
           notificationService.undoSuccess('Division');
         }
         break;
@@ -1207,7 +1268,6 @@ export const useAppointmentLogic = ({
   // Handler pour ouvrir la modal d'édition
   const handleOpenEditModal = useCallback((appointment: Appointment) => {
     setSelectedAppointment(appointment);
-    setSelectedAppointment(appointment);
     setSelectedItem(eventsRef.current[Number(appointment.IdPlanningRessource)] || 
       {
         IdPlanningRessource: -1,
@@ -1281,17 +1341,37 @@ export const useAppointmentLogic = ({
     return { success: true };
   }, []);
 
-  useEffect(() => {
-    console.log('isModalOpen', isModalOpen);
-  }, [isModalOpen]);
 
-  const handleEditManualRessource = useCallback((dimension: Item) => {
-    eventsRef.current[Number(dimension.IdPlanningRessource)] = {
-      ...eventsRef.current[Number(dimension.IdPlanningRessource)],
-      ...dimension,
-    };
+  const handleEditRessource = useCallback(async (dimension: Item): Promise<{ success: boolean, message?: string }> => {
+    try{
+      const apiPayload = {
+        CouleurFondPlanningRessource: dimension.CouleurFondPlanningRessource,
+        CouleurBordurePlanningRessource: dimension.CouleurBordurePlanningRessource,
+        CouleurTextePlanningRessource: dimension.CouleurTextePlanningRessource,
+        ...(dimension.Type === 'Rubrique Perso' ? 
+          { 
+            CodePlanningRessource: dimension.CodePlanningRessource,
+            LibellePlanningRessource: dimension.LibellePlanningRessource,
+            Actif: dimension.Actif,
+          } : {}),
+        IdImage: dimension.Image,
+      };
+      const result = await ressourceService.editRessource(dimension.IdPlanningRessource, apiPayload);
+      console.log('Résultat de la modification de ressource', result);
+      if (!isApiSuccess(result)) {
+        const message = result?.message || 'Le serveur a refusé la modification de la ressource.';
+        notificationService.error('Modification annulée', message);
+        return { success: false, message };
+      }     }
+    catch(error){
+      console.error('Erreur réseau lors de la modification de la ressource', error);
+      notificationService.error('Erreur réseau', 'Impossible de modifier la ressource sur le serveur');
+      return { success: false, message: 'Erreur réseau' };
+    }
+
     setIsModalOpen(false);
     onUpdate();
+    return { success: true };
   }, []);
 
   const handleDeleteManualRessource = useCallback((dimensionId: number, forceDelete: boolean = false) => {
@@ -1353,25 +1433,6 @@ export const useAppointmentLogic = ({
     };
   }, []);
 
-  /**
-   * Supprime une étiquette de tous les rendez-vous qui l'utilisent
-   */
-  const removeTagFromAppointments = useCallback((tagId: number) => {
-    let updatedCount = 0;
-    appointmentsRef.current = appointmentsRef.current.map(app => {
-      if (app.Etiquette && app.Etiquette.IdPlanningEtiquette === tagId) {
-        updatedCount++;
-        return { ...app, Etiquette: undefined };
-      }
-      return app;
-    });
-    
-    onUpdate();
-    notificationService.info(
-      'Étiquette supprimée', 
-      `L'étiquette a été retirée de ${updatedCount} rendez-vous.`
-    );
-  }, [onUpdate]);
 
   return {
     // États exposés
@@ -1392,10 +1453,9 @@ export const useAppointmentLogic = ({
     createAppointmentFromDrag,
     handleOpenEditModal,
     handleAddManualRessource,
-    handleEditManualRessource,
+    handleEditRessource,
     handleDeleteManualRessource,
     handleDeactivateDimension,
-    removeTagFromAppointments,
 
     // Actions Spécifiques
     handleDeleteAppointmentConfirm,

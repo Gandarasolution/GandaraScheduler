@@ -46,11 +46,10 @@ interface CalendarModalsProps {
     closeModal: () => void;
     saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean, type: 'create' | 'update') => Promise<{ success: boolean; message?: string }>;
     handleAddManualRessource: (dimension: AutreItem) => Promise<{ success: boolean; message?: string }>;
-    handleEditManualRessource: (dimension: Item) => void;
+    handleEditManualRessource: (dimension: Item) => Promise<{ success: boolean; message?: string }>;
     handleDeleteManualRessource?: (dimensionId: number, forceDelete?: boolean) => any;
     handleDeactivateDimension?: (dimensionId: number) => any;
     setDeleteConfirmData?: (data: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null) => void;
-    removeTagFromAppointments?: (tagId: number) => void;
     
     // Repeat Handlers
     setRepeatData: (data: RepeatData | null) => void;
@@ -135,6 +134,8 @@ export const CalendarModals = memo(({
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
+
+  console.log(data.items);
 
   const handleRepeatSubmit = async () => {
     if (isSubmittingModalAction) return;
@@ -234,7 +235,7 @@ export const CalendarModals = memo(({
     if (modalsState.extendData) return "Prolonger le rendez-vous";
     if (modalsState.selectedAppointmentForm) {
         if (resourceEditMode === 'createRessource') return "Création de la ressource";
-        if (resourceEditMode === 'editRessource') return "Modification de la ressource";
+        if (resourceEditMode === 'editRessource') return `Modification de la ressource - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource}`;
         return `Modifier l'Évènement - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource || 'Ressource inconnue'}`;
     }
     return "Ajouter un rendez-vous";
@@ -477,7 +478,7 @@ export const CalendarModals = memo(({
             onDirtyChange={setIsFormDirty}
             handleAddManualRessource={handlers.handleAddManualRessource}
             handleEditManualRessource={handlers.handleEditManualRessource}
-            onRemoveTagFromAppointments={handlers.removeTagFromAppointments}
+            onRemoveTagFromAppointments={etiquetteService.deleteEtiquette}
             onFetchTagsForResource={etiquetteService.getEtiquettes}
             onAddTagToResource={etiquetteService.createEtiquette}
             loadingFallback={<ModalLoadingFallback />}

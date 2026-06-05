@@ -374,22 +374,3 @@ export interface MockNotification {
   timestamp: number;
   isRead: boolean;
 }
-
-/**
- * Permissions spécifiques pour une rubrique sociale par employé
- * @interface SocialItemPermission
- */
-export interface SocialItemPermission {
-  /** ID de l'employé */
-  userId: number;
-  /** ID de la rubrique sociale (absence ou autre) */
-  itemId: number;
-  /** L'employé peut voir cette rubrique */
-  canView: boolean;
-  /** L'employé peut créer des entrées pour cette rubrique */
-  canCreate: boolean;
-  /** L'employé peut modifier des entrées pour cette rubrique */
-  canEdit: boolean;
-  /** L'employé peut supprimer des entrées pour cette rubrique */
-  canDelete: boolean;
-}

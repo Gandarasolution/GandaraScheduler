@@ -17,18 +17,17 @@ const getWithSeparator = (num: string, colonne: string): string => {
 
   
 export interface TableConfigDeps {
-  setSelectedAppointment?: (app: Appointment) => void;
   handleOpenEditModal?: (app: Appointment) => void;
   onImageClick?: (user: User) => void;
   initialTeams?: Record<number, Equipe>;
   onTeamChange?: (employee: User, groupId: number | null) => Promise<{ success: boolean }>;
-  onEditManuelRessourceRequest?: (item: any) => void;
   ressources?: Record<number, Item>;
 }
 
 // 1. Renderer pour les images de Chantiers / Paie (Affiche un mini AppointmentItem)
 const imageRendererChantierAndPaie = (value: any, item: any, deps: TableConfigDeps) => {
-    const Item = { ...item, IdPlanningRessource: Number(item.IdSocialRubriquePaie)}
+    //console.log('Rendering image for item:', item);
+    const Item = { ...item, IdPlanningRessource: Number(item.IdPlanningRessource)}
     return (
         <AppointmentItem
           appointment={{
@@ -46,7 +45,7 @@ const imageRendererChantierAndPaie = (value: any, item: any, deps: TableConfigDe
           source='demo'
           className='cursor-pointer'
           onDoubleClick={() => {
-            if (deps.ressources) deps.ressources[Item.IdPlanningRessource] = Item; // Assurer que la ressource est à jour
+            if (deps.ressources) deps.ressources[Number(Item.IdPlanningRessource)] = Item; // Assurer que la ressource est à jour
             const newAppointment: Appointment = {
               IdPlanningEvenement: 0,
               AnnotationPlanningEvenement: '',
@@ -55,7 +54,6 @@ const imageRendererChantierAndPaie = (value: any, item: any, deps: TableConfigDe
               FinPlanningEvenement: 1000,
               IdEmploye: 0,
             }
-            if (deps.setSelectedAppointment) deps.setSelectedAppointment(newAppointment);
             if (deps.handleOpenEditModal) deps.handleOpenEditModal(newAppointment);
           }} 
           mainScrollRef={null}
@@ -267,13 +265,23 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 sortable: false,
                 align: 'center',
                 width: 200,
-                renderer: (value, item) => (
+                renderer: (value, item ) => (
                 <div 
                     className="flex items-center justify-center cursor-pointer"
                     onDoubleClick={() => {
-                        if (deps.onEditManuelRessourceRequest) {
-                            deps.onEditManuelRessourceRequest({ ...item, IdPlanningRessource: item.id });
+                        console.log('Double click on item:', item);
+                        const Item = { ...item, IdPlanningRessource: Number(item.IdPlanningRessource)}
+                        if (deps.ressources) deps.ressources[Number(Item.IdPlanningRessource)] = Item as unknown as AutreItem; // Assurer que la ressource est à jour
+
+                        const newAppointment: Appointment = {
+                        IdPlanningEvenement: 0,
+                        AnnotationPlanningEvenement: '',
+                        IdPlanningRessource: Item.IdPlanningRessource,
+                        DebutPlanningEvenement: 0,
+                        FinPlanningEvenement: 1000,
+                        IdEmploye: 0,
                         }
+                        if (deps.handleOpenEditModal) deps.handleOpenEditModal(newAppointment);
                     }}
                 >
                     {(item as any).Image ? (

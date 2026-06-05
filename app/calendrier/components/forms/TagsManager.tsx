@@ -44,8 +44,8 @@ import { Tag, TagsManagerProps, TagsManagerState } from '../../types';
  * ```
  */
 export interface ExtendedTagsManagerProps extends TagsManagerProps {
-  isLoading?: boolean;
   isCreating?: boolean;
+  isDeleting?: number | null; // ID de l'étiquette en cours de suppression
   error?: string | null;
 }
 
@@ -59,7 +59,7 @@ export const TagsManager: React.FC<ExtendedTagsManagerProps> = ({
   variant = 'extended',
   title = "Étiquettes",
   placeholder = "Aucune étiquette",
-  isLoading = false,
+  isDeleting,
   isCreating = false,
   error = null,
 }) => {
@@ -208,6 +208,7 @@ export const TagsManager: React.FC<ExtendedTagsManagerProps> = ({
             duplicateError={state.duplicateError}
             longVersionError={state.longVersionError}
             variant="compact"
+            isLoading={isCreating}
           />
 
           {/* Liste des étiquettes */}
@@ -224,16 +225,23 @@ export const TagsManager: React.FC<ExtendedTagsManagerProps> = ({
                   title={tagInfo.used ? `Utilisée ${tagInfo.count} fois` : 'Non utilisée - suppression directe'}
                 >
                   <span>{tag.LibelleLongPlanningEtiquette}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag.IdPlanningEtiquette)}
-                    className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 hidden group-hover:block"
-                    title={tagInfo.used ? 'Supprimer l\'étiquette (confirmation requise)' : 'Supprimer l\'étiquette'}
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
-                    </svg>
-                  </button>
+                  {Number(isDeleting) === Number(tag.IdPlanningEtiquette) ? (
+                    <svg className="animate-spin ml-1 mr-3 h-5 w-5 text-black" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg> 
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag.IdPlanningEtiquette)}
+                      className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 hidden group-hover:block"
+                      title={tagInfo.used ? 'Supprimer l\'étiquette (confirmation requise)' : 'Supprimer l\'étiquette'}
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
+                      </svg>
+                    </button>
+                  )}                  
                 </div>
               );
             })}

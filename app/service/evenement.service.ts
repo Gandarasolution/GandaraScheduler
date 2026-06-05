@@ -156,6 +156,10 @@ async function deleteEvenement(id: string) {
     return await deleteRequest(`/api/event/${id}`, 'deleteEvenement', {});
 }
 
+async function deleteEvenements(ids: string[]) {
+    return await deleteRequest(`/api/event`, 'deleteEvenements', { ids });
+}
+
 async function updateEvenementAndRessource(id: string, data: any) {
     const payload = {
         ...toApiEventPayload(data),
@@ -195,4 +199,5 @@ export default {
     updateEvenementAndRessource,
     divideEvenement,
     repeatEvenement,
+    deleteEvenements,
 }
