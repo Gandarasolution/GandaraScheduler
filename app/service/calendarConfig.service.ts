@@ -1,8 +1,9 @@
 import { getRequest, postRequest, putRequest, deleteRequest } from "./axios.service";
 
-async function getCalendarConfigsByUserId(userId: number, idPlanning?: number) {
+async function getCalendarConfigsByUserId(userId: number, idPlanning: number) {
     if (!idPlanning) {
-        idPlanning = 3; // Valeur par défaut pour idPlanning si non fourni
+      console.error('idPlanning is required to fetch calendar configurations.');
+      return null;
     }
   return await getRequest(`/api/planning/vue/user/${userId}?idPlanning=${idPlanning}`, 'getCalendarConfigsByUserId');
 }

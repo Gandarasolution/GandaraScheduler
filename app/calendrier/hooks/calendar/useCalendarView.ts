@@ -3,9 +3,8 @@ import { CalendarConfig, User } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
-import loadConfig from 'next/dist/server/config';
 
-export const useCalendarView = (employeesRef: any, user: User) => {
+export const useCalendarView = (idPlanning: number, user: User) => {
   // --- Préférences persistantes (localStorage) ---
   const getStoredBool = (key: string, def: boolean) => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -57,7 +56,7 @@ export const useCalendarView = (employeesRef: any, user: User) => {
 
 
   // --- Hook de configuration existant ---
-  const calendarConfigHook = useCalendarConfig({ user });
+  const calendarConfigHook = useCalendarConfig({ user, idPlanning });
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
 
    // État local pour le menu déroulant des vues

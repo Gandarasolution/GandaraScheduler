@@ -66,7 +66,7 @@ export const useDataLayer = ({
         teamsRecord[team.Id] = team;
       });
       setTeams(teamsRecord);
-      return response.data;
+      return response;
     }
   }, []);
 
@@ -78,7 +78,7 @@ export const useDataLayer = ({
         poleActivitesRecord[pole.Id] = pole;
       });
       setPoleActivites(poleActivitesRecord);
-      return response.data;
+      return response;
     }
   }, []);
 

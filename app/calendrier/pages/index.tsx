@@ -91,7 +91,7 @@ export default function HomePage({
   onThemeChange?: (theme: any) => void;
 }) {
 
-  const { hasPermission } = useAuth();
+  const { hasPermission, currentPlanningId } = useAuth();
   
   const user = useCurrentUser();
   
@@ -106,12 +106,13 @@ export default function HomePage({
   const [, setEmployeesVersion] = useState(0);
   const hasInitializedPlanningRef = useRef(false);
   const hasInitializedTeamsRef = useRef(false);
+  const [errorPlanning, setErrorPlanning] = useState<string | null>(null);
 
   // Refs de données dynamiques (chargées via API)
   const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
-  const viewState = useCalendarView(globalEmployees, user );
+  const viewState = useCalendarView(currentPlanningId, user );
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
@@ -320,17 +321,9 @@ export default function HomePage({
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
       
       const configResponse = await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
-      const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
+      console.log('Config Response:', configResponse);
 
-      console.log('Employees Response:', employeesResponse);
-      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
-        setGlobalEmployees(employeesResponse.data);
-      } else {
-        setGlobalEmployees([]);
-      }
-      setEmployeesVersion(prev => prev + 1);
-
-      if (configResponse?.error === 0 && configResponse.data?.JoursNonTravailles) {
+      if (configResponse?.error === 0 && configResponse.data?.JoursNonTravailles && configResponse.data.Configs.length > 0) {
         const recordData = Object.fromEntries(
           configResponse.data.JoursNonTravailles.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [
               item.DatePlanningJourNontravaille, // La clé (string)
@@ -340,10 +333,39 @@ export default function HomePage({
 
         // 2. On met à jour le state
         viewState.setNonWorkingDates(recordData);
+      }else {
+        setErrorPlanning("Erreur lors du chargement des jours non travaillés. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
       }
 
-      await dataLayer.loadTeams();
-      await dataLayer.loadPoleActivites();
+      const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
+
+      console.log('Employees Response:', employeesResponse);
+      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+        setGlobalEmployees(employeesResponse.data);
+      } else {
+        setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+        setGlobalEmployees([]);
+        setLoadCalendar(false);
+        return;
+      }
+      setEmployeesVersion(prev => prev + 1);
+
+      
+
+      let rep = await dataLayer.loadTeams();
+      if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
+        setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
+      rep = await dataLayer.loadPoleActivites();
+      if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
+        setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
 
       const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
       const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
@@ -424,53 +446,58 @@ export default function HomePage({
                 {/* Injection des contextes pour les composants enfants */}          
                 {viewState.viewType === 'calendar' ? (
                   /* VUE PLANNING */
-                  (viewState.currentCalendarConfig || hasPermission(21)) ? (
-                      <CalendarGrid
-                        /* Données */
-                        employees={dataLayer.filteredEmployees}
-                        appointments={dataLayer.filteredAppointments}
-                        user={user}
+                  (errorPlanning) ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <p className="text-red-600 text-lg font-semibold">{errorPlanning}</p>
+                      </div>
+                    </div>
+                  ) :
+                  (viewState.currentCalendarConfig || hasPermission(21)) && (
+                    <CalendarGrid
+                      /* Données */
+                      employees={dataLayer.filteredEmployees}
+                      appointments={dataLayer.filteredAppointments}
+                      user={user}
 
-                        /* Équipes & Événements */
-                        initialTeams={dataLayer.initialTeams}
-                        poleActivites={dataLayer.poleActivites}
-                        events={dataLayer.itemsRef.current}
-                        
-                        /* État Temporel */
-                        dayInTimeline={timeline.days}
-                        mainScrollRef={timeline.mainScrollRef}
-                        
-                        /* Configuration */
-                        isDisplayWeekend={viewState.isDisplayWeekend}
-                        isFullDay={viewState.isFullDay}
-                        isMobile={viewState.isMobile}
-                        nonWorkingDates={viewState.nonWorkingDates}
-                        tagPlacement={viewState.tagPlacement}
-                        HALF_DAY_INTERVALS={viewState.constants.intervals}
-                        
-                        /* Config Calendrier */
-                        calendarConfig={viewState.currentCalendarConfig}
-                        onCalendarConfigChange={viewState.setCurrentCalendarConfig}
-                        availableConfigs={viewState.availableConfigs}
-                        
-                        /* Actions & Events */
-                        onAppointmentMoved={appointmentLogic.moveAppointment}
-                        onCellDoubleClick={handleCellDoubleClick}
-                        onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
-                        onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
-                        handleContextMenu={interaction.handleContextMenu}
-                        onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
-                        mouseUpAfterScroll={timeline.getFirstDayAppearing}
-                        onAddAppointment={appointmentLogic.handleSaveAppointment}
-                        
-                        /* Sélection Optimisée */
-                        selectedCell={appointmentLogic.selectedCell}
-                        selectedAppointmentId={appointmentLogic.selectedAppointment?.IdPlanningEvenement}
-                        onSelectCell={appointmentLogic.setSelectedCell}
-                        onSelectAppointment={appointmentLogic.setSelectedAppointment}
-                      />
-                  ) : (
-                    <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>
+                      /* Équipes & Événements */
+                      initialTeams={dataLayer.initialTeams}
+                      poleActivites={dataLayer.poleActivites}
+                      events={dataLayer.itemsRef.current}
+                      
+                      /* État Temporel */
+                      dayInTimeline={timeline.days}
+                      mainScrollRef={timeline.mainScrollRef}
+                      
+                      /* Configuration */
+                      isDisplayWeekend={viewState.isDisplayWeekend}
+                      isFullDay={viewState.isFullDay}
+                      isMobile={viewState.isMobile}
+                      nonWorkingDates={viewState.nonWorkingDates}
+                      tagPlacement={viewState.tagPlacement}
+                      HALF_DAY_INTERVALS={viewState.constants.intervals}
+                      
+                      /* Config Calendrier */
+                      calendarConfig={viewState.currentCalendarConfig}
+                      onCalendarConfigChange={viewState.setCurrentCalendarConfig}
+                      availableConfigs={viewState.availableConfigs}
+                      
+                      /* Actions & Events */
+                      onAppointmentMoved={appointmentLogic.moveAppointment}
+                      onCellDoubleClick={handleCellDoubleClick}
+                      onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
+                      onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
+                      handleContextMenu={interaction.handleContextMenu}
+                      onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
+                      mouseUpAfterScroll={timeline.getFirstDayAppearing}
+                      onAddAppointment={appointmentLogic.handleSaveAppointment}
+                      
+                      /* Sélection Optimisée */
+                      selectedCell={appointmentLogic.selectedCell}
+                      selectedAppointmentId={appointmentLogic.selectedAppointment?.IdPlanningEvenement}
+                      onSelectCell={appointmentLogic.setSelectedCell}
+                      onSelectAppointment={appointmentLogic.setSelectedAppointment}
+                    />
                   )
                 ) : (
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */

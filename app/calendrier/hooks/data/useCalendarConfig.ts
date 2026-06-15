@@ -9,9 +9,10 @@ import calendarConfigService from '@/app/service/calendarConfig.service';
 
 interface UseCalendarConfigProps {
   user: User;
+  idPlanning: number;
 }
 
-export function useCalendarConfig({ user }: UseCalendarConfigProps) {
+export function useCalendarConfig({ user, idPlanning }: UseCalendarConfigProps) {
   const [customConfigs, setCustomConfigs] = useState<CalendarConfig[]>([]);
   const [loadedConfigs, setLoadedConfigs] = useState<CalendarConfig[]>([]);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -19,7 +20,9 @@ export function useCalendarConfig({ user }: UseCalendarConfigProps) {
   const [isCreatingConfig, setIsCreatingConfig] = useState(false);
 
   const loadConfigs = async (hasPermission: boolean) => {
-      const response = hasPermission ? await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel) : null;
+    console.log('Loading configs with permission:', hasPermission);
+      const response = hasPermission ? await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel, idPlanning) : null;
+      console.log('Load Configs Response:', response);
       
       if (response?.error === 0 && Array.isArray(response.data.Configs)) {
 

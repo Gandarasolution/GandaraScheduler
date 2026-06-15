@@ -36,11 +36,11 @@ async function login(payload: LoginPayload) {
 }
 
 async function me() {
-  return await getRequest("/api/auth/me", "me");
+  return await getRequest("/api/me", "me");
 }
 
 async function logout() {
-  return await postRequest("/api/auth/logout", {}, "logout");
+  return await postRequest("/api/logout", {}, "logout");
 }
 
 export default {

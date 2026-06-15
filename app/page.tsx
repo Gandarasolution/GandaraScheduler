@@ -6,11 +6,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ThemeType, useTheme } from './calendrier/utils/themeManager';
 import { ErrorBoundary } from "./calendrier/components/ui/ErrorBoundary";
 import { useAuth } from './calendrier/hooks/utils/AuthContext';
+import PlanningSelection from './login/PlanningSelection';
 
 
 export default function Home() {
 
-  const {user, login, isLoading, isAuthenticated, setUser} = useAuth();
+  const {user, login, isAuthenticated, setUser, UserPlanning, currentPlanningId, setCurrentPlanningId} = useAuth();
 
   const { setTheme } = useTheme(user);
   
@@ -61,8 +62,18 @@ export default function Home() {
     }
   }, [user, setTheme]);
 
+  if (!isAuthenticated || !user) return <LoginPage login={login} />;
 
-  if (!isAuthenticated) return <LoginPage login={login} />;
+  if (UserPlanning && UserPlanning.length > 1 && currentPlanningId === -1) {
+    return (
+      <PlanningSelection 
+        plannings={UserPlanning} 
+        onSelectPlanning={(id) => {
+          setCurrentPlanningId(id);
+        }} 
+      />
+    );
+  }
 
   return (
      <ErrorBoundary

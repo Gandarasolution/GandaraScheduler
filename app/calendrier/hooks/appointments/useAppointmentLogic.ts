@@ -391,6 +391,7 @@ export const useAppointmentLogic = ({
       };
 
       appointmentsRef.current.push(localAppointment);
+      onUpdate();
 
       // Mode local uniquement : pas de synchronisation BDD.
       if (!syncWithApi || !api?.createEvenement) {
