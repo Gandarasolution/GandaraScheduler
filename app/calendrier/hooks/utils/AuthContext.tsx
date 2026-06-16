@@ -4,6 +4,7 @@ import { authService } from '@/app/service';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { User } from '../../types';
 import { PlanningOption } from '@/app/login/PlanningSelection';
+import { axiosAgent } from '@/app/service/axios.service';
 
 
 
@@ -87,6 +88,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (currentPlanningId !== null) {
+      axiosAgent.defaults.headers.common['X-Planning-Id'] = currentPlanningId;
+    } else {
+      delete axiosAgent.defaults.headers.common['X-Planning-Id'];
+    }
+  }, [currentPlanningId]);
 
   return (
     <AuthContext.Provider value={{ 

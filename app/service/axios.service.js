@@ -23,7 +23,7 @@ Ces trois cas sont traités par une unique fonction handleError().
 
 
 // creation d'un agent axios, avec une config. pour atteindre l'API
-const axiosAgent = axios.create({
+export const axiosAgent = axios.create({
     baseURL: 'https://localhost:8000',
     withCredentials: true,
     headers: {

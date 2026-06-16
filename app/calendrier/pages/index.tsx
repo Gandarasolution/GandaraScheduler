@@ -60,6 +60,7 @@ import { User, Item, CommonPaieAttributs } from '../types';
 import { canCreateEvent } from '../utils/permissions';
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
 import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
+import { useMercureSync } from '../hooks/utils/useMercureSync';
 
 // Composant de chargement réutilisable
 const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
@@ -321,7 +322,7 @@ export default function HomePage({
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
       
       const configResponse = await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
-      console.log('Config Response:', configResponse);
+      //console.log('Config Response:', configResponse);
 
       if (configResponse?.error === 0 && configResponse.data?.JoursNonTravailles && configResponse.data.Configs.length > 0) {
         const recordData = Object.fromEntries(
@@ -341,7 +342,7 @@ export default function HomePage({
 
       const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
 
-      console.log('Employees Response:', employeesResponse);
+      //console.log('Employees Response:', employeesResponse);
       if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
       } else {
@@ -413,6 +414,58 @@ export default function HomePage({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [interaction, timeline, viewState.viewType]);
+
+
+  // 1. La fonction qui va réagir aux messages Mercure
+  const handleMercureEvent = useCallback((action: string, data: any) => {
+    console.log("📥 Action reçue en direct :", action, data);
+    console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    switch (action) {
+      case 'APPOINTMENT_CREATED':
+        dataLayer.addMissingResourcesToCache(data.ressources);
+        dataLayer.appointmentsRef.current.push(...data.appointments);
+        break;
+
+      case 'APPOINTMENT_UPDATED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, ...data } : appt));        
+        break;
+
+      case 'APPOINTMENT_AND_RESSOURCE_UPDATED':
+        dataLayer.itemsRef.current[Number(data.ressources.IdPlanningRessource)] = {
+          ...dataLayer.itemsRef.current[Number(data.ressources.IdPlanningRessource)],
+          CouleurFondPlanningRessource: data.ressources.CouleurFondPlanningRessource,
+          CouleurBordurePlanningRessource: data.ressources.CouleurBordurePlanningRessource,
+          CouleurTextePlanningRessource: data.ressources.CouleurTextePlanningRessource,
+          Image: data.ressources.IdPlanningImage,
+        }
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.appointment.IdPlanningEvenement) ? { ...appt, ...data.appointment } : appt));
+        break;
+
+      case 'APPOINTMENT_DELETED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.filter((appt) => Number(appt.IdPlanningEvenement) !== Number(data.IdPlanningEvenement));
+        break;
+        
+      case 'APPOINTMENTS_DELETED':
+        for (const deletedId of data.deletedIds) {
+          dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.filter((appt) => Number(appt.IdPlanningEvenement) !== Number(deletedId));
+        }
+        break;
+        
+      case 'APPOINTMENT_DIVISION_UPDATED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map(
+          (appt) => (Number(appt.IdPlanningEvenement) === Number(data.originalEventId) ? { ...appt, FinPlanningEvenement: data.divisionDate } : appt)
+        );
+        dataLayer.appointmentsRef.current.push(data.newEvent);
+        break;
+      default:
+        console.warn("Action Mercure inconnue :", action);      
+    }
+    console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    dataLayer.refreshData(); 
+  }, []);
+
+  // 2. On branche la radio !
+  useMercureSync(currentPlanningId, handleMercureEvent);
 
   // --- RENDU VISUEL ---
 

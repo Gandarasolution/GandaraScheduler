@@ -164,12 +164,9 @@ function getItemsByLevel(
   poleActivites: Record<number, PoleActivite>
 ): HierarchicalGroupItem[] {  
   if (levelType === 'pole') {
-          console.log(employees);
-
     return Object.values(poleActivites).map(pole => {      
       
       const poleEmployees = employees.filter(emp => Number(emp.PoleActivite) === Number(pole.Id));
-      console.log(poleEmployees);
 
       return {
         id: pole.Id || 'Sans Pôle',

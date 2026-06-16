@@ -7,6 +7,7 @@ import { getWorkedDayIntervals, isWeekend } from "../../utils/dates";
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
 import { on } from 'events';
 import ressourceService from '@/app/service/ressource.service';
+import { useAuth } from '../utils/AuthContext';
 
 // Type pour les données de répétition
 export type RepeatData = {
@@ -53,6 +54,8 @@ export const useAppointmentLogic = ({
   setDimensionsSearchInput,
   api,
 }: LogicProps) => {
+  
+  const { currentPlanningId } = useAuth();
   
   // --- Initialisation des Utilitaires ---
   const appointmentUtils = useMemo(() => createAppointmentUtils(employees), []);
@@ -864,27 +867,35 @@ export const useAppointmentLogic = ({
     const previousAppointments = { ...appointmentsRef.current };
     const originalAppointment = { ...appointment };
     const { DebutPlanningEvenement: startDate, FinPlanningEvenement: endDate, IdEmploye: employeeId } = appointment;
-    
-    // Calcul du milieu
-    let totalDuration = (endDate - startDate) + 1;
-    const timeInterval = timelineState.isFullDay 
-      ? DAY_INTERVALS[0].endHour - DAY_INTERVALS[0].startHour 
-      : HALF_DAY_INTERVALS[0].endHour - HALF_DAY_INTERVALS[0].startHour;
-    
-      
+
+    // 1. On liste tous les jours de l'intervalle
     const allDates = eachDayOfInterval({ start: startDate, end: endDate });
 
-    let compteur = 0;
-    allDates.forEach(date => {
-      if (isWeekend(date.getTime()) && !timelineState.isDisplayWeekend && !timelineState.includeWeekend) {
-          compteur++;
-      } 
+    // 2. On FILTRE pour ne garder que les jours "travaillés" (on exclut les week-ends si nécessaire)
+    const validDates = allDates.filter(date => {
+        const isWknd = isWeekend(date.getTime()); // ou date (selon comment est faite ta fonction isWeekend)
+        const skipWeekend = !timelineState.isDisplayWeekend && !timelineState.includeWeekend;
+        return !(isWknd && skipWeekend);
     });
 
-    totalDuration -= (timelineState.isFullDay ? compteur : compteur * 2) * (timeInterval * 60 * 60 * 1000);
+    // 3. On calcule le nombre d'intervalles par jour (1 pour FullDay, 2 pour Demi-journée)
+    const intervalsPerDay = timelineState.isFullDay ? 1 : 2;
+    const totalIntervals = validDates.length * intervalsPerDay;
 
-    const nbOfIntervals = Math.floor(totalDuration / (timeInterval * 60 * 60 * 1000));
-    const splitDate = startDate + (Math.floor(nbOfIntervals / 2) * (timeInterval * 60 * 60 * 1000));
+    // 4. On trouve l'intervalle du milieu
+    const halfIntervals = Math.floor(totalIntervals / 2);
+
+    // 5. On déduit l'index du jour dans notre tableau filtré
+    const splitDayIndex = Math.floor(halfIntervals / intervalsPerDay);
+    const splitDateObj = validDates[splitDayIndex];
+
+    // 6. On convertit en timestamp
+    let splitDate = splitDateObj.getTime();
+
+    // 7. Si on est en demi-journée et que la coupure tombe l'après-midi, on rajoute 12h
+    if (!timelineState.isFullDay && (halfIntervals % 2 !== 0)) {
+        splitDate += (12 * 60 * 60 * 1000); // Ajoute 12 heures en millisecondes
+    }
 
     const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
 
@@ -894,6 +905,8 @@ export const useAppointmentLogic = ({
       notificationService.error('Action interdite', 'Employé ou ressource introuvable. Le rendez-vous ne peut pas être divisé.');
       return;
     }
+
+    console.log(new Date(splitDate).toLocaleString(), 'Date de coupure calculée pour la division du rendez-vous');
   
 
     // 1. Redimensionner l'original

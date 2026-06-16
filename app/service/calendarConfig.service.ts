@@ -8,9 +8,7 @@ async function getCalendarConfigsByUserId(userId: number, idPlanning: number) {
   return await getRequest(`/api/planning/vue/user/${userId}?idPlanning=${idPlanning}`, 'getCalendarConfigsByUserId');
 }
 
-async function addNonWorkingDatesToPlanning(idPlanning: number, nonWorkingDate: number) {
-  console.log(idPlanning);
-  
+async function addNonWorkingDatesToPlanning(idPlanning: number, nonWorkingDate: number) {  
   return await postRequest(`/api/planning/${idPlanning}/non-working-dates`, { nonWorkingDate }, 'addNonWorkingDatesToPlanning');
 }
 

@@ -346,6 +346,7 @@ export const useDataLayer = ({
     updateEventImage,
     updateEmployeeImage,
     loadAppointmentsInRange,
-    loadTeams, loadPoleActivites
+    loadTeams, loadPoleActivites,
+    addMissingResourcesToCache,
   };
 };

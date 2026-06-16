@@ -135,8 +135,6 @@ export const CalendarModals = memo(({
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
 
-  console.log(data.items);
-
   const handleRepeatSubmit = async () => {
     if (isSubmittingModalAction) return;
     setModalSubmitError(null);
