@@ -41,8 +41,6 @@ interface AppointmentFormProps {
   appointment: Appointment;
   /** Événement associé au rendez-vous */
   item: Item;
-  /** Événements*/
-  items: Item[];
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
@@ -77,11 +75,13 @@ interface AppointmentFormProps {
   /** Callback pour ajouter une ressource manuelle */
   handleAddManualRessource: (dimension: AutreItem) => Promise<{ success: boolean, message?: string }>;
   /** Callback pour éditer une ressource manuelle */
-  handleEditManualRessource: (dimension: Item) => Promise<{ success: boolean, message?: string }>;
+  handleEditRessource: (dimension: Item) => Promise<{ success: boolean, message?: string }>;
   /** Callback pour supprimer une étiquette de tous les rendez-vous associés */
   onRemoveTagFromAppointments?: (tagId: number) => Promise<any>;
   onAddTagToResource?: (tag: any) => Promise<any>;
   onFetchTagsForResource?: (idRessource: number) => Promise<any>;
+  onFetchEventAndRessource?: (idEvent: number) => Promise<any>;
+  onFetchRessourceById?: (idRessource: number, typeRessource: 'Projet' | 'Paie' | 'Rubrique Perso') => Promise<any>;
   loadingFallback?: React.ReactNode;
 }
 
@@ -119,7 +119,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   appointments,
   appointment,
   item,
-  items,
   tagPlacement = 'hover',
   employees,
   HALF_DAY_INTERVALS,
@@ -131,12 +130,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   handleOpenImageModal,
   onDirtyChange,
   handleAddManualRessource,
-  handleEditManualRessource,
+  handleEditRessource,
   isMobile,
   resourceEditMode = null,
   onRemoveTagFromAppointments,
   onAddTagToResource,
   onFetchTagsForResource,
+  onFetchEventAndRessource,
+  onFetchRessourceById,
   loadingFallback,
 }) => {
 
@@ -145,6 +146,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // Variables dérivées pour améliorer la lisibilité
   const isCreatingResource = resourceEditMode === 'createRessource';
   const isEditingResource = resourceEditMode === 'editRessource';
+  const isEditingAppointment = resourceEditMode === 'editAppointment';
 
   // On simplifie la logique d'affichage 
   // - Les options de ressources (couleurs, code, ect.) sont toujours affichées dans tous les modes pour les rubriques perso
@@ -165,32 +167,89 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   // Nouveaux états pour gérer les étiquettes asynchrones
   const [resourceTags, setResourceTags] = useState<Tag[]>([]);
-  const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [DeletingTag, setDeletingTag] = useState<number | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
 
-  console.log("Ressource actuelle :", formDataItemType);
-  console.log("isResourceMode :", isResourceMode);
+  // console.log("Ressource actuelle :", formDataItemType);
+  // console.log("isResourceMode :", isResourceMode);
 
-  // Charger les étiquettes au chargement
   useEffect(() => {
-    if (onFetchTagsForResource && item?.IdPlanningRessource && isEditingResource) {
-      setIsLoadingTags(true);
-      onFetchTagsForResource(item?.IdPlanningRessource)
-        .then(response => {
-          // Assume response.data is the array of tags, adjust if necessary
-          setResourceTags(response.data || response || []);
-        })
-        .catch(err => {
-          console.error("Failed to load tags", err);
-          setTagError("Erreur lors de la récupération des étiquettes");
-        })
-        .finally(() => {
-          setIsLoadingTags(false);
-        });
-    }
-  }, [item?.IdPlanningRessource, onFetchTagsForResource]);
+    const loadAllFormData = async () => {
+      // Sécurité : Si aucune fonction de fetch n'est fournie, pas besoin de charger
+      if (!onFetchTagsForResource && !onFetchEventAndRessource && !onFetchRessourceById) return;
+
+      setIsLoading(true);
+      setTagError(null);
+
+      try {
+        // On crée un tableau pour stocker les promesses qui vont s'exécuter
+        const promises: Promise<any>[] = [];
+
+        // 1. Fetch des étiquettes
+        if (onFetchTagsForResource && (isEditingResource || isEditingAppointment)) {
+          promises.push(
+            onFetchTagsForResource(item?.IdPlanningRessource)
+              .then(response => {
+                setResourceTags(response.data || response || []);
+              })
+              .catch(err => {
+                console.error("Failed to load tags", err);
+               setTagError("Erreur lors de la récupération des étiquettes");
+              })
+          );
+        }
+
+        // 2. Fetch de l'événement complet et de sa ressource
+        if (onFetchEventAndRessource && isEditingAppointment) {
+          promises.push(
+            onFetchEventAndRessource(formDataAppointment.IdPlanningEvenement)
+              .then(response => {
+                if (response?.error === 0 && response?.data) {
+                  const { appointments, ressources } = response.data;
+                  setFormDataAppointment(appointments[0] ?? appointments);
+                  setFormDataItemType(ressources[0] ?? ressources);
+                }
+              })
+              .catch(err => {
+                console.error("Failed to load event and resource", err);
+                setTagError("Erreur lors de la récupération de l'événement");
+              })
+          );
+        }
+
+        // 3. Fetch de la ressource par ID
+        if (onFetchRessourceById && isEditingResource) {
+          promises.push(
+            onFetchRessourceById(item?.IdPlanningRessource, item?.Type)
+              .then(response => {
+                if (response?.error === 0 && response?.data) {
+                  setFormDataItemType(response.data[0] ?? response.data);
+                }
+              })
+              .catch(err => {
+                console.error("Failed to load resource by ID", err);
+                setTagError("Erreur lors de la récupération de la ressource");
+              })
+          );
+        }
+
+        // 🎯 MAGIE : On attend que toutes les promesses ajoutées soient terminées
+        await Promise.all(promises);
+
+      } catch (globalError) {
+        console.error("Erreur générale lors du chargement du formulaire", globalError);
+      } finally {
+        // On n'éteint le chargement QUE lorsque tout est fini (succès ou échec)
+        setIsLoading(false);
+      }
+    };
+
+    void loadAllFormData();
+  }, [
+    onFetchTagsForResource, onFetchEventAndRessource, onFetchRessourceById
+  ]);
 
   const handleCreateTag = async (tagData: Partial<Tag>) => {
     if (!onAddTagToResource) return;
@@ -466,7 +525,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       }
       
       // Mise à jour de l'événement existant
-      const result = await handleEditManualRessource(formDataItemType);
+      const result = await handleEditRessource(formDataItemType);
       if (!result.success) {
         notificationService.error('Erreur', result.message || 'Erreur lors de la mise à jour de la ressource.');
         setSaveError(result.message || 'Erreur lors de la mise à jour de la ressource.');
@@ -676,7 +735,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     return { used: count > 0, count };
   };
     
-  if (isLoadingTags && loadingFallback) {
+  if (isLoading && loadingFallback) {
     return <>{loadingFallback}</>;
   }
 

@@ -131,7 +131,7 @@ async function getEvenements(startDate: number, endDate: number) {
     return normalizeEventListResponse(response);
 }
 
-async function getEvenement(id: string) {
+async function getEvenement(id: number) {
     const response = await getRequest(`/api/event/${id}`, 'getEvenement');
     return normalizeSingleEventResponse(response);
 }

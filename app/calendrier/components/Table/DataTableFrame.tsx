@@ -233,6 +233,8 @@ export interface DataTableFrameProps<T extends GenericDataItem = GenericDataItem
   paginatedSearchFunction?: PaginatedSearchFunction<T>;
   /** Clé pour forcer le rafraîchissement des données (si pagination) */
   refreshKey?: number;
+  /** Événement temps réel pour mettre à jour le tableau sans appel API */
+  realtimeUpdate?: { action: string; data: any } | null;
 }
 
 /**
@@ -262,7 +264,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   defaultSort,
   enablePagination = false,
   paginatedSearchFunction,
-  refreshKey
+  refreshKey,
+  realtimeUpdate
 }: DataTableFrameProps<T>) => {
   const DEFAULT_PAGE_SIZE = 20;
   
@@ -272,6 +275,9 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     customContainerWidth || 1200
   );  
   
+  const prevRefreshKeyRef = useRef(refreshKey);
+  const prevRealtimeRef = useRef(realtimeUpdate);
+  const prevSearchFuncRef = useRef(paginatedSearchFunction);
   const containerRef = useRef<HTMLDivElement>(null);
   const tableWidth = useRef<number>(containerWidth);
 
@@ -458,16 +464,109 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       return;
     }
 
-    setIsPaginationLoading(true);
+    // 2. On analyse ce qui a déclenché ce useEffect grâce à nos mémoires
+    const isMercureEvent = prevRealtimeRef.current !== realtimeUpdate;
+    const isLocalAction = prevRefreshKeyRef.current !== refreshKey && !isMercureEvent;
+    const isViewChanged = prevSearchFuncRef.current !== paginatedSearchFunction;
 
-    const timeoutId = setTimeout(() => {
-      setRemotePageItems(normalizeItemsWithId(([]) as unknown as T[]));
-      fetchPage(1);
-    }, 500);
 
-    return () => clearTimeout(timeoutId);
+    // 3. On met à jour les mémoires pour le prochain passage
+    prevRefreshKeyRef.current = refreshKey;
+    prevRealtimeRef.current = realtimeUpdate;
+    prevSearchFuncRef.current = paginatedSearchFunction;
+    
+    if (remotePageItems === null || isViewChanged) {
+      setIsPaginationLoading(true);
+      const timeoutId = setTimeout(() => {
+        setRemotePageItems(normalizeItemsWithId(([]) as unknown as T[]));
+        fetchPage(1);
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
+    }
+
+    // --- CAS 2 : ÉVÉNEMENT MERCURE ---
+    if (isMercureEvent) {
+      // 🛑 ON COUPE TOUT ! On ne rappelle surtout pas l'API.
+      // Le deuxième useEffect (celui avec le switch) va se charger de patcher le tableau en mémoire.
+      return;
+    }
+
+    // --- CAS 3 : ACTION LOCALE (L'utilisateur a fait une modif) ---
+    if (isLocalAction) {
+      fetchPage(currentPage);
+    }
+
   }, [enablePagination, paginatedSearchFunction, fetchPage, normalizeItemsWithId, refreshKey]);
     
+
+  // --- ECOUTEUR TEMPS RÉEL (MERCURE) ---
+  useEffect(() => {
+    if (!realtimeUpdate || !remotePageItems) return;
+
+    const { action, data } = realtimeUpdate;
+
+    setRemotePageItems(prevItems => {
+      if (!prevItems) return prevItems;
+
+      switch (action) {
+        case 'EMPLOYEE_UPDATED':
+          // On cherche la ligne et on fusionne les nouvelles données
+          return prevItems.map(item => {
+            // Compare avec l'ID approprié selon le type de donnée
+            const itemId = item.IdPlanningRessource ?? item.IdPersonnel ?? item.id;
+            const updatedId = data.id ?? data.IdPlanningRessource ?? data.IdPersonnel;
+            
+            return itemId === updatedId ? { ...item, ...data } : item;
+          });
+        case 'RESSOURCE_DELETED':
+          // On retire la ligne visuellement
+          return prevItems.filter(item => {
+            const itemId = item.IdPlanningRessource ?? item.IdPersonnel ?? item.id;
+            return itemId !== data.id;
+          });
+        
+        case 'APPOINTMENT_AND_RESSOURCE_UPDATED':
+          return prevItems.map(item => {
+            if (Number(item.IdPlanningRessource || item.id) === Number(data.ressources.IdPlanningRessource)) {
+              return {
+                ...item,
+                CouleurFondPlanningRessource: data.ressources.CouleurFondPlanningRessource,
+                CouleurBordurePlanningRessource: data.ressources.CouleurBordurePlanningRessource,
+                CouleurTextePlanningRessource: data.ressources.CouleurTextePlanningRessource,
+                Image: data.ressources.IdPlanningImage,
+              }
+            }
+            return item;
+          });
+
+
+        case 'RESSOURCE_UPDATED':
+          return prevItems.map(item => {
+            // Si l'ID de la ligne correspond à l'ID reçu
+            if (Number(item.IdPlanningRessource || item.id) === Number(data.IdPlanningRessource)) {
+              // On fusionne les nouvelles données visuelles
+              return {
+                  ...item,
+                  CouleurFondPlanningRessource: data.CouleurFondPlanningRessource,
+                  CouleurBordurePlanningRessource: data.CouleurBordurePlanningRessource,
+                  CouleurTextePlanningRessource: data.CouleurTextePlanningRessource,
+                  Image: data.IdPlanningImage,
+                  // Gestion des champs spécifiques (Rubrique perso, etc.)
+                  ...(data.LibellePlanningRubriquePersonnalise && { LibellePlanningRessource: data.LibellePlanningRubriquePersonnalise }),
+                  ...(data.CodePlanningRubriquePersonalise && { CodePlanningRessource: data.CodePlanningRubriquePersonalise }),
+                  ...(data.ActivePlanningRubriquePersonalise !== undefined && { Actif: data.ActivePlanningRubriquePersonalise })
+              };
+            }
+            return item;
+          });
+
+
+        default:
+          return prevItems;
+      }
+    });
+  }, [realtimeUpdate]); // Se déclenche à chaque nouvel événement Mercure
 
   // Configuration des groupes
   const groups = useMemo(() => 

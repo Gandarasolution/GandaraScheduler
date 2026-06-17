@@ -97,6 +97,7 @@ export default function HomePage({
   const user = useCurrentUser();
   
   const [loadCalendar, setLoadCalendar] = useState(true); 
+  const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
@@ -457,9 +458,30 @@ export default function HomePage({
         );
         dataLayer.appointmentsRef.current.push(data.newEvent);
         break;
+      
+      case 'APPOINTMENT_REPEATED':
+        dataLayer.appointmentsRef.current.push(...data.appointments);
+        break;
+      
+      case 'ADD_NON_WORKING_DAY':
+        viewState.setNonWorkingDates((prev) => ({
+          ...prev,
+          [data.date]: Number(data.id),
+        }));
+        break;
+      
+      case 'REMOVE_NON_WORKING_DAY':
+        viewState.setNonWorkingDates((prev) => {
+          const updated = { ...prev };
+          delete updated[data.date];
+          return updated;
+        });
+        break;
+      
       default:
         console.warn("Action Mercure inconnue :", action);      
     }
+    setLastMercureEvent({ action, data });
     console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     dataLayer.refreshData(); 
   }, []);
@@ -566,6 +588,7 @@ export default function HomePage({
                           ressources: dataLayer.itemsRef.current
                         }
                       ) || []}
+                      realtimeUpdate={lastMercureEvent}
                       enablePagination={true}
                       paginatedSearchFunction={handlePaginatedSearch}
                       refreshKey={dataLayer.appointmentsVersion}
@@ -614,7 +637,7 @@ export default function HomePage({
               closeModal: () => appointmentLogic.setIsModalOpen(false),
               saveAppointment: appointmentLogic.handleSaveAppointment,
               handleAddManualRessource: appointmentLogic.handleAddManualRessource,
-              handleEditManualRessource: appointmentLogic.handleEditRessource,
+              handleEditRessource: appointmentLogic.handleEditRessource,
               handleDeleteManualRessource: (dimensionId: number, forceDelete: boolean = false) => {
                 const result = appointmentLogic.handleDeleteManualRessource(dimensionId, forceDelete);
                 if (result.success) {

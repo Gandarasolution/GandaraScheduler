@@ -1,6 +1,9 @@
 import { getRequest, postRequest, putRequest, deleteRequest } from "./axios.service";
 
 
+async function getRessourceById(ressourceId: number, timeoutMs: number = 5000) {
+  return await getRequest(`/api/ressources/${ressourceId}`, 'getRessourceById', { timeout: timeoutMs });
+}
 
 async function searchRessources(query: string = '', types: string[] = [], limit: number = 20, timeoutMs: number = 5000) {
   const params = new URLSearchParams();

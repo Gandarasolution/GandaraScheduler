@@ -8,6 +8,7 @@ import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
 import etiquetteService from '@/app/service/etiquette.service';
+import eventService from '@/app/service/evenement.service';
 import { useAuth } from '../../hooks/utils/AuthContext';
 
 type ModalActionResult = { success: boolean; message?: string };
@@ -46,7 +47,7 @@ interface CalendarModalsProps {
     closeModal: () => void;
     saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean, type: 'create' | 'update') => Promise<{ success: boolean; message?: string }>;
     handleAddManualRessource: (dimension: AutreItem) => Promise<{ success: boolean; message?: string }>;
-    handleEditManualRessource: (dimension: Item) => Promise<{ success: boolean; message?: string }>;
+    handleEditRessource: (dimension: Item) => Promise<{ success: boolean; message?: string }>;
     handleDeleteManualRessource?: (dimensionId: number, forceDelete?: boolean) => any;
     handleDeactivateDimension?: (dimensionId: number) => any;
     setDeleteConfirmData?: (data: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null) => void;
@@ -463,7 +464,6 @@ export const CalendarModals = memo(({
                   Category: 'dimension',
               } 
               : data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)] as Item}
-            items={Object.values(data.items)}
             isReducedVersion={resourceEditMode !== null}
             resourceEditMode={resourceEditMode}
             employees={data.employees}
@@ -475,10 +475,11 @@ export const CalendarModals = memo(({
             handleOpenImageModal={handlers.openImageModalForEvent}
             onDirtyChange={setIsFormDirty}
             handleAddManualRessource={handlers.handleAddManualRessource}
-            handleEditManualRessource={handlers.handleEditManualRessource}
+            handleEditRessource={handlers.handleEditRessource}
             onRemoveTagFromAppointments={etiquetteService.deleteEtiquette}
             onFetchTagsForResource={etiquetteService.getEtiquettes}
             onAddTagToResource={etiquetteService.createEtiquette}
+            onFetchEventAndRessource={eventService.getEvenement}
             loadingFallback={<ModalLoadingFallback />}
           />
         )}
