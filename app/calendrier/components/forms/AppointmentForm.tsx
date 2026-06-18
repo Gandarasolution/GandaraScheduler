@@ -187,21 +187,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         // On crée un tableau pour stocker les promesses qui vont s'exécuter
         const promises: Promise<any>[] = [];
 
-        // 1. Fetch des étiquettes
-        if (onFetchTagsForResource && (isEditingResource || isEditingAppointment)) {
-          promises.push(
-            onFetchTagsForResource(item?.IdPlanningRessource)
-              .then(response => {
-                setResourceTags(response.data || response || []);
-              })
-              .catch(err => {
-                console.error("Failed to load tags", err);
-               setTagError("Erreur lors de la récupération des étiquettes");
-              })
-          );
-        }
-
-        // 2. Fetch de l'événement complet et de sa ressource
+        // 1. Fetch de l'événement complet et de sa ressource
         if (onFetchEventAndRessource && isEditingAppointment) {
           promises.push(
             onFetchEventAndRessource(formDataAppointment.IdPlanningEvenement)
@@ -219,7 +205,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           );
         }
 
-        // 3. Fetch de la ressource par ID
+        // 2. Fetch de la ressource par ID
         if (onFetchRessourceById && isEditingResource) {
           promises.push(
             onFetchRessourceById(item?.IdPlanningRessource, item?.Type)
@@ -234,6 +220,22 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               })
           );
         }
+
+        // 3. Fetch des étiquettes
+        if (onFetchTagsForResource && (isEditingResource || isEditingAppointment)) {
+          promises.push(
+            onFetchTagsForResource(item?.IdPlanningRessource)
+              .then(response => {
+                setResourceTags(response.data || response || []);
+              })
+              .catch(err => {
+                console.error("Failed to load tags", err);
+               setTagError("Erreur lors de la récupération des étiquettes");
+              })
+          );
+        }
+
+        
 
         // 🎯 MAGIE : On attend que toutes les promesses ajoutées soient terminées
         await Promise.all(promises);

@@ -12,9 +12,11 @@
 "use client";
 
 import '../styles/custom.scss';
-import React, { useEffect, useRef, useMemo, use, useCallback, lazy, Suspense, useState } from "react";
+import React, { useEffect, useRef, useMemo, useCallback, lazy, Suspense, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { format } from "date-fns";
+
 
 // --- COMPOSANTS UI (Eager loading pour éviter le flash) ---
 import { 
@@ -108,6 +110,7 @@ export default function HomePage({
   const [, setEmployeesVersion] = useState(0);
   const hasInitializedPlanningRef = useRef(false);
   const hasInitializedTeamsRef = useRef(false);
+  const hasInitializedNonWorkingDatesRef = useRef(false);
   const [errorPlanning, setErrorPlanning] = useState<string | null>(null);
 
   // Refs de données dynamiques (chargées via API)
@@ -315,33 +318,28 @@ export default function HomePage({
 
   // Init unique: configuration utilisateur + données planning (employés, équipes, RDV)
   useEffect(() => {
+    if (!currentPlanningId || currentPlanningId <= 0) return;
+
     let isMounted = true;
+
+    const initializeNonWorkingDates = async () => {
+      if (!isMounted || hasInitializedNonWorkingDatesRef.current) return;
+      hasInitializedNonWorkingDatesRef.current = true;
+      const result = await viewState.loadNonWorkingDates();
+      if (result.error === 1){
+        setLoadCalendar(false);
+        setErrorPlanning(result.message || "Erreur lors du chargement des jours non travaillés. Veuillez réessayer.");
+      }
+    };
     
     const initializePlanning = async () => {
       if (!isMounted || hasInitializedPlanningRef.current) return;
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
       
-      const configResponse = await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
-      //console.log('Config Response:', configResponse);
-
-      if (configResponse?.error === 0 && configResponse.data?.JoursNonTravailles && configResponse.data.Configs.length > 0) {
-        const recordData = Object.fromEntries(
-          configResponse.data.JoursNonTravailles.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [
-              item.DatePlanningJourNontravaille, // La clé (string)
-              Number(item.IdPlanningJourNontravaille) // La valeur (number)
-          ])
-        );
-
-        // 2. On met à jour le state
-        viewState.setNonWorkingDates(recordData);
-      }else {
-        setErrorPlanning("Erreur lors du chargement des jours non travaillés. Veuillez réessayer.");
-        setLoadCalendar(false);
-        return;
-      }
-
+      await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
       const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
+
 
       //console.log('Employees Response:', employeesResponse);
       if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
@@ -362,6 +360,7 @@ export default function HomePage({
         setLoadCalendar(false);
         return;
       }
+
       rep = await dataLayer.loadPoleActivites();
       if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
@@ -376,16 +375,18 @@ export default function HomePage({
       setLoadCalendar(false);
     };
 
-    const initializeTeams = async () => {
+    const initializeEmployeeTable = async () => {
       if (!isMounted || hasInitializedTeamsRef.current) return;
       hasInitializedTeamsRef.current = true;
       await dataLayer.loadTeams();
     };
 
+    
+    initializeNonWorkingDates();
     if (viewState.viewType === 'calendar') {
       initializePlanning();
     } else if (viewState.viewType === 'employee-table') {
-      initializeTeams();
+      initializeEmployeeTable();
     }
 
     return () => {
@@ -393,6 +394,7 @@ export default function HomePage({
     };
   }, [
     viewState.viewType,
+    currentPlanningId,
     dataLayer.loadTeams,
     dataLayer.loadAppointmentsInRange,
   ]);
@@ -420,7 +422,7 @@ export default function HomePage({
   // 1. La fonction qui va réagir aux messages Mercure
   const handleMercureEvent = useCallback((action: string, data: any) => {
     console.log("📥 Action reçue en direct :", action, data);
-    console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    //console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     switch (action) {
       case 'APPOINTMENT_CREATED':
         dataLayer.addMissingResourcesToCache(data.ressources);
@@ -466,11 +468,11 @@ export default function HomePage({
       case 'ADD_NON_WORKING_DAY':
         viewState.setNonWorkingDates((prev) => ({
           ...prev,
-          [data.date]: Number(data.id),
+          [format(data.date, "yyyy-MM-dd")]: Number(data.id)
         }));
         break;
       
-      case 'REMOVE_NON_WORKING_DAY':
+      case 'DELETE_NON_WORKING_DAY':
         viewState.setNonWorkingDates((prev) => {
           const updated = { ...prev };
           delete updated[data.date];
@@ -482,7 +484,7 @@ export default function HomePage({
         console.warn("Action Mercure inconnue :", action);      
     }
     setLastMercureEvent({ action, data });
-    console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    //console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     dataLayer.refreshData(); 
   }, []);
 

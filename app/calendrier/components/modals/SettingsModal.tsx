@@ -114,7 +114,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 
                                 try {
                                   if (setting.addNonWorkingDatesToPlanning) { // Appeler la fonction passée en props
-                                     const response = await setting.addNonWorkingDatesToPlanning(3, parsedDate); // TODO: pass the real idPlanning if not 3
+                                     const response = await setting.addNonWorkingDatesToPlanning(parsedDate);
                                      if (response && response.error === 0 && response.data) {
                                        setting.setNonWorkingDates((prev: Record<string, number>) => ({
                                          ...prev,

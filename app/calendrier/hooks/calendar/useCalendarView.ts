@@ -3,6 +3,7 @@ import { CalendarConfig, User } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
+import calendarConfigService from '@/app/service/calendarConfig.service';
 
 export const useCalendarView = (idPlanning: number, user: User) => {
   // --- Préférences persistantes (localStorage) ---
@@ -63,6 +64,30 @@ export const useCalendarView = (idPlanning: number, user: User) => {
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const viewDropdownRef = useRef<HTMLDivElement>(null);
 
+
+  const loadNonWorkingDates = async (): Promise<{ error: number; message: string }> => {
+      const result = await calendarConfigService.getNonWorkingDatesByPlanningId();
+      console.log('Résultat du chargement des jours non travaillés :', result);
+      if (result?.error === 0 && result.data) {
+        const recordData = Object.fromEntries(
+          result.data.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [
+              item.DatePlanningJourNontravaille, // La clé (string)
+              Number(item.IdPlanningJourNontravaille) // La valeur (number)
+          ])
+        );
+
+        // 2. On met à jour le state
+        setNonWorkingDates(recordData);
+
+        return { error: 0, message: 'Jours non travaillés chargés avec succès' };
+      }else {
+        return { error: result?.error || 1, message: result?.message || 'Erreur lors du chargement des jours non travaillés'};
+      }
+    };
+
+    useEffect(() => {
+      console.log('Non-working dates updated:', nonWorkingDates);
+    }, [nonWorkingDates]);
 
   // --- Setters avec persistence ---
   const toggleSet = (key: string, setter: React.Dispatch<React.SetStateAction<boolean>>, value: boolean) => {
@@ -164,6 +189,7 @@ export const useCalendarView = (idPlanning: number, user: User) => {
 
 
     loadConfigs: calendarConfigHook.loadConfigs,
+    loadNonWorkingDates,
 
     // Helpers pour constants
     constants: {

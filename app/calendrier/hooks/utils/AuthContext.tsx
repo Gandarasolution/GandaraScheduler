@@ -46,7 +46,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
     if (response?.error === 0 && response.user) {
 
-      setCurrentPlanningId(response.planning[0]?.IdPlanning || -1); // Sélectionne le premier planning par défaut
+      const id = response.planning[0]?.IdPlanning || -1;
+      if (id >= 0) {
+        axiosAgent.defaults.headers.common['X-Planning-Id'] = id;
+        setCurrentPlanningId(id);
+      }else {
+        console.error('Aucun planning valide trouvé pour l\'utilisateur.');
+        return { success: false, message: 'Aucun planning valide trouvé pour l\'utilisateur.' };
+      }
+
       setUserPlanning(response.user?.planning || []);
       setUser(response.user);
       setPermissions(response.permissions || 0);
@@ -71,7 +79,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const response = await authService.me();
         
-        setCurrentPlanningId(response.planning[0]?.IdPlanning || -1); // Sélectionne le premier planning par défaut
+        const id = response.planning[0]?.IdPlanning || -1;
+
+        if (id >= 0) {
+          axiosAgent.defaults.headers.common['X-Planning-Id'] = id;
+          setCurrentPlanningId(id); 
+        }
         setUserPlanning(response.user?.planning || []);
         setUser(response.user);
         setPermissions(response.permissions || 0);
@@ -89,13 +102,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkAuth();
   }, []);
 
-  useEffect(() => {
-    if (currentPlanningId !== null) {
-      axiosAgent.defaults.headers.common['X-Planning-Id'] = currentPlanningId;
-    } else {
-      delete axiosAgent.defaults.headers.common['X-Planning-Id'];
-    }
-  }, [currentPlanningId]);
 
   return (
     <AuthContext.Provider value={{ 

@@ -83,7 +83,7 @@ interface CalendarModalsProps {
     // Config Configuration Editing State (from hook)
     setEditingConfig: (config: any) => void;
     setIsCreatingConfig: (val: boolean) => void;
-    addNonWorkingDatesToPlanning: (idPlanning: number, date: number) => Promise<any>;
+    addNonWorkingDatesToPlanning: (date: number) => Promise<any>;
     removeNonWorkingDatesFromPlanning: (idPlanning: number, date: number) => Promise<any>;
 
     setSelectedItem: (item: Item | null) => void;
