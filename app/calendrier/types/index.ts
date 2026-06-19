@@ -188,6 +188,8 @@ export interface Appointment{
   Etiquette?: Tag;
   /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */
   PlanningEvenementPriorite?: number;
+  
+  isLocked: boolean; // Indique si le rendez-vous est verrouillé (non modifiable)
 }
 
 

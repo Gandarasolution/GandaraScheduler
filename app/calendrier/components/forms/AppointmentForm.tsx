@@ -82,6 +82,7 @@ interface AppointmentFormProps {
   onFetchTagsForResource?: (idRessource: number) => Promise<any>;
   onFetchEventAndRessource?: (idEvent: number) => Promise<any>;
   onFetchRessourceById?: (idRessource: number, typeRessource: 'Projet' | 'Paie' | 'Rubrique Perso') => Promise<any>;
+  onLockedError?: (message: string) => void;
   loadingFallback?: React.ReactNode;
 }
 
@@ -138,6 +139,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   onFetchTagsForResource,
   onFetchEventAndRessource,
   onFetchRessourceById,
+  onLockedError,
   loadingFallback,
 }) => {
 
@@ -192,6 +194,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           promises.push(
             onFetchEventAndRessource(formDataAppointment.IdPlanningEvenement)
               .then(response => {
+                console.log("Réponse de onFetchEventAndRessource :", response);
+                if (response?.error === 409 && response?.isLocked) {
+                  onClose(); // On ferme la modale immédiatement
+                  if (onLockedError) {
+                    onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition par un collègue.");
+                  }
+                  return;
+                }
+
                 if (response?.error === 0 && response?.data) {
                   const { appointments, ressources } = response.data;
                   setFormDataAppointment(appointments[0] ?? appointments);
@@ -522,7 +533,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
       if (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') {
         employeePermissions.forEach((perm) => {
-          void socialPermissionService.setSocialItemPermission(perm);
+          //void socialPermissionService.setSocialItemPermission(perm);
         });
       }
       

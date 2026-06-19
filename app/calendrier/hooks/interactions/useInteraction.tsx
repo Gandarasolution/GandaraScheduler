@@ -212,12 +212,13 @@ export const useInteraction = ({
              // C'est un événement, on ouvre le formulaire d'édition
              // On simule un RDV temporaire pour ouvrir la modale
              const mockApp: Appointment = {
-                 IdPlanningEvenement: 0,
-                 AnnotationPlanningEvenement: '',
-                 IdPlanningRessource: item.IdPlanningRessource,
-                 DebutPlanningEvenement: Date.now(),
-                 FinPlanningEvenement: Date.now(),
+                IdPlanningEvenement: 0,
+                AnnotationPlanningEvenement: '',
+                IdPlanningRessource: item.IdPlanningRessource,
+                DebutPlanningEvenement: Date.now(),
+                FinPlanningEvenement: Date.now(),
                 IdEmploye: item.IdEmploye,
+                isLocked: false,
              };
              handleOpenEditModal(mockApp);
           }

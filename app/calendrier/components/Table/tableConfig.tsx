@@ -37,6 +37,7 @@ const imageRendererChantierAndPaie = (value: any, item: any, deps: TableConfigDe
             DebutPlanningEvenement: 0,
             FinPlanningEvenement: 1000,
             IdEmploye: 0,
+            isLocked: false,
           }}
           isFullDay={false}
           isMobile={false}
@@ -47,12 +48,13 @@ const imageRendererChantierAndPaie = (value: any, item: any, deps: TableConfigDe
           onDoubleClick={() => {
             if (deps.ressources) deps.ressources[Number(Item.IdPlanningRessource)] = Item; // Assurer que la ressource est à jour
             const newAppointment: Appointment = {
-              IdPlanningEvenement: 0,
-              AnnotationPlanningEvenement: '',
-              IdPlanningRessource: Item.IdPlanningRessource,
-              DebutPlanningEvenement: 0,
-              FinPlanningEvenement: 1000,
-              IdEmploye: 0,
+                IdPlanningEvenement: 0,
+                AnnotationPlanningEvenement: '',
+                IdPlanningRessource: Item.IdPlanningRessource,
+                DebutPlanningEvenement: 0,
+                FinPlanningEvenement: 1000,
+                IdEmploye: 0,
+                isLocked: false,
             }
             if (deps.handleOpenEditModal) deps.handleOpenEditModal(newAppointment);
           }} 
@@ -274,12 +276,13 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                         if (deps.ressources) deps.ressources[Number(Item.IdPlanningRessource)] = Item as unknown as AutreItem; // Assurer que la ressource est à jour
 
                         const newAppointment: Appointment = {
-                        IdPlanningEvenement: 0,
-                        AnnotationPlanningEvenement: '',
-                        IdPlanningRessource: Item.IdPlanningRessource,
-                        DebutPlanningEvenement: 0,
-                        FinPlanningEvenement: 1000,
-                        IdEmploye: 0,
+                            IdPlanningEvenement: 0,
+                            AnnotationPlanningEvenement: '',
+                            IdPlanningRessource: Item.IdPlanningRessource,
+                            DebutPlanningEvenement: 0,
+                            FinPlanningEvenement: 1000,
+                            IdEmploye: 0,
+                            isLocked: false,
                         }
                         if (deps.handleOpenEditModal) deps.handleOpenEditModal(newAppointment);
                     }}

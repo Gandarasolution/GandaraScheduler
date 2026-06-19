@@ -391,6 +391,7 @@ export const useAppointmentLogic = ({
         IdEmploye: employeeId,
         IdPlanningRessource: ressource.IdPlanningRessource,
         PlanningEvenementPriorite: priority,
+        isLocked: false,
       };
 
       appointmentsRef.current.push(localAppointment);

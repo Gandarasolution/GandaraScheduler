@@ -105,6 +105,7 @@ export const createAppointmentUtils = (
             FinPlanningEvenement: day.end,
             IdEmploye: appointment.IdEmploye,
             IdPlanningRessource: appointment.IdPlanningRessource,
+            isLocked: false,
           });
         });
 
@@ -137,6 +138,7 @@ export const createAppointmentUtils = (
             FinPlanningEvenement: day.end,
             IdEmploye: appointment.IdEmploye,
             IdPlanningRessource: appointment.IdPlanningRessource,
+            isLocked: false,
           });
         });
 

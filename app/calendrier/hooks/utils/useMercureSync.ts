@@ -29,7 +29,7 @@ export const useMercureSync = (
         const payload = JSON.parse(event.data);
 
         if (Number(payload.updatedBy) === Number(user.IdPersonnel)) {
-        //  return;
+          return;
         }
 
         // 5. On transmet l'action au composant parent (le Calendrier)

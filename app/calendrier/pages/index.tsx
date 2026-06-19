@@ -63,6 +63,7 @@ import { canCreateEvent } from '../utils/permissions';
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
 import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
+import TopNotification from '../components/ui/TopNotification';
 
 // Composant de chargement réutilisable
 const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
@@ -100,6 +101,8 @@ export default function HomePage({
   
   const [loadCalendar, setLoadCalendar] = useState(true); 
   const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
+  const [lockNotification, setLockNotification] = useState<string | null>(null);
+
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
@@ -422,7 +425,7 @@ export default function HomePage({
   // 1. La fonction qui va réagir aux messages Mercure
   const handleMercureEvent = useCallback((action: string, data: any) => {
     console.log("📥 Action reçue en direct :", action, data);
-    //console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     switch (action) {
       case 'APPOINTMENT_CREATED':
         dataLayer.addMissingResourcesToCache(data.ressources);
@@ -479,12 +482,19 @@ export default function HomePage({
           return updated;
         });
         break;
+      case 'APPOINTMENT_UNLOCKED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, isLocked: false } : appt));
+        break;
+      
+      case 'APPOINTMENT_LOCKED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, isLocked: true } : appt));
+        break;
       
       default:
         console.warn("Action Mercure inconnue :", action);      
     }
     setLastMercureEvent({ action, data });
-    //console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     dataLayer.refreshData(); 
   }, []);
 
@@ -501,8 +511,15 @@ export default function HomePage({
           <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
             <LoadingFallback message="Chargement du calendrier..." />
           </div>
-        )}        <div className="h-screen flex flex-col overflow-hidden bg-page poppins">
-          
+        )}      
+        {lockNotification && (
+            <TopNotification 
+              message={lockNotification} 
+              onClose={() => setLockNotification(null)} 
+            />
+          )}          
+        <div className="h-screen flex flex-col overflow-hidden bg-page poppins">
+    
           {/* HEADER : Navigation et Contrôles */}
           {!viewState.isMobile && (
             <CalendarHeader 
@@ -725,6 +742,7 @@ export default function HomePage({
 
               // Correction : Setter pour l'item sélectionné
               setSelectedItem: appointmentLogic.setSelectedItem,
+              onLockedError: setLockNotification,
               
               addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
               removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,

@@ -87,6 +87,7 @@ interface CalendarModalsProps {
     removeNonWorkingDatesFromPlanning: (idPlanning: number, date: number) => Promise<any>;
 
     setSelectedItem: (item: Item | null) => void;
+    onLockedError: (message: string) => void;
   };
   data: {
     appointments: Appointment[];
@@ -240,6 +241,14 @@ export const CalendarModals = memo(({
     return "Ajouter un rendez-vous";
   };  
 
+  const handleCloseModal = () => {
+      if (resourceEditMode === 'editAppointment') {
+        eventService.unlockEvenement(modalsState.selectedAppointmentForm?.IdPlanningEvenement);
+      }
+      handlers.closeModal();
+      
+  }
+
   
   return (
     <>
@@ -247,7 +256,7 @@ export const CalendarModals = memo(({
       <Modal
         isOpen={modalsState.isModalOpen || !!modalsState.repeatData || !!modalsState.extendData}
         onClose={() => {
-          handlers.closeModal();
+          handleCloseModal();
           handlers.setRepeatData(null);
           handlers.setExtendData(null);
           setIsFormDirty(false);
@@ -480,6 +489,7 @@ export const CalendarModals = memo(({
             onFetchTagsForResource={etiquetteService.getEtiquettes}
             onAddTagToResource={etiquetteService.createEtiquette}
             onFetchEventAndRessource={eventService.getEvenement}
+            onLockedError={handlers.onLockedError}
             loadingFallback={<ModalLoadingFallback />}
           />
         )}

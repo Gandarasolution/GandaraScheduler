@@ -309,6 +309,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       IdEmploye: appointmentEmployee.IdPersonnel,
       IdPlanningRessource: 0,
       PlanningEvenementPriorite: 0,
+      isLocked: false,
     };
   };
 
@@ -678,7 +679,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   appointments={appointments}
                   appointment={createEmptyAppointment(0)}
                   item={createEmptyItem()}
-                  items={allowedItems}
                   employees={visibleEmployees}
                   HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
                   isFullDay={true}
@@ -691,8 +691,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                     setSelectedItem(null);
                   }}
                   handleOpenImageModal={() => {}}
-                  handleEditManualRessource={() => {}}
                   handleAddManualRessource={async (_dimension) => ({ success: true })}
+                  handleEditRessource={async (_dimension) => ({ success: true })}
                 />
               </div>
             </div>
