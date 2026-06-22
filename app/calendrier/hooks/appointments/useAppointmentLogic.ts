@@ -33,6 +33,7 @@ interface LogicProps {
   onUpdate: () => void; // Callback pour forcer le rafraîchissement de l'UI
   setIsSearchOverlayOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setDimensionsSearchInput: React.Dispatch<React.SetStateAction<string>>;
+  onLockedError: (message: string) => void;
   api?: {
     createEvenement: (data: any) => Promise<any>;
     updateEvenement: (id: string, data: any) => Promise<any>;
@@ -53,6 +54,7 @@ export const useAppointmentLogic = ({
   setIsSearchOverlayOpen,
   setDimensionsSearchInput,
   api,
+  onLockedError
 }: LogicProps) => {
   
   const { currentPlanningId } = useAuth();
@@ -607,6 +609,11 @@ export const useAppointmentLogic = ({
           const message = 'Le serveur a refusé la mise à jour.';
           notificationService.error('Déplacement annulé', message);
           return { success: false, message };
+        } else if (resp.error === 409){
+          console.log('Response from updateEvenement:', resp);
+
+          appointmentsRef.current = previousAppointments;
+          onLockedError(resp?.message || 'Un autre utilisateur a modifié cet événement.');
         }
 
         notificationService.appointmentUpdated();

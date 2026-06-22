@@ -128,6 +128,11 @@ async function unlockEvenement(id: number | undefined | null) {
     return await postRequest(`/api/event/${id}/unlock`, {}, 'unlockEvenement');
 }
 
+async function lockQuickEvenement(id: number | undefined | null) {
+    if (id === null || id === undefined) return Promise.resolve();
+    return await postRequest(`/api/event/${id}/lock-quick`, {}, 'quickLockEvenement');
+}
+
 async function getEvenements(startDate: number, endDate: number) {
     const startStr = new Date(startDate).toISOString().split('T')[0];
     const endStr = new Date(endDate).toISOString().split('T')[0];
@@ -206,4 +211,5 @@ export default {
     repeatEvenement,
     deleteEvenements,
     unlockEvenement,
+    lockQuickEvenement
 }

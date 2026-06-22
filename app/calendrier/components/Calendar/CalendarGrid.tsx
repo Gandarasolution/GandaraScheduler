@@ -58,6 +58,7 @@ interface CalendarGridProps {
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
   mouseUpAfterScroll: () => void;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
+  onLockedError: (message: string) => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -90,6 +91,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onLoadAppointmentsInRange,
   mouseUpAfterScroll,
   onAddAppointment,
+  onLockedError
 }) => {
 
   
@@ -184,6 +186,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         hoverColumnLeft={hoverColumnLeft}
         onLoadAppointmentsInRange={onLoadAppointmentsInRange}
         mouseUpAfterScroll={mouseUpAfterScroll}
+        onLockedError={onLockedError}
       />
   );
 };

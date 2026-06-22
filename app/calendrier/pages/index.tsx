@@ -103,6 +103,9 @@ export default function HomePage({
   const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
   const [lockNotification, setLockNotification] = useState<string | null>(null);
 
+  useEffect(() => {
+    console.log('lockNotification changed:', lockNotification);
+  }, [lockNotification]);
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
@@ -162,6 +165,7 @@ export default function HomePage({
     onUpdate: dataLayer.refreshData, // Callback pour rafraichir l'UI après modification des Refs
     setIsSearchOverlayOpen: viewState.setIsSearchOverlayOpen,
     setDimensionsSearchInput: viewState.setDimensionsSearchInput,
+    onLockedError: setLockNotification,
     api: {
       updateEvenementAndRessource: evenementService.updateEvenementAndRessource,
       createEvenement: evenementService.createEvenement,
@@ -585,6 +589,7 @@ export default function HomePage({
                       onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
                       mouseUpAfterScroll={timeline.getFirstDayAppearing}
                       onAddAppointment={appointmentLogic.handleSaveAppointment}
+                      onLockedError={setLockNotification}
                       
                       /* Sélection Optimisée */
                       selectedCell={appointmentLogic.selectedCell}

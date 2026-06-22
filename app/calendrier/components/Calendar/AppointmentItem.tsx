@@ -13,6 +13,7 @@ import AppointmentMetadata from './AppointmentIcon';
 import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
 import { Image } from '../ui';
 import { useAuth } from '../../hooks/utils/AuthContext';
+import { evenementService } from '@/app/service';
 
 interface AppointmentItemProps {
   appointment: Appointment;
@@ -40,6 +41,7 @@ interface AppointmentItemProps {
   onDoubleClick?: (app: Appointment) => void;
   onAppointmentResize?: (id: number, newStart: number, newEnd: number, resizeDirection: 'left' | 'right', priority: number) => void;
   handleContextMenu?: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
+  onLockedError?: (message: string) => void;
 }
 
 const AppointmentItem: React.FC<AppointmentItemProps> = ({
@@ -64,6 +66,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   onDoubleClick,
   onAppointmentResize,
   handleContextMenu,
+  onLockedError
 }) => {
 
   const { hasPermission } = useAuth();
@@ -144,6 +147,20 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   
   // --- Handlers (Drag) ---
   const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    evenementService.lockQuickEvenement(appointment.IdPlanningEvenement)
+      .then(response => {
+        console.log('onLockedError called with message:', response.message);
+        if (response.error === 409) {
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+
+
+          if (onLockedError) {
+            
+            onLockedError(response.message || 'Un autre utilisateur modifie cet événement.');
+          }        
+        }
+      });
+
     const rect = e.currentTarget.getBoundingClientRect();
     setDragOffset(e.clientX - rect.left);
   }, []);

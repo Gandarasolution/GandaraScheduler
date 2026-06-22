@@ -39,6 +39,7 @@ interface CalendarRowsProps {
   handleSetRowExpansion: (employeeId: number, expanded: boolean) => void;
   collapseTriggers: Record<number, number>;
   tagPlacement: 'hover' | 'fixed';
+  onLockedError: (message: string) => void;
 }
 
 /**
@@ -68,7 +69,8 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   expandedOverlapRows,
   handleSetRowExpansion,
   collapseTriggers,
-  tagPlacement
+  tagPlacement,
+  onLockedError
 }) => {
   
   return (
@@ -126,6 +128,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             onSetExpansion={handleSetRowExpansion}
             collapseTrigger={collapseTriggers[row.id as number]}
             tagPlacement={tagPlacement}
+            onLockedError={onLockedError}
           />
         );
       })}

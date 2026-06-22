@@ -5,6 +5,7 @@ import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
 import { calculateWidthPx, calculateLeftPx } from '../../hooks';
 import { isSameDay } from 'date-fns';
+import { on } from 'events';
 
 interface EmployeeRowProps {
   employee: User;
@@ -30,6 +31,7 @@ interface EmployeeRowProps {
   onSetExpansion: (id: number, expanded: boolean) => void;
   collapseTrigger?: number;
   mainScrollRef: React.RefObject<HTMLDivElement>;
+  onLockedError: (message: string) => void;
 }
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
@@ -56,6 +58,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   onSetExpansion,
   collapseTrigger,
   mainScrollRef,
+  onLockedError
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
   useEffect(() => {
@@ -352,12 +355,12 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   mainScrollRef={mainScrollRef}
                   isGhost={isGhost} 
                   ghostInterval={ghostIntervals.length > 0 ? ghostIntervals : undefined}
-
                   onAppointmentResize={handleAppointmentResize}
                   handleContextMenu={handleContextMenu}
                   onDoubleClick={onAppointmentDoubleClick}
                   onClick={onSelectAppointment}
                   isSelected={selectedAppointmentId === app.IdPlanningEvenement}
+                  onLockedError={onLockedError}
                 />
               );
             })}

@@ -58,6 +58,7 @@ interface DesktopCalendarGridProps {
   hoverColumnLeft: number | null;
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
   mouseUpAfterScroll: () => void;
+  onLockedError: (message: string) => void;
 }
 
 
@@ -93,6 +94,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   hoverColumnLeft,
   isDisplayWeekend,
   tagPlacement = 'hover',
+  onLockedError,
   mouseUpAfterScroll
 }) => {
   
@@ -520,6 +522,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
             tagPlacement={tagPlacement}
             collapseTriggers={collapseTriggers}
             mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
+            onLockedError={onLockedError}
           />
         </div>
       </TimelineFrame>
