@@ -119,6 +119,8 @@ export const useCalendarDragDrop = ({
 
       // Gestion de la priorité : détecter sur quel rdv (position Y) l'utilisateur drop
       const targetEmployeeId = Number(targetRow.id);
+
+      console.log('Drop target:', targetEmployeeId)
       
       // Trouver tous les rdv qui chevauchent la nouvelle position
       const overlappingAppointments = appointments.filter(app => 

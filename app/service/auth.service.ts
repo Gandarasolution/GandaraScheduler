@@ -43,10 +43,16 @@ async function logout() {
   return await postRequest("/api/logout", {}, "logout");
 }
 
+async function refreshToken() {
+  return await postRequest("/api/token/refresh", {}, "refreshToken");
+}
+
+
 export default {
   login,
   me,
   logout,
+  refreshToken,
   // saveSession,
   // clearSession,
   // getSessionUser,

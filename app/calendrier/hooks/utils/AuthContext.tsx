@@ -60,7 +60,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setPermissions(response.permissions || 0);
       return { success: true };
     } 
-    return { success: false, message: response?.message || 'Identifiants incorrects' };
+
+    return { success: false, message: response?.data || response?.message || 'Identifiants incorrects' };
   };
 
   const logout = () => {

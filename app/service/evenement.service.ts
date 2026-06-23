@@ -194,7 +194,7 @@ async function repeatEvenement(repeatData: any) {
     const payload = {
        ...toApiEventPayload(repeatData)
     };    
-    return await postRequest(`/api/event/repeat`, payload, 'repeatEvenement');
+    return await postRequest(`/api/event/repeat/${repeatData.IdPlanningEvenement}`, payload, 'repeatEvenement');
 }
 
 

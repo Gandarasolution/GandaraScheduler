@@ -34,7 +34,7 @@ interface LogicProps {
   setIsSearchOverlayOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setDimensionsSearchInput: React.Dispatch<React.SetStateAction<string>>;
   onLockedError: (message: string) => void;
-  api?: {
+  api: {
     createEvenement: (data: any) => Promise<any>;
     updateEvenement: (id: string, data: any) => Promise<any>;
     deleteEvenement: (id: string) => Promise<any>;
@@ -42,6 +42,8 @@ interface LogicProps {
     divideEvenement: (id: string, data: any) => Promise<any>;
     repeatEvenement: (data: any) => Promise<any>;
     deleteEvenements: (ids: string[]) => Promise<any>;
+    unlockEvenement: (id: number | null | undefined) => Promise<any>;
+    lockEvenement: (id: number | null | undefined) => Promise<any>;
   };
 }
 
@@ -92,10 +94,13 @@ export const useAppointmentLogic = ({
     isVisible: boolean;
     title: "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?" | string;
     onConfirm: () => void;
+    onCancel: () => void;
+    fetchToLockAppointment?: () => Promise<any>;
   }>({
     isVisible: false,
     title: "",
     onConfirm: () => {},
+    onCancel: () => {},
   });
 
   const isApiSuccess = useCallback((resp: any) => {
@@ -485,6 +490,8 @@ export const useAppointmentLogic = ({
         idRessource,
         resizeDirection = 'right',
       } = data;
+
+      console.log('newEmployeeId:', newEmployeeId);
       const appointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
       if (!appointment) {
         return { success: false, message: 'Rendez-vous introuvable.' };
@@ -500,6 +507,15 @@ export const useAppointmentLogic = ({
         notificationService.error('Action interdite', 'Ressource introuvable. Le rendez-vous ne peut pas être déplacé.');
         return { success: false, message: 'Ressource introuvable.' };
       }
+
+
+      if(appointment.DebutPlanningEvenement === newStartDate && appointment.FinPlanningEvenement === newEndDate && appointment.IdEmploye === newEmployeeId) {
+        api?.unlockEvenement(appointment.IdPlanningEvenement).catch((err) => {
+          console.error('Erreur lors du déverrouillage du rendez-vous:', err);
+        });
+        return { success: true, message: 'Aucun changement détecté.' };
+      }
+
 
       const previousAppointment = saveToHistory ? { ...appointment } : undefined;
       const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
@@ -864,7 +880,14 @@ export const useAppointmentLogic = ({
         setIsModalOpen(false);
         setSelectedAppointment(null);
         setAlertState(prev => ({ ...prev, isVisible: false }));
-      }
+      },
+      onCancel: () => {
+        api?.unlockEvenement(id).catch((err) => {
+          console.error('Erreur lors du déverrouillage du rendez-vous:', err);
+        });
+        setAlertState(prev => ({ ...prev, isVisible: false }));
+      },
+      fetchToLockAppointment: () => api?.lockEvenement(id),
     });
   }, [selectedAppointment, appointmentsRef, saveAppointmentState, onUpdate, api, isApiSuccess]);
 
@@ -1000,7 +1023,14 @@ export const useAppointmentLogic = ({
           onConfirm: () => {
               handleDivideAppointment(appointment);
               setAlertState(prev => ({ ...prev, isVisible: false }));
-          }
+          },
+          onCancel: () => {
+            api?.unlockEvenement(appointment.IdPlanningEvenement).catch((err) => {
+              console.error('Erreur lors du déverrouillage du rendez-vous:', err);
+            });
+            setAlertState(prev => ({ ...prev, isVisible: false }));
+          },
+          fetchToLockAppointment: () => api?.lockEvenement(appointment.IdPlanningEvenement),
       });
   }, [selectedAppointment, handleDivideAppointment]);
 
@@ -1025,6 +1055,7 @@ export const useAppointmentLogic = ({
     });
     
     const payloads = {
+      IdPlanningEvenement: Number(selectedAppointment.IdPlanningEvenement),
       Type: employees.find(emp => Number(emp.IdPersonnel) === Number(selectedAppointment.IdEmploye))?.Type,
       IdEmploye: Number(selectedAppointment.IdEmploye),
       IdPlanningRessource: Number(selectedAppointment.IdPlanningRessource),

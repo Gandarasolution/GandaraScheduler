@@ -172,26 +172,11 @@ export const CalendarModals = memo(({
     }
   }, [modalsState.repeatData, modalsState.extendData]);
 
-  // Reconstitution de la structure des paramètres pour SettingsModal
   const settings = useMemo(() => [
     ...(hasPermission(23) ? [
       {
       category: "Gestion des jours travaillés",
       items: [
-        // {
-        //   id: "includeWeekend", 
-        //   label: "Autoriser la planification sur les week-ends", 
-        //   type: "checkbox",
-        //   value: config.includeWeekend,
-        //   onChange: config.setIncludeWeekend,
-        // },
-        // {
-        //   id: "respectNonWorkingDays", 
-        //   label: "Respecter les jours non travaillés", 
-        //   type: "checkbox",
-        //   value: config.respectNonWorkingDays,
-        //   onChange: config.setRespectNonWorkingDays,
-        // },
         {
           id: "nonWorkedDay", 
           label: "Dates non travaillées personnalisées", 
@@ -202,7 +187,7 @@ export const CalendarModals = memo(({
           removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
         }
       ]
-    }] : []), // Seule la permission 23 peut gérer les jours non travaillés
+    }] : []),
     {
       category: "Affichage des étiquettes",
       items: [
@@ -221,7 +206,6 @@ export const CalendarModals = memo(({
     }
   ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
 
-  // Détermination du mode d'édition de ressource
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;
     if (modalsState.selectedAppointmentForm.IdPlanningEvenement === -1) return 'createRessource';
@@ -229,7 +213,6 @@ export const CalendarModals = memo(({
     return 'editAppointment';
   }, [modalsState.selectedAppointmentForm]);
 
-  // Titre dynamique de la modale principale
   const getMainModalTitle = () => {
     if (modalsState.repeatData) return "Répéter ce rendez-vous";
     if (modalsState.extendData) return "Prolonger le rendez-vous";
@@ -242,23 +225,33 @@ export const CalendarModals = memo(({
   };  
 
   const handleCloseModal = () => {
-      if (resourceEditMode === 'editAppointment') {
+      // Le composant enfant (AppointmentForm) gère déjà son propre unlock si besoin
+      // Mais en sécurité, on débloque si c'est une édition classique
+      if (resourceEditMode === 'editAppointment' && !modalsState.repeatData && !modalsState.extendData) {
         eventService.unlockEvenement(modalsState.selectedAppointmentForm?.IdPlanningEvenement);
       }
       handlers.closeModal();
-      
   }
 
+  const handleCloseRepeatOrExtend = () => {
+    // Si on annule Repeat ou Extend, on doit libérer le verrou récupéré lors de l'ouverture
+    if (modalsState.selectedAppointmentForm?.IdPlanningEvenement) {
+      eventService.unlockEvenement(modalsState.selectedAppointmentForm.IdPlanningEvenement);
+    }
+    handlers.setRepeatData(null);
+    handlers.setExtendData(null);
+  };
   
   return (
     <>
-      {/* --- MODALE PRINCIPALE (Formulaire / Répétition / Prolongation) --- */}
       <Modal
         isOpen={modalsState.isModalOpen || !!modalsState.repeatData || !!modalsState.extendData}
         onClose={() => {
-          handleCloseModal();
-          handlers.setRepeatData(null);
-          handlers.setExtendData(null);
+          if (!!modalsState.repeatData || !!modalsState.extendData) {
+            handleCloseRepeatOrExtend();
+          } else {
+            handleCloseModal();
+          }
           setIsFormDirty(false);
         }}
         title={getMainModalTitle()}
@@ -275,184 +268,28 @@ export const CalendarModals = memo(({
       >
         {/* CAS 1: Répétition */}
         {!!modalsState.repeatData ? (
-          <div className="flex flex-col gap-6 poppins w-[340px]">
-            <div className="flex flex-col gap-4">
-              <span className="text-base underline">{'Rythme de répétition'}</span>
-              <div className="flex items-center gap-7">
-                <label className="flex items-center gap-2 font-medium">
-                  <span className="">{modalsState.repeatData.repeatInterval === 'week' ? 'Toutes les' : 'Tous les'}</span>
-                  <input
-                    required
-                    type="number"
-                    min={1}
-                    className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[70px] text-center"
-                    value={modalsState.repeatData.numberCount || 1}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value, 10);
-                      if (value > 0) {
-                        handlers.setRepeatData({ ...modalsState.repeatData!, numberCount: value });
-                      }
-                    }}
-                  />
-                </label>
-                <select
-                  className="border border-default bg-secondary-bg rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition ml-2 custom-select"
-                  value={modalsState.repeatData.repeatInterval || "day"}
-                  onChange={(e) => {
-                    const value = e.target.value as "day" | "week" | "month";
-                    handlers.setRepeatData({ ...modalsState.repeatData!, repeatInterval: value });
-                  }}
-                  required
-                >
-                  <option value="day">Jours</option>
-                  <option value="week">Semaines</option>
-                  <option value="month">Mois</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="flex flex-col gap-4">
-              <span className="text-base underline">{'Méthode'}</span>
-              <div className="flex flex-row items-center gap-6">
-                {/* Option: Nombre de fois */}
-                <div className="flex items-center gap-22">
-                  <div className="">
-                    <input
-                      type="radio"
-                      name="repeatMethod"
-                      value="count"
-                      checked={modalsState.repeatData.repeatCount !== null && modalsState.repeatData.endDate === null}
-                      onChange={() => {
-                        handlers.setRepeatData({ ...modalsState.repeatData!, repeatCount: 1, endDate: null });
-                      }}
-                    />
-                    <span className="ml-1">Nombre</span>
-                  </div>
-                  <input
-                    type="number"
-                    min={1}
-                    disabled={modalsState.repeatData.endDate !== null}
-                    className={`${modalsState.repeatData.endDate !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[70px] ml-2`}
-                    value={modalsState.repeatData.repeatCount ?? ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === "") {
-                        handlers.setRepeatData({ ...modalsState.repeatData!, repeatCount: null });
-                        return;
-                      }
-                      const parsed = parseInt(value, 10);
-                      if (!isNaN(parsed) && parsed > 0) {
-                        handlers.setRepeatData({ ...modalsState.repeatData!, repeatCount: parsed, endDate: null });
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-              
-              {/* Option: Jusqu'à date */}
-              <div className="flex items-center gap-12">
-                <div>
-                  <input
-                    type="radio"
-                    name="repeatMethod"
-                    value="endDate"
-                    checked={modalsState.repeatData.endDate !== null && modalsState.repeatData.repeatCount === null}
-                    onChange={() => {                        
-                      handlers.setRepeatData({ ...modalsState.repeatData!, repeatCount: null, endDate: Date.now() });
-                    }}
-                  />
-                  <span className="ml-1">{'Fin répétition'}</span>
-                </div>
-                <input
-                  type="date"
-                  className={`${modalsState.repeatData.repeatCount !== null ? 'opacity-50 cursor-not-allowed text-sm' : 'opacity-100 text-base focus:ring-2 focus:ring-color'} ml-2 border border-default rounded-xl px-3 py-2 focus:outline-none transition w-[145px]`}
-                  value={modalsState.repeatData.endDate ? format(modalsState.repeatData.endDate, "yyyy-MM-dd") : ""}
-                  min={modalsState.selectedAppointmentForm?.FinPlanningEvenement ? format(modalsState.selectedAppointmentForm.FinPlanningEvenement, "yyyy-MM-dd") : undefined}
-                  onChange={e => {
-                    const value = e.target.value;
-                    const parsed = value ? new Date(value).getTime() : null;
-                    if (parsed !== null && Number.isNaN(parsed)) return; // Ignore invalid dates
-                    handlers.setRepeatData({ ...modalsState.repeatData!, endDate: parsed, repeatCount: null });
-                  }}
-                />
-              </div>
-            </div>
-
-            {modalSubmitError && (
-              <p className="text-red-500 text-sm mt-1">{modalSubmitError}</p>
-            )}
-            
-            <div className="flex justify-between mt-2">
-              <button
-                type="button"
-                onClick={() => handlers.setRepeatData(null)}
-                disabled={isSubmittingModalAction}
-                className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors ${isSubmittingModalAction ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleRepeatSubmit}
-                disabled={isSubmittingModalAction}
-                className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors flex items-center justify-center min-w-[120px] ${isSubmittingModalAction ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                {isSubmittingModalAction && (
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                )}
-                {isSubmittingModalAction ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
-            </div>
-          </div>
+          <RepeatAppointmentContent
+            appointment={modalsState.selectedAppointmentForm}
+            repeatData={modalsState.repeatData}
+            setRepeatData={handlers.setRepeatData}
+            onClose={handleCloseRepeatOrExtend}
+            onSubmit={handleRepeatSubmit}
+            isSubmitting={isSubmittingModalAction}
+            error={modalSubmitError}
+            onLockedError={handlers.onLockedError}
+          />
         ) : modalsState.extendData ? (          
           /* CAS 2: Prolongation */
-          <div>
-            <div className="flex flex-row items-center mb-4 poppins">
-              <span className="text-base poppins mr-[65px]">Jusqu'au</span>
-              <input
-                type="date"
-                className="text-base border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[145px]"
-                value={format(modalsState.extendData, "yyyy-MM-dd")}
-                min={modalsState.selectedAppointmentForm?.FinPlanningEvenement ? format(new Date(modalsState.selectedAppointmentForm.FinPlanningEvenement), "yyyy-MM-dd") : undefined}
-                onChange={(e) => {
-                  const date = new Date(e.target.value).setHours(23, 59, 59, 999);
-                  if (!isNaN(date)) {
-                    handlers.setExtendData(date);
-                  }
-                }}
-              />
-            </div>
-            {modalSubmitError && (
-              <p className="text-red-500 text-sm mt-1">{modalSubmitError}</p>
-            )}
-            <div className="flex gap-3 mt-4">
-              <button
-                type="button"
-                onClick={() => handlers.setExtendData(null)}
-                disabled={isSubmittingModalAction}
-                className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors w-[110px] mr-[89px] ${isSubmittingModalAction ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleExtendSubmit}
-                disabled={isSubmittingModalAction}
-                className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors w-[140px] flex items-center justify-center ${isSubmittingModalAction ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                {isSubmittingModalAction && (
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                )}
-                {isSubmittingModalAction ? 'Validation...' : 'Valider'}
-              </button>
-            </div>
-          </div>
+          <ExtendAppointmentContent
+            appointment={modalsState.selectedAppointmentForm}
+            extendData={modalsState.extendData}
+            setExtendData={handlers.setExtendData}
+            onClose={handleCloseRepeatOrExtend}
+            onSubmit={handleExtendSubmit}
+            isSubmitting={isSubmittingModalAction}
+            error={modalSubmitError}
+            onLockedError={handlers.onLockedError}
+          />
         ) : (
           /* CAS 3: Formulaire de RDV */
           <AppointmentForm
@@ -720,3 +557,290 @@ export const CalendarModals = memo(({
     </>
   );
 });
+
+
+
+const RepeatAppointmentContent = ({
+  appointment,
+  repeatData,
+  setRepeatData,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  error,
+  onLockedError
+}: {
+  appointment: Appointment | null;
+  repeatData: RepeatData;
+  setRepeatData: (data: RepeatData | null) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+  error: string | null;
+  onLockedError: (msg: string) => void;
+}) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [freshApp, setFreshApp] = useState<Appointment | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!appointment?.IdPlanningEvenement) return;
+
+    setIsLoading(true);
+    // 1. On appelle l'API pour récupérer les infos FRAÎCHES et poser le verrou de 5 minutes
+    eventService.getEvenement(appointment.IdPlanningEvenement).then(response => {
+      if (!isMounted) return;
+      
+      if (response?.error === 409 || response?.isLocked) {
+        // 🚨 Verrou pris par un autre
+        onClose();
+        onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition.");
+      } else if (response?.error === 0 && response?.data) {
+        const fetchedApp = response.data.appointments[0] ?? response.data.appointments;
+        setFreshApp(fetchedApp);
+        setIsLoading(false);
+      } else {
+        // Fallback
+        setFreshApp(appointment);
+        setIsLoading(false);
+      }
+    }).catch(() => {
+      if (isMounted) {
+        setFreshApp(appointment);
+        setIsLoading(false);
+      }
+    });
+
+    return () => { isMounted = false; };
+  }, [appointment]);
+
+  if (isLoading) return <ModalLoadingFallback />;
+
+  return (
+    <div className="flex flex-col gap-6 poppins w-[340px]">
+      <div className="flex flex-col gap-4">
+        <span className="text-base underline">Rythme de répétition</span>
+        <div className="flex items-center gap-7">
+          <label className="flex items-center gap-2 font-medium">
+            <span className="">{repeatData.repeatInterval === 'week' ? 'Toutes les' : 'Tous les'}</span>
+            <input
+              required
+              type="number"
+              min={1}
+              className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[70px] text-center"
+              value={repeatData.numberCount || 1}
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (value > 0) setRepeatData({ ...repeatData, numberCount: value });
+              }}
+            />
+          </label>
+          <select
+            className="border border-default bg-secondary-bg rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition ml-2 custom-select"
+            value={repeatData.repeatInterval || "day"}
+            onChange={(e) => {
+              const value = e.target.value as "day" | "week" | "month";
+              setRepeatData({ ...repeatData, repeatInterval: value });
+            }}
+            required
+          >
+            <option value="day">Jours</option>
+            <option value="week">Semaines</option>
+            <option value="month">Mois</option>
+          </select>
+        </div>
+      </div>
+      
+      <div className="flex flex-col gap-4">
+        <span className="text-base underline">Méthode</span>
+        <div className="flex flex-row items-center gap-6">
+          <div className="flex items-center gap-22">
+            <div className="">
+              <input
+                type="radio"
+                name="repeatMethod"
+                value="count"
+                checked={repeatData.repeatCount !== null && repeatData.endDate === null}
+                onChange={() => setRepeatData({ ...repeatData, repeatCount: 1, endDate: null })}
+              />
+              <span className="ml-1">Nombre</span>
+            </div>
+            <input
+              type="number"
+              min={1}
+              disabled={repeatData.endDate !== null}
+              className={`${repeatData.endDate !== null ? 'opacity-50 cursor-not-allowed' : 'opacity-100'} border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[70px] ml-2`}
+              value={repeatData.repeatCount ?? ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "") {
+                  setRepeatData({ ...repeatData, repeatCount: null });
+                  return;
+                }
+                const parsed = parseInt(value, 10);
+                if (!isNaN(parsed) && parsed > 0) {
+                  setRepeatData({ ...repeatData, repeatCount: parsed, endDate: null });
+                }
+              }}
+            />
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-12">
+          <div>
+            <input
+              type="radio"
+              name="repeatMethod"
+              value="endDate"
+              checked={repeatData.endDate !== null && repeatData.repeatCount === null}
+              onChange={() => setRepeatData({ ...repeatData, repeatCount: null, endDate: Date.now() })}
+            />
+            <span className="ml-1">Fin répétition</span>
+          </div>
+          <input
+            type="date"
+            className={`${repeatData.repeatCount !== null ? 'opacity-50 cursor-not-allowed text-sm' : 'opacity-100 text-base focus:ring-2 focus:ring-color'} ml-2 border border-default rounded-xl px-3 py-2 focus:outline-none transition w-[145px]`}
+            value={repeatData.endDate ? format(repeatData.endDate, "yyyy-MM-dd") : ""}
+            // 💡 On utilise la date fraîche récupérée de la BDD !
+            min={freshApp?.FinPlanningEvenement ? format(freshApp.FinPlanningEvenement, "yyyy-MM-dd") : undefined}
+            onChange={e => {
+              const value = e.target.value;
+              const parsed = value ? new Date(value).getTime() : null;
+              if (parsed !== null && Number.isNaN(parsed)) return;
+              setRepeatData({ ...repeatData, endDate: parsed, repeatCount: null });
+            }}
+          />
+        </div>
+      </div>
+
+      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      
+      <div className="flex justify-between mt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isSubmitting}
+          className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={isSubmitting}
+          className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors flex items-center justify-center min-w-[120px] ${isSubmitting ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          {isSubmitting && (
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          )}
+          {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// SOUS-COMPOSANT : PROLONGATION (Gère son propre fetch et son verrou)
+// ============================================================================
+const ExtendAppointmentContent = ({
+  appointment,
+  extendData,
+  setExtendData,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  error,
+  onLockedError
+}: {
+  appointment: Appointment | null;
+  extendData: number;
+  setExtendData: (date: number | null) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+  error: string | null;
+  onLockedError: (msg: string) => void;
+}) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [freshApp, setFreshApp] = useState<Appointment | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!appointment?.IdPlanningEvenement) return;
+
+    setIsLoading(true);
+    eventService.getEvenement(appointment.IdPlanningEvenement).then(response => {
+      if (!isMounted) return;
+      if (response?.error === 409 || response?.isLocked) {
+        onClose();
+        onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition.");
+      } else if (response?.error === 0 && response?.data) {
+        const fetchedApp = response.data.appointments[0] ?? response.data.appointments;
+        setFreshApp(fetchedApp);
+        setIsLoading(false);
+      } else {
+        setFreshApp(appointment);
+        setIsLoading(false);
+      }
+    }).catch(() => {
+      if (isMounted) {
+        setFreshApp(appointment);
+        setIsLoading(false);
+      }
+    });
+
+    return () => { isMounted = false; };
+  }, [appointment]);
+
+  if (isLoading) return <ModalLoadingFallback />;
+
+  return (
+    <div>
+      <div className="flex flex-row items-center mb-4 poppins">
+        <span className="text-base poppins mr-[65px]">Jusqu'au</span>
+        <input
+          type="date"
+          className="text-base border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition w-[145px]"
+          value={format(extendData, "yyyy-MM-dd")}
+          // 💡 On utilise la date fraîche récupérée de la BDD !
+          min={freshApp?.FinPlanningEvenement ? format(new Date(freshApp.FinPlanningEvenement), "yyyy-MM-dd") : undefined}
+          onChange={(e) => {
+            const date = new Date(e.target.value).setHours(23, 59, 59, 999);
+            if (!isNaN(date)) {
+              setExtendData(date);
+            }
+          }}
+        />
+      </div>
+      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      <div className="flex gap-3 mt-4">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isSubmitting}
+          className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors w-[110px] mr-[89px] ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={isSubmitting}
+          className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors w-[140px] flex items-center justify-center ${isSubmitting ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          {isSubmitting && (
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          )}
+          {isSubmitting ? 'Validation...' : 'Valider'}
+        </button>
+      </div>
+    </div>
+  );
+};

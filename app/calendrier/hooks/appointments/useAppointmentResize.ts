@@ -12,6 +12,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { isWeekend } from 'date-fns';
 import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { HalfDayInterval } from '../../types';
+import evenementService from '@/app/service/evenement.service';
 
 interface UseAppointmentResizeParams {
   appointmentId: number;
@@ -116,6 +117,11 @@ export const useAppointmentResize = ({
    */
   const handleMouseDown = useCallback((e: React.MouseEvent, handleType: 'left' | 'right') => {
     e.stopPropagation();
+
+    evenementService.unlockEvenement(appointmentId).catch((err) => {
+          console.error('Erreur lors du déverrouillage du rendez-vous:', err);
+    });
+
     initialX.current = e.clientX;
     setDragStart(startDate);
     setDragEnd(endDate);

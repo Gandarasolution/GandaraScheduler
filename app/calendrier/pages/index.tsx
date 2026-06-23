@@ -58,8 +58,7 @@ import calendarConfigService from '@/app/service/calendarConfig.service';
 
 // --- UTILITAIRES ---
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
-import { User, Item, CommonPaieAttributs } from '../types';
-import { canCreateEvent } from '../utils/permissions';
+import { User, Item } from '../types';
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
 import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
@@ -95,17 +94,13 @@ export default function HomePage({
   onThemeChange?: (theme: any) => void;
 }) {
 
-  const { hasPermission, currentPlanningId } = useAuth();
+  const { hasPermission, currentPlanningId, setUser } = useAuth();
   
   const user = useCurrentUser();
   
   const [loadCalendar, setLoadCalendar] = useState(true); 
   const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
   const [lockNotification, setLockNotification] = useState<string | null>(null);
-
-  useEffect(() => {
-    console.log('lockNotification changed:', lockNotification);
-  }, [lockNotification]);
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
@@ -174,6 +169,8 @@ export default function HomePage({
       deleteEvenements: evenementService.deleteEvenements,
       divideEvenement: evenementService.divideEvenement,
       repeatEvenement: evenementService.repeatEvenement,
+      unlockEvenement: evenementService.unlockEvenement,
+      lockEvenement: evenementService.lockQuickEvenement,
     },
   });
 
@@ -425,6 +422,16 @@ export default function HomePage({
     };
   }, [interaction, timeline, viewState.viewType]);
 
+  useEffect(() => {
+    const handleExpiration = () => {
+      setLockNotification("Votre session a expiré, veuillez vous reconnecter.");
+      setUser(undefined);
+      // navigate('/login');
+    };
+
+    window.addEventListener('auth:expired', handleExpiration);
+    return () => window.removeEventListener('auth:expired', handleExpiration);
+  }, []);
 
   // 1. La fonction qui va réagir aux messages Mercure
   const handleMercureEvent = useCallback((action: string, data: any) => {
@@ -437,7 +444,7 @@ export default function HomePage({
         break;
 
       case 'APPOINTMENT_UPDATED':
-        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, ...data } : appt));        
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, ...data, isLocked: false } : appt));        
         break;
 
       case 'APPOINTMENT_AND_RESSOURCE_UPDATED':
@@ -448,7 +455,7 @@ export default function HomePage({
           CouleurTextePlanningRessource: data.ressources.CouleurTextePlanningRessource,
           Image: data.ressources.IdPlanningImage,
         }
-        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.appointment.IdPlanningEvenement) ? { ...appt, ...data.appointment } : appt));
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.appointment.IdPlanningEvenement) ? { ...appt, ...data.appointment, isLocked: false } : appt));
         break;
 
       case 'APPOINTMENT_DELETED':
@@ -463,13 +470,16 @@ export default function HomePage({
         
       case 'APPOINTMENT_DIVISION_UPDATED':
         dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map(
-          (appt) => (Number(appt.IdPlanningEvenement) === Number(data.originalEventId) ? { ...appt, FinPlanningEvenement: data.divisionDate } : appt)
+          (appt) => (Number(appt.IdPlanningEvenement) === Number(data.originalEventId) ? { ...appt, FinPlanningEvenement: data.divisionDate, isLocked: false } : appt)
         );
         dataLayer.appointmentsRef.current.push(data.newEvent);
         break;
       
       case 'APPOINTMENT_REPEATED':
-        dataLayer.appointmentsRef.current.push(...data.appointments);
+        dataLayer.appointmentsRef.current.push(...data.data.appointments);
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => 
+          (Number(appt.IdPlanningEvenement) === Number(data.data.originalEventId) ? { ...appt, isLocked: false } : appt)
+      );
         break;
       
       case 'ADD_NON_WORKING_DAY':
@@ -796,12 +806,11 @@ export default function HomePage({
           />
 
           <AlertModal
-            isOpen={appointmentLogic.alertState.isVisible}
-            title={appointmentLogic.alertState.title}
+            alertState={appointmentLogic.alertState}
             confirmLabel="Confirmer"
             cancelLabel="Annuler"
-            onConfirm={appointmentLogic.alertState.onConfirm}
-            onClose={() => appointmentLogic.setAlertState(prev => ({...prev, isVisible: false}))}
+            onClose={() =>  appointmentLogic.alertState.onCancel()}
+            fetchToLockAppointment={appointmentLogic.alertState.fetchToLockAppointment}
           />
 
           <SearchOverlay

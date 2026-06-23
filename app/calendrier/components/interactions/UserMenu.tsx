@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { User } from '../../types';
 import { Image } from '../ui';
 import { getCachedImageById } from '../../utils/imageCacheStore';
+import { useAuth } from '../../hooks/utils/AuthContext';
 
 interface UserMenuProps {
   user: User;
@@ -16,13 +17,11 @@ export default function UserMenu({ user }: UserMenuProps) {
     ? (cachedUserImage?.image || user.IdImage)
     : null;
 
+
+  const { setUser } = useAuth();
+
   const handleLogout = () => {
-    // Supprimer les données de localStorage
-    //localStorage.removeItem('user');
-    //localStorage.removeItem('isAuthenticated');
-    
-    // Rediriger vers la page de login
-    //router.push('/login');
+    setUser(undefined);  
   };
 
   return (

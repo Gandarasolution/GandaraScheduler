@@ -32,6 +32,80 @@ export const axiosAgent = axios.create({
     },
 })
 
+// --- VARIABLES POUR LA GESTION DU REFRESH ---
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
+// --- L'INTERCEPTEUR MAGIQUE ---
+axiosAgent.interceptors.response.use(
+    // 1. Si la réponse est un succès (2XX), on la laisse passer normalement
+    (response) => response,
+    
+    // 2. Si la réponse est une erreur (4XX, 5XX)
+    async (error) => {
+        const originalRequest = error.config;
+
+        // Si l'erreur est 401 (Non autorisé / JWT expiré) et qu'on n'a pas déjà essayé de rejouer la requête
+        if (error.response && error.response.status === 401 && !originalRequest._retry) {
+            
+            // Sécurité : si la route qui a échoué EST la route de refresh, on arrête tout (le refresh token est aussi expiré)
+            if (originalRequest.url === '/api/token/refresh') {
+                return Promise.reject(error);
+            }
+
+            // Si un rafraîchissement est DÉJÀ en cours (ex: 3 requêtes ont échoué en même temps)
+            // On les met en file d'attente
+            if (isRefreshing) {
+                return new Promise(function(resolve, reject) {
+                    failedQueue.push({resolve, reject});
+                }).then(() => {
+                    return axiosAgent(originalRequest);
+                }).catch(err => {
+                    return Promise.reject(err);
+                });
+            }
+
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            return new Promise(function (resolve, reject) {
+                // On appelle la route de rafraîchissement
+                axiosAgent.post('/api/token/refresh', {})
+                    .then(() => {
+                        // Le serveur a renvoyé un nouveau cookie HttpOnly
+                        processQueue(null); // On libère la file d'attente
+                        resolve(axiosAgent(originalRequest)); // On rejoue la requête qui avait échoué
+                    })
+                    .catch((err) => {
+                        processQueue(err, null);
+                        // LE REFRESH A ÉCHOUÉ : Déconnexion forcée de l'utilisateur
+                        // On peut émettre un événement que ton composant principal (App.js) écoute pour afficher le login
+                        window.dispatchEvent(new Event('auth:expired'));
+                        reject(err);
+                    })
+                    .finally(() => {
+                        isRefreshing = false;
+                    });
+            });
+        }
+
+        // Si ce n'est pas une erreur 401, on la rejette pour que `handleError` s'en occupe
+        return Promise.reject(error);
+    }
+);
+
+
 
 /* Pour la démonstration, décommenter l'instruction suivnante.
   Cela permet d'ajouter à toutes les requêtes une entête api-key.
@@ -58,10 +132,7 @@ function handleError(serviceName, err) {
         // on retourne un objet qui a la même structure qu'une réponse normale sans erreur.
         // mais avec un champ data contenant le message d'erreur renvoyé par l'API
         return {
-            data: {
-                error: 1,
-                data: err.response.data
-            }
+            data: err.response.data
         };
     }
     else if (err.request) {

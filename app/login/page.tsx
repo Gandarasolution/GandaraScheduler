@@ -27,6 +27,7 @@ export default function LoginPage(
 
     try {
       const result = await login(formData.login, formData.password);
+      console.log('Login result:', result);
       setLoading(false);
       if (!result.success) {
         setError(result.message || 'Échec de la connexion');
