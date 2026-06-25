@@ -389,9 +389,11 @@ export const useAppointmentLogic = ({
         IdPlanningRessource: ressource.IdPlanningRessource,
       };
 
+      const idTemp = Date.now();
+
       const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
       const localAppointment: Appointment = {
-        IdPlanningEvenement: -1, // ID temporaire pour le rendu local
+        IdPlanningEvenement: idTemp, // ID temporaire pour le rendu local
         AnnotationPlanningEvenement: description || `Nouveau rendez-vous`,
         DebutPlanningEvenement: startDate,
         FinPlanningEvenement: endDate,
@@ -416,6 +418,9 @@ export const useAppointmentLogic = ({
       api.createEvenement(payload)
         .then((resp) => {
           try {
+
+            console.log('createEvenement response:', resp);
+
             if (resp && resp.error === 0) {
               const apiData = resp?.data;
               const apiResources = Array.isArray(apiData?.ressources) ? apiData.ressources : [];
@@ -434,7 +439,7 @@ export const useAppointmentLogic = ({
               }
 
               appointmentsRef.current = appointmentsRef.current.map((app) =>{
-                if (Number(app.IdPlanningEvenement) === Number(-1)) {
+                if (Number(app.IdPlanningEvenement) === Number(idTemp)) {
                   const a = {...app, IdPlanningEvenement: apiCreated.IdPlanningEvenement, PlanningEvenementPriorite: apiCreated.PlanningEvenementPriorite };
                   if (saveToHistory) {
                     saveAppointmentState(a, 'create');
@@ -448,6 +453,7 @@ export const useAppointmentLogic = ({
               return;
             }
 
+            onLockedError(resp?.message);
             appointmentsRef.current = previousAppointments;
             notificationService.error('Erreur création', 'Le serveur n\'a pas créé l\'événement.');
           } catch (e) {
@@ -491,16 +497,18 @@ export const useAppointmentLogic = ({
         resizeDirection = 'right',
       } = data;
 
-      console.log('newEmployeeId:', newEmployeeId);
+      console.log('moveAppointment called with:', data);
       const appointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
       if (!appointment) {
         return { success: false, message: 'Rendez-vous introuvable.' };
       }
+      console.log('Found appointment:', appointment);
       const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(newEmployeeId));
       if (!employee) {
         notificationService.error('Action interdite', 'Employé introuvable. Le rendez-vous ne peut pas être déplacé.');
         return { success: false, message: 'Employé introuvable.' };
       }
+      console.log('Found employee:', employee);
 
       const ressource = eventsRef.current[Number(idRessource)] ;
       if (!ressource) {
@@ -508,6 +516,7 @@ export const useAppointmentLogic = ({
         return { success: false, message: 'Ressource introuvable.' };
       }
 
+      console.log('Found ressource:', ressource);
 
       if(appointment.DebutPlanningEvenement === newStartDate && appointment.FinPlanningEvenement === newEndDate && appointment.IdEmploye === newEmployeeId) {
         api?.unlockEvenement(appointment.IdPlanningEvenement).catch((err) => {
@@ -534,6 +543,7 @@ export const useAppointmentLogic = ({
         (state.isDisplayWeekend && state.includeWeekend) || !state.isDisplayWeekend,
         state.nonWorkingDates
       );  
+
 
       if (days.length === 0) {
         return { success: false, message: 'Aucun créneau valide pour effectuer cette action.' };
@@ -617,31 +627,37 @@ export const useAppointmentLogic = ({
         IdPlanningEtiquette: appointment.Etiquette?.IdPlanningEtiquette,
       };
 
-      try {
+      try{
+        console.log('Payload for updateEvenement:', payload);
         const resp = await api.updateEvenement(String(id), payload);
-        if (!isApiSuccess(resp)) {
-          appointmentsRef.current = previousAppointments;
-          onUpdate();
-          const message = 'Le serveur a refusé la mise à jour.';
-          notificationService.error('Déplacement annulé', message);
-          return { success: false, message };
-        } else if (resp.error === 409){
+        console.log('Response from updateEvenement:', resp);
+        if (resp.error === 409){
           console.log('Response from updateEvenement:', resp);
 
-          appointmentsRef.current = previousAppointments;
           onLockedError(resp?.message || 'Un autre utilisateur a modifié cet événement.');
+          appointmentsRef.current = previousAppointments;
+          onUpdate();
         }
+        else if (!isApiSuccess(resp)) {
+          appointmentsRef.current = previousAppointments;
+          onUpdate();
+          onLockedError(resp?.message);
+
+          return { success: false, message: resp.message};
+        } else 
 
         notificationService.appointmentUpdated();
         return { success: true };
-      } catch (err) {
-        console.error('Erreur réseau moveAppointment/updateEvenement', err);
+      }catch (error) {
+        console.error('Erreur réseau updateEvenement', error);
         appointmentsRef.current = previousAppointments;
         onUpdate();
-        const message = 'Impossible de déplacer l\'événement sur le serveur';
-        notificationService.error('Erreur réseau', message);
-        return { success: false, message };
+        onLockedError('Impossible de mettre à jour l\'événement sur le serveur. Veuillez réessayer.');
+        notificationService.error('Erreur réseau', 'Impossible de mettre à jour l\'événement sur le serveur');
+        return { success: false, message: 'Erreur réseau' };
       }
+      
+      
     }, [appointmentsRef, employees, timelineStateRef, updateAppointmentBounds, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities, api, isApiSuccess]);
 
   // Sauvegarde depuis le formulaire (Création ou Édition)

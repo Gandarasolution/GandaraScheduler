@@ -44,7 +44,7 @@ export default function PlanningSelection({ plannings, onSelectPlanning }: Plann
               key={planning.IdPlanning}
               onClick={() => handleSelect(planning.IdPlanning)}
               disabled={loadingId !== null}
-              className="w-full flex items-center justify-between p-4 border border-default rounded-xl hover:border-primary hover:shadow-md transition-all group bg-white disabled:opacity-50 disabled:cursor-not-allowed text-left"
+              className="w-full flex items-center justify-between p-4 border border-default rounded-xl hover:border-primary hover:shadow-md transition-all group bg-white disabled:opacity-50 disabled:cursor-not-allowed text-left cursor-pointer"
             >
               <span className="font-medium text-primary poppins group-hover:text-primary-600">
                 {planning.NomPlanning}

@@ -64,7 +64,12 @@ export default function Home() {
 
   if (!isAuthenticated || !user) return <LoginPage login={login} />;
 
-  if (UserPlanning && UserPlanning.length > 1 && currentPlanningId === -1) {
+  // console.log("✅ Home: Utilisateur connecté", user);
+
+  // console.log("ℹ️ Home: Plannings disponibles pour l'utilisateur", UserPlanning);
+  // console.log("ℹ️ Home: Planning actuellement sélectionné", currentPlanningId);
+
+  if (UserPlanning.length > 1 && currentPlanningId === -1) {
     return (
       <PlanningSelection 
         plannings={UserPlanning} 

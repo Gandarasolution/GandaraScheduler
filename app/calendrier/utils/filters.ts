@@ -114,6 +114,7 @@ export function getHierarchicalDimensionItems(
   groups: Record<number, Equipe>,
   poleActivites: Record<number, PoleActivite>
 ): HierarchicalGroupItem[] {
+  console.log('oui ');
   if (!groupingLevels?.ChampsPremierGroupePlanningVue) {
     // Pas de grouping défini, retourner une liste plate d'employés
     return employees.map(emp => ({
@@ -127,12 +128,14 @@ export function getHierarchicalDimensionItems(
 
   const { ChampsPremierGroupePlanningVue: level1, ChampsDeuxiemeGroupePlanningVue: level2 } = groupingLevels;
 
+
   // Cas 1: Un seul niveau de grouping
   if (!level2 || level1 === level2) {
     return getItemsByLevel(level1, employees, groups, poleActivites).map(item => ({
       ...item,
       level: 1
     }));
+    
   }
 
   // Cas 2: Deux niveaux de grouping (level1 !== level2)
@@ -164,29 +167,36 @@ function getItemsByLevel(
   poleActivites: Record<number, PoleActivite>
 ): HierarchicalGroupItem[] {  
   if (levelType === 'pole') {
-    return Object.values(poleActivites).map(pole => {      
+    return Object.values(poleActivites).reduce((acc, pole) => {
+      const poleEmployees = employees.filter(emp => Number(emp.PoleActivite) === Number(pole.Id) && emp.Actif !== false);
       
-      const poleEmployees = employees.filter(emp => Number(emp.PoleActivite) === Number(pole.Id));
-
-      return {
-        id: pole.Id || 'Sans Pôle',
-        name: pole.Nom || 'Sans Pôle',
-        level: 0, // Sera écrasé par l'appelant
-        employees: poleEmployees,
-        data: { pole }
-      };
-    });
+      // On n'ajoute au tableau final (acc) QUE si on a des employés
+      if (poleEmployees.length > 0) {
+        acc.push({
+          id: pole.Id || 'Sans Pôle',
+          name: pole.Nom || 'Sans Pôle',
+          level: 0,
+          employees: poleEmployees,
+          data: { pole }
+        });
+      }
+      
+      return acc;
+    }, [] as HierarchicalGroupItem[]);
   } else if (levelType === 'equipe') {
-    return Object.values(groups).map(group => {
-      const groupEmployees = employees.filter(emp => Number(emp.Equipe) === Number(group.Id));
-      return {
-        id: group.Id || 'Sans Équipe',
-        name: group.Nom || 'Sans Équipe',
-        level: 0, // Sera écrasé par l'appelant
-        employees: groupEmployees,
-        data: group 
-      };
-    });
+    return Object.values(groups).reduce((acc, group) => {
+      const groupEmployees = employees.filter(emp => Number(emp.Equipe) === Number(group.Id) && emp.Actif !== false);
+      if (groupEmployees.length > 0) {
+        acc.push({
+          id: group.Id || 'Sans Équipe',
+          name: group.Nom || 'Sans Équipe',
+          level: 0,
+          employees: groupEmployees,
+          data: group
+        });
+      }
+      return acc;
+    }, [] as HierarchicalGroupItem[]);
   }
   return [];
 }
@@ -198,9 +208,9 @@ function filterEmployeesByLevel(
   levelId: string | number
 ): User[] {
   if (levelType === 'pole') {
-    return employees.filter(emp => Number(emp.PoleActivite) === Number(levelId));
+    return employees.filter(emp => Number(emp.PoleActivite) === Number(levelId) && emp.Actif !== false);
   } else if (levelType === 'equipe') {
-    return employees.filter(emp => Number(emp.Equipe) === Number(levelId));
+    return employees.filter(emp => Number(emp.Equipe) === Number(levelId) && emp.Actif !== false);
   }
   return [];
 }

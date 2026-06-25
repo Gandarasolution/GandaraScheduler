@@ -55,6 +55,7 @@ export const useCalendarInteractions = ({
       const row = elementAtPoint?.closest('.calendar-row') as HTMLElement;
       const rowId = row ? row.id : null;
       
+      //console.log('Row ID under mouse:', rowId);
       if (withinX && colIndex === lastHoveredCol.current && rowId === lastHoveredRowId.current) {
         return;
       }
@@ -103,6 +104,7 @@ export const useCalendarInteractions = ({
   }, [dayInTimeline, mainScrollRef, onHoverMove]);
 
   const updateHighlightedEmployeeRow = useCallback((employeeId: number | null) => {
+    console.log('Updating highlighted employee row for employeeId:', employeeId);
       const tableElement = tableRef.current;
       if (!tableElement) return;
   

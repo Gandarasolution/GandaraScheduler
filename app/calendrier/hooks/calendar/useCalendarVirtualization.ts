@@ -41,7 +41,7 @@ export interface RowWithBoundaries extends FlatRow {
 interface UseCalendarVirtualizationParams {
   dimensionItems: HierarchicalGroupItem[];
   openItems: (string | number)[];
-  employeesByDimension: Record<string | number, User[]>;
+  //employeesByDimension: Record<string | number, User[]>;
   employeeHeights: Array<{ employeeId: number; height: number }>;
   expandedOverlapRows: Record<number, boolean>;
   contentViewportTop: number;
@@ -65,7 +65,7 @@ interface UseCalendarVirtualizationResult {
 export const useCalendarVirtualization = ({
   dimensionItems,
   openItems,
-  employeesByDimension,
+  //employeesByDimension,
   employeeHeights,
   expandedOverlapRows,
   contentViewportTop,
@@ -79,7 +79,7 @@ export const useCalendarVirtualization = ({
     
     // Fonction récursive pour traiter les items hiérarchiques
     const processHierarchicalItem = (
-      item: any, 
+      item: HierarchicalGroupItem, 
       idx: number, 
       isChild: boolean = false,
       parentIdx?: number,
@@ -99,6 +99,7 @@ export const useCalendarVirtualization = ({
         }
       }
       
+      console.log(rows)
       if (idx !== 0 || isChild) {
         rows.push({
           type: 'group',
@@ -109,8 +110,10 @@ export const useCalendarVirtualization = ({
         });
       }      
       
+      //console.log('openItems.includes(item.id)', openItems.includes(item.id), item.id);
       if (openItems.includes(item.id)) {
         // Si l'item a des enfants (niveau 2), les traiter
+        //console.log('item.children', item.children, item.children?.length);
         if (item.children && item.children.length > 0) {
           item.children.forEach((child: any, childIdx: number) => {
             processHierarchicalItem(child, childIdx, true, idx, level + 1);
@@ -118,7 +121,7 @@ export const useCalendarVirtualization = ({
         } else {
           
           // Sinon, afficher les employés
-          const itemEmployees = employeesByDimension[item.id] || [];
+          const itemEmployees = item.employees || [];
           itemEmployees.forEach(employee => {
             const baseHeight = employeeHeights.find(e => e.employeeId === employee.IdPersonnel)?.height ?? CELL_HEIGHT;
             const adjustedHeight = expandedOverlapRows[employee.IdPersonnel]
@@ -137,8 +140,10 @@ export const useCalendarVirtualization = ({
       }
     };
     
+    //console.log('Processing dimensionItems for virtualization:', dimensionItems);
     // Traiter tous les items de dimension
     dimensionItems.forEach((item, idx) => {
+      //console.log('Rows before processing item:', rows);
       processHierarchicalItem(item, idx);
     });
 
@@ -156,7 +161,7 @@ export const useCalendarVirtualization = ({
     }
     
     return rows;
-  }, [dimensionItems, openItems, employeesByDimension, employeeHeights, expandedOverlapRows]);
+  }, [dimensionItems, openItems, employeeHeights, expandedOverlapRows]);
 
   // Calcul des positions de début et fin de chaque ligne
   const rowBoundaries = useMemo(() => {

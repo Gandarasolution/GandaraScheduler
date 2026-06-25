@@ -72,7 +72,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   tagPlacement,
   onLockedError
 }) => {
-  
+  //console.log('Rendering CalendarRows with visibleRows:', visibleRows);
   return (
     <>
       {visibleRows.map((row) => { 

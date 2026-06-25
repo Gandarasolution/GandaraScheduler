@@ -18,11 +18,8 @@ export default function UserMenu({ user }: UserMenuProps) {
     : null;
 
 
-  const { setUser } = useAuth();
+  const { setUser, logout } = useAuth();
 
-  const handleLogout = () => {
-    setUser(undefined);  
-  };
 
   return (
     <div className="flex items-center gap-3">
@@ -48,7 +45,7 @@ export default function UserMenu({ user }: UserMenuProps) {
             )}
           </div>
           <button
-            onClick={handleLogout}
+            onClick={logout}
             className="w-full px-4 py-2 text-left text-sm text-color-error hover:bg-error-light transition-colors flex items-center gap-2 poppins cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

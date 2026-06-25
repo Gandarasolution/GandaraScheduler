@@ -44,16 +44,18 @@ interface EmployeeSidebarProps {
 }
 
 const CustomArrow = ({ isOpen }: { isOpen: boolean }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    fill="currentColor"
-    className={`bi bi-chevron-down ${isOpen ? 'rotate-180' : ''} transition-transform duration-200 ease-in-out text-[#84818a]`}
-    viewBox="0 0 16 16"
-  >
-    <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
-  </svg>
+  <div className="flex items-center justify-center w-5 h-5">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      fill="currentColor"
+      className={`bi bi-chevron-down ${isOpen ? 'rotate-180' : ''} transition-transform duration-200 ease-in-out text-[#84818a]`}
+      viewBox="0 0 16 16"
+    >
+      <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+    </svg>
+  </div>
 );
 
 const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
@@ -174,12 +176,13 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                 style={{ 
                   paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y, 
                   paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y,
+                  height: CELL_HEIGHT,
                 }}
                 onClick={() => onToggleItem(item.id)}
                 type="button"
               >
-                <div className="flex items-center gap-4">
-                  <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="18" height="18" viewBox="0 0 510 510" enableBackground="new 0 0 510 510" xmlSpace="preserve">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <svg className="flex-shrink-0" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="18" height="18" viewBox="0 0 510 510" enableBackground="new 0 0 510 510" xmlSpace="preserve">
                     <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
                       <g>
                         <g id="play-install">
@@ -188,8 +191,12 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                       </g>
                     </g>
                   </svg>
-                  <span className="poppins font-bold">{item.name}</span>
+                  
+                  {/* 3. Le truncate va maintenant fonctionner correctement */}
+                  <span className="poppins font-bold truncate block">{item.name}</span>
                 </div>
+                
+                {/* La flèche garde sa place à droite */}
                 <CustomArrow isOpen={isOpen} />
               </button>
             </div>

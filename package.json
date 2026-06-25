@@ -7,7 +7,7 @@
     "build": "next build",
     "build:analyze": "cross-env ANALYZE=true next build",
     "build:prod": "NODE_ENV=production next build",
-    "start": "next start",
+    "start": "next start -p 8080",
     "lint": "next lint",
     "clean": "rimraf .next out",
     "test": "jest",

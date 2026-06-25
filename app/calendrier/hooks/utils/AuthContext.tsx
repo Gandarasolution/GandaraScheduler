@@ -49,15 +49,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const id = response.planning[0]?.IdPlanning || -1;
       if (id >= 0) {
         axiosAgent.defaults.headers.common['X-Planning-Id'] = id;
-        setCurrentPlanningId(id);
+
+        if(response.planning.length === 1) {
+          setCurrentPlanningId(id); 
+        }else {
+          setCurrentPlanningId(-1); 
+        }
       }else {
         console.error('Aucun planning valide trouvé pour l\'utilisateur.');
         return { success: false, message: 'Aucun planning valide trouvé pour l\'utilisateur.' };
       }
 
-      setUserPlanning(response.user?.planning || []);
+      setUserPlanning(response.planning || []);
       setUser(response.user);
       setPermissions(response.permissions || 0);
+      localStorage.setItem('isAuthenticated', 'true'); // Sauvegarde du token dans le localStorage
       return { success: true };
     } 
 
@@ -65,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('jwt_token');
+    localStorage.removeItem('isAuthenticated');
     setUser(undefined);
     setPermissions(0);
   };
@@ -77,6 +83,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      if (localStorage.getItem('isAuthenticated') !== 'true') {
+        setIsLoading(false);
+        return;
+      }
       try {
         const response = await authService.me();
         
@@ -84,9 +94,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (id >= 0) {
           axiosAgent.defaults.headers.common['X-Planning-Id'] = id;
-          setCurrentPlanningId(id); 
+
+          if(response.planning.length === 1) {
+            setCurrentPlanningId(id); 
+          }else {
+            setCurrentPlanningId(-1); 
+          }
         }
-        setUserPlanning(response.user?.planning || []);
+        setUserPlanning(response.planning || []);
         setUser(response.user);
         setPermissions(response.permissions || 0);
 

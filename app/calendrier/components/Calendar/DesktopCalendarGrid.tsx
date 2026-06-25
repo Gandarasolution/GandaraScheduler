@@ -268,7 +268,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   } = useCalendarVirtualization({
     dimensionItems,
     openItems,
-    employeesByDimension,
     employeeHeights,
     expandedOverlapRows,
     contentViewportTop,
