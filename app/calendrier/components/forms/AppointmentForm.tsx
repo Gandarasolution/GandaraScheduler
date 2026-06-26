@@ -19,12 +19,12 @@ import React, { useState, memo, useMemo, useEffect, useCallback, useRef } from '
 import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, Tag, AutreItem } from '../../types';
 import { isSameDay, isSameYear, isSameMonth, format } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
-import socialPermissionService from '@/app/service/socialPermission.service';
+import socialPermissionService from '@/app/service/permission.service';
 
 import { AppointmentItem } from '../index';
 import FormHeader, { ColorConfig, ResourceField } from './FormHeader';
 import DateTimeSelector, { TimeInterval } from './DateTimeSelector';
-import PermissionsPanel, { Permission, UserWithPermissions } from './PermissionsPanel';
+import PermissionsPanel, { Permission, UserWithPermission } from './PermissionsPanel';
 import TagsManager from './TagsManager';
 import { FormPreview, EmployeeSelector, AnnotationsField, ExpandButton, ActionButtons, Employee } from './FormComponents';
 import { useModalContext } from '@/app/calendrier/components/modals/Modal';
@@ -83,6 +83,7 @@ interface AppointmentFormProps {
   onFetchEventAndRessource?: (idEvent: number) => Promise<any>;
   onFetchRessourceById?: (idRessource: number, typeRessource: 'Projet' | 'Paie' | 'Rubrique Perso') => Promise<any>;
   onLockedError?: (message: string) => void;
+  onFetchPermissions?: () => Promise<any>;
   loadingFallback?: React.ReactNode;
 }
 
@@ -139,6 +140,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   onFetchTagsForResource,
   onFetchEventAndRessource,
   onFetchRessourceById,
+  onFetchPermissions,
   onLockedError,
   loadingFallback,
 }) => {
@@ -173,6 +175,14 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [DeletingTag, setDeletingTag] = useState<number | null>(null);
   const [tagError, setTagError] = useState<string | null>(null);
+  const permissions = useRef<Permission[]>([])
+  const [usersWithPermission, setUsersWithPermission] = useState<UserWithPermission[]>([]);
+
+   /**
+   * États pour la gestion des permissions par employé (rubriques sociales et rubrique perso uniquement)
+   */
+  const changedEmployeePermissions = useRef<Record<number, number>>({});
+  
 
   // console.log("Ressource actuelle :", formDataItemType);
   // console.log("isResourceMode :", isResourceMode);
@@ -246,9 +256,20 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           );
         }
 
+        if (onFetchPermissions && isResourceMode && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso')) {
+          promises.push(
+            onFetchPermissions()
+            .then(response => {
+              permissions.current = response.data.permissions || response.data || response || [];
+              setUsersWithPermission(response.data.employees || response.data || response || []);
+            })
+            .catch(err => {
+              console.error("Failed to load permissions", err);
+              setTagError("Erreur lors de la récupération des permissions");
+            })
+          );
+        }
         
-
-        // 🎯 MAGIE : On attend que toutes les promesses ajoutées soient terminées
         await Promise.all(promises);
 
       } catch (globalError) {
@@ -347,10 +368,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    */
   const [isExpanded, setIsExpanded] = useState(isReducedVersion ? false : true);
 
-  /**
-   * États pour la gestion des permissions par employé (rubriques sociales uniquement)
-   */
-  const [employeePermissions, setEmployeePermissions] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
     // Ne mettre à jour que si l'image a réellement changé
@@ -405,7 +422,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
         if (!isMounted) return;
 
-        setEmployeePermissions(new Map<number, number>(permissionEntries));
+        //setEmployeePermissions(new Map<number, number>(permissionEntries));
         return;
       }
 
@@ -418,7 +435,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
       if (!isMounted) return;
 
-      setEmployeePermissions(permissions);
+      //setEmployeePermissions(permissions);
       }
     };
 
@@ -532,9 +549,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
       if (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') {
-        employeePermissions.forEach((perm) => {
-          //void socialPermissionService.setSocialItemPermission(perm);
-        });
+        // changedEmployeePermissions.current.forEach((perm) => {
+        //   //void socialPermissionService.setSocialItemPermission(perm);
+        // });
       }
       
       // Mise à jour de l'événement existant
@@ -612,9 +629,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   };
 
   // Callback pour changement de permission
-  const handlePermissionChange = (userId: number, permissionId: string, value: boolean) => {
-    const perm = employeePermissions.get(userId) 
-    setEmployeePermissions(new Map(employeePermissions.set(userId, 23)));
+  const handlePermissionChange = (IdPersonnel: number, IdDroit: number | string) => {
+    setUsersWithPermission(prev => prev.map(user => 
+      user.IdPersonnel === IdPersonnel ? { ...user, IdDroit } : user
+    ));
+    changedEmployeePermissions.current[IdPersonnel] = Number(IdDroit);
+    // const perm = employeePermissions.get(userId) 
+    // setEmployeePermissions(new Map(employeePermissions.set(userId, 23)));
   };
 
   const handleSelectTag = (tag: Tag | undefined) => {
@@ -686,61 +707,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     displayName: `${emp.Nom} ${emp.Prenom}`,
   }));
 
-  // Permissions disponibles pour PermissionsPanel
-  const availablePermissions: Permission[] = [
-    {
-      id: 'canView',
-      label: 'Voir',
-      icon: (
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
-        </svg>
-      ),
-    },
-    {
-      id: 'canCreate',
-      label: 'Créer',
-      icon: (
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd"/>
-        </svg>
-      ),
-    },
-    {
-      id: 'canEdit',
-      label: 'Éditer',
-      icon: (
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-        </svg>
-      ),
-    },
-    {
-      id: 'canDelete',
-      label: 'Supprimer',
-      icon: (
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
-        </svg>
-      ),
-    },
-  ];
-
-  // Users avec permissions pour PermissionsPanel
-  const usersWithPermissions: UserWithPermissions[] = employees.map(emp => {
-    const perm = employeePermissions.get(emp.IdPersonnel)
-    return {
-      id: emp.IdPersonnel,
-      displayName: `${emp.Nom} ${emp.Prenom}`,
-      initials: `${emp.Prenom?.charAt(0)}${emp.Nom?.charAt(0)}`,
-      permissions: {
-        canView: perm === 23,
-        canCreate: perm === 23,
-        canEdit: perm === 23,
-        canDelete: perm === 23,
-      },
-    };
-  });
 
   // Tags pour TagsManager
   const isTagUsedCheck = (tagId: number) => {
@@ -802,8 +768,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           {/* PermissionsPanel - Gestion des permissions par employé */}
           {isResourceMode && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') && (
             <PermissionsPanel
-              users={usersWithPermissions}
-              availablePermissions={availablePermissions}
+              usersWithPermission={usersWithPermission}
+              permissions={permissions.current}
               onPermissionChange={handlePermissionChange}
               title="Gestion des permissions"
               defaultOpen={false}

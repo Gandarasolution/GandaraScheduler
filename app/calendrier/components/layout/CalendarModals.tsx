@@ -10,6 +10,7 @@ import { DeleteScenario } from '../modals/DeleteModal';
 import etiquetteService from '@/app/service/etiquette.service';
 import eventService from '@/app/service/evenement.service';
 import { useAuth } from '../../hooks/utils/AuthContext';
+import permissionService from '@/app/service/permission.service';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -326,6 +327,7 @@ export const CalendarModals = memo(({
             onFetchTagsForResource={etiquetteService.getEtiquettes}
             onAddTagToResource={etiquetteService.createEtiquette}
             onFetchEventAndRessource={eventService.getEvenement}
+            onFetchPermissions={permissionService.getPermissions}
             onLockedError={handlers.onLockedError}
             loadingFallback={<ModalLoadingFallback />}
           />

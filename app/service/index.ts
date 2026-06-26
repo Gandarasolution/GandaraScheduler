@@ -2,7 +2,7 @@ export { default as evenementService } from './evenement.service';
 export { default as employeeService } from './employee.service';
 export { default as equipeService } from './equipe.service';
 export { default as calendarConfigService } from './calendarConfig.service';
-export { default as socialPermissionService } from './socialPermission.service';
+export { default as permissionService } from './permission.service';
 export { default as notificationApiService } from './notificationApi.service';
 export { default as ressourceService } from './ressource.service';
 export { default as imageService } from './image.service';

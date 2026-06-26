@@ -94,7 +94,7 @@ export default function HomePage({
   onThemeChange?: (theme: any) => void;
 }) {
 
-  const { hasPermission, currentPlanningId, setUser } = useAuth();
+  const { hasPermission, currentPlanningId, setUser, logout } = useAuth();
   
   const user = useCurrentUser();
   
@@ -111,6 +111,7 @@ export default function HomePage({
   const [, setEmployeesVersion] = useState(0);
   const hasInitializedPlanningRef = useRef(false);
   const hasInitializedTeamsRef = useRef(false);
+  const hasInitializedEmployeesRef = useRef(false);
   const hasInitializedNonWorkingDatesRef = useRef(false);
   const [errorPlanning, setErrorPlanning] = useState<string | null>(null);
 
@@ -335,28 +336,30 @@ export default function HomePage({
         setErrorPlanning(result.message || "Erreur lors du chargement des jours non travaillés. Veuillez réessayer.");
       }
     };
-    
+
     const initializePlanning = async () => {
       if (!isMounted || hasInitializedPlanningRef.current) return;
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
       
       await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
-      const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
 
-
-      //console.log('Employees Response:', employeesResponse);
-      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
-        setGlobalEmployees(employeesResponse.data);
-      } else {
-        setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
-        setGlobalEmployees([]);
-        setLoadCalendar(false);
-        return;
+      // Chargement des employés selon les permissions
+      if (hasInitializedEmployeesRef.current) {
+        const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
+        //console.log('Employees Response:', employeesResponse);
+        if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+          setGlobalEmployees(employeesResponse.data);
+        } else {
+          setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+          setGlobalEmployees([]);
+          setLoadCalendar(false);
+          return;
+        }
+        hasInitializedEmployeesRef.current = true;
+        setEmployeesVersion(prev => prev + 1);
       }
-      setEmployeesVersion(prev => prev + 1);
 
-      
 
       let rep = await dataLayer.loadTeams();
       if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
@@ -385,12 +388,35 @@ export default function HomePage({
       await dataLayer.loadTeams();
     };
 
+    const initializePaieTableAndManualEventTable = async () => {
+      if (!isMounted || hasInitializedEmployeesRef.current) return;
+      hasInitializedEmployeesRef.current = true;
+      const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : null;
+
+      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+        setGlobalEmployees(employeesResponse.data);
+      } else {
+        setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+        setGlobalEmployees([]);
+        setLoadCalendar(false);
+        return;
+      }
+    }
     
     initializeNonWorkingDates();
     if (viewState.viewType === 'calendar') {
       initializePlanning();
     } else if (viewState.viewType === 'employee-table') {
       initializeEmployeeTable();
+    }
+    else if (viewState.viewType === 'paie-table' || viewState.viewType === 'manual-event-table') {
+      if (hasPermission(23) && hasPermission(22)) {
+        console.log("Initialisation de la table Paie et de la table des événements manuels...");
+        initializePaieTableAndManualEventTable();
+      }else {
+        setErrorPlanning("Vous n'avez pas les droits nécessaires pour accéder à cette vue.");
+        setLoadCalendar(false);
+      }
     }
 
     return () => {
@@ -425,8 +451,7 @@ export default function HomePage({
   useEffect(() => {
     const handleExpiration = () => {
       setLockNotification("Votre session a expiré, veuillez vous reconnecter.");
-      setUser(undefined);
-      // navigate('/login');
+      logout();
     };
 
     window.addEventListener('auth:expired', handleExpiration);

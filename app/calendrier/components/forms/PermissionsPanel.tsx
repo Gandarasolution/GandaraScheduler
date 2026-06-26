@@ -1,49 +1,48 @@
 /**
- * @fileoverview Composant générique pour la gestion des permissions par utilisateur
- * 
- * @component PermissionsPanel
- * @version 1.0.0
- * @remarks Composant agnostique du métier, réutilisable pour tout système de permissions
+ * @fileoverview Composant de gestion des permissions par utilisateur (niveaux exclusifs)
+ * * @component PermissionsPanel
+ * @version 1.1.0
  */
 
 "use client";
 import React, { useState, useMemo } from 'react';
 
 /**
- * Définition d'une permission
+ * Définition d'un niveau de permission (ex: 21, 22, 23)
  */
 export interface Permission {
-  /** Identifiant unique de la permission */
-  id: string;
+  /** ID unique du niveau de permission */
+  IdDroit: number | string;
   /** Label affiché dans le tableau */
-  label: string;
+  LibelleDroit: string;
   /** Icône SVG (optionnel) */
-  icon?: React.ReactNode;
+  Icon?: React.ReactNode;
   /** Description tooltip (optionnel) */
-  description?: string;
+  Description?: string;
 }
 
 /**
- * Utilisateur avec permissions
+ * Utilisateur avec son niveau de permission actuel
  */
-export interface UserWithPermissions<T = Record<string, boolean>> {
+export interface UserWithPermission {
   /** ID unique de l'utilisateur */
-  id: number;
-  /** Nom complet ou identifiant affiché */
-  displayName: string;
+  IdPersonnel: number;
+
+  NomPersonnel: string;
+  PrenomPersonnel: string;
   /** Initiales (optionnel, pour avatar) */
-  initials?: string;
-  /** Permissions de cet utilisateur */
-  permissions: T;
+  Initials?: string;
+  /** ID du niveau de permission actuel */
+  IdDroit: number | string;
 }
 
-export interface PermissionsPanelProps<T = Record<string, boolean>> {
-  /** Liste des utilisateurs avec leurs permissions */
-  users: UserWithPermissions<T>[];
-  /** Liste des permissions disponibles */
-  availablePermissions: Permission[];
+export interface PermissionsPanelProps {
+  /** Liste des utilisateurs avec leur niveau de permission */
+  usersWithPermission: UserWithPermission[];
+  /** Liste des niveaux de permission disponibles */
+  permissions: Permission[];
   /** Callback pour changement de permission */
-  onPermissionChange: (userId: number, permissionId: string, value: boolean) => void;
+  onPermissionChange: (IdPersonnel: number, IdDroit: number | string) => void;
   /** Titre du panel */
   title?: string;
   /** Sous-titre ou description */
@@ -55,45 +54,18 @@ export interface PermissionsPanelProps<T = Record<string, boolean>> {
 }
 
 /**
- * Composant PermissionsPanel - Gestion des permissions par utilisateur
- * 
- * Ce composant est complètement générique et peut gérer n'importe quel type
- * de permissions pour n'importe quel type d'utilisateurs.
- * 
- * @example
- * ```tsx
- * const permissions = [
- *   { id: 'canView', label: 'Voir', icon: <EyeIcon /> },
- *   { id: 'canEdit', label: 'Éditer', icon: <EditIcon /> },
- * ];
- * 
- * const users = [
- *   { 
- *     id: 1, 
- *     displayName: 'Jean Dupont', 
- *     initials: 'JD',
- *     permissions: { canView: true, canEdit: false }
- *   }
- * ];
- * 
- * <PermissionsPanel
- *   users={users}
- *   availablePermissions={permissions}
- *   onPermissionChange={(userId, permId, value) => updatePerm(userId, permId, value)}
- *   title="Gestion des permissions"
- *   defaultOpen={false}
- * />
- * ```
+ * Composant PermissionsPanel
+ * Affiche une liste d'utilisateurs avec des boutons radio pour sélectionner un niveau d'accès.
  */
-export function PermissionsPanel<T = Record<string, boolean>>({
-  users,
-  availablePermissions,
+export function PermissionsPanel({
+  usersWithPermission,
+  permissions,
   onPermissionChange,
   title = "Gestion des permissions",
   subtitle,
   defaultOpen = false,
   searchPlaceholder = "Rechercher un utilisateur...",
-}: PermissionsPanelProps<T>) {
+}: PermissionsPanelProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -101,14 +73,15 @@ export function PermissionsPanel<T = Record<string, boolean>>({
    * Filtrage des utilisateurs selon la recherche
    */
   const filteredUsers = useMemo(() => {
-    if (!searchQuery) return users;
+    if (!searchQuery) return usersWithPermission;
     
     const query = searchQuery.toLowerCase();
-    return users.filter(user => 
-      user.displayName.toLowerCase().includes(query) ||
-      (user.initials && user.initials.toLowerCase().includes(query))
+    return usersWithPermission.filter(user => 
+      user.NomPersonnel.toLowerCase().includes(query) ||
+      user.PrenomPersonnel.toLowerCase().includes(query) ||
+      (user.Initials && user.Initials.toLowerCase().includes(query))
     );
-  }, [users, searchQuery]);
+  }, [usersWithPermission, searchQuery]);
 
   return (
     <div className="mt-4 border border-primary rounded-xl overflow-hidden bg-secondary-bg">
@@ -116,7 +89,7 @@ export function PermissionsPanel<T = Record<string, boolean>>({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 hover:bg-primary-50 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-primary-50 transition-colors focus:outline-none"
       >
         <div className="flex items-center gap-3">
           <div className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}>
@@ -133,7 +106,7 @@ export function PermissionsPanel<T = Record<string, boolean>>({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-tertiary">{users.length} utilisateur(s)</span>
+          <span className="text-xs text-tertiary">{filteredUsers.length} utilisateur(s)</span>
           <span className="text-xs px-2 py-1 rounded-full bg-primary-50 text-primary font-medium">
             {isOpen ? 'Masquer' : 'Afficher'}
           </span>
@@ -176,17 +149,17 @@ export function PermissionsPanel<T = Record<string, boolean>>({
                   <th className="text-left py-3 px-3 font-semibold text-primary border-b border-default">
                     Utilisateur
                   </th>
-                  {availablePermissions.map(permission => (
+                  {permissions.map(level => (
                     <th 
-                      key={permission.id}
+                      key={level.IdDroit}
                       className="text-center py-3 px-2 font-semibold text-primary border-b border-default"
-                      title={permission.description}
+                      title={level.Description || ''}
                     >
                       <div className="flex flex-col items-center gap-1">
-                        {permission.icon || (
+                        {level.Icon || (
                           <div className="w-4 h-4" /> /* Placeholder si pas d'icône */
                         )}
-                        <span className="text-[10px] font-normal">{permission.label}</span>
+                        <span className="text-[10px] font-normal">{level.LibelleDroit}</span>
                       </div>
                     </th>
                   ))}
@@ -195,31 +168,33 @@ export function PermissionsPanel<T = Record<string, boolean>>({
               <tbody>
                 {filteredUsers.map((user, index) => (
                   <tr 
-                    key={user.id} 
+                    key={user.IdPersonnel} 
                     className={`hover:bg-primary-50 transition-colors border-b border-default ${
                       index % 2 === 0 ? 'bg-white' : 'bg-secondary-bg'
                     }`}
                   >
                     <td className="py-2.5 px-3 text-primary font-medium">
                       <div className="flex items-center gap-2">
-                        {user.initials && (
+                        {user.Initials && (
                           <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-                            {user.initials}
+                            {user.Initials}
                           </div>
                         )}
-                        {user.displayName}
+                        {user.NomPersonnel} {user.PrenomPersonnel}
                       </div>
                     </td>
-                    {availablePermissions.map(permission => {
-                      const isChecked = (user.permissions as Record<string, boolean>)[permission.id] || false;
+                    {permissions.map(level => {
+                      // Vérifie si l'utilisateur possède CE niveau spécifique
+                      const isChecked = user.IdDroit === level.IdDroit;
                       return (
-                        <td key={permission.id} className="text-center py-2.5 px-2">
-                          <label className="inline-flex items-center justify-center cursor-pointer">
+                        <td key={level.IdDroit} className="text-center py-2.5 px-2">
+                          <label className="inline-flex items-center justify-center cursor-pointer w-full h-full">
                             <input
-                              type="checkbox"
+                              type="radio"
+                              name={`perm-${user.IdPersonnel}`}
                               checked={isChecked}
-                              onChange={(e) => onPermissionChange(user.id, permission.id, e.target.checked)}
-                              className="w-4 h-4 cursor-pointer accent-primary rounded"
+                              onChange={() => onPermissionChange(user.IdPersonnel, level.IdDroit)}
+                              className="w-4 h-4 cursor-pointer accent-primary"
                             />
                           </label>
                         </td>
@@ -229,7 +204,7 @@ export function PermissionsPanel<T = Record<string, boolean>>({
                 ))}
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={availablePermissions.length + 1} className="py-8 text-center text-tertiary">
+                    <td colSpan={permissions.length + 1} className="py-8 text-center text-tertiary">
                       <div className="flex flex-col items-center gap-2">
                         <svg className="w-8 h-8 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"/>
