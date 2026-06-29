@@ -345,7 +345,7 @@ export default function HomePage({
       await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
 
       // Chargement des employés selon les permissions
-      if (hasInitializedEmployeesRef.current) {
+      if (!hasInitializedEmployeesRef.current) {
         const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
         //console.log('Employees Response:', employeesResponse);
         if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {

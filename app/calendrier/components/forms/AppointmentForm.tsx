@@ -84,6 +84,7 @@ interface AppointmentFormProps {
   onFetchRessourceById?: (idRessource: number, typeRessource: 'Projet' | 'Paie' | 'Rubrique Perso') => Promise<any>;
   onLockedError?: (message: string) => void;
   onFetchPermissions?: () => Promise<any>;
+  onSetPermissions?: (data: { IdPersonnel: number, IdDroit: number }[]) => Promise<any>;
   loadingFallback?: React.ReactNode;
 }
 
@@ -143,6 +144,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   onFetchPermissions,
   onLockedError,
   loadingFallback,
+  onSetPermissions
 }) => {
 
   const { handleCloseWithSave, registerSaveHandler } = useModalContext();
@@ -396,56 +398,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    */
   const includeAllNonWorkingDays = useMemo(() => isAppointmentSplitByNotWorkingDay, [isAppointmentSplitByNotWorkingDay]);
 
-  // Charger les permissions existantes au montage ou lors du changement d'item
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadPermissions = async () => {
-      if (isEditingResource && formDataItemType?.IdPlanningRessource && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso')) {
-        const permissionEntries = await Promise.all(
-          employees.map(async (emp) => {
-            const response = await socialPermissionService.getSocialItemPermission(emp.IdPersonnel, formDataItemType?.IdPlanningRessource);
-            const perm = response?.error === 0 ? response.data : null;
-
-            // const safePermission: SocialItemPermission = perm || {
-            //   userId: emp.IdPersonnel,
-            //   itemId: formDataItemType?.IdPlanningRessource,
-            //   canView: true,
-            //   canCreate: true,
-            //   canEdit: true,
-            //   canDelete: true,
-            // };
-
-            return [emp.IdPersonnel, perm] as const;
-          })
-        );
-
-        if (!isMounted) return;
-
-        //setEmployeePermissions(new Map<number, number>(permissionEntries));
-        return;
-      }
-
-      if (isCreatingResource && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso')) {
-      // Pour la création, initialiser avec tous les droits
-      const permissions = new Map<number, number>();
-      employees.forEach(emp => {
-        permissions.set(emp.IdPersonnel, 23);
-      });
-
-      if (!isMounted) return;
-
-      //setEmployeePermissions(permissions);
-      }
-    };
-
-    loadPermissions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isEditingResource, isCreatingResource, formDataItemType?.IdPlanningRessource, formDataItemType?.Type, employees]);
-
   /**
    * Détection des changements non sauvegardés
    */
@@ -549,9 +501,31 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
       if (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') {
-        // changedEmployeePermissions.current.forEach((perm) => {
-        //   //void socialPermissionService.setSocialItemPermission(perm);
-        // });
+        const updatedPermissions = Object.entries(changedEmployeePermissions.current).map(([IdPersonnel, IdDroit]) => {
+          return {
+            IdPersonnel: Number(IdPersonnel),
+            IdDroit: Number(IdDroit),
+          }
+        })
+
+        // Appel à l'API pour mettre à jour les permissions
+        if (onSetPermissions && updatedPermissions.length > 0) {
+          try {
+            const permissionResult = await onSetPermissions(updatedPermissions);
+            if (permissionResult?.error === 1) {
+              notificationService.error('Erreur', permissionResult.message || 'Erreur lors de la mise à jour des permissions.');
+              setSaveError(permissionResult.message || 'Erreur lors de la mise à jour des permissions.');
+              setIsSaving(false);
+              return;
+            }
+          } catch (error) {
+            console.error("Erreur lors de la mise à jour des permissions :", error);
+            notificationService.error('Erreur', 'Erreur lors de la mise à jour des permissions.');
+            setSaveError('Erreur lors de la mise à jour des permissions.');
+            setIsSaving(false);
+            return;
+          }
+        }
       }
       
       // Mise à jour de l'événement existant
@@ -634,8 +608,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       user.IdPersonnel === IdPersonnel ? { ...user, IdDroit } : user
     ));
     changedEmployeePermissions.current[IdPersonnel] = Number(IdDroit);
-    // const perm = employeePermissions.get(userId) 
-    // setEmployeePermissions(new Map(employeePermissions.set(userId, 23)));
   };
 
   const handleSelectTag = (tag: Tag | undefined) => {
@@ -766,7 +738,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           </FormPreview>
         
           {/* PermissionsPanel - Gestion des permissions par employé */}
-          {isResourceMode && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') && (
+          {isEditingResource && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') && (
             <PermissionsPanel
               usersWithPermission={usersWithPermission}
               permissions={permissions.current}

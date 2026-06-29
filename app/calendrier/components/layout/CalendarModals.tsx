@@ -328,6 +328,7 @@ export const CalendarModals = memo(({
             onAddTagToResource={etiquetteService.createEtiquette}
             onFetchEventAndRessource={eventService.getEvenement}
             onFetchPermissions={permissionService.getPermissions}
+            onSetPermissions={permissionService.setPermissions}
             onLockedError={handlers.onLockedError}
             loadingFallback={<ModalLoadingFallback />}
           />
