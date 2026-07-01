@@ -98,8 +98,7 @@ export const useCalendarVirtualization = ({
           inactiveRowHeight += EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM + 27;
         }
       }
-      
-      console.log(rows)
+    
       if (idx !== 0 || isChild) {
         rows.push({
           type: 'group',

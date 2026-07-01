@@ -1,8 +1,8 @@
-
 import { memo, useEffect, useState } from "react";
 import { CalendarConfig, Filter, ImageType, GroupingLevel, FilterCategories, User } from "../../types";
 import Modal from "./Modal";
 import { Group } from "lucide-react";
+import { calendarConfigService } from "@/app/service";
 
 // Modal de gestion des configurations
 type ConfigurationModalProps = {
@@ -70,6 +70,11 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   // Charger les données pour l'édition
   useEffect(() => {
     if (editingConfig) {
+      calendarConfigService.lockCalendarConfig(editingConfig.IdPlanningVue).then((response) => {
+        if (response?.error !== 0) {
+          console.error('Erreur lors du verrouillage de la configuration :', response?.message);
+        }
+      });
       setConfigName(editingConfig.LibellePlanningVue);
       setConfigDescription(editingConfig.DescriptionPlanningVue || '');
       setConfigImage(editingConfig.IdPlanningImage ? availablesImages.find(img => img.id === editingConfig.IdPlanningImage) : undefined);
@@ -98,7 +103,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     } else {
       resetForm();
     }
-  }, [editingConfig]);
+  }, [editingConfig, availablesImages]);
 
   const handleSave = async () => {
     if (!configName.trim()) return;
@@ -169,11 +174,20 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 <img 
                   src={availablesImages.find(img => img.id === currentConfig.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
                   className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                  alt="Config image"
                 />
               )}
               <div className="flex-1">
-                <p className="text-sm font-medium text-primary mb-1">
+                <p className="text-sm font-medium text-primary mb-1 flex items-center gap-2">
                   {currentConfig.LibellePlanningVue}
+                  {currentConfig.isLocked && (
+                    <span className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      Verrouillé
+                    </span>
+                  )}
                 </p>
                 {currentConfig.DescriptionPlanningVue && (
                   <p className="text-xs text-secondary mb-2">
@@ -227,7 +241,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 className={`p-4 border-2 rounded-xl transition-all duration-200 ${
                   currentConfig?.IdPlanningVue === config.IdPlanningVue 
                     ? 'border-primary bg-gradient-to-r from-primary-ultra-light to-primary-light shadow-lg' 
-                    : 'border-ultra-light hover:border-primary/30 hover:bg-secondary-bg/50'
+                    : config.isLocked 
+                      ? 'border-red-100 bg-red-50/30 opacity-75'
+                      : 'border-ultra-light hover:border-primary/30 hover:bg-secondary-bg/50'
                 }`}
               >
                 <div className="flex items-start gap-3 mb-3">
@@ -235,6 +251,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     <img 
                       src={availablesImages.find(img => img.id === config.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
                       className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                      alt="Config image"
                     />
                   )}
                   <div className="flex-1">
@@ -248,6 +265,15 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                         </span>
                         {currentConfig?.IdPlanningVue === config.IdPlanningVue && (
                           <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                        )}
+                        {/* 🔒 INDICATEUR DE VERROUILLAGE */}
+                        {config.isLocked && (
+                          <span className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-600" title="En cours d'édition par un autre utilisateur">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            En édition
+                          </span>
                         )}
                       </div>
                       {config.DescriptionPlanningVue && (
@@ -287,16 +313,27 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {/* MODIFIER */}
                   <button
-                    onClick={() => setEditingConfig(config)}
-                    className="p-2 text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-all duration-200"
-                    title="Modifier"
+                    onClick={() => {
+                      if (!config.isLocked) {
+                        setEditingConfig(config);
+                      }
+                    }}
+                    disabled={config.isLocked}
+                    className={`p-2 rounded-lg transition-all duration-200 ${
+                      config.isLocked
+                        ? 'text-red-300 cursor-not-allowed opacity-50'
+                        : 'text-secondary hover:text-primary hover:bg-primary/10'
+                    }`}
+                    title={config.isLocked ? "Verrouillé : En cours d'édition par un autre utilisateur" : "Modifier"}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
                   
+                  {/* DUPLIQUER */}
                   <button
                     onClick={async () => {
                       const duplicated = await onDuplicateConfig(config);
@@ -310,11 +347,21 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     </svg>
                   </button>
 
+                  {/* SUPPRIMER */}
                   {config.IdPlanningVue > 10 && ( // Seules les configs personnalisées peuvent être supprimées
                     <button
-                      onClick={() => onDeleteConfig(config.IdPlanningVue)}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200"
-                      title="Supprimer"
+                      onClick={() => {
+                        if (!config.isLocked) {
+                          onDeleteConfig(config.IdPlanningVue);
+                        }
+                      }}
+                      disabled={config.isLocked}
+                      className={`p-2 rounded-lg transition-all duration-200 ${
+                        config.isLocked
+                          ? 'text-red-300 cursor-not-allowed opacity-50'
+                          : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                      }`}
+                      title={config.isLocked ? "Verrouillé : En cours d'édition par un autre utilisateur" : "Supprimer"}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -766,6 +813,5 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     </Modal>
   );
 };
-
 
 export default memo(ConfigurationModal);

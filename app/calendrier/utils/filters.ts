@@ -114,7 +114,6 @@ export function getHierarchicalDimensionItems(
   groups: Record<number, Equipe>,
   poleActivites: Record<number, PoleActivite>
 ): HierarchicalGroupItem[] {
-  console.log('oui ');
   if (!groupingLevels?.ChampsPremierGroupePlanningVue) {
     // Pas de grouping défini, retourner une liste plate d'employés
     return employees.map(emp => ({

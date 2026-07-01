@@ -32,6 +32,20 @@ async function deleteCalendarConfig(id: number) {
   return await deleteRequest(`/api/planning/vue/${id}`, 'deleteCalendarConfig', {});
 }
 
+async function lockCalendarConfig(id: number) {
+  return await postRequest(`/api/planning/vue/${id}/lock`, {}, 'lockCalendarConfig');
+}
+
+async function getLastVueForUser() {
+  return await getRequest(`/api/planning/getLastVue`, 'getLastVueForUser');
+}
+
+async function setLastVueForUser(idVue: number) {
+  return await postRequest(`/api/planning/setLastVue`, { idVue }, 'setLastVueForUser');
+}
+
+
+
 export default {
   getCalendarConfigsByUserId,
   createCalendarConfig,
@@ -39,5 +53,8 @@ export default {
   deleteCalendarConfig,
   addNonWorkingDatesToPlanning,
   removeNonWorkingDatesFromPlanning,
-  getNonWorkingDatesByPlanningId
+  getNonWorkingDatesByPlanningId,
+  lockCalendarConfig,
+  getLastVueForUser,
+  setLastVueForUser
 };

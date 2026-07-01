@@ -6,15 +6,18 @@
 import { useState, useCallback, useMemo, useEffect, MutableRefObject } from 'react';
 import { CalendarConfig, User } from '@/app/calendrier';
 import calendarConfigService from '@/app/service/calendarConfig.service';
+import { useAuth } from '../utils/AuthContext';
 
 interface UseCalendarConfigProps {
   user: User;
   idPlanning: number;
+  setCurrentCalendarConfig: (config: CalendarConfig | null) => void;
 }
 
-export function useCalendarConfig({ user, idPlanning }: UseCalendarConfigProps) {
-  const [customConfigs, setCustomConfigs] = useState<CalendarConfig[]>([]);
-  const [loadedConfigs, setLoadedConfigs] = useState<CalendarConfig[]>([]);
+export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }: UseCalendarConfigProps) {
+  const { currentVueId } = useAuth();
+    
+  const [configs, setConfigs] = useState<CalendarConfig[]>([]);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<CalendarConfig | null>(null);
   const [isCreatingConfig, setIsCreatingConfig] = useState(false);
@@ -26,20 +29,13 @@ export function useCalendarConfig({ user, idPlanning }: UseCalendarConfigProps) 
       
       if (response?.error === 0 && Array.isArray(response.data.Configs)) {
 
-        setLoadedConfigs(response.data.Configs);
+        setConfigs(response.data.Configs);
+        setCurrentCalendarConfig(response.data.Configs.find((config: { IdPlanningVue: number | null; }) => Number(config.IdPlanningVue) === Number(currentVueId)) || null);
         return response;
       }
 
-      setLoadedConfigs([]);
+      setConfigs([]);
   }; 
-
-  // Fonction pour obtenir les configurations disponibles depuis la base de données
-  const getAvailableConfigs = useMemo((): CalendarConfig[] => {
-    // Ajouter les configurations personnalisées créées par l'utilisateur
-    const configs = [...loadedConfigs, ...customConfigs];
-
-    return configs;
-  }, [loadedConfigs, customConfigs]);
 
   const openConfigModal = useCallback(() => {
     setIsConfigModalOpen(true);
@@ -66,14 +62,14 @@ export function useCalendarConfig({ user, idPlanning }: UseCalendarConfigProps) 
     if (isCreatingConfig) {
       void calendarConfigService.createCalendarConfig(configWithUser).then((response) => {
         if (response?.error === 0 && response.data) {
-          setLoadedConfigs(prev => [...prev, response.data]);
+          setConfigs(prev => [...prev, response.data]);
           return;
         }
       });
     } else if (editingConfig) {
       void calendarConfigService.updateCalendarConfig(editingConfig.IdPlanningVue, configWithUser).then((response) => {
         if (response?.error === 0 && response.data) {
-          setLoadedConfigs(prev => prev.map(c => c.IdPlanningVue === editingConfig.IdPlanningVue ? response.data : c));
+          setConfigs(prev => prev.map(c => c.IdPlanningVue === editingConfig.IdPlanningVue ? response.data : c));
           return;
         }
       });
@@ -84,7 +80,7 @@ export function useCalendarConfig({ user, idPlanning }: UseCalendarConfigProps) 
   const deleteConfig = useCallback((configId: number) => {
     void calendarConfigService.deleteCalendarConfig(configId).then((response) => {
       if (response?.error === 0) {
-        setLoadedConfigs(prev => prev.filter(c => c.IdPlanningVue !== configId));
+        setConfigs(prev => prev.filter(c => c.IdPlanningVue !== configId));
       }
     });
   }, []);
@@ -93,7 +89,7 @@ export function useCalendarConfig({ user, idPlanning }: UseCalendarConfigProps) 
     const configWithUser = { ...config, IdPersonnel: user.IdPersonnel };
     const response = await calendarConfigService.createCalendarConfig(configWithUser);
     if (response?.error === 0 && response.data) {
-      setLoadedConfigs(prev => [...prev, response.data]);
+      setConfigs(prev => [...prev, response.data]);
       return response.data;
     }
     return null;
@@ -103,7 +99,7 @@ export function useCalendarConfig({ user, idPlanning }: UseCalendarConfigProps) 
     const configWithUser = { ...config, IdPersonnel: user.IdPersonnel };
     void calendarConfigService.updateCalendarConfig(config.IdPlanningVue, configWithUser).then((response) => {
       if (response?.error === 0 && response.data) {
-        setLoadedConfigs(prev => prev.map(c => c.IdPlanningVue === config.IdPlanningVue ? response.data : c));
+        setConfigs(prev => prev.map(c => c.IdPlanningVue === config.IdPlanningVue ? response.data : c));
         return;
       }
       // setCustomConfigs(prev => prev.map(c => c.IdPlanningVue === config.IdPlanningVue ? config : c));
@@ -111,11 +107,10 @@ export function useCalendarConfig({ user, idPlanning }: UseCalendarConfigProps) 
   }, [user.IdPersonnel]);
 
   return {
-    customConfigs,
     isConfigModalOpen,
     editingConfig,
     isCreatingConfig,
-    getAvailableConfigs,
+    configs, setConfigs,
     openConfigModal,
     closeConfigModal,
     startCreatingConfig,

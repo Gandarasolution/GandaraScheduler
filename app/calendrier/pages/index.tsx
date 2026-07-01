@@ -529,6 +529,9 @@ export default function HomePage({
         dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, isLocked: true } : appt));
         break;
       
+      case 'CONFIG_LOCKED':
+        viewState.setAvailableConfigs((prev) => prev.map((config) => (Number(config.IdPlanningVue) === Number(data.IdPlanningVue) ? { ...config, isLocked: true } : config)));
+        break;
       default:
         console.warn("Action Mercure inconnue :", action);      
     }
@@ -612,7 +615,7 @@ export default function HomePage({
                       
                       /* Config Calendrier */
                       calendarConfig={viewState.currentCalendarConfig}
-                      onCalendarConfigChange={viewState.setCurrentCalendarConfig}
+                      onCalendarConfigChange={viewState.onCalendarConfigChange}
                       availableConfigs={viewState.availableConfigs}
                       
                       /* Actions & Events */
@@ -750,7 +753,7 @@ export default function HomePage({
               clearFilters: () => viewState.setActiveFilters({ empty: [] }),
               
               closeConfigModal: viewState.calendarConfigHook.closeConfigModal,
-              setCurrentConfig: viewState.setCurrentCalendarConfig,
+              setCurrentConfig: viewState.onCalendarConfigChange,
               saveCustomConfig: async (c) => { 
                  const newConfig = {...c};
                  const savedConfig = await viewState.calendarConfigHook.addConfig(newConfig); 

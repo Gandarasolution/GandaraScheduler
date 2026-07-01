@@ -4,11 +4,18 @@ async function getEmployees() {
     return await getRequest(`/api/employees`, 'getEmployees');
 }
 
-async function getEmployeesPag(limit: number = 20, pageNum: number = 1, query: string = '', timeoutMs: number = 15000) {
+async function getEmployeesPag(limit: number = 20, pageNum: number = 1, query: string = '', activeFilters: { [key: string]: string[] } = {}, timeoutMs: number = 15000) {
     const params = new URLSearchParams();
     params.set('limit', String(limit));
     params.set('pageNum', String(pageNum));
     params.set('q', query);
+
+    for (const filterKey in activeFilters) {
+        if (activeFilters[filterKey].length > 0) {
+        params.set(filterKey, activeFilters[filterKey].join(','));
+        }
+    }
+
     return await getRequest(
         `/api/employees?${params.toString()}`,
         'getEmployees',

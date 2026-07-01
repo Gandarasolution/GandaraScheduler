@@ -409,12 +409,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return () => node.removeEventListener('scroll', handleViewport);
   }, [mainScrollRef]);
 
-  // useEffect(() => {
-  //   // On recalcule les IDs basés sur la nouvelle config
-  //   const currentDimensionItems = getHierarchicalDimensionItems(calendarConfig.Group, employees, initialTeams);
-  //   setOpenItems(currentDimensionItems.map(item => item.id));
-    
-  // }, [calendarConfig.Group]);
 
 
 

@@ -249,11 +249,11 @@ export interface CalendarConfig {
   IdPlanningImage?: number;
   /** Description de la vue */
   DescriptionPlanningVue?: string;
-
   /** Configuration des niveaux de groupement (équipe et pole) */
   Group?: GroupingLevels;
   /** Filtres structurés par catégories */
   filterCategories?: FilterCategories;
+  isLocked?: boolean;
 }
 
 // Interface pour les éléments de la dimension (ce qui s'affiche en colonne)
