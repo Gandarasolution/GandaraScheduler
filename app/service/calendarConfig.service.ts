@@ -44,6 +44,9 @@ async function setLastVueForUser(idVue: number) {
   return await postRequest(`/api/planning/setLastVue`, { idVue }, 'setLastVueForUser');
 }
 
+async function getVueDetails(id: number) {
+  return await getRequest(`/api/planning/vue/${id}`, 'getVueDetails');
+}
 
 
 export default {
@@ -56,5 +59,6 @@ export default {
   getNonWorkingDatesByPlanningId,
   lockCalendarConfig,
   getLastVueForUser,
-  setLastVueForUser
+  setLastVueForUser,
+  getVueDetails
 };

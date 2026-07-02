@@ -1,7 +1,6 @@
 import { memo, useEffect, useState } from "react";
-import { CalendarConfig, Filter, ImageType, GroupingLevel, FilterCategories, User } from "../../types";
+import { CalendarConfig, ImageType, GroupingLevel, FilterCategories, User } from "../../types";
 import Modal from "./Modal";
-import { Group } from "lucide-react";
 import { calendarConfigService } from "@/app/service";
 
 // Modal de gestion des configurations
@@ -45,7 +44,17 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   const [configImage, setConfigImage] = useState<ImageType | undefined>(undefined);
   const [groupingLevel1, setGroupingLevel1] = useState<GroupingLevel | undefined>(undefined);
   const [groupingLevel2, setGroupingLevel2] = useState<GroupingLevel | undefined>(undefined);
-  const [configFilters, setConfigFilters] = useState<Filter[]>([]);
+  
+  // Nouveaux états pour la gestion API
+  const [isLoadingForm, setIsLoadingForm] = useState(false);
+  const [filtresPerso, setFiltresPerso] = useState<
+  {
+    IdFiltre: number; 
+    LibelleFiltre: string; 
+    EstFiltreGandara: boolean; 
+    Valeurs: {Selection: number; Id: string, Nom: string}[] | []
+  }[]>([]);
+
   const [filterCategories, setFilterCategories] = useState<FilterCategories>({
     personnel: [],
     evenements: []
@@ -59,7 +68,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     setConfigImage(undefined);
     setGroupingLevel1(undefined);
     setGroupingLevel2(undefined);
-    setConfigFilters([]);
+    setFiltresPerso([]);
     setFilterCategories({
       personnel: [],
       evenements: []
@@ -67,39 +76,58 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     setSelectedRdvTypes(['Chantier', 'Absence', 'Autre']);
   };
 
-  // Charger les données pour l'édition
+  // Charger les données pour l'édition via API
   useEffect(() => {
     if (editingConfig) {
+      setIsLoadingForm(true);
+
+      // Verrouillage de la configuration
       calendarConfigService.lockCalendarConfig(editingConfig.IdPlanningVue).then((response) => {
         if (response?.error !== 0) {
           console.error('Erreur lors du verrouillage de la configuration :', response?.message);
         }
       });
-      setConfigName(editingConfig.LibellePlanningVue);
-      setConfigDescription(editingConfig.DescriptionPlanningVue || '');
-      setConfigImage(editingConfig.IdPlanningImage ? availablesImages.find(img => img.id === editingConfig.IdPlanningImage) : undefined);
-      setGroupingLevel1(editingConfig.Group?.ChampsPremierGroupePlanningVue);
-      setGroupingLevel2(editingConfig.Group?.ChampsDeuxiemeGroupePlanningVue);
-      setFilterCategories(editingConfig.filterCategories || {
-        personnel: [],
-        evenements: {
-          filters: [],
-          selectedRdvTypes: ['Chantier', 'Absence', 'Autre']
-        }
-      });
-      // Mettre à jour configFilters pour compatibilité
-      const allFilters = [
-        ...(editingConfig.filterCategories?.personnel || []),
-        ...(typeof editingConfig.filterCategories?.evenements === 'object' && 'filters' in editingConfig.filterCategories.evenements 
-          ? editingConfig.filterCategories.evenements.filters 
-          : [])
-      ];
-      setConfigFilters(allFilters);
-      setSelectedRdvTypes(
-        (typeof editingConfig.filterCategories?.evenements === 'object' && 'selectedRdvTypes' in editingConfig.filterCategories.evenements
-          ? editingConfig.filterCategories.evenements.selectedRdvTypes
-          : ['Chantier', 'Absence', 'Autre'])
-      );
+
+      // Récupération des données de la vue depuis l'API
+      // Note: Assurez-vous que la méthode getCalendarVueDetails existe dans votre service
+      calendarConfigService.getVueDetails(editingConfig.IdPlanningVue)
+        .then((response: any) => {
+          const apiData = response.data || response;
+          const { planningVue, filtrePerso } = apiData;
+
+          if (planningVue) {
+            setConfigName(planningVue.LibellePlanningVue || '');
+            setConfigDescription(planningVue.DescriptionPlanningVue || '');
+            setConfigImage(
+              planningVue.IdPlanningImage 
+                ? availablesImages.find(img => img.id === planningVue.IdPlanningImage) 
+                : undefined
+            );
+            
+            if (planningVue.Group) {
+              setGroupingLevel1(planningVue.Group.ChampsPremierGroupePlanningVue);
+              setGroupingLevel2(planningVue.Group.ChampsDeuxiemeGroupePlanningVue);
+            }
+
+            // Mapping des événements booléens vers le format local selectedRdvTypes
+            const types = [];
+            if (planningVue.chantierEvenement) types.push('Chantier');
+            if (planningVue.paieEvenement) types.push('Absence'); 
+            if (planningVue.persoEvenement) types.push('Autre');
+            setSelectedRdvTypes(types.length > 0 ? types : ['Chantier', 'Absence', 'Autre']);
+          }
+
+          if (filtrePerso) {
+            setFiltresPerso(filtrePerso);
+          }
+
+          setIsLoadingForm(false);
+        })
+        .catch((error: any) => {
+          console.error('Erreur lors de la récupération des détails de la vue :', error);
+          setIsLoadingForm(false);
+        });
+        
     } else {
       resetForm();
     }
@@ -117,6 +145,11 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         ChampsPremierGroupePlanningVue: groupingLevel1,
         ChampsDeuxiemeGroupePlanningVue: groupingLevel2
       } : undefined,
+      // On re-map les champs d'événements pour l'API
+      chantierEvenement: selectedRdvTypes.includes('Chantier'),
+      paieEvenement: selectedRdvTypes.includes('Absence'),
+      persoEvenement: selectedRdvTypes.includes('Autre'),
+      FiltrePerso: filtresPerso,
       filterCategories: {
         personnel: filterCategories.personnel,
         evenements: {
@@ -129,13 +162,11 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     };
 
     if (editingConfig) {
-      // Si on modifie une configuration prédéfinie (ID <= 10), créer une nouvelle config personnalisée
       if (editingConfig.IdPlanningVue <= 10) {
         const savedConfig = await onSaveConfig(newConfig);
         if (savedConfig) onConfigChange(savedConfig as CalendarConfig);
       } else {
-        // Sinon, mettre à jour la configuration existante
-        onUpdateConfig({ ...editingConfig, ...newConfig });
+        onUpdateConfig({ ...editingConfig, ...newConfig } as CalendarConfig);
       }
       setEditingConfig(null);
     } else {
@@ -380,412 +411,351 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         {(isCreatingConfig || editingConfig) && (
           <div className="w-1/2 border-l pl-6">
             <div className="max-h-[70vh] overflow-y-auto scrollbar-hide">
-              <div className="sticky top-0 bg-primary-bg pb-4 border-b mb-6">
+              <div className="sticky top-0 bg-primary-bg pb-4 border-b mb-6 z-10">
                 <h3 className="font-semibold text-primary text-lg">
                   {editingConfig ? 'Modifier la configuration' : 'Nouvelle configuration'}
                 </h3>
               </div>
             
-            <div className="space-y-4">
-              {/* Nom de la configuration */}
-              <div>
-                <label className="block text-sm font-medium text-primary mb-1">
-                  Nom de la configuration
-                </label>
-                <input
-                  type="text"
-                  value={configName}
-                  onChange={(e) => setConfigName(e.target.value)}
-                  className="w-full px-3 py-2 border border-default rounded-lg focus:ring-primary focus:border-primary bg-transparent"
-                  placeholder="Ex: Vue Technique par contrats"
-                />
+            {/* Loading Overlay pour le formulaire */}
+            {isLoadingForm ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-secondary text-sm">Chargement des données de la vue...</p>
               </div>
-
-              {/* Description de la configuration */}
-              <div>
-                <label className="block text-sm font-medium text-primary mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={configDescription}
-                  onChange={(e) => setConfigDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-default rounded-lg focus:ring-primary focus:border-primary bg-transparent"
-                  placeholder="Description de la vue (optionnel)"
-                  rows={3}
-                />
-              </div>
-
-              {/* Image de la configuration (optionnel) */}
-              <div>
-                <label className="block text-sm font-medium text-primary mb-1">
-                  Image de la vue (optionnel)
-                </label>
-                <div className="border-2 border-dashed border-default rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer">
-                  {configImage ? (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={configImage.image} 
-                          alt={"Image de la configuration"} 
-                          className="w-12 h-12 object-cover rounded-lg"
-                        />
-                      </div>
-                      <button
-                        onClick={() => setConfigImage(undefined)}
-                        className="text-red-500 hover:text-red-700 p-2"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-secondary">
-                      <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <p className="text-sm">Cliquez pour sélectionner une image</p>
-                    </div>
-                  )}
+            ) : (
+              <div className="space-y-4">
+                {/* Nom de la configuration */}
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-1">
+                    Nom de la configuration
+                  </label>
+                  <input
+                    type="text"
+                    value={configName}
+                    onChange={(e) => setConfigName(e.target.value)}
+                    className="w-full px-3 py-2 border border-default rounded-lg focus:ring-primary focus:border-primary bg-transparent"
+                    placeholder="Ex: Vue Technique par contrats"
+                  />
                 </div>
-              </div>
 
-              {/* Niveaux de groupement */}
-              <div>
-                <label className="block text-sm font-medium text-primary mb-3">
-                  Niveaux de groupement
-                </label>
-                <div className="space-y-3 bg-secondary-bg p-4 rounded-lg">
-                  {/* Niveau 1 */}
-                  <div>
-                    <label className="block text-xs font-medium text-secondary mb-2">
-                      Niveau 1
-                    </label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newValue = groupingLevel1 === 'equipe' ? undefined : 'equipe';
-                          setGroupingLevel1(newValue);
-                          // Si on sélectionne le même que niveau 2, désélectionner niveau 2
-                          if (newValue === groupingLevel2) {
-                            setGroupingLevel2(undefined);
-                          }
-                        }}
-                        className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                          groupingLevel1 === 'equipe'
-                            ? 'border-primary bg-primary-ultra-light text-primary'
-                            : 'border-default bg-secondary-bg text-primary hover:border-light'
-                        }`}
-                      >
-                        Équipe
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newValue = groupingLevel1 === 'pole' ? undefined : 'pole';
-                          setGroupingLevel1(newValue);
-                          // Si on sélectionne le même que niveau 2, désélectionner niveau 2
-                          if (newValue === groupingLevel2) {
-                            setGroupingLevel2(undefined);
-                          }
-                        }}
-                        className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                          groupingLevel1 === 'pole'
-                            ? 'border-primary bg-primary-ultra-light text-primary'
-                            : 'border-default bg-secondary-bg text-primary hover:border-light'
-                        }`}
-                      >
-                        Pôle
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Niveau 2 */}
-                  <div>
-                    <label className="block text-xs font-medium text-secondary mb-2">
-                      Niveau 2
-                    </label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newValue = groupingLevel2 === 'equipe' ? undefined : 'equipe';
-                          // Ne peut pas être le même que niveau 1
-                          if (groupingLevel1 !== 'equipe') {
-                            setGroupingLevel2(newValue);
-                          }
-                        }}
-                        disabled={groupingLevel1 === 'equipe'}
-                        className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                          groupingLevel2 === 'equipe'
-                            ? 'border-primary bg-primary-ultra-light text-primary'
-                            : groupingLevel1 === 'equipe'
-                            ? 'border-ultra-light bg-secondary-bg text-secondary cursor-not-allowed'
-                            : 'border-default bg-secondary-bg text-primary hover:border-light'
-                        }`}
-                      >
-                        Équipe
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newValue = groupingLevel2 === 'pole' ? undefined : 'pole';
-                          // Ne peut pas être le même que niveau 1
-                          if (groupingLevel1 !== 'pole') {
-                            setGroupingLevel2(newValue);
-                          }
-                        }}
-                        disabled={groupingLevel1 === 'pole'}
-                        className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                          groupingLevel2 === 'pole'
-                            ? 'border-primary bg-primary-ultra-light text-primary'
-                            : groupingLevel1 === 'pole'
-                            ? 'border-ultra-light bg-secondary-bg text-secondary cursor-not-allowed'
-                            : 'border-default bg-secondary-bg text-primary hover:border-light'
-                        }`}
-                      >
-                        Pôle
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-secondary mt-2">
-                    Définissez comment regrouper les données dans la vue (seulement équipe et pôle). Les deux niveaux ne peuvent pas être identiques.
-                  </p>
+                {/* Description de la configuration */}
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={configDescription}
+                    onChange={(e) => setConfigDescription(e.target.value)}
+                    className="w-full px-3 py-2 border border-default rounded-lg focus:ring-primary focus:border-primary bg-transparent"
+                    placeholder="Description de la vue (optionnel)"
+                    rows={3}
+                  />
                 </div>
-              </div>
 
-              {/* Section Filtres catégorisés */}
-              <div>
-                <label className="block text-sm font-medium text-primary mb-3">
-                  Filtres
-                </label>
-                
-                <div className="space-y-4">
-                  {/* Filtres Personnel */}
-                  <div className="border border-ultra-light rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-primary flex items-center gap-2">
-                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        Filtres Personnel
-                      </h4>
-                      <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
-                        {filterCategories.personnel.length} filtre{filterCategories.personnel.length > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <p className="text-xs text-secondary mb-3">
-                      Filtres appliqués au personnel (pôle, équipe, contrat, etc.)
-                    </p>
-                    
-                    {filterCategories.personnel.length > 0 ? (
-                      <div className="space-y-2">
-                        {filterCategories.personnel.map((filter) => (
-                          <div key={filter.value + filter.field} className="flex items-center justify-between bg-blue-50 p-2 rounded-lg">
-                            <button
-                              onClick={() => {
-                                setFilterCategories({
-                                  ...filterCategories,
-                                  personnel: filterCategories.personnel.filter(f => f.value !== filter.value || f.field !== filter.field)
-                                });
-                                setConfigFilters(configFilters.filter(f => f.value !== filter.value || f.field !== filter.field));
-                              }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
+                {/* Image de la configuration (optionnel) */}
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-1">
+                    Image de la vue (optionnel)
+                  </label>
+                  <div className="border-2 border-dashed border-default rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer">
+                    {configImage ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={configImage.image} 
+                            alt={"Image de la configuration"} 
+                            className="w-12 h-12 object-cover rounded-lg"
+                          />
+                        </div>
+                        <button
+                          onClick={() => setConfigImage(undefined)}
+                          className="text-red-500 hover:text-red-700 p-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       </div>
                     ) : (
-                      <div className="text-center py-4 bg-secondary-bg rounded-lg">
-                        <p className="text-sm text-secondary">Aucun filtre personnel</p>
-                      </div>
-                    )}
-                    
-                    <button
-                      onClick={() => {
-                        // Logique pour ajouter un filtre personnel
-                        const newFilter: Filter = {
-                          field: 'pole',
-                          type: 'equals',
-                          value: '',
-                        };
-                        setFilterCategories({
-                          ...filterCategories,
-                          personnel: [...filterCategories.personnel, newFilter]
-                        });
-                        setConfigFilters([...configFilters, newFilter]);
-                      }}
-                      className="mt-3 w-full px-3 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium transition-colors"
-                    >
-                      + Ajouter un filtre personnel
-                    </button>
-                  </div>
-
-                  {/* Filtres Événements */}
-                  <div className="border border-ultra-light rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-primary flex items-center gap-2">
-                        <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <div className="text-secondary">
+                        <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        Filtres Événements
-                      </h4>
-                      <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
-                        {selectedRdvTypes.length} type{selectedRdvTypes.length > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <p className="text-xs text-secondary mb-3">
-                      Types d'événements à afficher dans cette vue
-                    </p>
-                    
-                    {/* Types de RDV sous forme de checkboxes */}
-                    <div className="space-y-2 mb-3">
-                      {/* Chantier */}
-                      <div className="flex items-center space-x-3 p-2 border border-ultra-light rounded-lg hover:bg-primary-ultra-light/30 transition-colors">
-                        <input
-                          type="checkbox"
-                          id="rdv-chantier"
-                          checked={selectedRdvTypes.includes('Chantier')}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedRdvTypes([...selectedRdvTypes, 'Chantier']);
-                            } else {
-                              setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Chantier'));
-                            }
-                          }}
-                          className="h-4 w-4 text-primary focus:ring-primary border-default rounded"
-                        />
-                        <div className="flex items-center space-x-2 flex-1">
-                          <div className="w-6 h-6 bg-[#FF6B6B] rounded flex items-center justify-center flex-shrink-0">
-                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                          </div>
-                          <label htmlFor="rdv-chantier" className="text-sm font-medium text-primary cursor-pointer">
-                            Chantiers
-                          </label>
-                        </div>
+                        <p className="text-sm">Cliquez pour sélectionner une image</p>
                       </div>
-
-                      {/* Absence */}
-                      <div className="flex items-center space-x-3 p-2 border border-ultra-light rounded-lg hover:bg-primary-ultra-light/30 transition-colors">
-                        <input
-                          type="checkbox"
-                          id="rdv-absence"
-                          checked={selectedRdvTypes.includes('Absence')}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedRdvTypes([...selectedRdvTypes, 'Absence']);
-                            } else {
-                              setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Absence'));
-                            }
-                          }}
-                          className="h-4 w-4 text-primary focus:ring-primary border-default rounded"
-                        />
-                        <div className="flex items-center space-x-2 flex-1">
-                          <div className="w-6 h-6 bg-[#FFC107] rounded flex items-center justify-center flex-shrink-0">
-                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                          <label htmlFor="rdv-absence" className="text-sm font-medium text-primary cursor-pointer">
-                            Absences / Social
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Autre */}
-                      <div className="flex items-center space-x-3 p-2 border border-ultra-light rounded-lg hover:bg-primary-ultra-light/30 transition-colors">
-                        <input
-                          type="checkbox"
-                          id="rdv-autre"
-                          checked={selectedRdvTypes.includes('Autre')}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedRdvTypes([...selectedRdvTypes, 'Autre']);
-                            } else {
-                              setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Autre'));
-                            }
-                          }}
-                          className="h-4 w-4 text-primary focus:ring-primary border-default rounded"
-                        />
-                        <div className="flex items-center space-x-2 flex-1">
-                          <div className="w-6 h-6 bg-[#6C5CE7] rounded flex items-center justify-center flex-shrink-0">
-                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <label htmlFor="rdv-autre" className="text-sm font-medium text-primary cursor-pointer">
-                            Autres événements
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Autres filtres événements personnalisés */}
-                    {!Array.isArray(filterCategories.evenements) && filterCategories.evenements.filters.length > 0 && (
-                      <>  <hr className="my-3" />
-                        <p className="text-xs text-secondary mb-2 font-medium">Filtres personnalisés</p>
-                        <div className="space-y-2">
-                          {filterCategories.evenements.filters.map((filter, index) => (
-                            <div key={index} className="flex items-center justify-between bg-primary-ultra-light p-2 rounded-lg">
-                              <span className="text-sm text-primary">{filter.field}: {filter.value}</span>
-                              <button
-                                onClick={() => {
-                                  if (!Array.isArray(filterCategories.evenements)) {
-                                    setFilterCategories({
-                                      ...filterCategories,
-                                      evenements: {
-                                        ...filterCategories.evenements,
-                                        filters: filterCategories.evenements.filters.filter((_, i) => i !== index)
-                                      }
-                                    });
-                                  }
-                                }}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </>
                     )}
-                    
-                    <button
-                      onClick={() => {
-                        // Logique pour ajouter un filtre événement
-                        const newFilter: Filter = {
-                          field: 'type',
-                          type: 'equals',
-                          value: 'chantier'
-                        };
-                        if (!Array.isArray(filterCategories.evenements)) {
-                          setFilterCategories({
-                            ...filterCategories,
-                            evenements: {
-                              ...filterCategories.evenements,
-                              filters: [...filterCategories.evenements.filters, newFilter]
+                  </div>
+                </div>
+
+                {/* Niveaux de groupement */}
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-3">
+                    Niveaux de groupement
+                  </label>
+                  <div className="space-y-3 bg-secondary-bg p-4 rounded-lg">
+                    {/* Niveau 1 */}
+                    <div>
+                      <label className="block text-xs font-medium text-secondary mb-2">
+                        Niveau 1
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newValue = groupingLevel1 === 'equipe' ? undefined : 'equipe';
+                            setGroupingLevel1(newValue);
+                            if (newValue === groupingLevel2) {
+                              setGroupingLevel2(undefined);
                             }
-                          });
-                        }
-                      }}
-                      className="mt-3 w-full px-3 py-2 border border-purple-300 text-purple-600 rounded-lg hover:bg-purple-50 text-sm font-medium transition-colors"
-                    >
-                      + Ajouter un filtre personnalisé
-                    </button>
+                          }}
+                          className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                            groupingLevel1 === 'equipe'
+                              ? 'border-primary bg-primary-ultra-light text-primary'
+                              : 'border-default bg-secondary-bg text-primary hover:border-light'
+                          }`}
+                        >
+                          Équipe
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newValue = groupingLevel1 === 'pole' ? undefined : 'pole';
+                            setGroupingLevel1(newValue);
+                            if (newValue === groupingLevel2) {
+                              setGroupingLevel2(undefined);
+                            }
+                          }}
+                          className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                            groupingLevel1 === 'pole'
+                              ? 'border-primary bg-primary-ultra-light text-primary'
+                              : 'border-default bg-secondary-bg text-primary hover:border-light'
+                          }`}
+                        >
+                          Pôle
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Niveau 2 */}
+                    <div>
+                      <label className="block text-xs font-medium text-secondary mb-2">
+                        Niveau 2
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newValue = groupingLevel2 === 'equipe' ? undefined : 'equipe';
+                            if (groupingLevel1 !== 'equipe') {
+                              setGroupingLevel2(newValue);
+                            }
+                          }}
+                          disabled={groupingLevel1 === 'equipe'}
+                          className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                            groupingLevel2 === 'equipe'
+                              ? 'border-primary bg-primary-ultra-light text-primary'
+                              : groupingLevel1 === 'equipe'
+                              ? 'border-ultra-light bg-secondary-bg text-secondary cursor-not-allowed'
+                              : 'border-default bg-secondary-bg text-primary hover:border-light'
+                          }`}
+                        >
+                          Équipe
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newValue = groupingLevel2 === 'pole' ? undefined : 'pole';
+                            if (groupingLevel1 !== 'pole') {
+                              setGroupingLevel2(newValue);
+                            }
+                          }}
+                          disabled={groupingLevel1 === 'pole'}
+                          className={`flex-1 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                            groupingLevel2 === 'pole'
+                              ? 'border-primary bg-primary-ultra-light text-primary'
+                              : groupingLevel1 === 'pole'
+                              ? 'border-ultra-light bg-secondary-bg text-secondary cursor-not-allowed'
+                              : 'border-default bg-secondary-bg text-primary hover:border-light'
+                          }`}
+                        >
+                          Pôle
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-secondary mt-2">
+                      Définissez comment regrouper les données dans la vue (seulement équipe et pôle). Les deux niveaux ne peuvent pas être identiques.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Section Filtres catégorisés */}
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-3">
+                    Filtres
+                  </label>
+                  
+                  <div className="space-y-4">
+                    {/* Filtres Personnel gérés par l'API */}
+                    <div className="border border-ultra-light rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-primary flex items-center gap-2">
+                          <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          Filtres Personnel
+                        </h4>
+                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                          {filtresPerso.length} catégorie{filtresPerso.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <p className="text-xs text-secondary mb-3">
+                        Filtres appliqués au personnel configurés depuis l'API.
+                      </p>
+                      
+                      {filtresPerso.length > 0 ? (
+                        <div className="space-y-3">
+                          {filtresPerso.map((filtre, index) => {
+                            const selectedValues = Array.isArray(filtre.Valeurs) 
+                               ? filtre.Valeurs.filter((v: any) => v.Selection === 1) 
+                               : [];
+                            
+                            return (
+                              <div key={filtre.IdFiltre || index} className="bg-blue-50/50 border border-blue-100 p-3 rounded-lg">
+                                <h5 className="text-sm font-medium text-primary mb-2 flex items-center justify-between">
+                                  <span>{filtre.LibelleFiltre}</span>
+                                  {filtre.EstFiltreGandara && (
+                                    <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded uppercase font-bold">Gandara</span>
+                                  )}
+                                </h5>
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedValues.length > 0 ? (
+                                    selectedValues.map((val: any) => (
+                                      <span key={val.Id || val.Nom} className="text-xs bg-white text-blue-700 px-2 py-1 rounded border border-blue-200 shadow-sm">
+                                        {val.Nom || val}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-xs text-secondary italic">Toutes les valeurs / Non défini</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 bg-secondary-bg rounded-lg">
+                          <p className="text-sm text-secondary">Aucun filtre personnel provenant de l'API</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Filtres Événements */}
+                    <div className="border border-ultra-light rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-primary flex items-center gap-2">
+                          <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Filtres Événements
+                        </h4>
+                        <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
+                          {selectedRdvTypes.length} type{selectedRdvTypes.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <p className="text-xs text-secondary mb-3">
+                        Types d'événements à afficher dans cette vue
+                      </p>
+                      
+                      {/* Types de RDV sous forme de checkboxes */}
+                      <div className="space-y-2 mb-3">
+                        {/* Chantier */}
+                        <div className="flex items-center space-x-3 p-2 border border-ultra-light rounded-lg hover:bg-primary-ultra-light/30 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="rdv-chantier"
+                            checked={selectedRdvTypes.includes('Chantier')}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRdvTypes([...selectedRdvTypes, 'Chantier']);
+                              } else {
+                                setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Chantier'));
+                              }
+                            }}
+                            className="h-4 w-4 text-primary focus:ring-primary border-default rounded"
+                          />
+                          <div className="flex items-center space-x-2 flex-1">
+                            <div className="w-6 h-6 bg-[#FF6B6B] rounded flex items-center justify-center flex-shrink-0">
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                            </div>
+                            <label htmlFor="rdv-chantier" className="text-sm font-medium text-primary cursor-pointer">
+                              Chantiers (ChantierEvenement)
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Absence / Paie */}
+                        <div className="flex items-center space-x-3 p-2 border border-ultra-light rounded-lg hover:bg-primary-ultra-light/30 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="rdv-absence"
+                            checked={selectedRdvTypes.includes('Absence')}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRdvTypes([...selectedRdvTypes, 'Absence']);
+                              } else {
+                                setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Absence'));
+                              }
+                            }}
+                            className="h-4 w-4 text-primary focus:ring-primary border-default rounded"
+                          />
+                          <div className="flex items-center space-x-2 flex-1">
+                            <div className="w-6 h-6 bg-[#FFC107] rounded flex items-center justify-center flex-shrink-0">
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <label htmlFor="rdv-absence" className="text-sm font-medium text-primary cursor-pointer">
+                              Absences / Social (PaieEvenement)
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Autre / Perso */}
+                        <div className="flex items-center space-x-3 p-2 border border-ultra-light rounded-lg hover:bg-primary-ultra-light/30 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="rdv-autre"
+                            checked={selectedRdvTypes.includes('Autre')}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRdvTypes([...selectedRdvTypes, 'Autre']);
+                              } else {
+                                setSelectedRdvTypes(selectedRdvTypes.filter(type => type !== 'Autre'));
+                              }
+                            }}
+                            className="h-4 w-4 text-primary focus:ring-primary border-default rounded"
+                          />
+                          <div className="flex items-center space-x-2 flex-1">
+                            <div className="w-6 h-6 bg-[#6C5CE7] rounded flex items-center justify-center flex-shrink-0">
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </div>
+                            <label htmlFor="rdv-autre" className="text-sm font-medium text-primary cursor-pointer">
+                              Autres événements (PersoEvenement)
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-end gap-3 mt-6">
               <button
@@ -794,13 +764,14 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   setEditingConfig(null);
                   resetForm();
                 }}
-                className="px-4 py-2 text-secondary hover:text-primary font-medium transition-colors"
+                disabled={isLoadingForm}
+                className="px-4 py-2 text-secondary hover:text-primary font-medium transition-colors disabled:opacity-50"
               >
                 Annuler
               </button>
               <button
                 onClick={handleSave}
-                disabled={!configName.trim()}
+                disabled={!configName.trim() || isLoadingForm}
                 className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {editingConfig ? 'Modifier' : 'Créer'}
