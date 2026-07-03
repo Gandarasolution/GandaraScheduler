@@ -754,19 +754,7 @@ export default function HomePage({
               
               closeConfigModal: viewState.calendarConfigHook.closeConfigModal,
               setCurrentConfig: viewState.onCalendarConfigChange,
-              saveCustomConfig: async (c) => { 
-                 const newConfig = {...c};
-                 const savedConfig = await viewState.calendarConfigHook.addConfig(newConfig); 
-                 if (savedConfig) {
-                   notificationService.configSaved(savedConfig.LibellePlanningVue);
-                   return savedConfig;
-                 }
-                 return newConfig;
-              },
-              updateCustomConfig: (c) => { 
-                 viewState.calendarConfigHook.updateConfig(c);
-                 notificationService.configUpdated(c.LibellePlanningVue);
-              },
+              saveCustomConfig: viewState.calendarConfigHook.saveConfig,
               deleteCustomConfig: (id) => {
                  viewState.calendarConfigHook.deleteConfig(id);
                  notificationService.info('Configuration supprimée', 'La vue a été supprimée avec succès');

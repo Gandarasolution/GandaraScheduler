@@ -217,12 +217,12 @@ export interface Filter {
  * Catégories de filtres structurées
  * @interface FilterCategories
  */
-export interface FilterCategories {
-  /** Filtres appliqués au personnel (pole, équipe, contrat, etc.) */
-  personnel: Filter[];
-  /** Filtres appliqués aux événements (chantier, social, etc.) */
-  evenements: {filters: Filter[], selectedRdvTypes: string[]} | []; // Types de RDV sélectionnés (Chantier, Absence, Autre)
-}
+// export interface FilterCategories {
+//   /** Filtres appliqués au personnel (pole, équipe, contrat, etc.) */
+//   personnel: Filter[];
+//   /** Filtres appliqués aux événements (chantier, social, etc.) */
+//   evenements: {filters: Filter[], selectedRdvTypes: string[]} | []; // Types de RDV sélectionnés (Chantier, Absence, Autre)
+// }
 
 /**
  * Niveaux de groupement disponibles
@@ -252,7 +252,6 @@ export interface CalendarConfig {
   /** Configuration des niveaux de groupement (équipe et pole) */
   Group?: GroupingLevels;
   /** Filtres structurés par catégories */
-  filterCategories?: FilterCategories;
   isLocked?: boolean;
 }
 

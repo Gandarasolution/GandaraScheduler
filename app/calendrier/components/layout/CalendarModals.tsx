@@ -76,8 +76,7 @@ interface CalendarModalsProps {
     // Config Calendar
     closeConfigModal: () => void;
     setCurrentConfig: (config: CalendarConfig) => void;
-    saveCustomConfig: (config: Omit<CalendarConfig, "id">) => Promise<CalendarConfig | void> | CalendarConfig | void;
-    updateCustomConfig: (config: CalendarConfig) => void;
+    saveCustomConfig: (config: { planningVue: any; filtrePerso: any }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
     deleteCustomConfig: (id: number) => void;
     duplicateConfig: (config: CalendarConfig) => Promise<CalendarConfig | void> | CalendarConfig | void;
     
@@ -379,7 +378,6 @@ export const CalendarModals = memo(({
           currentConfig={data.currentConfig}
           onConfigChange={handlers.setCurrentConfig}
           onSaveConfig={handlers.saveCustomConfig}
-          onUpdateConfig={handlers.updateCustomConfig}
           onDeleteConfig={handlers.deleteCustomConfig}
           onDuplicateConfig={handlers.duplicateConfig}
           editingConfig={data.editingConfig}
