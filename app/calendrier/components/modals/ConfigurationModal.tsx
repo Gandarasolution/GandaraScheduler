@@ -56,7 +56,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     IdFiltre: number; 
     LibelleFiltre: string; 
     EstFiltreGandara: boolean; 
-    Valeurs: {Selection: number; Id: string, Nom: string}[] | []
+    Valeurs: {Selection: number; Id: string, Nom: string}[] | [];
+    isDeleted?: boolean;
   }[]>([]);
 
   const [editingFilterId, setEditingFilterId] = useState<number | null>(null);
@@ -80,6 +81,26 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     setIsAddingFilter(false);
     setSelectedRdvTypes(['Chantier', 'Absence', 'Perso']);
     setSaveError(null);
+  };
+
+  // Vider complètement un filtre de ses valeurs sélectionnées
+  const handleRemoveFilter = (e: React.MouseEvent, idFiltre: number) => {
+    e.stopPropagation();
+    setFiltresPerso(prev => prev.map(f => {
+      if (f.IdFiltre === idFiltre) {
+        return {
+          ...f,
+          Valeurs: f.Valeurs.map((v: any) => ({ ...v, Selection: 0 })),
+          isDeleted: true
+        };
+      }
+      return f;
+    }));
+    
+    // Si on était en train de l'éditer, on referme l'édition
+    if (editingFilterId === idFiltre) {
+      setEditingFilterId(null);
+    }
   };
 
   // Charger les données pour l'édition OU LA CRÉATION via API
@@ -178,14 +199,20 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       persoEvenement: selectedRdvTypes.includes('Perso'),
     };
 
-    const filtre = activeFilters.map(f => ({
-      'IdFiltre': f.IdFiltre,
-      'EstFiltreGandara': f.EstFiltreGandara,
-      'Valeurs': f.Valeurs
-        .filter(v => v.Selection === 1)
-        .map(v => v.Id)
-    }));
 
+    const filtre = filtresPerso
+      .filter(f => Array.isArray(f.Valeurs) && (f.Valeurs.some(v => v.Selection === 1) || f.isDeleted))
+      .map(f => {
+        const valeursSelectionnees = f.Valeurs
+          .filter(v => v.Selection === 1)
+          .map(v => v.Id);
+
+        return {
+        'IdFiltre': f.IdFiltre,
+        'EstFiltreGandara': f.EstFiltreGandara,
+        'Valeurs': f.isDeleted ? null : valeursSelectionnees
+        };
+      });
     try {
       const response = await onSaveConfig({ planningVue, filtrePerso: filtre });
       
@@ -408,9 +435,12 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             
             {/* Loading Overlay */}
             {isLoadingForm ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-secondary text-sm font-medium animate-pulse">Configuration de l'espace de travail...</p>
+              <div className="flex flex-col items-center justify-center py-20 space-y-5">
+                <div className="relative w-12 h-12">
+                   <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+                   <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <p className="text-primary font-medium animate-pulse">Chargement des données...</p>
               </div>
             ) : (
               <div className="space-y-6 pb-6">
@@ -425,7 +455,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 {/* Nom & Description */}
                 <div className="space-y-4 bg-secondary-bg/30 p-5 rounded-2xl border border-ultra-light/50">
                   <div>
-                    <label className="block text-sm font-semibold text-primary mb-1.5">Nom de la configuration *</label>
+                    <label className="block text-sm font-semibold text-primary mb-1.5">Nom de la configuration <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={configName}
@@ -560,14 +590,15 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                                         if (f.IdFiltre === filterToEdit.IdFiltre) {
                                           return {
                                             ...f,
-                                            Valeurs: f.Valeurs.map(v => {
+                                            Valeurs: f.Valeurs.map((v: any) => {
                                               if (isSingleSelect) {
                                                 return { ...v, Selection: v.Id === val.Id ? 1 : 0 };
                                               } else {
                                                 if (v.Id === val.Id) return { ...v, Selection: v.Selection === 1 ? 0 : 1 };
                                                 return v;
                                               }
-                                            })
+                                            }),
+                                            isDeleted: false
                                           };
                                         }
                                         return f;
@@ -635,8 +666,22 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                                       <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase font-extrabold tracking-wider">Gandara</span>
                                     )}
                                   </h5>
-                                  <div className="text-blue-500 bg-blue-50 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                  {/* BOUTONS ACTIONS */}
+                                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                      className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-md shadow-sm transition-colors"
+                                      onClick={(e) => { e.stopPropagation(); setEditingFilterId(filtre.IdFiltre); }}
+                                      title="Modifier"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                    </button>
+                                    <button 
+                                      className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded-md shadow-sm transition-colors"
+                                      onClick={(e) => handleRemoveFilter(e, filtre.IdFiltre)}
+                                      title="Supprimer"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
                                   </div>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">

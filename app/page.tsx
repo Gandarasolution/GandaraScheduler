@@ -84,6 +84,7 @@ export default function Home() {
             } else if (vues.length === 1) {
               // ⚡ MAGIC : S'il n'y a qu'une seule vue, on la sélectionne automatiquement !
               setCurrentVueId(vues[0].IdPlanningVue);
+              axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = vues[0].IdPlanningVue;
             } else {
               // Sinon, on les met en mémoire pour afficher l'écran de sélection
               setAvailableVues(vues);

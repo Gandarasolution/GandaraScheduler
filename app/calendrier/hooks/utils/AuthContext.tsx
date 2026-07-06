@@ -93,11 +93,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setLastVueForUser = async (idVue: number) => {
-    setCurrentVueId(idVue); // Met à jour l'état local immédiatement
+    setCurrentVueId(idVue);
     calendarConfigService.setLastVueForUser(idVue)
       .then(response => {
         if (response.error === 0) {
           console.log(`✅ Vue ${idVue} enregistrée comme dernière vue pour l'utilisateur.`);
+          axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = idVue;
         } else {
           console.error(`❌ Erreur lors de l'enregistrement de la dernière vue :`, response.message);
         }
