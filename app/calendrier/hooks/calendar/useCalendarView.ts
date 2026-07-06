@@ -4,6 +4,7 @@ import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // 
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
 import calendarConfigService from '@/app/service/calendarConfig.service';
+import { axiosAgent } from '@/app/service/axios.service';
 
 export const useCalendarView = (idPlanning: number, user: User) => {
 
@@ -66,14 +67,11 @@ export const useCalendarView = (idPlanning: number, user: User) => {
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const viewDropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    console.log('Current Calendar Config changed:', currentCalendarConfig);
-  }, [currentCalendarConfig]);
-
   const onCalendarConfigChange = (config: CalendarConfig) => {
     setCurrentCalendarConfig(config);
     calendarConfigService.setLastVueForUser(config.IdPlanningVue || -1).then(() => {
       console.log(`Last view for user ${user.IdPersonnel} set to ${config.IdPlanningVue}`);
+      axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = config.IdPlanningVue;
     }).catch((error) => {
       console.error('Error setting last view for user:', error);
     }); 
@@ -98,9 +96,6 @@ export const useCalendarView = (idPlanning: number, user: User) => {
       }
     };
 
-    useEffect(() => {
-      console.log('Non-working dates updated:', nonWorkingDates);
-    }, [nonWorkingDates]);
 
   // --- Setters avec persistence ---
   const toggleSet = (key: string, setter: React.Dispatch<React.SetStateAction<boolean>>, value: boolean) => {

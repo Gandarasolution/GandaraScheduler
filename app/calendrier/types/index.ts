@@ -359,8 +359,6 @@ export interface User{
   theme?: string;
   /** Image de profil de l'utilisateur */
   IdImage?: number;
-  /** Email de l'utilisateur */
-  Email?: string;
   /** Statut actif de l'utilisateur (défaut: true) */
   Actif?: boolean;
 }
