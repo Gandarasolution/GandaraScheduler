@@ -2,35 +2,18 @@ import { useState, useRef, useEffect, useMemo, useCallback, use } from 'react';
 import { Appointment, User, Item, CalendarConfig, ImageType, UserRole, Equipe, PoleActivite, ChantierItem } from '../../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
 import { employeeService, equipeService, evenementService } from '@/app/service';
-import { applyFiltersToEmployees, applyFiltersToAppointments, getFlatFilters } from "../../utils/filters";
 import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
 import { getCachedImages, subscribeToImageCache, upsertCachedImage } from '../../utils/imageCacheStore';
 
 
 interface DataLayerProps {
-  viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table';
-  searchQueryDimensions: string;
-  searchInput: string;
-  filters: ActiveFilters;
-  calendarConfig: CalendarConfig | null;
   globalEmployees: User[];
   setGlobalEmployees: React.Dispatch<React.SetStateAction<User[]>>;
-  userIdNumber: number;
-  userRole: UserRole;
-  isSearchOverlayOpen: boolean;
 }
 
 export const useDataLayer = ({
-  viewType,
-  filters,
-  searchInput,
-  searchQueryDimensions,
-  calendarConfig,
   globalEmployees,
   setGlobalEmployees,
-  userIdNumber,
-  userRole,
-  isSearchOverlayOpen,
 }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const worker = useCalendarWorker();
@@ -43,7 +26,6 @@ export const useDataLayer = ({
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
   const [availableImages, setAvailableImages] = useState<ImageType[]>(() => getCachedImages());
-  const itemsSnapshot = useMemo(() => Object.values(itemsRef.current), [appointmentsVersion]);
 
 
  
@@ -82,6 +64,14 @@ export const useDataLayer = ({
     }
   }, []);
 
+  const resetPlanningData = useCallback(() => {
+    itemsRef.current = {};
+    appointmentsRef.current = [];
+    setTeams({});
+    setPoleActivites({});
+    setAppointmentsVersion(prev => prev + 1);
+  }, []);
+
   // Instanciation Utils
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
 
@@ -103,103 +93,7 @@ export const useDataLayer = ({
     }
   }, []);
 
-  // --- Filtrage de base (sans recherche) ---
-  // Ces mémos se recalculent uniquement quand les filtres changent, PAS à chaque searchQuery
   
-  const baseFilteredEmployees = useMemo(() => {
-    if (!calendarConfig || viewType === 'chantier-table' || viewType === 'paie-table') return globalEmployees;
-    
-    if (viewType === 'calendar') {
-      let employees = globalEmployees.filter(emp => emp.Type === 'SALARIE' || emp.Type === 'INTERIM');
-      
-      // Filtrer par rôle : users et viewers ne voient que leur propre employé
-      if (userRole === 'user' || userRole === 'viewer') {
-        employees = employees.filter(emp => emp.IdPersonnel === userIdNumber);
-      }
-      
-      return applyFiltersToEmployees(
-        employees, 
-        getFlatFilters(calendarConfig.filterCategories)
-      );
-    }
-
-    // Pour les vues tableaux, retourner les données brutes (filtrage avec recherche appliqué après)
-    return globalEmployees;
-  }, [calendarConfig, appointmentsVersion, userRole, userIdNumber, viewType]);
-
-
-
-  const baseFilteredAppointments = useMemo(() => {
-    // Toujours retourner une nouvelle instance d'array afin que les composants
-    // mémorisés (React.memo) détectent le changement et se re-render.
-    if (!calendarConfig || isSearchOverlayOpen) return appointmentsRef.current.slice();
-    // Logique de filtrage combinée (Types RDV + Filtres champs) SANS searchQuery
-    let filtered = appointmentsRef.current;
-    
-    // Filtre par rôle utilisateur - users et viewers ne voient que leurs propres RDV
-    if (userRole === 'user' || userRole === 'viewer') {
-      filtered = filtered.filter(app => app.IdEmploye === userIdNumber);
-    }
-    
-    // Filtre par type de RDV (logique métier)
-    const selectedRdvTypes = calendarConfig.filterCategories?.evenements &&
-      typeof calendarConfig.filterCategories.evenements === 'object' &&
-      'selectedRdvTypes' in calendarConfig.filterCategories.evenements
-      ? calendarConfig.filterCategories.evenements.selectedRdvTypes
-      : [];
-    
-    if (selectedRdvTypes.length > 0) {
-         const allTypes = ['Chantier', 'Absence', 'Autre'];
-         const isAllSelected = allTypes.every(t => selectedRdvTypes.includes(t));
-         if (!isAllSelected) {
-             filtered = filtered.filter(app => {
-                const item = itemsSnapshot.find(i => i.IdPlanningRessource === app.IdPlanningRessource);
-                  if (!item) return false; // Si pas de ressource associée, on exclut le RDV (ou on peut choisir de l'inclure)
-                const norm = item?.Type;
-                return selectedRdvTypes.includes(norm);
-             });
-         }
-    }
-    // Appliquer les filtres SANS searchQuery pour avoir une base stable
-    return applyFiltersToAppointments(filtered, getFlatFilters(calendarConfig.filterCategories), globalEmployees);
-  }, [calendarConfig, appointmentsVersion, userRole, userIdNumber, isSearchOverlayOpen, itemsSnapshot]);
-
-    
-  // --- Filtrage avec recherche (appliqué uniquement si searchQuery existe) ---
-  // Ces mémos ne se recalculent que si searchQuery OU les données de base changent
-  const filteredEmployees = useMemo(() => {
-    // En mode calendar, les filtres sont déjà appliqués dans baseFilteredEmployees
-    if (viewType === 'calendar') {
-      return baseFilteredEmployees;
-    }
-    
-    // Pour les autres vues, toujours appliquer les filtres et la recherche
-    // La fonction applyFiltersToEmployees gère elle-même le cas où searchQuery est vide
-    return searchUtils.applyFiltersToEmployees(
-      baseFilteredEmployees,
-      searchInput,
-      filters
-    );
-  }, [baseFilteredEmployees, searchInput, viewType, searchUtils, filters]);
-
-
-  const filteredAppointments = useMemo(() => {
-    // Si pas de recherche, retourner la version de base
-    if (!searchInput) {
-      return baseFilteredAppointments;
-    }
-
-    return baseFilteredAppointments.filter(appointment => {
-      if (searchInput) {
-        const query = searchInput.toLowerCase();
-        const appointmentMatches = 
-        String(itemsRef.current[appointment.IdPlanningRessource]?.LibellePlanningRessource).toLowerCase().includes(query)
-        if (!appointmentMatches) {
-          return false;
-        }
-      }
-    });
-  }, [baseFilteredAppointments, searchInput, calendarConfig, itemsSnapshot]);
 
 
 
@@ -330,8 +224,6 @@ export const useDataLayer = ({
     isLoading,
     itemsRef,
     appointmentsRef,
-    filteredEmployees,
-    filteredAppointments,
     availableImages,
     initialTeams: teams,
     poleActivites,
@@ -345,6 +237,7 @@ export const useDataLayer = ({
     addImage,
     updateEventImage,
     updateEmployeeImage,
+    resetPlanningData,
     loadAppointmentsInRange,
     loadTeams, loadPoleActivites,
     addMissingResourcesToCache,

@@ -104,7 +104,6 @@ export const useCalendarInteractions = ({
   }, [dayInTimeline, mainScrollRef, onHoverMove]);
 
   const updateHighlightedEmployeeRow = useCallback((employeeId: number | null) => {
-    console.log('Updating highlighted employee row for employeeId:', employeeId);
       const tableElement = tableRef.current;
       if (!tableElement) return;
   

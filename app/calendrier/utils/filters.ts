@@ -1,4 +1,4 @@
-import { User, Appointment, Filter, DimensionItem, Equipe, GroupingLevel, GroupingLevels, FilterCategories, Item, PoleActivite } from '../types';
+import { User, Appointment, Filter, DimensionItem, Equipe, GroupingLevel, GroupingLevels, Item, PoleActivite } from '../types';
 
 // Types pour l'accès sécurisé aux propriétés
 type UserField = keyof User;
@@ -14,88 +14,6 @@ function getAppointmentProperty(appointment: Appointment, field: string): any {
   return appointment[field as AppointmentField];
 }
 
-// Fonction utilitaire pour extraire tous les filtres de filterCategories
-export function getFlatFilters(filterCategories?: FilterCategories): Filter[] {
-  if (!filterCategories) return [];
-  
-  const allFilters: Filter[] = [];
-  
-  if (filterCategories.personnel) {
-    allFilters.push(...filterCategories.personnel);
-  }
-  
-  if (filterCategories.evenements && !Array.isArray(filterCategories.evenements)) {
-    allFilters.push(...filterCategories.evenements.filters);
-  }
-  
-  return allFilters;
-}
-
-// Fonction pour appliquer les filtres aux employés
-export function applyFiltersToEmployees(employees: User[], filters: Filter[]): User[] {
-  return employees.filter(employee => {
-    return filters.every(filter => {
-      switch (filter.type) {
-        case 'equals':
-          return getEmployeeProperty(employee, filter.field) === filter.value;
-        case 'contains':
-          return String(getEmployeeProperty(employee, filter.field)).toLowerCase().includes(String(filter.value).toLowerCase());
-        case 'in':
-          return Array.isArray(filter.value) && filter.value.includes(getEmployeeProperty(employee, filter.field));
-        default:
-          return true;
-      }
-    });
-  });
-}
-
-// Fonction pour appliquer les filtres aux rendez-vous
-export function applyFiltersToAppointments(
-  appointments: Appointment[], 
-  filters: Filter[], 
-  employees: User[],
-): Appointment[] {
-    
-  // Optimisation: Créer une Map pour O(1) lookup des employés
-  const employeeMap = new Map<number, User>();
-  employees.forEach(emp => employeeMap.set(emp.IdPersonnel, emp));
-  
-  return appointments.filter(appointment => {
-    // Trouver l'employé associé au rendez-vous avec O(1) lookup
-    const employee = employeeMap.get(Number(appointment.IdEmploye));
-    
-    return filters.every(filter => {
-      switch (filter.type) {
-        case 'equals':
-          // Si le filtre concerne un champ d'employé, utiliser les données de l'employé
-          if (filter.field === 'pole' || filter.field === 'contrat' || filter.field === 'groupId') {
-            return employee ? getEmployeeProperty(employee, filter.field) === filter.value : false;
-          }
-          // Sinon, utiliser les données du rendez-vous
-          return getAppointmentProperty(appointment, filter.field) === filter.value;
-        case 'contains':
-          if (filter.field === 'pole' || filter.field === 'contrat' || filter.field === 'groupId') {
-            return employee ? String(getEmployeeProperty(employee, filter.field)).toLowerCase().includes(String(filter.value).toLowerCase()) : false;
-          }
-          return String(getAppointmentProperty(appointment, filter.field)).toLowerCase().includes(String(filter.value).toLowerCase());
-        case 'in':
-          if (filter.field === 'pole' || filter.field === 'contrat' || filter.field === 'groupId') {
-            return employee ? Array.isArray(filter.value) && filter.value.includes(getEmployeeProperty(employee, filter.field)) : false;
-          }
-          return Array.isArray(filter.value) && filter.value.includes(getAppointmentProperty(appointment, filter.field));
-        case 'date_range':
-          if (filter.field === 'startDate' || filter.field === 'endDate') {
-            const date = getAppointmentProperty(appointment, filter.field);
-            const [start, end] = filter.value as [number, number];
-            return date >= start && date <= end;
-          }
-          return true;
-        default:
-          return true;
-      }
-    });
-  });
-}
 
 // Interface pour une structure hiérarchique de groupes
 export interface HierarchicalGroupItem {

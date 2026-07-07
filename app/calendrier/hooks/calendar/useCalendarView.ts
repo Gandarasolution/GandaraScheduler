@@ -3,8 +3,8 @@ import { CalendarConfig, User } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
-import calendarConfigService from '@/app/service/calendarConfig.service';
 import { axiosAgent } from '@/app/service/axios.service';
+import { calendarConfigService } from '@/app/service';
 
 export const useCalendarView = (idPlanning: number, user: User) => {
 

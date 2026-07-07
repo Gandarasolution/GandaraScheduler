@@ -123,16 +123,8 @@ export default function HomePage({
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
-    viewType: viewState.viewType, 
-    searchInput: viewState.searchInput,
-    searchQueryDimensions: viewState.dimensionSearchInput,
-    filters: viewState.activeFilters,
-    calendarConfig: viewState.currentCalendarConfig,
     globalEmployees: globalEmployees,
-    setGlobalEmployees,
-    isSearchOverlayOpen: viewState.isSearchOverlayOpen,
-    userIdNumber: user?.IdPersonnel || 0,
-    userRole: user?.role || 'admin',
+    setGlobalEmployees, 
   });
 
 
@@ -347,7 +339,7 @@ export default function HomePage({
       // Chargement des employés selon les permissions
       if (!hasInitializedEmployeesRef.current) {
         const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
-        //console.log('Employees Response:', employeesResponse);
+        console.log('Employees Response:', employeesResponse);
         if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
           setGlobalEmployees(employeesResponse.data);
         } else {
@@ -362,6 +354,7 @@ export default function HomePage({
 
 
       let rep = await dataLayer.loadTeams();
+      console.log('Teams Response:', rep);
       if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
         setLoadCalendar(false);
@@ -369,6 +362,7 @@ export default function HomePage({
       }
 
       rep = await dataLayer.loadPoleActivites();
+      console.log('Pole Activités Response:', rep);
       if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
         setLoadCalendar(false);
@@ -429,6 +423,65 @@ export default function HomePage({
     dataLayer.loadAppointmentsInRange,
   ]);
 
+  useEffect(() => {
+    if (viewState.viewType !== 'calendar') return;
+    if (!viewState.currentCalendarConfig) return;
+    if (!hasInitializedPlanningRef.current) return;
+
+    const reloadPlanningDataForCurrentView = async () => {
+      setErrorPlanning(null);
+      setLoadCalendar(true);
+      setGlobalEmployees([]);
+      dataLayer.resetPlanningData();
+
+      const employeesResponse = hasPermission(23) || hasPermission(22)
+        ? await employeeService.getEmployees()
+        : await employeeService.getEmployee(user.IdPersonnel);
+
+      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+        setGlobalEmployees(employeesResponse.data);
+        setEmployeesVersion(prev => prev + 1);
+      } else {
+        setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+        setGlobalEmployees([]);
+        setLoadCalendar(false);
+        return;
+      }
+
+      const teamsResponse = await dataLayer.loadTeams();
+      if (teamsResponse?.error !== 0 || !Array.isArray(teamsResponse.data) || teamsResponse.data.length === 0) {
+        setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
+
+      const poleActivitesResponse = await dataLayer.loadPoleActivites();
+      if (poleActivitesResponse?.error !== 0 || !Array.isArray(poleActivitesResponse.data) || poleActivitesResponse.data.length === 0) {
+        setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
+
+      const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
+      const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
+      await dataLayer.loadAppointmentsInRange(startDate, endDate);
+      setLoadCalendar(false);
+    };
+
+    void reloadPlanningDataForCurrentView();
+  }, [
+    viewState.viewType,
+    viewState.currentCalendarConfig?.IdPlanningVue,
+    hasPermission,
+    user.IdPersonnel,
+    setGlobalEmployees,
+    setEmployeesVersion,
+    dataLayer.resetPlanningData,
+    dataLayer.loadTeams,
+    dataLayer.loadPoleActivites,
+    dataLayer.loadAppointmentsInRange,
+  ]);
+
   // Init: Raccourcis Clavier Globaux
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -464,8 +517,10 @@ export default function HomePage({
     console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     switch (action) {
       case 'APPOINTMENT_CREATED':
-        dataLayer.addMissingResourcesToCache(data.ressources);
-        dataLayer.appointmentsRef.current.push(...data.appointments);
+        if(globalEmployees.some(emp => emp.IdPersonnel === data.appointments.IdPersonnel)) {
+          dataLayer.addMissingResourcesToCache(data.ressources);
+          dataLayer.appointmentsRef.current.push(...data.appointments);
+        }
         break;
 
       case 'APPOINTMENT_UPDATED':
@@ -592,8 +647,8 @@ export default function HomePage({
                   (viewState.currentCalendarConfig || hasPermission(21)) && (
                     <CalendarGrid
                       /* Données */
-                      employees={dataLayer.filteredEmployees}
-                      appointments={dataLayer.filteredAppointments}
+                      employees={globalEmployees}
+                      appointments={dataLayer.appointmentsRef.current}
                       user={user}
 
                       /* Équipes & Événements */

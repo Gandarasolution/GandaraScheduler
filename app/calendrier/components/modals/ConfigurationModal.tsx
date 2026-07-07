@@ -733,6 +733,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       { id: 'Absence', label: 'Absences & Social', color: 'bg-amber-400', bg: 'bg-amber-50', border: 'border-amber-200' },
                       { id: 'Perso', label: 'Autres (Perso)', color: 'bg-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-200' }
                     ].map(type => (
+                      console.log(selectedRdvTypes, type.id),
+                      console.log('selectedRdvTypes.includes(type.id)', selectedRdvTypes.includes(type.id)),
                       <label key={type.id} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${selectedRdvTypes.includes(type.id) ? `${type.bg} ${type.border} shadow-sm` : 'border-gray-200 hover:bg-gray-50'}`}>
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm text-white ${selectedRdvTypes.includes(type.id) ? type.color : 'bg-gray-300'}`}>
                           {type.id === 'Chantier' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}

@@ -13,7 +13,7 @@ import {
   HOUR_MS,
   CELL_HEIGHT,
 } from '../../utils/constants';
-import { applyFiltersToEmployees, getHierarchicalDimensionItems, groupEmployeesHierarchically, getFlatFilters } from '../../utils/filters';
+import {getHierarchicalDimensionItems, groupEmployeesHierarchically } from '../../utils/filters';
 import { isSameDay } from 'date-fns';
 import { useSmartScroll } from '../../hooks/interactions/useSmartScroll';
 import { useAutoScrollOnDrag } from '../../hooks/interactions/useAutoScrollOnDrag';
@@ -236,10 +236,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   const filteredEmployees = useMemo(() => {
     if (!calendarConfig) return employees;
-    const baseFiltered = applyFiltersToEmployees(employees, getFlatFilters( calendarConfig?.filterCategories));
     
     // Filtrer les employés inactifs qui n'ont pas de rdv dans la fenêtre visible
-    return baseFiltered.filter(emp => {
+    return employees.filter(emp => {
       // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
       if (emp.Actif !== false) {
         return true;
@@ -248,7 +247,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       // Si inactif, on garde seulement s'il a au moins un RDV visible.
       return visibleEmployeeIdsInWindow.has(emp.IdPersonnel);
     });
-  }, [employees, calendarConfig?.filterCategories, visibleEmployeeIdsInWindow]);
+  }, [employees, visibleEmployeeIdsInWindow]);
 
   const employeesByDimension = useMemo(() => {
     return groupEmployeesHierarchically(filteredEmployees, calendarConfig?.Group, initialTeams, poleActivites);
