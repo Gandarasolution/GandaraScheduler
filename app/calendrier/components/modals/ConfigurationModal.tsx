@@ -4,6 +4,17 @@ import Modal from "./Modal";
 import { calendarConfigService } from "@/app/service";
 import { useAuth } from "../../hooks/utils/AuthContext";
 
+// --- Composant Loader Uniformisé ---
+const Spinner = ({ size = "md", className = "" }: { size?: "sm" | "md" | "lg", className?: string }) => {
+  const sizes = { sm: "w-4 h-4", md: "w-6 h-6", lg: "w-10 h-10" };
+  return (
+    <svg className={`animate-spin ${sizes[size]} ${className}`} fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  );
+};
+
 // Modal de gestion des configurations
 type ConfigurationModalProps = {
   user: User;
@@ -14,8 +25,7 @@ type ConfigurationModalProps = {
   currentConfig: CalendarConfig | null;
   onConfigChange: (config: CalendarConfig) => void;
   onSaveConfig: (config: { planningVue: any; filtrePerso: any }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
-  onDeleteConfig: (configId: number) => void;
-  onDuplicateConfig: (config: CalendarConfig) => Promise<CalendarConfig | void> | CalendarConfig | void;
+  onDeleteConfig: (configId: number) => Promise<{error: number, message?: string} | void> | void;
   editingConfig: CalendarConfig | null;
   setEditingConfig: (config: CalendarConfig | null) => void;
   isCreatingConfig: boolean;
@@ -32,7 +42,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   onConfigChange,
   onSaveConfig,
   onDeleteConfig,
-  onDuplicateConfig,
   editingConfig,
   setEditingConfig,
   isCreatingConfig,
@@ -50,6 +59,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   const [isLoadingForm, setIsLoadingForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Nouveaux états pour la suppression
+  const [deletingConfigId, setDeletingConfigId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [filtresPerso, setFiltresPerso] = useState<
   {
@@ -100,6 +113,28 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     // Si on était en train de l'éditer, on referme l'édition
     if (editingFilterId === idFiltre) {
       setEditingFilterId(null);
+    }
+  };
+
+  // Gérer la suppression avec Loader et retour d'erreur
+  const handleDeleteConfig = async (e: React.MouseEvent, configId: number) => {
+    e.stopPropagation();
+    if (deletingConfigId === configId) return;
+
+    setDeletingConfigId(Number(configId));
+    setDeleteError(null);
+
+    try {
+      const response = await onDeleteConfig(configId);
+      
+      if (response && response.error === 1) {
+        setDeleteError(response.message || "Impossible de supprimer cette configuration.");
+        setDeletingConfigId(null);
+      }
+    } catch (error) {
+      setDeletingConfigId(null);
+      setDeleteError("Erreur réseau ou inattendue lors de la suppression.");
+      console.error("Erreur de suppression:", error);
     }
   };
 
@@ -185,6 +220,24 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     setIsSaving(true);
     setSaveError(null);
 
+    if(groupingLevel1 && groupingLevel2 && groupingLevel1 === groupingLevel2) {
+      setSaveError("Les niveaux de regroupement doivent être différents.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (selectedRdvTypes.length === 0) {
+      setSaveError("Au moins un type de rendez-vous doit être sélectionné.");
+      setIsSaving(false);
+      return;
+    }
+
+    if(groupingLevel1 === undefined ) {
+      setSaveError("Le premier niveau de regroupement doit être sélectionné.");
+      setIsSaving(false);
+      return;
+    }
+
     const planningVue = {
       IdPlanningVue: editingConfig?.IdPlanningVue || 0,
       LibellePlanningVue: configName.trim(),
@@ -199,7 +252,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       persoEvenement: selectedRdvTypes.includes('Perso'),
     };
 
-
     const filtre = filtresPerso
       .filter(f => Array.isArray(f.Valeurs) && (f.Valeurs.some(v => v.Selection === 1) || f.isDeleted))
       .map(f => {
@@ -210,9 +262,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         return {
         'IdFiltre': f.IdFiltre,
         'EstFiltreGandara': f.EstFiltreGandara,
-        'Valeurs': f.isDeleted ? null : valeursSelectionnees
+        'Valeurs': valeursSelectionnees.length > 0 ? valeursSelectionnees : null
         };
       });
+      
     try {
       const response = await onSaveConfig({ planningVue, filtrePerso: filtre });
       
@@ -233,6 +286,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       setIsSaving(false);
     }
   };
+
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Gestion des configurations" className="px-4 py-4">
@@ -316,6 +370,14 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             )}
           </div>
 
+          {/* Affichage des erreurs de suppression */}
+          {deleteError && (
+            <div className="bg-red-50 text-red-600 p-3 mb-4 rounded-xl text-sm border border-red-200 shadow-sm flex items-start gap-3">
+              <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span className="font-medium">{deleteError}</span>
+            </div>
+          )}
+
           <div className="space-y-3 pb-4">
             {availableConfigs.map((config: CalendarConfig) => (
               <div
@@ -371,7 +433,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
                 <div className="flex items-center justify-end gap-1 mt-2 border-t border-ultra-light/50 pt-2 opacity-60 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (!config.isLocked) {
                         setIsCreatingConfig(false);
                         setEditingConfig(config);
@@ -386,29 +449,24 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   </button>
                   
-                  <button
-                    onClick={async () => {
-                      const duplicated = await onDuplicateConfig(config);
-                      if (duplicated) onConfigChange(duplicated as CalendarConfig);
-                    }}
-                    className="p-1.5 text-secondary hover:text-blue-500 hover:bg-blue-50 rounded-md transition-all duration-200"
-                    title="Dupliquer"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                  </button>
 
                   {config.IdPlanningVue > 10 && (
                     <button
-                      onClick={() => {
-                        if (!config.isLocked) onDeleteConfig(config.IdPlanningVue);
-                      }}
-                      disabled={config.isLocked}
+                      onClick={(e) => handleDeleteConfig(e, config.IdPlanningVue)}
+                      disabled={config.isLocked || deletingConfigId === config.IdPlanningVue}
                       className={`p-1.5 rounded-md transition-all duration-200 ${
-                        config.isLocked ? 'text-red-300 cursor-not-allowed' : 'text-secondary hover:text-red-500 hover:bg-red-50'
+                        config.isLocked || deletingConfigId === config.IdPlanningVue 
+                        ? 'text-red-300 cursor-not-allowed' 
+                        : 'text-secondary hover:text-red-500 hover:bg-red-50'
                       }`}
                       title="Supprimer"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    {                    
+                      deletingConfigId === Number(config.IdPlanningVue) ? (
+                        <Spinner size="sm" className="text-red-500" />
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      )}
                     </button>
                   )}
                 </div>
@@ -436,10 +494,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             {/* Loading Overlay */}
             {isLoadingForm ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-5">
-                <div className="relative w-12 h-12">
-                   <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
-                   <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                </div>
+                <Spinner size="lg" className="text-primary" />
                 <p className="text-primary font-medium animate-pulse">Chargement des données...</p>
               </div>
             ) : (
@@ -550,7 +605,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 </div>
 
                 {/* Filtres Personnels */}
-                <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-sm">
+                 <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
                     <h4 className="font-bold text-primary flex items-center gap-2">
                       <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
@@ -597,8 +652,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                                                 if (v.Id === val.Id) return { ...v, Selection: v.Selection === 1 ? 0 : 1 };
                                                 return v;
                                               }
-                                            }),
-                                            isDeleted: false
+                                            })
                                           };
                                         }
                                         return f;
@@ -733,8 +787,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       { id: 'Absence', label: 'Absences & Social', color: 'bg-amber-400', bg: 'bg-amber-50', border: 'border-amber-200' },
                       { id: 'Perso', label: 'Autres (Perso)', color: 'bg-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-200' }
                     ].map(type => (
-                      console.log(selectedRdvTypes, type.id),
-                      console.log('selectedRdvTypes.includes(type.id)', selectedRdvTypes.includes(type.id)),
                       <label key={type.id} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${selectedRdvTypes.includes(type.id) ? `${type.bg} ${type.border} shadow-sm` : 'border-gray-200 hover:bg-gray-50'}`}>
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm text-white ${selectedRdvTypes.includes(type.id) ? type.color : 'bg-gray-300'}`}>
                           {type.id === 'Chantier' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
@@ -783,7 +835,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
               >
                 {isSaving ? (
                   <>
-                    <svg className="w-5 h-5 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <Spinner size="sm" className="text-white" />
                     <span>Sauvegarde...</span>
                   </>
                 ) : (

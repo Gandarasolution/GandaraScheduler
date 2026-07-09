@@ -60,8 +60,11 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
   const saveConfig = useCallback(async (config: { planningVue: any; filtrePerso: any }) => {
     if (isCreatingConfig) {
       const response = await calendarConfigService.createCalendarConfig(config);
+      console.log('Create Config Response:', response);
       if (response?.error === 0 && (response.data || response.message)) {
+        console.log('Config created successfully:', response.data);
         setConfigs(prev => [...prev, response.data]);
+        
         return response;
       }else {
         console.error('Failed to create config:', response?.message);
@@ -79,23 +82,27 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
     }
   }, [isCreatingConfig, editingConfig, closeConfigModal, user.IdPersonnel]);
 
-  const deleteConfig = useCallback((configId: number) => {
-    void calendarConfigService.deleteCalendarConfig(configId).then((response) => {
-      if (response?.error === 0) {
+  const deleteConfig = useCallback(async (configId: number): Promise<{error: number, message?: string} | void> => {
+    try {
+      const response = await calendarConfigService.deleteCalendarConfig(configId);
+      
+      // On vérifie si la réponse existe et si l'erreur est 0
+      if (response && response.error === 0) {
         setConfigs(prev => prev.filter(c => c.IdPlanningVue !== configId));
       }
-    });
+      
+      // On retourne la réponse pour que la modale puisse lire le code erreur (0 ou 1)
+      return response;
+    } catch (error) {
+      console.error("Erreur lors de l'appel API de suppression:", error);
+      // On retourne une structure d'erreur cohérente en cas de crash réseau
+      return { error: 1, message: "Erreur de communication avec le serveur." };
+    }
   }, []);
 
-  const addConfig = useCallback(async (config: CalendarConfig) => {
-    const configWithUser = { ...config, IdPersonnel: user.IdPersonnel };
-    const response = await calendarConfigService.createCalendarConfig(configWithUser);
-    if (response?.error === 0 && response.data) {
-      setConfigs(prev => [...prev, response.data]);
-      return response.data;
-    }
-    return null;
-  }, [user.IdPersonnel]);
+useEffect(() => {
+  console.log(configs);
+}, [configs]);
 
   return {
     isConfigModalOpen,
@@ -108,7 +115,6 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
     startEditingConfig,
     saveConfig,
     deleteConfig,
-    addConfig,
     setIsConfigModalOpen,
     setEditingConfig,
     setIsCreatingConfig,

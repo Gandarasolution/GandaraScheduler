@@ -438,6 +438,7 @@ export default function HomePage({
         ? await employeeService.getEmployees()
         : await employeeService.getEmployee(user.IdPersonnel);
 
+        console.log('Employees Response:', employeesResponse);
       if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
         setEmployeesVersion(prev => prev + 1);
@@ -587,6 +588,15 @@ export default function HomePage({
       case 'CONFIG_LOCKED':
         viewState.setAvailableConfigs((prev) => prev.map((config) => (Number(config.IdPlanningVue) === Number(data.IdPlanningVue) ? { ...config, isLocked: true } : config)));
         break;
+
+      case 'ADD_VUE':
+        viewState.setAvailableConfigs((prev) => [...prev, data.vue]);
+        break;
+
+      case 'DELETE_VUE':
+        viewState.setAvailableConfigs((prev) => prev.filter((config) => Number(config.IdPlanningVue) !== Number(data.IdPlanningVue)));
+        break;
+
       default:
         console.warn("Action Mercure inconnue :", action);      
     }
@@ -813,15 +823,6 @@ export default function HomePage({
               deleteCustomConfig: (id) => {
                  viewState.calendarConfigHook.deleteConfig(id);
                  notificationService.info('Configuration supprimée', 'La vue a été supprimée avec succès');
-              },
-              duplicateConfig: async (c) => {
-                 const newConfig = {...c, name: c.LibellePlanningVue + ' (copie)'};
-                 const savedConfig = await viewState.calendarConfigHook.addConfig(newConfig);
-                 if (savedConfig) {
-                   notificationService.configSaved(savedConfig.LibellePlanningVue);
-                   return savedConfig;
-                 }
-                 return newConfig;
               },
               setEditingConfig: viewState.calendarConfigHook.setEditingConfig,
               setIsCreatingConfig: viewState.calendarConfigHook.setIsCreatingConfig,
