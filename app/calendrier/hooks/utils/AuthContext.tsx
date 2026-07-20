@@ -1,10 +1,10 @@
 "use client";
 
 import { authService, calendarConfigService } from '@/app/service';
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../../types';
 import { axiosAgent } from '@/app/service/axios.service';
-
+import Cookies from 'js-cookie';
 
 export type PlanningOption = {
   IdPlanning: number;
@@ -12,27 +12,25 @@ export type PlanningOption = {
   IdPlanningImage: number | null;
 };
 
-
 interface AuthContextType {
   user: User | undefined;
-  UserPlanning:PlanningOption[];
+  UserPlanning: PlanningOption[];
   setUser: React.Dispatch<React.SetStateAction<User | undefined>>;
   currentPlanningId: number;
-  setCurrentPlanningId: React.Dispatch<React.SetStateAction<number>>;  permissions: number;
+  setCurrentPlanningId: React.Dispatch<React.SetStateAction<number>>;  
+  permissions: number;
   currentVueId: number | null;
   setCurrentVueId: React.Dispatch<React.SetStateAction<number | null>>;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (login: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
-  hasPermission: (permissionId: number) => boolean; // La fonction magique pour ton UI
-  setLastVueForUser: (idVue: number) => void; // Nouvelle fonction pour définir la dernière vue
+  hasPermission: (permissionId: number) => boolean;
+  setLastVueForUser: (idVue: number) => void;
 }
 
-// 2. Création du contexte
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// 3. Le composant Provider qui va envelopper l'application
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>();
   const [UserPlanning, setUserPlanning] = useState<PlanningOption[]>([]);
@@ -42,10 +40,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentPlanningId, setCurrentPlanningId] = useState<number>(-1);
   const [currentVueId, setCurrentVueId] = useState<number | null>(null);
 
-  
-
   const login = async (login: string, password: string): Promise<{ success: boolean; message?: string }> => {
-
+    // Note : À ce stade, le composant LoginPage aura DÉJÀ renseigné le cookie 'client_api_url' 
+    // et mis à jour l'axiosAgent, donc l'appel authService.login partira vers le bon serveur !
     const response = await authService.login({
         login: login,
         password: password,
@@ -63,14 +60,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCurrentPlanningId(-1); 
         }
       }else {
-        console.error('Aucun planning valide trouvé pour l\'utilisateur.');
         return { success: false, message: 'Aucun planning valide trouvé pour l\'utilisateur.' };
       }
       setCurrentVueId(null);
       setUserPlanning(response.planning || []);
       setUser(response.user);
       setPermissions(response.permissions || 0);
-      localStorage.setItem('isAuthenticated', 'true'); // Sauvegarde du token dans le localStorage
+      localStorage.setItem('isAuthenticated', 'true');
       return { success: true };
     } 
 
@@ -79,6 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem('isAuthenticated');
+    // On ne supprime pas forcément le cookie 'client_api_url' ici, 
+    // pour que le client reste sur son environnement s'il veut juste se reconnecter.
     setUser(undefined);
     setPermissions(0);
     setUserPlanning([]);
@@ -87,7 +85,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     axiosAgent.defaults.headers.common['X-Planning-Id'] = '';
   };
 
-  // Fonction d'aide pour vérifier un droit partout dans l'application
   const hasPermission = (permissionId: number): boolean => {
     return Number(permissions) === Number(permissionId);
   };
@@ -97,10 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     calendarConfigService.setLastVueForUser(idVue)
       .then(response => {
         if (response.error === 0) {
-          console.log(`✅ Vue ${idVue} enregistrée comme dernière vue pour l'utilisateur.`);
           axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = idVue;
-        } else {
-          console.error(`❌ Erreur lors de l'enregistrement de la dernière vue :`, response.message);
         }
       })
       .catch(error => {
@@ -110,18 +104,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      const clientApiUrl = Cookies.get('client_api_url');
+      
+      if (!clientApiUrl) {
+        console.log("⚠️ Aucune URL d'API connue. Redirection vers le LoginPage (Résolution requise).");
+        setIsLoading(false);
+        setUser(undefined);
+        return; // On arrête tout, l'utilisateur n'est pas authentifié.
+      }
+
       if (localStorage.getItem('isAuthenticated') !== 'true') {
         setIsLoading(false);
         return;
       }
+
       try {
         const response = await authService.me();
-        
         const id = response.planning[0]?.IdPlanning || -1;
 
         if (id >= 0) {
           axiosAgent.defaults.headers.common['X-Planning-Id'] = id;
-
           if(response.planning.length === 1) {
             setCurrentPlanningId(id); 
           }else {
@@ -132,12 +134,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(response.user);
         setPermissions(response.permissions || 0);
         setCurrentVueId(null);
-        localStorage.setItem('isAuthenticated', 'true'); // Sauvegarde du token dans le localStorage
-        console.log("✅ AuthProvider: Utilisateur connecté via cookie", response.user);
+        localStorage.setItem('isAuthenticated', 'true');
       } catch (error) {
-        console.log("❌ AuthProvider: Aucun cookie valide trouvé (401). L'utilisateur doit se connecter.", error);
         setUser(undefined);
-        // Si on a une erreur 401, c'est qu'il n'y a pas de cookie valide
+        localStorage.removeItem('isAuthenticated'); // Sécurité en cas de token expiré
       } finally {
         setIsLoading(false);
       }
@@ -146,23 +146,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkAuth();
   }, []);
 
-
   return (
     <AuthContext.Provider value={{ 
-        user, 
-        permissions, 
-        isAuthenticated, 
-        isLoading, 
-        login, 
-        logout, 
-        hasPermission, 
-        setUser, 
-        UserPlanning, 
-        currentPlanningId, 
-        setCurrentPlanningId,
-        currentVueId,
-        setCurrentVueId,
-        setLastVueForUser
+        user, permissions, isAuthenticated, isLoading, login, logout, 
+        hasPermission, setUser, UserPlanning, currentPlanningId, 
+        setCurrentPlanningId, currentVueId, setCurrentVueId, setLastVueForUser
     }}>
       {isLoading ? (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-ultra-light via-white to-primary-lighter">
@@ -175,7 +163,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// 4. Custom Hook pour utiliser le contexte facilement
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -184,13 +171,8 @@ export const useAuth = () => {
   return context;
 };
 
-
 export const useCurrentUser = (): User => {
   const { user } = useAuth();
-  
-  if (!user) {
-    throw new Error("useCurrentUser a été appelé mais l'utilisateur n'est pas connecté.");
-  }
-  
+  if (!user) throw new Error("useCurrentUser a été appelé mais l'utilisateur n'est pas connecté.");
   return user;
 };

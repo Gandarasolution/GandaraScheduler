@@ -1,4 +1,5 @@
-import axios from 'axios'
+import axios from 'axios';
+import Cookies from 'js-cookie';
 
 /* Explications :
 
@@ -24,7 +25,6 @@ Ces trois cas sont traités par une unique fonction handleError().
 
 // creation d'un agent axios, avec une config. pour atteindre l'API
 export const axiosAgent = axios.create({
-    baseURL: 'https://localhost:8000',
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
@@ -32,20 +32,16 @@ export const axiosAgent = axios.create({
     },
 })
 
-// --- VARIABLES POUR LA GESTION DU REFRESH ---
-let isRefreshing = false;
-let failedQueue = [];
+axiosAgent.interceptors.request.use((config) => {
+  // Avant chaque requête, on va chercher l'URL de l'API du client
+  const clientApiUrl = Cookies.get('client_api_url');
+  
+  if (clientApiUrl) {
+    config.baseURL = clientApiUrl;
+  } 
 
-const processQueue = (error, token = null) => {
-    failedQueue.forEach(prom => {
-        if (error) {
-            prom.reject(error);
-        } else {
-            prom.resolve(token);
-        }
-    });
-    failedQueue = [];
-};
+  return config;
+});
 
 axiosAgent.interceptors.response.use(
     // 1. Si la réponse est un succès (2XX), on la laisse passer normalement
@@ -83,6 +79,7 @@ axiosAgent.interceptors.request.use(
 */
 
 function handleError(serviceName, err) {
+    console.log("handleError called for service " + serviceName + " with error: " + err);
     if (err.response) {
         // la requête a été reçue par le serveur mais celui-ci renvoie un status != 2XX, ce qui signifie
         // une erreur. Par exemple, il peut renovyer un status 404 pour dire que la ressource demandée n'existe pas.
@@ -108,8 +105,7 @@ function handleError(serviceName, err) {
     else {
         // tout autre cas
         console.log("UNKNOWN ERROR while calling SERVICE "+serviceName);
-        // on retourne un objet qui a la même structure qu'une réponse normale sans erreur.
-        // mais avec un champ data contenant un message
+        
         return {
             data: {
                 error: 1,

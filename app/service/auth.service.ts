@@ -1,5 +1,4 @@
 import { getRequest, postRequest } from "./axios.service";
-import { UserRole } from "@/app/calendrier/types";
 
 type LoginPayload = {
   login: string;
@@ -48,11 +47,57 @@ async function refreshToken() {
 }
 
 
+async function SchedulerIsURICannonical(hostname: string): Promise<boolean> {
+  try {
+    const response = await fetch("https://extranet.palissot.fr/extranet/inc_librairie/API/routes.php?endpoint=SchedulerIsURICannonical", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      // Pas de withCredentials ici !
+      body: JSON.stringify({ uri: hostname })
+    });
+
+    const data = await response.json();
+    console.log('SchedulerIsURICannonical response:', data);
+    
+    // Adapte selon ce que ton API renvoie vraiment (ex: data.data === 1)
+    return data === 1; 
+  } catch (error) {
+    console.error('Erreur lors de la vérification de l\'URL canonique:', error);
+    return false;
+  }
+}
+
+async function SchedulerGetAPI(hostname: string): Promise<string | null> {
+  try {
+    const response = await fetch("https://extranet.palissot.fr/extranet/inc_librairie/API/routes.php?endpoint=SchedulerGetAPI", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ codeEntreprise: hostname })
+    });
+
+    const data = await response.json();
+    // Adapte selon la structure exacte renvoyée, par exemple data.data.urlAPI
+    return data?.urlAPI || null; 
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'API:', error);
+    return null;
+  }
+}
+
+
 export default {
   login,
   me,
   logout,
   refreshToken,
+  SchedulerIsURICannonical,
+  SchedulerGetAPI,
   // saveSession,
   // clearSession,
   // getSessionUser,
