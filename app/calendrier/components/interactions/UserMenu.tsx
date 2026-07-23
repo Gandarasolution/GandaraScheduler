@@ -40,9 +40,6 @@ export default function UserMenu({ user }: UserMenuProps) {
         <div className="absolute right-0 mt-2 w-48 bg-secondary-bg rounded-lg shadow-lg border border-light opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
           <div className="p-3 border-b border-light">
             <p className="text-sm font-medium text-primary poppins">{user.Nom} {user.Prenom}</p>
-            {user.Email && (
-              <p className="text-xs text-secondary mt-1 poppins">{user.Email}</p>
-            )}
           </div>
           <button
             onClick={logout}

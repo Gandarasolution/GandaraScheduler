@@ -35,10 +35,12 @@ export default function LoginPage({ login }: LoginPageProps) {
 
       
 
-      console.log('window.location', window.location);
+      //console.log('window.location', window.location);
       // LOGIQUE CANONIQUE : Adapte cette condition selon ton domaine principal
       // Ex: si on n'est pas sur localhost et pas sur www.tondomaine.com
       const isCanonical = await authService.SchedulerIsURICannonical(host);
+
+      console.log('isCanonical', isCanonical, 'existingApiUrl', existingApiUrl);
 
       if (isCanonical && !existingApiUrl) {
         await resolveCompanyCode(host);
@@ -66,6 +68,7 @@ export default function LoginPage({ login }: LoginPageProps) {
       // On utilise fetch direct pour éviter l'intercepteur Axios qui pourrait bloquer
       const response = await authService.SchedulerGetAPI(code);
       
+      console.log(response)
       if (!response) {
         throw new Error("Code entreprise introuvable.");
       }
