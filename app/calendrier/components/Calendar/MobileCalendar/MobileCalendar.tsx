@@ -8,12 +8,12 @@
  * @version 2.0.0
  */
 
-import React, { useEffect, useState , Suspense, useMemo } from 'react';
-import { addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import React, { useCallback, useEffect, useState , useMemo } from 'react';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
-import { Appointment, Item, User } from '../../../types/index';
+import { Appointment, Equipe, Item, MockNotification, User } from '../../../types/index';
 
 // Composants
 
@@ -23,12 +23,15 @@ import {
 
 import { EmployeeSelector, MobileCalendarGrid, NotificationPanel, AppointmentList} from './index';
 import SearchOverlay from '../../modals/SearchOverlay';
+import type { SearchableItem } from '../../modals/SearchOverlay';
 
 // Hooks & Utils
 import { useNotifications, useCalendarWorker } from '../../../hooks';
-import { getNotificationsByUserId } from '@/app/datasource';
+import notificationApiService from '@/app/service/notificationApi.service';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
-import { canCreateEvent, getUserPermissions } from '../../../utils/permissions';
+import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
+import { Image } from '../../ui';
+import { getCachedImageById } from '../../../utils/imageCacheStore';
 
 // Lazy loading des composants lourds
 
@@ -36,33 +39,36 @@ import { canCreateEvent, getUserPermissions } from '../../../utils/permissions';
 
 interface MobileCalendarGridProps {
   employees: User[];
+  teams: Record<number, Equipe>;
   appointments: Appointment[];
   user: User;
   items: Item[];
-  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => void;
+  nonWorkingDates: Record<string, number>;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
 }
 
 // ===== COMPOSANT PRINCIPAL =====
 
 export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({ 
   employees, 
+  teams,
   appointments, 
   user, 
   items, 
+  nonWorkingDates,
   onAddAppointment 
 }) => {
   // ----- ÉTATS LOCAUX -----
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const currentDate = useMemo(() => new Date(), []); // Date actuelle, mémorisée pour éviter les recalculs
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showLogout, setShowLogout] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
-  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
+  const cachedUserImage = user.IdImage ? getCachedImageById(user.IdImage) : undefined;
 
   // ----- HOOKS PERSONNALISÉS -----
   const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
@@ -72,11 +78,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   // ----- GESTION DES DROITS D'ACCÈS -----
   const isAdmin = user.role === 'admin';
   const isManager = user.role === 'manager';
-  const userPermissions = getUserPermissions(user.role);
+  //const userPermissions = getUserPermissions(user.role);
   
   // Filtrer les items selon les permissions de l'utilisateur
   const allowedItems = useMemo(() => {
-    return items.filter(item => canCreateEvent(user.role, item.type));
+    return items.filter(item => canCreateEvent(user.role, item.Type));
   }, [items, user.role]);
   
   // Les admins et managers peuvent voir tous les employés
@@ -84,27 +90,27 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const visibleEmployees = useMemo(() => {
     const baseEmployees = (isAdmin || isManager)
       ? employees 
-      : employees.filter(emp => emp.id === user.id);
+      : employees.filter(emp => emp.IdPersonnel === user.IdPersonnel);
     
     // Filtrer les employés inactifs qui n'ont pas de rdv dans le mois visible
     return baseEmployees.filter(emp => {
       // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
-      if (emp.actif !== false) {
+      if (emp.Actif !== false) {
         return true;
       }
       
       // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
       const hasMonthlyAppointments = monthlyAppointments.some(app => 
-        app.employee.id === emp.id
+        app.IdEmploye === emp.IdPersonnel
       );
       
       return hasMonthlyAppointments;
     });
-  }, [employees, isAdmin, isManager, user.id, monthlyAppointments]);
+  }, [employees, isAdmin, isManager, user.IdPersonnel, monthlyAppointments]);
   
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(() => {
     if (!isAdmin && !isManager) {
-      return employees.find(emp => emp.id === user.id) || null;
+      return employees.find(emp => emp.IdPersonnel === user.IdPersonnel) || null;
     }
     return employees[0] || null;
   });
@@ -122,12 +128,12 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       // Filtrer par rôle : users et viewers ne voient que leurs propres RDV
       if (user.role === 'user' || user.role === 'viewer') {
-        filteredApps = appointments.filter(app => app.employee.id === user.id);
+        filteredApps = appointments.filter(app => app.IdEmploye === user.IdPersonnel);
       }
       
       const filtered = filteredApps.filter(app => {
-        const matchesEmployee = !selectedEmployee || app.employee.id === selectedEmployee.id;
-        const isInMonth = app.startDate <= monthEnd && app.endDate >= monthStart;
+        const matchesEmployee = !selectedEmployee || app.IdEmploye === selectedEmployee.IdPersonnel;
+        const isInMonth = app.DebutPlanningEvenement <= monthEnd && app.FinPlanningEvenement >= monthStart;
         return matchesEmployee && isInMonth;
       });
       
@@ -136,26 +142,23 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     }
     
     // Utiliser le Web Worker pour les calculs
-    const filterAppointments = async () => {
-      setIsLoadingAppointments(true);
-      
+    const filterAppointments = async () => {      
       const filtered = await worker.filterMonthlyAppointments(
         appointments,
         currentDate,
         selectedEmployee,
         user.role || 'viewer',
-        user.id
+        user.IdPersonnel
       );
       
       if (filtered) {
         setMonthlyAppointments(filtered);
       }
       
-      setIsLoadingAppointments(false);
     };
     
     filterAppointments();
-  }, [worker.isReady, appointments, currentDate, selectedEmployee, user.role, user.id]);
+  }, [worker.isReady, appointments, currentDate, selectedEmployee, user.role, user.IdPersonnel]);
 
   // Filtrage journalier avec Web Worker
   useEffect(() => {
@@ -165,7 +168,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       const selectedDayEnd = new Date(selectedDate).setHours(23, 59, 59, 999);
       
       const filtered = monthlyAppointments.filter(app => 
-        app.startDate <= selectedDayEnd && app.endDate >= selectedDayStart
+        app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement >= selectedDayStart
       );
       
       setSelectedDayAppointments(filtered);
@@ -191,16 +194,29 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   
   // Charger les notifications au montage
   useEffect(() => {
-    const userNotifications = getNotificationsByUserId(user.id);
-    
-    userNotifications.forEach(notif => {
-      addNotification(notif.type, notif.title, notif.message);
-    });
+    let isMounted = true;
+
+    const loadNotifications = async () => {
+      const response = await notificationApiService.getNotificationsByUserId(user.IdPersonnel);
+      if (!isMounted) return;
+
+      const userNotifications = response?.error === 0 && Array.isArray(response.data) ? response.data : [];
+
+      userNotifications.forEach((notif: MockNotification) => {
+        addNotification(notif.type, notif.title, notif.message);
+      });
+    };
+
+    loadNotifications();
     
     setTimeout(() => {
-      addNotification('info', 'Bienvenue', `Bonjour ${user.nom} ${user.prenom} !`);
+      addNotification('info', 'Bienvenue', `Bonjour ${user.Nom} ${user.Prenom} !`);
     }, 500);
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [addNotification, user.IdPersonnel, user.Nom, user.Prenom]);
 
   // ----- HANDLERS -----
   
@@ -217,11 +233,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
   const handleSelectItem = (item: Item) => {
     // Vérifier les permissions selon le type d'événement
-    const canCreate = canCreateEvent(user.role, item.type);
+    const canCreate = canCreateEvent(user.role, item.Type);
     
     if (!canCreate) {
       // Afficher une notification d'erreur
-      addNotification('error', 'Permission refusée', `Vous n'avez pas les droits pour créer des événements de type "${item.type}"`);
+      addNotification('error', 'Permission refusée', `Vous n'avez pas les droits pour créer des événements de type "${item.Type}"`);
       return;
     }
     
@@ -230,13 +246,17 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     setShowAppointmentForm(true);
   };
 
-  const handleSaveAppointment = (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => {
+  const handleSaveAppointment = (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean): Promise<{success: boolean}> => {
     if (onAddAppointment) {
-      onAddAppointment(appointment, item, includeAllNonWorkingDays);
-      addNotification('success', 'Rendez-vous créé', 'Le rendez-vous a été ajouté avec succès');
+      return onAddAppointment(appointment, item, includeAllNonWorkingDays, appointment.IdPlanningEvenement <= 0 ? 'create' : 'update').then(() => {
+        addNotification('success', 'Rendez-vous créé', 'Le rendez-vous a été ajouté avec succès');
+        setShowAppointmentForm(false);
+        return { success: true };
+      });
     }
     setShowAppointmentForm(false);
     setSelectedItem(null);
+    return Promise.resolve({ success: false });
   };
 
   const handleCloseMenus = () => {
@@ -244,27 +264,31 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     setShowNotifications(false);
   };
 
-  // Filtrage des items pour la recherche
-  const filteredItems = useMemo(() => {
-    if (!searchInput.trim()) return [];
-    
-    const search = searchInput.toLowerCase();
-    // Utiliser allowedItems qui contient déjà les items filtrés par permissions
-    return allowedItems.filter(item => {
-      const matchLabel = item.label?.toLowerCase().includes(search);
-      const matchCode = item.code?.toLowerCase().includes(search);
-      
-      // Propriétés spécifiques aux ChantierItem
-      if (item.type === 'chantier') {
+  const searchOverlayItems = useCallback(async (query: string): Promise<{ error: number; data: SearchableItem[]; message?: string }> => {
+    const trimmedQuery = query.trim().toLowerCase();
+    if (!trimmedQuery) {
+      return { error: 0, data: [] };
+    }
+
+    const data = allowedItems.filter(item => {
+      const matchLabel = item.LibellePlanningRessource?.toLowerCase().includes(trimmedQuery);
+      const matchCode = item.CodePlanningRessource?.toLowerCase().includes(trimmedQuery);
+
+      if (item.Type === 'Projet') {
         const chantierItem = item as any;
         return matchLabel || matchCode ||
-          chantierItem.identifiant?.toLowerCase().includes(search) ||
-          chantierItem.libelle?.toLowerCase().includes(search);
+          chantierItem.identifiant?.toLowerCase().includes(trimmedQuery) ||
+          chantierItem.libelle?.toLowerCase().includes(trimmedQuery);
       }
-      
+
       return matchLabel || matchCode;
-    });
-  }, [allowedItems, searchInput]);
+    }).map(item => ({
+      ...item,
+      id: (item as any).IdPlanningRessource || (item as any).id,
+      label: item.LibellePlanningRessource || (item as any).label
+    }));
+    return { error: 0, data };
+  }, [allowedItems]);
 
   // ----- FACTORIES -----
   
@@ -272,15 +296,20 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     const startOfSelectedDay = new Date(selectedDate).setHours(8, 0, 0, 0);
     const endOfSelectedDay = new Date(selectedDate).setHours(17, 0, 0, 0);
     
+    const appointmentEmployee = selectedEmployee || employees[0];
+    if (!appointmentEmployee) {
+      throw new Error('No employee available for appointment creation');
+    }
+    
     return {
-      id: id ?? -1,
-      description: '',
-      startDate: startOfSelectedDay,
-      endDate: endOfSelectedDay,
-      employee: selectedEmployee || employees[0] || null,
-      type: 'chantier',
-      EventId: 0,
-      priority: 0,
+      IdPlanningEvenement: id ?? -1,
+      AnnotationPlanningEvenement: '',
+      DebutPlanningEvenement: startOfSelectedDay,
+      FinPlanningEvenement: endOfSelectedDay,
+      IdEmploye: appointmentEmployee.IdPersonnel,
+      IdPlanningRessource: 0,
+      PlanningEvenementPriorite: 0,
+      isLocked: false,
     };
   };
 
@@ -290,21 +319,20 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     }
     
     return {
-      id: 0,
-      type: 'chantier',
-      label: '',
-      color: '#3953aaff',
-      borderColor: '#2c4086',
-      textColor: '#ffffff',
-      code: '',
-      identifiant: '',
-      poleActivite: '',
-      libelle: '',
-      etat: 'En cours',
-      chargeAffaire: '',
-      chefChantier: '',
-      dateOS: '',
-      dateFin: '',
+      IdPlanningRessource: 0,
+      Type: 'Projet',
+      LibellePlanningRessource: '',
+      CouleurFondPlanningRessource: '#3953aaff',
+      CouleurBordurePlanningRessource: '#2c4086',
+      CouleurTextePlanningRessource: '#ffffff',
+      CodePlanningRessource: '',
+      Identifiant: '',
+      PoleActivite: '',
+      Etat: 'En cours',
+      ChargeAffaire: '',
+      ChefChantier: '',
+      DateOS: '',
+      DateFin: '',
       TM: 0,
       HR: 0,
       SH: 0,
@@ -357,19 +385,16 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 className="relative w-8 h-8 rounded-full overflow-hidden"
                 style={{ borderWidth: '1px', borderColor: 'var(--border-light)' }}
               >
-                <img 
-                  src={user.image?.image || '/default-avatar.png'}
-                  alt="User"
-                  width={32}
-                  height={32}
-                  className="object-cover"
+                <Image
+                  image={user.IdImage ? (cachedUserImage?.image || user.IdImage) : '/default-avatar.png'}
+                  className="w-8 h-8 object-cover"
                 />
               </div>
               <span 
                 className="text-sm font-semibold hidden sm:inline-block"
                 style={{ color: 'var(--text-primary)' }}
               >
-                {user.nom} {user.prenom}
+                {user.Nom} {user.Prenom}
               </span>
             </button>
             
@@ -414,7 +439,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
               className="transition-colors relative"
               style={{ color: 'var(--text-tertiary)' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-primary)';
+                e.currentTarget.style.color = 'var(--color-primary-500)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = 'var(--text-tertiary)';
@@ -441,7 +466,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
               className="transition-colors"
               style={{ color: 'var(--text-tertiary)' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-primary)';
+                e.currentTarget.style.color = 'var(--color-primary-500)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = 'var(--text-tertiary)';
@@ -473,6 +498,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
           {(isAdmin || isManager) && (
             <EmployeeSelector 
               employees={visibleEmployees}
+              teams={teams}
               selectedEmployee={selectedEmployee}
               onSelect={setSelectedEmployee}
             />
@@ -484,7 +510,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             selectedDate={selectedDate}
             appointments={monthlyAppointments}
             onDateSelect={setSelectedDate}
-            onChange={setCurrentDate}
           />
 
           {/* Appointments Detail */}
@@ -511,9 +536,9 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             >
               <button 
                 onClick={handleOpenAddAppointment}
-                className="w-14 h-14 rounded-full text-white flex items-center justify-center transform -translate-y-6 transition-transform active:scale-95"
+                className="w-14 h-14 rounded-full text-white flex items-center justify-center transform  transition-transform active:scale-95"
                 style={{
-                  backgroundColor: 'var(--color-primary)',
+                  backgroundColor: 'var(--color-primary-500)',
                   boxShadow: 'var(--shadow-lg)'
                 }}
                 onMouseEnter={(e) => {
@@ -535,11 +560,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             isOpen={showSearchModal}
             onClose={() => {
               setShowSearchModal(false);
-              setSearchInput('');
             }}
-            searchInput={searchInput}
-            setSearchInput={setSearchInput}
-            items={filteredItems}
+            onSearch={searchOverlayItems}
             placeholder="Rechercher un chantier, paie, congé..."
             emptyStateConfig={{
               noInput: {
@@ -564,7 +586,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             }}
             renderItem={(item) => {
               const itemData = item as any as Item;
-              const isChantier = itemData.type === 'chantier';
+              const isChantier = itemData.Type === 'Projet';
               const chantierData = isChantier ? itemData as any : null;
               
               return (
@@ -572,14 +594,14 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   <div className="flex items-center gap-3">
                     <div 
                       className="w-4 h-4 rounded-full flex-shrink-0" 
-                      style={{ backgroundColor: itemData.color }}
+                      style={{ backgroundColor: itemData.CouleurFondPlanningRessource }}
                     />
                     <div className="flex-1">
                       <p 
                         className="font-semibold"
                         style={{ color: 'var(--text-primary)' }}
                       >
-                        {itemData.label}
+                        {itemData.LibellePlanningRessource}
                       </p>
                       {isChantier && (chantierData?.code || chantierData?.identifiant) && (
                         <p 
@@ -657,11 +679,10 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   appointments={appointments}
                   appointment={createEmptyAppointment(0)}
                   item={createEmptyItem()}
-                  items={allowedItems}
                   employees={visibleEmployees}
                   HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
                   isFullDay={true}
-                  nonWorkingDates={[]}
+                  nonWorkingDates={nonWorkingDates}
                   isReducedVersion={false}
                   isMobile={true}
                   onSave={handleSaveAppointment}
@@ -670,8 +691,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                     setSelectedItem(null);
                   }}
                   handleOpenImageModal={() => {}}
-                  handleAddDimension={() => {}}
-                  handleEditDimension={() => {}}
+                  handleAddManualRessource={async (_dimension) => ({ success: true })}
+                  handleEditRessource={async (_dimension) => ({ success: true })}
                 />
               </div>
             </div>

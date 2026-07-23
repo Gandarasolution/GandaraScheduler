@@ -16,18 +16,19 @@ import GroupRow from './GroupRow';
 import { RowWithBoundaries } from '../../hooks';
 
 interface CalendarRowsProps {
+  mainScrollRef:React.RefObject<HTMLDivElement>;
   visibleRows: RowWithBoundaries[];
   dayInTimeline: number[];
   todayIndex: number;
   isFullDay: boolean;
   isGrabbing: boolean;
-  appointmentsByEmployee: Record<number, (Appointment & { top: number })[]>;
-  EMPTY_APPOINTMENTS: (Appointment & { top: number })[];
-  events: Item[];
+  appointmentsByEmployee: Record<number, Appointment[]>;
+  EMPTY_APPOINTMENTS: Appointment[];
+  events: Record<number, Item>;
   visibleWindowStart: number;
   visibleWindowEnd: number;
   isDisplayWeekend: boolean;
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   selectedCell: { employeeId: number; date: number } | null;
@@ -38,6 +39,7 @@ interface CalendarRowsProps {
   handleSetRowExpansion: (employeeId: number, expanded: boolean) => void;
   collapseTriggers: Record<number, number>;
   tagPlacement: 'hover' | 'fixed';
+  onLockedError: (message: string) => void;
 }
 
 /**
@@ -45,6 +47,7 @@ interface CalendarRowsProps {
  * Utilisé avec virtualisation pour optimiser les performances
  */
 const CalendarRows: React.FC<CalendarRowsProps> = memo(({
+  mainScrollRef,
   visibleRows,
   dayInTimeline,
   todayIndex,
@@ -66,11 +69,15 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   expandedOverlapRows,
   handleSetRowExpansion,
   collapseTriggers,
-  tagPlacement
+  tagPlacement,
+  onLockedError
 }) => {
+  //console.log('Rendering CalendarRows with visibleRows:', visibleRows);
   return (
     <>
-      {visibleRows.map((row) => {
+      {visibleRows.map((row) => { 
+        //console.log(row);
+               
         const commonProps = {
           style: {
             width: '100%',
@@ -81,6 +88,10 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             right: 0,
           },
         };
+        // if (row.data.Nom === 'CABESTANT') {
+        //   console.log(row.data);
+        //   console.log(appointmentsByEmployee);
+        // }
 
         return row.type === 'group' ? (
           <GroupRow
@@ -94,6 +105,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
         ) : (
           <EmployeeRow
             key={row.uniqueKey}
+            mainScrollRef={mainScrollRef}
             {...commonProps}
             employee={row.data}
             dayInTimeline={dayInTimeline}
@@ -116,6 +128,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             onSetExpansion={handleSetRowExpansion}
             collapseTrigger={collapseTriggers[row.id as number]}
             tagPlacement={tagPlacement}
+            onLockedError={onLockedError}
           />
         );
       })}

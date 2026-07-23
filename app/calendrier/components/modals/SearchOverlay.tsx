@@ -29,9 +29,7 @@
  * <SearchOverlay
  *   isOpen={isOpen}
  *   onClose={handleClose}
- *   searchInput={searchText}
- *   setSearchInput={setSearchText}
- *   items={filteredItems}
+ *   onSearch={searchItems}
  *   placeholder="Rechercher un élément..."
  *   emptyStateConfig={{
  *     noInput: {
@@ -56,7 +54,7 @@
  */
 
 import { useDragDropManager } from "react-dnd";
-import { memo, useEffect, useState, ReactNode } from "react";
+import { memo, useCallback, useEffect, useRef, useState, ReactNode } from "react";
 
 
 /**
@@ -85,12 +83,8 @@ type SearchOverlayProps<T extends SearchableItem = SearchableItem> = {
   isOpen: boolean;
   /** Callback de fermeture */
   onClose: () => void;
-  /** Valeur de l'input de recherche */
-  searchInput: string;
-  /** Callback pour modifier l'input */
-  setSearchInput: (input: string) => void;
-  /** Liste des items filtrés à afficher */
-  items: T[];
+  /** Fonction de recherche (sync ou async) appelée avec la query */
+  onSearch: (query: string) => Promise<{ error: number; data: T[]; message?: string }>;
   /** Placeholder de l'input de recherche */
   placeholder?: string;
   /** Configuration des états vides */
@@ -121,6 +115,8 @@ type SearchOverlayProps<T extends SearchableItem = SearchableItem> = {
     right?: string;
     bottom?: string;
   };
+  /** Délai debounce de la recherche en millisecondes */
+  debounceMs?: number;
 };
 
 /**
@@ -129,9 +125,7 @@ type SearchOverlayProps<T extends SearchableItem = SearchableItem> = {
 const SearchOverlay = <T extends SearchableItem = SearchableItem>({
   isOpen,
   onClose,
-  searchInput,
-  setSearchInput,
-  items,
+  onSearch,
   placeholder = "Rechercher...",
   emptyStateConfig,
   renderItem,
@@ -142,10 +136,49 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
   style,
   maxWidth = '2xl',
   maxHeight = '50vh',
-  position = { top: '35%', left: '32%' }
+  position = { top: '35%', left: '32%' },
+  debounceMs = 250,
 }: SearchOverlayProps<T>) => {
   const dragDropManager = useDragDropManager();
   const [isDragging, setIsDragging] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [items, setItems] = useState<T[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const lastRequestId = useRef(0);
+
+  const resetSearchState = useCallback(() => {
+    setSearchInput('');
+    setItems([]);
+    setIsLoading(false);
+    setErrorMessage(null);
+  }, []);
+
+  const executeSearch = useCallback(async (query: string) => {
+    const requestId = ++lastRequestId.current;
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    await onSearch(query).then(result => {
+      if (requestId !== lastRequestId.current) return;
+      if (result.error === 0) {
+        console.log(result.data);
+        
+        setItems(result.data);
+      } else {
+        setItems([]);
+        setErrorMessage(result.message || 'Erreur lors de la recherche. Veuillez réessayer.');
+      }
+    }).catch(() => {
+      if (requestId !== lastRequestId.current) return;
+      setItems([]);
+      setErrorMessage('Erreur lors de la recherche. Veuillez réessayer.');
+    }).finally(() => {
+      if (requestId === lastRequestId.current) {
+        setIsLoading(false);
+      }
+    });
+  }, [onSearch]);
 
   // Utiliser React DnD pour détecter l'état de drag (optionnel)
   useEffect(() => {
@@ -160,6 +193,30 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
     return unsubscribe;
   }, [dragDropManager, enableDragDetection]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetSearchState();
+    }
+  }, [isOpen, resetSearchState]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const query = searchInput.trim();
+    if (query === '') {
+      setItems([]);
+      setIsLoading(false);
+      setErrorMessage(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void executeSearch(query);
+    }, debounceMs);
+
+    return () => clearTimeout(timer);
+  }, [debounceMs, executeSearch, isOpen, searchInput]);
 
   // États vides par défaut
   const defaultEmptyStates = {
@@ -186,6 +243,11 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    onClose();
+    resetSearchState();
+  };
+
   return (
     <>
       {/* Overlay de fond */}
@@ -196,8 +258,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
         onClick={() => {
           if (!enableDragDetection || !isDragging) {
-            onClose();
-            setSearchInput('');
+            handleClose();
           }
         }}
       />
@@ -230,15 +291,14 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
             <input
               type="text"
               placeholder={placeholder}
-              className="block bg-bg-secondary placeholder:text-primary text-primary w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-sm sm:text-base"
+              className="block bg-secondary-bg placeholder:text-primary text-primary w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-sm sm:text-base"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                   e.preventDefault(); // Empêche le comportement par défaut si nécessaire
-                  onClose();
-                  setSearchInput('');
+                  handleClose();
                 }
               }}
             />
@@ -249,15 +309,51 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
         {/* Liste des items */}
         <div 
-          className="flex-1 overflow-y-auto px-2 sm:px-2 py-2 bg-bg-secondary rounded-2xl shadow-lg border border-light text-primary"
+          className="flex-1 overflow-y-auto px-2 sm:px-2 py-2 bg-secondary-bg rounded-2xl shadow-lg border border-light text-primary"
           style={{ maxHeight }}
         >
+          {searchInput.trim() !== '' && (
+            <div className="px-2 pb-2 text-xs sm:text-sm text-primary/70 flex items-center justify-between">
+              <span>
+                {isLoading && 'Recherche en cours...'}
+              </span>
+              {isLoading && <span className="h-2 w-2 rounded-full bg-primary animate-ping" />}
+            </div>
+          )}
+
           {searchInput.trim() === '' ? (
             // État: aucune recherche
             <div className="text-center py-4 sm:py-8">
               {defaultEmptyStates.noInput.icon}
               <p className="text-base sm:text-lg font-medium mb-2">{defaultEmptyStates.noInput.title}</p>
               <p className="text-xs sm:text-sm">{defaultEmptyStates.noInput.description}</p>
+            </div>
+          ) : isLoading ? (
+            <div className="grid gap-2 sm:gap-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={`skeleton-${index}`}
+                  className="rounded-xl border border-light bg-primary-50/30 px-3 py-3 animate-pulse"
+                >
+                  <div className="h-3 w-1/2 bg-light rounded mb-2" />
+                  <div className="h-3 w-1/3 bg-light rounded" />
+                </div>
+              ))}
+            </div>
+          ) : errorMessage ? (
+            <div className="text-center py-6 sm:py-8">
+              <p className="text-sm sm:text-base mb-3">{errorMessage}</p>
+              <button
+                type="button"
+                className="px-3 py-1.5 rounded-lg border border-light hover:bg-primary-50 transition-colors"
+                onClick={() => {
+                  if (searchInput.trim() !== '') {
+                    void executeSearch(searchInput.trim());
+                  }
+                }}
+              >
+                Réessayer
+              </button>
             </div>
           ) : items.length === 0 ? (
             // État: aucun résultat
@@ -272,7 +368,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
               {items.map((item, index) => (
                 <div 
                   key={`${item.id}-${index}`} 
-                  className="w-full flex justify-between hover:bg-primary-ultra-light rounded-xl transition-colors px-1 sm:px-2"
+                  className="w-full flex justify-between hover:bg-primary-50 rounded-xl transition-colors px-1 sm:px-2"
                 >
                   {/* Rendu personnalisé ou rendu par défaut */}
                   {renderItem ? (
@@ -287,11 +383,10 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
                   {onItemAction && (
                     <div className="h-full">
                       <button
-                        className="px-1.5 sm:px-2 py-1 text-lg sm:text-xl cursor-pointer h-full hover:text-color-primary transition-colors"
+                        className="px-1.5 sm:px-2 py-1 text-lg sm:text-xl cursor-pointer h-full hover:text-primary-500 transition-colors"
                         onClick={() => {
                           onItemAction(item);
-                          onClose();
-                          setSearchInput('');
+                          handleClose();
                         }}
                         title="Ajouter"
                       >

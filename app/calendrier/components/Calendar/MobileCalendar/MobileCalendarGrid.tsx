@@ -18,7 +18,6 @@ import {
   startOfWeek, 
   endOfWeek,
   eachDayOfInterval,
-  addWeeks
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Appointment } from '../../../types';
@@ -28,7 +27,6 @@ interface CalendarGridProps {
   selectedDate: Date;
   appointments: Appointment[];
   onDateSelect: (date: Date) => void;
-  onChange: (date: Date) => void;
 }
 
 export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({ 
@@ -36,21 +34,20 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
   selectedDate, 
   appointments, 
   onDateSelect,
-  onChange
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Calculer les dates de début et fin selon l'état expandé
-  const monthStart = startOfMonth(currentDate);
+  const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(monthStart);
   
   const startDate = isExpanded 
     ? startOfWeek(monthStart, { weekStartsOn: 1 })  // Mois entier
-    : startOfWeek(currentDate, { weekStartsOn: 1 }); // Début de la semaine actuelle
+    : startOfWeek(selectedDate, { weekStartsOn: 1 }); // Début de la semaine actuelle
   
   const endDate = isExpanded
     ? endOfWeek(monthEnd, { weekStartsOn: 1 })      // Mois entier
-    : endOfWeek(addWeeks(currentDate, 1), { weekStartsOn: 1 }); // Fin de la semaine suivante
+    : endOfWeek(selectedDate, { weekStartsOn: 1 }); // Fin de la semaine actuelle
 
   const days = eachDayOfInterval({ start: startDate, end: endDate });
   const weekDays = ['L', 'M', 'M', 'J', 'V', 'S', 'D']; // Jours de la semaine
@@ -59,47 +56,45 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
   const hasAppointment = (day: number) => {
     const start = new Date(day).setHours(0, 0, 0, 0);
     const end = new Date(day).setHours(23, 59, 59, 999);
-    return appointments.some(app => app.startDate <= end && app.endDate >= start);
+    return appointments.some(app => app.DebutPlanningEvenement <= end && app.FinPlanningEvenement >= start);
   };
 
   // Compter le nombre de rendez-vous pour un jour
   const getDayAppointmentCount = (day: number) => {
     const start = new Date(day).setHours(0, 0, 0, 0);
     const end = new Date(day).setHours(23, 59, 59, 999);
-    return appointments.filter(app => app.startDate <= end && app.endDate >= start).length;
+    return appointments.filter(app => app.DebutPlanningEvenement <= end && app.FinPlanningEvenement >= start).length;
   };
 
   return (
     <div className="flex flex-col px-6 pb-6 h-auto transition-all duration-300">
-      <div className="mb-4 flex items-center justify-between">
-        <span 
-          className="text-sm font-medium capitalize transition-all duration-300 ease-in-out"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          {format(currentDate, 'MMMM yyyy', { locale: fr })}
-        </span>
-        <input
-          type="date"
-          id="start"
-          name="trip-start"
-          value={format(currentDate, 'yyyy-MM-dd')}
-          onChange={(e) => onChange(new Date(e.target.value))}
-          className="transition-all duration-200 ease-in-out rounded-lg px-2 py-1"
-          style={{ 
-            backgroundColor: 'var(--bg-secondary)',
-            color: 'var(--text-primary)',
-            borderColor: 'var(--border-light)'
-          }}
-        />
-      </div>
-      
       <div 
-        className="rounded-[2.5rem] p-6 relative transition-all duration-300 ease-in-out"
+        className="rounded-[2.5rem] px-6 pb-6 pt-2 relative transition-all duration-300 ease-in-out"
         style={{
           backgroundColor: 'var(--bg-card)',
           boxShadow: 'var(--shadow-md)'
         }}
       >
+        <div className="mb-4 flex items-center justify-between">
+          <span 
+            className="text-sm font-medium capitalize transition-all duration-300 ease-in-out"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {format(currentDate, 'MMMM yyyy', { locale: fr })}
+          </span>
+          <input
+            type="date"
+            id="start"
+            name="trip-start"
+            value={format(selectedDate, 'yyyy-MM-dd')}
+            onChange={(e) => onDateSelect(new Date(e.target.value))}
+            className="transition-all duration-200 ease-in-out rounded-lg px-2 py-1 w-[35px]"
+            style={{
+              color: 'var(--text-primary)',
+              borderColor: 'var(--border-light)'
+            }}
+          />
+        </div>
         {/* En-têtes des jours */}
         <div className="grid grid-cols-7 mb-4">
           {weekDays.map((day, index) => (
@@ -136,14 +131,14 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
                   `}
                   style={{
                     backgroundColor: isSelected 
-                      ? 'var(--color-primary)' 
+                      ? 'var(--color-primary-500)' 
                       : today 
-                        ? 'var(--color-primary-lighter)'
+                        ? 'var(--color-primary-100)'
                         : 'transparent',
                     color: isSelected 
                       ? 'var(--text-inverse)' 
                       : today 
-                        ? 'var(--color-primary)'
+                        ? 'var(--color-primary-500)'
                         : 'var(--text-primary)',
                     fontWeight: today ? 'bold' : 'medium',
                     boxShadow: isSelected ? 'var(--shadow-lg)' : 'none'
@@ -174,7 +169,7 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
                             ? '#a78bfa'
                             : appCount > 1 
                               ? '#fbbf24'
-                              : 'var(--color-primary)'
+                              : 'var(--color-primary-500)'
                       }}
                     />
                   )}
@@ -187,7 +182,7 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
         <button 
           className={`absolute -bottom-3 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full text-sm hover:shadow-lg active:scale-95 transition-all duration-300 ease-in-out ${!isExpanded ? 'rotate-180' : ''}`}
           style={{
-            backgroundColor: 'var(--color-primary)',
+            backgroundColor: 'var(--color-primary-500)',
             color: 'var(--text-inverse)',
             boxShadow: 'var(--shadow-md)'
           }}

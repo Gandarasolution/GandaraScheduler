@@ -21,7 +21,7 @@
 
 "use client";
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Appointment, HalfDayInterval, Groupe, CalendarConfig, Item, User } from '../../types';
+import { Appointment, HalfDayInterval, Equipe, CalendarConfig, Item, User, PoleActivite } from '../../types';
 import { 
   useCalendarInteractions
  } from '@/app/calendrier/hooks';
@@ -31,25 +31,25 @@ import { CELL_WIDTH } from '../../utils/constants';
 interface CalendarGridProps {
   employees: User[];
   appointments: Appointment[];
-  appointmentsDefault: Appointment[];
-  events: Item[];
-  initialTeams: Groupe[];
+  events: Record<number, Item>;
+  initialTeams: Record<number, Equipe>;
+  poleActivites: Record<number, PoleActivite>;
   user: User;
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: number[];
+  nonWorkingDates: Record<string, number>;
   isMobile: boolean;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
-  calendarConfig: CalendarConfig;
+  calendarConfig: CalendarConfig | null;
   onCalendarConfigChange: (config: CalendarConfig) => void;
   availableConfigs: CalendarConfig[];
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onCellDoubleClick: (date: number, employeeId: number, intervalName: "morning" | "afternoon" | "day") => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
-  onExternalDragDrop: (title: string, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre', ) => void;
+  onExternalDragDrop: (item: Item, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, priority: number) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   selectedCell: { employeeId: number; date: number } | null;
   selectedAppointmentId: number | undefined;
@@ -57,14 +57,15 @@ interface CalendarGridProps {
   onSelectAppointment: (appointment: Appointment | null) => void;
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
   mouseUpAfterScroll: () => void;
-  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => void;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
+  onLockedError: (message: string) => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
   employees,
   appointments,
-  appointmentsDefault,
   initialTeams,
+  poleActivites,
   dayInTimeline,
   HALF_DAY_INTERVALS,
   isFullDay,
@@ -90,8 +91,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onLoadAppointmentsInRange,
   mouseUpAfterScroll,
   onAddAppointment,
+  onLockedError
 }) => {
 
+  
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
   const [hoverColumnLeft, setHoverColumnLeft] = useState<number | null>(null);
   const hasAutoScrolled = useRef(false);
@@ -138,9 +141,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return (
       <MobileCalendar
         employees={employees}
+        teams={initialTeams}
         appointments={appointments}
         user={user}
-        items={events}
+        items={Object.values(events)}
+        nonWorkingDates={nonWorkingDates}
         onAddAppointment={onAddAppointment}
       />
     );
@@ -149,9 +154,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   return (
       <DesktopCalendarGrid 
         employees={employees}
-        appointments={appointmentsDefault}
+        appointments={appointments}
         dayInTimeline={dayInTimeline}
         initialTeams={initialTeams}
+        poleActivites={poleActivites}
         calendarConfig={calendarConfig}
         onCalendarConfigChange={onCalendarConfigChange}
         availableConfigs={availableConfigs}
@@ -180,6 +186,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         hoverColumnLeft={hoverColumnLeft}
         onLoadAppointmentsInRange={onLoadAppointmentsInRange}
         mouseUpAfterScroll={mouseUpAfterScroll}
+        onLockedError={onLockedError}
       />
   );
 };

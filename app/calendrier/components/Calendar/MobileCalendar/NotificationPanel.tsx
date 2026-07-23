@@ -32,7 +32,6 @@ interface NotificationPanelProps {
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({ 
   notifications, 
-  onClose, 
   onMarkAsRead, 
   onRemove,
   onClearAll 
@@ -98,7 +97,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
           <button 
             onClick={() => onClearAll()}
             className="text-xs font-medium hover:underline"
-            style={{ color: 'var(--color-primary)' }}
+            style={{ color: 'var(--color-primary-500)' }}
           >
             Tout effacer
           </button>
@@ -195,7 +194,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                       {!notif.isRead && (
                         <span 
                           className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: 'var(--color-primary)' }}
+                          style={{ backgroundColor: 'var(--color-primary-500)' }}
                         >
                         </span>
                       )}

@@ -15,6 +15,7 @@
 import React, { memo } from 'react';
 import { User, CalendarConfig } from '../../types';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
+import { Image as CalendarImage } from '../ui';
 import { 
   TIMELINE_HEADERITEMS_CELL_HEIGHT, 
   CONTAINER_PADDING,
@@ -34,7 +35,7 @@ interface EmployeeSidebarProps {
   expandedOverlapRows: Record<number, boolean>;
   onToggleItem: (itemId: string | number) => void;
   onCollapseRow: (employeeId: number) => void;
-  calendarConfig: CalendarConfig;
+  calendarConfig: CalendarConfig | null;
   availableConfigs: CalendarConfig[];
   onCalendarConfigChange: (config: CalendarConfig) => void;
   updateHighlightedEmployeeRow: (employeeId: number) => void;
@@ -43,16 +44,18 @@ interface EmployeeSidebarProps {
 }
 
 const CustomArrow = ({ isOpen }: { isOpen: boolean }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    fill="currentColor"
-    className={`bi bi-chevron-down ${isOpen ? 'rotate-180' : ''} transition-transform duration-200 ease-in-out text-[#84818a]`}
-    viewBox="0 0 16 16"
-  >
-    <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
-  </svg>
+  <div className="flex items-center justify-center w-5 h-5">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      fill="currentColor"
+      className={`bi bi-chevron-down ${isOpen ? 'rotate-180' : ''} transition-transform duration-200 ease-in-out text-[#84818a]`}
+      viewBox="0 0 16 16"
+    >
+      <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+    </svg>
+  </div>
 );
 
 const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
@@ -72,9 +75,9 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 }) => {
 
   const selectOptions: SelectOptionWithImage[] = availableConfigs.map(config => ({
-    id: config.id,
-    name: config.name,
-    value: config.id,
+    id: config.IdPlanningVue,
+    name: config.LibellePlanningVue,
+    value: config.IdPlanningVue,
   }));
 
   return (
@@ -85,45 +88,49 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
       ref={columnEmployeeRef}
     >
       {/* Header avec sélecteur de calendrier */}
+      
       <div 
-        className={`sticky top-0 z-40 flex bg-bg-primary justify-center flex-shrink-0`}
+        className={`sticky top-0 z-40 flex bg-page justify-center flex-shrink-0`}
         style={{
           height: TIMELINE_HEADERITEMS_CELL_HEIGHT + CONTAINER_PADDING
         }}
       >
-        <div className="custom-select-wrapper relative inline-block w-full">
-          <CustomSelectWithImage
-            options={selectOptions}
-            value={calendarConfig.id}
-            onChange={(value) => {
-              const selectedConfig = availableConfigs.find(config => config.id === value);                  
-              if (selectedConfig) {
-                onCalendarConfigChange(selectedConfig);
+        {calendarConfig && (
+          <div className="custom-select-wrapper relative inline-block w-full">
+            <CustomSelectWithImage
+              options={selectOptions}
+              value={calendarConfig.IdPlanningVue}
+              onChange={(value) => {
+                const selectedConfig = availableConfigs.find(config => config.IdPlanningVue === value);                  
+                if (selectedConfig) {
+                  onCalendarConfigChange(selectedConfig);
+                }
+              }}
+              illustrationImage={
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 80 80" width="25" height="25">
+                  <defs>
+                    <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#00c6ff"/>
+                      <stop offset="100%" stopColor="#0072ff"/>
+                    </linearGradient>
+                    <linearGradient id="gradPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#8e2de2"/>
+                      <stop offset="100%" stopColor="#4a00e0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M20 40 Q50 10 80 40 L60 50 Q40 60 20 40 Z" fill="url(#gradBlue)"/>
+                  <path d="M20 60 Q50 90 80 60 L60 50 Q40 40 20 60 Z" fill="url(#gradPurple)"/>
+                </svg>
               }
-            }}
-            illustrationImage={
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 80 80" width="25" height="25">
-                <defs>
-                  <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#00c6ff"/>
-                    <stop offset="100%" stopColor="#0072ff"/>
-                  </linearGradient>
-                  <linearGradient id="gradPurple" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#8e2de2"/>
-                    <stop offset="100%" stopColor="#4a00e0"/>
-                  </linearGradient>
-                </defs>
-                <path d="M20 40 Q50 10 80 40 L60 50 Q40 60 20 40 Z" fill="url(#gradBlue)"/>
-                <path d="M20 60 Q50 90 80 60 L60 50 Q40 40 20 60 Z" fill="url(#gradPurple)"/>
-              </svg>
-            }
-            placeholder="Sélectionner un calendrier"
-            customArrow={<CustomArrow isOpen={false} />}
-            className='py-3 px-4 w-full'
-          />
-        </div>
-      </div>
+              placeholder="Sélectionner un calendrier"
+              customArrow={<CustomArrow isOpen={false} />}
+              className='py-3 px-4 w-full'
+            />
+          </div>
+        )}
 
+      </div>
+      
       {/* Liste des groupes d'employés */}
       {dimensionItems.map((item, index) => {
         const isOpen = openItems.includes(item.id);
@@ -146,7 +153,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
         return (
           <div
             key={item.id}
-            className="rounded-4xl border-default bg-bg-primary text-primary"
+            className="rounded-4xl border-default bg-primary-bg text-primary"
             style={style}
           >
             {/* Header du groupe */}
@@ -159,22 +166,23 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             >
               {isOpen && (
                 <>
-                  <div className="absolute top-0 -left-1 w-8 h-7 bg-bg-primary" />
-                  <div className="absolute top-0 -right-1 w-7 h-7 bg-bg-primary" />
+                  <div className="absolute top-0 -left-1 w-8 h-7 bg-page" />
+                  <div className="absolute top-0 -right-1 w-7 h-7 bg-page" />
                 </>
               )}
 
               <button
-                className={`relative flex justify-between items-center px-4 ${isOpen ? 'rounded-t-4xl -ml-px border-default border-t border-r border-l w-[284px]' : 'rounded-4xl w-full'} focus:outline-none cursor-pointer bg-bg-secondary`}
+                className={`relative flex justify-between items-center px-4 ${isOpen ? 'rounded-t-4xl -ml-px border-default border-t border-r border-l w-[284px]' : 'rounded-4xl w-full'} focus:outline-none cursor-pointer bg-primary-bg`}
                 style={{ 
                   paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y, 
                   paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y,
+                  height: CELL_HEIGHT,
                 }}
                 onClick={() => onToggleItem(item.id)}
                 type="button"
               >
-                <div className="flex items-center gap-4">
-                  <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="18" height="18" viewBox="0 0 510 510" enableBackground="new 0 0 510 510" xmlSpace="preserve">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <svg className="flex-shrink-0" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="18" height="18" viewBox="0 0 510 510" enableBackground="new 0 0 510 510" xmlSpace="preserve">
                     <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
                       <g>
                         <g id="play-install">
@@ -183,22 +191,26 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                       </g>
                     </g>
                   </svg>
-                  <span className="poppins font-bold">{item.name}</span>
+                  
+                  {/* 3. Le truncate va maintenant fonctionner correctement */}
+                  <span className="poppins font-bold truncate block">{item.name}</span>
                 </div>
+                
+                {/* La flèche garde sa place à droite */}
                 <CustomArrow isOpen={isOpen} />
               </button>
             </div>
             
             {/* Liste des employés */}
             {isOpen && itemEmployees.map((employee) => {
-              const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.id);
-              const employeeRowHeight = rows.find(e => e.id === employee.id)?.height ?? CELL_HEIGHT;
-              const isInactive = employee.actif === false;
+              const rows = flatRows.filter(r => r.type === 'employee' && r.id === employee.IdPersonnel);
+              const employeeRowHeight = rows.find(e => e.id === employee.IdPersonnel)?.height ?? CELL_HEIGHT;
+              const isInactive = employee.Actif === false;
               
               return (
                 <div
-                  key={employee.id}
-                  className="flex px-4 cursor-pointer bg-bg-secondary"
+                  key={employee.IdPersonnel}
+                  className="flex px-4 cursor-pointer bg-primary-bg"
                   style={{ 
                     height: employeeRowHeight, 
                     alignItems: 'center',
@@ -208,31 +220,38 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   }}                    
                 >
                   <div 
-                    className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-ultra-light employee-row-item"
-                    data-employee-id={employee.id}
+                    className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-50 employee-row-item"
+                    data-employee-id={employee.IdPersonnel}
                     onMouseOver={() => {
-                      updateHighlightedEmployeeRow(employee.id);
+                      updateHighlightedEmployeeRow(employee.IdPersonnel);
                     }}
                   >
                     <div className="relative">
-                      <img
-                        src={employee.image?.image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`}
-                        alt={employee.nom}
-                        className={`w-8 h-8 rounded-full border-1 shadow ${employee.type === 'interim' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
-                        onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.nom.charAt(0)}`; }}
-                      />
-                      {employee.type === 'interim' && (
+                      {employee.IdImage ? (
+                        <CalendarImage
+                          image={employee.IdImage}
+                          className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+                        />
+                      ) : (
+                        <img
+                          src={`https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`}
+                          alt={employee.Nom}
+                          className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+                          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`; }}
+                        />
+                      )}
+                      {employee.Type === 'INTERIM' && (
                         <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
                       )}
                     </div>
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className={`poppins text-[16px] font-inherit group-hover:font-semibold truncate ${isInactive ? 'text-gray-400' : ''}`}>{employee.nom + ' ' + employee.prenom}</span>
+                      <span className={`poppins text-[16px] font-inherit group-hover:font-semibold truncate ${isInactive ? 'text-gray-400' : ''}`}>{employee.Nom + ' ' + employee.Prenom}</span>
                     </div>
-                    {expandedOverlapRows[employee.id] && (
+                    {expandedOverlapRows[employee.IdPersonnel] && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onCollapseRow(employee.id);
+                          onCollapseRow(employee.IdPersonnel);
                         }}
                         className="text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
                         type="button"
@@ -256,10 +275,10 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   marginBottom: -EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
                 }}
               >
-                <div className="absolute bottom-0 left-0 w-6 h-7 bg-bg-primary" />
-                <div className="absolute bottom-0 right-0 w-6 h-7 bg-bg-primary" />
+                <div className="absolute bottom-0 left-0 w-6 h-7 bg-page" />
+                <div className="absolute bottom-0 right-0 w-6 h-7 bg-page" />
                 <div 
-                  className="relative w-full h-full bg-bg-secondary border-b border-l border-r border-default rounded-b-4xl"
+                  className="relative w-full h-full bg-primary-bg border-b border-l border-r border-default rounded-b-4xl"
                 />
               </div>
             )}

@@ -9,10 +9,12 @@ export const useSmartScroll = (ref: React.RefObject<HTMLElement>, mouseUpAfterSc
   const scrollTimeout = useRef<number | null>(null);
   const lastScrollPos = useRef(0);
   const hasScrolled = useRef(false); // Nouveau: track si un scroll a eu lieu
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
+    isMountedRef.current = true;
 
     // --- 1. LOGIQUE GRAB (Souris) ---
     const handleMouseDown = (e: MouseEvent) => {
@@ -56,7 +58,9 @@ export const useSmartScroll = (ref: React.RefObject<HTMLElement>, mouseUpAfterSc
 
       // Si pas de nouveau scroll après 50ms, on considère que c'est fini
       scrollTimeout.current = window.setTimeout(() => {
-        setIsScrolling(false);
+        if (isMountedRef.current) {
+          setIsScrolling(false);
+        }
       }, 50);
 
 
@@ -76,10 +80,14 @@ export const useSmartScroll = (ref: React.RefObject<HTMLElement>, mouseUpAfterSc
     node.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
+      isMountedRef.current = false;
       node.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
       node.removeEventListener('scroll', handleScroll);
-      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+        scrollTimeout.current = null;
+      }
     };
   }, [ref, isGrabbing, isScrolling]);
 

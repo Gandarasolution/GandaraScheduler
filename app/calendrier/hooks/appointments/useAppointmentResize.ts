@@ -12,6 +12,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { isWeekend } from 'date-fns';
 import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { HalfDayInterval } from '../../types';
+import evenementService from '@/app/service/evenement.service';
 
 interface UseAppointmentResizeParams {
   appointmentId: number;
@@ -20,7 +21,7 @@ interface UseAppointmentResizeParams {
   priority: number;
   isFullDay: boolean;
   isDisplayWeekend: boolean;
-  onResize?: (
+  onAppointmentResize?: (
     id: number, 
     newStart: number, 
     newEnd: number, 
@@ -53,7 +54,7 @@ export const useAppointmentResize = ({
   priority,
   isFullDay,
   isDisplayWeekend,
-  onResize,
+  onAppointmentResize,
 }: UseAppointmentResizeParams): UseAppointmentResizeReturn => {
   
   const [isResizingLeft, setIsResizingLeft] = useState(false);
@@ -86,31 +87,27 @@ export const useAppointmentResize = ({
     let currentTs = date;
     let currentHour = new Date(currentTs).getHours();
     let idx = intervals.findIndex(interval => 
-      currentHour >= interval.startHour && currentHour < interval.endHour
+        currentHour >= interval.startHour && currentHour < interval.endHour
     );
     if (idx === -1) idx = 0;
-    
     const step = n >= 0 ? 1 : -1;
     let remaining = Math.abs(n);
 
     while (remaining > 0) {
-      idx += step;
-      if (idx >= intervals.length) {
-        idx = 0;
-        currentTs += isFullDay ? DAY_MS : DAY_MS / 2; 
-      } else if (idx < 0) {
-        idx = intervals.length - 1;
-        currentTs -= isFullDay ? DAY_MS : DAY_MS / 2; 
-      } else {
-        currentTs = new Date(currentTs).setHours(intervals[idx].startHour, 0, 0, 0);
-      }
-      
-      if (!isDisplayWeekend) {
-        while (isWeekend(currentTs)) {
-          currentTs += (step * (isFullDay ? DAY_MS : DAY_MS / 2));
+        idx += step;
+        if (idx > 0 ) {
+            idx = 0;
+            currentTs += isFullDay ? DAY_MS : DAY_MS/2; 
+        } else if (idx <= 0) {
+            idx = intervals.length - 1;
+            currentTs -= isFullDay ? DAY_MS : DAY_MS/2; 
         }
-      }
-      remaining--;
+        if (!isDisplayWeekend) {
+            while (isWeekend(currentTs)) {
+                currentTs += (step * (isFullDay ? DAY_MS : DAY_MS/2));
+            }
+        }
+        remaining--;
     }
     return currentTs;
   }, [isDisplayWeekend, isFullDay]);
@@ -120,6 +117,11 @@ export const useAppointmentResize = ({
    */
   const handleMouseDown = useCallback((e: React.MouseEvent, handleType: 'left' | 'right') => {
     e.stopPropagation();
+
+    evenementService.unlockEvenement(appointmentId).catch((err) => {
+          console.error('Erreur lors du déverrouillage du rendez-vous:', err);
+    });
+
     initialX.current = e.clientX;
     setDragStart(startDate);
     setDragEnd(endDate);
@@ -129,6 +131,7 @@ export const useAppointmentResize = ({
     } else {
       setIsResizingRight(true);
     }
+    
   }, [startDate, endDate]);
 
   /**
@@ -148,22 +151,19 @@ export const useAppointmentResize = ({
       if (newStartDate > dragEndRef.current) {
         newStartDate = addInterval(dragEndRef.current, 0, intervals);
       }
+      
       dragStartRef.current = newStartDate;
       setDragStart(newStartDate);
     }
-    
     if (isResizingRight) {
+      
       let newEndDate = addInterval(endDate, intervalsMoved, intervals);
       // Empêcher que la fin soit avant le début
       if (newEndDate < dragStartRef.current) {
         newEndDate = addInterval(dragStartRef.current, 1, intervals);
-      }
-      // Ajuster à la fin de l'heure
-      const adjustedEndDate = new Date(newEndDate).setHours(
-        new Date(newEndDate).getHours() - 1, 59, 59, 999
-      );
-      dragEndRef.current = adjustedEndDate;
-      setDragEnd(adjustedEndDate);
+      }    
+      dragEndRef.current = newEndDate;
+      setDragEnd(newEndDate);
     }
   }, [isResizingLeft, isResizingRight, startDate, endDate, isFullDay, addInterval, INTERVAL_WIDTH]);
 
@@ -171,8 +171,8 @@ export const useAppointmentResize = ({
    * Gère la fin du resize
    */
   const handleMouseUp = useCallback(() => {
-    if (isResizingRight && onResize) {
-      onResize(
+    if (isResizingRight && onAppointmentResize) {
+      onAppointmentResize(
         appointmentId, 
         dragStartRef.current, 
         dragEndRef.current, 
@@ -181,8 +181,8 @@ export const useAppointmentResize = ({
       );
     }
     
-    if (isResizingLeft && onResize) {
-      onResize(
+    if (isResizingLeft && onAppointmentResize) {      
+      onAppointmentResize(
         appointmentId, 
         dragStartRef.current, 
         dragEndRef.current, 
@@ -193,7 +193,7 @@ export const useAppointmentResize = ({
     
     setIsResizingLeft(false);
     setIsResizingRight(false);
-  }, [isResizingLeft, isResizingRight, onResize, appointmentId, priority]);
+  }, [isResizingLeft, isResizingRight, onAppointmentResize, appointmentId, priority]);
 
   /**
    * Attacher/détacher les événements souris

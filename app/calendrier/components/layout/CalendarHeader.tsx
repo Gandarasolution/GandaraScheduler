@@ -3,8 +3,10 @@ import { UserMenu } from '../index';
 
 import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
 import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
-import { Appointment, User } from '../../types';
+import { Appointment, Item, User } from '../../types';
 import { memo, use, useEffect } from 'react';
+import DatePicker from '../ui/DatePicker';
+import { useAuth } from '../../hooks/utils/AuthContext';
 
 interface CalendarHeaderProps {
   theme: string;
@@ -37,7 +39,6 @@ export const CalendarHeader = memo(({
     viewDropdownRef,
     calendarConfigHook, // Pour ouvrir la modale de config calendrier
     
-    
     // Toggles d'affichage
     isDisplayWeekend, setIsDisplayWeekend,
     isFullDay, setIsFullDay,
@@ -46,6 +47,7 @@ export const CalendarHeader = memo(({
     selectedDate, setSelectedDate
   } = viewState;
 
+  const { hasPermission } = useAuth();
 
 
   return (
@@ -111,7 +113,7 @@ export const CalendarHeader = memo(({
               {/* Bouton Retour Planning (visible si hors calendar) */}
               {viewType !== 'calendar' && (
                 <button
-                  className="p-3 rounded-full hover:bg-primary-lighter transition cursor-pointer"
+                  className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
                   onClick={() => {setViewType('calendar')}}
                   title="Planning"
                 >
@@ -134,7 +136,7 @@ export const CalendarHeader = memo(({
 
               {/* Bouton Paramètres */}
               <button
-                className="p-3 rounded-full hover:bg-primary-lighter transition cursor-pointer"
+                className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
                 onClick={() => setIsSettingsOpen(true)}
                 title="Paramètres"
               >
@@ -146,117 +148,120 @@ export const CalendarHeader = memo(({
               </button>
 
               {/* Menu Sélection de Vue */}
-              <div className="relative" ref={viewDropdownRef}>
-                <button
-                  className="p-3 rounded-full hover:bg-primary-lighter transition cursor-pointer"
-                  onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
-                  title="Changer de vue"
-                >
-                  <svg id="Layer_1" enableBackground="new 0 0 512 512" height="25" viewBox="0 0 512 512" width="25" xmlns="http://www.w3.org/2000/svg" version="1.1" fill='currentColor' xmlnsXlink="http://www.w3.org/1999/xlink" className='bg-icon'>
-                    <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                      <path clipRule="evenodd" d="m40.583 21h71.806c10.771 0 19.583 8.812 19.583 19.583v71.806c0 10.771-8.812 19.583-19.583 19.583h-71.806c-10.771 0-19.583-8.812-19.583-19.583v-71.806c0-10.771 8.812-19.583 19.583-19.583zm159.931 19.583v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583z"/>
-                    </g>
-                  </svg>
-                </button>
+              {(hasPermission(23) || hasPermission(22)) && (
+                <div className="relative" ref={viewDropdownRef}>
+                  <button
+                    className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
+                    onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
+                    title="Changer de vue"
+                  >
+                    <svg id="Layer_1" enableBackground="new 0 0 512 512" height="25" viewBox="0 0 512 512" width="25" xmlns="http://www.w3.org/2000/svg" version="1.1" fill='currentColor' xmlnsXlink="http://www.w3.org/1999/xlink" className='bg-icon'>
+                      <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                        <path clipRule="evenodd" d="m40.583 21h71.806c10.771 0 19.583 8.812 19.583 19.583v71.806c0 10.771-8.812 19.583-19.583 19.583h-71.806c-10.771 0-19.583-8.812-19.583-19.583v-71.806c0-10.771 8.812-19.583 19.583-19.583zm159.931 19.583v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm-359.028 179.514v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583zm179.514 0v71.806c0 10.771 8.812 19.583 19.583 19.583h71.806c10.771 0 19.583-8.812 19.583-19.583v-71.806c0-10.771-8.812-19.583-19.583-19.583h-71.806c-10.771 0-19.583 8.812-19.583 19.583z"/>
+                      </g>
+                    </svg>
+                  </button>
 
-                {/* Dropdown Content */}
-                {isViewDropdownOpen && (
-                  <div className="absolute top-full -left-30 mt-2 w-56 bg-bg-secondary rounded-2xl shadow-2xl border-gray-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-                    <div className="px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white">
-                      <h3 className="text-sm font-semibold">Changer de vue</h3>
-                      <p className="text-xs text-white/80 mt-1">Sélectionnez votre mode d'affichage</p>
-                    </div>
-                    
-                    <div className="py-2">
-                      {/* Option: Calendrier */}
-                      <button
-                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'calendar' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
-                        onClick={() => { setViewType('calendar'); setIsViewDropdownOpen(false); }}
-                      >
-                        <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'calendar' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">Planning</div>
-                          <div className="text-xs text-primary mt-0.5">Vue calendrier avec timeline</div>
-                        </div>
-                        {viewType === 'calendar' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
-                      </button>
+                  {/* Dropdown Content */}
+                  {isViewDropdownOpen && (
+                    <div className="absolute top-full -left-30 mt-2 w-56 bg-secondary-bg rounded-2xl shadow-2xl border border-light z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                      <div className="px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white">
+                        <h3 className="text-sm font-semibold">Changer de vue</h3>
+                        <p className="text-xs text-white/80 mt-1">Sélectionnez votre mode d'affichage</p>
+                      </div>
                       
-                      <div className="mx-4 my-2 h-px bg-primary-lighter"></div>
-
-                      {/* Option: Chantier Table */}
-                      <button
-                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'chantier-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
-                        onClick={() => { setViewType('chantier-table'); setIsViewDropdownOpen(false); }}
-                      >
-                        <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'chantier-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zM1 2v2h4V2H1zm4 3H1v3h4V5zm0 4H1v3h4V9zm0 4H1v2a1 1 0 0 0 1 1h3v-3zm5-8H6v3h4V4zm0 4H6v3h4V8z" /></svg>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">Liste des chantiers</div>
-                          <div className="text-xs text-primary mt-0.5">Vue tableau avec filtres</div>
-                        </div>
-                        {viewType === 'chantier-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
-                      </button>
-
-                      {/* Option: Paie Table - Seulement pour Admin et Manager */}
-                      {(user?.role === 'admin' || user?.role === 'manager') && (
+                      <div className="py-2">
+                        {/* Option: Calendrier */}
                         <button
-                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'paie-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
-                          onClick={() => { setViewType('paie-table'); setIsViewDropdownOpen(false); }}
+                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'calendar' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
+                          onClick={() => { setViewType('calendar'); setIsViewDropdownOpen(false); }}
                         >
-                          <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'paie-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm13-1H2a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM2 5v7h12V5H2z"/><path d="M6 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 8zm0 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5z"/></svg>
+                          <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'calendar' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
                           </div>
                           <div className="flex-1">
-                            <div className="font-medium">Rubrique Sociale</div>
-                            <div className="text-xs text-primary mt-0.5">Gestion des éléments de paie</div>
+                            <div className="font-medium">Planning</div>
+                            <div className="text-xs text-primary mt-0.5">Vue calendrier avec timeline</div>
                           </div>
-                          {viewType === 'paie-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
+                          {viewType === 'calendar' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
                         </button>
-                      )}
-                      {/* Option: Événements manuels - Seulement pour Admin et Manager */}
-                      {(user?.role === 'admin' || user?.role === 'manager') && (
+                        
+                        <div className="mx-4 my-2 h-px bg-primary-100"></div>
+
+                        {/* Option: Chantier Table */}
                         <button
-                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
-                          onClick={() => { setViewType('manual-event-table'); setIsViewDropdownOpen(false); }}
+                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'chantier-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
+                          onClick={() => { setViewType('chantier-table'); setIsViewDropdownOpen(false); }}
                         >
-                          <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'manual-event-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 011 1v10a1 1 0 01-1 1h-6.586l-3.707 3.707A1 1 0 018 19v-3H4a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v8h4a1 1 0 011 1v1.586L12.586 15H19V6H5zm2 2h10v2H7V8zm0 3h7v2H7v-2z"/></svg>
+                          <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'chantier-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zM1 2v2h4V2H1zm4 3H1v3h4V5zm0 4H1v3h4V9zm0 4H1v2a1 1 0 0 0 1 1h3v-3zm5-8H6v3h4V4zm0 4H6v3h4V8z" /></svg>
                           </div>
                           <div className="flex-1">
-                            <div className="font-medium">Événements manuels</div>
-                            <div className="text-xs text-primary mt-0.5">Créer et gérer les rubriques personnalisées</div>
+                            <div className="font-medium">Liste des chantiers</div>
+                            <div className="text-xs text-primary mt-0.5">Vue tableau avec filtres</div>
                           </div>
-                          {viewType === 'manual-event-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}                     
+                          {viewType === 'chantier-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
                         </button>
-                      )}
-                      {/* Option: Employee Table */}
-                      <button
-                        className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'employee-table' ? 'bg-primary-lighter text-primary shadow-sm' : 'text-primary hover:bg-primary-ultra-light hover:shadow-sm'}`}
-                        onClick={() => { setViewType('employee-table'); setIsViewDropdownOpen(false); }}
-                      >
-                        <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'employee-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">Liste des employées</div>
-                          <div className="text-xs text-primary mt-0.5">Gestion des employée</div>
-                        </div>
-                        {viewType === 'employee-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
-                      </button>
+
+                        {/* Option: Paie Table - Seulement pour Admin et Manager */}
+                        {hasPermission(23) && (
+                          <button
+                            className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'paie-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
+                            onClick={() => { setViewType('paie-table'); setIsViewDropdownOpen(false); }}
+                          >
+                            <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'paie-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm13-1H2a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM2 5v7h12V5H2z"/><path d="M6 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 8zm0 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5z"/></svg>
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium">Rubrique Sociale</div>
+                              <div className="text-xs text-primary mt-0.5">Gestion des éléments de paie</div>
+                            </div>
+                            {viewType === 'paie-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
+                          </button>
+                        )}
+                        {hasPermission(23) && (
+                          <button
+                            className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
+                            onClick={() => { setViewType('manual-event-table'); setIsViewDropdownOpen(false); }}
+                          >
+                            <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'manual-event-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 011 1v10a1 1 0 01-1 1h-6.586l-3.707 3.707A1 1 0 018 19v-3H4a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v8h4a1 1 0 011 1v1.586L12.586 15H19V6H5zm2 2h10v2H7V8zm0 3h7v2H7v-2z"/></svg>
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium">Événements manuels</div>
+                              <div className="text-xs text-primary mt-0.5">Créer et gérer les rubriques personnalisées</div>
+                            </div>
+                            {viewType === 'manual-event-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}                     
+                          </button>
+                        )}
+                        
+                        {hasPermission(23) && (
+                          <button
+                            className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'employee-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
+                            onClick={() => { setViewType('employee-table'); setIsViewDropdownOpen(false); }}
+                          >
+                            <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'employee-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium">Liste des employées</div>
+                              <div className="text-xs text-primary mt-0.5">Gestion des employée</div>
+                            </div>
+                            {viewType === 'employee-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
+                          </button>
+                        )}
+                      </div>
+                      <div className="px-4 py-2 bg-transparent border-t border-light">
+                        <p className="text-xs text-primary text-center">Raccourci : <span className="font-mono bg-transparent px-1 rounded">Ctrl + Q</span></p>
+                      </div>
                     </div>
-                    <div className="px-4 py-2 bg-transparent border-t border-light">
-                      <p className="text-xs text-primary text-center">Raccourci : <span className="font-mono bg-transparent px-1 rounded">Ctrl + Q</span></p>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
               {/* Bouton Notifications */}
               <button
-                className="p-3 rounded-full hover:bg-primary-lighter transition relative cursor-pointer"
+                className="p-3 rounded-full hover:bg-primary-100 transition relative cursor-pointer"
                 onClick={() => setIsNotificationsPanelOpen(!isNotificationsPanelOpen)}
                 title="Notifications"
               >
@@ -299,18 +304,18 @@ export const CalendarHeader = memo(({
         <div className="flex flex-row items-center gap-4">
           <div className="flex flex-row items-center gap-2">
             {viewType === 'calendar' && (
-              <input
-                id="date-select"
-                type="date"
-                className="date-input border w-38 border-default rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-color transition bg-bg-secondary text-base text-primary"
-                value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
-                onChange={(e) => {
-                  const date = new Date(e.target.value).setHours(0,0,0,0);                  
-                  if (isNaN(date)) return;
-                  setSelectedDate(date);
-                  onNavigateDate(date);
-                }}
-              />
+              <div className="w-44">
+                <DatePicker
+                  value={selectedDate}
+                  onChange={(date) => {
+                    setSelectedDate(date);
+                    onNavigateDate(date);
+                  }}
+                  format="dd/MM/yyyy"
+                  placeholder="Sélectionner une date"
+                  inputClassName="bg-secondary-bg text-primary border-default border rounded-2xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary transition w-38"
+                />
+              </div>
             )}
           </div>
 
@@ -323,13 +328,13 @@ export const CalendarHeader = memo(({
                   className="transition btn-header cursor-pointer border-r border-default px-3 py-2"
                   onClick={() => setIsDisplayWeekend(!isDisplayWeekend)}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className={"bg-icon bi bi-calendar-event transition duration-200 " + (!isDisplayWeekend ? ' text-color-primary' : 'text-gray-500')} viewBox="0 0 16 16">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className={"bg-icon bi bi-calendar-event transition duration-200 " + (!isDisplayWeekend ? ' text-primary-500' : 'text-gray-500')} viewBox="0 0 16 16">
                     <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z" fillOpacity="1" stroke="none" strokeOpacity="1"/>
                     <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z" fillOpacity="1" stroke="none" strokeOpacity="1"/>
                   </svg>
                 </button>
                 <button 
-                  className="transition cursor-pointer btn-header border-r border-default px-3 py-2"
+                  className={"transition cursor-pointer btn-header  border-default px-3 py-2" + (!hasPermission(23) ? '' : ' border-r')}
                   onClick={() => setIsFullDay(!isFullDay)}
                 >
                   {!isFullDay ? (
@@ -348,38 +353,39 @@ export const CalendarHeader = memo(({
                 </button>
               </>
             )}
-            
-            <>
-              <button 
-                className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
-                name="filtrer"
-                onClick={() => viewType === 'calendar' ? calendarConfigHook.openConfigModal() : setIsFilterModalOpen(true)}
-                title="Filtrer"
-              >
-                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bg-icon w-5 h-5 text-inherit text-gray-500 transition duration-200">
-                  <g><path d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"/></g>
-                </svg>
-              </button>
-            </>
+            {(hasPermission(23)) && (
+              <>
+                <button 
+                  className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
+                  name="filtrer"
+                  onClick={() => viewType === 'calendar' ? calendarConfigHook.openConfigModal() : setIsFilterModalOpen(true)}
+                  title="Filtrer"
+                >
+                  <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bg-icon w-5 h-5 text-inherit text-gray-500 transition duration-200">
+                    <g><path d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"/></g>
+                  </svg>
+                </button>
+              </>
+            )}
             
           </div>
 
           {/* Bouton Ajouter Évènement */}
-          {(viewType === 'calendar' || viewType === 'manual-event-table') && (
+          {(hasPermission(23) || hasPermission(22)) && (viewType === 'calendar' || viewType === 'manual-event-table')  && (
             <button
-              className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto bg-primary-light"
+              className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto bg-primary-500"
               type="button"
               onClick={() => 
                 viewType === 'calendar' 
                   ? setIsSearchOverlayOpen(true) 
                   : handleAddModal({
-                    id: -1,
-                    description: '',
-                    startDate: 0,
-                    endDate: 1,
-                    employee: {} as User,
-                    type: 'autre',
-                    EventId: 0,
+                    IdPlanningEvenement: -1,
+                    AnnotationPlanningEvenement: '',
+                    DebutPlanningEvenement: 0,
+                    FinPlanningEvenement: 1,
+                    IdEmploye: -1,
+                    IdPlanningRessource: -1,
+                    isLocked: false,
                   })
               }
               title={viewType === 'calendar' ? "Ajouter un évènement" : "Ajouter une ressource"}

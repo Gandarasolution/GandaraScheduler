@@ -18,6 +18,8 @@ const GroupRow: React.FC<GroupRowProps> = ({
   isFullDay,
 }) => {
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
+  const STEP_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
+  
 
   return (
     <div 
@@ -31,10 +33,10 @@ const GroupRow: React.FC<GroupRowProps> = ({
         backgroundColor: 'transparent',
         backgroundImage: `repeating-linear-gradient(
           to right,
-          rgba(229,231,235,0.9) 0px,
-          rgba(229,231,235,0.9) 1px,
-          transparent 1px,
-          transparent ${isFullDay ? CELL_WIDTH  : CELL_WIDTH / 2}px
+          transparent 0px,
+          transparent ${STEP_WIDTH - 1}px, /* L'espace vide prend presque toute la largeur */
+          var(--border-100) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
+          var(--border-100) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
         )`
       }}
     >

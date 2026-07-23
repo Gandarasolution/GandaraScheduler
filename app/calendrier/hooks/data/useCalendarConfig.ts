@@ -3,31 +3,39 @@
  * Centralise toute la logique de configuration et de dimension
  */
 
-import { useState, useCallback, useMemo, MutableRefObject } from 'react';
+import { useState, useCallback, useMemo, useEffect, MutableRefObject } from 'react';
 import { CalendarConfig, User } from '@/app/calendrier';
-import { getCalendarConfigsByUserId } from '@/app/datasource';
+import calendarConfigService from '@/app/service/calendarConfig.service';
+import { useAuth } from '../utils/AuthContext';
 
 interface UseCalendarConfigProps {
-  employees: MutableRefObject<User[]>;
   user: User;
+  idPlanning: number;
+  setCurrentCalendarConfig: (config: CalendarConfig | null) => void;
 }
 
-export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
-  const [customConfigs, setCustomConfigs] = useState<CalendarConfig[]>([]);
+export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }: UseCalendarConfigProps) {
+  const { currentVueId } = useAuth();
+    
+  const [configs, setConfigs] = useState<CalendarConfig[]>([]);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<CalendarConfig | null>(null);
   const [isCreatingConfig, setIsCreatingConfig] = useState(false);
 
-  // Fonction pour obtenir les configurations disponibles depuis la base de données
-  const getAvailableConfigs = useMemo((): CalendarConfig[] => {
-    // Charger les configurations d'après l'accès utilisateur depuis datasource
-    const userConfigs = getCalendarConfigsByUserId(user.id);
-    
-    // Ajouter les configurations personnalisées créées par l'utilisateur
-    const configs = [...userConfigs, ...customConfigs];
+  const loadConfigs = async (hasPermission: boolean) => {
+    console.log('Loading configs with permission:', hasPermission);
+      const response = hasPermission ? await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel, idPlanning) : null;
+      console.log('Load Configs Response:', response);
+      
+      if (response?.error === 0 && Array.isArray(response.data.Configs)) {
 
-    return configs;
-  }, [user.id, customConfigs]);
+        setConfigs(response.data.Configs);
+        setCurrentCalendarConfig(response.data.Configs.find((config: { IdPlanningVue: number | null; }) => Number(config.IdPlanningVue) === Number(currentVueId)) || null);
+        return response;
+      }
+
+      setConfigs([]);
+  }; 
 
   const openConfigModal = useCallback(() => {
     setIsConfigModalOpen(true);
@@ -49,43 +57,67 @@ export function useCalendarConfig({ employees, user }: UseCalendarConfigProps) {
     setIsCreatingConfig(false);
   }, []);
 
-  const saveConfig = useCallback((config: CalendarConfig) => {
+  const saveConfig = useCallback(async (config: { planningVue: any; filtrePerso: any }) => {
     if (isCreatingConfig) {
-      setCustomConfigs(prev => [...prev, { ...config, id: Date.now() }]);
+      const response = await calendarConfigService.createCalendarConfig(config);
+      console.log('Create Config Response:', response);
+      if (response?.error === 0 && (response.data || response.message)) {
+        console.log('Config created successfully:', response.data);
+        setConfigs(prev => [...prev, response.data]);
+        
+        return response;
+      }else {
+        console.error('Failed to create config:', response?.message);
+        return response;
+      }
     } else if (editingConfig) {
-      setCustomConfigs(prev => prev.map(c => c.id === editingConfig.id ? config : c));
+      const response = await calendarConfigService.updateCalendarConfig(editingConfig.IdPlanningVue, config);
+      if (response?.error === 0 && (response.data || response.message)) {
+        setConfigs(prev => prev.map(c => c.IdPlanningVue === editingConfig.IdPlanningVue ? response.data : c));
+        return response;
+      } else {
+        console.error('Failed to update config:', response?.message);
+        return response;
+      }
     }
-    closeConfigModal();
-  }, [isCreatingConfig, editingConfig, closeConfigModal]);
+  }, [isCreatingConfig, editingConfig, closeConfigModal, user.IdPersonnel]);
 
-  const deleteConfig = useCallback((configId: number) => {
-    setCustomConfigs(prev => prev.filter(c => c.id !== configId));
+  const deleteConfig = useCallback(async (configId: number): Promise<{error: number, message?: string} | void> => {
+    try {
+      const response = await calendarConfigService.deleteCalendarConfig(configId);
+      
+      // On vérifie si la réponse existe et si l'erreur est 0
+      if (response && response.error === 0) {
+        setConfigs(prev => prev.filter(c => c.IdPlanningVue !== configId));
+      }
+      
+      // On retourne la réponse pour que la modale puisse lire le code erreur (0 ou 1)
+      return response;
+    } catch (error) {
+      console.error("Erreur lors de l'appel API de suppression:", error);
+      // On retourne une structure d'erreur cohérente en cas de crash réseau
+      return { error: 1, message: "Erreur de communication avec le serveur." };
+    }
   }, []);
 
-  const addConfig = useCallback((config: CalendarConfig) => {
-    setCustomConfigs(prev => [...prev, config]);
-  }, []);
-
-  const updateConfig = useCallback((config: CalendarConfig) => {
-    setCustomConfigs(prev => prev.map(c => c.id === config.id ? config : c));
-  }, []);
+useEffect(() => {
+  console.log(configs);
+}, [configs]);
 
   return {
-    customConfigs,
     isConfigModalOpen,
     editingConfig,
     isCreatingConfig,
-    getAvailableConfigs,
+    configs, setConfigs,
     openConfigModal,
     closeConfigModal,
     startCreatingConfig,
     startEditingConfig,
     saveConfig,
     deleteConfig,
-    addConfig,
-    updateConfig,
     setIsConfigModalOpen,
     setEditingConfig,
-    setIsCreatingConfig
+    setIsCreatingConfig,
+    loadConfigs,
   };
 }

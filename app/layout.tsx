@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.scss";
+import { AuthProvider } from "./calendrier/hooks/utils/AuthContext";
 
 
 
@@ -58,7 +59,9 @@ export default function RootLayout({
       <body
         className={`poppins antialiased`}
       >
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

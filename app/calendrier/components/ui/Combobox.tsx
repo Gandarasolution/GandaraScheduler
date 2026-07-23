@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect, memo } from 'react';
 
-interface ComboboxOption {
-  value: string;
-  label: string;
-}
+
 
 interface ComboboxProps {
-  options: ComboboxOption[];
+  options: string[];
   value: string[];
   onValueChange: (value: string[]) => void;
   placeholder?: string;
@@ -17,12 +14,14 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOptions = options.filter(opt => value.includes(opt.value));
+  const selectedOptions = options.filter(opt => value.includes(opt));
+
 
   const filteredOptions = options.filter(option =>
-    option.label.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    !value.includes(option.value)
+    option?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    !value.includes(option)
   );
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -41,8 +40,8 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
     setIsOpen(true);
   };
 
-  const handleOptionClick = (option: ComboboxOption) => {
-    onValueChange([...value, option.value]);
+  const handleOptionClick = (option: string) => {
+    onValueChange([...value, option]);
     setSearchQuery('');
     setIsOpen(false);
   };
@@ -62,29 +61,29 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
         <div className="flex flex-wrap gap-2 mb-2">
           {selectedOptions.map((option) => (
             <div
-              key={option.value}
+              key={option}
               className="pl-3 pr-2 py-1 flex items-center gap-1 rounded-md"
               style={{
-                backgroundColor: 'var(--color-primary-lighter)',
-                color: 'var(--color-primary-dark)',
+                backgroundColor: 'var(--color-primary-100)',
+                color: 'var(--color-primary-600)',
                 border: 'none'
               }}
             >
-              <span>{option.label}</span>
+              <span>{option}</span>
               <button
                 type="button"
-                onClick={() => handleRemoveOption(option.value)}
+                onClick={() => handleRemoveOption(option)}
                 className="rounded-full p-0.5 transition-colors"
                 style={{
-                  color: 'var(--color-primary-dark)'
+                  color: 'var(--color-primary-600)'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-primary-light)';
+                  e.currentTarget.style.backgroundColor = 'var(--color-primary-400)';
                   e.currentTarget.style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--color-primary-dark)';
+                  e.currentTarget.style.color = 'var(--color-primary-600)';
                 }}
               >
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -109,7 +108,7 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           placeholder={placeholder}
-          className="pl-9 pr-9 w-full py-2 border border-light rounded-xl focus:outline-none focus:border-primary transition bg-bg-secondary text-primary"
+          className="pl-9 pr-9 w-full py-2 border border-light rounded-xl focus:outline-none focus:border-primary transition bg-secondary-bg text-primary"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-chevron-down" viewBox="0 0 16 16">
@@ -121,22 +120,22 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
       {/* Dropdown list */}
       {isOpen && filteredOptions.length > 0 && (
         <div 
-          className="absolute z-50 mt-1 w-full border rounded-xl border-light shadow-lg max-h-60 overflow-auto bg-bg-secondary"
+          className="absolute z-50 mt-1 w-full border rounded-xl border-light shadow-lg max-h-60 overflow-auto bg-secondary-bg"
         >
           {filteredOptions.map((option) => (
             <button
-              key={option.value}
+              key={option}
               type="button"
               onClick={() => handleOptionClick(option)}
               className="w-full text-left px-3 py-2 transition-colors"
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-primary-ultra-light)';
+                e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              {option.label}
+              {option}
             </button>
           ))}
         </div>
@@ -146,7 +145,7 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
         <div 
           className="absolute z-50 mt-1 w-full border rounded-md shadow-lg px-3 py-2"
           style={{
-            backgroundColor: 'var(--color-bg-secondary)',
+            backgroundColor: 'var(--bg-primary)',
             borderColor: 'var(--border)',
             color: 'var(--muted-foreground)'
           }}

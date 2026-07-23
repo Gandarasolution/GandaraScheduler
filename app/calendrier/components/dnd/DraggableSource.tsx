@@ -1,10 +1,7 @@
 "use client";
 import React, { memo } from 'react';
 import { useDrag } from 'react-dnd';
-
-import ChantierIcones from '../../image/Icones/Chantier.png';
-import AbsenceIcones from '../../image/Icones/Absences.png';
-import AutreIcones from '../../image/Icones/Autres.png';
+import { Item } from '../../types';
 
 /**
  * Props du composant DraggableSource
@@ -12,9 +9,10 @@ import AutreIcones from '../../image/Icones/Autres.png';
  */
 interface DraggableSourceProps {
   id: number; // ID unique de la source
+  item: Item;
   title: string;
   imageUrl?: string | undefined; // URL de l'image associée à la source, optionnelle
-  type: 'Chantier' | 'Absence' | 'Autre'; // Type de l'élément, pour catégoriser les sources
+  type: "Projet" | "Paie" | "Rubrique Perso"; // Type de l'élément, pour catégoriser les sources
   className?: string; // Classes CSS additionnelles
 }
 
@@ -22,10 +20,10 @@ interface DraggableSourceProps {
  * Composant DraggableSource
  * Utilisé pour rendre un élément draggable depuis une source externe.
  */
-const DraggableSource: React.FC<DraggableSourceProps> = ({ id, title, imageUrl = null, type, className }) => {
+const DraggableSource: React.FC<DraggableSourceProps> = ({ id, item, title, imageUrl = null, type, className }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'external-item',
-    item: { id, title, sourceType: 'external', imageUrl, typeEvent: type },
+    item: { id, item, title, sourceType: 'external', imageUrl, typeEvent: type },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),

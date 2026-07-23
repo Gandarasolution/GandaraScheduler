@@ -3,8 +3,11 @@ import { CalendarConfig, User } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
+import { axiosAgent } from '@/app/service/axios.service';
+import { calendarConfigService } from '@/app/service';
 
-export const useCalendarView = (employeesRef: any, user: User) => {
+export const useCalendarView = (idPlanning: number, user: User) => {
+
   // --- Préférences persistantes (localStorage) ---
   const getStoredBool = (key: string, def: boolean) => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -49,18 +52,49 @@ export const useCalendarView = (employeesRef: any, user: User) => {
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({ empty: [] });
   const [selectedDate, setSelectedDate] = useState<number>(new Date().setHours(0,0,0,0));
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
-  const [nonWorkingDates, setNonWorkingDates] = useState<number[]>([]);
+  const [nonWorkingDates, setNonWorkingDates] = useState<Record<string, number>>({});
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
   const [searchInput, setSearchInput] = useState<string>('');
   const [dimensionSearchInput, setDimensionsSearchInput] = useState<string>('');
 
+
   // --- Hook de configuration existant ---
-  const calendarConfigHook = useCalendarConfig({ employees: employeesRef, user });
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
+  const calendarConfigHook = useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig });
+
 
    // État local pour le menu déroulant des vues
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const viewDropdownRef = useRef<HTMLDivElement>(null);
+
+  const onCalendarConfigChange = (config: CalendarConfig) => {
+    setCurrentCalendarConfig(config);
+    calendarConfigService.setLastVueForUser(config.IdPlanningVue || -1).then(() => {
+      console.log(`Last view for user ${user.IdPersonnel} set to ${config.IdPlanningVue}`);
+      axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = config.IdPlanningVue;
+    }).catch((error) => {
+      console.error('Error setting last view for user:', error);
+    }); 
+  }
+  const loadNonWorkingDates = async (): Promise<{ error: number; message: string }> => {
+      const result = await calendarConfigService.getNonWorkingDatesByPlanningId();
+      console.log('Résultat du chargement des jours non travaillés :', result);
+      if (result?.error === 0 && result.data) {
+        const recordData = Object.fromEntries(
+          result.data.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [
+              item.DatePlanningJourNontravaille, // La clé (string)
+              Number(item.IdPlanningJourNontravaille) // La valeur (number)
+          ])
+        );
+
+        // 2. On met à jour le state
+        setNonWorkingDates(recordData);
+
+        return { error: 0, message: 'Jours non travaillés chargés avec succès' };
+      }else {
+        return { error: result?.error || 1, message: result?.message || 'Erreur lors du chargement des jours non travaillés'};
+      }
+    };
 
 
   // --- Setters avec persistence ---
@@ -68,14 +102,7 @@ export const useCalendarView = (employeesRef: any, user: User) => {
     setter(value);
     setTimeout(() => localStorage.setItem(key, JSON.stringify(value)), 0);
   };
-
-  // --- Auto-init configuration ---
-  useEffect(() => {
-    if (calendarConfigHook.getAvailableConfigs.length > 0 && !currentCalendarConfig) {
-      setCurrentCalendarConfig(calendarConfigHook.getAvailableConfigs[0]);
-    }
-  }, [calendarConfigHook.getAvailableConfigs, currentCalendarConfig]);
-
+  
   // --- Detection Mobile ---
   useEffect(() => {
     const handleResize = () => {
@@ -93,6 +120,7 @@ export const useCalendarView = (employeesRef: any, user: User) => {
 
   useEffect(() => {
     setSearchInput('');
+    setActiveFilters({ empty: [] });
   }, [viewType]);
 
   // Fermer le dropdown quand on clique à l'extérieur
@@ -157,8 +185,13 @@ export const useCalendarView = (employeesRef: any, user: User) => {
     // Config Calendar
     calendarConfigHook,
     currentCalendarConfig,
-    setCurrentCalendarConfig,
-    availableConfigs: calendarConfigHook.getAvailableConfigs,
+    onCalendarConfigChange,
+    availableConfigs: calendarConfigHook.configs,
+    setAvailableConfigs: calendarConfigHook.setConfigs,
+
+
+    loadConfigs: calendarConfigHook.loadConfigs,
+    loadNonWorkingDates,
 
     // Helpers pour constants
     constants: {

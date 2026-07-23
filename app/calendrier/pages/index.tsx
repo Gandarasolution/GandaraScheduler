@@ -12,9 +12,11 @@
 "use client";
 
 import '../styles/custom.scss';
-import React, { useEffect, useRef, useMemo, use, useCallback, lazy, Suspense, useState } from "react";
+import React, { useEffect, useRef, useMemo, useCallback, lazy, Suspense, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { format } from "date-fns";
+
 
 // --- COMPOSANTS UI (Eager loading pour éviter le flash) ---
 import { 
@@ -27,12 +29,13 @@ import {
   CalendarModals,
   DraggableSource,
 } from '@/app/calendrier/components';
+import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOverlay';
+import { getTableStructure } from '../components/Table/tableConfig';
 
 
 // --- COMPOSANTS UI AVEC CODE SPLITTING ---
 const CalendarGrid = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.CalendarGrid })));
 const DataTableFrame = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.DataTableFrame })));
-const ManualEventsManager = lazy(() => import('@/app/calendrier/components').then(mod => ({ default: mod.ManualEventsManager })));
 
 // --- CUSTOM HOOKS ---
 import { 
@@ -48,13 +51,18 @@ import { useTheme } from '../utils/themeManager';
 
 // --- CONTEXTES & SERVICES ---
 import { notificationService } from "../services";
+import employeeService from '@/app/service/employee.service';
+import evenementService from '@/app/service/evenement.service';
+import ressourceService from '@/app/service/ressource.service';
+import calendarConfigService from '@/app/service/calendarConfig.service';
 
 // --- UTILITAIRES ---
-import { getEmployees } from "../../datasource"; // Ajout de getImages
-import { customRenderersFactory, customComputedFieldsFactory } from "../utils/factories";
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
-import { User, Item, CommonPaieAttributs } from '../types';
-import { canCreateEvent } from '../utils/permissions';
+import { User, Item } from '../types';
+import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
+import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
+import { useMercureSync } from '../hooks/utils/useMercureSync';
+import TopNotification from '../components/ui/TopNotification';
 
 // Composant de chargement réutilisable
 const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
@@ -81,47 +89,45 @@ function NoSSR({ children }: { children: React.ReactNode }) {
  * Composant Principal HomePage
  */
 export default function HomePage({
-  user,
   onThemeChange,
 }: {
-  user: User;
   onThemeChange?: (theme: any) => void;
 }) {
+
+  const { hasPermission, currentPlanningId, setUser, logout } = useAuth();
+  
+  const user = useCurrentUser();
+  
+  const [loadCalendar, setLoadCalendar] = useState(true); 
+  const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
+  const [lockNotification, setLockNotification] = useState<string | null>(null);
+
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
   const notifications = useNotifications();
 
   // État pour la confirmation de suppression de rubrique
   const [deleteConfirmData, setDeleteConfirmData] = useState<{ item: Item, isUsedInPlanning: boolean, isActive: boolean } | null>(null);
+  const [, setEmployeesVersion] = useState(0);
+  const hasInitializedPlanningRef = useRef(false);
+  const hasInitializedTeamsRef = useRef(false);
+  const hasInitializedEmployeesRef = useRef(false);
+  const hasInitializedNonWorkingDatesRef = useRef(false);
+  const [errorPlanning, setErrorPlanning] = useState<string | null>(null);
 
-  // Refs de données statiques
-  const globalEmployeesRef = useRef(getEmployees());
+  // Refs de données dynamiques (chargées via API)
+  const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
-  const viewState = useCalendarView(globalEmployeesRef, user);
+  const viewState = useCalendarView(currentPlanningId, user );
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
-    viewType: viewState.viewType, 
-    searchQuery: viewState.searchInput || viewState.dimensionSearchInput,
-    filters: viewState.activeFilters,
-    calendarConfig: viewState.currentCalendarConfig,
-    globalEmployeesRef,
-    isSearchOverlayOpen: viewState.isSearchOverlayOpen,
-    // Activer la collaboration
-    enableCollaboration: true,
-    userId: user?.id ? String(user.id) : 'anonymous',
-    userIdNumber: user?.id || 0,
-    userRole: user?.role || 'viewer',
-    userName: user?.nom ? `${user.nom} ${user.prenom}` : 'Utilisateur'
+    globalEmployees: globalEmployees,
+    setGlobalEmployees, 
   });
 
-  // Filtrer les items selon les permissions de l'utilisateur
-  const allowedItems = useMemo(() => {
-    return dataLayer.itemsRef.current.filter(item => 
-      canCreateEvent(user.role, item.type)
-    );
-  }, [dataLayer.itemsRef.current, user.role]);
+
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
   const timeline = useTimeline({
@@ -140,13 +146,25 @@ export default function HomePage({
   }), [viewState.isFullDay, viewState.isDisplayWeekend, viewState.includeWeekend, viewState.respectNonWorkingDays, viewState.nonWorkingDates]);
 
   const appointmentLogic = useAppointmentLogic({
-    employeesRef: globalEmployeesRef,
+    employees: globalEmployees,
     appointmentsRef: dataLayer.appointmentsRef,
     eventsRef: dataLayer.itemsRef,
     timelineState,
     onUpdate: dataLayer.refreshData, // Callback pour rafraichir l'UI après modification des Refs
     setIsSearchOverlayOpen: viewState.setIsSearchOverlayOpen,
     setDimensionsSearchInput: viewState.setDimensionsSearchInput,
+    onLockedError: setLockNotification,
+    api: {
+      updateEvenementAndRessource: evenementService.updateEvenementAndRessource,
+      createEvenement: evenementService.createEvenement,
+      updateEvenement: evenementService.updateEvenement,
+      deleteEvenement: evenementService.deleteEvenement,
+      deleteEvenements: evenementService.deleteEvenements,
+      divideEvenement: evenementService.divideEvenement,
+      repeatEvenement: evenementService.repeatEvenement,
+      unlockEvenement: evenementService.unlockEvenement,
+      lockEvenement: evenementService.lockQuickEvenement,
+    },
   });
 
   
@@ -169,7 +187,7 @@ export default function HomePage({
       repeatInterval: 'day', // "...jours"
       endDate: null,        // Pas de date de fin par défaut
     }),
-    handleExtend: () => appointmentLogic.setExtendData(appointmentLogic.selectedAppointment?.endDate || Date.now()),
+    handleExtend: () => appointmentLogic.setExtendData(appointmentLogic.selectedAppointment?.FinPlanningEvenement || Date.now()),
     handleDivide: (appointment) => appointmentLogic.handleDivideConfirm(appointment),
     
     // Constantes pour calculs d'interaction
@@ -187,7 +205,61 @@ export default function HomePage({
     viewState.setIsSearchOverlayOpen(true);
   }, [viewState.setIsSearchOverlayOpen]);
 
-  // --- CONFIGURATION DES FILTRES (Pour FilterModal) ---
+  const handleSearchOverlayItemAction = useCallback((item: SearchableItem) => {
+    if (!appointmentLogic.selectedCell) {
+      return;
+    }
+    
+    appointmentLogic.handleSearchItemAction(item as unknown as Item);
+  }, [appointmentLogic.selectedCell, appointmentLogic.handleSearchItemAction, dataLayer.itemsRef]);
+
+  const searchOverlayItems = useCallback(async (query: string): Promise<{ error: number; data: SearchableItem[]; message?: string }> => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      return { error: 0, data: [] };
+    }
+
+    const response = await ressourceService.searchRessources(trimmedQuery, [], 20);
+    if (response?.error !== 0 || !Array.isArray(response.data)) {
+      return { error: 1, data: [], message: 'Erreur lors de la recherche. Veuillez réessayer.' };
+    }
+
+    
+    const data = (response.data as Item[])
+      .filter((item) => {
+        // if (!canCreateEvent(user.role, item.Type)) {
+        //   return false;
+        // }
+
+        if ('Actif' in item) {
+          return item.Actif !== false && item.Actif !== null;
+        }
+
+        return true;
+      })
+      .map((item) => ({
+        ...item,
+        id: item.IdPlanningRessource,
+        label: item.LibellePlanningRessource,
+      }));
+    
+    return { error: 0, data };
+  }, [user.role]);
+
+  // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
+  const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
+    return viewState.viewType === 'chantier-table' 
+      ? (ressourceService.getRessourcesProjet as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
+      : viewState.viewType === 'employee-table' && hasPermission(23) 
+        ? (employeeService.getEmployeesPag as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
+        : viewState.viewType === 'manual-event-table' && hasPermission(23) 
+          ? (ressourceService.getManualEvents as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
+          : viewState.viewType === 'paie-table' && hasPermission(23) 
+            ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs)
+            : undefined;
+  }, [viewState.viewType, viewState.activeFilters, viewState.searchInput, ]);
+
+  // --- FILTRES ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
   
   const keyOfFilter = useMemo((): { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } } => {
@@ -219,7 +291,7 @@ export default function HomePage({
   const filterConfig = useMemo(() => {
       // Génération des options de filtre basées sur les données actuelles
       const baseConfig = searchUtils.getFilterOptions(
-        dataLayer.itemsRef.current, 
+        Object.values(dataLayer.itemsRef.current),
         viewState.viewType === 'chantier-table' ? 'chantier' : null,
         keyOfFilter
       );
@@ -230,26 +302,186 @@ export default function HomePage({
         activeFilters: viewState.activeFilters
       };
   }, [searchUtils, dataLayer.itemsRef.current, viewState.viewType, keyOfFilter, viewState.activeFilters]);
-      
-
-
-  // --- PREPARATION DES TABLEAUX (Correction TS) ---
-  
-  // Calcul des champs calculés spécifiques à la vue actuelle
-  const currentComputedFields = useMemo(() => {
-    const allFields = customComputedFieldsFactory(viewState.viewType, dataLayer.appointmentsRef.current);
-    if (viewState.viewType === 'chantier-table') return allFields.chantierTable;
-    if (viewState.viewType === 'paie-table') return allFields.paieTable;
-    return undefined;
-  }, [viewState.viewType, dataLayer.appointmentsRef]);
-
+        
   // --- EFFETS DE BORD ---
 
-  // Init: Services & Thème
+  // Init global: notifications + theme (indépendant de la vue)
   useEffect(() => {
     notificationService.setNotificationCallback(notifications.addNotification);
-    if (user.theme) setTheme(user.theme as any);
+    if (user.theme) {
+      setTheme(user.theme as any);
+    }
   }, [notifications.addNotification, user.theme, setTheme]);
+
+  // Init unique: configuration utilisateur + données planning (employés, équipes, RDV)
+  useEffect(() => {
+    if (!currentPlanningId || currentPlanningId <= 0) return;
+
+    let isMounted = true;
+
+    const initializeNonWorkingDates = async () => {
+      if (!isMounted || hasInitializedNonWorkingDatesRef.current) return;
+      hasInitializedNonWorkingDatesRef.current = true;
+      const result = await viewState.loadNonWorkingDates();
+      if (result.error === 1){
+        setLoadCalendar(false);
+        setErrorPlanning(result.message || "Erreur lors du chargement des jours non travaillés. Veuillez réessayer.");
+      }
+    };
+
+    const initializePlanning = async () => {
+      if (!isMounted || hasInitializedPlanningRef.current) return;
+      hasInitializedPlanningRef.current = true;
+      hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
+      
+      await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
+
+      // Chargement des employés selon les permissions
+      if (!hasInitializedEmployeesRef.current) {
+        const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
+        console.log('Employees Response:', employeesResponse);
+        if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+          setGlobalEmployees(employeesResponse.data);
+        } else {
+          setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+          setGlobalEmployees([]);
+          setLoadCalendar(false);
+          return;
+        }
+        hasInitializedEmployeesRef.current = true;
+        setEmployeesVersion(prev => prev + 1);
+      }
+
+
+      let rep = await dataLayer.loadTeams();
+      console.log('Teams Response:', rep);
+      if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
+        setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
+
+      rep = await dataLayer.loadPoleActivites();
+      console.log('Pole Activités Response:', rep);
+      if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
+        setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
+
+      const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
+      const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
+      await dataLayer.loadAppointmentsInRange(startDate, endDate);
+
+      setLoadCalendar(false);
+    };
+
+    const initializeEmployeeTable = async () => {
+      if (!isMounted || hasInitializedTeamsRef.current) return;
+      hasInitializedTeamsRef.current = true;
+      await dataLayer.loadTeams();
+    };
+
+    const initializePaieTableAndManualEventTable = async () => {
+      if (!isMounted || hasInitializedEmployeesRef.current) return;
+      hasInitializedEmployeesRef.current = true;
+      const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : null;
+
+      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+        setGlobalEmployees(employeesResponse.data);
+      } else {
+        setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+        setGlobalEmployees([]);
+        setLoadCalendar(false);
+        return;
+      }
+    }
+    
+    initializeNonWorkingDates();
+    if (viewState.viewType === 'calendar') {
+      initializePlanning();
+    } else if (viewState.viewType === 'employee-table') {
+      initializeEmployeeTable();
+    }
+    else if (viewState.viewType === 'paie-table' || viewState.viewType === 'manual-event-table') {
+      if (hasPermission(23) && hasPermission(22)) {
+        console.log("Initialisation de la table Paie et de la table des événements manuels...");
+        initializePaieTableAndManualEventTable();
+      }else {
+        setErrorPlanning("Vous n'avez pas les droits nécessaires pour accéder à cette vue.");
+        setLoadCalendar(false);
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    viewState.viewType,
+    currentPlanningId,
+    dataLayer.loadTeams,
+    dataLayer.loadAppointmentsInRange,
+  ]);
+
+  useEffect(() => {
+    if (viewState.viewType !== 'calendar') return;
+    if (!viewState.currentCalendarConfig) return;
+    if (!hasInitializedPlanningRef.current) return;
+
+    const reloadPlanningDataForCurrentView = async () => {
+      setErrorPlanning(null);
+      setLoadCalendar(true);
+      setGlobalEmployees([]);
+      dataLayer.resetPlanningData();
+
+      const employeesResponse = hasPermission(23) || hasPermission(22)
+        ? await employeeService.getEmployees()
+        : await employeeService.getEmployee(user.IdPersonnel);
+
+        console.log('Employees Response:', employeesResponse);
+      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+        setGlobalEmployees(employeesResponse.data);
+        setEmployeesVersion(prev => prev + 1);
+      } else {
+        setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+        setGlobalEmployees([]);
+        setLoadCalendar(false);
+        return;
+      }
+
+      const teamsResponse = await dataLayer.loadTeams();
+      if (teamsResponse?.error !== 0 || !Array.isArray(teamsResponse.data) || teamsResponse.data.length === 0) {
+        setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
+
+      const poleActivitesResponse = await dataLayer.loadPoleActivites();
+      if (poleActivitesResponse?.error !== 0 || !Array.isArray(poleActivitesResponse.data) || poleActivitesResponse.data.length === 0) {
+        setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
+
+      const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
+      const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
+      await dataLayer.loadAppointmentsInRange(startDate, endDate);
+      setLoadCalendar(false);
+    };
+
+    void reloadPlanningDataForCurrentView();
+  }, [
+    viewState.viewType,
+    viewState.currentCalendarConfig?.IdPlanningVue,
+    hasPermission,
+    user.IdPersonnel,
+    setGlobalEmployees,
+    setEmployeesVersion,
+    dataLayer.resetPlanningData,
+    dataLayer.loadTeams,
+    dataLayer.loadPoleActivites,
+    dataLayer.loadAppointmentsInRange,
+  ]);
 
   // Init: Raccourcis Clavier Globaux
   useEffect(() => {
@@ -270,22 +502,131 @@ export default function HomePage({
     };
   }, [interaction, timeline, viewState.viewType]);
 
+  useEffect(() => {
+    const handleExpiration = () => {
+      setLockNotification("Votre session a expiré, veuillez vous reconnecter.");
+      logout();
+    };
+
+    window.addEventListener('auth:expired', handleExpiration);
+    return () => window.removeEventListener('auth:expired', handleExpiration);
+  }, []);
+
+  // 1. La fonction qui va réagir aux messages Mercure
+  const handleMercureEvent = useCallback((action: string, data: any) => {
+    console.log("📥 Action reçue en direct :", action, data);
+    console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    switch (action) {
+      case 'APPOINTMENT_CREATED':
+        if(globalEmployees.some(emp => emp.IdPersonnel === data.appointments.IdPersonnel)) {
+          dataLayer.addMissingResourcesToCache(data.ressources);
+          dataLayer.appointmentsRef.current.push(...data.appointments);
+        }
+        break;
+
+      case 'APPOINTMENT_UPDATED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, ...data, isLocked: false } : appt));        
+        break;
+
+      case 'APPOINTMENT_AND_RESSOURCE_UPDATED':
+        dataLayer.itemsRef.current[Number(data.ressources.IdPlanningRessource)] = {
+          ...dataLayer.itemsRef.current[Number(data.ressources.IdPlanningRessource)],
+          CouleurFondPlanningRessource: data.ressources.CouleurFondPlanningRessource,
+          CouleurBordurePlanningRessource: data.ressources.CouleurBordurePlanningRessource,
+          CouleurTextePlanningRessource: data.ressources.CouleurTextePlanningRessource,
+          Image: data.ressources.IdPlanningImage,
+        }
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.appointment.IdPlanningEvenement) ? { ...appt, ...data.appointment, isLocked: false } : appt));
+        break;
+
+      case 'APPOINTMENT_DELETED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.filter((appt) => Number(appt.IdPlanningEvenement) !== Number(data.IdPlanningEvenement));
+        break;
+        
+      case 'APPOINTMENTS_DELETED':
+        for (const deletedId of data.deletedIds) {
+          dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.filter((appt) => Number(appt.IdPlanningEvenement) !== Number(deletedId));
+        }
+        break;
+        
+      case 'APPOINTMENT_DIVISION_UPDATED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map(
+          (appt) => (Number(appt.IdPlanningEvenement) === Number(data.originalEventId) ? { ...appt, FinPlanningEvenement: data.divisionDate, isLocked: false } : appt)
+        );
+        dataLayer.appointmentsRef.current.push(data.newEvent);
+        break;
+      
+      case 'APPOINTMENT_REPEATED':
+        dataLayer.appointmentsRef.current.push(...data.data.appointments);
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => 
+          (Number(appt.IdPlanningEvenement) === Number(data.data.originalEventId) ? { ...appt, isLocked: false } : appt)
+      );
+        break;
+      
+      case 'ADD_NON_WORKING_DAY':
+        viewState.setNonWorkingDates((prev) => ({
+          ...prev,
+          [format(data.date, "yyyy-MM-dd")]: Number(data.id)
+        }));
+        break;
+      
+      case 'DELETE_NON_WORKING_DAY':
+        viewState.setNonWorkingDates((prev) => {
+          const updated = { ...prev };
+          delete updated[data.date];
+          return updated;
+        });
+        break;
+      case 'APPOINTMENT_UNLOCKED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, isLocked: false } : appt));
+        break;
+      
+      case 'APPOINTMENT_LOCKED':
+        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, isLocked: true } : appt));
+        break;
+      
+      case 'CONFIG_LOCKED':
+        viewState.setAvailableConfigs((prev) => prev.map((config) => (Number(config.IdPlanningVue) === Number(data.IdPlanningVue) ? { ...config, isLocked: true } : config)));
+        break;
+
+      case 'ADD_VUE':
+        viewState.setAvailableConfigs((prev) => [...prev, data.vue]);
+        break;
+
+      case 'DELETE_VUE':
+        viewState.setAvailableConfigs((prev) => prev.filter((config) => Number(config.IdPlanningVue) !== Number(data.IdPlanningVue)));
+        break;
+
+      default:
+        console.warn("Action Mercure inconnue :", action);      
+    }
+    setLastMercureEvent({ action, data });
+    console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    dataLayer.refreshData(); 
+  }, []);
+
+  // 2. On branche la radio !
+  useMercureSync(currentPlanningId, handleMercureEvent);
+
   // --- RENDU VISUEL ---
 
   return (
     <NoSSR>
       <DndProvider backend={HTML5Backend}>
         {/* Overlay de loading pendant le centrage initial */}
-        {viewState.viewType === 'calendar' && timeline.isLoading && (
+        {viewState.viewType === 'calendar' && loadCalendar && (
           <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-gray-600">Chargement du calendrier...</p>
-            </div>
+            <LoadingFallback message="Chargement du calendrier..." />
           </div>
-        )}
-        <div className="h-screen flex flex-col overflow-hidden bg-bg-primary poppins">
-          
+        )}      
+        {lockNotification && (
+            <TopNotification 
+              message={lockNotification} 
+              onClose={() => setLockNotification(null)} 
+            />
+          )}          
+        <div className="h-screen flex flex-col overflow-hidden bg-page poppins">
+    
           {/* HEADER : Navigation et Contrôles */}
           {!viewState.isMobile && (
             <CalendarHeader 
@@ -306,105 +647,82 @@ export default function HomePage({
                 {/* Injection des contextes pour les composants enfants */}          
                 {viewState.viewType === 'calendar' ? (
                   /* VUE PLANNING */
-                  viewState.currentCalendarConfig ? (
-                    <Suspense fallback={<LoadingFallback message="Chargement du calendrier..." />}>
-                      <CalendarGrid
-                        /* Données */
-                        employees={dataLayer.filteredEmployees}
-                        appointments={dataLayer.filteredAppointments}
-                        appointmentsDefault={dataLayer.appointmentsRef.current}
-                        user={user}
+                  (errorPlanning) ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <p className="text-red-600 text-lg font-semibold">{errorPlanning}</p>
+                      </div>
+                    </div>
+                  ) :
+                  (viewState.currentCalendarConfig || hasPermission(21)) && (
+                    <CalendarGrid
+                      /* Données */
+                      employees={globalEmployees}
+                      appointments={dataLayer.appointmentsRef.current}
+                      user={user}
 
-                        /* Équipes & Événements */
-                        initialTeams={dataLayer.initialTeams}
-                        events={dataLayer.itemsRef.current}
-                        
-                        /* État Temporel */
-                        dayInTimeline={timeline.days}
-                        mainScrollRef={timeline.mainScrollRef}
-                        
-                        /* Configuration */
-                        isDisplayWeekend={viewState.isDisplayWeekend}
-                        isFullDay={viewState.isFullDay}
-                        isMobile={viewState.isMobile}
-                        nonWorkingDates={viewState.nonWorkingDates}
-                        tagPlacement={viewState.tagPlacement}
-                        HALF_DAY_INTERVALS={viewState.constants.intervals}
-                        
-                        /* Config Calendrier */
-                        calendarConfig={viewState.currentCalendarConfig}
-                        onCalendarConfigChange={viewState.setCurrentCalendarConfig}
-                        availableConfigs={viewState.availableConfigs}
-                        
-                        /* Actions & Events */
-                        onAppointmentMoved={appointmentLogic.moveAppointment}
-                        onCellDoubleClick={handleCellDoubleClick}
-                        onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
-                        onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
-                        handleContextMenu={interaction.handleContextMenu}
-                        onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
-                        mouseUpAfterScroll={timeline.getFirstDayAppearing}
-                        onAddAppointment={appointmentLogic.handleSaveAppointment}
-                        
-                        /* Sélection Optimisée */
-                        selectedCell={appointmentLogic.selectedCell}
-                        selectedAppointmentId={appointmentLogic.selectedAppointment?.id}
-                        onSelectCell={appointmentLogic.setSelectedCell}
-                        onSelectAppointment={appointmentLogic.setSelectedAppointment}
-                      />
-                    </Suspense>
-                  ) : (
-                    <div className="flex items-center justify-center h-64 text-gray-500">Chargement configuration...</div>
-                  )
-                ) : viewState.viewType === 'manual-event-table' ? (
-                  <Suspense fallback={<LoadingFallback message="Chargement des événements..." />}>
-                    <ManualEventsManager
-                      events={dataLayer.filteredItems}
-                      onDeleteRequest={(item) => {
-                        // Vérifier si l'item est utilisé dans le planning
-                        const result = appointmentLogic.handleDeleteDimension(item.id);
-                        const isActive = 'actif' in item ? (item as CommonPaieAttributs).actif : true;
-                        // Toujours ouvrir la modal de confirmation
-                        setDeleteConfirmData({ 
-                          item, 
-                          isUsedInPlanning: result.isUsedInPlanning || false, 
-                          isActive 
-                        });
-                      }}
-                      onEditRequest={(item) => {
-                        appointmentLogic.setSelectedAppointmentForm({
-                          id: 0,
-                          description: '',
-                          type: item.type,
-                          EventId: Number(item.id),
-                          startDate: 0,
-                          endDate: 1000,
-                          employee: globalEmployeesRef.current[0],
-                        });
-                        appointmentLogic.setSelectedItem(item);
-                        appointmentLogic.setIsModalOpen(true);
-                      }}
+                      /* Équipes & Événements */
+                      initialTeams={dataLayer.initialTeams}
+                      poleActivites={dataLayer.poleActivites}
+                      events={dataLayer.itemsRef.current}
+                      
+                      /* État Temporel */
+                      dayInTimeline={timeline.days}
+                      mainScrollRef={timeline.mainScrollRef}
+                      
+                      /* Configuration */
+                      isDisplayWeekend={viewState.isDisplayWeekend}
+                      isFullDay={viewState.isFullDay}
+                      isMobile={viewState.isMobile}
+                      nonWorkingDates={viewState.nonWorkingDates}
+                      tagPlacement={viewState.tagPlacement}
+                      HALF_DAY_INTERVALS={viewState.constants.intervals}
+                      
+                      /* Config Calendrier */
+                      calendarConfig={viewState.currentCalendarConfig}
+                      onCalendarConfigChange={viewState.onCalendarConfigChange}
+                      availableConfigs={viewState.availableConfigs}
+                      
+                      /* Actions & Events */
+                      onAppointmentMoved={appointmentLogic.moveAppointment}
+                      onCellDoubleClick={handleCellDoubleClick}
+                      onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
+                      onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
+                      handleContextMenu={interaction.handleContextMenu}
+                      onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
+                      mouseUpAfterScroll={timeline.getFirstDayAppearing}
+                      onAddAppointment={appointmentLogic.handleSaveAppointment}
+                      onLockedError={setLockNotification}
+                      
+                      /* Sélection Optimisée */
+                      selectedCell={appointmentLogic.selectedCell}
+                      selectedAppointmentId={appointmentLogic.selectedAppointment?.IdPlanningEvenement}
+                      onSelectCell={appointmentLogic.setSelectedCell}
+                      onSelectAppointment={appointmentLogic.setSelectedAppointment}
                     />
-                  </Suspense>
+                  )
                 ) : (
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
                   <Suspense fallback={<LoadingFallback message="Chargement du tableau..." />}>
                     <DataTableFrame 
-                    items={dataLayer.getTableItems()} 
-                    categoriesStructure={dataLayer.getTableStructure() || []}
-                    computedFields={currentComputedFields as any}
-                    customRenderers={
-                      customRenderersFactory(
+                      categoriesStructure={getTableStructure(
                         viewState.viewType, 
-                        globalEmployeesRef.current, 
-                        interaction.handleOpenImageModal,
-                        appointmentLogic.setSelectedAppointment,
-                        appointmentLogic.handleOpenEditModal,
-                        dataLayer.initialTeams,
-                        dataLayer.updateEmployeeGroup
-                      ) as any}
-                    showGroupHeaders={viewState.viewType === 'chantier-table'}
-                    onRightClick={interaction.handleDataTableContextMenu}
+                        {
+                          handleOpenEditModal: appointmentLogic.handleOpenEditModal,
+                          onImageClick: interaction.handleOpenImageModal,
+                          initialTeams: dataLayer.initialTeams,
+                          onTeamChange: dataLayer.updateEmployeeGroup,
+                          ressources: dataLayer.itemsRef.current
+                        }
+                      ) || []}
+                      realtimeUpdate={lastMercureEvent}
+                      enablePagination={true}
+                      paginatedSearchFunction={handlePaginatedSearch}
+                      refreshKey={dataLayer.appointmentsVersion}
+                      loadingElement={<LoadingFallback message="Chargement des données..." />}
+                      showGroupHeaders={viewState.viewType === 'chantier-table'}
+                      onRightClick={interaction.handleDataTableContextMenu}
+                      heightCell={60}
                   />
                   </Suspense>
                 )}
@@ -438,17 +756,17 @@ export default function HomePage({
               repeatData: appointmentLogic.repeatData,
               extendData: appointmentLogic.extendData,
               modalInfo: viewState.modalInfo,
-              selectedAppointmentForm: appointmentLogic.selectedAppointmentForm,
+              selectedAppointmentForm: appointmentLogic.selectedAppointment,
               deleteConfirmData: deleteConfirmData,
               tagPlacement: viewState.tagPlacement,
             }}
             handlers={{
               closeModal: () => appointmentLogic.setIsModalOpen(false),
               saveAppointment: appointmentLogic.handleSaveAppointment,
-              handleAddDimension: appointmentLogic.handleAddDimension,
-              handleEditDimension: appointmentLogic.handleEditDimension,
-              handleDeleteDimension: (dimensionId: number, forceDelete: boolean = false) => {
-                const result = appointmentLogic.handleDeleteDimension(dimensionId, forceDelete);
+              handleAddManualRessource: appointmentLogic.handleAddManualRessource,
+              handleEditRessource: appointmentLogic.handleEditRessource,
+              handleDeleteManualRessource: (dimensionId: number, forceDelete: boolean = false) => {
+                const result = appointmentLogic.handleDeleteManualRessource(dimensionId, forceDelete);
                 if (result.success) {
                   notificationService.info('Suppression réussie', result.message);
                 }
@@ -474,11 +792,11 @@ export default function HomePage({
               handleImageSelect: (newImageUrl) => {
                 // Logique de décision basée sur la vue active
                 if (viewState.viewType === 'employee-table') {
-                    const id = appointmentLogic.selectedEmployee?.id || null;
+                    const id = appointmentLogic.selectedEmployee?.IdPersonnel || null;
                     if (id === null) return;                    
                     dataLayer.updateEmployeeImage(id, newImageUrl);
                 } else {
-                    const id = appointmentLogic.selectedItem?.id || null;
+                  const id = appointmentLogic.selectedItem?.IdPlanningRessource || null;
                     if (id === null) return;                    
                     appointmentLogic.setSelectedItem(prev => {
                         if (prev) {
@@ -500,38 +818,26 @@ export default function HomePage({
               clearFilters: () => viewState.setActiveFilters({ empty: [] }),
               
               closeConfigModal: viewState.calendarConfigHook.closeConfigModal,
-              setCurrentConfig: viewState.setCurrentCalendarConfig,
-              saveCustomConfig: (c) => { 
-                 const newConfig = {...c, id: Date.now()};
-                 viewState.calendarConfigHook.addConfig(newConfig); 
-                 notificationService.configSaved(c.name);
-                 return newConfig;
-              },
-              updateCustomConfig: (c) => { 
-                 viewState.calendarConfigHook.updateConfig(c);
-                 notificationService.configUpdated(c.name);
-              },
+              setCurrentConfig: viewState.onCalendarConfigChange,
+              saveCustomConfig: viewState.calendarConfigHook.saveConfig,
               deleteCustomConfig: (id) => {
                  viewState.calendarConfigHook.deleteConfig(id);
-              },
-              duplicateConfig: (c) => {
-                 const newConfig = {...c, id: Date.now(), name: c.name + ' (copie)'};
-                 viewState.calendarConfigHook.addConfig(newConfig);
-                 return newConfig;
+                 notificationService.info('Configuration supprimée', 'La vue a été supprimée avec succès');
               },
               setEditingConfig: viewState.calendarConfigHook.setEditingConfig,
               setIsCreatingConfig: viewState.calendarConfigHook.setIsCreatingConfig,
 
               // Correction : Setter pour l'item sélectionné
               setSelectedItem: appointmentLogic.setSelectedItem,
+              onLockedError: setLockNotification,
               
-              // Suppression d'étiquette de tous les rendez-vous
-              removeTagFromAppointments: appointmentLogic.removeTagFromAppointments,
+              addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
+              removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,
-              items: allowedItems,
-              employees: globalEmployeesRef.current,
+              items: dataLayer.itemsRef.current,
+              employees: globalEmployees,
               selectedItem: appointmentLogic.selectedItem,
               selectedEmployee: appointmentLogic.selectedEmployee,
               // Correction : Passer les images disponibles
@@ -572,44 +878,31 @@ export default function HomePage({
           />
 
           <AlertModal
-            isOpen={appointmentLogic.alertState.isVisible}
-            title={appointmentLogic.alertState.title}
+            alertState={appointmentLogic.alertState}
             confirmLabel="Confirmer"
             cancelLabel="Annuler"
-            onConfirm={appointmentLogic.alertState.onConfirm}
-            onClose={() => appointmentLogic.setAlertState(prev => ({...prev, isVisible: false}))}
+            onClose={() =>  appointmentLogic.alertState.onCancel()}
+            fetchToLockAppointment={appointmentLogic.alertState.fetchToLockAppointment}
           />
 
           <SearchOverlay
             isOpen={viewState.isSearchOverlayOpen}
             onClose={() => viewState.setIsSearchOverlayOpen(false)}
-            searchInput={viewState.dimensionSearchInput}
-            setSearchInput={viewState.setDimensionsSearchInput}
-            items={dataLayer.filteredItems.filter(item => {
-              // 1. Vérifier les permissions - Ne montrer que les items que l'utilisateur peut créer
-              if (!canCreateEvent(user.role, item.type)) {
-                return false;
-              }
-              
-              // 2. Filtrer les items désactivés (pour les types absence/autre)
-              if ('actif' in item) {
-                return item.actif !== false;
-              }
-              return true; // Les chantiers n'ont pas de champ actif, donc toujours actifs
-            })}
-            onItemAction={appointmentLogic.selectedCell ? appointmentLogic.handleSearchItemAction : undefined}
+            onSearch={searchOverlayItems}
+            onItemAction={handleSearchOverlayItemAction}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
               noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
               noResults: { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
-            renderItem={(event: any, index: number) => (              
+            renderItem={(event: any, index: number) => (                            
               <DraggableSource
                 key={`${event.label}-${event.id}-${index}`}
                 id={event.id as number}
-                imageUrl={event.image.image}
+                item={event as Item}
+                imageUrl={event.image?.image}
                 title={event.label}
-                type={(event as any).type as "Chantier" | "Absence" | "Autre"}
+                type={(event as any).Type as "Projet" | "Paie" | "Rubrique Perso"}
                 className="w-full"
               />
             )}

@@ -15,19 +15,21 @@
 
 "use client";
 // components/AppointmentForm.tsx
-import React, { useState, memo, useMemo, useEffect } from 'react';
-import {Appointment, HalfDayInterval, Item, Tags, CommonPaieAttributs, User, SocialItemPermission } from '../../types';
-import { format, startOfDay, isSameDay, isSameYear, isSameMonth } from 'date-fns';
+import React, { useState, memo, useMemo, useEffect, useCallback, useRef } from 'react';
+import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, Tag, AutreItem } from '../../types';
+import { isSameDay, isSameYear, isSameMonth, format } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
-import { getSocialItemPermission, setSocialItemPermission } from '@/app/datasource';
+import socialPermissionService from '@/app/service/permission.service';
 
 import { AppointmentItem } from '../index';
-import TagCreationForm from './TagCreationForm';
-import DeleteModal from '../modals/DeleteModal';
-
-const MAX_LENGTH_TAG = 20; // Longueur maximale pour les étiquettes
-const MAX_LENGTH_SHORT_TAG = 4; // Longueur maximale pour les versions courtes
-
+import FormHeader, { ColorConfig, ResourceField } from './FormHeader';
+import DateTimeSelector, { TimeInterval } from './DateTimeSelector';
+import PermissionsPanel, { Permission, UserWithPermission } from './PermissionsPanel';
+import TagsManager from './TagsManager';
+import { FormPreview, EmployeeSelector, AnnotationsField, ExpandButton, ActionButtons, Employee } from './FormComponents';
+import { useModalContext } from '@/app/calendrier/components/modals/Modal';
+import ressourceService from '@/app/service/ressource.service';
+import { notificationService } from '../..';
 /**
  * Interface définissant les propriétés du composant AppointmentForm
  * @interface AppointmentFormProps
@@ -39,8 +41,6 @@ interface AppointmentFormProps {
   appointment: Appointment;
   /** Événement associé au rendez-vous */
   item: Item;
-  /** Événements*/
-  items: Item[];
   /** ID de l'employé présélectionné (optionnel) */
   initialEmployeeId?: number | null;
   /** Liste de tous les employés disponibles */
@@ -50,31 +50,42 @@ interface AppointmentFormProps {
   /** Indique si le rendez-vous occupe une journée complète */
   isFullDay: boolean;
   /** Liste des dates non-travaillées (week-ends, fériés) */
-  nonWorkingDates: number[];
+  nonWorkingDates: Record<string, number>;
   /** Version réduite du formulaire (moins de champs) */
   isReducedVersion?: boolean;
   /** Indique si l'application est utilisée sur un appareil mobile */
   isMobile?: boolean;
-  /** Mode d'édition de ressource: 'create' pour créer, 'edit' pour modifier, null pour un rendez-vous normal */
-  resourceEditMode?: 'create' | 'edit' | null;
+  /** Mode d'édition de ressource: 'createRessource' pour créer, 'editRessource' pour modifier, 'editAppointment' pour un rendez-vous normal */
+  resourceEditMode?: 'createRessource' | 'editRessource' | 'editAppointment' | null;
     /** Placement des étiquettes : 'hover' pour les afficher au survol, 'fixed' pour les afficher en permanence */
   tagPlacement?: 'hover' | 'fixed';
   /** Callback appelé lors de la sauvegarde */
   onSave: (
     appointment: Appointment,
     eventType: Item,
-    includeAllNonWorkingDays: boolean
-  ) => void;
+    includeAllNonWorkingDays: boolean,
+    type: 'create' | 'update'
+  ) => Promise<{ success: boolean; message?: string }>;
   /** Callback appelé lors de la fermeture du formulaire */
   onClose: () => void;
   /** Callback appelé lors de la sauvegarde de l'événement */
   handleOpenImageModal: (itemId: number) => void;
   /** Callback pour notifier si le formulaire a des modifications non enregistrées */
   onDirtyChange?: (isDirty: boolean) => void;
-  handleAddDimension: (dimension: Item) => void;
-  handleEditDimension: (dimension: Item) => void;
+  /** Callback pour ajouter une ressource manuelle */
+  handleAddManualRessource: (dimension: AutreItem) => Promise<{ success: boolean, message?: string }>;
+  /** Callback pour éditer une ressource manuelle */
+  handleEditRessource: (dimension: Item) => Promise<{ success: boolean, message?: string }>;
   /** Callback pour supprimer une étiquette de tous les rendez-vous associés */
-  onRemoveTagFromAppointments?: (tagId: number) => void;
+  onRemoveTagFromAppointments?: (tagId: number) => Promise<any>;
+  onAddTagToResource?: (tag: any) => Promise<any>;
+  onFetchTagsForResource?: (idRessource: number) => Promise<any>;
+  onFetchEventAndRessource?: (idEvent: number) => Promise<any>;
+  onFetchRessourceById?: (idRessource: number, typeRessource: 'Projet' | 'Paie' | 'Rubrique Perso') => Promise<any>;
+  onLockedError?: (message: string) => void;
+  onFetchPermissions?: () => Promise<any>;
+  onSetPermissions?: (data: { IdPersonnel: number, IdDroit: number }[]) => Promise<any>;
+  loadingFallback?: React.ReactNode;
 }
 
 
@@ -111,7 +122,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   appointments,
   appointment,
   item,
-  items,
   tagPlacement = 'hover',
   employees,
   HALF_DAY_INTERVALS,
@@ -122,21 +132,34 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   onClose,
   handleOpenImageModal,
   onDirtyChange,
-  handleAddDimension,
-  handleEditDimension,
+  handleAddManualRessource,
+  handleEditRessource,
   isMobile,
   resourceEditMode = null,
   onRemoveTagFromAppointments,
+  onAddTagToResource,
+  onFetchTagsForResource,
+  onFetchEventAndRessource,
+  onFetchRessourceById,
+  onFetchPermissions,
+  onLockedError,
+  loadingFallback,
+  onSetPermissions
 }) => {
 
-  // Variables dérivées pour améliorer la lisibilité
-  const isCreatingResource = resourceEditMode === 'create';
-  const isEditingResource = resourceEditMode === 'edit';
-  const isResourceMode = isCreatingResource || isEditingResource;
+  const { handleCloseWithSave, registerSaveHandler } = useModalContext();
 
-  //console.log(appointment);
-  
-    
+  // Variables dérivées pour améliorer la lisibilité
+  const isCreatingResource = resourceEditMode === 'createRessource';
+  const isEditingResource = resourceEditMode === 'editRessource';
+  const isEditingAppointment = resourceEditMode === 'editAppointment';
+
+  // On simplifie la logique d'affichage 
+  // - Les options de ressources (couleurs, code, ect.) sont toujours affichées dans tous les modes pour les rubriques perso
+  // - Les selecteurs de Date et d'Employé sont cachés si on créer ou si on edite une ressource (isEditingAppointment == false)
+  const isResourceMode = isCreatingResource || isEditingResource;
+        
+
   // ===== ÉTATS LOCAUX =====
   
   /**
@@ -146,29 +169,214 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(appointment);
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
   const [dateValidationError, setDateValidationError] = useState(false);
-  const [codeValidationError, setCodeValidationError] = useState(false);  
-   
-  /**
-   * Normalise une couleur en format hexadécimal court (#RRGGBB)
-   * Supprime le canal alpha si présent (#RRGGBBAA -> #RRGGBB)
-   * @param color - Couleur au format hex (#RRGGBB ou #RRGGBBAA)
-   * @returns Couleur normalisée au format #RRGGBB
+  const [codeValidationError, setCodeValidationError] = useState(false);
+
+  // Nouveaux états pour gérer les étiquettes asynchrones
+  const [resourceTags, setResourceTags] = useState<Tag[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [DeletingTag, setDeletingTag] = useState<number | null>(null);
+  const [tagError, setTagError] = useState<string | null>(null);
+  const permissions = useRef<Permission[]>([])
+  const [usersWithPermission, setUsersWithPermission] = useState<UserWithPermission[]>([]);
+
+   /**
+   * États pour la gestion des permissions par employé (rubriques sociales et rubrique perso uniquement)
    */
-  const normalizeColorForInput = (color: string | undefined): string => {
-    if (!color) return '#1E40AF';
-    // Si la couleur a 9 caractères (#RRGGBBAA), on retire les 2 derniers (canal alpha)
-    if (color.length === 9 && color.startsWith('#')) {
-      return color.substring(0, 7);
+  const changedEmployeePermissions = useRef<Record<number, number>>({});
+  
+
+  // console.log("Ressource actuelle :", formDataItemType);
+  // console.log("isResourceMode :", isResourceMode);
+
+  useEffect(() => {
+    const loadAllFormData = async () => {
+      // Sécurité : Si aucune fonction de fetch n'est fournie, pas besoin de charger
+      if (!onFetchTagsForResource && !onFetchEventAndRessource && !onFetchRessourceById) return;
+
+      setIsLoading(true);
+      setTagError(null);
+
+      try {
+        // On crée un tableau pour stocker les promesses qui vont s'exécuter
+        const promises: Promise<any>[] = [];
+
+        // 1. Fetch de l'événement complet et de sa ressource
+        if (onFetchEventAndRessource && isEditingAppointment) {
+          promises.push(
+            onFetchEventAndRessource(formDataAppointment.IdPlanningEvenement)
+              .then(response => {
+                console.log("Réponse de onFetchEventAndRessource :", response);
+                if (response?.error === 409 && response?.isLocked) {
+                  onClose(); // On ferme la modale immédiatement
+                  if (onLockedError) {
+                    onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition par un collègue.");
+                  }
+                  return;
+                }
+
+                if (response?.error === 0 && response?.data) {
+                  const { appointments, ressources } = response.data;
+                  setFormDataAppointment(appointments[0] ?? appointments);
+                  setFormDataItemType(ressources[0] ?? ressources);
+                }
+              })
+              .catch(err => {
+                console.error("Failed to load event and resource", err);
+                setTagError("Erreur lors de la récupération de l'événement");
+              })
+          );
+        }
+
+        // 2. Fetch de la ressource par ID
+        if (onFetchRessourceById && isEditingResource) {
+          promises.push(
+            onFetchRessourceById(item?.IdPlanningRessource, item?.Type)
+              .then(response => {
+                if (response?.error === 0 && response?.data) {
+                  setFormDataItemType(response.data[0] ?? response.data);
+                }
+              })
+              .catch(err => {
+                console.error("Failed to load resource by ID", err);
+                setTagError("Erreur lors de la récupération de la ressource");
+              })
+          );
+        }
+
+        // 3. Fetch des étiquettes
+        if (onFetchTagsForResource && (isEditingResource || isEditingAppointment)) {
+          promises.push(
+            onFetchTagsForResource(item?.IdPlanningRessource)
+              .then(response => {
+                setResourceTags(response.data || response || []);
+              })
+              .catch(err => {
+                console.error("Failed to load tags", err);
+               setTagError("Erreur lors de la récupération des étiquettes");
+              })
+          );
+        }
+
+        if (onFetchPermissions && isResourceMode && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso')) {
+          promises.push(
+            onFetchPermissions()
+            .then(response => {
+              permissions.current = response.data.permissions || response.data || response || [];
+              setUsersWithPermission(response.data.employees || response.data || response || []);
+            })
+            .catch(err => {
+              console.error("Failed to load permissions", err);
+              setTagError("Erreur lors de la récupération des permissions");
+            })
+          );
+        }
+        
+        await Promise.all(promises);
+
+      } catch (globalError) {
+        console.error("Erreur générale lors du chargement du formulaire", globalError);
+      } finally {
+        // On n'éteint le chargement QUE lorsque tout est fini (succès ou échec)
+        setIsLoading(false);
+      }
+    };
+
+    void loadAllFormData();
+  }, [
+    onFetchTagsForResource, onFetchEventAndRessource, onFetchRessourceById
+  ]);
+
+  const handleCreateTag = async (tagData: Partial<Tag>) => {
+    if (!onAddTagToResource) return;
+    
+    setIsCreatingTag(true);
+    setTagError(null);
+    
+    try {
+      const response = await onAddTagToResource({ ...tagData, IdPlanningRessource: item?.IdPlanningRessource || -1 });
+      const newTagId = response.data || response;
+      setResourceTags(prev => [...prev, { ...tagData, IdPlanningEtiquette: newTagId } as Tag]);
+      return newTagId;
+    } catch (err) {
+      console.error("Failed to create tag", err);
+      setTagError("Erreur lors de la création de l'étiquette");
+      throw err;
+    } finally {
+      setIsCreatingTag(false);
     }
-    return color;
   };
+
+  const handleDeleteTag = async (tagId: number) => {
+    if (!onRemoveTagFromAppointments) return;
+    setDeletingTag(tagId);
+    setTagError(null);
+    try {
+      const result = await onRemoveTagFromAppointments(tagId);
+      if (result?.error === 1) {
+        setTagError(result.message || "Erreur lors de la suppression de l'étiquette");
+        return;
+      }
+      setResourceTags(prev => prev.filter(tag => tag.IdPlanningEtiquette !== tagId));
+    } catch (err) {
+      console.error("Failed to delete tag", err);
+      setTagError("Erreur lors de la suppression de l'étiquette");
+    } finally {
+      setDeletingTag(null);
+    }
+  };
+
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+    
+  const saveHandlerRef = useRef<(() => void | Promise<void>) | null>(null);
+    const performAppointmentSave = async (): Promise<void> => {
+      if (isSaving) return;
+
+      if (formDataAppointment.DebutPlanningEvenement >= formDataAppointment.FinPlanningEvenement) {
+        setDateValidationError(true);
+        return;
+      }
+
+      setDateValidationError(false);
+      setSaveError(null);
+      setIsSaving(true);
+
+      try {
+        const result = await onSave(
+          formDataAppointment,
+          formDataItemType,
+          includeAllNonWorkingDays,
+          formDataAppointment.IdPlanningEvenement <= 0 ? 'create' : 'update'
+        );
+
+        if (result.success) {
+          onClose();
+          return;
+        }
+
+        setSaveError(result.message || 'La sauvegarde a échoué.');
+      } catch (error) {
+        setSaveError((error as Error).message || 'Une erreur est survenue pendant la sauvegarde.');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+  
+  /**
+   * État pour contrôler l'expansion du panel d'options avancées
+   */
+  const [isExpanded, setIsExpanded] = useState(isReducedVersion ? false : true);
+
 
   useEffect(() => {
     // Ne mettre à jour que si l'image a réellement changé
-    if (item?.image !== formDataItemType.image) {
-      setFormDataItemType(prev => ({ ...prev, image: item?.image }));
+    if (item?.Image !== formDataItemType?.Image) {
+      setFormDataItemType(prev => ({ ...prev, Image: item?.Image }));
     }
-  }, [item?.image, formDataItemType.image]);
+  }, [item?.Image, formDataItemType?.Image]);
   
 
   /**
@@ -176,89 +384,19 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * Utilisé pour déterminer l'état initial de la checkbox
    */
   const isAppointmentSplitByNotWorkingDay = useMemo(() => {
-    const app = appointments.find(a => a.id === formDataAppointment.id);
+    const app = appointments.find(a => a.IdPlanningEvenement === formDataAppointment.IdPlanningEvenement);
     if (!app) return false;
-    const days = eachDayOfInterval({ start: app.startDate, end: app.endDate });
+    const days = eachDayOfInterval({ start: app.DebutPlanningEvenement, end: app.FinPlanningEvenement });
     return days.some((date) =>
-      (nonWorkingDates.some(nd => 
-        isSameDay(nd, date)
-        && isSameMonth(nd, date)
-        && isSameYear(nd, date)
-      ) || isHoliday(date) || isWeekend(date)) // Vérifie jours non travaillés, fériés ou week-ends
+      (nonWorkingDates[format(date, 'yyyy-MM-dd')] !== undefined) || isHoliday(date) || isWeekend(date) // Vérifie jours non travaillés, fériés ou week-ends
     );
-  }, [appointments, formDataAppointment.id, nonWorkingDates]);
-
-  /**
-   * État pour contrôler l'expansion du panel d'options avancées
-   */
-  const [isExpanded, setIsExpanded] = useState(isReducedVersion ? false : true);
+  }, [appointments, formDataAppointment.IdPlanningEvenement, nonWorkingDates]);
 
   /**
    * État unifié pour la gestion de tous les jours non travaillés
    * (week-ends, fériés, jours configurés comme non travaillés)
    */
-  const [includeAllNonWorkingDays, setIncludeAllNonWorkingDays] = useState(
-    isAppointmentSplitByNotWorkingDay
-  );
-
-  /**
-   * États pour la gestion des étiquettes (version réduite uniquement)
-   */
-  const [newTag, setNewTag] = useState<Tags>({id: 0, name: '', shortName: ''});
-  const [showTagCreation, setShowTagCreation] = useState(false);
-  const [tagDuplicateError, setTagDuplicateError] = useState(false);
-  const [deleteTagModal, setDeleteTagModal] = useState<{ isOpen: boolean; tagId: number | null; tagName: string; affectedCount: number }>({ 
-    isOpen: false, 
-    tagId: null, 
-    tagName: '',
-    affectedCount: 0 
-  });
-
-  /**
-   * États pour la gestion des permissions par employé (rubriques sociales uniquement)
-   */
-  const [employeePermissions, setEmployeePermissions] = useState<Map<number, SocialItemPermission>>(new Map());
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isPermissionsPanelOpen, setIsPermissionsPanelOpen] = useState(false);
-
-  // Charger les permissions existantes au montage ou lors du changement d'item
-  useEffect(() => {
-    if (isEditingResource && formDataItemType.id && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
-      // Charger les permissions existantes pour cet item
-      const permissions = new Map<number, SocialItemPermission>();
-      employees.forEach(emp => {
-        const perm = getSocialItemPermission(emp.id, formDataItemType.id);
-        if (perm) {
-          permissions.set(emp.id, perm);
-        } else {
-          // Permissions par défaut
-          permissions.set(emp.id, {
-            userId: emp.id,
-            itemId: formDataItemType.id,
-            canView: true,
-            canCreate: true,
-            canEdit: true,
-            canDelete: true,
-          });
-        }
-      });
-      setEmployeePermissions(permissions);
-    } else if (isCreatingResource && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual)) {
-      // Pour la création, initialiser avec tous les droits
-      const permissions = new Map<number, SocialItemPermission>();
-      employees.forEach(emp => {
-        permissions.set(emp.id, {
-          userId: emp.id,
-          itemId: formDataItemType.id || -1,
-          canView: true,
-          canCreate: true,
-          canEdit: true,
-          canDelete: true,
-        });
-      });
-      setEmployeePermissions(permissions);
-    }
-  }, [isEditingResource, isCreatingResource, formDataItemType.id, formDataItemType.type, employees]);
+  const includeAllNonWorkingDays = useMemo(() => isAppointmentSplitByNotWorkingDay, [isAppointmentSplitByNotWorkingDay]);
 
   /**
    * Détection des changements non sauvegardés
@@ -276,12 +414,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     const isAppDirty = JSON.stringify({
       ...formDataAppointment,
       // Normalisation des dates pour éviter les faux positifs dus aux millisecondes
-      startDate: formDataAppointment.startDate,
-      endDate: formDataAppointment.endDate
+      startDate: formDataAppointment.DebutPlanningEvenement,
+      endDate: formDataAppointment.FinPlanningEvenement
     }) !== JSON.stringify({
       ...appointment,
-      startDate: appointment.startDate,
-      endDate: appointment.endDate
+      startDate: appointment.DebutPlanningEvenement,
+      endDate: appointment.FinPlanningEvenement
     });
 
     const isItemDirty = JSON.stringify(formDataItemType) !== JSON.stringify(item);
@@ -290,1019 +428,426 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
   }, [formDataAppointment, formDataItemType, includeAllNonWorkingDays, appointment, item, isAppointmentSplitByNotWorkingDay, onDirtyChange]);
 
+
   /**
-   * Gère les changements des champs texte, textarea et select du formulaire.
-   * Met à jour l'état local `formData` en fonction du champ modifié.
-   *
-   * @param {React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>} e - Événement de changement.
+   * Enregistre le gestionnaire de sauvegarde dans le contexte du Modal
+   * Cela permet au Modal de déclencher la sauvegarde du formulaire
+   * lorsque l'utilisateur confirme vouloir sauvegarder
    */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
-     if (name === 'employeeId') {
-      setFormDataAppointment((prev) => ({ ...prev, employeeId: Number(value) }));
-      return;
-    }
-    setFormDataAppointment((prev) => ({ ...prev, [name]: value }));
-  };
+  useEffect(() => {
+    // Enregistre un wrapper stable pour éviter les re-registers en cascade.
+    registerSaveHandler(() => saveHandlerRef.current?.());
+
+    // Nettoyer lors du démontage
+    return () => {
+      registerSaveHandler(null);
+    };
+  }, [registerSaveHandler]);
 
   /**
    * Gère le changement de date via les inputs de type "date".
-   * Met à jour la date de début ou de fin dans l'état local `formData`.
-   *
-   * @param {React.ChangeEvent<HTMLInputElement>} e - Événement de changement de date.
    */
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDateChange = (dateType: 'start' | 'end', newDate: number) => {
     // Réinitialiser l'erreur de validation lors du changement de date
     if (dateValidationError) {
       setDateValidationError(false);
     }
 
-    const { name, value } = e.target;
-    if (!value) return;
-
-    const baseDate = new Date(value);
-    const baseTs = baseDate.getTime();
-    if (Number.isNaN(baseTs)) return; // Ignore invalid input to avoid propagating NaN
-
-    // 2. On récupère l'heure actuelle stockée dans le state (ou l'heure courante si vide)
-    // formDataAppointment[name] est supposé être un timestamp (number)
-    const currentTimestamp = formDataAppointment[name as 'startDate' | 'endDate'] || Date.now();
-    const timeSource = new Date(currentTimestamp);
-    const timeSourceTs = timeSource.getTime();
-    const safeTimeSource = Number.isNaN(timeSourceTs) ? new Date() : timeSource;
-
-    // 3. FUSION : On applique l'heure conservée sur la nouvelle date
-    // setHours prend (heures, minutes, secondes, ms)
-    baseDate.setHours(
-      safeTimeSource.getHours(), 
-      safeTimeSource.getMinutes(), 
-      0, 
-      0
-    );
-
-    // 4. On met à jour le state avec un TIMESTAMP (nombre)
     setFormDataAppointment(prev => ({ 
-        ...prev, 
-        [name]: baseDate.getTime() 
+      ...prev, 
+      [dateType === 'start' ? 'DebutPlanningEvenement' : 'FinPlanningEvenement']: newDate 
     }));
   };
 
 
   /**
    * Soumet le formulaire de rendez-vous.
-   * Appelle la fonction `onSave` avec les données du formulaire et l'état `includeAllNonWorkingDays`.
-   *
-   * @param {React.FormEvent} e - Événement de soumission du formulaire.
    */
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    console.log(formDataAppointment);
-    
-    // Gestion de la création d'une nouvelle ressource
+  const handleSubmit = async (e?: React.FormEvent) => {
+    setSaveError(null);
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    // Gestion de la crÃ©ation d'une nouvelle ressource
     if (isCreatingResource) {
-      // Validation du code avant la création
-      if (formDataItemType.code && items.find(item => item.code === formDataItemType.code.toUpperCase() && item.id !== formDataItemType.id)) {
-        setCodeValidationError(true);
-        return;
-      }
-      
-      const newItemId = Date.now();
-      
+      setIsSaving(true);
+            
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
-        employeePermissions.forEach((perm) => {
-          setSocialItemPermission({
-            ...perm,
-            itemId: newItemId, // Utiliser le nouvel ID
-          });
-        });
-      }
+      // if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
+      //   employeePermissions.forEach((perm) => {
+      //     void socialPermissionService.setSocialItemPermission({
+      //       ...perm,
+      //       itemId: newItemId, // Utiliser le nouvel ID
+      //     });
+      //   });
+      // }
       
+    
       // Ajout du nouvel événement
-      handleAddDimension({...formDataItemType, id: newItemId});
+      const result = await handleAddManualRessource({...formDataItemType} as AutreItem);
+      if (!result.success) {
+        notificationService.error('Erreur', result.message || 'Erreur lors de l\'ajout de la ressource.');
+        setSaveError(result.message || 'Erreur lors de l\'ajout de la ressource.');
+      } else if (onClose) {
+        onClose();
+      }
+      setIsSaving(false);
       return;
     }
-    
     // Gestion de la modification d'une ressource existante
     if (isEditingResource) {
       console.log('Modification de ressource');
-      
+      setIsSaving(true);
+
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      if (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) {
-        employeePermissions.forEach((perm) => {
-          setSocialItemPermission(perm);
-        });
+      if (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') {
+        const updatedPermissions = Object.entries(changedEmployeePermissions.current).map(([IdPersonnel, IdDroit]) => {
+          return {
+            IdPersonnel: Number(IdPersonnel),
+            IdDroit: Number(IdDroit),
+          }
+        })
+
+        // Appel à l'API pour mettre à jour les permissions
+        if (onSetPermissions && updatedPermissions.length > 0) {
+          try {
+            const permissionResult = await onSetPermissions(updatedPermissions);
+            if (permissionResult?.error === 1) {
+              notificationService.error('Erreur', permissionResult.message || 'Erreur lors de la mise à jour des permissions.');
+              setSaveError(permissionResult.message || 'Erreur lors de la mise à jour des permissions.');
+              setIsSaving(false);
+              return;
+            }
+          } catch (error) {
+            console.error("Erreur lors de la mise à jour des permissions :", error);
+            notificationService.error('Erreur', 'Erreur lors de la mise à jour des permissions.');
+            setSaveError('Erreur lors de la mise à jour des permissions.');
+            setIsSaving(false);
+            return;
+          }
+        }
       }
       
       // Mise à jour de l'événement existant
-      handleEditDimension(formDataItemType);
+      const result = await handleEditRessource(formDataItemType);
+      if (!result.success) {
+        notificationService.error('Erreur', result.message || 'Erreur lors de la mise à jour de la ressource.');
+        setSaveError(result.message || 'Erreur lors de la mise à jour de la ressource.');
+      }else if (onClose) {
+        onClose();
+      }
+
+      setIsSaving(false);
       return;
     }    
 
-    // Validation des dates
-    if (formDataAppointment.startDate >= formDataAppointment.endDate) {      
-      setDateValidationError(true);
-      return;
-    }
-
-    setDateValidationError(false);
-    
-       // console.log(formDataItemType.id);
-
-    onSave(
-      formDataAppointment,
-      formDataItemType,
-      includeAllNonWorkingDays
-    );
+    void performAppointmentSave();
   };
 
   /**
-   * Gestion des étiquettes
+   * Callbacks pour les composants
    */
-  const handleAddTag = () => {
-    if (!newTag.name.trim()) return;
-    
-    // Vérifier si l'étiquette existe déjà
-    if (formDataItemType.tags?.some(tag => tag.name === newTag.name.trim())) {
-      setTagDuplicateError(true);
-      return;
-    }
-    
-    // Ajouter la nouvelle étiquette
-    setFormDataItemType(prev => ({
-      ...prev,
-      tags: prev.tags ? [...prev.tags, { id: Date.now(), name: newTag.name.trim(), shortName: newTag.shortName?.trim() || undefined }] : [{ id: Date.now(), name: newTag.name.trim(), shortName: newTag.shortName?.trim() || undefined }]
-    }));
-    setNewTag({id: 0, name: '', shortName: ''});
-    setShowTagCreation(false);
-    setTagDuplicateError(false);
+  
+  // Callback pour changement de couleur
+  const handleColorChange = (colorType: 'background' | 'border' | 'text', value: string) => {
+    const colorMap = {
+      background: 'CouleurFondPlanningRessource',
+      border: 'CouleurBordurePlanningRessource',
+      text: 'CouleurTextePlanningRessource',
+    };
+    setFormDataItemType(prev => ({ ...prev, [colorMap[colorType]]: value }));
   };
 
-  const handleRemoveTag = (tagToRemove: number) => {
-    // Vérifier si l'étiquette est utilisée par des rendez-vous
-    const affectedAppointments = appointments.filter(app => app.tag && app.tag.id === tagToRemove);
-    
-    if (affectedAppointments.length > 0) {
-      // Ouvrir la modale de confirmation
-      const tagToDelete = formDataItemType.tags?.find(tag => tag.id === tagToRemove);
-      setDeleteTagModal({
-        isOpen: true,
-        tagId: tagToRemove,
-        tagName: tagToDelete?.name || '',
-        affectedCount: affectedAppointments.length
-      });
-    } else {
-      // Supprimer directement si non utilisée
-      setFormDataItemType(prev => ({
-        ...prev,
-        tags: prev.tags ? prev.tags.filter(tag => tag.id !== tagToRemove) : []
-      }));
-    }
-  };
-
-  const confirmRemoveTag = () => {
-    if (!deleteTagModal.tagId) return;
-    
-    // Supprimer l'étiquette de la liste
-    setFormDataItemType(prev => ({
-      ...prev,
-      tags: prev.tags ? prev.tags.filter(tag => tag.id !== deleteTagModal.tagId) : []
-    }));
-    
-    // Si le rendez-vous actuel utilise cette étiquette, la retirer
-    if (formDataAppointment.tag && formDataAppointment.tag.id === deleteTagModal.tagId) {
-      setFormDataAppointment(prev => ({
-        ...prev,
-        tag: undefined
-      }));
-    }
-    
-    // Notifier le parent pour mettre à jour tous les rendez-vous concernés
-    if (onRemoveTagFromAppointments) {
-      onRemoveTagFromAppointments(deleteTagModal.tagId);
-    }
-    
-    // Fermer la modale
-    setDeleteTagModal({ isOpen: false, tagId: null, tagName: '', affectedCount: 0 });
-  };
-
-  const handleTagKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddTag();
-    }
-  };
-
-  const handleTagChange = (tag: Tags) => {
-    setNewTag(tag);
-    if (tagDuplicateError) setTagDuplicateError(false);
-  };
-
-  const handleToggleTagCreation = () => {
-    setShowTagCreation(!showTagCreation);
-    setTagDuplicateError(false);
-    setNewTag({id: 0, name: '', shortName: ''});
-  };
-
-  const handleItemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-
-    if (name === 'code') {
+  // Callback pour changement de champ ressource
+  const handleResourceFieldChange = async (fieldName: string, value: string | boolean) => {
+    if (fieldName === 'CodePlanningRessource') {
       // Réinitialiser l'erreur lors de la modification
       if (codeValidationError) {
         setCodeValidationError(false);
       }
-      
       // Forcer les majuscules pour le champ code
-      const upperCode = value.toUpperCase();
-      if (items.find(item => item.code === upperCode && item.id !== formDataItemType.id)) {
-        // Gérer le cas où le code existe déjà
-        setCodeValidationError(true);
-        setFormDataItemType(prev => ({
-          ...prev,
-          [name]: upperCode
-        }));
-        return;
+      const upperCode = (value as string).toUpperCase();
+      
+      console.log("Vérification de l'unicité du code :", upperCode);
+      setFormDataItemType(prev => ({ ...prev, CodePlanningRessource: upperCode }));
+
+      if (upperCode.length > 0) {
+        try {
+          const result = await ressourceService.verifyUniqueCode(upperCode);
+          console.log("Résultat de la vérification d'unicité du code :", result);
+
+          if(result.error === 1) {
+            console.error("Erreur lors de la vérification du code :", result.message);
+            return;
+          }
+
+          if (result.exists) {
+            setCodeValidationError(true);
+            return;
+          }
+        } catch (error) {
+            console.error("Erreur lors de la vérification de l'unicité du code :", error);
+            return;
+        }
+      
       }
-      setFormDataItemType(prev => ({
-        ...prev,
-        [name]: upperCode
-      }));
       return;
     }
+    
+    setFormDataItemType(prev => ({ ...prev, [fieldName]: value }));
+  };
 
-    setFormDataItemType(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+  // Callback pour changement d'employé
+  const handleEmployeeChange = (employeeId: number) => {
+    setFormDataAppointment(prev => ({ ...prev, IdEmploye: employeeId }));
+  };
+
+  // Callback pour changement de permission
+  const handlePermissionChange = (IdPersonnel: number, IdDroit: number | string) => {
+    setUsersWithPermission(prev => prev.map(user => 
+      user.IdPersonnel === IdPersonnel ? { ...user, IdDroit } : user
+    ));
+    changedEmployeePermissions.current[IdPersonnel] = Number(IdDroit);
+  };
+
+  const handleSelectTag = (tag: Tag | undefined) => {
+    setFormDataAppointment(prev => ({ ...prev, Etiquette: tag }));
+  };
+
+  // Callback pour changement de description/annotations
+  const handleDescriptionChange = (value: string) => {
+    setFormDataAppointment(prev => ({ ...prev, AnnotationPlanningEvenement: value }));
+  };
+
+  useEffect(() => {
+    saveHandlerRef.current = handleSubmit;
+  }, [handleSubmit]);
+
+
+  /**
+   * Préparation des données pour les composants génériques
+   */
+  
+  // Configuration des couleurs pour FormHeader
+  const colors: ColorConfig = {
+   background: formDataItemType?.CouleurFondPlanningRessource,
+    border: formDataItemType?.CouleurBordurePlanningRessource,
+    text: formDataItemType?.CouleurTextePlanningRessource,
+  };
+  
+  // Champs de ressource pour FormHeader (mode création/édition)
+  const resourceFields: ResourceField[] | undefined = (isCreatingResource || (isEditingResource && formDataItemType?.Type === 'Rubrique Perso')) ? [
+    {
+      name: 'CodePlanningRessource',
+      label: 'Code',
+      type: 'text',
+      value: formDataItemType?.CodePlanningRessource || '',
+      placeholder: 'EX: CH',
+      required: true,
+      width: '1/3',
+      error: codeValidationError ? 'Ce code est déjà utilisé' : undefined,
+    },
+    {
+      name: 'Actif',
+      label: 'Actif',
+      type: 'checkbox',
+      value: !!(formDataItemType as CommonPaieAttributs)?.Actif,
+      width: '1/6',
+    },
+    {
+      name: 'LibellePlanningRessource',
+      label: 'Description',
+      type: 'text',
+      value: formDataItemType?.LibellePlanningRessource || '',
+      placeholder: 'Nom de la rubrique...',
+      required: true,
+      width: 'full',
+    },
+  ] : undefined;
+
+  // Intervalles pour DateTimeSelector
+  const timeIntervals: TimeInterval[] = HALF_DAY_INTERVALS.map((interval, index) => ({
+    id: index === 0 ? 'morning' : 'afternoon',
+    label: index === 0 ? 'Matin' : 'Après-midi',
+    startHour: interval.startHour,
+    endHour: interval.endHour,
+  }));
+
+  // Employees pour EmployeeSelector
+  const employeeList: Employee[] = employees.map(emp => ({
+    id: emp.IdPersonnel,
+    displayName: `${emp.Nom} ${emp.Prenom}`,
+  }));
+
+
+  // Tags pour TagsManager
+  const isTagUsedCheck = (tagId: number) => {
+    const count = appointments.filter(app => app.Etiquette && app.Etiquette.IdPlanningEtiquette === tagId).length;
+    return { used: count > 0, count };
   };
     
-  
+  if (isLoading && loadingFallback) {
+    return <>{loadingFallback}</>;
+  }
+
   // Rendu du formulaire
   return (
     <>
-      <div className={`flex ${isReducedVersion ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} 
+      <div className={`flex ${isResourceMode ? 'flex-row' : isExpanded ? 'lg:flex-row flex-col' : 'flex-col'} 
         gap-4 rounded-xl poppins transition-all duration-300 h-full items-stretch`}
       >  
-        <form onSubmit={handleSubmit} 
+        <form 
+          onSubmit={handleSubmit} 
           className="flex flex-col gap-4 w-full max-w-[380px] min-w-[320px] flex-grow" 
           noValidate
         >
-          {!isReducedVersion && (
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="absolute top-4 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors z-10 cursor-pointer"
-              title={isExpanded ? "Réduire" : "Options avancées"}
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="16" 
-                height="16" 
-                fill="currentColor" 
-                className={`transition-transform duration-300 bi bi-chevron-right text-[#84818a] ${isExpanded ? 'rotate-180' : ''}`} 
-                viewBox="0 0 16 16"
-              >
-                <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
-              </svg>
-            </button>
-          )}
-          {(isCreatingResource || (isEditingResource && formDataItemType.isManual)) && (
-            <div className="flex flex-col gap-3">
-              <div className="flex gap-3">
-                  {/* Champ CODE */}
-                  <div className="w-1/3">
-                      <label htmlFor="code" className="block text-xs font-medium text-gray-500 mb-1">Code</label>
-                      <input
-                          type="text"
-                          name="code"
-                          id="code"
-                          value={formDataItemType.code || ''}
-                          onChange={handleItemChange}
-                          placeholder="EX: CH"
-                          className={`w-full p-2 border rounded-xl focus:outline-none focus:ring-2 text-sm ${codeValidationError ? 'border-red-500 focus:ring-red-500' : 'border-default focus:ring-primary'}`}
-                          required
-                      />
-                      {codeValidationError && (
-                        <p className="text-xs text-red-500 mt-1">Ce code est déjà utilisé</p>
-                      )}
-                  </div>
-                  
-                  {/* Champ ACTIF (Switch) */}
-                  <div className="flex flex-col items-center justify-center w-1/6">
-                      <label htmlFor="active" className="block text-xs font-medium text-gray-500 mb-1">Actif</label>
-                      <input
-                          type="checkbox"
-                          name="actif"
-                          id="actif"
-                          checked={!!(formDataItemType as CommonPaieAttributs).actif}
-                          onChange={handleItemChange}
-                          className="w-5 h-5 cursor-pointer accent-primary"
-                          title="Statut actif/inactif"
-                      />
-                  </div>
-              </div>
-
-              {/* Champ DESCRIPTION (Nom) */}
-              <div className="w-full">
-                  <label htmlFor="name" className="block text-xs font-medium text-gray-500 mb-1">Description</label>
-                  <input
-                      type="text"
-                      name="label"
-                      id="label"
-                      value={formDataItemType.label || ''}
-                      onChange={handleItemChange}
-                      placeholder="Nom de la rubrique..."
-                      className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                      required
-                  />
-              </div>
-            </div>
+          {!isResourceMode && (
+            <ExpandButton
+              isExpanded={isExpanded}
+              onToggle={() => setIsExpanded(!isExpanded)}
+            />
           )}
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mr-2">
-            <div className='flex item-start w-full sm:w-[68px]'>Icône</div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
-              {/* Container pour l'image et le bouton de modification */}
-              <div 
-                className="relative group"
-                onClick={() => {if (isMobile) handleOpenImageModal(formDataItemType.id)}}
-              >
-                {formDataItemType?.image?.image ? (
-                  // CAS 1 : L'image existe -> On l'affiche
-                  <img 
-                    src={formDataItemType.image.image} 
-                    alt="Icône" 
-                    className="w-12 h-12 rounded border border-default object-cover" 
-                  />
-                ) : (
-                  // CAS 2 : Pas d'image -> Fond gris avec une croix
-                  <div className="w-12 h-12 rounded border border-default bg-gray-200 flex items-center justify-center text-gray-400">
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      strokeWidth={2} 
-                      stroke="currentColor" 
-                      className="w-6 h-6"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {if (!isMobile) handleOpenImageModal(formDataItemType.id)}}
-                  className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
-                  title="Modifier l'image"
-                >
-                  <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L10.5 8.207l-3-3L12.146.146zM11.207 9L8 5.793 1.146 12.646a.5.5 0 0 0-.146.354v2.5a.5.5 0 0 0 .5.5h2.5a.5.5 0 0 0 .354-.146L11.207 9zM4 15.5a.5.5 0 0 1-.5-.5v-2.293l8.5-8.5L14.293 6.5 5.793 15H4z"/>
-                  </svg>
-                </button>
-              </div>
-              {/* Sélecteurs de couleur */}
-              <div className="flex flex-col gap-2 w-full">
-                {/* Couleur de fond */}
-                <div className="relative group flex items-center gap-2">
-                  <label 
-                    htmlFor="color-fond"
-                    className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataItemType?.color || '#1E40AF' }}
-                    title="Couleur de fond"
-                  />
-                  <input
-                    id="color-fond"
-                    type="color"
-                    value={normalizeColorForInput(formDataItemType?.color)}
-                    onChange={(e) => setFormDataItemType(prev => ({ ...prev, color: e.target.value }))}
-                    className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-                    title="Couleur de fond"
-                  />
-                  <label htmlFor="color-fond" className="cursor-pointer text-sm flex-1">
-                    Couleur de fond
-                  </label>
-                </div>
-                {/* Couleur de bordure */}
-                <div className="relative group flex items-center gap-2">
-                 <label 
-                    htmlFor="color-bordure"
-                    className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataItemType?.borderColor || '#1E40AF' }}
-                    title="Couleur de bordure"
-                  />
-                  <input
-                    id="color-bordure"
-                    type="color"
-                    value={normalizeColorForInput(formDataItemType?.borderColor)}
-                    onChange={(e) => setFormDataItemType(prev => ({ ...prev, borderColor: e.target.value }))}
-                    className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-                    title="Couleur de bordure"
-                  />
-                  <label htmlFor="color-bordure" className="cursor-pointer text-sm flex-1">
-                    Couleur de bordure
-                  </label>
-                </div>
-              
-                {/* Couleur de texte */}
-                <div className="relative group flex items-center gap-2">
-                  <label 
-                    htmlFor="color-texte"
-                    className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                    style={{ backgroundColor: formDataItemType?.textColor || '#FFFFFF' }}
-                    title="Couleur de texte"
-                  />
-                  <input
-                    id="color-texte"
-                    type="color"
-                    value={normalizeColorForInput(formDataItemType?.textColor)}
-                    onChange={(e) => setFormDataItemType(prev => ({ ...prev, textColor: e.target.value }))}
-                    className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-                    title="Couleur de texte"
-                  />
-                  <label htmlFor="color-texte" className="cursor-pointer text-sm flex-1">
-                    Couleur de texte
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* FormHeader - Icône + Couleurs + Ressource */}
+          <FormHeader
+            icon={formDataItemType?.Image || undefined}
+            onIconClick={() => handleOpenImageModal(formDataItemType?.IdPlanningRessource)}
+            colors={colors}
+            onColorChange={handleColorChange}
+            resourceFields={resourceFields}
+            onResourceFieldChange={handleResourceFieldChange}
+            isMobile={isMobile}
+          />
 
-          {/* Aperçu du rendez-vous - Repositionné sous les couleurs */}
-          <div className='relative'>
+          {/* FormPreview - Aperçu du rendez-vous */}
+          <FormPreview>
             <AppointmentItem
-              appointment={{
-                ...formDataAppointment,
-                id: formDataAppointment.id || 0,
-                startDate: Date.now(),
-                endDate: Date.now() + 86400000 * 3, // +3 jours
-              }}
+              appointment={formDataAppointment}
               event={formDataItemType}
               isFullDay={isFullDay}
-              source='demo'
+              source={'demo'}
               isMobile={false}
               isDisplayWeekend={false}
-              chargeeAffaire={formDataItemType && formDataItemType.type === 'chantier' ? formDataItemType.chargeAffaire : ''}
+              chargeeAffaire={formDataItemType && formDataItemType?.Type === 'Projet' ? formDataItemType?.ChargeAffaire : ''}
               onDoubleClick={() => {}}
-              onResize={() => {}}
+              onAppointmentResize={() => {}}
               handleContextMenu={() => {}}
               tagPlacement={tagPlacement}
+              mainScrollRef={null}
             />
-          </div>
+          </FormPreview>
         
-          {/* Section Permissions par employé (Rubriques sociales et événements manuels) */}
-          {(isCreatingResource || isEditingResource) && (formDataItemType.type === 'absence' || formDataItemType.type === 'autre' || formDataItemType.isManual) && (
-            <div className="mt-4 border border-primary rounded-xl overflow-hidden bg-bg-secondary">
-              {/* En-tête cliquable pour ouvrir/fermer */}
-              <button
-                type="button"
-                onClick={() => setIsPermissionsPanelOpen(!isPermissionsPanelOpen)}
-                className="w-full flex items-center justify-between p-4 hover:bg-primary-ultra-light transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`transition-transform duration-200 ${isPermissionsPanelOpen ? 'rotate-90' : ''}`}>
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" className="text-primary">
-                      <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
-                    </svg>
-                  </div>
-                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" className="text-primary">
-                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-                  </svg>
-                  <h3 className="text-sm font-semibold text-primary">
-                    Gestion des permissions
-                  </h3>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-tertiary">{employees.length} employé(s)</span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-primary-ultra-light text-primary font-medium">
-                    {isPermissionsPanelOpen ? 'Masquer' : 'Afficher'}
-                  </span>
-                </div>
-              </button>
-
-              {/* Contenu dépliable */}
-              {isPermissionsPanelOpen && (
-                <div className="px-4 pb-4 animate-in slide-in-from-top duration-200">
-
-                  {/* Barre de recherche */}
-                  <div className="relative mb-3">
-                    <input
-                      type="text"
-                      placeholder="Rechercher un employé..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-9 py-2 text-sm border border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 20 20">
-                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-                    </svg>
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-
-              {/* Tableau des permissions */}
-              <div className="max-h-[350px] overflow-y-auto border border-default rounded-lg shadow-sm">
-                <table className="w-full text-xs">
-                  <thead className="bg-bg-primary sticky top-0 z-10 shadow-sm">
-                    <tr>
-                      <th className="text-left py-3 px-3 font-semibold text-primary border-b border-default">
-                        Employé
-                      </th>
-                      <th className="text-center py-3 px-2 font-semibold text-primary border-b border-default">
-                        <div className="flex flex-col items-center gap-1">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
-                          </svg>
-                          <span className="text-[10px] font-normal">Voir</span>
-                        </div>
-                      </th>
-                      <th className="text-center py-3 px-2 font-semibold text-primary border-b border-default">
-                        <div className="flex flex-col items-center gap-1">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd"/>
-                          </svg>
-                          <span className="text-[10px] font-normal">Créer</span>
-                        </div>
-                      </th>
-                      <th className="text-center py-3 px-2 font-semibold text-primary border-b border-default">
-                        <div className="flex flex-col items-center gap-1">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-                          </svg>
-                          <span className="text-[10px] font-normal">Éditer</span>
-                        </div>
-                      </th>
-                      <th className="text-center py-3 px-2 font-semibold text-primary border-b border-default">
-                        <div className="flex flex-col items-center gap-1">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
-                          </svg>
-                          <span className="text-[10px] font-normal">Supprimer</span>
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                      <tbody>
-                        {employees
-                          .filter(emp => 
-                            emp.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            emp.prenom.toLowerCase().includes(searchQuery.toLowerCase())
-                          )
-                          .map((emp, index) => {
-                            const perm = employeePermissions.get(emp.id) || {
-                              userId: emp.id,
-                              itemId: formDataItemType.id || -1,
-                              canView: true,
-                              canCreate: true,
-                              canEdit: true,
-                              canDelete: true,
-                            };
-                            return (
-                              <tr key={emp.id} className={`hover:bg-primary-ultra-light transition-colors border-b border-default ${index % 2 === 0 ? 'bg-white' : 'bg-bg-secondary'}`}>
-                                <td className="py-2.5 px-3 text-primary font-medium">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-                                      {emp.prenom.charAt(0)}{emp.nom.charAt(0)}
-                                    </div>
-                                    {emp.nom} {emp.prenom}
-                                  </div>
-                                </td>
-                                <td className="text-center py-2.5 px-2">
-                                  <label className="inline-flex items-center justify-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={perm.canView}
-                                      onChange={(e) => {
-                                        const updated = { ...perm, canView: e.target.checked };
-                                        setEmployeePermissions(new Map(employeePermissions.set(emp.id, updated)));
-                                      }}
-                                      className="w-4 h-4 cursor-pointer accent-primary rounded"
-                                    />
-                                  </label>
-                                </td>
-                                <td className="text-center py-2.5 px-2">
-                                  <label className="inline-flex items-center justify-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={perm.canCreate}
-                                      onChange={(e) => {
-                                        const updated = { ...perm, canCreate: e.target.checked };
-                                        setEmployeePermissions(new Map(employeePermissions.set(emp.id, updated)));
-                                      }}
-                                      className="w-4 h-4 cursor-pointer accent-primary rounded"
-                                    />
-                                  </label>
-                                </td>
-                                <td className="text-center py-2.5 px-2">
-                                  <label className="inline-flex items-center justify-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={perm.canEdit}
-                                      onChange={(e) => {
-                                        const updated = { ...perm, canEdit: e.target.checked };
-                                        setEmployeePermissions(new Map(employeePermissions.set(emp.id, updated)));
-                                      }}
-                                      className="w-4 h-4 cursor-pointer accent-primary rounded"
-                                    />
-                                  </label>
-                                </td>
-                                <td className="text-center py-2.5 px-2">
-                                  <label className="inline-flex items-center justify-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={perm.canDelete}
-                                      onChange={(e) => {
-                                        const updated = { ...perm, canDelete: e.target.checked };
-                                        setEmployeePermissions(new Map(employeePermissions.set(emp.id, updated)));
-                                      }}
-                                      className="w-4 h-4 cursor-pointer accent-primary rounded"
-                                    />
-                                  </label>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        {employees.filter(emp => 
-                          emp.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          emp.prenom.toLowerCase().includes(searchQuery.toLowerCase())
-                        ).length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="py-8 text-center text-tertiary">
-                              <div className="flex flex-col items-center gap-2">
-                                <svg className="w-8 h-8 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"/>
-                                </svg>
-                                <span className="text-sm">Aucun employé trouvé</span>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {!isReducedVersion && (
-            <>
-              {/* Dates et créneaux */}
-              <div className="flex flex-col gap-4 bg-transparent">
-              <div className="flex-1 flex flex-row gap-2 items-center justify-between">
-                <label htmlFor="startDate" className={"block text-sm font-medium"}>Début</label>
-                <div className="flex flex-row gap-2 w-full justify-end">
-                  <input
-                    type="date"
-                    id="startDate"
-                    name="startDate"
-                    value={format(formDataAppointment.startDate, 'yyyy-MM-dd')}
-                    onChange={handleDateChange}
-                    required
-                    className={`w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm`}
-                  />
-            
-                  <div className='w-[145px]'>
-                    {!isFullDay && (
-                      <select
-                        id="intervalNameStart"
-                        name="intervalName"
-                        value={
-                          new Date(formDataAppointment.startDate).getHours() >= HALF_DAY_INTERVALS[0].startHour 
-                          && new Date(formDataAppointment.startDate).getHours() < HALF_DAY_INTERVALS[0].endHour
-                          ? 'morning' : 'afternoon'
-                        }
-                        onChange={e => {
-                          const newHour = e.target.value === 'morning'
-                            ? HALF_DAY_INTERVALS[0].startHour
-                            : HALF_DAY_INTERVALS[1].startHour;
-                          setFormDataAppointment(prev => ({
-                            ...prev,
-                            startDate: startOfDay(prev.startDate).setHours(newHour),
-                          }));
-                        }}
-                        className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
-                      >
-                        <option value="morning">Matin</option>
-                        <option value="afternoon"
-                          disabled={
-                            format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
-                            new Date(formDataAppointment.endDate).getHours() === HALF_DAY_INTERVALS[0].endHour - 1
-                          }
-                        >Après-midi</option>
-                      </select>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 flex flex-row gap-2 items-center">
-                <label htmlFor="endDate" className="block text-sm font-medium">Fin</label>
-                <div className="flex flex-col w-full">
-                  <div className="flex flex-row gap-2 w-full justify-end">
-                    <input
-                      type="date"
-                      id="endDate"
-                      name="endDate"
-                      value={format(formDataAppointment.endDate, 'yyyy-MM-dd')}
-                      onChange={handleDateChange}
-                      required
-                      className={`w-[145px] p-2 border ${dateValidationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm`}
-                    />
-
-                    <div className='w-[145px]'>
-                      {!isFullDay && (
-                        <select
-                          id="intervalNameEnd"
-                          name="intervalName"
-                          value={
-                            new Date(formDataAppointment.endDate).getHours() <= HALF_DAY_INTERVALS[0].endHour
-                              ? 'morning'
-                              : 'afternoon'
-                          }
-                          onChange={e => {
-                            const isAfternoon = e.target.value === 'afternoon';
-
-                            setFormDataAppointment(prev => {
-                              const targetDate = new Date(prev.endDate);
-                              targetDate.setHours(
-                                isAfternoon ? HALF_DAY_INTERVALS[1].endHour - 1 : HALF_DAY_INTERVALS[0].endHour - 1 ,
-                                59 ,
-                                59 ,
-                                999
-                              );
-                              return {
-                                ...prev,
-                                endDate: targetDate.getTime(),
-                              };
-                            });
-                          }}
-                          className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-gray-50"
-                        >
-                          <option 
-                            value="morning"
-                            disabled={
-                              format(formDataAppointment.startDate, 'yyyy-MM-dd') === format(formDataAppointment.endDate, 'yyyy-MM-dd') &&
-                              new Date(formDataAppointment.startDate).getHours() === HALF_DAY_INTERVALS[1].startHour
-                            }
-                          >Matin</option>
-                          <option value="afternoon">Après-midi</option>
-                        </select>
-                      )}
-                    </div>
-                  </div>
-                  {dateValidationError && (
-                    <div className='w-full'>
-                      <span className="text-red-500 text-xs mt-1 block">
-                        La date de fin doit être postérieure à la date de début
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Sélecteur de chargé d'affaire */}
-            <div className="flex flex-col gap-2">
-              <label htmlFor="employeeId" className="block text-sm font-medium">Affecté</label>
-              <select
-                id="employeeId"
-                name="employeeId"
-                value={formDataAppointment.employee.id || ''}
-                onChange={handleChange}
-                className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-bg-secondary text-sm"
-              >
-                {employees.map(employee => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.nom + ' ' + employee.prenom}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </>
-          )}
-
-          {/* Boutons d'action */}
-          <div className="flex flex-col sm:flex-row justify-between gap-3 mt-auto pt-5">
-            <input
-              type="submit"
-              className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation"
-              value={isCreatingResource ? 'Créer' : 'Enregistrer'}
+          {/* PermissionsPanel - Gestion des permissions par employé */}
+          {isEditingResource && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') && (
+            <PermissionsPanel
+              usersWithPermission={usersWithPermission}
+              permissions={permissions.current}
+              onPermissionChange={handlePermissionChange}
+              title="Gestion des permissions"
+              defaultOpen={false}
+              searchPlaceholder="Rechercher un employé..."
             />
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation"
-            >
-              Annuler
-            </button>
-          </div>
+          )}
+
+          {!isResourceMode && (
+            <>
+              {/* DateTimeSelector - Dates et créneaux */}
+              <DateTimeSelector
+                startDate={formDataAppointment.DebutPlanningEvenement}
+                endDate={formDataAppointment.FinPlanningEvenement}
+                onDateChange={handleDateChange}
+                intervals={timeIntervals}
+                isFullDay={isFullDay}
+                validationError={dateValidationError ? "La date de fin doit être postérieure à la date de début" : undefined}
+              />
+
+              {/* EmployeeSelector - Sélecteur d'employé */}
+              <EmployeeSelector
+                employees={employeeList}
+                selectedEmployeeId={formDataAppointment.IdEmploye}
+                onEmployeeChange={handleEmployeeChange}
+                label="Affecté"
+              />
+            </>
+          )}
+
+          {/* ActionButtons - Boutons d'action */}
+          <ActionButtons
+            primaryLabel={
+              isSaving ? 
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg> 
+              : isCreatingResource ? 'Créer' : 'Enregistrer'}
+            secondaryLabel="Fermé"
+            onSecondary={() => handleCloseWithSave()}
+            primaryType="submit"
+            disabled={isSaving}
+          />
+
+          {saveError && (
+            <p className="text-sm text-red-600 mt-2">{saveError}</p>
+          )}
         </form>
 
         {/* Section étiquettes - Version réduite uniquement */}
-        {isReducedVersion && (
+        {isResourceMode && formDataItemType?.Type === 'Projet' && (
           <div className="w-full lg:w-[320px] px-4 flex flex-col gap-4 border-l border-light">
-            <h3 className="text-sm font-semibold text-primary">Étiquettes</h3>
-            
-            {/* Formulaire d'ajout d'étiquette */}
-            <TagCreationForm
-              newTag={newTag}
-              onTagChange={handleTagChange}
-              onAdd={handleAddTag}
-              onKeyPress={handleTagKeyPress}
-              duplicateError={tagDuplicateError}
+            <TagsManager
+              tags={resourceTags}
+              onAddTag={handleCreateTag}
+              onRemoveTag={handleDeleteTag}
+              isTagUsed={isTagUsedCheck}
               variant="compact"
+              title="Étiquettes"
+              isDeleting={DeletingTag}
+              isCreating={isCreatingTag}
+              error={tagError}
             />
-
-            {/* Liste des étiquettes */}
-            <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto">
-              {formDataItemType?.tags?.map((tag, index) => (
-                  <div
-                    key={index}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-primary-ultra-light text-primary rounded-full text-xs group hover:bg-red-50 hover:text-red-600 transition-colors"
-                  >
-                    <span>{tag.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag.id)}
-                      className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                      title="Supprimer l'étiquette"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
-                      </svg>
-                    </button>
-                  </div>
-                ))
-              }
-            </div>
           </div>
         )}
 
         {/* Section extensible - Options avancées */}
         {isExpanded && (
-          <div className="w-full lg:w-[530px] p-4 flex flex-col gap-1 animate-in slide-in-from-right text-primary duration-300 lg:border-l border-light mt-4 lg:mt-0">
+          <div className="w-full lg:w-[530px] p-4 flex flex-col gap-6 animate-in slide-in-from-right text-primary duration-300 lg:border-l border-light mt-4 lg:mt-0">
             
-            {/* Cases à cocher */}
-            {/* <div className="mb-[50px]">
-              <label className="flex items-start space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={includeAllNonWorkingDays}
-                  onChange={(e) => {
-                    const isChecked = e.target.checked;
-                    setIncludeAllNonWorkingDays(isChecked);
-                    // Synchroniser avec les anciens états pour compatibilité
-                    
-                  }}
-                  className="w-4 h-4 border-default rounded mt-0.5"
-                />
-                <span className="text-sm  leading-tight">Inclure les week-ends, jours fériés et jours non travaillés</span>
-              </label>
-            </div> */}
+            {/* AnnotationsField - Zone de texte pour annotations */}
+            <AnnotationsField
+              value={formDataAppointment.AnnotationPlanningEvenement || ''}
+              onChange={handleDescriptionChange}
+              label="Annotations"
+              placeholder="Ajoutez des annotations..."
+              height={96}
+            />
 
-            {/* Zone de texte pour annotations */}
-            <div className="flex flex-col gap-6">
-              <label className="text-sm font-medium">Annotations</label>
-              <textarea
-                value={formDataAppointment.description || ''}
-                onChange={(e) => setFormDataAppointment(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Ajoutez des annotations..."
-                className="w-full h-24 p-3 border border-default rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-color text-sm"
+            {/* TagsManager - Sélecteur d'étiquette (version étendue pour chantiers) */}
+            {formDataItemType?.Type === 'Projet' && (
+              <TagsManager
+                tags={resourceTags}
+                selectedTag={formDataAppointment.Etiquette}
+                onSelectTag={handleSelectTag}
+                onAddTag={async (newTag) => {
+                  try {
+                      const createdTag = await handleCreateTag(newTag);
+                      handleSelectTag(createdTag);
+                  } catch (e) {
+                      // err is handled via tagError
+                  }
+                }}
+                onRemoveTag={handleDeleteTag}
+                isTagUsed={isTagUsedCheck}
+                variant="extended"
+                title="Étiquette associée"
+                placeholder="Aucune étiquette"
+                isDeleting={DeletingTag}
+                isCreating={isCreatingTag}
+                error={tagError}
               />
-            </div>
-
-            {formDataItemType.type === 'chantier' && (
-              <>
-                {/* Sélecteur d'étiquette - Version étendue uniquement */}
-                <div className="flex flex-col gap-4 mt-6">
-                  <label className="text-sm font-medium">Étiquette associée</label>
-                  
-                  {/* Ligne avec le select et le bouton d'ajout */}
-                  
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={formDataAppointment.tag?.id || ''}
-                          onChange={(e) => setFormDataAppointment(prev => ({
-                            ...prev,
-                            tag: e.target.value ? formDataItemType.tags?.find(tag => tag.id === Number(e.target.value)) || undefined : undefined
-                          }))}
-                          className="flex-1 p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-bg-secondary"
-                        >
-                          <option value="">Aucune étiquette</option>
-                          {formDataItemType.tags?.map((tag) => (
-                            <option key={tag.id} value={tag.id}>
-                              {tag.name} {tag.shortName ? `(${tag.shortName})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                        
-                        {/* Petit bouton pour créer une étiquette */}
-                        <button
-                          type="button"
-                          onClick={handleToggleTagCreation}
-                          className="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors shadow-sm"
-                          title={showTagCreation ? "Annuler" : "Créer une étiquette"}
-                        >
-                          {showTagCreation ? (
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                              <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
-                            </svg>
-                          ) : (
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                    
-                      {/* Aperçu de l'étiquette sélectionnée */}
-                      {formDataAppointment.tag && formDataItemType.tags && !showTagCreation && (
-                        <div className="flex items-center gap-2 p-3 bg-primary-ultra-light rounded-xl">
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-primary">
-                            <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
-                          </svg>
-                          <div className="flex flex-col">
-                            <span className="text-sm text-primary font-medium">
-                              {formDataAppointment.tag.name}
-                            </span>
-                            {formDataAppointment.tag.shortName && (
-                              <span className="text-xs text-gray-500">
-                                Version courte : {formDataAppointment.tag.shortName}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                  
-                  
-                  {/* Formulaire de création d'étiquette */}
-                  {showTagCreation && (
-                    <TagCreationForm
-                      newTag={newTag}
-                      onTagChange={handleTagChange}
-                      onAdd={handleAddTag}
-                      duplicateError={tagDuplicateError}
-                      variant="extended"
-                    />
-                  )}
-                </div>
-              </>
             )}
-
           </div>
         )}
       </div>
-
-      {/* Modale de confirmation de suppression d'étiquette */}
-      <DeleteModal
-        isOpen={deleteTagModal.isOpen}
-        onClose={() => setDeleteTagModal({ isOpen: false, tagId: null, tagName: '', affectedCount: 0 })}
-        title="Supprimer l'étiquette"
-        scenario={{
-          title: "Étiquette utilisée",
-          description: (
-            <>
-              L'étiquette <strong>{deleteTagModal.tagName}</strong> est actuellement utilisée par{' '}
-              <strong>{deleteTagModal.affectedCount}</strong> rendez-vous.
-              <br />
-              <br />
-              Si vous supprimez cette étiquette, elle sera retirée de tous les rendez-vous associés.
-            </>
-          ),
-          iconColor: "orange",
-          iconType: "warning",
-          infoMessages: [
-            { 
-              text: "⚠️ Cette action ne peut pas être annulée.", 
-              type: "warning" 
-            }
-          ],
-          actions: [
-            { 
-              label: "Supprimer de tous les RDV", 
-              onClick: confirmRemoveTag, 
-              variant: "primary",
-              requiresConfirm: false
-            },
-            { 
-              label: "Annuler", 
-              onClick: () => setDeleteTagModal({ isOpen: false, tagId: null, tagName: '', affectedCount: 0 }), 
-              variant: "cancel" 
-            }
-          ]
-        }}
-      />
     </>
   );
 });

@@ -14,7 +14,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, Clock, Users } from 'lucide-react';
 import Fuse from 'fuse.js';
-import { User } from '../../../types';
+import { Equipe, User } from '../../../types';
+import { Image } from '../../ui';
+import { getCachedImageById } from '../../../utils/imageCacheStore';
 import { 
   useDebounce,
   useRecentEmployees
@@ -23,11 +25,13 @@ import {
 interface EmployeeSelectorProps {
   employees: User[];
   selectedEmployee: User | null;
+  teams: Record<number, Equipe>;
   onSelect: (employee: User) => void;
 }
 
 export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({ 
   employees, 
+  teams,
   selectedEmployee, 
   onSelect 
 }) => {
@@ -69,7 +73,8 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     const groups: Record<string, User[]> = {};
     
     searchResults.forEach(emp => {
-      const groupName = emp.equipe?.name || 'Sans équipe';
+      const equipeKey = typeof emp.Equipe === 'number' ? emp.Equipe : undefined;
+      const groupName = (equipeKey !== undefined ? teams[equipeKey]?.Nom : undefined) || 'Sans équipe';
       if (!groups[groupName]) {
         groups[groupName] = [];
       }
@@ -82,7 +87,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   // Filtrer les employés récents qui sont dans la liste actuelle
   const validRecentEmployees = useMemo(() => {
     return recentEmployees.filter(recent => 
-      employees.some(emp => emp.id === recent.id)
+      employees.some(emp => emp.IdPersonnel === recent.IdPersonnel)
     );
   }, [recentEmployees, employees]);
 
@@ -139,8 +144,8 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         <div 
           className="rounded-xl p-2.5 mr-3"
           style={{
-            backgroundColor: 'var(--color-primary-lighter)',
-            color: 'var(--color-primary)'
+            backgroundColor: 'var(--color-primary-100)',
+            color: 'var(--color-primary-500)'
           }}
         >
           <Search size={20} />
@@ -157,7 +162,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             className="text-sm font-semibold truncate"
             style={{ color: 'var(--text-primary)' }}
           >
-            {selectedEmployee ? `${selectedEmployee.nom} ${selectedEmployee.prenom}` : 'Sélectionner...'}
+            {selectedEmployee ? `${selectedEmployee.Nom} ${selectedEmployee.Prenom}` : 'Sélectionner...'}
           </p>
         </div>
 
@@ -193,7 +198,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                 color: 'var(--text-primary)'
               }}
               onFocus={(e) => {
-                e.currentTarget.style.outline = '2px solid var(--color-primary)';
+                e.currentTarget.style.outline = '2px solid var(--color-primary-500)';
               }}
               onBlur={(e) => {
                 e.currentTarget.style.outline = 'none';
@@ -216,7 +221,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             {validRecentEmployees.length > 0 && !search && (
               <EmployeeGroup
                 title="Récents"
-                icon={<Clock size={14} style={{ color: 'var(--color-primary)' }} />}
+                icon={<Clock size={14} style={{ color: 'var(--color-primary-500)' }} />}
                 employees={validRecentEmployees}
                 isExpanded={expandedGroups.has('récents')}
                 onToggle={() => toggleGroup('récents')}
@@ -313,9 +318,9 @@ const EmployeeGroup: React.FC<EmployeeGroupProps> = ({
       <div className="space-y-1 pl-1">
         {employees.map(emp => (
           <EmployeeItem 
-            key={showBadge ? `recent-${emp.id}` : emp.id}
+            key={showBadge ? `recent-${emp.IdPersonnel}` : emp.IdPersonnel}
             employee={emp}
-            isSelected={selectedEmployee?.id === emp.id}
+            isSelected={selectedEmployee?.IdPersonnel === emp.IdPersonnel}
             onSelect={onSelect}
             showBadge={showBadge}
           />
@@ -333,16 +338,19 @@ interface EmployeeItemProps {
 }
 
 const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSelect, showBadge }) => {
-  const avatarUrl = employee.image?.image || `https://ui-avatars.com/api/?name=${employee.nom}+${employee.prenom}&background=009580&color=fff`;
-  const isInactive = employee.actif === false;
+  const cachedImage = employee.IdImage ? getCachedImageById(employee.IdImage) : undefined;
+  const avatarSource = employee.IdImage
+    ? (cachedImage?.image || employee.IdImage)
+    : `https://ui-avatars.com/api/?name=${employee.Nom}+${employee.Prenom}&background=009580&color=fff`;
+  const isInactive = employee.Actif === false;
   
   return (
   <div 
     onClick={() => onSelect(employee)}
     className="flex items-center p-2 rounded-xl cursor-pointer transition-colors border"
     style={{
-      backgroundColor: isSelected ? 'var(--color-primary-lighter)' : 'transparent',
-      borderColor: isSelected ? 'var(--color-primary)' : 'transparent',
+      backgroundColor: isSelected ? 'var(--color-primary-100)' : 'transparent',
+      borderColor: isSelected ? 'var(--color-primary-500)' : 'transparent',
       opacity: isInactive ? 0.5 : 1
     }}
     onMouseEnter={(e) => {
@@ -360,13 +368,9 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
       className={`relative w-9 h-9 rounded-full overflow-hidden mr-3 border flex-shrink-0 ${isInactive ? 'grayscale' : ''}`}
       style={{ borderColor: 'var(--border-light)' }}
     >
-      <img 
-        src={avatarUrl}
-        alt={`${employee.nom} ${employee.prenom}`}
-        width="36"
-        height="36"
-        className="object-cover"
-        loading="lazy"
+      <Image 
+        image={avatarSource}
+        className="w-9 h-9 object-cover"
       />
     </div>
     <div className="flex-1 min-w-0">
@@ -374,17 +378,17 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
         <p 
           className="text-sm font-medium truncate"
           style={{ 
-            color: isInactive ? 'var(--text-tertiary)' : (isSelected ? 'var(--color-primary-dark)' : 'var(--text-primary)')
+            color: isInactive ? 'var(--text-tertiary)' : (isSelected ? 'var(--color-primary-600)' : 'var(--text-primary)')
           }}
         >
-          {employee.nom} {employee.prenom}
+          {employee.Nom} {employee.Prenom}
         </p>
         {showBadge && (
           <span 
             className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded"
             style={{
-              backgroundColor: 'var(--color-primary-lighter)',
-              color: 'var(--color-primary-dark)'
+              backgroundColor: 'var(--color-primary-100)',
+              color: 'var(--color-primary-600)'
             }}
           >
             Récent
@@ -393,17 +397,17 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
       </div>
       <div className="flex items-center gap-2 mt-0.5">
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          {employee.type === 'interim' ? 'Intérimaire' : 'Employé'}
+          {employee.Type === 'INTERIM' ? 'Intérimaire' : 'Employé'}
         </p>
-        {employee.code && (
+        {employee.Code && (
           <>
             <span style={{ color: 'var(--border-light)' }}>•</span>
-            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{employee.code}</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{employee.Code}</p>
           </>
         )}
       </div>
     </div>
-    {isSelected && <Check size={18} className="flex-shrink-0" style={{ color: 'var(--color-primary)' }} />}
+    {isSelected && <Check size={18} className="flex-shrink-0" style={{ color: 'var(--color-primary-500)' }} />}
   </div>
   );
 };

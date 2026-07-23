@@ -55,6 +55,7 @@ export const useCalendarInteractions = ({
       const row = elementAtPoint?.closest('.calendar-row') as HTMLElement;
       const rowId = row ? row.id : null;
       
+      //console.log('Row ID under mouse:', rowId);
       if (withinX && colIndex === lastHoveredCol.current && rowId === lastHoveredRowId.current) {
         return;
       }

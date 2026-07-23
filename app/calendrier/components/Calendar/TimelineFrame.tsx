@@ -14,7 +14,7 @@
  */
 
 "use client";
-import React, { useMemo, ReactNode, memo } from 'react';
+import React, { useMemo, ReactNode, memo, useEffect } from 'react';
 import { format, isToday, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CELL_WIDTH, TIMELINE_HEADERGROUPS_CELL_HEIGHT, TIMELINE_HEADERITEMS_CELL_HEIGHT } from '../../utils/constants';
@@ -36,6 +36,7 @@ interface TimelineFrameProps {
     /** Labels pour les colonnes individuelles */
     items: string[];
   };
+  nonworkingDates?: Record<string, number>; // Clé: date au format "yyyy-MM-dd"
   /** Référence pour le scroll principal */
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   /** Gestionnaire d'événement scroll */
@@ -74,9 +75,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   mainScrollRef,
   onScroll,
   children,
-  className = '',
-  style,
-  todayLineColor = '#ffcdde',
+  nonworkingDates,
   showGroupHeaders = true,
   showItemHeaders = true,
   contentClassName = '',
@@ -175,6 +174,114 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
     return dayInTimeline.map(day => format(day, 'd', { locale: fr }));
   }, [dayInTimeline, customDayLabels, columns]);
 
+const computedHeaders = useMemo(() => {
+    const headersConfig = [];
+
+    // Niveau 1: Groupes (Mois)
+    if (showGroupHeaders) {
+      headersConfig.push({
+        show: true,
+        minHeight: TIMELINE_HEADERGROUPS_CELL_HEIGHT,
+        containerClassName: 'bg-secondary-bg border-ultra-light',
+        items: groupsInTimeline.map(group => ({
+          span: group.span,
+          key: group.key,
+          style: {
+            maxHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
+            minHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
+          },
+          className: `col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-secondary-bg border-b`,
+          render: () => (
+            <div className="sticky left-0 z-30 pl-4">
+              <div className="flex sticky flex-col items-center">
+                <span className="poppins text-center font-semibold">
+                  {group.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                </span>
+              </div>
+            </div>
+          ),
+        }))
+      });
+    }
+
+    // Niveau 2: Items (Jours)
+    if (showItemHeaders) {
+      headersConfig.push({
+        show: true,
+        minHeight: TIMELINE_HEADERITEMS_CELL_HEIGHT,
+        containerClassName: 'bg-secondary-bg border-ultra-light',
+        items: itemsInTimeline.map((item, index) => {
+          if ((customDayLabels && customDayLabels.length > 0) || columns) {
+            return {
+              span: 1,
+              key: `item-${index}-custom`,
+              style: { width: `${CELL_WIDTH}px`, height: 'auto', minWidth: `${CELL_WIDTH}px` },
+              render: () => (
+                <div className="flex flex-col justify-center border-b border-r border-light text-center text-sm font-semibold text-primary p-2 bg-secondary-bg relative item-cell">
+                  <div className="flex flex-col justify-center items-center h-full px-2">
+                    <span className="text-xs leading-3 break-words text-center">{item}</span>
+                  </div>
+                </div>
+              )
+            };
+          }
+
+          if (!dayInTimeline || !dayInTimeline[index]) return { span: 1, key: `empty-${index}`, render: () => null };
+
+          const day = dayInTimeline[index];
+          const holiday = isHoliday(day);
+          const weekNumber = getWeekNumber(day);
+          const dayKey = format(day, 'yyyy-MM-dd');
+          
+          // Détection du jour non-travaillé
+          const isNonWorking = nonworkingDates && nonworkingDates[dayKey];
+
+          return {
+            span: 1,
+            // 💡 LA MODIFICATION MAGIQUE : La clé change de nom si le statut du jour change !
+            key: `item-${index}-${isNonWorking ? 'nw' : 'w'}`,
+            style: {
+              maxHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
+              minHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
+              width: `${CELL_WIDTH}px`,
+              minWidth: `${CELL_WIDTH}px`
+            },
+            render: () => (
+              <div
+                className={`
+                  flex flex-col justify-end border-b border-r border-light text-center text-sm font-semibold text-primary p-1 h-full w-full
+                  ${(isToday(day) && 'calendar-today') || (holiday ? 'FERIE' : (isWeekend(day) ? 'calendar-weekend' : (isNonWorking ? 'NON-WORKING' : 'bg-secondary-bg')))}
+                  relative day-cell
+                `}
+              >
+                {new Date(day).getDay() === 1 && (
+                  <span
+                    className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
+                    style={{ width: '24px', height: '24px', background: '#23adde' }}
+                  >
+                    {weekNumber}
+                  </span>
+                )}
+                <div className="flex flex-col justify-center items-center h-full">
+                  <span className="block font-bold text-lg">
+                    {customDayLabels && customDayLabels[index] ? customDayLabels[index].split(' ')[0] : format(day, 'd', { locale: fr })}
+                  </span>
+                  <span className="block text-xs text-secondary">
+                    {customDayLabels && customDayLabels[index]
+                      ? customDayLabels[index].split(' ').slice(1).join(' ')
+                      : format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() + format(day, 'EEE', { locale: fr }).slice(1).replace('.', '')}
+                  </span>
+                </div>
+              </div>
+            )
+          };
+        })
+      });
+    }
+
+    return headersConfig;
+  }, [showGroupHeaders, showItemHeaders, groupsInTimeline, itemsInTimeline, dayInTimeline, nonworkingDates, customDayLabels, columns]);
+
 
   return (
     <FlexibleFrame
@@ -187,123 +294,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
         cellWidth: CELL_WIDTH,
         minColumnWidth: CELL_WIDTH
       }}
-      headers={[
-        // Niveau 1: Groupes (Mois ou catégories)
-        ...(showGroupHeaders ? [{
-          items: groupsInTimeline.map(group => ({
-            span: group.span,
-            key: group.key,
-            render: () => (
-              <div className="sticky left-0 z-30 pl-4">
-                <div className="flex sticky flex-col items-center">
-                  <span className="poppins text-center font-semibold">
-                    {group.name.split(' ').map(word => 
-                      word.charAt(0).toUpperCase() + word.slice(1)
-                    ).join(' ')}
-                  </span>
-                </div>
-              </div>
-            ),
-            style: {
-              maxHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
-              minHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
-            },
-            className: `col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-bg-secondary border-b`
-          })),
-          show: true,
-          minHeight: TIMELINE_HEADERGROUPS_CELL_HEIGHT,
-          containerClassName: 'bg-bg-secondary border-ultra-light',
-        }] : []),
-        // Niveau 2: Items (Jours)
-        ...(showItemHeaders ? [{
-          items: itemsInTimeline.map((item, index) => ({
-            span: 1,
-            key: `item-${index}`,
-            render: () => {
-              // Si on utilise des labels personnalisés ou le mode colonnes
-              if ((customDayLabels && customDayLabels.length > 0) || columns) {
-                return (
-                  <div
-                    className="flex flex-col justify-center border-b border-r border-default text-center text-sm font-semibold text-primary p-2 bg-bg-secondary relative item-cell"
-                    style={{ 
-                      width: `${CELL_WIDTH}px`,
-                      height: 'auto',
-                      minWidth: `${CELL_WIDTH}px`
-                    }}
-                  >
-                    <div className="flex flex-col justify-center items-center h-full px-2">
-                      <span className="text-xs leading-3 break-words text-center">
-                        {item}
-                      </span>
-                    </div>
-                  </div>
-                );
-              }
-              
-              // Mode normal avec vraies dates
-              if (!dayInTimeline || !dayInTimeline[index]) {
-                return null;
-              }
-              
-              const day = dayInTimeline[index];
-              const holiday = isHoliday(day);
-              const weekNumber = getWeekNumber(day);
-              
-              return (
-                <div
-                  className={`
-                    flex flex-col justify-end border-b border-r border-default text-center text-sm font-semibold text-primary p-1
-                    ${(isToday(day) && 'calendar-today') || (holiday ? 'FERIE' : (isWeekend(day) ? 'calendar-weekend' : 'bg-bg-secondary'))}
-                    relative
-                    day-cell
-                  `}
-                  style={{ 
-                    width: `${CELL_WIDTH}px`,
-                    height: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
-                    minWidth: `${CELL_WIDTH}px`
-                  }}
-                >
-                  {/* Affiche le numéro de semaine en début de semaine */}
-                  {new Date(day).getDay() === 1 && (
-                    <span
-                      className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        background: '#23adde',
-                      }}
-                    >
-                      {weekNumber}
-                    </span>
-                  )}
-                  <div className="flex flex-col justify-center items-center h-full">
-                    <span className="block font-bold text-lg">
-                      {customDayLabels && customDayLabels[index] 
-                        ? customDayLabels[index].split(' ')[0]
-                        : format(day, 'd', { locale: fr })
-                      }
-                    </span>
-                    <span className="block text-xs text-secondary">
-                      {customDayLabels && customDayLabels[index]
-                        ? customDayLabels[index].split(' ').slice(1).join(' ')
-                        : format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() 
-                          + format(day, 'EEE', { locale: fr }).slice(1).replace('.', '')
-                      }
-                    </span>
-                  </div>
-                </div>
-              );
-            },
-            style: {
-              maxHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
-              minHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
-            },
-          })),
-          show: true,
-          minHeight: TIMELINE_HEADERITEMS_CELL_HEIGHT,
-          containerClassName: 'bg-bg-secondary border-ultra-light',
-        }] : [])
-      ]}
+      headers={computedHeaders}
     >
       {children}
     </FlexibleFrame>

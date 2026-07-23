@@ -217,16 +217,16 @@ export const canViewAllCalendars = (role?: UserRole): boolean => {
  * @param eventType - Le type d'événement ('chantier', 'absence', 'autre')
  * @returns true si l'utilisateur peut créer cet événement
  */
-export const canCreateEvent = (role?: UserRole, eventType?: 'chantier' | 'absence' | 'autre'): boolean => {
+export const canCreateEvent = (role?: UserRole, eventType?: 'Projet' | 'Paie' | 'Rubrique Perso'): boolean => {
   if (!eventType) return false;
   
   const permissions = getUserPermissions(role);
   
-  if (eventType === 'chantier') {
+  if (eventType === 'Projet') {
     return permissions.chantier.canCreate;
   }
   
-  // 'absence' et 'autre' sont des événements sociaux
+  // 'Paie' et 'Rubrique Perso' sont des événements sociaux
   return permissions.social.canCreate;
 };
 
@@ -236,16 +236,16 @@ export const canCreateEvent = (role?: UserRole, eventType?: 'chantier' | 'absenc
  * @param eventType - Le type d'événement ('chantier', 'absence', 'autre')
  * @returns true si l'utilisateur peut éditer cet événement
  */
-export const canEditEvent = (role?: UserRole, eventType?: 'chantier' | 'absence' | 'autre'): boolean => {
+export const canEditEvent = (role?: UserRole, eventType?: 'Projet' | 'Paie' | 'Rubrique Perso'): boolean => {
   if (!eventType) return false;
   
   const permissions = getUserPermissions(role);
   
-  if (eventType === 'chantier') {
+  if (eventType === 'Projet') {
     return permissions.chantier.canEdit;
   }
   
-  // 'absence' et 'autre' sont des événements sociaux
+  // 'Paie' et 'Rubrique Perso' sont des événements sociaux
   return permissions.social.canEdit;
 };
 

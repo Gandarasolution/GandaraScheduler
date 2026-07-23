@@ -14,9 +14,9 @@
  */
 export interface PoleActivite {
   /** Identifiant unique du pôle (IdPoleActivite) */
-  id: number;
+  Id: number;
   /** Libellé du pôle d'activité (LibellePoleActivite) */
-  name: string;
+  Nom: string;
 }
 
 /**
@@ -26,13 +26,11 @@ export interface PoleActivite {
  */
 export interface Equipe {
   /** Identifiant unique de l'équipe (IdEquipe) */
-  id: number;
+  Id: number;
   /** Libellé de l'équipe (LibelleEquipe) */
-  name: string;  
+  Nom: string;  
 }
 
-/** @deprecated Utiliser Equipe à la place */
-export type Groupe = Equipe;
 
 /** @deprecated Utiliser PoleActivite à la place */
 export type poleActivite = PoleActivite;
@@ -65,10 +63,49 @@ export interface Calendar {
   color?: string;
 }
 
-export interface Tags {
-  id: number;
-  name: string;
-  shortName?: string; // Version courte pour les petits rendez-vous (2 jours ou moins)
+/**
+ * Définition d'une étiquette
+ */
+
+export interface Tag {
+  IdPlanningEtiquette: number;
+  LibelleLongPlanningEtiquette: string;
+  LibelleCourtPlanningEtiquette?: string; // Version courte pour les petits rendez-vous (2 jours ou moins)
+}
+
+
+export interface TagsManagerProps {
+  /** Liste des étiquettes disponibles */
+  tags: Tag[];
+  /** Étiquette sélectionnée (optionnel) */
+  selectedTag?: Tag;
+  /** Callback pour sélection d'étiquette */
+  onSelectTag?: (tag: Tag | undefined) => void;
+  /** Callback pour ajout d'étiquette */
+  onAddTag: (tag: Tag) => void;
+  /** Callback pour suppression d'étiquette */
+  onRemoveTag: (tagId: number) => void;
+  /** Fonction pour vérifier si une étiquette es utilisée */
+  isTagUsed?: (tagId: number) => { used: boolean; count: number };
+  /** Mode d'affichage: 'compact' (liste seule) ou 'extended' (avec sélecteur) */
+  variant?: 'compact' | 'extended';
+  /** Titre de la section (pour mode extended) */
+  title?: string;
+  /** Placeholder pour la recherche/sélection */
+  placeholder?: string;
+}
+
+export interface TagsManagerState {
+  showCreation: boolean;
+  newTag: Tag;
+  duplicateError: boolean;
+  longVersionError: boolean;
+  deleteModal: {
+    isOpen: boolean;
+    tagId: number | null;
+    tagName: string;
+    affectedCount: number;
+  };
 }
 
 export interface BaseItemCategory{
@@ -77,28 +114,26 @@ export interface BaseItemCategory{
 }
 
 interface BaseItem {
-  id: number;
-  label: string;
-  color: string;
-  borderColor: string;
-  textColor: string;
-  code: string;
-  image?: Image;
+  IdPlanningRessource: number;
+  LibellePlanningRessource: string;
+  CouleurFondPlanningRessource: string;
+  CouleurBordurePlanningRessource: string;
+  CouleurTextePlanningRessource: string;
+  CodePlanningRessource: string;
+  Image?: number;
   defaultDescription?: string;
-  tags?: Tags[];
-  isManual?: boolean;
+  Etiquettes?: Tag[];
 }
 
 export interface ChantierItem extends BaseItem {
-  type: "chantier";
-  identifiant: string;
-  poleActivite: string;
-  libelle: string;
-  etat: string;
-  chargeAffaire: string;
-  chefChantier: string;
-  dateOS: string;
-  dateFin: string;
+  Type: "Projet";
+  Identifiant: string;
+  PoleActivite: string;
+  Etat: string;
+  ChargeAffaire: string;
+  ChefChantier: string;
+  DateOS: string;
+  DateFin: string;
   TM: number;
   HR: number;
   SH: number;
@@ -110,27 +145,25 @@ export interface ChantierItem extends BaseItem {
 
 // Interface commune pour les attributs partagés entre Absence et Autre
 export interface CommonPaieAttributs extends BaseItem {
-  verrou: boolean;
-  actif: boolean;
-  category: BaseItemCategory["name"];
-
+  Verrou: boolean;
+  Actif: boolean;
+  Category: BaseItemCategory["name"];
 }
 
 export interface AbsenceItem extends CommonPaieAttributs {
-  type: "absence";
+  Type: "Paie";
 }
 
 export interface AutreItem extends CommonPaieAttributs {
-  type: "autre";
+  Type: "Rubrique Perso";
 }
 
 export type SocialItem = AbsenceItem | AutreItem;
 export type Item = ChantierItem | SocialItem;
 
-export type Image = {
+export type ImageType = {
   id: number;
   image: string;
-  name: string;
 };
 
 /**
@@ -140,23 +173,23 @@ export type Image = {
  */
 export interface Appointment{
   /** Identifiant unique du rendez-vous */
-  id: number;
+  IdPlanningEvenement: number;
   /** Description spécifique du rendez-vous */
-  description: string;
+  AnnotationPlanningEvenement: string;
   /** Date et heure de début du rendez-vous */
-  startDate: number;
+  DebutPlanningEvenement: number;
   /** Date et heure de fin du rendez-vous */
-  endDate: number;
+  FinPlanningEvenement: number;
   /** ID de l'employé assigné au rendez-vous */
-  employee: User;
-  /** Type de rendez-vous */
-  type: 'chantier' | 'absence' | 'autre';
+  IdEmploye: User["IdPersonnel"];
   /** ID de l'événement auquel ce RDV est lié */
-  EventId: number;
+  IdPlanningRessource: Item["IdPlanningRessource"];
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
-  tag?: Tags;
+  Etiquette?: Tag;
   /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */
-  priority?: number;
+  PlanningEvenementPriorite?: number;
+  
+  isLocked: boolean; // Indique si le rendez-vous est verrouillé (non modifiable)
 }
 
 
@@ -184,12 +217,12 @@ export interface Filter {
  * Catégories de filtres structurées
  * @interface FilterCategories
  */
-export interface FilterCategories {
-  /** Filtres appliqués au personnel (pole, équipe, contrat, etc.) */
-  personnel: Filter[];
-  /** Filtres appliqués aux événements (chantier, social, etc.) */
-  evenements: {filters: Filter[], selectedRdvTypes: string[]} | []; // Types de RDV sélectionnés (Chantier, Absence, Autre)
-}
+// export interface FilterCategories {
+//   /** Filtres appliqués au personnel (pole, équipe, contrat, etc.) */
+//   personnel: Filter[];
+//   /** Filtres appliqués aux événements (chantier, social, etc.) */
+//   evenements: {filters: Filter[], selectedRdvTypes: string[]} | []; // Types de RDV sélectionnés (Chantier, Absence, Autre)
+// }
 
 /**
  * Niveaux de groupement disponibles
@@ -203,24 +236,23 @@ export type GroupingLevel = 'equipe' | 'pole';
  */
 export interface GroupingLevels {
   /** Premier niveau de groupement */
-  level1?: GroupingLevel;
+  ChampsPremierGroupePlanningVue?: GroupingLevel;
   /** Deuxième niveau de groupement */
-  level2?: GroupingLevel;
+  ChampsDeuxiemeGroupePlanningVue?: GroupingLevel;
 }
 
 
 export interface CalendarConfig {
-  id: number;
-  name: string;
+  IdPlanningVue: number;
+  LibellePlanningVue: string;
   /** Image associée à la vue */
-  image?: Image;
+  IdPlanningImage?: number;
   /** Description de la vue */
-  description?: string;
+  DescriptionPlanningVue?: string;
   /** Configuration des niveaux de groupement (équipe et pole) */
-  groupingLevels?: GroupingLevels;
+  Group?: GroupingLevels;
   /** Filtres structurés par catégories */
-  filterCategories?: FilterCategories;
-  color?: string;
+  isLocked?: boolean;
 }
 
 // Interface pour les éléments de la dimension (ce qui s'affiche en colonne)
@@ -308,29 +340,27 @@ export interface UserPermissions {
  */
 export interface User{
   /** Identifiant unique de l'utilisateur (IdPersonnel) */
-  id: number;
+  IdPersonnel: number;
   /** Nom de l'utilisateur */
-  nom: string;
+  Nom: string;
   /** Prénom de l'utilisateur */
-  prenom: string;
+  Prenom: string;
   /** Code de contrat de l'utilisateur (ex: CDI, CDD, etc.) */
-  code?: string;
+  Code?: string;
   /** Référence au pôle d'activité (relation) */
-  poleActivite?: PoleActivite;
+  PoleActivite: PoleActivite['Id'] | null;
   /** Type de l'utilisateur (employé ou intérimaire) */
-  type: 'employee' | 'interim';
+  Type: 'SALARIE' | 'INTERIM';
   /** Référence à l'équipe (relation) */
-  equipe?: Equipe;
+  Equipe: Equipe['Id'] | null;
   /** Rôle de l'utilisateur dans l'application */
   role?: UserRole;
   /** Thème préféré de l'utilisateur */
   theme?: string;
   /** Image de profil de l'utilisateur */
-  image?: Image;
-  /** Email de l'utilisateur */
-  email?: string;
+  IdImage?: number;
   /** Statut actif de l'utilisateur (défaut: true) */
-  actif?: boolean;
+  Actif?: boolean;
 }
 
 
@@ -342,23 +372,4 @@ export interface MockNotification {
   message: string;
   timestamp: number;
   isRead: boolean;
-}
-
-/**
- * Permissions spécifiques pour une rubrique sociale par employé
- * @interface SocialItemPermission
- */
-export interface SocialItemPermission {
-  /** ID de l'employé */
-  userId: number;
-  /** ID de la rubrique sociale (absence ou autre) */
-  itemId: number;
-  /** L'employé peut voir cette rubrique */
-  canView: boolean;
-  /** L'employé peut créer des entrées pour cette rubrique */
-  canCreate: boolean;
-  /** L'employé peut modifier des entrées pour cette rubrique */
-  canEdit: boolean;
-  /** L'employé peut supprimer des entrées pour cette rubrique */
-  canDelete: boolean;
 }

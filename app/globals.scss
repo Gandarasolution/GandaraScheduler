@@ -20,28 +20,26 @@
 // ============================================================================
 
 :root {
-  // ── Couleurs Primaires (Marque Gandara) ───────────────────────────────────
-  --color-primary: #009580;           // Vert principal Gandara
-  --color-primary-dark: #007a6b;      // Vert foncé pour hover
-  --color-primary-light: #00947f;     // Vert clair
-  --color-primary-lighter: #C8E6E1;   // Vert très clair (backgrounds)
-  --color-primary-ultra-light: #e7f4f2; // Vert ultra-clair
-  --color-bg-primary: #f3f7f8;
-  --color-bg-secondary: #ffffff;
 
-  --color-icon: #84818a;             // Couleur des icônes (gris moyen)
+  --contraste-max: #000000;          // Noir pur pour contraste maximum
 
-  --calendar-indicator-filter: brightness(0) saturate(100%); // noir (texte clair)
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE MARQUE (PRIMARY)
+  // ══════════════════════════════════════════════════════════════════════════
+  --color-primary-50: #e7f4f2;        // Vert ultra-clair (backgrounds subtils)
+  --color-primary-100: #c8e6e1;       // Vert très clair (backgrounds)
+  --color-primary-200: #a0d4cb;       // Vert clair pâle
+  --color-primary-300: #78c2b5;       // Vert clair
+  --color-primary-400: #50b09f;       // Vert moyen-clair
+  --color-primary-500: #009580;       // Vert principal Gandara ⭐ BASE
+  --color-primary-600: #007a6b;       // Vert foncé (hover, active)
+  --color-primary-700: #006156;       // Vert très foncé
+  --color-primary-800: #004841;       // Vert ultra-foncé
+  --color-primary-900: #002f2c;       // Vert presque noir
 
-  // ── Couleurs par Type d'Employé ───────────────────────────────────────────
-  --color-interim: #e6b11a;           // Jaune pour intérimaires
-  --color-employee: #4baea4;          // Turquoise pour employés
-
-  --color-header-table: #f3f4f6;     // Gris clair pour header tableau
-
-  --card-notification-bg: #defdfa;        
-  
-  // ── Couleurs Neutres (Gris) ───────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS NEUTRES (GRIS)
+  // ══════════════════════════════════════════════════════════════════════════
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
   --color-gray-200: #e5e7eb;
@@ -53,72 +51,247 @@
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
   
-  // ── Couleurs de Statut ────────────────────────────────────────────────────
-  --color-success: #10b981;           // Vert succès
-  --color-success-light: #d1fae5;
-  --color-success-dark: #059669;
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE STATUT (Semantic Colors)
+  // ══════════════════════════════════════════════════════════════════════════
   
-  --color-warning: #f59e0b;           // Orange warning
-  --color-warning-light: #fef3c7;
-  --color-warning-dark: #d97706;
+  // Success (Vert)
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;       // ⭐ BASE
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
   
-  --color-error: #ef4444;             // Rouge erreur
-  --color-error-light: #fee2e2;
-  --color-error-dark: #dc2626;
+  // Warning (Orange/Jaune)
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;       // ⭐ BASE
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
   
-  --color-info: #3b82f6;              // Bleu info
-  --color-info-light: #dbeafe;
-  --color-info-dark: #2563eb;
+  // Error (Rouge)
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-200: #fecaca;
+  --color-error-300: #fca5a5;
+  --color-error-400: #f87171;
+  --color-error-500: #ef4444;         // ⭐ BASE
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+  --color-error-800: #991b1b;
+  --color-error-900: #7f1d1d;
   
-  // ── Couleurs de Texte ─────────────────────────────────────────────────────
-  --text-primary: #364153;            // Texte principal 
-  --text-secondary: #6a7282;          // Texte secondaire
-  --text-tertiary: #9ca3af;           // Texte tertiaire
+  // Info (Bleu)
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;          // ⭐ BASE
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS MÉTIER (Types d'Employés)
+  // ══════════════════════════════════════════════════════════════════════════
+  --color-employee-interim: #e6b11a;           // Jaune - Intérimaires
+  --color-employee-permanent: #4baea4;         // Turquoise - Employés permanents
+  --color-employee-charge-affaire: #3b82f6;    // Bleu - Chargés d'affaire
+  --color-employee-chef-chantier: #f97316;     // Orange - Chefs de chantier
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE TEXTE
+  // ══════════════════════════════════════════════════════════════════════════
+  --text-primary: #364153;            // Texte principal (titres, contenu important)
+  --text-secondary: #6a7282;          // Texte secondaire (sous-titres, labels)
+  --text-tertiary: #9ca3af;           // Texte tertiaire (placeholders, hints)
+  --text-disabled: #d1d5db;           // Texte désactivé
   --text-inverse: #ffffff;            // Texte sur fond sombre
-  --text-link: #009580;               // Liens
-  --text-link-hover: #007a6b;
+  --text-link: #009580;               // Liens (couleur primary)
+  --text-link-hover: #007a6b;         // Liens au survol
+  --text-on-primary: #ffffff;         // Texte sur fond primary
+  --text-on-success: #ffffff;         // Texte sur fond success
+  --text-on-warning: #78350f;         // Texte sur fond warning
+  --text-on-error: #ffffff;           // Texte sur fond error
+  --text-on-info: #ffffff;            // Texte sur fond info
   
-  // ── Couleurs de Background ────────────────────────────────────────────────
-  --bg-primary: #ffffff;              // Background principal
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE FOND (Backgrounds)
+  // ══════════════════════════════════════════════════════════════════════════
+  --bg-page: #f3f7f8;                 // Background de la page principale
+  --bg-primary: #ffffff;              // Background principal (cartes, conteneurs)
   --bg-secondary: #f9fafb;            // Background secondaire
   --bg-tertiary: #f3f4f6;             // Background tertiaire
-  --bg-hover: #f3f7f8;                // Hover sur cellules calendrier
-  --bg-active: #e7f4f2;               // Élément actif
-  --bg-disabled: #f9f9f9;             // Élément désactivé
+  --bg-quaternary: #e5e7eb;           // Background quaternaire
+  
+  // États interactifs
+  --bg-hover: #f3f7f8;                // Background au survol
+  --bg-active: #e7f4f2;               // Background élément actif/sélectionné
+  --bg-disabled: #f9f9f9;             // Background élément désactivé
+  --bg-focus: #e7f4f2;                // Background élément focus
+  
+  // Hiérarchie visuelle
   --bg-card: #ffffff;                 // Background cartes/modales
-  --bg-elevated: #fafafa;             // Background élevé (dropdown, popover)
-  --bg-overlay: rgba(0, 0, 0, 0.5);   // Overlay semi-transparent
-  --bg-subtle: #f8f9fa;               // Background subtil pour zones secondaires
+  --bg-elevated: #fafafa;             // Background élevé (dropdown, popover, tooltip)
+  --bg-overlay: rgba(0, 0, 0, 0.5);   // Overlay semi-transparent (modal backdrop)
+  --bg-subtle: #f8f9fa;               // Background subtil (zones secondaires)
   
-  // ── Couleurs Spécifiques Calendrier ───────────────────────────────────────
-  --calendar-weekend: #f6f6f6;        // Week-end
-  --calendar-holiday: #fce4e4;        // Jours fériés (rose clair)
-  --calendar-non-working: #f3f7f8;   // Jours non travaillés (gris très clair)
-  --calendar-today: #ffcdde;          // Aujourd'hui (rose)
-  --calendar-today-dark: #ffc1dd;
-  --calendar-border: #e5e7eb;
-  --calendar-cell-hover: rgb(228, 245, 239);    // Hover cellule
-  --calendar-cell-active: #d4ede9;    // Cellule active (intersection)
+  // Backgrounds de notification
+  --bg-notification: #defdfa;         // Background notifications générales
+  --bg-header-table: #f3f4f6;         // Background en-têtes de tableau
   
-  // ── Bordures ──────────────────────────────────────────────────────────────
-  --border-light: #e5e7eb;
-  --border-ultra-light: #dfdedeff;
-  --border-default: #d1d5db;
-  --border-dark: #d1d5db;
-  --border-focus: #009580;
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS SPÉCIFIQUES AU CALENDRIER
+  // ══════════════════════════════════════════════════════════════════════════
+  --calendar-bg-weekend: #f1f1f1;              // Week-end
+  --calendar-bg-holiday: #fce4e4;              // Jours fériés
+  --calendar-bg-non-working: #f3f7f8;          // Jours non travaillés
+  --calendar-bg-today: #ffcdde;                // Aujourd'hui
+  --calendar-bg-today-hover: #ffc1dd;          // Aujourd'hui au survol
+  --calendar-bg-cell-hover: #e4f5ef;           // Cellule au survol
+  --calendar-bg-cell-active: #d4ede9;          // Cellule active (intersection ligne/colonne)
+  --calendar-border: #e5e7eb;                  // Bordures du calendrier
+  --calendar-indicator-filter: brightness(0) saturate(100%); // Filtre pour date picker (noir)
   
-  // ── Ombres ────────────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE BORDURES
+  // ══════════════════════════════════════════════════════════════════════════
+  --border-50: #f3f4f6;               // Bordure ultra-légère (presque invisible)
+  --border-100: #e5e7eb;              // Bordure très légère
+  --border-200: #dfdede;              // Bordure légère
+  --border-300: #d1d5db;              // Bordure par défaut
+  --border-400: #9ca3af;              // Bordure moyenne
+  --border-500: #6b7280;              // Bordure forte
+  --border-600: #4b5563;              // Bordure très forte
+  
+  // Bordures sémantiques
+  --border-default: #d1d5db;          // Bordure par défaut (alias de border-300)
+  --border-light: #e5e7eb;            // Bordure légère (alias de border-100)
+  --border-dark: #6b7280;             // Bordure foncée (alias de border-500)
+  --border-focus: #009580;            // Bordure focus (couleur primary)
+  --border-error: #ef4444;            // Bordure erreur
+  --border-success: #10b981;          // Bordure succès
+  --border-warning: #f59e0b;          // Bordure warning
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS D'ICÔNES
+  // ══════════════════════════════════════════════════════════════════════════
+  --icon-primary: #84818a;            // Icônes par défaut
+  --icon-secondary: #9ca3af;          // Icônes secondaires
+  --icon-tertiary: #d1d5db;           // Icônes tertiaires (moins importantes)
+  --icon-inverse: #ffffff;            // Icônes sur fond sombre
+  --icon-on-primary: #ffffff;         // Icônes sur fond primary
+  --icon-interactive: #009580;        // Icônes interactives (boutons, liens)
+  --icon-interactive-hover: #007a6b;  // Icônes interactives au survol
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // OMBRES (Shadows)
+  // ══════════════════════════════════════════════════════════════════════════
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
   
+  // Ombres sémantiques
+  --shadow-card: var(--shadow-md);
+  --shadow-dropdown: var(--shadow-lg);
+  --shadow-modal: var(--shadow-2xl);
+  --shadow-focus: 0 0 0 3px rgba(0, 149, 128, 0.1);  // Ring focus primary
   
-  // ── Transitions ───────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // TRANSITIONS
+  // ══════════════════════════════════════════════════════════════════════════
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slower: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // RAYONS DE BORDURE (Border Radius)
+  // ══════════════════════════════════════════════════════════════════════════
+  --radius-sm: 0.25rem;    // 4px
+  --radius-md: 0.375rem;   // 6px
+  --radius-lg: 0.5rem;     // 8px
+  --radius-xl: 0.75rem;    // 12px
+  --radius-2xl: 1rem;      // 16px
+  --radius-full: 9999px;   // Complètement arrondi
+
+  .rdp-root{
+    // ══════════════════════════════════════════════════════════════════════════
+    // DAYPICKER (React Day Picker)
+    // ══════════════════════════════════════════════════════════════════════════
+    --rdp-accent-color: var(--color-primary-500);                    // Couleur accent pour les jours sélectionnés
+    --rdp-accent-background-color: var(--color-primary-50);          // Background accent
+    --rdp-background-color: var(--bg-primary);                       // Background du calendrier
+    --rdp-accent-color-dark: var(--color-primary-600);               // Couleur accent hover
+    
+    // Dimensions
+    --rdp-day-height: 40px;                                          // Hauteur des cellules de jour
+    --rdp-day-width: 40px;                                           // Largeur des cellules de jour
+    --rdp-day_button-height: 38px;                                   // Hauteur des boutons de jour
+    --rdp-day_button-width: 38px;                                    // Largeur des boutons de jour
+    --rdp-day_button-border-radius: var(--radius-lg);                // Rayon des boutons
+    --rdp-day_button-border: 1px solid transparent;                  // Bordure par défaut
+    
+    // Couleurs de texte
+    --rdp-color: var(--text-primary);                                // Couleur de texte par défaut
+    --rdp-today-color: var(--color-primary-600);                     // Couleur pour aujourd'hui
+    --rdp-selected-color: var(--text-on-primary);                    // Couleur texte jour sélectionné
+    --rdp-selected-border: 2px solid var(--color-primary-500);       // Bordure jour sélectionné
+    
+    // États
+    --rdp-disabled-opacity: 0.35;                                    // Opacité éléments désactivés
+    --rdp-outside-opacity: 0.5;                                      // Opacité jours hors mois
+    
+    // Navigation
+    --rdp-nav_button-height: 32px;                                   // Hauteur boutons navigation
+    --rdp-nav_button-width: 32px;                                    // Largeur boutons navigation
+    --rdp-nav_button-disabled-opacity: 0.3;                          // Opacité boutons navigation désactivés
+    --rdp-nav-height: 40px;                                          // Hauteur barre de navigation
+    --rdp-chevron-disabled-opacity: 0.3;                             // Opacité chevron désactivé
+    
+    // Range (sélection de plage)
+    --rdp-range_middle-background-color: var(--color-primary-100);   // Background milieu de plage
+    --rdp-range_middle-color: var(--text-primary);                   // Couleur texte milieu de plage
+    --rdp-range_start-color: var(--text-on-primary);                 // Couleur début de plage
+    --rdp-range_start-background: var(--color-primary-500);          // Background début de plage
+    --rdp-range_end-background: var(--color-primary-500);            // Background fin de plage
+    --rdp-range_end-color: var(--text-on-primary);                   // Couleur fin de plage
+    
+    // Week numbers
+    --rdp-week_number-border-radius: var(--radius-md);               // Rayon numéros de semaine
+    --rdp-week_number-border: 1px solid var(--border-light);         // Bordure numéros de semaine
+    --rdp-week_number-height: 40px;                                  // Hauteur numéros de semaine
+    --rdp-week_number-width: 40px;                                   // Largeur numéros de semaine
+    
+    // Weekdays
+    --rdp-weekday-opacity: 0.7;                                      // Opacité en-têtes jour de semaine
+    --rdp-weekday-padding: 0.5rem;                                   // Padding en-têtes
+    --rdp-weekday-text-align: center;                                // Alignement texte
+    
+    // Spacing
+    --rdp-dropdown-gap: 0.5rem;                                      // Espace entre dropdowns
+    --rdp-months-gap: 1rem;                                          // Espace entre mois (multi-mois)
+    
+    // Animation
+    --rdp-animation_duration: 0.2s;                                  // Durée animation
+    --rdp-animation_timing: cubic-bezier(0.4, 0, 0.2, 1);            // Fonction timing
+  }
 }
 
 
@@ -127,86 +300,222 @@
 // ============================================================================
 
 [data-theme="dark"] {
-  // ── Couleurs Primaires (Adaptées pour le sombre) ──────────────────────
-  --color-primary: #00b597;         // Vert plus clair pour contraste
-  --color-primary-dark: #009580;
-  --color-primary-light: #008068;
-  --color-primary-lighter: #585858;  // Vert foncé pour backgrounds
-  --color-primary-ultra-light: #757575;
-  --color-bg-primary: #000000;
-  --color-bg-secondary: #383838;
+  --contraste-max: #ffffff;          // Blanc pur pour contraste maximum
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE MARQUE (PRIMARY) - Mode Sombre
+  // ══════════════════════════════════════════════════════════════════════════
+  --color-primary-50: #e7f4f2;
+  --color-primary-100: #757575;
+  --color-primary-200: #666666;
+  --color-primary-300: #585858;
+  --color-primary-400: #4a4a4a;
+  --color-primary-500: #00b597;       // Vert plus lumineux pour contraste ⭐ BASE
+  --color-primary-600: #009580;
+  --color-primary-700: #008068;
+  --color-primary-800: #006b55;
+  --color-primary-900: #005642;
 
-  --color-icon: #e4e4e7;           // Couleur des icônes (gris clair)
-  --calendar-indicator-filter: invert(0.9) brightness(1.2); // gris très clair
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS NEUTRES (GRIS) - Mode Sombre (inversées)
+  // ══════════════════════════════════════════════════════════════════════════
+  --color-gray-50: #18181b;
+  --color-gray-100: #27272a;
+  --color-gray-200: #3f3f46;
+  --color-gray-300: #52525b;
+  --color-gray-400: #a1a1aa;
+  --color-gray-500: #d4d4d8;
+  --color-gray-600: #e4e4e7;
+  --color-gray-700: #f4f4f5;
+  --color-gray-800: #fafafa;
+  --color-gray-900: #ffffff;
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE STATUT - Mode Sombre
+  // ══════════════════════════════════════════════════════════════════════════
+  
+  // Success (Vert plus lumineux)
+  --color-success-50: #064e3b;
+  --color-success-100: #14532d;
+  --color-success-200: #166534;
+  --color-success-300: #15803d;
+  --color-success-400: #16a34a;
+  --color-success-500: #22c55e;       // ⭐ BASE
+  --color-success-600: #4ade80;
+  --color-success-700: #86efac;
+  --color-success-800: #bbf7d0;
+  --color-success-900: #dcfce7;
+  
+  // Warning (Orange/Jaune plus lumineux)
+  --color-warning-50: #78350f;
+  --color-warning-100: #92400e;
+  --color-warning-200: #b45309;
+  --color-warning-300: #d97706;
+  --color-warning-400: #f59e0b;
+  --color-warning-500: #fbbf24;       // ⭐ BASE
+  --color-warning-600: #fcd34d;
+  --color-warning-700: #fde68a;
+  --color-warning-800: #fef3c7;
+  --color-warning-900: #fffbeb;
+  
+  // Error (Rouge plus lumineux)
+  --color-error-50: #7f1d1d;
+  --color-error-100: #991b1b;
+  --color-error-200: #b91c1c;
+  --color-error-300: #dc2626;
+  --color-error-400: #ef4444;
+  --color-error-500: #f87171;         // ⭐ BASE
+  --color-error-600: #fca5a5;
+  --color-error-700: #fecaca;
+  --color-error-800: #fee2e2;
+  --color-error-900: #fef2f2;
+  
+  // Info (Bleu plus lumineux)
+  --color-info-50: #1e3a8a;
+  --color-info-100: #1e40af;
+  --color-info-200: #1d4ed8;
+  --color-info-300: #2563eb;
+  --color-info-400: #3b82f6;
+  --color-info-500: #60a5fa;          // ⭐ BASE
+  --color-info-600: #93c5fd;
+  --color-info-700: #bfdbfe;
+  --color-info-800: #dbeafe;
+  --color-info-900: #eff6ff;
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS MÉTIER (Types d'Employés) - Mode Sombre
+  // ══════════════════════════════════════════════════════════════════════════
+  --color-employee-interim: #fbbf24;           // Jaune plus lumineux
+  --color-employee-permanent: #5eead4;         // Turquoise plus lumineux
+  --color-employee-charge-affaire: #60a5fa;    // Bleu plus lumineux
+  --color-employee-chef-chantier: #fb923c;     // Orange plus lumineux
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE TEXTE - Mode Sombre
+  // ══════════════════════════════════════════════════════════════════════════
+  --text-primary: #f4f4f5;            // Texte principal (très clair)
+  --text-secondary: #d4d4d8;          // Texte secondaire (clair)
+  --text-tertiary: #a1a1aa;           // Texte tertiaire
+  --text-disabled: #52525b;           // Texte désactivé
+  --text-inverse: #18181b;            // Texte sur fond clair
+  --text-link: #00b597;               // Liens
+  --text-link-hover: #00d4ad;         // Liens au survol
+  --text-on-primary: #ffffff;
+  --text-on-success: #ffffff;
+  --text-on-warning: #78350f;
+  --text-on-error: #ffffff;
+  --text-on-info: #ffffff;
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE FOND - Mode Sombre
+  // ══════════════════════════════════════════════════════════════════════════
+  --bg-page: #0a0a0b;                 // Background page principale (noir profond)
+  --bg-primary: #121214;              // Background principal (plus sombre)
+  --bg-secondary: #1a1a1d;            // Background secondaire (plus sombre)
+  --bg-tertiary: #27272a;             // Background tertiaire
+  --bg-quaternary: #3f3f46;           // Background quaternaire
+  
+  // États interactifs
+  --bg-hover: #232326;                // Background au survol
+  --bg-active: #1a3d38;               // Background élément actif
+  --bg-disabled: #18181b;             // Background désactivé
+  --bg-focus: #1a3d38;                // Background focus
+  
+  // Hiérarchie visuelle
+  --bg-card: #161618;                 // Background cartes/modales (plus sombre)
+  --bg-elevated: #1e1e21;             // Background élevé
+  --bg-overlay: rgba(0, 0, 0, 0.8);   // Overlay plus sombre
+  --bg-subtle: #141416;               // Background subtil
+  
+  // Backgrounds de notification
+  --bg-notification: #1a3d38;         // Background notifications
+  --bg-header-table: #1a1a1d;         // Background en-têtes de tableau (plus sombre)
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS SPÉCIFIQUES AU CALENDRIER - Mode Sombre
+  // ══════════════════════════════════════════════════════════════════════════
+  --calendar-bg-weekend: #181c24;              // Week-end (bleu très foncé)
+  --calendar-bg-holiday: #4a1414;              // Jours fériés (rouge foncé)
+  --calendar-bg-non-working: #1a1a1d;          // Jours non travaillés
+  --calendar-bg-today: #991b1b;                // Aujourd'hui (rouge visible)
+  --calendar-bg-today-hover: #b91c1c;          // Aujourd'hui au survol
+  --calendar-bg-cell-hover: #1f3a35;           // Cellule au survol (plus sombre)
+  --calendar-bg-cell-active: #1a3d38;          // Cellule active
+  --calendar-border: #3f3f46;                  // Bordures du calendrier
+  --calendar-indicator-filter: invert(0.9) brightness(1.2); // Filtre date picker (clair)
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS DE BORDURES - Mode Sombre (plus claires pour la visibilité)
+  // ══════════════════════════════════════════════════════════════════════════
+  --border-50: #27272a;
+  --border-100: #3f3f46;              // Plus clair pour démarcations
+  --border-200: #52525b;              // Plus clair
+  --border-300: #63636d;              // Plus clair
+  --border-400: #7c7c88;              // Plus clair
+  --border-500: #a1a1aa;
+  --border-600: #d4d4d8;
+  
+  // Bordures sémantiques
+  --border-default: #52525b;          // Plus clair pour démarcations visibles
+  --border-light: #3f3f46;            // Plus clair
+  --border-dark: #7c7c88;             // Plus clair
+  --border-focus: #00b597;
+  --border-error: #f87171;
+  --border-success: #22c55e;
+  --border-warning: #fbbf24;
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // COULEURS D'ICÔNES - Mode Sombre
+  // ══════════════════════════════════════════════════════════════════════════
+  --icon-primary: #d4d4d8;            // Icônes par défaut (bien visible)
+  --icon-secondary: #a1a1aa;          // Icônes secondaires
+  --icon-tertiary: #71717a;           // Icônes tertiaires
+  --icon-inverse: #18181b;            // Icônes sur fond clair
+  --icon-on-primary: #ffffff;
+  --icon-interactive: #00b597;
+  --icon-interactive-hover: #00d4ad;
+  
+  // ══════════════════════════════════════════════════════════════════════════
+  // OMBRES - Mode Sombre (plus prononcées)
+  // ══════════════════════════════════════════════════════════════════════════
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.3);
+  
+  --shadow-card: var(--shadow-md);
+  --shadow-dropdown: var(--shadow-lg);
+  --shadow-modal: var(--shadow-2xl);
+  --shadow-focus: 0 0 0 3px rgba(0, 181, 151, 0.15);
 
-  // ── Couleurs par Type d'Employé (Mode Sombre) ─────────────────────────────
-  --color-interim: #fbbf24;           // Jaune plus clair pour intérimaires
-  --color-employee: #5eead4;          // Turquoise plus clair pour employés
-  --color-charge-affaire: #60a5fa;    // Bleu plus clair pour chargés d'affaire
-  --color-chef-chantier: #fb923c;     // Orange plus clair pour chefs de chantier
-
-
-  --color-gray-200: #575757;
-  --color-gray-400: #b8bcc2;
-
-    // ── Couleurs de Statut (Adaptées) ─────────────────────────────────────
-    --color-success: #22c55e;
-    --color-success-light: #14532d;
-    --color-success-dark: #4ade80;
-    
-    --color-warning: #fbbf24;
-    --color-warning-light: #78350f;
-    --color-warning-dark: #fcd34d;
-    
-    --color-error: #f87171;
-    --color-error-light: #7f1d1d;
-    --color-error-dark: #fca5a5;
-    
-    --color-info: #60a5fa;
-    --color-info-light: #1e3a8a;
-    --color-info-dark: #93c5fd;
-    
-    // ── Couleurs de Texte (Inversées) ─────────────────────────────────────
-    --text-primary: #e4e4e7;
-    --text-secondary: #d1d1d1;
-    --text-tertiary: #71717a;
-    --text-inverse: #18181b;
-    --text-link: #00b597;
-    --text-link-hover: #00d4ad;
-    
-    // ── Couleurs de Background (Sombres) ──────────────────────────────────
-    --bg-primary: #18181b;
-    --bg-secondary: #27272a;
-    --bg-tertiary: #3f3f46;
-    --bg-hover: #2d2d30;
-    --bg-active: #1a3d38;
-    --bg-disabled: #27272a;
-    --bg-card: #1f1f23;                 // Background cartes/modales sombre
-    --bg-elevated: #2a2a2e;             // Background élevé sombre
-    --bg-overlay: rgba(0, 0, 0, 0.75);  // Overlay plus sombre
-    --bg-subtle: #202024;               // Background subtil sombre
-    
-    // ── Couleurs Spécifiques Calendrier (Mode Sombre) ─────────────────────
-    --calendar-weekend: #1e293b;      // Bleu foncé
-    --calendar-holiday: #7f1d1d;      // Rouge foncé
-    --calendar-today: #991b1b;        // Rouge plus visible
-    --calendar-border: #3f3f46;
-    --calendar-cell-hover: var( --color-primary-ultra-light);
-    --calendar-cell-active: #1a3d38;
-    
-    // ── Bordures (Sombres) ────────────────────────────────────────────────
-    --border-light: #686868;
-    --border-ultra-light: var(--border-default);
-    --border-default: #525252;
-    --border-dark: #52525b;
-    --border-focus: #00b597;
-    
-    // ── Ombres (Adaptées) ─────────────────────────────────────────────────
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
-    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  // ══════════════════════════════════════════════════════════════════════════
+  // DAYPICKER - Mode Sombre
+  // ══════════════════════════════════════════════════════════════════════════
+  --rdp-accent-color: var(--color-primary-500);                    // Couleur accent plus lumineuse
+  --rdp-accent-background-color: var(--color-primary-900);         // Background accent sombre
+  --rdp-background-color: var(--bg-card);                          // Background du calendrier
+  --rdp-accent-color-dark: var(--color-primary-400);               // Couleur accent hover
+  
+  // Couleurs de texte
+  --rdp-color: var(--text-primary);                                // Couleur texte (clair en mode sombre)
+  --rdp-today-color: var(--color-primary-400);                     // Couleur aujourd'hui plus visible
+  --rdp-selected-color: var(--text-on-primary);                    // Couleur texte sélectionné
+  --rdp-selected-border: 2px solid var(--color-primary-500);       // Bordure sélectionné
+  
+  // États
+  --rdp-disabled-opacity: 0.25;                                    // Opacité réduite en mode sombre
+  --rdp-outside-opacity: 0.4;                                      // Opacité jours hors mois
+  
+  // Range
+  --rdp-range_middle-background-color: var(--color-primary-900);   // Background milieu de plage sombre
+  --rdp-range_middle-color: var(--text-secondary);                 // Couleur texte milieu
+  --rdp-range_start-background: var(--color-primary-500);          // Background début
+  --rdp-range_end-background: var(--color-primary-500);            // Background fin
+  
+  // Week numbers
+  --rdp-week_number-border: 1px solid var(--border-default);       // Bordure adaptée au mode sombre
 }
 
 
@@ -214,52 +523,144 @@
 // THÈMES PERSONNALISÉS PAR CLIENT
 // ============================================================================
 
-// ── CLIENT: BLEU (Exemple) ────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// CLIENT: BLEU
+// ══════════════════════════════════════════════════════════════════════════
 [data-theme="client-blue"] {
-  --color-primary: #3b82f6;
-  --color-primary-dark: #2563eb;
-  --color-primary-light: #60a5fa;
-  --color-primary-lighter: #dbeafe;
-  --color-primary-ultra-light: #eff6ff;
-
-  --color-bg-primary: #f3f7f8;
-
- 
+  // Couleurs de marque (Bleu)
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;       // ⭐ BASE
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  
+  // Mettre à jour les couleurs dérivées
   --text-link: #3b82f6;
   --text-link-hover: #2563eb;
   --border-focus: #3b82f6;
-  --calendar-cell-hover: #dbeafe;
-  --calendar-cell-active: #bfdbfe;
+  --calendar-bg-cell-hover: #dbeafe;
+  --calendar-bg-cell-active: #bfdbfe;
+  --bg-active: #dbeafe;
+  --icon-interactive: #3b82f6;
+  --icon-interactive-hover: #2563eb;
+  --shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-// ── CLIENT: VIOLET (Exemple) ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// CLIENT: VIOLET
+// ══════════════════════════════════════════════════════════════════════════
 [data-theme="client-purple"] {
-  --color-primary: #8b5cf6;
-  --color-primary-dark: #7c3aed;
-  --color-primary-light: #a78bfa;
-  --color-primary-lighter: #ede9fe;
-  --color-primary-ultra-light: #f5f3ff;
+  // Couleurs de marque (Violet)
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #8b5cf6;       // ⭐ BASE
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-800: #5b21b6;
+  --color-primary-900: #4c1d95;
   
+  // Mettre à jour les couleurs dérivées
   --text-link: #8b5cf6;
   --text-link-hover: #7c3aed;
   --border-focus: #8b5cf6;
-  --calendar-cell-hover: #ede9fe;
-  --calendar-cell-active: #ddd6fe;
+  --calendar-bg-cell-hover: #ede9fe;
+  --calendar-bg-cell-active: #ddd6fe;
+  --bg-active: #ede9fe;
+  --icon-interactive: #8b5cf6;
+  --icon-interactive-hover: #7c3aed;
+  --shadow-focus: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
-// ── CLIENT: ORANGE (Exemple) ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// CLIENT: ORANGE
+// ══════════════════════════════════════════════════════════════════════════
 [data-theme="client-orange"] {
-  --color-primary: #f97316;
-  --color-primary-dark: #ea580c;
-  --color-primary-light: #fb923c;
-  --color-primary-lighter: #ffedd5;
-  --color-primary-ultra-light: #fff7ed;
+  // Couleurs de marque (Orange)
+  --color-primary-50: #fff7ed;
+  --color-primary-100: #ffedd5;
+  --color-primary-200: #fed7aa;
+  --color-primary-300: #fdba74;
+  --color-primary-400: #fb923c;
+  --color-primary-500: #f97316;       // ⭐ BASE
+  --color-primary-600: #ea580c;
+  --color-primary-700: #c2410c;
+  --color-primary-800: #9a3412;
+  --color-primary-900: #7c2d12;
   
+  // Mettre à jour les couleurs dérivées
   --text-link: #f97316;
   --text-link-hover: #ea580c;
   --border-focus: #f97316;
-  --calendar-cell-hover: #ffedd5;
-  --calendar-cell-active: #fed7aa;
+  --calendar-bg-cell-hover: #ffedd5;
+  --calendar-bg-cell-active: #fed7aa;
+  --bg-active: #ffedd5;
+  --icon-interactive: #f97316;
+  --icon-interactive-hover: #ea580c;
+  --shadow-focus: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CLIENT: ROUGE (Nouveau thème)
+// ══════════════════════════════════════════════════════════════════════════
+[data-theme="client-red"] {
+  // Couleurs de marque (Rouge)
+  --color-primary-50: #fef2f2;
+  --color-primary-100: #fee2e2;
+  --color-primary-200: #fecaca;
+  --color-primary-300: #fca5a5;
+  --color-primary-400: #f87171;
+  --color-primary-500: #ef4444;       // ⭐ BASE
+  --color-primary-600: #dc2626;
+  --color-primary-700: #b91c1c;
+  --color-primary-800: #991b1b;
+  --color-primary-900: #7f1d1d;
+  
+  // Mettre à jour les couleurs dérivées
+  --text-link: #ef4444;
+  --text-link-hover: #dc2626;
+  --border-focus: #ef4444;
+  --calendar-bg-cell-hover: #fee2e2;
+  --calendar-bg-cell-active: #fecaca;
+  --bg-active: #fee2e2;
+  --icon-interactive: #ef4444;
+  --icon-interactive-hover: #dc2626;
+  --shadow-focus: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CLIENT: VERT ÉMERAUDE (Nouveau thème)
+// ══════════════════════════════════════════════════════════════════════════
+[data-theme="client-emerald"] {
+  // Couleurs de marque (Vert Émeraude)
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-200: #a7f3d0;
+  --color-primary-300: #6ee7b7;
+  --color-primary-400: #34d399;
+  --color-primary-500: #10b981;       // ⭐ BASE
+  --color-primary-600: #059669;
+  --color-primary-700: #047857;
+  --color-primary-800: #065f46;
+  --color-primary-900: #064e3b;
+  
+  // Mettre à jour les couleurs dérivées
+  --text-link: #10b981;
+  --text-link-hover: #059669;
+  --border-focus: #10b981;
+  --calendar-bg-cell-hover: #d1fae5;
+  --calendar-bg-cell-active: #a7f3d0;
+  --bg-active: #d1fae5;
+  --icon-interactive: #10b981;
+  --icon-interactive-hover: #059669;
+  --shadow-focus: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 
@@ -290,6 +691,11 @@ body {
   font-family: 'Poppins', sans-serif;
 }
 
+
+/* Parfois utile pour chiffres (alignement/forme) */
+input[type="date"] { font-variant-numeric: tabular-nums; }
+
+
 .bg-cell-hover {
   background-color: var(--calendar-cell-hover) !important;
 }
@@ -300,67 +706,162 @@ body {
 
 
 /* ================================================== */
-/* 4. VOS CLASSES UTILITAIRES PERSO (Syntaxe v4)      */
-/* (C'est la partie la plus importante)               */
+/* 4. CLASSES UTILITAIRES (Syntaxe Tailwind v4)      */
 /* ================================================== */
 
-/* ── Backgrounds ────────────────────────────────── */
-@utility bg-primary { background-color: var(--color-primary) !important; }
-@utility bg-primary-dark { background-color: var(--color-primary-dark) !important; }
-@utility bg-primary-light { background-color: var(--color-primary-light) !important; }
-@utility bg-primary-lighter { background-color: var(--color-primary-lighter) !important; }
-@utility bg-primary-ultra-light { background-color: var(--color-primary-ultra-light) !important; }
-@utility bg-secondary { background-color: var(--bg-secondary) !important; }
+// ══════════════════════════════════════════════════════════════════════════
+// BACKGROUNDS (Couleurs de marque)
+// ══════════════════════════════════════════════════════════════════════════
+@utility bg-primary-50 { background-color: var(--color-primary-50) !important; }
+@utility bg-primary-100 { background-color: var(--color-primary-100) !important; }
+@utility bg-primary-200 { background-color: var(--color-primary-200) !important; }
+@utility bg-primary-300 { background-color: var(--color-primary-300) !important; }
+@utility bg-primary-400 { background-color: var(--color-primary-400) !important; }
+@utility bg-primary-500 { background-color: var(--color-primary-500) !important; }
+@utility bg-primary-600 { background-color: var(--color-primary-600) !important; }
+@utility bg-primary-700 { background-color: var(--color-primary-700) !important; }
+@utility bg-primary-800 { background-color: var(--color-primary-800) !important; }
+@utility bg-primary-900 { background-color: var(--color-primary-900) !important; }
+
+// Alias pour compatibilité (recommandé : utiliser bg-primary-500)
+@utility bg-primary { background-color: var(--color-primary-500) !important; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// BACKGROUNDS (Statuts)
+// ══════════════════════════════════════════════════════════════════════════
+@utility bg-success { background-color: var(--color-success-500) !important; }
+@utility bg-success-light { background-color: var(--color-success-100) !important; }
+@utility bg-success-dark { background-color: var(--color-success-700) !important; }
+
+@utility bg-warning { background-color: var(--color-warning-500) !important; }
+@utility bg-warning-light { background-color: var(--color-warning-100) !important; }
+@utility bg-warning-dark { background-color: var(--color-warning-700) !important; }
+
+@utility bg-error { background-color: var(--color-error-500) !important; }
+@utility bg-error-light { background-color: var(--color-error-100) !important; }
+@utility bg-error-dark { background-color: var(--color-error-700) !important; }
+
+@utility bg-info { background-color: var(--color-info-500) !important; }
+@utility bg-info-light { background-color: var(--color-info-100) !important; }
+@utility bg-info-dark { background-color: var(--color-info-700) !important; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// BACKGROUNDS (Sémantiques)
+// ══════════════════════════════════════════════════════════════════════════
+@utility bg-page { background-color: var(--bg-page) !important; }
+@utility bg-primary-bg { background-color: var(--bg-primary) !important; }
+@utility bg-secondary-bg { background-color: var(--bg-secondary) !important; }
 @utility bg-tertiary { background-color: var(--bg-tertiary) !important; }
-@utility bg-success { background-color: var(--color-success) !important; }
-@utility bg-warning { background-color: var(--color-warning) !important; }
-@utility bg-error { background-color: var(--color-error) !important; }
-@utility bg-info { background-color: var(--color-info) !important; }
-
-@utility bg-bg-primary { background-color: var(--color-bg-primary) !important; }
-@utility bg-bg-secondary { background-color: var(--color-bg-secondary) !important; }
-@utility bg-icon { color: var(--color-icon) !important; }
-
-/* ── Nouveaux Backgrounds ──────────────────────── */
 @utility bg-card { background-color: var(--bg-card) !important; }
 @utility bg-elevated { background-color: var(--bg-elevated) !important; }
-@utility bg-overlay { background-color: var(--bg-overlay) !important; }
 @utility bg-subtle { background-color: var(--bg-subtle) !important; }
+@utility bg-hover { background-color: var(--bg-hover) !important; }
+@utility bg-active { background-color: var(--bg-active) !important; }
 
-@utility bg-interim { background-color: var(--color-interim) !important; }
-@utility bg-employee { background-color: var(--color-employee) !important; }
+// ══════════════════════════════════════════════════════════════════════════
+// BACKGROUNDS (Types d'employés)
+// ══════════════════════════════════════════════════════════════════════════
+@utility bg-employee-interim { background-color: var(--color-employee-interim) !important; }
+@utility bg-employee-permanent { background-color: var(--color-employee-permanent) !important; }
+@utility bg-employee-charge-affaire { background-color: var(--color-employee-charge-affaire) !important; }
+@utility bg-employee-chef-chantier { background-color: var(--color-employee-chef-chantier) !important; }
 
-@utility border-interim { border-color: var(--color-interim) !important; }
-@utility border-employee { border-color: var(--color-employee) !important; }
+// Alias pour compatibilité
+@utility bg-interim { background-color: var(--color-employee-interim) !important; }
+@utility bg-employee { background-color: var(--color-employee-permanent) !important; }
 
-/* ── Gradients ──────────────────────────────────── */
-@utility from-primary { --tw-gradient-from: var(--color-primary) !important; --tw-gradient-to: rgb(0 149 128 / 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
-@utility to-primary-dark { --tw-gradient-to: var(--color-primary-dark) !important; }
+// ══════════════════════════════════════════════════════════════════════════
+// BACKGROUNDS SPÉCIAUX
+// ══════════════════════════════════════════════════════════════════════════
+@utility bg-cell-hover { background-color: var(--calendar-bg-cell-hover) !important; }
+@utility bg-header-table { background-color: var(--bg-header-table) !important; }
 
-/* ── Texte ──────────────────────────────────────── */
+// ══════════════════════════════════════════════════════════════════════════
+// TEXTE (Couleurs)
+// ══════════════════════════════════════════════════════════════════════════
 @utility text-primary { color: var(--text-primary) !important; }
 @utility text-secondary { color: var(--text-secondary) !important; }
 @utility text-tertiary { color: var(--text-tertiary) !important; }
+@utility text-disabled { color: var(--text-disabled) !important; }
 @utility text-inverse { color: var(--text-inverse) !important; }
 @utility text-link { color: var(--text-link) !important; }
-@utility text-color-primary { color: var(--color-primary) !important; }
-@utility text-primary-dark { color: var(--color-primary-dark) !important; }
-@utility text-color-success { color: var(--color-success) !important; }
-@utility text-color-warning { color: var(--color-warning) !important; }
-@utility text-color-error { color: var(--color-error) !important; }
 
-/* ── Bordures ───────────────────────────────────── */
-@utility border-primary { border-color: var(--color-primary) !important; }
+// Texte avec couleurs de marque
+@utility text-primary-500 { color: var(--color-primary-500) !important; }
+@utility text-primary-600 { color: var(--color-primary-600) !important; }
+
+// Alias pour compatibilité
+@utility text-color-primary { color: var(--color-primary-500) !important; }
+@utility text-primary-dark { color: var(--color-primary-600) !important; }
+
+// Texte avec couleurs de statut
+@utility text-success { color: var(--color-success-500) !important; }
+@utility text-warning { color: var(--color-warning-500) !important; }
+@utility text-error { color: var(--color-error-500) !important; }
+@utility text-info { color: var(--color-info-500) !important; }
+
+// Alias pour compatibilité
+@utility text-color-success { color: var(--color-success-500) !important; }
+@utility text-color-warning { color: var(--color-warning-500) !important; }
+@utility text-color-error { color: var(--color-error-500) !important; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// ICÔNES
+// ══════════════════════════════════════════════════════════════════════════
+@utility text-icon { color: var(--icon-primary) !important; }
+@utility text-icon-secondary { color: var(--icon-secondary) !important; }
+@utility bg-icon { color: var(--icon-primary) !important; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// BORDURES (Couleurs)
+// ══════════════════════════════════════════════════════════════════════════
 @utility border-default { border-color: var(--border-default) !important; }
 @utility border-light { border-color: var(--border-light) !important; }
 @utility border-dark { border-color: var(--border-dark) !important; }
-@utility border-ultra-light { border-color: var(--border-ultra-light) !important; }
+@utility border-focus { border-color: var(--border-focus) !important; }
 
-@utility ring-color {--tw-ring-color: var(--color-primary-light) !important;}
+// Bordures avec couleurs de marque
+@utility border-primary { border-color: var(--color-primary-500) !important; }
+@utility border-primary-500 { border-color: var(--color-primary-500) !important; }
+@utility border-primary-600 { border-color: var(--color-primary-600) !important; }
 
-@utility calendar-weekend { background-color: var(--calendar-weekend) !important; }
-@utility calendar-holiday { background-color: var(--calendar-holiday) !important; }
-@utility calendar-today { background-color: var(--calendar-today) !important; }
+// Bordures avec couleurs de statut
+@utility border-success { border-color: var(--border-success) !important; }
+@utility border-warning { border-color: var(--border-warning) !important; }
+@utility border-error { border-color: var(--border-error) !important; }
+
+// Bordures types d'employés
+@utility border-interim { border-color: var(--color-employee-interim) !important; }
+@utility border-employee { border-color: var(--color-employee-permanent) !important; }
+
+// Alias pour compatibilité
+@utility border-ultra-light { border-color: var(--border-100) !important; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// RING (Focus)
+// ══════════════════════════════════════════════════════════════════════════
+@utility ring-primary { --tw-ring-color: var(--color-primary-500) !important; }
+@utility ring-color { --tw-ring-color: var(--color-primary-300) !important; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// GRADIENTS
+// ══════════════════════════════════════════════════════════════════════════
+@utility from-primary { --tw-gradient-from: var(--color-primary-500) !important; --tw-gradient-to: rgb(0 149 128 / 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+@utility to-primary-dark { --tw-gradient-to: var(--color-primary-600) !important; }
+@utility from-primary-50 { --tw-gradient-from: var(--color-primary-50) !important; --tw-gradient-to: rgb(0 149 128 / 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+@utility to-primary-100 { --tw-gradient-to: var(--color-primary-100) !important; }
+
+// Alias pour compatibilité
+@utility from-primary-ultra-light { --tw-gradient-from: var(--color-primary-50) !important; --tw-gradient-to: rgb(0 149 128 / 0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+@utility to-primary-light { --tw-gradient-to: var(--color-primary-100) !important; }
+
+// ══════════════════════════════════════════════════════════════════════════
+// CLASSES CALENDRIER (Jours spéciaux)
+// ══════════════════════════════════════════════════════════════════════════
+@utility calendar-weekend { background-color: var(--calendar-bg-weekend) !important; }
+@utility calendar-holiday { background-color: var(--calendar-bg-holiday) !important; }
+@utility calendar-today { background-color: var(--calendar-bg-today) !important; }
+@utility calendar-non-working { background-color: var(--calendar-bg-non-working) !important; }
 
 
 

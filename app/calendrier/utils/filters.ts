@@ -1,4 +1,4 @@
-import { User, Appointment, Filter, DimensionItem, Groupe, GroupingLevel, GroupingLevels, FilterCategories } from '../types';
+import { User, Appointment, Filter, DimensionItem, Equipe, GroupingLevel, GroupingLevels, Item, PoleActivite } from '../types';
 
 // Types pour l'accès sécurisé aux propriétés
 type UserField = keyof User;
@@ -14,101 +14,6 @@ function getAppointmentProperty(appointment: Appointment, field: string): any {
   return appointment[field as AppointmentField];
 }
 
-// Fonction utilitaire pour extraire tous les filtres de filterCategories
-export function getFlatFilters(filterCategories?: FilterCategories): Filter[] {
-  if (!filterCategories) return [];
-  
-  const allFilters: Filter[] = [];
-  
-  if (filterCategories.personnel) {
-    allFilters.push(...filterCategories.personnel);
-  }
-  
-  if (filterCategories.evenements && !Array.isArray(filterCategories.evenements)) {
-    allFilters.push(...filterCategories.evenements.filters);
-  }
-  
-  return allFilters;
-}
-
-// Fonction pour appliquer les filtres aux employés
-export function applyFiltersToEmployees(employees: User[], filters: Filter[]): User[] {
-  return employees.filter(employee => {
-    return filters.every(filter => {
-      switch (filter.type) {
-        case 'equals':
-          return getEmployeeProperty(employee, filter.field) === filter.value;
-        case 'contains':
-          return String(getEmployeeProperty(employee, filter.field)).toLowerCase().includes(String(filter.value).toLowerCase());
-        case 'in':
-          return Array.isArray(filter.value) && filter.value.includes(getEmployeeProperty(employee, filter.field));
-        default:
-          return true;
-      }
-    });
-  });
-}
-
-// Fonction pour appliquer les filtres aux rendez-vous
-export function applyFiltersToAppointments(
-  appointments: Appointment[], 
-  filters: Filter[], 
-  searchQuery: string,
-  employees: User[]
-): Appointment[] {
-  
-  // Optimisation: Créer une Map pour O(1) lookup des employés
-  const employeeMap = new Map<number, User>();
-  employees.forEach(emp => employeeMap.set(emp.id, emp));
-  
-  return appointments.filter(appointment => {
-    // Trouver l'employé associé au rendez-vous avec O(1) lookup
-    const employee = employeeMap.get(Number(appointment.employee?.id));
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const appointmentMatches = 
-        String(appointment.description).toLowerCase().includes(query) ||
-        String(appointment.type).toLowerCase().includes(query);
-      const employeeMatches = employee ? String(employee.nom).toLowerCase().includes(query) : false;
-
-      if (!appointmentMatches && !employeeMatches) {
-        return false;
-      }
-    }
-    
-    return filters.every(filter => {
-      switch (filter.type) {
-        case 'equals':
-          // Si le filtre concerne un champ d'employé, utiliser les données de l'employé
-          if (filter.field === 'pole' || filter.field === 'contrat' || filter.field === 'groupId') {
-            return employee ? getEmployeeProperty(employee, filter.field) === filter.value : false;
-          }
-          // Sinon, utiliser les données du rendez-vous
-          return getAppointmentProperty(appointment, filter.field) === filter.value;
-        case 'contains':
-          if (filter.field === 'pole' || filter.field === 'contrat' || filter.field === 'groupId') {
-            return employee ? String(getEmployeeProperty(employee, filter.field)).toLowerCase().includes(String(filter.value).toLowerCase()) : false;
-          }
-          return String(getAppointmentProperty(appointment, filter.field)).toLowerCase().includes(String(filter.value).toLowerCase());
-        case 'in':
-          if (filter.field === 'pole' || filter.field === 'contrat' || filter.field === 'groupId') {
-            return employee ? Array.isArray(filter.value) && filter.value.includes(getEmployeeProperty(employee, filter.field)) : false;
-          }
-          return Array.isArray(filter.value) && filter.value.includes(getAppointmentProperty(appointment, filter.field));
-        case 'date_range':
-          if (filter.field === 'startDate' || filter.field === 'endDate') {
-            const date = getAppointmentProperty(appointment, filter.field);
-            const [start, end] = filter.value as [number, number];
-            return date >= start && date <= end;
-          }
-          return true;
-        default:
-          return true;
-      }
-    });
-  });
-}
 
 // Interface pour une structure hiérarchique de groupes
 export interface HierarchicalGroupItem {
@@ -124,38 +29,41 @@ export interface HierarchicalGroupItem {
 export function getHierarchicalDimensionItems(
   groupingLevels: GroupingLevels | undefined,
   employees: User[],
-  groups: Groupe[]
+  groups: Record<number, Equipe>,
+  poleActivites: Record<number, PoleActivite>
 ): HierarchicalGroupItem[] {
-  if (!groupingLevels?.level1) {
+  if (!groupingLevels?.ChampsPremierGroupePlanningVue) {
     // Pas de grouping défini, retourner une liste plate d'employés
     return employees.map(emp => ({
-      id: emp.id,
-      name: emp.nom,
+      id: emp.IdPersonnel,
+      name: emp.Nom,
       level: 0,
       employees: [emp],
       data: emp
     }));
   }
 
-  const { level1, level2 } = groupingLevels;
+  const { ChampsPremierGroupePlanningVue: level1, ChampsDeuxiemeGroupePlanningVue: level2 } = groupingLevels;
+
 
   // Cas 1: Un seul niveau de grouping
   if (!level2 || level1 === level2) {
-    return getItemsByLevel(level1, employees, groups).map(item => ({
+    return getItemsByLevel(level1, employees, groups, poleActivites).map(item => ({
       ...item,
       level: 1
     }));
+    
   }
 
   // Cas 2: Deux niveaux de grouping (level1 !== level2)
-  const level1Items = getItemsByLevel(level1, employees, groups);
+  const level1Items = getItemsByLevel(level1, employees, groups, poleActivites);
   
   return level1Items.map(level1Item => {
     // Filtrer les employés appartenant à ce groupe de niveau 1
     const level1Employees = filterEmployeesByLevel(employees, level1, level1Item.id);
     
     // Obtenir les sous-groupes de niveau 2
-    const level2Items = getItemsByLevel(level2, level1Employees, groups);
+    const level2Items = getItemsByLevel(level2, level1Employees, groups, poleActivites);
     
     return {
       ...level1Item,
@@ -172,31 +80,40 @@ export function getHierarchicalDimensionItems(
 function getItemsByLevel(
   levelType: GroupingLevel,
   employees: User[],
-  groups: Groupe[]
-): HierarchicalGroupItem[] {
+  groups: Record<number, Equipe>,
+  poleActivites: Record<number, PoleActivite>
+): HierarchicalGroupItem[] {  
   if (levelType === 'pole') {
-    const poles = Array.from(new Set(employees.map(emp => emp.poleActivite?.name).filter((p): p is string => p !== undefined)));
-    return poles.map(pole => {
-      const poleEmployees = employees.filter(emp => emp.poleActivite?.name === pole);
-      return {
-        id: pole,
-        name: pole,
-        level: 0, // Sera écrasé par l'appelant
-        employees: poleEmployees,
-        data: { pole }
-      };
-    });
+    return Object.values(poleActivites).reduce((acc, pole) => {
+      const poleEmployees = employees.filter(emp => Number(emp.PoleActivite) === Number(pole.Id) && emp.Actif !== false);
+      
+      // On n'ajoute au tableau final (acc) QUE si on a des employés
+      if (poleEmployees.length > 0) {
+        acc.push({
+          id: pole.Id || 'Sans Pôle',
+          name: pole.Nom || 'Sans Pôle',
+          level: 0,
+          employees: poleEmployees,
+          data: { pole }
+        });
+      }
+      
+      return acc;
+    }, [] as HierarchicalGroupItem[]);
   } else if (levelType === 'equipe') {
-    return groups.map(group => {
-      const groupEmployees = employees.filter(emp => emp.equipe?.id === group.id);
-      return {
-        id: group.id,
-        name: group.name,
-        level: 0, // Sera écrasé par l'appelant
-        employees: groupEmployees,
-        data: group
-      };
-    });
+    return Object.values(groups).reduce((acc, group) => {
+      const groupEmployees = employees.filter(emp => Number(emp.Equipe) === Number(group.Id) && emp.Actif !== false);
+      if (groupEmployees.length > 0) {
+        acc.push({
+          id: group.Id || 'Sans Équipe',
+          name: group.Nom || 'Sans Équipe',
+          level: 0,
+          employees: groupEmployees,
+          data: group
+        });
+      }
+      return acc;
+    }, [] as HierarchicalGroupItem[]);
   }
   return [];
 }
@@ -208,9 +125,9 @@ function filterEmployeesByLevel(
   levelId: string | number
 ): User[] {
   if (levelType === 'pole') {
-    return employees.filter(emp => emp.poleActivite?.name === levelId);
+    return employees.filter(emp => Number(emp.PoleActivite) === Number(levelId) && emp.Actif !== false);
   } else if (levelType === 'equipe') {
-    return employees.filter(emp => emp.equipe?.id === levelId);
+    return employees.filter(emp => Number(emp.Equipe) === Number(levelId) && emp.Actif !== false);
   }
   return [];
 }
@@ -219,19 +136,21 @@ function filterEmployeesByLevel(
 export function groupEmployeesHierarchically(
   employees: User[],
   groupingLevels: GroupingLevels | undefined,
-  groups: Groupe[]
+  groups: Record<number, Equipe>,
+  poleActivites: Record<number, PoleActivite>
 ): { [key: string]: User[] } {
   const result: { [key: string]: User[] } = {};
   
-  if (!groupingLevels?.level1) {
+  if (!groupingLevels?.ChampsPremierGroupePlanningVue) {
     // Pas de grouping, retourner les employés individuellement
     employees.forEach(emp => {
-      result[emp.id] = [emp];
+      result[emp.IdPersonnel] = [emp];
     });
     return result;
   }
 
-  const hierarchicalItems = getHierarchicalDimensionItems(groupingLevels, employees, groups);
+  const hierarchicalItems = getHierarchicalDimensionItems(groupingLevels, employees, groups, poleActivites);
+  
   
   // Aplatir la hiérarchie pour créer la structure Record
   function flattenHierarchy(items: HierarchicalGroupItem[]) {

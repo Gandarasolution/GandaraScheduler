@@ -1,23 +1,24 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Appointment, Item, User } from '../../types';
-import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
+import { CELL_WIDTH, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 import { AppointmentItem } from './index';
 import { calculateWidthPx, calculateLeftPx } from '../../hooks';
 import { isSameDay } from 'date-fns';
+import { on } from 'events';
 
 interface EmployeeRowProps {
   employee: User;
   dayInTimeline: number[];
-  appointments: (Appointment & { top: number})[];
+  appointments: Appointment[];
   rowHeight: number;
   isFullDay: boolean;
-  events: Item[];
+  events: Record<number, Item>;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
   visibleWindowStart: number;
   visibleWindowEnd: number;
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
   style?: React.CSSProperties;
@@ -29,6 +30,8 @@ interface EmployeeRowProps {
   isOverlapExpanded: boolean;
   onSetExpansion: (id: number, expanded: boolean) => void;
   collapseTrigger?: number;
+  mainScrollRef: React.RefObject<HTMLDivElement>;
+  onLockedError: (message: string) => void;
 }
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
@@ -54,38 +57,74 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   isOverlapExpanded,
   onSetExpansion,
   collapseTrigger,
+  mainScrollRef,
+  onLockedError
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
   useEffect(() => {
     setExpandedGroups({});
   }, [collapseTrigger]);
+  
+  // if (employee.Nom === 'CABESTANT') {
+  //   console.log(employee);
+  //   console.log(appointments);
+  // }
+  
+  
+  
+  const handleAppointmentResize = useCallback((id: number, newStartDate: number, newEndDate: number, resizeDirection: 'left' | 'right', priority: number) => {
+    const appointmentToResize = appointments.find((app) => app.IdPlanningEvenement === id);
+    if (!appointmentToResize) return;
 
-  const timelineStart = useMemo(() => dayInTimeline[0], [dayInTimeline]);
+    onAppointmentMoved(
+      {
+        id,
+        newStartDate,
+        newEndDate,
+        newEmployeeId: employee.IdPersonnel as number,
+        idRessource: appointmentToResize.IdPlanningRessource as number,
+        resizeDirection,
+      },
+      true,
+      priority
+    );
+  }, [onAppointmentMoved, employee.IdPersonnel, appointments]);
+
+  const timelineStart = useMemo(() => dayInTimeline[0] || 0, [dayInTimeline]);
   
   // Positionnement et calcul des dimensions
   const positionedAppointments = useMemo(() => {
-    return appointments
+    const filterred =  appointments
       .filter((app) => {
-        if (app.employee.id !== employee.id) return false;
-        return app.endDate > visibleWindowStart && app.startDate < visibleWindowEnd;
+        if (Number(app?.IdEmploye) !== Number(employee.IdPersonnel)) return false;
+        return app.FinPlanningEvenement > visibleWindowStart && app.DebutPlanningEvenement < visibleWindowEnd;
       })
-      .map((app) => {
-        const start = app.startDate;
-        const end = app.endDate;
 
-        // Utilisation des fonctions utilitaires pour les calculs de position
-        const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
-        const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
-        const topPx = (app.top * CELL_HEIGHT) + (2 * app.top);
+    return filterred.map((app, index) => {
+      const start = app.DebutPlanningEvenement;
+      const end = app.FinPlanningEvenement;
 
-        return { ...app, left, width, topPx } as Appointment & {
-          top: number;
-          left: number;
-          width: number;
-          topPx: number;
-        };
-      });
-  }, [appointments, employee.id, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart, isFullDay]);
+      // Utilisation des fonctions utilitaires pour les calculs de position
+      const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
+      const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
+      const topPx = 
+        ((app.PlanningEvenementPriorite ?? 0) * CELL_HEIGHT) // Empilement vertical selon la priorité (0 = base, 1 = premier niveau de chevauchement, etc.)
+        + (2 * (app.PlanningEvenementPriorite ?? 0)) // Espacement de 2px entre les niveaux de chevauchement
+        + (
+            (tagPlacement === 'fixed' && index > 0) // Si placement fixe, ajouter un décalage de 18px pour les événements suivants qui ont une étiquette
+            && Number(app.PlanningEvenementPriorite ?? 0) > 0 // Seulement pour les événements de priorité > 0 (chevauchements)
+            && filterred[index - 1]?.Etiquette?.IdPlanningEtiquette ? 18 : 0
+        ); // Décalage pour les tags en placement fixe
+
+      //console.log(topPx);
+      
+      return { ...app, left, width, topPx } as Appointment & {
+        left: number;
+        width: number;
+        topPx: number;
+      };
+    });
+  }, [appointments, employee.IdPersonnel, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart, isFullDay]);
 
   const overlappingGroups = useMemo(() => {
     if (!positionedAppointments.length) return [] as { key: number; apps: (typeof positionedAppointments) }[];
@@ -93,23 +132,23 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     // DÉDUPLICATION : Supprimer les doublons basés sur l'ID
     // Si plusieurs rendez-vous ont le même ID, ne garder que le premier
     const deduplicatedAppointments = positionedAppointments.reduce((acc, app) => {
-      const existingIndex = acc.findIndex(a => a.id === app.id);
+      const existingIndex = acc.findIndex(a => a.IdPlanningEvenement === app.IdPlanningEvenement);
       if (existingIndex === -1) {
         acc.push(app);
       }
       return acc;
     }, [] as typeof positionedAppointments);
 
-    const sorted = [...deduplicatedAppointments].sort((a, b) => a.startDate - b.startDate);
+    const sorted = [...deduplicatedAppointments].sort((a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement);
     const groups: Array<{ key: number; apps: (typeof positionedAppointments)[number][]; end: number }> = [];
 
     for (const app of sorted) {
       const lastGroup = groups[groups.length - 1];
-      if (lastGroup && app.startDate < lastGroup.end) {
+      if (lastGroup && app.DebutPlanningEvenement < lastGroup.end) {
         lastGroup.apps.push(app);
-        lastGroup.end = Math.max(lastGroup.end, app.endDate);
+        lastGroup.end = Math.max(lastGroup.end, app.FinPlanningEvenement);
       } else {
-        groups.push({ key: app.id, apps: [app], end: app.endDate });
+        groups.push({ key: app.IdPlanningEvenement, apps: [app], end: app.FinPlanningEvenement });
       }
     }
 
@@ -117,15 +156,22 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       // OPTIMISATION 5 : Ne trier que si nécessaire (plus de 1 élément)
       if (group.apps.length > 1) {
         group.apps.sort((a, b) => {
-          const pA = a.priority ?? 0;
-          const pB = b.priority ?? 0;
-          return (pA - pB) || (a.startDate - b.startDate);
+          const pA = a.PlanningEvenementPriorite ?? 0;
+          const pB = b.PlanningEvenementPriorite ?? 0;
+          return (pA - pB) || (a.DebutPlanningEvenement - b.DebutPlanningEvenement);
         });
       }
     }
 
     return groups.map(({ key, apps }) => ({ key, apps }));
   }, [positionedAppointments]);
+
+  // if (Number(employee.IdPersonnel) === 5404) {
+  // console.log(overlappingGroups);
+  // console.log(positionedAppointments);
+  // }
+  //console.log(employee.IdPersonnel, (Number(employee.IdPersonnel) === 5404));
+  
 
   const hasExpandedGroup = useMemo(() => overlappingGroups.some((g) => expandedGroups[g.key]), [overlappingGroups, expandedGroups]);
   
@@ -135,7 +181,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     setExpandedGroups(prev => {
       const cleaned: Record<number, boolean> = {};
       for (const key in prev) {
-        if (validKeys.has(Number(key))) {
+        if (validKeys.has(Number(key)) && prev[key] !== undefined) {
           cleaned[key] = prev[key];
         }
       }
@@ -146,14 +192,14 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
   useEffect(() => {
     if (hasExpandedGroup && !isOverlapExpanded) {
-      onSetExpansion(employee.id, true);
+      onSetExpansion(employee.IdPersonnel, true);
     } else if (!hasExpandedGroup && isOverlapExpanded) {
-      onSetExpansion(employee.id, false);
+      onSetExpansion(employee.IdPersonnel, false);
     }
-  }, [hasExpandedGroup, isOverlapExpanded, onSetExpansion, employee.id]);
+  }, [hasExpandedGroup, isOverlapExpanded, onSetExpansion, employee.IdPersonnel]);
 
   const selectionOverlay = useMemo(() => {
-    if (!selectedCell || selectedCell.employeeId !== employee.id) return null;
+    if (!selectedCell || selectedCell.employeeId !== employee.IdPersonnel) return null;
     const dayIndex = dayInTimeline.findIndex((day) => isSameDay(day, selectedCell.date));
     if (dayIndex === -1) return null;
 
@@ -161,13 +207,13 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     const startHour = new Date(selectedCell.date).getHours();
     const intervalIndex = isFullDay
       ? 0
-      : startHour >= HALF_DAY_INTERVALS[1].startHour ? 1 : 0;
+      : startHour >= (HALF_DAY_INTERVALS[1]?.startHour ?? 0) ? 1 : 0;
 
     return {
       left: dayIndex * CELL_WIDTH + intervalIndex * intervalWidth,
       width: intervalWidth,
     };
-  }, [dayInTimeline, employee.id, isFullDay, selectedCell]);
+  }, [dayInTimeline, employee.IdPersonnel, isFullDay, selectedCell]);
 
   const handleRowClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!dayInTimeline.length) return;
@@ -185,22 +231,23 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       ? Math.min(Math.max(rawIntervalIndex, 0), DAY_INTERVALS.length - 1)
       : Math.min(Math.max(rawIntervalIndex, 0), HALF_DAY_INTERVALS.length - 1);
     const intervalConfig = isFullDay ? DAY_INTERVALS[clampedIndex] : HALF_DAY_INTERVALS[clampedIndex];
-    const selectedDate = dayInTimeline[dayIndex] + (intervalConfig?.startHour ?? 0) * HOUR_MS;
+    const day = dayInTimeline[dayIndex];
+    if (day === undefined) return;
+    const selectedDate = day + (intervalConfig?.startHour ?? 0) * HOUR_MS;
 
-    onSelectCell({ employeeId: employee.id, date: selectedDate });
+    onSelectCell({ employeeId: employee.IdPersonnel, date: selectedDate });
     onSelectAppointment(null);
-  }, [dayInTimeline, employee.id, isFullDay, onSelectAppointment, onSelectCell]);
+  }, [dayInTimeline, employee.IdPersonnel, isFullDay, onSelectAppointment, onSelectCell]);
 
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
-  const isInactive = employee.actif === false;
-  const gridOpacity = isInactive ? 0.4 : 0.9;
+  const isInactive = employee.Actif === false;
   const STEP_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
 
   return (
     <div 
-      id={getRowId('employee', employee.id)}
+      id={getRowId('employee', employee.IdPersonnel)}
       className="calendar-row employee-row flex w-fit relative" 
-      data-employee-id={employee.id}
+      data-employee-id={employee.IdPersonnel}
       role="row"
       onClick={handleRowClick}
       style={{
@@ -212,8 +259,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           to right,
           transparent 0px,
           transparent ${STEP_WIDTH - 1}px, /* L'espace vide prend presque toute la largeur */
-          rgba(229,231,235,${gridOpacity}) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
-          rgba(229,231,235,${gridOpacity}) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
+          var(--border-100) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
+          var(--border-100) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
         )`
       }}
     >
@@ -238,24 +285,29 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       {overlappingGroups.map((group) => {
         const isExpanded = expandedGroups[group.key] === true;
         const appsToRender = group.apps;
-        const baseTopPx = group.apps[0].topPx;
+        const baseTopPx = group.apps[0]?.topPx || 0; // Position de base pour les éléments du groupe (le premier élément)
 
+        
         // Récupérer tous les RDV avec priorité 0 (RDV de base)
-        const priority0Apps = group.apps.filter(app => (app.priority ?? 0) === 0);
+        const priority0Apps = group.apps.filter(app => Number(app.PlanningEvenementPriorite ?? 0) === 0);
         
         // Clé unique pour le groupe basée sur tous les IDs des rendez-vous
-        const groupUniqueKey = `group-${group.apps.map(a => `${a.id}-${a.startDate}-${a.endDate}`).join('_')}`;
-        
+        const groupUniqueKey = `group-${group.apps.map(a => `${a.IdPlanningEvenement}-${a.DebutPlanningEvenement}-${a.FinPlanningEvenement}`).join('_')}`;
+      
         return (
           <React.Fragment key={groupUniqueKey}>
             {appsToRender.map((app, index) => {
-              const event = events.find((et) => et.id === app.EventId) as Item | undefined;
+            
+              const ressource = events[Number(app.IdPlanningRessource)];
+              if (!ressource) return null;
   
               // Est-ce un "fantôme" ? (Non étendu, et pas le premier élément)
-              const isGhost = !isExpanded && (app.priority ?? 0) !== 0;
+              const isGhost = !isExpanded && (Number(app.PlanningEvenementPriorite ?? 0)) !== 0;
+
+              
               
               const beforeApp = index > 0 ? group.apps[index - 1] : null;
-              const beforeHasTag = beforeApp && (app.priority ?? 0) > 0 && tagPlacement === 'fixed' && !!beforeApp.tag;
+              const beforeHasTag = beforeApp && Number((app.PlanningEvenementPriorite ?? 0)) > 0 && tagPlacement === 'fixed' && !!beforeApp.Etiquette?.IdPlanningEtiquette;
               const widthDiff = beforeApp ? Math.abs(app.width - beforeApp.width) : Infinity;
               const isSimilarSize = widthDiff <= CELL_WIDTH; // À une case près
               const shouldOffsetForTag = beforeHasTag && isSimilarSize;              
@@ -265,6 +317,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               // Sinon, on utilise sa propre position (+ décalage si l'événement précédent a un tag et taille similaire)
               const forcedTopPx = !isExpanded ? baseTopPx : shouldOffsetForTag ? app.topPx + 18 : app.topPx;
 
+              //console.log('top', shouldOffsetForTag, forcedTopPx );
 
 
               // Calcul des intervalles de chevauchement avec les RDV de priorité 0
@@ -274,8 +327,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               if (isGhost) {
                 priority0Apps.forEach(baseApp => {
                   // Calculer l'intersection entre le RDV actuel et le RDV de base
-                  const overlapStart = Math.max(app.startDate, baseApp.startDate);
-                  const overlapEnd = Math.min(app.endDate, baseApp.endDate);
+                  const overlapStart = Math.max(app.DebutPlanningEvenement, baseApp.DebutPlanningEvenement);
+                  const overlapEnd = Math.min(app.FinPlanningEvenement, baseApp.FinPlanningEvenement);
                   
                   // S'il y a un chevauchement réel
                   if (overlapStart < overlapEnd) {
@@ -283,45 +336,36 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   }
                 });
               }
-
+                          
               return (
                 <AppointmentItem
-                  key={`${app.id}-${app.startDate}-${app.endDate}-${index}`}
+                  key={`${app.IdPlanningEvenement}-${app.DebutPlanningEvenement}-${app.FinPlanningEvenement}-${index}`}
                   appointment={app as Appointment}
                   isInactive={isInactive}
                   isFullDay={isFullDay}
                   isMobile={false}
                   isDisplayWeekend={isDisplayWeekend}
                   tagPlacement={tagPlacement}
-                  event={event as Item}
+                  event={ressource}
                   timelineStart={timelineStart}
-                  chargeeAffaire={(event && event.type === 'chantier' ? event.chargeAffaire : '') || ''}
+                  chargeeAffaire={(ressource && ressource.Type === 'Projet' ? ressource.ChargeAffaire : '') || ''}
                   absoluteLeft={app.left}
                   absoluteWidth={app.width}
                   absoluteTop={forcedTopPx} 
-                  
+                  mainScrollRef={mainScrollRef}
                   isGhost={isGhost} 
                   ghostInterval={ghostIntervals.length > 0 ? ghostIntervals : undefined}
-
-                  onResize={(id, newStartDate, newEndDate, resizeDirection, priority) =>{              
-                    onAppointmentMoved(id, newStartDate, newEndDate, app.employee.id as number, resizeDirection, true, priority)}
-                  }
-                  handleContextMenu={(e, origin) =>
-                    handleContextMenu(
-                      e,
-                      origin,
-                      { ...app, startDate: app.startDate, endDate: app.endDate },
-                      { employeeId: app.employee.id as number, date: app.startDate }
-                    )
-                  }
-                  onDoubleClick={() => onAppointmentDoubleClick(app)}
-                  onClick={() => onSelectAppointment(app)}
-                  isSelected={selectedAppointmentId === app.id}
+                  onAppointmentResize={handleAppointmentResize}
+                  handleContextMenu={handleContextMenu}
+                  onDoubleClick={onAppointmentDoubleClick}
+                  onClick={onSelectAppointment}
+                  isSelected={selectedAppointmentId === app.IdPlanningEvenement}
+                  onLockedError={onLockedError}
                 />
               );
             })}
 
-            {group.apps.length > 1 && !isExpanded && (
+            {group.apps.length > 1 && !isExpanded && group.apps[0] && (
               <button
                 type="button"
                 className="absolute z-40 text-[11px] font-semibold rounded-full px-2 py-0.5 shadow-sm border border-gray-200 bg-white/95 text-gray-700 flex items-center gap-1 transition-transform hover:-translate-y-0.5 hover:shadow-md hover:bg-white"
@@ -335,17 +379,17 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 }}
               >
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
-                +{group.apps.reduce((count, app) => (app.priority && app.priority > 0 ? count + 1 : count), 0)}
+                +{group.apps.reduce((count, app) => (app.PlanningEvenementPriorite && app.PlanningEvenementPriorite > 0 ? count + 1 : count), 0)}
               </button>
             )}
 
-            {isExpanded && group.apps.length > 1 && (
+            {isExpanded && group.apps.length > 1 && group.apps[0] && (
               <button
                 type="button"
                 className="absolute z-40 text-[11px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
                 style={{
-                  left: (group.apps[0].left + group.apps[0].width) - 36,
-                  top: group.apps[0].topPx - 12,
+                  left: (group.apps[0]?.left + group.apps[0]?.width) - 36,
+                  top: group.apps[0]?.topPx - 12,
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -362,10 +406,11 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   );
 };
 
-export default memo(EmployeeRow, (prev, next) => {
-  if (prev.employee.id !== next.employee.id ||
+ export default memo(EmployeeRow, (prev, next) => {
+  if (prev.employee.IdPersonnel !== next.employee.IdPersonnel ||
       prev.dayInTimeline !== next.dayInTimeline ||
-      prev.appointments !== next.appointments ||
+      prev.appointments.length !== next.appointments.length ||
+    prev.appointments !== next.appointments ||
       prev.rowHeight !== next.rowHeight ||
       prev.style?.top !== next.style?.top ||
       prev.isFullDay !== next.isFullDay ||
@@ -381,8 +426,8 @@ export default memo(EmployeeRow, (prev, next) => {
   ) {
     return false;
   }
-  const wasSelected = prev.selectedCell?.employeeId === prev.employee.id;
-  const isSelected = next.selectedCell?.employeeId === next.employee.id;
+  const wasSelected = prev.selectedCell?.employeeId === prev.employee.IdPersonnel;
+  const isSelected = next.selectedCell?.employeeId === next.employee.IdPersonnel;
 
   if (wasSelected !== isSelected) return false;
   if (wasSelected && isSelected) {

@@ -133,7 +133,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
 
   const baseClasses = `
     relative border rounded-2xl
-    poppins text-[14px] font-medium bg-bg-secondary cursor-pointer
+    poppins text-[14px] font-medium bg-primary-bg cursor-pointer
     transition-colors duration-200 ease-in-out
     border border-default
     ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'hover:border-gray-400'}
@@ -201,14 +201,14 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
 
       {/* Dropdown des options */}
       {isOpen && (
-        <div className={`absolute z-50 ${showImages ? 'w-auto' : 'w-full'} mt-1 bg-bg-secondary text-primary rounded-2xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide`}>
+        <div className={`absolute z-50 ${showImages ? 'w-auto' : 'w-full'} mt-1 bg-secondary-bg text-primary rounded-2xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide`}>
           <ul role="listbox" className="py-1">
             {options.map((option) => (
               <li
                 key={option.id}
                 className={`
                   px-3 py-2 cursor-pointer flex items-center gap-2 transition-colors duration-150 
-                  ${String(option.value || option.id) === String(value) ? 'bg-primary-lighter text-primary font-medium' : 'hover:bg-primary-ultra-light hover:text-secondary'}
+                  ${String(option.value || option.id) === String(value) ? 'bg-primary-100 text-primary font-medium' : 'hover:bg-primary-50 hover:text-secondary'}
                 `}
                 onClick={() => handleOptionClick(option)}
                 role="option"

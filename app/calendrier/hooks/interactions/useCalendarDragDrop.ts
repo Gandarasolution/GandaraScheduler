@@ -14,14 +14,15 @@
 
 import { RefObject } from 'react';
 import { useDrop } from 'react-dnd';
-import { isSameDay, isWeekend } from 'date-fns';
-import { Appointment, HalfDayInterval } from '../../types';
+import { format, isSameDay, isWeekend } from 'date-fns';
+import { Appointment, HalfDayInterval, Item } from '../../types';
 import { CELL_WIDTH, CELL_HEIGHT, HOUR_MS, DAY_INTERVALS } from '../../utils/constants';
 import { isHoliday, getNextWorkedDay } from '../../utils/dates';
 import { RowWithBoundaries } from '@/app/calendrier';
 
 interface DragItem {
   id: number;
+  item?: Item;
   type: 'appointment';
   title?: string;
   sourceType?: 'external';
@@ -38,10 +39,10 @@ interface UseCalendarDragDropParams {
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: number[];
-  appointmentsWithTop: (Appointment & { top: number })[];
-  onAppointmentMoved: (id: number, newStartDate: number, newEndDate: number, newEmployeeId: number, resizeDirection?: 'left' | 'right', saveToHistory?: boolean, newPriority?: number) => void;
-  onExternalDragDrop: (title: string, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number, imageUrl: string, typeEvent: 'Chantier' | 'Absence' | 'Autre') => void;
+  nonWorkingDates: Record<string, number>;
+  appointments: Appointment[];
+  onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
+  onExternalDragDrop: (item: Item, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number, priority: number) => void;
 }
 
 /**
@@ -55,7 +56,7 @@ export const useCalendarDragDrop = ({
   HALF_DAY_INTERVALS,
   isFullDay,
   nonWorkingDates,
-  appointmentsWithTop,
+  appointments,
   onAppointmentMoved,
   onExternalDragDrop,
 }: UseCalendarDragDropParams) => {
@@ -64,7 +65,7 @@ export const useCalendarDragDrop = ({
     accept: ['appointment', 'external-item'],
     drop: (item: DragItem, monitor) => {
       if (!tableRef.current || rowBoundaries.length === 0 || dayInTimeline.length === 0) return;
-
+      
       const clientOffset = monitor.getClientOffset();
       if (!clientOffset) return;
 
@@ -105,40 +106,52 @@ export const useCalendarDragDrop = ({
 
       const weekend = isWeekend(targetDayTs);
       const holiday = isHoliday(targetDayTs);
-      const isNonWorking = nonWorkingDates.some((date) => isSameDay(date, targetDayTs));
+      const isNonWorking = nonWorkingDates[format(targetDayTs, 'yyyy-MM-dd')] !== undefined;
 
       if (weekend || holiday || isNonWorking) {
         targetDate = getNextWorkedDay(targetDate, isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS, nonWorkingDates);
         targetInterval = 'morning';
       }
-      
-      // Gestion des éléments externes
-      if (item.sourceType === 'external') {
-        onExternalDragDrop(
-          item.title || 'Nouveau rendez-vous',
-          targetDate,
-          targetInterval,
-          Number(targetRow.id),
-          item.imageUrl || '',
-          item.typeEvent
-        );
-        return;
-      }
 
       // Calcul de la durée et nouvelle fin
       const duration = item.endDate - item.startDate;
       const newEnd = targetDate + duration;
-      
+
       // Gestion de la priorité : détecter sur quel rdv (position Y) l'utilisateur drop
       const targetEmployeeId = Number(targetRow.id);
+
+      console.log('Drop target:', targetEmployeeId)
       
       // Trouver tous les rdv qui chevauchent la nouvelle position
-      const overlappingAppointments = appointmentsWithTop.filter(app => 
-        app.id !== item.id &&
-        app.employee.id === targetEmployeeId &&
-        app.startDate < newEnd &&
-        app.endDate > targetDate
+      const overlappingAppointments = appointments.filter(app => 
+        app.IdPlanningEvenement !== item.id &&
+        app.IdEmploye === targetEmployeeId &&
+        app.DebutPlanningEvenement < newEnd &&
+        app.FinPlanningEvenement > targetDate
       );
+
+      
+      // Gestion des éléments externes
+      if (item.sourceType === 'external') {
+        const draggedItem = item.item;
+        if (!draggedItem) return;
+
+        onExternalDragDrop(
+          draggedItem,
+          targetDate,
+          targetInterval,
+          Number(targetRow.id),
+          overlappingAppointments.length
+        );
+        return;
+      }
+
+      
+      const movedAppointment = appointments.find((a) => a.IdPlanningEvenement === item.id);
+
+      if (!movedAppointment) return;
+      
+      
 
       let newPriority: number | undefined = undefined;
       
@@ -150,59 +163,55 @@ export const useCalendarDragDrop = ({
         const targetPriorityIndex = Math.floor(employeeRowY / (CELL_HEIGHT + 2));
 
         // Récupérer l'item d'origine
-        const originalItem = appointmentsWithTop.find(a => a.id === item.id);
+        const originalItem = appointments.find(a => a.IdPlanningEvenement === item.id);
         const isAlreadyPresent = originalItem && 
-                               originalItem.employee.id === targetEmployeeId && 
-                               originalItem.startDate < newEnd && 
-                               originalItem.endDate > targetDate;
+                               originalItem.IdEmploye === targetEmployeeId && 
+                               originalItem.DebutPlanningEvenement < newEnd && 
+                               originalItem.FinPlanningEvenement > targetDate;
 
         // Trouver les rdv à la position cible
         const rdvAtTargetPosition = overlappingAppointments
-          .sort((a, b) => (a.priority || 0) - (b.priority || 0))
-          .filter(app => (app.priority ?? 0) === targetPriorityIndex);
+          .sort((a, b) => (a.PlanningEvenementPriorite || 0) - (b.PlanningEvenementPriorite || 0))
+          .filter(app => (app.PlanningEvenementPriorite ?? 0) === targetPriorityIndex);
           
-        const startDateRdvTarget = rdvAtTargetPosition[0]?.startDate;
-        const endDateRdvTarget = rdvAtTargetPosition[rdvAtTargetPosition.length - 1]?.endDate;
+        const startDateRdvTarget = rdvAtTargetPosition[0]?.DebutPlanningEvenement;
+        const endDateRdvTarget = rdvAtTargetPosition[rdvAtTargetPosition.length - 1]?.FinPlanningEvenement;
         
         // Trouver les rdv à la position originale
-        const rdvatOriginalPosition = appointmentsWithTop
+        const rdvatOriginalPosition = appointments
           .filter(app =>
-            app.id !== item.id &&
-            app.employee.id === originalItem?.employee.id &&
-            app.startDate < endDateRdvTarget &&
-            app.endDate > startDateRdvTarget &&
-            (app.priority ?? 0) === (originalItem?.priority ?? 0)
+            app.IdPlanningEvenement !== item.id &&
+            app.IdEmploye === originalItem?.IdEmploye &&
+            app.DebutPlanningEvenement < endDateRdvTarget &&
+            app.FinPlanningEvenement > startDateRdvTarget &&
+            (app.PlanningEvenementPriorite ?? 0) === (originalItem?.PlanningEvenementPriorite ?? 0)
           );          
         
         if (isAlreadyPresent) {
           if (rdvAtTargetPosition.length > 0) {
             // Interchange des priorités
-            newPriority = (rdvAtTargetPosition[0].priority ?? 0);
+            newPriority = (rdvAtTargetPosition[0].PlanningEvenementPriorite ?? 0);
             
             rdvAtTargetPosition.forEach(appToMove => {
-              onAppointmentMoved(
-                appToMove.id,
-                appToMove.startDate,
-                appToMove.endDate,
-                appToMove.employee.id,
-                undefined,
-                false,
-                (originalItem?.priority ?? 0)
-              );
+              onAppointmentMoved({
+                id: appToMove.IdPlanningEvenement,
+                newStartDate: appToMove.DebutPlanningEvenement,
+                newEndDate: appToMove.FinPlanningEvenement,
+                newEmployeeId: appToMove.IdEmploye,
+                idRessource: appToMove.IdPlanningRessource,
+              }, false, (originalItem?.PlanningEvenementPriorite ?? 0));
             });
 
             if (rdvatOriginalPosition.length > 0) {
               rdvatOriginalPosition.forEach(appToAdjust => {
-                if (appToAdjust.id !== item.id) {
-                  onAppointmentMoved(
-                    appToAdjust.id,
-                    appToAdjust.startDate,
-                    appToAdjust.endDate,
-                    appToAdjust.employee.id,
-                    undefined,
-                    false,
-                    newPriority
-                  );
+                if (appToAdjust.IdPlanningEvenement !== item.id) {
+                  onAppointmentMoved({
+                    id: appToAdjust.IdPlanningEvenement,
+                    newStartDate: appToAdjust.DebutPlanningEvenement,
+                    newEndDate: appToAdjust.FinPlanningEvenement,
+                    newEmployeeId: appToAdjust.IdEmploye,
+                    idRessource: appToAdjust.IdPlanningRessource,
+                  }, false, newPriority);
                 } 
               });
             }
@@ -211,14 +220,21 @@ export const useCalendarDragDrop = ({
           }
         } else {
           if (rdvAtTargetPosition.length > 0) {
-            newPriority = (rdvAtTargetPosition[0].priority ?? 0) + 1;
+            newPriority = (rdvAtTargetPosition[0].PlanningEvenementPriorite ?? 0) + 1;
           } else {
             newPriority = targetPriorityIndex;
           }
         }
       }
 
-      onAppointmentMoved(item.id, targetDate, newEnd, targetEmployeeId, 'right', true, newPriority);
+      onAppointmentMoved({
+        id: item.id,
+        newStartDate: targetDate,
+        newEndDate: newEnd,
+        newEmployeeId: targetEmployeeId,
+        idRessource: movedAppointment?.IdPlanningRessource,
+        resizeDirection: 'right',
+      }, true, newPriority);
     },
   }), [
     DAY_INTERVALS, 
@@ -229,7 +245,7 @@ export const useCalendarDragDrop = ({
     onAppointmentMoved, 
     onExternalDragDrop, 
     rowBoundaries, 
-    appointmentsWithTop,
+    appointments,
     tableRef
   ]);
 

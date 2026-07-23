@@ -106,3 +106,12 @@ export const HOURS_PER_DAY = 8;
 // ===== AUTRES CONSTANTES =====
 export const INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE = 24;
 export const INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER = 24;
+
+// ===== RECHERCHE DISTANTE =====
+export const SEARCH_MIN_QUERY_LENGTH = 1;
+export const SEARCH_DEBOUNCE_MS = 400;
+export const SEARCH_DEFAULT_LIMIT = 20;
+export const SEARCH_API_TIMEOUT_MS = 5000;
+export const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
+export const SEARCH_CACHE_MAX_ENTRIES = 50;
+export const FAVORITE_ITEMS_LIMIT = 10;
