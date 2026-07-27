@@ -48,6 +48,10 @@ async function getVueDetails(id: number) {
   return await getRequest(`/api/planning/vue/${id}`, 'getVueDetails');
 }
 
+async function getAllUsersForVue() {
+  return await getRequest(`/api/planning/vue/users`, 'getAllUsersForVue');
+}
+
 
 export default {
   getCalendarConfigsByUserId,
@@ -60,5 +64,6 @@ export default {
   lockCalendarConfig,
   getLastVueForUser,
   setLastVueForUser,
-  getVueDetails
+  getVueDetails,
+  getAllUsersForVue
 };

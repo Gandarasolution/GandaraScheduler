@@ -76,7 +76,7 @@ interface CalendarModalsProps {
     // Config Calendar
     closeConfigModal: () => void;
     setCurrentConfig: (config: CalendarConfig) => void;
-    saveCustomConfig: (config: { planningVue: any; filtrePerso: any }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
+    saveCustomConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
     deleteCustomConfig: (configId: number) => Promise<{error: number, message?: string} | void> | void;
     
     // Config Configuration Editing State (from hook)

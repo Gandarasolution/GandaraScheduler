@@ -40,6 +40,10 @@ export const useMercureSync = (
       }
     };
 
+    eventSource.onerror = (error) => {
+      console.error("Erreur de connexion à Mercure", error);
+    };
+
     return () => {
       eventSource.close();
     };
