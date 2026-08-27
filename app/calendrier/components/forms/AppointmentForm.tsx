@@ -159,7 +159,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   // - Les selecteurs de Date et d'Employé sont cachés si on créer ou si on edite une ressource (isEditingAppointment == false)
   const isResourceMode = isCreatingResource || isEditingResource;
         
-
   // ===== ÉTATS LOCAUX =====
   
   /**
@@ -710,7 +709,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           
           {/* FormHeader - Icône + Couleurs + Ressource */}
           <FormHeader
-            icon={formDataItemType?.Image || undefined}
+            icon={formDataItemType?.Image?.image || undefined}
             onIconClick={() => handleOpenImageModal(formDataItemType?.IdPlanningRessource)}
             colors={colors}
             onColorChange={handleColorChange}

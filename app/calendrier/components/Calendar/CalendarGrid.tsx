@@ -56,6 +56,7 @@ interface CalendarGridProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
+  //reloadToken?: number;
   mouseUpAfterScroll: () => void;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
   onLockedError: (message: string) => void;
@@ -89,6 +90,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onSelectCell,
   onSelectAppointment,
   onLoadAppointmentsInRange,
+  //reloadToken,
   mouseUpAfterScroll,
   onAddAppointment,
   onLockedError
@@ -185,6 +187,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         onSelectAppointment={onSelectAppointment}
         hoverColumnLeft={hoverColumnLeft}
         onLoadAppointmentsInRange={onLoadAppointmentsInRange}
+        //reloadToken={reloadToken}
         mouseUpAfterScroll={mouseUpAfterScroll}
         onLockedError={onLockedError}
       />

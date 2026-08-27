@@ -1,30 +1,27 @@
-import { memo, use, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
 import { ImageType } from "../../types";
-
 
 /**
  * Props pour le composant ImageSelectorContent
  */
 interface ImageSelectorContentProps {
   isOpen: boolean;
-  images?: ImageType[];
-  actualImage: ImageType | null;
+  actualImage: ImageType | undefined | null;
   onImageSelect: (image: ImageType) => void;
   onClose: () => void;
   onImageUpload: (file: File) => Promise<ImageType>;
   isUploading: boolean;
   uploadError: string | null;
-  fetchPaginatedImages?: (page: number, limit?: number) => Promise<void>;
+  // La fonction de fetch devient l'unique source de vérité
+  fetchPaginatedImages: (page: number, limit: number) => Promise<{ image: ImageType[]; totalLignes: number }>; 
   addImageToDatabase?: (file: File) => Promise<void>;
-  totalPages?: number; // Suggéré d'ajouter ce prop pour rendre la pagination serveur propre
 }
 
 /**
- * Composant de sélection d'images avec recherche et pagination
+ * Composant de sélection d'images avec recherche et pagination serveur
  */
 const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
-  images,
   isOpen,
   actualImage,
   onImageSelect,
@@ -33,45 +30,88 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
   isUploading,
   uploadError,
   fetchPaginatedImages,
-  addImageToDatabase
+  addImageToDatabase,
 }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [dragActive, setDragActive] = useState(false);
+  
+  // NOUVEAUX STATES POUR LA PAGINATION SERVEUR
+  const [serverImages, setServerImages] = useState<ImageType[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+
   const itemsPerPage = 8;
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Effet pour la pagination serveur
-  useEffect(() => {
-    if (fetchPaginatedImages) {
-      fetchPaginatedImages(currentPage, itemsPerPage);
-    }
-  }, [currentPage, fetchPaginatedImages]);
+  // 1. EFFET DE FETCH : Appelé à l'ouverture et au changement de page
+ useEffect(() => {
+    if (isOpen && fetchPaginatedImages) {
+      let isMounted = true;
+      setIsLoadingImages(true);
+      
+      fetchPaginatedImages(currentPage, itemsPerPage)
+        .then(async (response) => {
+          if (isMounted && response) {
+            const fetchedImages = response.image || [];
+            
+            // On demande au navigateur de télécharger silencieusement les 8 images
+            const preloadPromises = fetchedImages.map((imgData) => {
+              return new Promise((resolve) => {
+                const img = new window.Image(); // Objet Image natif du navigateur
+                img.src = imgData.image;        // L'URL renvoyée par votre API
+                img.onload = resolve;           // Téléchargement réussi
+                img.onerror = resolve;          // Erreur (on ne bloque pas les autres)
+              });
+            });
 
-  // Si on utilise la pagination serveur, on affiche directement 'images' en les triant.
+            // On attend que TOUTES les images soient dans le cache du navigateur
+            await Promise.all(preloadPromises);
+            
+            // --- FIN DU PRÉCHARGEMENT ---
+
+            // Seulement maintenant, on les affiche (elles apparaîtront instantanément !)
+            if (isMounted) {
+              setServerImages(fetchedImages);
+              setTotalItems(response.totalLignes || 0);
+            }
+          }
+        })
+        .catch((error) => console.error("Erreur de fetch des images :", error))
+        .finally(() => {
+          if (isMounted) setIsLoadingImages(false); // Le spinner disparaît
+        });
+
+      return () => { isMounted = false; };
+    }
+  }, [isOpen, currentPage, fetchPaginatedImages]);
+
+  // 2. Réinitialiser la page à 1 quand on ferme la modale
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentPage(1);
+      setServerImages([]); // Nettoyage optionnel
+    }
+  }, [isOpen]);
+
+  // 3. Préparation des images pour l'affichage (Placement de l'image actuelle en premier)
   const displayImages = useMemo(() => {
-    let result = images || [];
+    let result = [...serverImages];
     
-    // **PLACER L'IMAGE ACTUELLE EN PREMIER**
     if (actualImage) {
-      result = [...result].sort((a, b) => {
-        if (a.id === actualImage?.id) return -1; // a en premier
-        if (b.id === actualImage?.id) return 1;  // b en premier
-        return 0; // Garde l'ordre original
+      result.sort((a, b) => {
+        if (a.id === actualImage.id) return -1;
+        if (b.id === actualImage.id) return 1;
+        return 0;
       });
     }
     
     return result;
-  }, [images, actualImage]);
+  }, [serverImages, actualImage]);
 
-  // Pagination calculation
-  const totalPages = fetchPaginatedImages ? Math.ceil((images?.length || 0) / itemsPerPage) : Math.ceil(displayImages.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  // Si serveur on prend tout `displayImages`, sinon on slice
-  const paginatedImages = fetchPaginatedImages ? displayImages : (viewMode === 'grid' ? displayImages.slice(startIndex, startIndex + itemsPerPage) : displayImages);
-   
+  // Calcul du total des pages basé UNIQUEMENT sur le retour serveur
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
-  // Fonctions pour gérer l'upload de fichiers
   const handleFiles = async (files: FileList) => {
     if (files.length > 0) {
       const file = files[0];
@@ -172,11 +212,11 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
           )}
         </div>
 
-        {/* Barre de recherche et contrôles (Recherche retirée) */}
+        {/* Contrôles d'affichage */}
         <div className="mb-4 space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-sm text-primary">
-              {displayImages.length} image{displayImages.length !== 1 ? 's' : ''} trouvée{displayImages.length !== 1 ? 's' : ''}
+              {totalItems} image{totalItems !== 1 ? 's' : ''} au total
             </span>
             
             <div className="flex items-center gap-2">
@@ -209,72 +249,51 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
         </div>
 
         {/* Contenu des images */}
-        <div className="mb-4 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 gap-4">
-          {paginatedImages.length === 0 ? (
+        <div className="mb-4 max-h-96 min-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 gap-4 relative">
+          
+          {isLoadingImages ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : displayImages.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              'Aucune image disponible'
+              Aucune image disponible
             </div>
           ) : viewMode === 'grid' ? (
-            <>
-              <div className="grid grid-cols-4 gap-4 mb-4">
-                {paginatedImages.map((image, index) => (
-                  <div
-                    key={index}
-                    onClick={() => onImageSelect(image)}
-                    className="cursor-pointer group relative"
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              {displayImages.map((image, index) => (
+                <div
+                  key={index}
+                  onClick={() => onImageSelect(image)}
+                  className="cursor-pointer group relative"
+                >
+                  <div 
+                    className={`border-2 rounded-lg p-2 hover:border-primary hover:shadow-md transition-all relative ${
+                      index === 0 && currentPage === 1 && actualImage !== null && image.id === actualImage?.id
+                        ? 'border-primary shadow-lg bg-primary-50' 
+                        : 'border-gray-200 hover:border-primary'
+                    }`}
+                    title={`Image ${image.id}`}
                   >
-                    <div 
-                      className={`border-2 rounded-lg p-2 hover:border-primary hover:shadow-md transition-all relative ${
-                        index === 0 && currentPage === 1 && actualImage !== null
-                          ? 'border-primary shadow-lg bg-primary-50' 
-                          : 'border-gray-200 hover:border-primary'
+                    <img 
+                      src={image.image} 
+                      alt={`Image ${image.id}`} 
+                      className={`w-full h-20 object-contain mb-2 group-hover:scale-105 transition-transform ${
+                        index === 0 && currentPage === 1 ? 'opacity-100' : 'opacity-90 hover:opacity-100'
                       }`}
-                      title={`Image ${image.id}`}
-                    >
-                      <img 
-                        src={image.image} 
-                        alt={`Image ${image.id}`} 
-                        className={`w-full h-20 object-contain mb-2 group-hover:scale-105 transition-transform ${
-                          index === 0 && currentPage === 1 ? 'opacity-100' : 'opacity-90 hover:opacity-100'
-                        }`}
-                      />
-                    </div>
+                    />
                   </div>
-                ))}
-              </div>
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
-                  >
-                    ←
-                  </button>
-                  
-                  <span className="text-sm text-primary">
-                    Page {currentPage} sur {totalPages}
-                  </span>
-                  
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
-                  >
-                    →
-                  </button>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           ) : (
-            <div className="space-y-2">
-              {paginatedImages.map((image, index) => (
+            <div className="space-y-2 mb-4">
+              {displayImages.map((image, index) => (
                 <div
                   key={index}
                   onClick={() => onImageSelect(image)}
                   className={`flex items-center p-3 border-2 rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all group relative ${
-                    index === 0 
+                    index === 0 && currentPage === 1 && actualImage !== null && image.id === actualImage?.id
                       ? 'border-primary shadow-md bg-primary-50' 
                       : 'border-gray-200'
                   }`}
@@ -283,8 +302,8 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                   <img 
                     src={image.image} 
                     alt={`Image ${image.id}`} 
-                    className={`w-12 h-12 object-contain mr-3 group-hover:scale-105 transition-transform ${
-                      index === 0 ? 'opacity-100' : 'opacity-90 hover:opacity-100'
+                    className={`w-full h-12 object-contain mr-3 group-hover:scale-105 transition-transform ${
+                      index === 0 && currentPage === 1 ? 'opacity-100' : 'opacity-90 hover:opacity-100'
                     }`}
                   />
                   <div>
@@ -294,18 +313,41 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
               ))}
             </div>
           )}
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-4">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1 || isLoadingImages}
+                className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
+              >
+                ←
+              </button>
+              
+              <span className="text-sm text-primary">
+                Page {currentPage} sur {totalPages}
+              </span>
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages || isLoadingImages}
+                className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
+              >
+                →
+              </button>
+            </div>
+          )}
         </div>
 
-      
-
         {/* Actions */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mt-2">
           <div className="text-xs text-primary">
             💡 Astuce : Vous pouvez également glisser-déposer une image directement sur cette zone
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-primary rounded-lg transition-colors"
+            className="px-4 py-2 bg-gray-200 text-primary rounded-lg transition-colors cursor-pointer hover:bg-gray-300"
           >
             Annuler
           </button>

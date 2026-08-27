@@ -90,7 +90,7 @@ function getItemsByLevel(
       // On n'ajoute au tableau final (acc) QUE si on a des employés
       if (poleEmployees.length > 0) {
         acc.push({
-          id: pole.Id || 'Sans Pôle',
+          id: pole.Id,
           name: pole.Nom || 'Sans Pôle',
           level: 0,
           employees: poleEmployees,
@@ -105,7 +105,7 @@ function getItemsByLevel(
       const groupEmployees = employees.filter(emp => Number(emp.Equipe) === Number(group.Id) && emp.Actif !== false);
       if (groupEmployees.length > 0) {
         acc.push({
-          id: group.Id || 'Sans Équipe',
+          id: group.Id,
           name: group.Nom || 'Sans Équipe',
           level: 0,
           employees: groupEmployees,

@@ -185,7 +185,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
       return (
         <div
           key={`header-level-${levelIndex}`}
-          className={`grid sticky z-30 ${headerLevel.containerClassName || ''}`}
+          className={`grid sticky z-40 ${headerLevel.containerClassName || ''}`}
           style={{
             gridTemplateColumns,
             minHeight: headerLevel.minHeight || 'auto',
@@ -203,7 +203,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
     return (
       <div
         key={`header-level-${levelIndex}`}
-        className={`grid sticky z-30 ${headerLevel.containerClassName || ''}`}
+        className={`grid sticky z-40 ${headerLevel.containerClassName || ''}`}
         style={{
           gridTemplateColumns,
           minHeight: headerLevel.minHeight || 'auto',

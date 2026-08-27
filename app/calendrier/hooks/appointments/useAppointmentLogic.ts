@@ -701,7 +701,7 @@ export const useAppointmentLogic = ({
             CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
             CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
             CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
-            IdImage: eventUpdate.Image,
+            IdImage: eventUpdate.Image?.id,
           },
         };
 
@@ -1005,7 +1005,7 @@ export const useAppointmentLogic = ({
           );
         }
 
-        notificationService.appointmentUpdated();
+        //notificationService.appointmentUpdated();
         return;
       }
       appointmentsRef.current = previousAppointments;
@@ -1094,14 +1094,18 @@ export const useAppointmentLogic = ({
 
     const result = await api.repeatEvenement(payloads)
     .then((resp) => {
+      console.log('repeatEvenement response:', resp);
       if (isApiSuccess(resp)) {
+        console.log('repeatEvenement success:', resp);
         const createdIds = resp?.data;
         if (Array.isArray(createdIds) && createdIds.length === newAppointments.length) {
-            newAppointments.forEach((app, index) => {
-              app.IdPlanningEvenement = createdIds[index];
-            });
-            appointmentsRef.current.push(...newAppointments);
-      
+          const repeatedAppointments = newAppointments.map((app, index) => ({
+            ...app,
+            IdPlanningEvenement: Number(createdIds[index]),
+          }));
+          appointmentsRef.current = [...appointmentsRef.current, ...repeatedAppointments];
+    
+          console.log('Rendez-vous répétés créés localement:', repeatedAppointments);
           onUpdate();
           return { success: true } as ActionResult;
         }
@@ -1129,7 +1133,7 @@ export const useAppointmentLogic = ({
     if (!result.success) {
       return result;
     }
-
+    onUpdate();
     notificationService.appointmentRepeated(newAppointments.length);
     setRepeatData(null);
     return { success: true };
@@ -1286,7 +1290,7 @@ export const useAppointmentLogic = ({
     
     await api.createEvenement({ ...payload })
     .then((resp) => {;
-
+      console.log('Response from createEvenement:', resp);
     if (!isApiSuccess(resp)) {
       const apiMessage = resp?.message || 'Le serveur a refusé la création du rendez-vous.';
       notificationService.error('Création annulée', apiMessage);

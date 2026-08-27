@@ -342,10 +342,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
           
           {currentConfig ? (
             <div className="flex items-start gap-4 relative z-10">
-              {currentConfig.IdPlanningImage && (
+              {currentConfig.PlanningImage?.image && (
                 <div className="relative">
                   <img 
-                    src={availablesImages.find(img => img.id === currentConfig.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
+                    src={currentConfig.PlanningImage.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
                     className="w-16 h-16 object-cover rounded-xl shadow-sm flex-shrink-0 border border-white"
                     alt="Config image"
                   />
@@ -420,9 +420,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 }`}
               >
                 <div className="flex items-start gap-4 mb-2">
-                  {config.IdPlanningImage && (
+                  {config.PlanningImage?.image && (
                     <img 
-                      src={availablesImages.find(img => img.id === config.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
+                      src={config.PlanningImage.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
                       className="w-12 h-12 object-cover rounded-lg flex-shrink-0 border border-gray-100"
                       alt="Config image"
                     />
