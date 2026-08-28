@@ -13,7 +13,7 @@ export const useMercureSync = (
     if (!planningId) return;
 
     // 2. On construit l'URL exacte du Topic Mercure (doit correspondre à Symfony)
-    const topic = encodeURIComponent(`https://gandara.com/planning/${planningId}`);
+    const topic = encodeURIComponent(`https://gandara.com/planning/update`);
     
     const mercureHubUrl = `http://localhost:3000/.well-known/mercure?topic=${topic}`;
 
@@ -41,8 +41,13 @@ export const useMercureSync = (
     };
 
     eventSource.onerror = (error) => {
-      setNotification("Erreur de connexion à Mercure. Veuillez vérifier votre connexion ou réessayer plus tard.");
-      console.error("Erreur de connexion à Mercure", error);
+      if (eventSource.readyState === 0) {
+        console.info("🔌 Connexion à Mercure interrompue. Tentative de reconnexion...");
+      }
+      else {
+        setNotification("Erreur de connexion à Mercure. Veuillez vérifier votre connexion ou réessayer plus tard.");
+        console.error("Erreur de connexion à Mercure", error);
+      }
     };
 
     eventSource.onopen = () => {
