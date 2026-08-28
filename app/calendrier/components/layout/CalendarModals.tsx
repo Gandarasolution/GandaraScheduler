@@ -1,6 +1,8 @@
 import React, { memo, useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { format } from 'date-fns';
 import { 
+  ConfigurationModal,
+  ImageSelectorContentModal,
   Modal, 
 } from '@/app/calendrier/components';
 import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem } from '../../types';
@@ -16,9 +18,7 @@ type ModalActionResult = { success: boolean; message?: string };
 
 // Lazy loading des modales lourdes
 const AppointmentForm = lazy(() => import('../forms/AppointmentForm'));
-const ImageSelectorContentModal = lazy(() => import('../modals/imageSelectorContentModal'));
 const SettingsModal = lazy(() => import('../modals/SettingsModal'));
-const ConfigurationModal = lazy(() => import('../modals/ConfigurationModal'));
 const FilterModal = lazy(() => import('../modals/FilterModal'));
 const DeleteModal = lazy(() => import('../modals/DeleteModal'));
 
@@ -66,6 +66,7 @@ interface CalendarModalsProps {
     handleImageSelect: (image: ImageType) => void;
     handleImageUpload: (file: File) => Promise<ImageType>;
     openImageModalForEvent: (id: number) => void;
+    fetchPaginatedImages: (page: number, limit?: number) => Promise<{ image: ImageType[]; totalLignes: number }>;
 
     // Settings & Config Handlers
     closeSettings: () => void;
@@ -76,7 +77,7 @@ interface CalendarModalsProps {
     // Config Calendar
     closeConfigModal: () => void;
     setCurrentConfig: (config: CalendarConfig) => void;
-    saveCustomConfig: (config: { planningVue: any; filtrePerso: any }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
+    saveCustomConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
     deleteCustomConfig: (configId: number) => Promise<{error: number, message?: string} | void> | void;
     
     // Config Configuration Editing State (from hook)
@@ -308,7 +309,7 @@ export const CalendarModals = memo(({
                   Verrou: false,
                   Category: 'dimension',
               } 
-              : data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)] as Item}
+              : data.selectedItem as Item}
             isReducedVersion={resourceEditMode !== null}
             resourceEditMode={resourceEditMode}
             employees={data.employees}
@@ -337,18 +338,14 @@ export const CalendarModals = memo(({
       {modalsState.isImageSelectorOpen && (
         <Suspense fallback={<ModalLoadingFallback />}>
           <ImageSelectorContentModal
-            images={data.availableImages}
-            actualImage={data.availableImages.find(img => img.id === (config.viewType === 'employee-table' ? data.selectedEmployee?.IdImage : data.selectedItem?.Image)) ?? null}
+            actualImage={config.viewType === 'employee-table' ? data.selectedEmployee?.Image : data.selectedItem?.Image}
             isOpen={modalsState.isImageSelectorOpen}
             onClose={handlers.closeImageModal}
             onImageSelect={handlers.handleImageSelect}
             onImageUpload={handlers.handleImageUpload}
             isUploading={data.isUploading}
             uploadError={data.uploadError}
-            fetchPaginatedImages={async (page, limit) => {
-              // TODO: Gérer l'état des images au niveau du parent via imageService.getImagesPaginated(page, limit || 8)
-              console.log('Appel de fetchPaginatedImages', { page, limit });
-            }}
+            fetchPaginatedImages={handlers.fetchPaginatedImages}
             addImageToDatabase={async (file) => {
               // TODO: Appeler imageService.uploadImage(file)
               console.log('Appel de addImageToDatabase', { file });

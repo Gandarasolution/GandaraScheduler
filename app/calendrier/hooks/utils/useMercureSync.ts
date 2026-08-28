@@ -3,7 +3,8 @@ import { useCurrentUser } from './AuthContext';
 
 export const useMercureSync = (
   planningId: number | null, 
-  onEventReceived: (action: string, data: any) => void
+  onEventReceived: (action: string, data: any) => void,
+  setNotification: (message: string) => void
 ) => {
   const user = useCurrentUser();
 
@@ -14,12 +15,11 @@ export const useMercureSync = (
     // 2. On construit l'URL exacte du Topic Mercure (doit correspondre à Symfony)
     const topic = encodeURIComponent(`https://gandara.com/planning/${planningId}`);
     
-    // Remplace par l'URL locale de ton Hub Mercure (souvent le même port que l'API Symfony, ou un port spécifique fourni par Symfony CLI)
     const mercureHubUrl = `http://localhost:3000/.well-known/mercure?topic=${topic}`;
 
     // 3. On ouvre la connexion radio (EventSource)
     const eventSource = new EventSource(mercureHubUrl, {
-      withCredentials: true // Important si ton hub Mercure est sécurisé
+      withCredentials: true
     });
 
     // 4. On écoute les messages entrants
@@ -38,6 +38,15 @@ export const useMercureSync = (
       } catch (error) {
         console.error("Erreur lors de la lecture du message Mercure", error);
       }
+    };
+
+    eventSource.onerror = (error) => {
+      setNotification("Erreur de connexion à Mercure. Veuillez vérifier votre connexion ou réessayer plus tard.");
+      console.error("Erreur de connexion à Mercure", error);
+    };
+
+    eventSource.onopen = () => {
+        console.log("✅ Connecté à Mercure avec succès ! Le serveur a accepté le cookie.");
     };
 
     return () => {

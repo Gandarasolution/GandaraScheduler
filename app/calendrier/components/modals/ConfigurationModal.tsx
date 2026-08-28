@@ -24,7 +24,7 @@ type ConfigurationModalProps = {
   availableConfigs: CalendarConfig[];
   currentConfig: CalendarConfig | null;
   onConfigChange: (config: CalendarConfig) => void;
-  onSaveConfig: (config: { planningVue: any; filtrePerso: any }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
+  onSaveConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
   onDeleteConfig: (configId: number) => Promise<{error: number, message?: string} | void> | void;
   editingConfig: CalendarConfig | null;
   setEditingConfig: (config: CalendarConfig | null) => void;
@@ -55,6 +55,12 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   const [groupingLevel1, setGroupingLevel1] = useState<GroupingLevel | undefined>(undefined);
   const [groupingLevel2, setGroupingLevel2] = useState<GroupingLevel | undefined>(undefined);
   
+  // --- NOUVEAUX ÉTATS : Visibilité et Utilisateurs ---
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [allUsers, setAllUsers] = useState<{Id: number, Nom: string}[]>([]); 
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
   // Nouveaux états pour la gestion API
   const [isLoadingForm, setIsLoadingForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -94,9 +100,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     setIsAddingFilter(false);
     setSelectedRdvTypes(['Chantier', 'Absence', 'Perso']);
     setSaveError(null);
+    setIsPrivate(false);
+    setSelectedUsers([]);
   };
 
-  // Vider complètement un filtre de ses valeurs sélectionnées
   const handleRemoveFilter = (e: React.MouseEvent, idFiltre: number) => {
     e.stopPropagation();
     setFiltresPerso(prev => prev.map(f => {
@@ -110,13 +117,11 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       return f;
     }));
     
-    // Si on était en train de l'éditer, on referme l'édition
     if (editingFilterId === idFiltre) {
       setEditingFilterId(null);
     }
   };
 
-  // Gérer la suppression avec Loader et retour d'erreur
   const handleDeleteConfig = async (e: React.MouseEvent, configId: number) => {
     e.stopPropagation();
     if (deletingConfigId === configId) return;
@@ -126,7 +131,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
     try {
       const response = await onDeleteConfig(configId);
-      
       if (response && response.error === 1) {
         setDeleteError(response.message || "Impossible de supprimer cette configuration.");
         setDeletingConfigId(null);
@@ -144,6 +148,18 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       setIsLoadingForm(true);
       setSaveError(null);
 
+      // --- NOUVEAU : Récupérer les utilisateurs dynamiquement ---
+      setIsLoadingUsers(true);
+      // Remplace "getUsers" par la fonction exacte de ton service si elle est différente
+      if (calendarConfigService.getAllUsersForVue) {
+        calendarConfigService.getAllUsersForVue()
+          .then((res: any) => setAllUsers(res.data || res || []))
+          .catch(console.error)
+          .finally(() => setIsLoadingUsers(false));
+      } else {
+        setIsLoadingUsers(false);
+      }
+
       // On utilise 0 comme ID pour récupérer le squelette des filtres lors d'une création
       const fetchId = editingConfig ? editingConfig.IdPlanningVue : 0;
 
@@ -159,9 +175,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       calendarConfigService.getVueDetails(fetchId)
         .then((response: any) => {
           const apiData = response.data || response;
-          const { planningVue, filtrePerso } = apiData;
+          const { planningVue, filtrePerso, utilisateursAutorises } = apiData;
 
-          // Si on est en mode édition, on peuple les champs avec les données existantes
+
           if (planningVue) {
             setConfigName(planningVue.LibellePlanningVue || '');
             setConfigDescription(planningVue.DescriptionPlanningVue || '');
@@ -181,9 +197,20 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             if (planningVue.paieEvenement) types.push('Absence'); 
             if (planningVue.persoEvenement) types.push('Perso');
             setSelectedRdvTypes(types.length > 0 ? types : ['Chantier', 'Absence', 'Perso']);
+
+            // --- NOUVEAU : Remplissage des droits ---
+            // On vérifie si la vue a des utilisateurs liés (Si oui = Privée)
+            const autorises = utilisateursAutorises;
+            if (autorises && autorises.length > 0) {
+              setIsPrivate(true);
+              // On s'assure d'extraire correctement l'ID selon ce que renvoie ton API
+              setSelectedUsers(autorises.map((u: any) => Number(u.Id) || Number(u))); 
+            } else {
+              setIsPrivate(false);
+              setSelectedUsers([]);
+            }
           }
 
-          // Initialisation des filtres disponibles (édition et création)
           if (filtrePerso) {
             const normalizedFiltres = filtrePerso.map((fp: any) => ({
               ...fp,
@@ -191,7 +218,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
               Valeurs: fp.Valeurs || fp.Valeur || []
             }));
             
-            // Si c'est une création, on force la sélection à 0 pour s'assurer d'avoir un canevas vierge
             if (isCreatingConfig) {
               normalizedFiltres.forEach((f: any) => {
                 if (Array.isArray(f.Valeurs)) {
@@ -250,6 +276,11 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       chantierEvenement: selectedRdvTypes.includes('Chantier'),
       paieEvenement: selectedRdvTypes.includes('Absence'),
       persoEvenement: selectedRdvTypes.includes('Perso'),
+      
+      // --- NOUVEAU : Envoi des droits ---
+      // Si c'est public, on envoie un tableau vide pour que l'API supprime les liaisons.
+      // Si c'est privé, on s'assure d'inclure l'utilisateur actuel + ceux sélectionnés.
+      utilisateursAutorises: isPrivate ? Array.from(new Set([user.IdPersonnel, ...selectedUsers])) : [],
     };
 
     const filtre = filtresPerso
@@ -267,9 +298,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       });
       
     try {
-      const response = await onSaveConfig({ planningVue, filtrePerso: filtre });
+      const response = await onSaveConfig({ planningVue, filtrePerso: filtre, utilisateursAutorises: isPrivate ? Array.from(new Set([user.IdPersonnel, ...selectedUsers])) : [] });
       
-      // Gestion de l'erreur explicite renvoyée par le backend
       if (response && response.error === 1) {
         setSaveError((response as any).message || "Une erreur s'est produite lors de l'enregistrement de la vue.");
         setIsSaving(false);
@@ -312,10 +342,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
           
           {currentConfig ? (
             <div className="flex items-start gap-4 relative z-10">
-              {currentConfig.IdPlanningImage && (
+              {currentConfig.PlanningImage?.image && (
                 <div className="relative">
                   <img 
-                    src={availablesImages.find(img => img.id === currentConfig.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
+                    src={currentConfig.PlanningImage.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
                     className="w-16 h-16 object-cover rounded-xl shadow-sm flex-shrink-0 border border-white"
                     alt="Config image"
                   />
@@ -370,7 +400,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             )}
           </div>
 
-          {/* Affichage des erreurs de suppression */}
           {deleteError && (
             <div className="bg-red-50 text-red-600 p-3 mb-4 rounded-xl text-sm border border-red-200 shadow-sm flex items-start gap-3">
               <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -391,9 +420,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 }`}
               >
                 <div className="flex items-start gap-4 mb-2">
-                  {config.IdPlanningImage && (
+                  {config.PlanningImage?.image && (
                     <img 
-                      src={availablesImages.find(img => img.id === config.IdPlanningImage)?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
+                      src={config.PlanningImage.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
                       className="w-12 h-12 object-cover rounded-lg flex-shrink-0 border border-gray-100"
                       alt="Config image"
                     />
@@ -448,27 +477,24 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   </button>
-                  
-
-                  {config.IdPlanningVue > 10 && (
-                    <button
-                      onClick={(e) => handleDeleteConfig(e, config.IdPlanningVue)}
-                      disabled={config.isLocked || deletingConfigId === config.IdPlanningVue}
-                      className={`p-1.5 rounded-md transition-all duration-200 ${
-                        config.isLocked || deletingConfigId === config.IdPlanningVue 
-                        ? 'text-red-300 cursor-not-allowed' 
-                        : 'text-secondary hover:text-red-500 hover:bg-red-50'
-                      }`}
-                      title="Supprimer"
-                    >
-                    {                    
-                      deletingConfigId === Number(config.IdPlanningVue) ? (
-                        <Spinner size="sm" className="text-red-500" />
-                      ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      )}
-                    </button>
-                  )}
+                    
+                  <button
+                    onClick={(e) => handleDeleteConfig(e, config.IdPlanningVue)}
+                    disabled={config.isLocked || deletingConfigId === config.IdPlanningVue}
+                    className={`p-1.5 rounded-md transition-all duration-200 ${
+                      config.isLocked || deletingConfigId === config.IdPlanningVue 
+                      ? 'text-red-300 cursor-not-allowed' 
+                      : 'text-secondary hover:text-red-500 hover:bg-red-50'
+                    }`}
+                    title="Supprimer"
+                  >
+                  {                    
+                    deletingConfigId === Number(config.IdPlanningVue) ? (
+                      <Spinner size="sm" className="text-red-500" />
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    )}
+                  </button>
                 </div>
               </div>
             ))}
@@ -530,6 +556,102 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       rows={2}
                     />
                   </div>
+                </div>
+
+                <div className="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
+                    <h4 className="font-bold text-primary flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-50 text-emerald-500 rounded-lg">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      </div>
+                      Visibilité de la vue
+                    </h4>
+                  </div>
+                  
+                  <div className="flex gap-4 mb-4">
+                    {/* Option Publique */}
+                    <label className={`flex-1 border p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 ${!isPrivate ? 'border-emerald-400 bg-emerald-50 shadow-sm' : 'border-gray-200 hover:bg-gray-50'}`}>
+                      <input 
+                        type="radio" 
+                        checked={!isPrivate} 
+                        onChange={() => {
+                          setIsPrivate(false);
+                          setSelectedUsers([]);
+                        }} 
+                        className="hidden" 
+                      />
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${!isPrivate ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                      </div>
+                      <div>
+                        <div className={`text-sm font-bold ${!isPrivate ? 'text-emerald-800' : 'text-gray-600'}`}>Publique</div>
+                        <div className="text-xs text-gray-500">Accessible par tous</div>
+                      </div>
+                    </label>
+
+                    {/* Option Privée */}
+                    <label className={`flex-1 border p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 ${isPrivate ? 'border-primary bg-primary-ultra-light/20 shadow-sm' : 'border-gray-200 hover:bg-gray-50'}`}>
+                      <input 
+                        type="radio" 
+                        checked={isPrivate} 
+                        onChange={() => setIsPrivate(true)} 
+                        className="hidden" 
+                      />
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isPrivate ? 'bg-primary/20 text-primary' : 'bg-gray-100 text-gray-400'}`}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
+                      </div>
+                      <div>
+                        <div className={`text-sm font-bold ${isPrivate ? 'text-primary' : 'text-gray-600'}`}>Privée</div>
+                        <div className="text-xs text-gray-500">Restreinte par membre</div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Liste des utilisateurs (affichée uniquement si "Privée" est sélectionné) */}
+                  {isPrivate && (
+                    <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Membres autorisés</label>
+                      <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+                        {isLoadingUsers ? (
+                          <div className="flex justify-center p-6"><Spinner size="sm" className="text-primary" /></div>
+                        ) : allUsers && allUsers.length > 0 ? (
+                          <div className="divide-y divide-gray-100">
+                            {allUsers.map((u: any) => {
+                             // Gérer les différentes structures d'objet utilisateur venant de l'API
+                              const uid = Number(u.Id);
+                              const isMe = Number(uid) === Number(user.IdPersonnel); // Désactiver la case de l'utilisateur courant pour éviter de se retirer l'accès
+                              console.log(selectedUsers.includes(uid))
+                              return (
+                                <label key={uid} className={`flex items-center gap-3 p-3 hover:bg-white cursor-pointer transition-colors ${isMe ? 'opacity-70 bg-gray-100 hover:bg-gray-100' : ''}`}>
+                                  <input
+                                    type="checkbox"
+                                    className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary disabled:opacity-50"
+                                    checked={isMe ? true : selectedUsers.includes(uid)}
+                                    disabled={isMe}
+                                    onChange={(e) => {
+                                      if (!isMe) {
+                                        if (e.target.checked) {
+                                          setSelectedUsers([...selectedUsers, uid]);
+                                        } else {
+                                          setSelectedUsers(selectedUsers.filter(id => id !== uid));
+                                        }
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                    {u.nom || u.Nom} {u.prenom || u.Prenom}
+                                    {isMe && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">Moi</span>}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-4 text-sm text-center text-gray-500 italic">Aucun utilisateur trouvé</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Image & Groupement */}
@@ -672,7 +794,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       })()}
                     </div>
                   ) : isAddingFilter ? (
-                    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-lg ring-1 ring-gray-100 mb-4 absolute z-30 left-6 right-6 top-1/2 -translate-y-1/2 backdrop-blur-xl bg-white/90">
+                    <div className="bg-gray-50/50 border border-gray-200 rounded-xl p-4 mb-4 ring-1 ring-gray-100 shadow-inner">
                       <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
                         <h5 className="text-sm font-bold text-gray-800">Ajouter un critère</h5>
                         <button onClick={() => setIsAddingFilter(false)} className="p-1 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-md transition-colors">
@@ -720,7 +842,6 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                                       <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase font-extrabold tracking-wider">Gandara</span>
                                     )}
                                   </h5>
-                                  {/* BOUTONS ACTIONS */}
                                   <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button 
                                       className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-md shadow-sm transition-colors"

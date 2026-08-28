@@ -11,7 +11,6 @@ import { Appointment, Item } from '../../types';
 import { CELL_WIDTH, HALF_DAY_INTERVALS, CELL_HEIGHT, DAY_INTERVALS, DAY_MS } from '../../utils/constants';
 import AppointmentMetadata from './AppointmentIcon';
 import { useAppointmentResize, useGhostSegments, calculateWidthPx, calculateLeftPx, getIntervalCount } from '../../hooks';
-import { Image } from '../ui';
 import { useAuth } from '../../hooks/utils/AuthContext';
 import { evenementService } from '@/app/service';
 
@@ -105,6 +104,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     isDisplayWeekend: isDisplayWeekend ?? false,
     onAppointmentResize,
   });
+
+  if(appointment.IdPlanningEvenement === 620) {
+    console.log('AppointmentItem render', appointment);
+    console.log('item', event);
+  }
 
   // Hook de calcul des segments Ghost
   const ghostSegments = useGhostSegments({
@@ -347,7 +351,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                           borderRight: segment.widthNoGhost > 0 ? 'none' : undefined,
                           borderLeft: isFirst ? undefined : 'none',
                           borderRadius: isFirst ? '0.75rem 0 0 0.75rem' : '0',
-                          zIndex: 0
+                          zIndex: 1
                       }}
                     />
                   )}
@@ -364,7 +368,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                           borderRight: isLast ? undefined : 'none',
                           borderRadius: isLast && segment.widthGhost === 0 && isFirst ? '0.75rem' : (isLast ? '0 0.75rem 0.75rem 0' : (isFirst && segment.widthGhost === 0 ? '0.75rem 0 0 0.75rem' : '0')),
                           opacity: isInactive ? 0.5 : 1,
-                          zIndex: 0
+                          zIndex: 1
                       }}
                     />
                   )}
@@ -399,8 +403,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           }}
         >        
           {event?.Image ? (
-            <Image
-              image={event.Image}
+            <img
+              src={event.Image.image}
               className="w-8 h-8 object-cover flex-shrink-0 rounded-full"
             />
           ): (

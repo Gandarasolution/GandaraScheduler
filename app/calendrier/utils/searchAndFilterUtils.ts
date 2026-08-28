@@ -151,23 +151,22 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
 
     const lowercasedQuery = searchQuery.toLowerCase();
     
-    return appointments
-      .map(app => {
-        // Récupérer les informations selon le type de rendez-vous
-        const event = events.find(e => e.IdPlanningRessource === app.IdPlanningRessource);
-        const title = event?.LibellePlanningRessource || '';
-        const description = app.AnnotationPlanningEvenement || '';
-        
-        // Vérifier si la recherche correspond
-        if (
-          title.toLowerCase().includes(lowercasedQuery) ||
-          description.toLowerCase().includes(lowercasedQuery)
-        ) {
-          return app;
-        }
-        return undefined;
-      })
-      .filter((app): app is Appointment => app !== undefined);
+    return appointments.filter((app) => {
+      // Récupérer la ressource liée au rendez-vous (comparaison robuste nombre/chaîne)
+      const event = events.find(
+        (e) => Number(e.IdPlanningRessource) === Number(app.IdPlanningRessource)
+      );
+
+      const haystack = [
+        event?.LibellePlanningRessource,
+        event?.CodePlanningRessource,
+        app.AnnotationPlanningEvenement,
+      ]
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.toLowerCase());
+
+      return haystack.some((value) => value.includes(lowercasedQuery));
+    });
   };
 
   const getFilterOptions = (

@@ -30,7 +30,6 @@ import { useNotifications, useCalendarWorker } from '../../../hooks';
 import notificationApiService from '@/app/service/notificationApi.service';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
 import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
-import { Image } from '../../ui';
 import { getCachedImageById } from '../../../utils/imageCacheStore';
 
 // Lazy loading des composants lourds
@@ -68,7 +67,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
-  const cachedUserImage = user.IdImage ? getCachedImageById(user.IdImage) : undefined;
+
 
   // ----- HOOKS PERSONNALISÉS -----
   const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
@@ -385,8 +384,9 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 className="relative w-8 h-8 rounded-full overflow-hidden"
                 style={{ borderWidth: '1px', borderColor: 'var(--border-light)' }}
               >
-                <Image
-                  image={user.IdImage ? (cachedUserImage?.image || user.IdImage) : '/default-avatar.png'}
+                <img
+                  src={user.Image?.image || '/default-avatar.png'}
+                  alt="Avatar"
                   className="w-8 h-8 object-cover"
                 />
               </div>

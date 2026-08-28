@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  
+  reactStrictMode: false,
   // Optimisations de build
   compiler: {
     // Supprimer les console.log en production

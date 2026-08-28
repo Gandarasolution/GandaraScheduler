@@ -57,7 +57,7 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
     setIsCreatingConfig(false);
   }, []);
 
-  const saveConfig = useCallback(async (config: { planningVue: any; filtrePerso: any }) => {
+  const saveConfig = useCallback(async (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => {
     if (isCreatingConfig) {
       const response = await calendarConfigService.createCalendarConfig(config);
       console.log('Create Config Response:', response);

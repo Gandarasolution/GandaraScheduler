@@ -22,6 +22,7 @@ interface UseCalendarDataLoaderParams {
   visibleWindowEnd: number;
   isGrabbing: boolean;
   isScrolling: boolean;
+  //resetToken?: number;
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<void>;
 }
 
@@ -37,6 +38,7 @@ export const useCalendarDataLoader = ({
   visibleWindowEnd,
   isGrabbing,
   isScrolling,
+  //resetToken,
   onLoadAppointmentsInRange,
 }: UseCalendarDataLoaderParams): void => {
 
@@ -45,7 +47,7 @@ export const useCalendarDataLoader = ({
   const visibleWindowEndInitial = useRef(0);
 
   // Fonction de chargement centralisée
-  const checkAndLoadData = useCallback((forceCriticalCheck = false) => {
+  const checkAndLoadData = useCallback((forceCriticalCheck = false, forceReload = false) => {
     if (isLoadingRef.current) return;
 
     // Configuration des seuils
@@ -63,7 +65,7 @@ export const useCalendarDataLoader = ({
     const thresholdAfter = forceCriticalCheck ? HARD_THRESHOLD : SOFT_THRESHOLD_AFTER;
 
     // Initialisation si vide
-    if (visibleWindowStartInitial.current === 0) {
+    if (!forceReload && visibleWindowStartInitial.current === 0) {
       visibleWindowStartInitial.current = visibleWindowStart;
       visibleWindowEndInitial.current = visibleWindowEnd;
       return;
@@ -73,7 +75,7 @@ export const useCalendarDataLoader = ({
     const isOutOfBoundLeft = visibleWindowStart < (visibleWindowStartInitial.current - thresholdBefore);
     const isOutOfBoundRight = visibleWindowEnd > (visibleWindowEndInitial.current + thresholdAfter);
 
-    if (isOutOfBoundLeft || isOutOfBoundRight) {
+    if (forceReload || isOutOfBoundLeft || isOutOfBoundRight) {
       console.log(`Loading data... Mode: ${forceCriticalCheck ? 'CRITICAL' : 'SOFT_STOP'}`);
       isLoadingRef.current = true;
 
@@ -88,10 +90,19 @@ export const useCalendarDataLoader = ({
       });
 
       // Mise à jour optimiste
-      if (isOutOfBoundLeft) visibleWindowStartInitial.current = newLoadStart;
-      if (isOutOfBoundRight) visibleWindowEndInitial.current = newLoadEnd;
+      if (forceReload || isOutOfBoundLeft) visibleWindowStartInitial.current = newLoadStart;
+      if (forceReload || isOutOfBoundRight) visibleWindowEndInitial.current = newLoadEnd;
     }
   }, [visibleWindowStart, visibleWindowEnd, onLoadAppointmentsInRange]);
+
+  // useEffect(() => {
+  //   if (visibleWindowStart === 0 && visibleWindowEnd === 0) return;
+
+  //   isLoadingRef.current = false;
+  //   visibleWindowStartInitial.current = 0;
+  //   visibleWindowEndInitial.current = 0;
+  //   checkAndLoadData(true, true);
+  // }, [resetToken]);
 
   // SCÉNARIO A : Relâchement du grab
   const prevIsGrabbing = useRef(false);

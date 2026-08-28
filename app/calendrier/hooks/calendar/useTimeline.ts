@@ -1,24 +1,43 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { format, isWeekend } from 'date-fns';
-import { CELL_WIDTH, WINDOW_SIZE, DAY_MS } from '@/app/calendrier/utils/constants';
+import { addDays, isSameDay, isWeekend, startOfDay } from 'date-fns';
+import { CELL_WIDTH, WINDOW_SIZE } from '@/app/calendrier/utils/constants';
 
 interface UseTimelineProps {
   isDisplayWeekend: boolean;
   selectedDate: number;
   setSelectedDate: React.Dispatch<React.SetStateAction<number>>;
+  isLoading: boolean;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }: UseTimelineProps) => {
+export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate, isLoading, setIsLoading }: UseTimelineProps) => {
   const [days, setDays] = useState<number[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   
   // **NOUVEAU**: Queue de navigation en attente
   //const pendingNavigationRef = useRef<number | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const navigationSeqRef = useRef(0);
   
   const isInfiniteScrollEnabled = useRef(false);
   const isAutoScrolling = useRef(false);
+
+  const normalizeDate = useCallback((timestamp: number) => startOfDay(timestamp).getTime(), []);
+
+  const resolveTargetDate = useCallback((timestamp: number) => {
+    let candidate = normalizeDate(timestamp);
+
+    if (isDisplayWeekend) {
+      return candidate;
+    }
+
+    // Si les week-ends sont masqués, on décale la navigation au prochain jour ouvré visible.
+    while (isWeekend(candidate)) {
+      candidate = addDays(candidate, 1).getTime();
+    }
+
+    return candidate;
+  }, [isDisplayWeekend, normalizeDate]);
   
 
   const buildWindow = useCallback((centerDate: number) => {
@@ -32,22 +51,29 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
     const leftTarget = Math.floor(WINDOW_SIZE / 2);
     const rightTarget = WINDOW_SIZE - leftTarget - (includeCenter ? 1 : 0);
 
+    // Fonction utilitaire pour ajouter/soustraire un jour en gérant l'heure d'été/hiver
+    const addDays = (timestamp: number, days: number) => {
+      const d = new Date(timestamp);
+      d.setDate(d.getDate() + days);
+      return d.getTime();
+    };
+
     // Collecte des jours à gauche (ordre inverse pour garder l'ordre chronologique ensuite)
-    let cursor = centerDate - DAY_MS;
+    let cursor = addDays(centerDate, -1);
     while (left.length < leftTarget) {
       if (shouldInclude(cursor)) {
         left.push(cursor);
       }
-      cursor -= DAY_MS;
+      cursor = addDays(cursor, -1);
     }
 
     // Collecte des jours à droite
-    cursor = centerDate + DAY_MS;
+    cursor = addDays(centerDate, 1);
     while (right.length < rightTarget) {
       if (shouldInclude(cursor)) {
         right.push(cursor);
       }
-      cursor += DAY_MS;
+      cursor = addDays(cursor, 1);
     }
 
     return [
@@ -55,61 +81,76 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
       ...(includeCenter ? [centerDate] : []),
       ...right,
     ];
-  }, [isDisplayWeekend]); 
+  }, [isDisplayWeekend]);
 
-
+ 
   // --- **NOUVELLE FONCTION**: Exécution de la navigation vers une date ---
   const executeGoToDate = useCallback((date: number): boolean => {
-    const scrollElement = mainScrollRef.current;      
-    
-    
+    const scrollElement = mainScrollRef.current;
     if (!scrollElement) {
       return false;
     }
+
+    const navigationId = ++navigationSeqRef.current;
+    const targetDate = resolveTargetDate(date);
+    let timelineToUse = days;
     
     setIsLoading(true);
-  
-    if(!days.includes(date)) {
-      const newTimeline = buildWindow(date);
+
+    const hasTargetInCurrentWindow = days.some((d) => isSameDay(d, targetDate));
+    if (!hasTargetInCurrentWindow) {
+      const newTimeline = buildWindow(targetDate);
       setDays(newTimeline);
+      timelineToUse = newTimeline;
+    }
+
+    const targetIndex = timelineToUse.findIndex((d) => isSameDay(d, targetDate));
+    if (targetIndex < 0) {
+      isInfiniteScrollEnabled.current = true;
+      setIsLoading(false);
+      return false;
     }
     
     // Centrage visuel
     queueMicrotask(() => {
       requestAnimationFrame(() => {
-          const todayCell = document.getElementById(format(date, "yyyy-MM-dd"));
-          if (todayCell && scrollElement) {
-              isAutoScrolling.current = true;
-              
-              // Trouver l'index de la date dans le tableau days
-              const dateIndex = days.indexOf(date);
-              
-              if (dateIndex !== -1) {
-                  // Calculer la position exacte basée sur l'index
-                  const targetLeft = dateIndex * CELL_WIDTH;
-                  
-                  scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
-              } else {
-                  // Fallback si la date n'est pas trouvée
-                  const cellRect = todayCell.getBoundingClientRect();
-                  const containerRect = scrollElement.getBoundingClientRect();
-                  const targetLeft = scrollElement.scrollLeft + cellRect.left - containerRect.left;
-                  scrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
-              }
-              
-              setTimeout(() => {
-                  isAutoScrolling.current = false;
-                  isInfiniteScrollEnabled.current = true;
-                  setIsLoading(false);
-              }, 800);
-          } else {
+        requestAnimationFrame(() => {
+          if (navigationId !== navigationSeqRef.current) {
+            return;
+          }
+
+          const currentScrollElement = mainScrollRef.current;
+          if (!currentScrollElement) {
               isInfiniteScrollEnabled.current = true;
               setIsLoading(false);
+              return;
           }
+
+          isAutoScrolling.current = true;
+          const targetLeft = targetIndex * CELL_WIDTH;
+          currentScrollElement.scrollTo({ left: targetLeft, behavior: 'smooth' });
+
+          setTimeout(() => {
+            if (navigationId !== navigationSeqRef.current) {
+              return;
+            }
+
+            const latestScrollElement = mainScrollRef.current;
+            if (latestScrollElement) {
+              // Recalage final pour éviter les offsets de smooth scroll.
+              latestScrollElement.scrollLeft = targetLeft;
+            }
+
+            isAutoScrolling.current = false;
+            isInfiniteScrollEnabled.current = true;
+            setSelectedDate(targetDate);
+            setIsLoading(false);
+          }, 850);
+        });
       });
     });
     return true;
-  }, [isDisplayWeekend, buildWindow]);
+  }, [buildWindow, days, resolveTargetDate, setIsLoading, setSelectedDate]);
 
   useEffect(() => {
     if (days.length > 0) {
@@ -139,19 +180,20 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
   }, []);
 
   const getFirstDayAppearing = useCallback(() => {
-    if (days.length === 0 || !mainScrollRef.current) return null;
+    if (isAutoScrolling.current || days.length === 0 || !mainScrollRef.current) return null;
     const scroller = mainScrollRef.current;
 
     const firstVisibleIndex = Math.floor(scroller.scrollLeft / CELL_WIDTH);
-    setSelectedDate(days[firstVisibleIndex])
-  }, [days]);
+    const safeIndex = Math.max(0, Math.min(firstVisibleIndex, days.length - 1));
+    setSelectedDate(days[safeIndex]);
+  }, [days, setSelectedDate]);
 
 
   // --- Gestion Clavier Scroll ---
   const handleKeyboardScroll = useCallback((e: KeyboardEvent) => {
     const scroller = mainScrollRef.current;
     
-    if (!scroller || !isInfiniteScrollEnabled.current) return;
+    if (!scroller || !isInfiniteScrollEnabled.current || isLoading) return;
           
     if (e.defaultPrevented) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -170,7 +212,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
       requestAnimationFrame(() => getFirstDayAppearing());
       e.preventDefault();
     }
-  }, [getFirstDayAppearing]);
+  }, [getFirstDayAppearing, isLoading]);
 
 
   useEffect(() => {
@@ -186,8 +228,6 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate }:
     setDays,
     mainScrollRef,
     goToDate,
-    isLoading,
-    setIsLoading,
     handleKeyboardScroll,
     getFirstDayAppearing,
   };

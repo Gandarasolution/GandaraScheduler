@@ -76,6 +76,9 @@ export const useCalendarView = (idPlanning: number, user: User) => {
       console.error('Error setting last view for user:', error);
     }); 
   }
+
+
+  
   const loadNonWorkingDates = async (): Promise<{ error: number; message: string }> => {
       const result = await calendarConfigService.getNonWorkingDatesByPlanningId();
       console.log('Résultat du chargement des jours non travaillés :', result);

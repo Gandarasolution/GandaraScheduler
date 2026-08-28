@@ -9,7 +9,6 @@
 
 "use client";
 import React from 'react';
-import { Image } from '../ui';
 
 /**
  * Configuration des couleurs personnalisables
@@ -47,7 +46,7 @@ export interface ResourceField {
 
 export interface FormHeaderProps {
   /** Configuration de l'icône */
-  icon?: string | number
+  icon?: string
   /** Callback pour ouvrir la modal d'image */
   onIconClick?: () => void;
   /** Configuration des couleurs */
@@ -163,8 +162,8 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
             }}
           >
             {icon ? (
-              <Image
-                image={icon}
+              <img
+                src={icon}
                 className="w-12 h-12 object-cover rounded border border-default flex-shrink-0"
               />
             ) : (

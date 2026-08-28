@@ -120,7 +120,7 @@ interface BaseItem {
   CouleurBordurePlanningRessource: string;
   CouleurTextePlanningRessource: string;
   CodePlanningRessource: string;
-  Image?: number;
+  Image?: ImageType;
   defaultDescription?: string;
   Etiquettes?: Tag[];
 }
@@ -246,7 +246,7 @@ export interface CalendarConfig {
   IdPlanningVue: number;
   LibellePlanningVue: string;
   /** Image associée à la vue */
-  IdPlanningImage?: number;
+  PlanningImage?: ImageType;
   /** Description de la vue */
   DescriptionPlanningVue?: string;
   /** Configuration des niveaux de groupement (équipe et pole) */
@@ -358,7 +358,7 @@ export interface User{
   /** Thème préféré de l'utilisateur */
   theme?: string;
   /** Image de profil de l'utilisateur */
-  IdImage?: number;
+  Image?: ImageType;
   /** Statut actif de l'utilisateur (défaut: true) */
   Actif?: boolean;
 }

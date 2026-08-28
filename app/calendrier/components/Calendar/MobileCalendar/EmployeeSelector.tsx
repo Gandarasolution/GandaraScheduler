@@ -15,7 +15,6 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, Clock, Users } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { Equipe, User } from '../../../types';
-import { Image } from '../../ui';
 import { getCachedImageById } from '../../../utils/imageCacheStore';
 import { 
   useDebounce,
@@ -338,10 +337,7 @@ interface EmployeeItemProps {
 }
 
 const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSelect, showBadge }) => {
-  const cachedImage = employee.IdImage ? getCachedImageById(employee.IdImage) : undefined;
-  const avatarSource = employee.IdImage
-    ? (cachedImage?.image || employee.IdImage)
-    : `https://ui-avatars.com/api/?name=${employee.Nom}+${employee.Prenom}&background=009580&color=fff`;
+  const avatarSource = employee.Image?.image || `https://ui-avatars.com/api/?name=${employee.Nom}+${employee.Prenom}&background=009580&color=fff`;
   const isInactive = employee.Actif === false;
   
   return (
@@ -368,8 +364,9 @@ const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSel
       className={`relative w-9 h-9 rounded-full overflow-hidden mr-3 border flex-shrink-0 ${isInactive ? 'grayscale' : ''}`}
       style={{ borderColor: 'var(--border-light)' }}
     >
-      <Image 
-        image={avatarSource}
+      <img
+        src={avatarSource}
+        alt={`${employee.Nom} ${employee.Prenom}`} 
         className="w-9 h-9 object-cover"
       />
     </div>

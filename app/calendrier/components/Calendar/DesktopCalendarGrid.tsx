@@ -57,6 +57,7 @@ interface DesktopCalendarGridProps {
   onSelectAppointment: (appointment: Appointment | null) => void;
   hoverColumnLeft: number | null;
   onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
+  //reloadToken?: number;
   mouseUpAfterScroll: () => void;
   onLockedError: (message: string) => void;
 }
@@ -94,6 +95,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   hoverColumnLeft,
   isDisplayWeekend,
   tagPlacement = 'hover',
+  //reloadToken,
   onLockedError,
   mouseUpAfterScroll
 }) => {
@@ -146,9 +148,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [calendarConfig?.Group, employees, initialTeams, poleActivites]);
 
   
-
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
-    return dimensionItems.map(i => i.id);
+    return dimensionItems.map(i => Number(i.id));
   });  
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
@@ -167,6 +168,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       left: 0, 
       width: 0 
   });
+
+  useEffect(() => {
+    setOpenItems(dimensionItems.map(i => Number(i.id)));
+  }, [dimensionItems]);
 
   const { isGrabbing, isScrolling } = useSmartScroll(mainScrollRef as React.RefObject<HTMLElement>, mouseUpAfterScroll);
 
@@ -299,6 +304,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     visibleWindowEnd,
     isGrabbing,
     isScrolling,
+    //resetToken: reloadToken,
     onLoadAppointmentsInRange: async (start, end) => {
       await onLoadAppointmentsInRange(start, end);
     },
@@ -363,7 +369,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     });
     
     return map;
-  }, [appointmentsInHorizontalWindow, flatRows]);
+  }, [appointmentsInHorizontalWindow, visibleRows]);
 
   const toggleItem = (itemId: string | number) => {
     setOpenItems(open =>

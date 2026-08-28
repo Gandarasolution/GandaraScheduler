@@ -15,7 +15,6 @@
 import React, { memo } from 'react';
 import { User, CalendarConfig } from '../../types';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
-import { Image as CalendarImage } from '../ui';
 import { 
   TIMELINE_HEADERITEMS_CELL_HEIGHT, 
   CONTAINER_PADDING,
@@ -133,7 +132,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
       
       {/* Liste des groupes d'employés */}
       {dimensionItems.map((item, index) => {
-        const isOpen = openItems.includes(item.id);
+        const isOpen = openItems.includes(Number(item.id));
         const itemEmployees = employeesByDimension[item.id] || [];
         
         if (itemEmployees.length === 0) return null;
@@ -227,9 +226,9 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                     }}
                   >
                     <div className="relative">
-                      {employee.IdImage ? (
-                        <CalendarImage
-                          image={employee.IdImage}
+                      {employee.Image?.image ? (
+                        <img  
+                          src={employee.Image.image}
                           className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
                         />
                       ) : (

@@ -113,6 +113,7 @@ export default function HomePage({
   const hasInitializedTeamsRef = useRef(false);
   const hasInitializedEmployeesRef = useRef(false);
   const hasInitializedNonWorkingDatesRef = useRef(false);
+  const isFirstRenderRef = useRef(true);
   const [errorPlanning, setErrorPlanning] = useState<string | null>(null);
 
   // Refs de données dynamiques (chargées via API)
@@ -125,6 +126,7 @@ export default function HomePage({
   const dataLayer = useDataLayer({ 
     globalEmployees: globalEmployees,
     setGlobalEmployees, 
+    setNotification: setLockNotification
   });
 
 
@@ -134,6 +136,8 @@ export default function HomePage({
     isDisplayWeekend: viewState.isDisplayWeekend,
     selectedDate: viewState.selectedDate,
     setSelectedDate: viewState.setSelectedDate,
+    isLoading: dataLayer.isLoading,
+    setIsLoading: dataLayer.setIsLoading,
   });
 
   // 5. LOGIQUE MÉTIER (CRUD, Règles de gestion, Historique)
@@ -224,7 +228,6 @@ export default function HomePage({
       return { error: 1, data: [], message: 'Erreur lors de la recherche. Veuillez réessayer.' };
     }
 
-    
     const data = (response.data as Item[])
       .filter((item) => {
         // if (!canCreateEvent(user.role, item.Type)) {
@@ -302,6 +305,23 @@ export default function HomePage({
         activeFilters: viewState.activeFilters
       };
   }, [searchUtils, dataLayer.itemsRef.current, viewState.viewType, keyOfFilter, viewState.activeFilters]);
+
+  const filteredCalendarAppointments = useMemo(() => {
+    if (viewState.viewType !== 'calendar') {
+      return dataLayer.appointmentsRef.current;
+    }
+
+    return searchUtils.searchAppointments(
+      dataLayer.appointmentsRef.current,
+      Object.values(dataLayer.itemsRef.current),
+      viewState.searchInput
+    );
+  }, [
+    searchUtils,
+    viewState.viewType,
+    viewState.searchInput,
+    dataLayer.appointmentsVersion,
+  ]);
         
   // --- EFFETS DE BORD ---
 
@@ -428,6 +448,10 @@ export default function HomePage({
     if (!viewState.currentCalendarConfig) return;
     if (!hasInitializedPlanningRef.current) return;
 
+    if (isFirstRenderRef.current) {
+        isFirstRenderRef.current = false;
+        return; 
+    }
     const reloadPlanningDataForCurrentView = async () => {
       setErrorPlanning(null);
       setLoadCalendar(true);
@@ -606,7 +630,7 @@ export default function HomePage({
   }, []);
 
   // 2. On branche la radio !
-  useMercureSync(currentPlanningId, handleMercureEvent);
+  useMercureSync(currentPlanningId, handleMercureEvent, setLockNotification);
 
   // --- RENDU VISUEL ---
 
@@ -658,7 +682,7 @@ export default function HomePage({
                     <CalendarGrid
                       /* Données */
                       employees={globalEmployees}
-                      appointments={dataLayer.appointmentsRef.current}
+                      appointments={filteredCalendarAppointments}
                       user={user}
 
                       /* Équipes & Événements */
@@ -690,6 +714,7 @@ export default function HomePage({
                       onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
                       handleContextMenu={interaction.handleContextMenu}
                       onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
+                      //reloadToken={dataLayer.loadingWindowVersion}
                       mouseUpAfterScroll={timeline.getFirstDayAppearing}
                       onAddAppointment={appointmentLogic.handleSaveAppointment}
                       onLockedError={setLockNotification}
@@ -732,9 +757,9 @@ export default function HomePage({
 
           {/* --- COMPOSANTS FLOTTANTS & MODALES --- */}
           
-          {!viewState.isMobile && (
+          {/* {!viewState.isMobile && (
             <ThemeSelector position='bottom-right' onThemeChange={onThemeChange} />
-          )}
+          )} */}
 
           <RightClickComponent
             open={!!interaction.contextMenu}
@@ -789,18 +814,19 @@ export default function HomePage({
               
               // Images
               closeImageModal: interaction.handleCloseImageModal,
-              handleImageSelect: (newImageUrl) => {
+              handleImageSelect: (newImage) => {
                 // Logique de décision basée sur la vue active
                 if (viewState.viewType === 'employee-table') {
                     const id = appointmentLogic.selectedEmployee?.IdPersonnel || null;
                     if (id === null) return;                    
-                    dataLayer.updateEmployeeImage(id, newImageUrl);
+                    dataLayer.updateEmployeeImage(id, newImage);
                 } else {
                   const id = appointmentLogic.selectedItem?.IdPlanningRessource || null;
+                  console.log("Selected Item ID:", id, "New Image:", newImage);
                     if (id === null) return;                    
                     appointmentLogic.setSelectedItem(prev => {
                         if (prev) {
-                            return { ...prev, image: newImageUrl };
+                            return { ...prev, Image: { id: newImage.id, image: newImage.image } };
                         }
                         return prev;
                     });
@@ -810,6 +836,7 @@ export default function HomePage({
               },
               handleImageUpload: interaction.handleImageUpload,
               openImageModalForEvent: () => interaction.handleOpenImageModal(),
+              fetchPaginatedImages: dataLayer.fetchPaginatedImages,
 
               // Settings & Config
               closeSettings: () => viewState.setIsSettingsOpen(false),

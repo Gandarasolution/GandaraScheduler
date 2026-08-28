@@ -3,7 +3,6 @@ import { CategoryStructure } from ".";
 import { Appointment, AutreItem, ChantierItem, Equipe, Item, User } from "../../types";
 import { AppointmentItem } from "../Calendar";
 import { GenericDataItem } from "./DataTableFrame";
-import Image from "../ui/Image";
 
 const getWithSeparator = (num: string, colonne: string): string => {
     if (colonne === 'TM' || colonne === 'HR' || colonne === 'DPF' || colonne === 'RPF' || colonne === 'SH' || colonne === 'SP') {
@@ -287,9 +286,11 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                         if (deps.handleOpenEditModal) deps.handleOpenEditModal(newAppointment);
                     }}
                 >
-                    {(item as any).Image ? (
-                        <Image
-                            image={(item as any).Image}
+                    {(item as any).Image?.image ? (
+                        <img
+                            src={(item as any).Image.image}
+                            alt="Employee"
+                            className="w-10 h-10 rounded-lg"
                         />
                     ) : (
                     <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center text-xs text-gray-600">
