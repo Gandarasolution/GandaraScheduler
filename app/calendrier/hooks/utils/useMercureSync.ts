@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import Cookies from 'js-cookie';
 import { useCurrentUser } from './AuthContext'; 
 
 export const useMercureSync = (
@@ -9,15 +10,17 @@ export const useMercureSync = (
   const user = useCurrentUser();
 
   useEffect(() => {
-    // 1. Si aucun planning n'est sélectionné, on ne s'abonne à rien
     if (!planningId) return;
 
-    // 2. On construit l'URL exacte du Topic Mercure (doit correspondre à Symfony)
-    const topic = encodeURIComponent(`https://gandara.com/planning/update`);
-    
-    const mercureHubUrl = `http://localhost:3000/.well-known/mercure?topic=${topic}`;
+    const mercureBaseUrl = Cookies.get('client_mercure_url');
+    if (!mercureBaseUrl) {
+      console.warn('Aucune URL Mercure disponible pour le client.');
+      return;
+    }
 
-    // 3. On ouvre la connexion radio (EventSource)
+    const topic = encodeURIComponent(`https://gandara.com/planning/update`);
+    const mercureHubUrl = `${mercureBaseUrl.replace(/\/$/, '')}/.well-known/mercure?topic=${topic}`;
+
     const eventSource = new EventSource(mercureHubUrl, {
       withCredentials: true
     });

@@ -1,8 +1,4 @@
-import { format } from 'date-fns';
 import { UserMenu } from '../index'; 
-
-import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
-import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
 import { Appointment, Item, User } from '../../types';
 import { memo, use, useEffect } from 'react';
 import DatePicker from '../ui/DatePicker';
@@ -48,7 +44,8 @@ export const CalendarHeader = memo(({
   } = viewState;
 
   const { hasPermission } = useAuth();
-
+  const clientLogo = localStorage.getItem('client_logo_url');
+  const logoSrc = clientLogo || `/assets/logo-${theme}.svg`;
 
   return (
     <div className="flex flex-col items-center pr-9">
@@ -58,9 +55,9 @@ export const CalendarHeader = memo(({
           className={`p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}
         >
           <img 
-            src={theme === 'dark' ? LogoUrlB.src : LogoUrlN.src} 
+            src={logoSrc}
             alt="Logo" 
-            className="h-20 w-auto mb-2 cursor-pointer" 
+            className="h-20 w-auto mb-2 cursor-pointer object-contain" 
             onClick={() => setViewType('calendar')}
           />
         </div>

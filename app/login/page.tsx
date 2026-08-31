@@ -64,26 +64,38 @@ export default function LoginPage({ login }: LoginPageProps) {
     setError('');
     
     try {
-      // ⚠️ REMPLACE CETTE URL par la vraie route de ton API Gandara globale
       // On utilise fetch direct pour éviter l'intercepteur Axios qui pourrait bloquer
       const response = await authService.SchedulerGetAPI(code);
-      
-      console.log(response)
       if (!response) {
         throw new Error("Code entreprise introuvable.");
       }
-      
-      
-      // ⚠️ Assure-toi que data.apiUrl correspond bien à la propriété renvoyée par ton API
-      if (response) {
-        Cookies.set('client_api_url', response, { expires: 365 });
-        setNeedsCompanyCode(false); // On passe à l'écran de login
-      } else {
-        throw new Error("L'URL de l'API n'a pas été fournie.");
+
+      const resolvedEnvironment = await authService.resolveApiEnvironment(response);
+
+      if (!resolvedEnvironment) {
+        throw new Error("Aucune URL d'API accessible. Vérifiez le réseau ou votre environnement.");
       }
+
+      Cookies.set('client_api_url', resolvedEnvironment.apiUrl, { expires: 365 });
+      if (resolvedEnvironment.mercureUrl) {
+        Cookies.set('client_mercure_url', resolvedEnvironment.mercureUrl, { expires: 365 });
+      } else {
+        Cookies.remove('client_mercure_url');
+      }
+      if (resolvedEnvironment.logoClient) {
+        console.log('Setting client_logo_url cookie:', resolvedEnvironment.logoClient);
+        localStorage.setItem('client_logo_url', resolvedEnvironment.logoClient);
+      } else {
+        Cookies.remove('client_logo_url');
+      }
+
+      setNeedsCompanyCode(false);
     } catch (err: any) {
       setError(err.message || "Impossible de résoudre l'environnement.");
-      setNeedsCompanyCode(true); // En cas d'erreur, on force la saisie manuelle
+      Cookies.remove('client_api_url');
+      Cookies.remove('client_mercure_url');
+      Cookies.remove('client_logo_url');
+      setNeedsCompanyCode(true);
     } finally {
       setLoading(false);
       setIsInitializing(false);
@@ -244,6 +256,8 @@ export default function LoginPage({ login }: LoginPageProps) {
                 type="button" 
                 onClick={() => {
                   Cookies.remove('client_api_url');
+                  Cookies.remove('client_mercure_url');
+                  Cookies.remove('client_logo_url');
                   setNeedsCompanyCode(true);
                   setFormData({ login: '', password: '' });
                 }}
