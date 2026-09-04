@@ -118,26 +118,27 @@ export const useDataLayer = ({
 
 
 
-  const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
+  const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number, employeeId?: number): Promise<boolean> => {
     setIsLoading(true);
     const diff = endDate - startDate;
-    if (lastLoadedRangeRef.current && startDate >= lastLoadedRangeRef.current.startDate && endDate <= lastLoadedRangeRef.current.endDate) {
+    if (employeeId == null && lastLoadedRangeRef.current && startDate >= lastLoadedRangeRef.current.startDate && endDate <= lastLoadedRangeRef.current.endDate) {
       setIsLoading(false);
       return true; // Déjà chargé
     }
 
-    if (lastLoadedRangeRef.current && startDate < lastLoadedRangeRef.current.endDate && endDate > lastLoadedRangeRef.current?.endDate) {
+    if (employeeId == null && lastLoadedRangeRef.current && startDate < lastLoadedRangeRef.current.endDate && endDate > lastLoadedRangeRef.current?.endDate) {
       startDate = lastLoadedRangeRef.current.endDate;
       endDate = startDate + diff; // On garde la même durée
     }
 
-    if (lastLoadedRangeRef.current && endDate > lastLoadedRangeRef.current.startDate && startDate < lastLoadedRangeRef.current?.startDate) {
+    if (employeeId == null && lastLoadedRangeRef.current && endDate > lastLoadedRangeRef.current.startDate && startDate < lastLoadedRangeRef.current?.startDate) {
       endDate = lastLoadedRangeRef.current.startDate;
       startDate = endDate - diff; // On garde la même durée
     }
 
     try {
-      const response = await evenementService.getEvenements(startDate, endDate);
+      console.log('employeeId:', employeeId);
+      const response = await evenementService.getEvenements(startDate, endDate, employeeId);
       const payloadData = response?.data;
 
       if(response?.error !== 0) {
@@ -162,6 +163,9 @@ export const useDataLayer = ({
       
       // Ajouter au cache uniquement les rendez-vous absents.
       addMissingAppointmentsToCache(newAppointments);
+      if (employeeId == null) {
+        lastLoadedRangeRef.current = { startDate, endDate };
+      }
       setAppointmentsVersion(prev => prev + 1);
     } catch (error) {
       console.error("Erreur lors du chargement des rendez-vous:", error);

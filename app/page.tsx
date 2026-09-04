@@ -23,6 +23,8 @@ export default function Home() {
   const [availableVues, setAvailableVues] = useState<any[] | null>(null);
   const [isLoadingVues, setIsLoadingVues] = useState(false);
   const [vueError, setVueError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
 
   // Fonction pour changer le thème
   const handleThemeChange = useCallback((newTheme: ThemeType) => {
@@ -56,13 +58,32 @@ export default function Home() {
     }
   }, [user, setTheme]);
 
-
+  // --- Detection Mobile ---
+  useEffect(() => {
+    const handleResize = () => {
+      const isTrue = window.innerWidth < 640;
+      setIsMobile(isTrue);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   // ==============================================================
   // LOGIQUE DU WORKFLOW : APPEL API POUR LES VUES
   // ==============================================================
   useEffect(() => {
     // Dès qu'on a un Planning mais pas encore de Vue, on déclenche l'API
     if (currentPlanningId !== -1 && currentVueId === null) {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
+      // La vue mobile n'utilise pas les configurations de vue du planning.
+      if (isMobile) {
+        setCurrentVueId(0);
+        axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = null;
+        return;
+      }
+
       const fetchVues = async () => {
         setIsLoadingVues(true);
         setVueError(null);
@@ -187,8 +208,7 @@ export default function Home() {
           console.error('[Error Boundary]', error, errorInfo);
         }}
       >
-        {/* Tu pourras passer initialVueId={currentVueId} à <Calendrier /> s'il a besoin de le savoir au démarrage */}
-        <Calendrier onThemeChange={handleThemeChange} />
+        <Calendrier isMobile={isMobile} />
       </ErrorBoundary>
     );
   }

@@ -6,7 +6,7 @@ import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { axiosAgent } from '@/app/service/axios.service';
 import { calendarConfigService } from '@/app/service';
 
-export const useCalendarView = (idPlanning: number, user: User) => {
+export const useCalendarView = (idPlanning: number, user: User, isMobile: boolean) => {
 
   // --- Préférences persistantes (localStorage) ---
   const getStoredBool = (key: string, def: boolean) => {
@@ -15,7 +15,6 @@ export const useCalendarView = (idPlanning: number, user: User) => {
     }
     return def;
   };
-  const [isMobile, setIsMobile] = useState(false);
 
   const [isDisplayWeekend, setIsDisplayWeekend] = useState(() => getStoredBool('isDisplayWeekend', false));
   const [includeWeekend, setIncludeWeekend] = useState(true); // Pas de persistence pour celui-ci, c'est une option temporaire
@@ -106,20 +105,6 @@ export const useCalendarView = (idPlanning: number, user: User) => {
     setTimeout(() => localStorage.setItem(key, JSON.stringify(value)), 0);
   };
   
-  // --- Detection Mobile ---
-  useEffect(() => {
-    const handleResize = () => {
-      const isTrue = window.innerWidth < 640;
-      setIsMobile(isTrue);
-
-      if (isTrue) {
-        setViewType('calendar');
-      }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     setSearchInput('');
@@ -147,6 +132,14 @@ export const useCalendarView = (idPlanning: number, user: User) => {
   }, [isViewDropdownOpen]);
     
 
+  useEffect(() => {
+    if (isMobile) {
+      setViewType('calendar');
+      setTimeout(() => localStorage.setItem('viewType', 'calendar'), 0);
+    }
+  }, [isMobile]);
+
+  
   return {
     // États
     isDisplayWeekend, setIsDisplayWeekend: (v: boolean) => toggleSet('isDisplayWeekend', setIsDisplayWeekend, v),

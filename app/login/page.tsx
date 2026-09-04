@@ -140,8 +140,8 @@ export default function LoginPage({ login }: LoginPageProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-ultra-light via-white to-primary-lighter">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-light transition-all duration-300">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-ultra-light via-white to-primary-lighter px-4 py-6 sm:px-6">
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-md border border-light transition-all duration-300">
         
         {/* Logo et Titre */}
         <div className="text-center mb-8">
@@ -150,8 +150,8 @@ export default function LoginPage({ login }: LoginPageProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-primary mb-2 poppins">Gandara Scheduler</h1>
-          <p className="text-secondary poppins">
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2 poppins">Gandara Scheduler</h1>
+          <p className="text-secondary poppins text-sm sm:text-base">
             {needsCompanyCode ? "Trouvez votre espace de travail" : "Connectez-vous à votre espace"}
           </p>
         </div>
@@ -166,7 +166,7 @@ export default function LoginPage({ login }: LoginPageProps) {
         {/* CONDITION : Affiche soit la demande de code, soit le login */}
         {needsCompanyCode ? (
           /* FORMULAIRE 1 : CODE ENTREPRISE */
-          <form onSubmit={handleCompanySubmit} className="space-y-5">
+          <form onSubmit={handleCompanySubmit} className="space-y-4 sm:space-y-5">
             <div>
               <label htmlFor="companyCode" className="block text-sm font-medium text-primary mb-2 poppins">
                 Code Entreprise
@@ -178,7 +178,7 @@ export default function LoginPage({ login }: LoginPageProps) {
                 onChange={(e) => setCompanyCode(e.target.value)}
                 required
                 placeholder="Ex: gandara-dev"
-                className="w-full px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins"
+                className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
               />
               <p className="text-xs text-gray-400 mt-2 poppins">
                 Entrez le code fourni par votre administrateur pour accéder à votre environnement.
@@ -187,7 +187,7 @@ export default function LoginPage({ login }: LoginPageProps) {
             <button
               type="submit"
               disabled={loading || !companyCode.trim()}
-              className="w-full bg-primary hover:bg-primary-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg poppins flex justify-center items-center"
+              className="w-full min-h-12 bg-primary hover:bg-primary-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg poppins flex justify-center items-center"
             >
               {loading ? (
                 <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
@@ -201,7 +201,7 @@ export default function LoginPage({ login }: LoginPageProps) {
           </form>
         ) : (
           /* FORMULAIRE 2 : CONNEXION (Existant) */
-          <form onSubmit={handleLoginSubmit} className="space-y-5">
+          <form onSubmit={handleLoginSubmit} className="space-y-4 sm:space-y-5">
             <div>
               <label htmlFor="login" className="block text-sm font-medium text-primary mb-2 poppins">
                 Identifiant
@@ -213,7 +213,7 @@ export default function LoginPage({ login }: LoginPageProps) {
                 onChange={(e) => setFormData({ ...formData, login: e.target.value })}
                 required
                 placeholder="Votre identifiant"
-                className="w-full px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins"
+                className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
               />
             </div>
 
@@ -228,14 +228,14 @@ export default function LoginPage({ login }: LoginPageProps) {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
                 placeholder="••••••••"
-                className="w-full px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins"
+                className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary hover:bg-primary-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg poppins flex justify-center items-center"
+              className="w-full min-h-12 bg-primary hover:bg-primary-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg poppins flex justify-center items-center"
             >
               {loading ? (
                 <>

@@ -33,13 +33,14 @@ function filterMonthlyAppointments(appointments, currentDate, selectedEmployee, 
   
   // Filtre par rôle : users et viewers ne voient que leurs propres RDV
   if (userRole === 'user' || userRole === 'viewer') {
-    filteredApps = appointments.filter(app => app.employee.id === userId);
+    filteredApps = appointments.filter(app => app.IdEmploye === userId);
   }
   
   // Filtre par employé sélectionné et par mois
   return filteredApps.filter(app => {
-    const matchesEmployee = !selectedEmployee || app.employee.id === selectedEmployee.id;
-    const isInMonth = app.startDate <= monthEndTime && app.endDate >= monthStartTime;
+    const selectedEmployeeId = selectedEmployee?.IdPersonnel ?? selectedEmployee?.id;
+    const matchesEmployee = !selectedEmployeeId || app.IdEmploye === selectedEmployeeId;
+    const isInMonth = app.DebutPlanningEvenement <= monthEndTime && app.FinPlanningEvenement >= monthStartTime;
     return matchesEmployee && isInMonth;
   });
 }
@@ -57,7 +58,7 @@ function filterDailyAppointments(appointments, selectedDate) {
   const dayEndTime = dayEnd.getTime();
   
   return appointments.filter(app => 
-    app.startDate <= dayEndTime && app.endDate >= dayStartTime
+    app.DebutPlanningEvenement <= dayEndTime && app.FinPlanningEvenement >= dayStartTime
   );
 }
 

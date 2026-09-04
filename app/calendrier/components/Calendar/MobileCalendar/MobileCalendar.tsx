@@ -8,8 +8,8 @@
  * @version 2.0.0
  */
 
-import React, { useCallback, useEffect, useState , useMemo } from 'react';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import React, { useCallback, useEffect, useState , useMemo, useRef } from 'react';
+import { endOfMonth, startOfMonth } from 'date-fns';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
@@ -31,6 +31,7 @@ import notificationApiService from '@/app/service/notificationApi.service';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
 import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
 import { getCachedImageById } from '../../../utils/imageCacheStore';
+import { useAuth } from '@/app/calendrier/hooks/utils/AuthContext';
 
 // Lazy loading des composants lourds
 
@@ -43,6 +44,7 @@ interface MobileCalendarGridProps {
   user: User;
   items: Item[];
   nonWorkingDates: Record<string, number>;
+  onLoadAppointmentsInRange?: (startDate: number, endDate: number, employeeId?: number) => Promise<boolean>;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
 }
 
@@ -55,22 +57,26 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   user, 
   items, 
   nonWorkingDates,
-  onAddAppointment 
+  onAddAppointment,
+  onLoadAppointmentsInRange
 }) => {
   // ----- ÉTATS LOCAUX -----
-  const currentDate = useMemo(() => new Date(), []); // Date actuelle, mémorisée pour éviter les recalculs
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showLogout, setShowLogout] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);0
   const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
+
+  const monthDisplay = useRef(selectedDate.getMonth());
+  const yearDisplay = useRef(selectedDate.getFullYear());
 
 
   // ----- HOOKS PERSONNALISÉS -----
   const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
+  const { logout } = useAuth();
   const worker = useCalendarWorker();
   
 
@@ -109,10 +115,36 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(() => {
     if (!isAdmin && !isManager) {
-      return employees.find(emp => emp.IdPersonnel === user.IdPersonnel) || null;
+      return employees.find(emp => emp.IdPersonnel === user.IdPersonnel) || user;
     }
-    return employees[0] || null;
+    return employees[0] || user;
   });
+
+  useEffect(() => {
+    if (selectedEmployee || employees.length === 0) return;
+
+    const defaultEmployee = (isAdmin || isManager)
+      ? employees[0]
+      : employees.find(emp => emp.IdPersonnel === user.IdPersonnel);
+
+    if (defaultEmployee) {
+      setSelectedEmployee(defaultEmployee);
+    }
+  }, [employees, isAdmin, isManager, selectedEmployee, user.IdPersonnel]);
+
+  // Charge uniquement le mois visible et l'employe selectionne.
+  useEffect(() => {
+    if (!onLoadAppointmentsInRange || !selectedEmployee) return;
+    if (monthDisplay.current === selectedDate.getMonth() && yearDisplay.current === selectedDate.getFullYear()) {
+      return; // Pas de changement de mois, pas besoin de recharger
+    }
+    monthDisplay.current = selectedDate.getMonth();
+    yearDisplay.current = selectedDate.getFullYear();
+    const monthStart = startOfMonth(selectedDate).getTime();
+    const monthEnd = endOfMonth(selectedDate).getTime();
+    void onLoadAppointmentsInRange(monthStart, monthEnd, selectedEmployee.IdPersonnel);
+  }, [onLoadAppointmentsInRange, selectedDate, selectedEmployee]);
+
 
   // ----- FILTRAGE DES RENDEZ-VOUS (Web Worker) -----
   
@@ -120,8 +152,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   useEffect(() => {
     if (!worker.isReady) {
       // Fallback synchrone si worker non prêt
-      const monthStart = startOfMonth(currentDate).getTime();
-      const monthEnd = endOfMonth(currentDate).getTime();
+      const monthStart = startOfMonth(selectedDate).getTime();
+      const monthEnd = endOfMonth(selectedDate).getTime();
       
       let filteredApps = appointments;
       
@@ -144,7 +176,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     const filterAppointments = async () => {      
       const filtered = await worker.filterMonthlyAppointments(
         appointments,
-        currentDate,
+        selectedDate,
         selectedEmployee,
         user.role || 'viewer',
         user.IdPersonnel
@@ -157,7 +189,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     };
     
     filterAppointments();
-  }, [worker.isReady, appointments, currentDate, selectedEmployee, user.role, user.IdPersonnel]);
+  }, [worker.isReady, appointments, selectedDate, selectedEmployee, user.role, user.IdPersonnel]);
 
   // Filtrage journalier avec Web Worker
   useEffect(() => {
@@ -219,9 +251,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
   // ----- HANDLERS -----
   
-  const handleLogout = () => {
-    alert("Déconnexion...");
-  };
 
   const handleOpenAddAppointment = () => {
     // Seulement les admins et managers peuvent ajouter des événements
@@ -410,7 +439,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 }}
               >
                 <button 
-                  onClick={handleLogout}
+                  onClick={logout }
                   className="w-full text-left px-4 py-2 text-sm flex items-center transition-colors"
                   style={{ color: 'var(--color-error)' }}
                   onMouseEnter={(e) => {
@@ -495,7 +524,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         >
           
           {/* Employee Selector - visible seulement pour les admins et managers */}
-          {(isAdmin || isManager) && (
+          {(isAdmin || isManager) && employees.length > 0 && (
             <EmployeeSelector 
               employees={visibleEmployees}
               teams={teams}
@@ -506,7 +535,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
           {/* Calendar */}
           <MobileCalendarGrid 
-            currentDate={currentDate}
+            currentDate={selectedDate}
             selectedDate={selectedDate}
             appointments={monthlyAppointments}
             onDateSelect={setSelectedDate}

@@ -1,6 +1,8 @@
 import React, { memo } from 'react';
 import { Appointment, Item } from '../../../types/index';
 import { Clock } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface AppointmentListProps {
   appointments: Appointment[];
@@ -10,6 +12,7 @@ interface AppointmentListProps {
 
 const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, items }) => {
   const item = items.find(i => i.IdPlanningRessource === app.IdPlanningRessource);
+  
   return (
     <div 
       className="rounded-3xl p-5 mb-4 border flex items-start group transition-all duration-300"
@@ -27,7 +30,7 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, i
     >
       <div 
         className={`w-1.5 h-12 rounded-full  mr-4 mt-1`} 
-        style={{backgroundColor : item?.CouleurFondPlanningRessource}}
+        style={{backgroundColor : item?.CouleurFondPlanningRessource || 'var(--color-primary-500)'}}
       ></div>
       <div className="flex-1">
         <h3 
@@ -44,6 +47,9 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[] }> = ({ app, i
         </h3>
         <div className="flex items-center text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>
           <span className="capitalize">{item?.Type}</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+          
         </div>
       </div>
     </div>

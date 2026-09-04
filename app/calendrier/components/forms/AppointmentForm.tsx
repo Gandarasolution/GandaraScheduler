@@ -153,6 +153,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const isCreatingResource = resourceEditMode === 'createRessource';
   const isEditingResource = resourceEditMode === 'editRessource';
   const isEditingAppointment = resourceEditMode === 'editAppointment';
+  const hasPermissionsPanel = isEditingResource &&
+    (item?.Type === 'Paie' || item?.Type === 'Rubrique Perso');
 
   // On simplifie la logique d'affichage 
   // - Les options de ressources (couleurs, code, ect.) sont toujours affichées dans tous les modes pour les rubriques perso
@@ -367,7 +369,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   /**
    * État pour contrôler l'expansion du panel d'options avancées
    */
-  const [isExpanded, setIsExpanded] = useState(isReducedVersion ? false : true);
+  const [isExpanded, setIsExpanded] = useState(!isReducedVersion || hasPermissionsPanel);
 
 
   useEffect(() => {
@@ -736,18 +738,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             />
           </FormPreview>
         
-          {/* PermissionsPanel - Gestion des permissions par employé */}
-          {isEditingResource && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') && (
-            <PermissionsPanel
-              usersWithPermission={usersWithPermission}
-              permissions={permissions.current}
-              onPermissionChange={handlePermissionChange}
-              title="Gestion des permissions"
-              defaultOpen={false}
-              searchPlaceholder="Rechercher un employé..."
-            />
-          )}
-
           {!isResourceMode && (
             <>
               {/* DateTimeSelector - Dates et créneaux */}
@@ -819,6 +809,18 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               placeholder="Ajoutez des annotations..."
               height={96}
             />
+
+            {/* PermissionsPanel - Gestion des permissions par employé */}
+            {hasPermissionsPanel && (
+              <PermissionsPanel
+                usersWithPermission={usersWithPermission}
+                permissions={permissions.current}
+                onPermissionChange={handlePermissionChange}
+                title="Gestion des permissions"
+                defaultOpen={false}
+                searchPlaceholder="Rechercher un employé..."
+              />
+            )}
 
             {/* TagsManager - Sélecteur d'étiquette (version étendue pour chantiers) */}
             {formDataItemType?.Type === 'Projet' && (

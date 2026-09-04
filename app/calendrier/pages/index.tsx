@@ -89,12 +89,12 @@ function NoSSR({ children }: { children: React.ReactNode }) {
  * Composant Principal HomePage
  */
 export default function HomePage({
-  onThemeChange,
+    isMobile,
 }: {
-  onThemeChange?: (theme: any) => void;
+    isMobile: boolean;
 }) {
 
-  const { hasPermission, currentPlanningId, setUser, logout } = useAuth();
+  const { hasPermission, currentPlanningId, logout } = useAuth();
   
   const user = useCurrentUser();
   
@@ -120,7 +120,7 @@ export default function HomePage({
   const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
-  const viewState = useCalendarView(currentPlanningId, user );
+  const viewState = useCalendarView(currentPlanningId, user, isMobile);
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
@@ -353,7 +353,28 @@ export default function HomePage({
       if (!isMounted || hasInitializedPlanningRef.current) return;
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
-      
+
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
+      // Sur mobile, le calendrier est personnel : les listes employees, equipes
+      // et poles ne sont pas necessaires pour afficher les rendez-vous.
+      if (isMobile) {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+        const monthEnd = new Date(monthStart);
+        monthEnd.setMonth(monthEnd.getMonth() + 1);
+        monthEnd.setMilliseconds(-1);
+
+        await dataLayer.loadAppointmentsInRange(
+          monthStart.getTime(),
+          monthEnd.getTime(),
+          user.IdPersonnel
+        );
+        setLoadCalendar(false);
+        return;
+      }
+
       await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
 
       // Chargement des employés selon les permissions
@@ -417,7 +438,10 @@ export default function HomePage({
       }
     }
     
-    initializeNonWorkingDates();
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    if (!isMobile) {
+      initializeNonWorkingDates();
+    }
     if (viewState.viewType === 'calendar') {
       initializePlanning();
     } else if (viewState.viewType === 'employee-table') {
@@ -678,7 +702,7 @@ export default function HomePage({
                       </div>
                     </div>
                   ) :
-                  (viewState.currentCalendarConfig || hasPermission(21)) && (
+                  (viewState.isMobile || viewState.currentCalendarConfig || hasPermission(21)) && (
                     <CalendarGrid
                       /* Données */
                       employees={globalEmployees}
