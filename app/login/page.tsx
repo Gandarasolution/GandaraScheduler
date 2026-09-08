@@ -24,6 +24,14 @@ export default function LoginPage({ login }: LoginPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    const sessionExpiredMessage = localStorage.getItem('session_expired');
+    if (sessionExpiredMessage) {
+      setError(sessionExpiredMessage);
+      localStorage.removeItem('session_expired');
+    }
+  }, []);
+
   // 1. Initialisation et vérification de l'URL
   useEffect(() => {
     const checkEnvironment = async () => {

@@ -52,6 +52,18 @@ async function getAllUsersForVue() {
   return await getRequest(`/api/planning/vue/users`, 'getAllUsersForVue');
 }
 
+async function getMobileAppointmentDisplayConfig() {
+  return await getRequest(`/api/planning/mobile`, 'getMobileAppointmentDisplayConfig');
+}
+
+async function saveMobileAppointmentDisplayConfig(data: {
+  idPersonnel: number;
+  primaryFields: string[];
+  secondaryFields: string[];
+}) {
+  return await putRequest('/api/planning/mobile-appointment-display-config', data, 'saveMobileAppointmentDisplayConfig');
+}
+
 
 export default {
   getCalendarConfigsByUserId,
@@ -65,5 +77,7 @@ export default {
   getLastVueForUser,
   setLastVueForUser,
   getVueDetails,
-  getAllUsersForVue
+  getAllUsersForVue,
+  getMobileAppointmentDisplayConfig,
+  saveMobileAppointmentDisplayConfig
 };

@@ -277,7 +277,7 @@ const Modal: React.FC<ModalProps> = ({
                         </button>
                     )}
                 </div>
-                <div className={`modal-body rounded-2xl scrollbar-hide ${classNameContent}`}>
+                <div className={`modal-body rounded-2xl scrollbar-hide min-h-0 ${classNameContent}`}>
                     <ModalContext.Provider value={modalContextValue}>
                         {children}
                     </ModalContext.Provider>

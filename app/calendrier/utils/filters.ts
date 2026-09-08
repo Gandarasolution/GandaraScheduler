@@ -25,6 +25,12 @@ export interface HierarchicalGroupItem {
   data?: any;
 }
 
+const UNASSIGNED_DIMENSION_ID = '__unassigned__';
+
+export function getDimensionItemKey(id: string | number | null | undefined): string | number {
+  return id == null ? UNASSIGNED_DIMENSION_ID : id;
+}
+
 // Fonction pour obtenir les éléments de dimension avec hiérarchie
 export function getHierarchicalDimensionItems(
   groupingLevels: GroupingLevels | undefined,

@@ -23,7 +23,7 @@ import {
   MARGIN_BETWEEN_TEAMS,
   CELL_HEIGHT,
 } from '../../utils/constants';
-import { HierarchicalGroupItem } from '../../utils/filters';
+import { getDimensionItemKey, HierarchicalGroupItem } from '../../utils/filters';
 import { FlatRow } from '../../hooks';
 
 interface EmployeeSidebarProps {
@@ -132,7 +132,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
       
       {/* Liste des groupes d'employés */}
       {dimensionItems.map((item, index) => {
-        const isOpen = openItems.includes(Number(item.id));
+        const isOpen = openItems.includes(getDimensionItemKey(item.id));
         const itemEmployees = employeesByDimension[item.id] || [];
         
         if (itemEmployees.length === 0) return null;
@@ -151,7 +151,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
         
         return (
           <div
-            key={item.id}
+            key={getDimensionItemKey(item.id)}
             className="rounded-4xl border-default bg-primary-bg text-primary"
             style={style}
           >

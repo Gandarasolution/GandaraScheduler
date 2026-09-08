@@ -5,7 +5,7 @@ import {
   ImageSelectorContentModal,
   Modal, 
 } from '@/app/calendrier/components';
-import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem } from '../../types';
+import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MOBILE_APPOINTMENT_FIELD_OPTIONS } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
@@ -116,6 +116,8 @@ interface CalendarModalsProps {
     setNonWorkingDates: (dates: Record<string, number>) => void;
     tagPlacement: 'hover' | 'fixed';
     setTagPlacement: (v: 'hover' | 'fixed') => void;
+    mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
+    setMobileAppointmentDisplay: (v: MobileAppointmentDisplayConfig) => void;
     
     // Constants
     HALF_DAY_INTERVALS: any[];
@@ -187,6 +189,19 @@ export const CalendarModals = memo(({
           removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
         }
       ]
+    },
+    {
+      category: "Affichage mobile des rendez-vous",
+      items: [
+        {
+          id: "mobileAppointmentFields",
+          label: null,
+          type: "mobile-appointment-fields",
+          value: config.mobileAppointmentDisplay,
+          onChange: config.setMobileAppointmentDisplay,
+          options: MOBILE_APPOINTMENT_FIELD_OPTIONS
+        }
+      ]
     }] : []),
     {
       category: "Affichage des étiquettes",
@@ -204,7 +219,7 @@ export const CalendarModals = memo(({
         }
       ]
     }
-  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
+  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, config.mobileAppointmentDisplay, config.setMobileAppointmentDisplay, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
 
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;

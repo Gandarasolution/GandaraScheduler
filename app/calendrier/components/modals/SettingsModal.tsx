@@ -1,12 +1,48 @@
 import { memo, useState } from "react";
 import Modal from "./Modal";
 import { format } from "date-fns";
+import { MOBILE_APPOINTMENT_FIELD_OPTIONS, MobileAppointmentField } from "../../types";
 
 type SettingsModalProps = {  
   onClose: () => void;
   settings: any;
   isSettingsOpen: boolean;
 };
+
+const previewValues: Record<MobileAppointmentField, string> = {
+  LibellePlanningRessource: "Maintenance chaudière",
+  Type: "Projet",
+  DebutPlanningEvenement: "07/09/2026 09:00",
+  FinPlanningEvenement: "07/09/2026 11:00",
+  AnnotationPlanningEvenement: "Prévoir le matériel nécessaire",
+  IdEmploye: "Camille Martin",
+  EtapeValidation: "Validé",
+  Etiquette: "Urgent",
+};
+
+const AppointmentDisplayPreview = ({ fields, secondary = false }: { fields: MobileAppointmentField[]; secondary?: boolean }) => (
+  <div className={`rounded-2xl border p-4 ${secondary ? "bg-secondary-bg" : "bg-card"}`} style={{ borderColor: "var(--border-light)", boxShadow: "var(--shadow-sm)" }}>
+    <div className="flex items-start gap-2">
+      <div className="w-1.5 h-10 rounded-full bg-primary flex-shrink-0" />
+      <div className="min-w-0 flex-1">
+        <div className="font-semibold text-sm truncate text-primary">
+          {previewValues[fields[0]] || "Rendez-vous"}
+        </div>
+        <div className="mt-1 flex flex-col gap-1 text-[11px] text-secondary">
+          {fields.slice(1).map(field => (
+            <div key={field} className="truncate">{previewValues[field]}</div>
+          ))}
+        </div>
+        {secondary && fields.length > 0 && (
+          <div className="mt-2 text-[11px] font-semibold text-primary">Fermer</div>
+        )}
+      </div>
+      {!secondary && fields.length > 0 && (
+        <div className="text-[11px] font-semibold text-primary whitespace-nowrap">Voir plus</div>
+      )}
+    </div>
+  </div>
+);
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
@@ -23,9 +59,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       isOpen={isSettingsOpen}
       onClose={onClose}
       title="Paramètres"
-      className="px-4 py-4"
+      className="w-[min(94vw,860px)] max-w-[860px] max-h-[86vh] overflow-hidden"
+      classNameContent="max-h-[calc(86vh-72px)] overflow-y-auto px-1"
     >
-      <div className="flex flex-col gap-6 poppins">
+      <div className="flex flex-col gap-4 p-2 poppins">
         {settings.map((cat: any, idx: number) => (
           <div key={cat.category} className="border border-light text-primary rounded-2xl overflow-hidden bg-secondary-bg shadow-lg hover:shadow-xl transition-all duration-300">
             <button
@@ -34,12 +71,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               onClick={() => setOpenCategory(openCategory === cat.category ? null : cat.category)}
             >
               <div className="flex items-center gap-3">
-                <div className="w-2 h-8 bg-primary rounded-full"></div>
+                <div className="w-1 h-6 bg-primary rounded-full"></div>
                 <span className="text-lg poppins font-medium">{cat.category}</span>
               </div>
-              <div className={`p-2 rounded-full transition-all duration-300 ${openCategory === cat.category ? 'bg-primary text-white rotate-180' : 'bg-transparent text-gray-500'}`}>
+              <div className={`p-1 text-secondary transition-transform duration-300 ${openCategory === cat.category ? 'rotate-180' : ''}`}>
                 <svg 
-                  className="w-5 h-5 transition-transform duration-300"
+                  className="w-5 h-5"
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -49,14 +86,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </button>
             
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openCategory === cat.category ? 'max-h-150 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="px-6 py-6 bg-secondary-bg">
+            <div className={`transition-all duration-300 ease-in-out ${openCategory === cat.category ? 'opacity-100' : 'max-h-0 overflow-hidden opacity-0'}`}>
+              <div className="px-4 py-4 bg-secondary-bg">
                 {cat.items.map((setting: any, settingIdx: number) => (
                   <div key={setting.id} className={`flex flex-col lg:flex-row lg:items-center justify-between py-4 ${settingIdx !== cat.items.length - 1 ? 'border-b border-ultra-light' : ''}`}>
-                    <div className="mb-3 lg:mb-0 lg:mr-6 min-w-[200px]">
-                      <label htmlFor={setting.id} className="text-base font-medium poppins block">
-                        {setting.label}
-                      </label>
+                    {setting.type !== "mobile-appointment-fields" && (
+                      <div className="mb-3 lg:mb-0 lg:mr-6 min-w-[200px]">
+                        <label htmlFor={setting.id} className="text-base font-medium poppins block">
+                          {setting.label}
+                        </label>
                       {/* {setting.id === "includeWeekend" && (
                         <p className="text-xs text-secondary mt-1 poppins">
                           Permet de placer des rendez-vous les samedis et dimanches
@@ -77,9 +115,83 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           Choisissez comment afficher l'étiquette sur les rendez-vous
                         </p>
                       )}
-                    </div>
+                      </div>
+                    )}
                     
-                    {setting.type === "select" ? (
+                    {setting.type === "mobile-appointment-fields" ? (
+                      <div className="w-full">
+                        <div className="max-h-[38vh] overflow-auto rounded-xl">
+                        <table className="w-full min-w-[500px] border-separate border-spacing-x-2 border-spacing-y-1 text-sm">
+                          <thead>
+                            <tr className="border-b border-light bg-secondary-bg text-left">
+                              <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold">Champs</th>
+                              <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold text-center">Principale</th>
+                              <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold text-center">Secondaire</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {MOBILE_APPOINTMENT_FIELD_OPTIONS.map(option => {
+                              const primaryChecked = setting.value.primaryFields.includes(option.value);
+                              const secondaryChecked = setting.value.secondaryFields.includes(option.value);
+                              const updateFields = (column: "primaryFields" | "secondaryFields", checked: boolean) => {
+                                const current = setting.value[column];
+                                const fields = checked
+                                  ? [...current, option.value]
+                                  : current.filter((field: string) => field !== option.value);
+                                setting.onChange({ ...setting.value, [column]: fields });
+                              };
+                              return (
+                                <tr key={option.value} className="border-b border-ultra-light">
+                                  <td className="px-3 py-3">{option.label}</td>
+                                  <td className="px-3 py-3 text-center align-middle">
+                                    <button
+                                      type="button"
+                                      aria-pressed={primaryChecked}
+                                      aria-label={`${option.label} dans l'affichage principal`}
+                                      onClick={() => updateFields("primaryFields", !primaryChecked)}
+                                      className={`inline-flex cursor-pointer h-7 w-7 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${primaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
+                                    >
+                                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
+                                        <path d="M6 6l12 12M18 6L6 18" />
+                                      </svg>
+                                    </button>
+                                  </td>
+                                  <td className="px-3 py-3 text-center align-middle">
+                                    <button
+                                      type="button"
+                                      aria-pressed={secondaryChecked}
+                                      aria-label={`${option.label} dans l'affichage secondaire`}
+                                      onClick={() => updateFields("secondaryFields", !secondaryChecked)}
+                                      className={`inline-flex cursor-pointer h-7 w-7 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${secondaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
+                                    >
+                                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
+                                        <path d="M6 6l12 12M18 6L6 18" />
+                                      </svg>
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        </div>
+                        <div className="mt-4 border-t border-light pt-4">
+                          <p className="mb-3 text-sm font-semibold text-primary">Aperçu en direct (prévisualisation)</p>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div className="rounded-xl bg-secondary-bg p-1">
+                            {setting.value.primaryFields.length > 0
+                              ? <AppointmentDisplayPreview fields={setting.value.primaryFields} />
+                              : <div className="p-4 text-xs text-secondary">Aucun champ sélectionné</div>}
+                          </div>
+                          <div className="rounded-xl bg-secondary-bg p-1">
+                            {setting.value.secondaryFields.length > 0
+                              ? <AppointmentDisplayPreview fields={setting.value.secondaryFields} secondary />
+                              : <div className="p-4 text-xs text-secondary">Aucun champ sélectionné</div>}
+                          </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : setting.type === "select" ? (
                       <select
                         id={setting.id}
                         className="border border-default rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-color transition-all duration-200 poppins text-sm bg-transparent shadow-sm hover:shadow-md"
@@ -92,6 +204,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           </option>
                         ))}
                       </select>
+                    ) : setting.type === "multi-select" ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+                        {setting.options?.map((option: any) => {
+                          const checked = setting.value.includes(option.value);
+                          return (
+                            <label key={option.value} className="flex items-center gap-3 cursor-pointer text-sm">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  const nextValue = checked
+                                    ? setting.value.filter((value: string) => value !== option.value)
+                                    : [...setting.value, option.value];
+                                  setting.onChange(nextValue);
+                                }}
+                                className="h-4 w-4 accent-primary"
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     ) : setting.type === "custom-non-working-dates" ? (
                       <div className="flex flex-col gap-4 w-full max-w-lg">
                         <div className="flex gap-3 items-center">
@@ -258,9 +392,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
             onClick={onClose}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
             Fermer
           </button>
         </div>
@@ -270,5 +401,3 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 };
 
 export default memo(SettingsModal);
-
-

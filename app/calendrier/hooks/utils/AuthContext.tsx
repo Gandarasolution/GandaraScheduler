@@ -24,12 +24,16 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (login: string, password: string) => Promise<{ success: boolean; message?: string }>;
-  logout: () => void;
+  logout: (reason?: 'inactive') => void;
   hasPermission: (permissionId: number) => boolean;
   setLastVueForUser: (idVue: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_STATE_KEY = 'isAuthenticated';
+const SESSION_EXPIRED_KEY = 'session_expired';
+const LOGIN_COOKIE_NAME = 'is_logged_in';
+const SESSION_EXPIRED_MESSAGE = 'Vous avez été déconnecté à cause de votre inactivité.';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>();
@@ -66,15 +70,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserPlanning(response.planning || []);
       setUser(response.user);
       setPermissions(response.permissions || 0);
-      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem(AUTH_STATE_KEY, 'true');
+      localStorage.removeItem(SESSION_EXPIRED_KEY);
       return { success: true };
     } 
 
     return { success: false, message: response?.data || response?.message || 'Identifiants incorrects' };
   };
 
-  const logout = () => {
-    localStorage.removeItem('isAuthenticated');
+  const logout = useCallback((reason?: 'inactive') => {
+    localStorage.removeItem(AUTH_STATE_KEY);
+    if (reason === 'inactive') {
+      localStorage.setItem(SESSION_EXPIRED_KEY, SESSION_EXPIRED_MESSAGE);
+    }
     // On ne supprime pas forcément le cookie 'client_api_url' ici, 
     // pour que le client reste sur son environnement s'il veut juste se reconnecter.
     setUser(undefined);
@@ -83,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentPlanningId(-1);
     setCurrentVueId(null);
     axiosAgent.defaults.headers.common['X-Planning-Id'] = '';
-  };
+  }, []);
 
   const hasPermission = useCallback((permissionId: number) => {
     return Number(permissions) === Number(permissionId);
@@ -104,6 +112,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      if (localStorage.getItem(AUTH_STATE_KEY) !== 'true') {
+        setIsLoading(false);
+        return;
+      }
+
+      if (Cookies.get(LOGIN_COOKIE_NAME) !== 'true') {
+        logout('inactive');
+        setIsLoading(false);
+        return;
+      }
+
       const clientApiUrl = Cookies.get('client_api_url');
       
       if (!clientApiUrl) {
@@ -111,11 +130,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
         setUser(undefined);
         return; // On arrête tout, l'utilisateur n'est pas authentifié.
-      }
-
-      if (localStorage.getItem('isAuthenticated') !== 'true') {
-        setIsLoading(false);
-        return;
       }
 
       try {
@@ -134,17 +148,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(response.user);
         setPermissions(response.permissions || 0);
         setCurrentVueId(null);
-        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem(AUTH_STATE_KEY, 'true');
       } catch (error) {
         setUser(undefined);
-        localStorage.removeItem('isAuthenticated'); // Sécurité en cas de token expiré
+        localStorage.removeItem(AUTH_STATE_KEY);
       } finally {
         setIsLoading(false);
       }
     };
 
     checkAuth();
-  }, []);
+
+    const checkLoginCookie = () => {
+      if (
+        localStorage.getItem(AUTH_STATE_KEY) === 'true' &&
+        Cookies.get(LOGIN_COOKIE_NAME) !== 'true'
+      ) {
+        logout('inactive');
+      }
+    };
+
+    const intervalId = window.setInterval(checkLoginCookie, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ 

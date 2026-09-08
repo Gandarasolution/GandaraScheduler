@@ -22,7 +22,7 @@ import {
   EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM
 } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
-import { HierarchicalGroupItem } from '../../utils/filters';
+import { getDimensionItemKey, HierarchicalGroupItem } from '../../utils/filters';
 
 export interface FlatRow {
   type: 'group' | 'employee';
@@ -91,7 +91,7 @@ export const useCalendarVirtualization = ({
       if (idx > 0 && !isChild) {
         const prevSiblingIdx = isChild && parentIdx !== undefined ? parentIdx : idx - 1;
         const prevItem = dimensionItems[prevSiblingIdx];
-        const isPrevOpen = openItems.includes(prevItem.id);
+        const isPrevOpen = openItems.includes(getDimensionItemKey(prevItem.id));
         
         inactiveRowHeight += MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2;
         if (isPrevOpen) {
@@ -110,7 +110,7 @@ export const useCalendarVirtualization = ({
       }      
       
       //console.log('openItems.includes(item.id)', openItems.includes(item.id), item.id);
-      if (openItems.includes(item.id)) {
+      if (openItems.includes(getDimensionItemKey(item.id))) {
         // Si l'item a des enfants (niveau 2), les traiter
         //console.log('item.children', item.children, item.children?.length);
         if (item.children && item.children.length > 0) {

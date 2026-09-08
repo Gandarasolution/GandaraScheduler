@@ -123,6 +123,7 @@ interface BaseItem {
   Image?: ImageType;
   defaultDescription?: string;
   Etiquettes?: Tag[];
+  Adresse?: string;
 }
 
 export interface ChantierItem extends BaseItem {
@@ -194,6 +195,40 @@ export interface Appointment{
   
   isLocked: boolean; // Indique si le rendez-vous est verrouillé (non modifiable)
 }
+
+/**
+ * Champs disponibles dans la carte d'un rendez-vous sur mobile.
+ * Les valeurs sont volontairement stables afin de pouvoir être utilisées
+ * directement par le futur endpoint de configuration.
+ */
+export type MobileAppointmentField =
+  | 'LibellePlanningRessource'
+  | 'Type'
+  | 'DebutPlanningEvenement'
+  | 'FinPlanningEvenement'
+  | 'AnnotationPlanningEvenement'
+  | 'IdEmploye'
+  | 'EtapeValidation'
+  | 'Etiquette';
+
+export interface MobileAppointmentDisplayConfig {
+  primaryFields: MobileAppointmentField[];
+  secondaryFields: MobileAppointmentField[];
+}
+
+export const MOBILE_APPOINTMENT_FIELD_OPTIONS: Array<{
+  value: MobileAppointmentField;
+  label: string;
+}> = [
+  { value: 'LibellePlanningRessource', label: 'Libellé de la rubrique' },
+  { value: 'Type', label: 'Type de ressource' },
+  { value: 'DebutPlanningEvenement', label: 'Date et heure de début' },
+  { value: 'FinPlanningEvenement', label: 'Date et heure de fin' },
+  { value: 'AnnotationPlanningEvenement', label: 'Annotation du rendez-vous' },
+  { value: 'IdEmploye', label: 'Employé du rendez-vous' },
+  { value: 'EtapeValidation', label: 'Étape de validation' },
+  { value: 'Etiquette', label: 'Étiquette du rendez-vous' },
+];
 
 
 

@@ -13,7 +13,7 @@ import {
   HOUR_MS,
   CELL_HEIGHT,
 } from '../../utils/constants';
-import {getHierarchicalDimensionItems, groupEmployeesHierarchically } from '../../utils/filters';
+import {getDimensionItemKey, getHierarchicalDimensionItems, groupEmployeesHierarchically } from '../../utils/filters';
 import { isSameDay } from 'date-fns';
 import { useSmartScroll } from '../../hooks/interactions/useSmartScroll';
 import { useAutoScrollOnDrag } from '../../hooks/interactions/useAutoScrollOnDrag';
@@ -149,7 +149,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   
   const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
-    return dimensionItems.map(i => Number(i.id));
+    return dimensionItems.map(i => getDimensionItemKey(i.id));
   });  
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
@@ -170,7 +170,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   });
 
   useEffect(() => {
-    setOpenItems(dimensionItems.map(i => Number(i.id)));
+    setOpenItems(dimensionItems.map(i => getDimensionItemKey(i.id)));
   }, [dimensionItems]);
 
   const { isGrabbing, isScrolling } = useSmartScroll(mainScrollRef as React.RefObject<HTMLElement>, mouseUpAfterScroll);
@@ -372,10 +372,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [appointmentsInHorizontalWindow, visibleRows]);
 
   const toggleItem = (itemId: string | number) => {
+    const itemKey = getDimensionItemKey(itemId);
     setOpenItems(open =>
-      open.includes(itemId)
-        ? open.filter(id => id !== itemId)
-        : [...open, itemId]
+      open.includes(itemKey)
+        ? open.filter(id => id !== itemKey)
+        : [...open, itemKey]
     );
   };
 

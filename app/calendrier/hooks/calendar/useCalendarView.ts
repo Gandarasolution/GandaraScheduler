@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { CalendarConfig, User } from '../../types'; // Assumed type
+import { CalendarConfig, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
@@ -8,7 +8,20 @@ import { calendarConfigService } from '@/app/service';
 
 export const useCalendarView = (idPlanning: number, user: User, isMobile: boolean) => {
 
-  // --- Préférences persistantes (localStorage) ---
+  const defaultMobileAppointmentDisplay: MobileAppointmentDisplayConfig = {
+    primaryFields: ['LibellePlanningRessource', 'Type'],
+    secondaryFields: [
+      'DebutPlanningEvenement',
+      'FinPlanningEvenement',
+      'AnnotationPlanningEvenement',
+      'IdEmploye',
+      'EtapeValidation',
+      'Etiquette',
+    ],
+  };
+  const mobileDisplayLoadedRef = useRef(false);
+
+  // --- Préférences persistantes ---
   const getStoredBool = (key: string, def: boolean) => {
     if (typeof window !== 'undefined' && window.localStorage) {
       return localStorage.getItem(key) === 'true';
@@ -27,6 +40,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     }
     return 'hover';
   });
+  const [mobileAppointmentDisplay, setMobileAppointmentDisplayState] = useState<MobileAppointmentDisplayConfig>(defaultMobileAppointmentDisplay);
   
   const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -60,6 +74,34 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   // --- Hook de configuration existant ---
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
   const calendarConfigHook = useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMobileAppointmentDisplay = async () => {
+      if (!isMobile || !user?.IdPersonnel) return;
+      const result = await calendarConfigService.getMobileAppointmentDisplayConfig();
+      if (cancelled) return;
+
+      const config = result?.data;
+      if (result?.error === 0 && config) {
+        const primaryFields = Array.isArray(config.primaryFields) ? config.primaryFields : [];
+        const secondaryFields = Array.isArray(config.secondaryFields) ? config.secondaryFields : [];
+        setMobileAppointmentDisplayState({
+          primaryFields: primaryFields as MobileAppointmentField[],
+          secondaryFields: secondaryFields as MobileAppointmentField[],
+        });
+      } else {
+        setMobileAppointmentDisplayState(defaultMobileAppointmentDisplay);
+      }
+      mobileDisplayLoadedRef.current = true;
+    };
+
+    void loadMobileAppointmentDisplay();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.IdPersonnel, currentCalendarConfig?.IdPlanningVue, isMobile]);
 
 
    // État local pour le menu déroulant des vues
@@ -150,6 +192,16 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     tagPlacement, setTagPlacement: (v: 'hover' | 'fixed') => {
       setTagPlacement(v);
       setTimeout(() => localStorage.setItem('tagPlacement', v), 0);
+    },
+    mobileAppointmentDisplay,
+    setMobileAppointmentDisplay: (value: MobileAppointmentDisplayConfig) => {
+      setMobileAppointmentDisplayState(value);
+      if (!mobileDisplayLoadedRef.current || !user?.IdPersonnel) return;
+      void calendarConfigService.saveMobileAppointmentDisplayConfig({
+        idPersonnel: user.IdPersonnel,
+        primaryFields: value.primaryFields,
+        secondaryFields: value.secondaryFields,
+      });
     },
     viewType, setViewType: (v: any) => {
         // Bloquer l'accès à paie-table et manual-event-table pour users et viewers

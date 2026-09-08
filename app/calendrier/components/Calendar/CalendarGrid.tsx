@@ -21,7 +21,7 @@
 
 "use client";
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Appointment, HalfDayInterval, Equipe, CalendarConfig, Item, User, PoleActivite } from '../../types';
+import { Appointment, HalfDayInterval, Equipe, CalendarConfig, Item, User, PoleActivite, MobileAppointmentDisplayConfig } from '../../types';
 import { 
   useCalendarInteractions
  } from '@/app/calendrier/hooks';
@@ -42,6 +42,7 @@ interface CalendarGridProps {
   isMobile: boolean;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
+  mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   calendarConfig: CalendarConfig | null;
   onCalendarConfigChange: (config: CalendarConfig) => void;
@@ -76,6 +77,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   isMobile,
   isDisplayWeekend,
   tagPlacement = 'hover',
+  mobileAppointmentDisplay,
   mainScrollRef,
   calendarConfig,
   onCalendarConfigChange,
@@ -150,6 +152,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         nonWorkingDates={nonWorkingDates}
         onLoadAppointmentsInRange={onLoadAppointmentsInRange}
         onAddAppointment={onAddAppointment}
+        mobileAppointmentDisplay={mobileAppointmentDisplay}
       />
     );
   }

@@ -13,7 +13,7 @@ import { endOfMonth, startOfMonth } from 'date-fns';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
-import { Appointment, Equipe, Item, MockNotification, User } from '../../../types/index';
+import { Appointment, Equipe, Item, MockNotification, User, MobileAppointmentDisplayConfig } from '../../../types/index';
 
 // Composants
 
@@ -46,6 +46,7 @@ interface MobileCalendarGridProps {
   nonWorkingDates: Record<string, number>;
   onLoadAppointmentsInRange?: (startDate: number, endDate: number, employeeId?: number) => Promise<boolean>;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
+  mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
 }
 
 // ===== COMPOSANT PRINCIPAL =====
@@ -58,7 +59,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   items, 
   nonWorkingDates,
   onAddAppointment,
-  onLoadAppointmentsInRange
+  onLoadAppointmentsInRange,
+  mobileAppointmentDisplay
 }) => {
   // ----- ÉTATS LOCAUX -----
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -439,7 +441,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 }}
               >
                 <button 
-                  onClick={logout }
+                  onClick={() => logout()}
                   className="w-full text-left px-4 py-2 text-sm flex items-center transition-colors"
                   style={{ color: 'var(--color-error)' }}
                   onMouseEnter={(e) => {
@@ -546,6 +548,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             appointments={selectedDayAppointments}
             selectedDate={selectedDate}
             items={items}
+            employees={employees}
+            displayConfig={mobileAppointmentDisplay}
           />
         </main>
 
