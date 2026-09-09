@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { CalendarConfig, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from '../../types'; // Assumed type
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { CalendarConfig, MobileAppointmentDisplayConfig, MobileAppointmentField, User, MOBILE_APPOINTMENT_FIELD_OPTIONS } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
@@ -20,6 +20,8 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     ],
   };
   const mobileDisplayLoadedRef = useRef(false);
+  const [mobileAppointmentFieldOptions, setMobileAppointmentFieldOptions] = useState(MOBILE_APPOINTMENT_FIELD_OPTIONS);
+  const [mobileAppointmentSettingsLoading, setMobileAppointmentSettingsLoading] = useState(false);
 
   // --- Préférences persistantes ---
   const getStoredBool = (key: string, def: boolean) => {
@@ -102,6 +104,36 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       cancelled = true;
     };
   }, [user?.IdPersonnel, currentCalendarConfig?.IdPlanningVue, isMobile]);
+
+  const loadMobileAppointmentSettings = useCallback(async () => {
+    if (!user?.IdPersonnel) return;
+    setMobileAppointmentSettingsLoading(true);
+    try {
+      const result = await calendarConfigService.getMobileAppointmentDisplayConfigSettings();
+      if (result?.error !== 0 || !result.data) return;
+
+      const fields = Array.isArray(result.data) ? result.data : result.data.fields;
+      if (Array.isArray(fields)) {
+        setMobileAppointmentFieldOptions(fields.map((field: any) => ({
+          CodeChamp: field.CodeChamp ?? field.value,
+          Libelle: field.Libelle ?? field.label,
+        })).filter((field: { CodeChamp?: string; Libelle?: string }) => field.CodeChamp && field.Libelle));
+      }
+
+      if (!isMobile) {
+        const config = result.data.config ?? result.data.displayConfig ?? result.data;
+        if (Array.isArray(config.primaryFields) && Array.isArray(config.secondaryFields)) {
+          setMobileAppointmentDisplayState({
+            primaryFields: config.primaryFields as MobileAppointmentField[],
+            secondaryFields: config.secondaryFields as MobileAppointmentField[],
+          });
+          mobileDisplayLoadedRef.current = true;
+        }
+      }
+    } finally {
+      setMobileAppointmentSettingsLoading(false);
+    }
+  }, [user?.IdPersonnel, isMobile]);
 
 
    // État local pour le menu déroulant des vues
@@ -194,6 +226,9 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       setTimeout(() => localStorage.setItem('tagPlacement', v), 0);
     },
     mobileAppointmentDisplay,
+    mobileAppointmentFieldOptions,
+    mobileAppointmentSettingsLoading,
+    loadMobileAppointmentSettings,
     setMobileAppointmentDisplay: (value: MobileAppointmentDisplayConfig) => {
       setMobileAppointmentDisplayState(value);
       if (!mobileDisplayLoadedRef.current || !user?.IdPersonnel) return;

@@ -53,15 +53,20 @@ async function getAllUsersForVue() {
 }
 
 async function getMobileAppointmentDisplayConfig() {
-  return await getRequest(`/api/planning/mobile`, 'getMobileAppointmentDisplayConfig');
+  return await getRequest(`/api/planning/mobile/display`, 'getMobileAppointmentDisplayConfig');
 }
+
+async function getMobileAppointmentDisplayConfigSettings() {
+  return await getRequest(`/api/planning/mobile/settings`, 'getMobileAppointmentDisplayConfigSettings');
+}
+
 
 async function saveMobileAppointmentDisplayConfig(data: {
   idPersonnel: number;
   primaryFields: string[];
   secondaryFields: string[];
 }) {
-  return await putRequest('/api/planning/mobile-appointment-display-config', data, 'saveMobileAppointmentDisplayConfig');
+  return await postRequest('/api/planning/mobile/save', data, 'saveMobileAppointmentDisplayConfig');
 }
 
 
@@ -79,5 +84,6 @@ export default {
   getVueDetails,
   getAllUsersForVue,
   getMobileAppointmentDisplayConfig,
+  getMobileAppointmentDisplayConfigSettings,
   saveMobileAppointmentDisplayConfig
 };

@@ -217,17 +217,17 @@ export interface MobileAppointmentDisplayConfig {
 }
 
 export const MOBILE_APPOINTMENT_FIELD_OPTIONS: Array<{
-  value: MobileAppointmentField;
-  label: string;
+  CodeChamp: MobileAppointmentField;
+  Libelle: string;
 }> = [
-  { value: 'LibellePlanningRessource', label: 'Libellé de la rubrique' },
-  { value: 'Type', label: 'Type de ressource' },
-  { value: 'DebutPlanningEvenement', label: 'Date et heure de début' },
-  { value: 'FinPlanningEvenement', label: 'Date et heure de fin' },
-  { value: 'AnnotationPlanningEvenement', label: 'Annotation du rendez-vous' },
-  { value: 'IdEmploye', label: 'Employé du rendez-vous' },
-  { value: 'EtapeValidation', label: 'Étape de validation' },
-  { value: 'Etiquette', label: 'Étiquette du rendez-vous' },
+  { CodeChamp: 'LibellePlanningRessource', Libelle: 'Libellé de la rubrique' },
+  { CodeChamp: 'Type', Libelle: 'Type de ressource' },
+  { CodeChamp: 'DebutPlanningEvenement', Libelle: 'Date et heure de début' },
+  { CodeChamp: 'FinPlanningEvenement', Libelle: 'Date et heure de fin' },
+  { CodeChamp: 'AnnotationPlanningEvenement', Libelle: 'Annotation du rendez-vous' },
+  { CodeChamp: 'IdEmploye', Libelle: 'Employé du rendez-vous' },
+  { CodeChamp: 'EtapeValidation', Libelle: 'Étape de validation' },
+  { CodeChamp: 'Etiquette', Libelle: 'Étiquette du rendez-vous' },
 ];
 
 

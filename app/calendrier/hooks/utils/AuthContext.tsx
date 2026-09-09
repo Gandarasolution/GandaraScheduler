@@ -3,6 +3,7 @@
 import { authService, calendarConfigService } from '@/app/service';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User } from '../../types';
+import Loader from '../../components/ui/Loader';
 import { axiosAgent } from '@/app/service/axios.service';
 import Cookies from 'js-cookie';
 
@@ -180,7 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }}>
       {isLoading ? (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-ultra-light via-white to-primary-lighter">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-primary"></div>
+          <Loader size="lg" />
         </div>
       ) : (
         children

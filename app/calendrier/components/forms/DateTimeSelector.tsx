@@ -71,6 +71,7 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   isFullDay = false,
   validationError,
 }) => {
+
   /**
    * Gère le changement de date
    */
@@ -122,10 +123,18 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   /**
    * Détermine l'intervalle actuel basé sur l'heure
    */
-  const getCurrentInterval = (timestamp: number): string => {
+  const getCurrentInterval = (timestamp: number, type: 'start' | 'end'): string => {
     if (intervals.length === 0) return '';
     
     const date = new Date(timestamp);
+    if(type === 'end') {
+      // Pour la date de fin, si l'heure est 0, on considère le dernier intervalle
+      if (date.getHours() === 0) {
+        return intervals[intervals.length - 1].id;
+      }
+
+      date.setHours(date.getHours() - 1, 59, 59, 999); // Ajuster pour la fin de l'intervalle
+    }
     const hours = date.getHours();
     
     // Trouver l'intervalle correspondant
@@ -203,7 +212,7 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
               <select
                 id="intervalNameStart"
                 name="intervalName"
-                value={getCurrentInterval(startDate)}
+                value={getCurrentInterval(startDate, 'start')}
                 onChange={(e) => handleIntervalChange('start', e.target.value)}
                 className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color"
               >
@@ -249,7 +258,7 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
                 <select
                   id="intervalNameEnd"
                   name="intervalName"
-                  value={getCurrentInterval(endDate)}
+                  value={getCurrentInterval(endDate, 'end')}
                   onChange={(e) => handleIntervalChange('end', e.target.value)}
                   className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-gray-50"
                 >

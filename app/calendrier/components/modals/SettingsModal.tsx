@@ -1,7 +1,9 @@
 import { memo, useState } from "react";
 import Modal from "./Modal";
+import Loader from "../ui/Loader";
 import { format } from "date-fns";
-import { MOBILE_APPOINTMENT_FIELD_OPTIONS, MobileAppointmentField } from "../../types";
+import { Appointment, Item, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from "../../types";
+import { AppointmentCard } from "../Calendar/MobileCalendar/AppointmentList";
 
 type SettingsModalProps = {  
   onClose: () => void;
@@ -9,40 +11,39 @@ type SettingsModalProps = {
   isSettingsOpen: boolean;
 };
 
-const previewValues: Record<MobileAppointmentField, string> = {
-  LibellePlanningRessource: "Maintenance chaudière",
-  Type: "Projet",
-  DebutPlanningEvenement: "07/09/2026 09:00",
-  FinPlanningEvenement: "07/09/2026 11:00",
+const previewAppointment: Appointment = {
+  IdPlanningEvenement: -1,
   AnnotationPlanningEvenement: "Prévoir le matériel nécessaire",
-  IdEmploye: "Camille Martin",
+  DebutPlanningEvenement: new Date(2026, 8, 7, 9, 0).getTime(),
+  FinPlanningEvenement: new Date(2026, 8, 7, 11, 0).getTime(),
+  IdEmploye: 1,
+  IdPlanningRessource: 1,
   EtapeValidation: "Validé",
-  Etiquette: "Urgent",
+  Etiquette: {
+    IdPlanningEtiquette: 1,
+    LibelleLongPlanningEtiquette: "Urgent",
+  },
+  isLocked: false,
 };
 
-const AppointmentDisplayPreview = ({ fields, secondary = false }: { fields: MobileAppointmentField[]; secondary?: boolean }) => (
-  <div className={`rounded-2xl border p-4 ${secondary ? "bg-secondary-bg" : "bg-card"}`} style={{ borderColor: "var(--border-light)", boxShadow: "var(--shadow-sm)" }}>
-    <div className="flex items-start gap-2">
-      <div className="w-1.5 h-10 rounded-full bg-primary flex-shrink-0" />
-      <div className="min-w-0 flex-1">
-        <div className="font-semibold text-sm truncate text-primary">
-          {previewValues[fields[0]] || "Rendez-vous"}
-        </div>
-        <div className="mt-1 flex flex-col gap-1 text-[11px] text-secondary">
-          {fields.slice(1).map(field => (
-            <div key={field} className="truncate">{previewValues[field]}</div>
-          ))}
-        </div>
-        {secondary && fields.length > 0 && (
-          <div className="mt-2 text-[11px] font-semibold text-primary">Fermer</div>
-        )}
-      </div>
-      {!secondary && fields.length > 0 && (
-        <div className="text-[11px] font-semibold text-primary whitespace-nowrap">Voir plus</div>
-      )}
-    </div>
-  </div>
-);
+const previewItem = {
+  IdPlanningRessource: 1,
+  LibellePlanningRessource: "Maintenance chaudière",
+  CouleurFondPlanningRessource: "#2563eb",
+  CouleurBordurePlanningRessource: "#1d4ed8",
+  CouleurTextePlanningRessource: "#ffffff",
+  CodePlanningRessource: "MAINT-001",
+  Type: "Projet",
+} as Item;
+
+const previewEmployee: User = {
+  IdPersonnel: 1,
+  Nom: "Martin",
+  Prenom: "Camille",
+  PoleActivite: null,
+  Type: "SALARIE",
+  Equipe: null,
+};
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
@@ -120,8 +121,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     
                     {setting.type === "mobile-appointment-fields" ? (
                       <div className="w-full">
-                        <div className="max-h-[38vh] overflow-auto rounded-xl">
-                        <table className="w-full min-w-[500px] border-separate border-spacing-x-2 border-spacing-y-1 text-sm">
+                        {setting.isLoading ? (
+                          <Loader size="md" className="min-h-40 rounded-xl border border-light" message="Chargement..." />
+                        ) : <div className="max-h-[38vh] overflow-auto rounded-xl">
+                        <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-x-2 border-spacing-y-1 text-sm">
+                          <colgroup>
+                            <col className="w-[30%]" />
+                            <col className="w-[35%]" />
+                            <col className="w-[35%]" />
+                          </colgroup>
                           <thead>
                             <tr className="border-b border-light bg-secondary-bg text-left">
                               <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold">Champs</th>
@@ -130,24 +138,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             </tr>
                           </thead>
                           <tbody>
-                            {MOBILE_APPOINTMENT_FIELD_OPTIONS.map(option => {
-                              const primaryChecked = setting.value.primaryFields.includes(option.value);
-                              const secondaryChecked = setting.value.secondaryFields.includes(option.value);
+                            {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
+                              const primaryChecked = setting.value.primaryFields.includes(option.CodeChamp);
+                              const secondaryChecked = setting.value.secondaryFields.includes(option.CodeChamp);
                               const updateFields = (column: "primaryFields" | "secondaryFields", checked: boolean) => {
                                 const current = setting.value[column];
                                 const fields = checked
-                                  ? [...current, option.value]
-                                  : current.filter((field: string) => field !== option.value);
+                                  ? [...current, option.CodeChamp]
+                                  : current.filter((field: string) => field !== option.CodeChamp);
                                 setting.onChange({ ...setting.value, [column]: fields });
                               };
                               return (
-                                <tr key={option.value} className="border-b border-ultra-light">
-                                  <td className="px-3 py-3">{option.label}</td>
+                                <tr key={option.CodeChamp} className="border-b border-ultra-light">
+                                  <td className="px-3 py-3">{option.Libelle}</td>
                                   <td className="px-3 py-3 text-center align-middle">
                                     <button
                                       type="button"
                                       aria-pressed={primaryChecked}
-                                      aria-label={`${option.label} dans l'affichage principal`}
+                                      aria-label={`${option.Libelle} dans l'affichage principal`}
                                       onClick={() => updateFields("primaryFields", !primaryChecked)}
                                       className={`inline-flex cursor-pointer h-7 w-7 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${primaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
                                     >
@@ -160,7 +168,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                     <button
                                       type="button"
                                       aria-pressed={secondaryChecked}
-                                      aria-label={`${option.label} dans l'affichage secondaire`}
+                                      aria-label={`${option.Libelle} dans l'affichage secondaire`}
                                       onClick={() => updateFields("secondaryFields", !secondaryChecked)}
                                       className={`inline-flex cursor-pointer h-7 w-7 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${secondaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
                                     >
@@ -173,23 +181,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               );
                             })}
                           </tbody>
+                          <tfoot>
+                            <tr>
+                              <td className="px-3 pt-5 align-top text-xs font-semibold text-secondary">Prévisualisation</td>
+                              <td className="px-3 pt-5 align-top">      
+                                  <AppointmentCard
+                                    app={previewAppointment}
+                                    items={[previewItem]}
+                                    employees={[previewEmployee]}
+                                    preview
+                                    displayConfig={{
+                                      primaryFields: setting.value.primaryFields,
+                                      secondaryFields: [],
+                                    } as MobileAppointmentDisplayConfig}
+                                  />
+                              </td>
+                              <td className="px-3 pt-5 align-top">
+                                  <AppointmentCard
+                                    app={previewAppointment}
+                                    items={[previewItem]}
+                                    employees={[previewEmployee]}
+                                    preview
+                                    showCard={false}
+                                    displayConfig={{
+                                      primaryFields: [],
+                                      secondaryFields: setting.value.secondaryFields,
+                                    } as MobileAppointmentDisplayConfig}
+                                  />
+                              </td>
+                            </tr>
+                          </tfoot>
                         </table>
                         </div>
-                        <div className="mt-4 border-t border-light pt-4">
-                          <p className="mb-3 text-sm font-semibold text-primary">Aperçu en direct (prévisualisation)</p>
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div className="rounded-xl bg-secondary-bg p-1">
-                            {setting.value.primaryFields.length > 0
-                              ? <AppointmentDisplayPreview fields={setting.value.primaryFields} />
-                              : <div className="p-4 text-xs text-secondary">Aucun champ sélectionné</div>}
-                          </div>
-                          <div className="rounded-xl bg-secondary-bg p-1">
-                            {setting.value.secondaryFields.length > 0
-                              ? <AppointmentDisplayPreview fields={setting.value.secondaryFields} secondary />
-                              : <div className="p-4 text-xs text-secondary">Aucun champ sélectionné</div>}
-                          </div>
-                          </div>
-                        </div>
+                        }
                       </div>
                     ) : setting.type === "select" ? (
                       <select

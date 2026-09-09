@@ -28,6 +28,7 @@ import {
   CalendarHeader,
   CalendarModals,
   DraggableSource,
+  Loader,
 } from '@/app/calendrier/components';
 import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOverlay';
 import { getTableStructure } from '../components/Table/tableConfig';
@@ -64,15 +65,6 @@ import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
 import TopNotification from '../components/ui/TopNotification';
 
-// Composant de chargement réutilisable
-const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
-  <div className="flex items-center justify-center h-full">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-      <p className="text-gray-600">{message}</p>
-    </div>
-  </div>
-);
 
 /**
  * Composant wrapper pour éviter les erreurs d'hydratation Next.js
@@ -664,7 +656,7 @@ export default function HomePage({
         {/* Overlay de loading pendant le centrage initial */}
         {viewState.viewType === 'calendar' && loadCalendar && (
           <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
-            <LoadingFallback message="Chargement du calendrier..." />
+            <Loader message="Chargement du calendrier..." className="h-full" />
           </div>
         )}      
         {lockNotification && (
@@ -753,7 +745,7 @@ export default function HomePage({
                   )
                 ) : (
                   /* VUES TABLEAUX (Chantier, Paie, Employés) */
-                  <Suspense fallback={<LoadingFallback message="Chargement du tableau..." />}>
+                  <Suspense fallback={<Loader message="Chargement du tableau..." />}>
                     <DataTableFrame 
                       categoriesStructure={getTableStructure(
                         viewState.viewType, 
@@ -769,7 +761,7 @@ export default function HomePage({
                       enablePagination={true}
                       paginatedSearchFunction={handlePaginatedSearch}
                       refreshKey={dataLayer.appointmentsVersion}
-                      loadingElement={<LoadingFallback message="Chargement des données..." />}
+                      loadingElement={<Loader message="Chargement des données..." />}
                       showGroupHeaders={viewState.viewType === 'chantier-table'}
                       onRightClick={interaction.handleDataTableContextMenu}
                       heightCell={60}
@@ -915,6 +907,9 @@ export default function HomePage({
               setTagPlacement: viewState.setTagPlacement,
               mobileAppointmentDisplay: viewState.mobileAppointmentDisplay,
               setMobileAppointmentDisplay: viewState.setMobileAppointmentDisplay,
+              mobileAppointmentFieldOptions: viewState.mobileAppointmentFieldOptions,
+              mobileAppointmentSettingsLoading: viewState.mobileAppointmentSettingsLoading,
+              loadMobileAppointmentSettings: viewState.loadMobileAppointmentSettings,
               HALF_DAY_INTERVALS: viewState.constants.intervals,
               isFullDay: viewState.isFullDay,
               isDisplayWeekend: viewState.isDisplayWeekend,

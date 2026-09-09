@@ -168,6 +168,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * Initialisé avec les données existantes ou des valeurs par défaut
    */
   const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(appointment);
+  const [formStartDate, setFormStartDate] = useState(() => new Date(appointment.DebutPlanningEvenement));
+  const [formEndDate, setFormEndDate] = useState(() => new Date(appointment.FinPlanningEvenement));
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);
@@ -218,7 +220,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
                 if (response?.error === 0 && response?.data) {
                   const { appointments, ressources } = response.data;
-                  setFormDataAppointment(appointments[0] ?? appointments);
+                  const loadedAppointment = appointments[0] ?? appointments;
+                  setFormDataAppointment(loadedAppointment);
+                  setFormStartDate(new Date(loadedAppointment.DebutPlanningEvenement));
+                  setFormEndDate(new Date(loadedAppointment.FinPlanningEvenement));
                   setFormDataItemType(ressources[0] ?? ressources);
                 }
               })
@@ -335,7 +340,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     const performAppointmentSave = async (): Promise<void> => {
       if (isSaving) return;
 
-      if (formDataAppointment.DebutPlanningEvenement >= formDataAppointment.FinPlanningEvenement) {
+      if (formStartDate >= formEndDate) {
         setDateValidationError(true);
         return;
       }
@@ -346,7 +351,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
       try {
         const result = await onSave(
-          formDataAppointment,
+          {
+            ...formDataAppointment,
+            DebutPlanningEvenement: formStartDate.getTime(),
+            FinPlanningEvenement: formEndDate.getTime(),
+          },
           formDataItemType,
           includeAllNonWorkingDays,
           formDataAppointment.IdPlanningEvenement <= 0 ? 'create' : 'update'
@@ -454,9 +463,16 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       setDateValidationError(false);
     }
 
-    setFormDataAppointment(prev => ({ 
-      ...prev, 
-      [dateType === 'start' ? 'DebutPlanningEvenement' : 'FinPlanningEvenement']: newDate 
+    const date = new Date(newDate);
+
+    if (dateType === 'start') {
+      setFormStartDate(date);
+    } else {
+      setFormEndDate(date);
+    }
+    setFormDataAppointment(prev => ({
+      ...prev,
+      [dateType === 'start' ? 'DebutPlanningEvenement' : 'FinPlanningEvenement']: date.getTime(),
     }));
   };
 
@@ -742,8 +758,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             <>
               {/* DateTimeSelector - Dates et créneaux */}
               <DateTimeSelector
-                startDate={formDataAppointment.DebutPlanningEvenement}
-                endDate={formDataAppointment.FinPlanningEvenement}
+                startDate={formStartDate.getTime()}
+                endDate={formEndDate.getTime()}
                 onDateChange={handleDateChange}
                 intervals={timeIntervals}
                 isFullDay={isFullDay}

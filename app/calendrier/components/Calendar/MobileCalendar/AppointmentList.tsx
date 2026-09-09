@@ -12,17 +12,19 @@ interface AppointmentListProps {
   displayConfig: MobileAppointmentDisplayConfig;
 }
 
-const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employees: User[], displayConfig: MobileAppointmentDisplayConfig }> = ({ app, items, employees, displayConfig }) => {
+export const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employees: User[], displayConfig: MobileAppointmentDisplayConfig; preview?: boolean; showCard?: boolean }> = ({ app, items, employees, displayConfig, preview = false, showCard = true }) => {
   const [isSecondaryOpen, setIsSecondaryOpen] = useState(false);
   const item = items.find(i => i.IdPlanningRessource === app.IdPlanningRessource);
   const employee = employees.find(e => e.IdPersonnel === app.IdEmploye);
-  const formatDate = (value: number) => format(new Date(value), 'dd/MM/yyyy HH:mm', { locale: fr });
+  const startDate = new Date(app.DebutPlanningEvenement);
+  const endDate = new Date(app.FinPlanningEvenement);
+  const formatDate = (value: Date) => format(value, 'dd/MM/yyyy HH:mm', { locale: fr });
   const getFieldValue = (field: MobileAppointmentField): string => {
     switch (field) {
       case 'LibellePlanningRessource': return item?.LibellePlanningRessource || 'Rendez-vous';
       case 'Type': return item?.Type || '';
-      case 'DebutPlanningEvenement': return formatDate(app.DebutPlanningEvenement);
-      case 'FinPlanningEvenement': return formatDate(app.FinPlanningEvenement);
+      case 'DebutPlanningEvenement': return formatDate(startDate);
+      case 'FinPlanningEvenement': return formatDate(endDate);
       case 'AnnotationPlanningEvenement': return app.AnnotationPlanningEvenement || '';
       case 'IdEmploye': return employee ? `${employee.Nom} ${employee.Prenom}`.trim() : '';
       case 'EtapeValidation': return app.EtapeValidation || '';
@@ -38,8 +40,8 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employees: Us
   
   return (
     <>
-      <div 
-        className="rounded-3xl p-5 mb-4 border flex items-start group transition-all duration-300"
+      {showCard && <div 
+        className={`${preview ? 'rounded-xl p-3 mb-0' : 'rounded-3xl p-5 mb-4'} border flex items-start group transition-all duration-300`}
         style={{
           backgroundColor: 'var(--bg-card)',
           boxShadow: 'var(--shadow-sm)',
@@ -58,7 +60,7 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employees: Us
         ></div>
         <div className="flex-1">
           <h3 
-            className="font-semibold text-base mb-1 transition-colors"
+            className={`${preview ? 'text-sm' : 'text-base'} font-semibold mb-1 transition-colors`}
             style={{ color: 'var(--text-primary)' }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = 'var(--color-primary-500)';
@@ -70,13 +72,13 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employees: Us
             {titleField?.value || 'Rendez-vous'}
           </h3>
           <div className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-            {primaryFields.map(({ field, value }) => (
+            {primaryFields.slice(1).map(({ field, value }) => (
               <div key={field} className="flex items-center gap-1">
                 <span>{value}</span>
               </div>
             ))}
           </div>
-          {secondaryFields.length > 0 && (
+          {secondaryFields.length > 0 && !preview && (
             <button
               type="button"
               className="mt-3 text-xs font-semibold text-primary underline underline-offset-2"
@@ -86,26 +88,26 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employees: Us
             </button>
           )}
         </div>
-      </div>
-      {isSecondaryOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end" role="dialog" aria-modal="true" aria-label="Détails du rendez-vous">
-          <button
+      </div>}
+      {(isSecondaryOpen || preview) && secondaryFields.length > 0 && (
+        <div className={preview ? "w-full" : "fixed inset-0 z-[60] flex items-end"} role={preview ? undefined : "dialog"} aria-modal={!preview} aria-label="Détails du rendez-vous">
+          {!preview && <button
             type="button"
             className="absolute inset-0 bg-black/40"
             aria-label="Fermer les détails"
             onClick={() => setIsSecondaryOpen(false)}
-          />
-          <div className="relative w-full rounded-t-[2rem] bg-secondary-bg p-5 shadow-2xl animate-in slide-in-from-bottom-full duration-300">
-            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-secondary" />
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-primary">Détails du rendez-vous</h2>
-              <button type="button" className="text-sm font-semibold text-primary" onClick={() => setIsSecondaryOpen(false)}>
+          />}
+          <div className={preview ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3" : "relative w-full rounded-t-[2rem] bg-secondary-bg p-5 shadow-2xl animate-in slide-in-from-bottom-full duration-300"}>
+            {!preview && <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-secondary" />}
+            <div className={`flex items-center justify-between ${preview ? 'mb-2' : 'mb-5'}`}>
+              <h2 className={`${preview ? 'text-sm' : 'text-lg'} font-bold text-primary`}>Détails du rendez-vous</h2>
+              {!preview && <button type="button" className="text-sm font-semibold text-primary" onClick={() => setIsSecondaryOpen(false)}>
                 Fermer
-              </button>
+              </button>}
             </div>
-            <div className="max-h-[65vh] overflow-y-auto flex flex-col gap-3">
+            <div className={`${preview ? 'gap-1' : 'max-h-[65vh] overflow-y-auto gap-3'} flex flex-col`}>
               {secondaryFields.map(({ field, value }) => (
-                <div key={field} className="flex flex-col gap-1 rounded-xl border border-ultra-light p-3">
+                <div key={field} className={`${preview ? 'rounded-lg p-2' : 'rounded-xl p-3'} flex flex-col gap-1 border border-ultra-light`}>
                   <span className="text-xs text-secondary">
                     {field === 'LibellePlanningRessource' ? 'Libellé de la rubrique' :
                       field === 'Type' ? 'Type de ressource' :
@@ -115,7 +117,7 @@ const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employees: Us
                       field === 'IdEmploye' ? 'Employé du rendez-vous' :
                       field === 'EtapeValidation' ? 'Étape de validation' : 'Étiquette du rendez-vous'}
                   </span>
-                  <span className="text-sm text-primary">{value}</span>
+                  <span className={`${preview ? 'text-xs' : 'text-sm'} text-primary`}>{value}</span>
                 </div>
               ))}
             </div>
@@ -141,8 +143,9 @@ export const AppointmentList: React.FC<AppointmentListProps> = memo(({ appointme
     const appStart = new Date(app.DebutPlanningEvenement);
     const appEnd = new Date(app.FinPlanningEvenement);
     
-    // Check if appointment intersects with this day
-    if (appEnd < startOfDay || appStart > endOfDay) {
+    // The end is exclusive: an appointment ending at midnight does not belong
+    // to the day that starts at that same midnight.
+    if (appEnd.getTime() <= startOfDay.getTime() || appStart.getTime() > endOfDay.getTime()) {
       return null; // Not on this day
     }
     

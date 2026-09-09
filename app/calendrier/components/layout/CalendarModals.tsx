@@ -5,7 +5,8 @@ import {
   ImageSelectorContentModal,
   Modal, 
 } from '@/app/calendrier/components';
-import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MOBILE_APPOINTMENT_FIELD_OPTIONS } from '../../types';
+import Loader from '../ui/Loader';
+import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MobileAppointmentField } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
@@ -23,11 +24,7 @@ const FilterModal = lazy(() => import('../modals/FilterModal'));
 const DeleteModal = lazy(() => import('../modals/DeleteModal'));
 
 // Composant de fallback pour le chargement
-const ModalLoadingFallback = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-  </div>
-);
+const ModalLoadingFallback = () => <Loader className="p-8" />;
 
 interface CalendarModalsProps {
   user: User;
@@ -118,6 +115,9 @@ interface CalendarModalsProps {
     setTagPlacement: (v: 'hover' | 'fixed') => void;
     mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
     setMobileAppointmentDisplay: (v: MobileAppointmentDisplayConfig) => void;
+    mobileAppointmentFieldOptions: Array<{ CodeChamp: MobileAppointmentField; Libelle: string }>;
+    mobileAppointmentSettingsLoading: boolean;
+    loadMobileAppointmentSettings: () => Promise<void>;
     
     // Constants
     HALF_DAY_INTERVALS: any[];
@@ -174,6 +174,12 @@ export const CalendarModals = memo(({
     }
   }, [modalsState.repeatData, modalsState.extendData]);
 
+  useEffect(() => {
+    if (modalsState.isSettingsOpen) {
+      void config.loadMobileAppointmentSettings();
+    }
+  }, [modalsState.isSettingsOpen, config.loadMobileAppointmentSettings]);
+
   const settings = useMemo(() => [
     ...(hasPermission(23) ? [
       {
@@ -199,7 +205,8 @@ export const CalendarModals = memo(({
           type: "mobile-appointment-fields",
           value: config.mobileAppointmentDisplay,
           onChange: config.setMobileAppointmentDisplay,
-          options: MOBILE_APPOINTMENT_FIELD_OPTIONS
+          options: config.mobileAppointmentFieldOptions,
+          isLoading: config.mobileAppointmentSettingsLoading
         }
       ]
     }] : []),
@@ -219,7 +226,7 @@ export const CalendarModals = memo(({
         }
       ]
     }
-  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, config.mobileAppointmentDisplay, config.setMobileAppointmentDisplay, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
+  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, config.mobileAppointmentDisplay, config.setMobileAppointmentDisplay, config.mobileAppointmentFieldOptions, config.mobileAppointmentSettingsLoading, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
 
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;

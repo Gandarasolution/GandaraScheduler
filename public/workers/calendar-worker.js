@@ -58,7 +58,7 @@ function filterDailyAppointments(appointments, selectedDate) {
   const dayEndTime = dayEnd.getTime();
   
   return appointments.filter(app => 
-    app.DebutPlanningEvenement <= dayEndTime && app.FinPlanningEvenement >= dayStartTime
+    app.DebutPlanningEvenement <= dayEndTime && app.FinPlanningEvenement > dayStartTime
   );
 }
 

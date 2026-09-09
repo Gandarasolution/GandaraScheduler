@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import Loader from '@/app/calendrier/components/ui/Loader';
 
 export type SelectionOption = {
   id: number;
@@ -71,9 +72,7 @@ export default function SelectionScreen({
 
         {/* Loader ou Liste */}
         {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-primary"></div>
-          </div>
+          <Loader size="lg" className="py-8" />
         ) : (
           <div className="space-y-3">
             {options.map((option) => (

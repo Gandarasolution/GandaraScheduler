@@ -201,7 +201,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       const selectedDayEnd = new Date(selectedDate).setHours(23, 59, 59, 999);
       
       const filtered = monthlyAppointments.filter(app => 
-        app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement >= selectedDayStart
+        app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement > selectedDayStart
       );
       
       setSelectedDayAppointments(filtered);
