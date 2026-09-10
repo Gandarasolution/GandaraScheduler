@@ -1,6 +1,6 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useRef, useState } from 'react';
 import { Appointment, Item, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from '../../../types/index';
-import { Clock } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -14,6 +14,8 @@ interface AppointmentListProps {
 
 export const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employees: User[], displayConfig: MobileAppointmentDisplayConfig; preview?: boolean; showCard?: boolean }> = ({ app, items, employees, displayConfig, preview = false, showCard = true }) => {
   const [isSecondaryOpen, setIsSecondaryOpen] = useState(false);
+  const [drawerOffset, setDrawerOffset] = useState(0);
+  const touchStartY = useRef<number | null>(null);
   const item = items.find(i => i.IdPlanningRessource === app.IdPlanningRessource);
   const employee = employees.find(e => e.IdPersonnel === app.IdEmploye);
   const startDate = new Date(app.DebutPlanningEvenement);
@@ -29,18 +31,41 @@ export const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employ
       case 'IdEmploye': return employee ? `${employee.Nom} ${employee.Prenom}`.trim() : '';
       case 'EtapeValidation': return app.EtapeValidation || '';
       case 'Etiquette': return app.Etiquette?.LibelleLongPlanningEtiquette || '';
+      case 'ChefChantier': return item?.Type === 'Projet' ? item.ChefChantier || '' : '';
+      case 'ChargeAffaire': return item?.Type === 'Projet' ? item.ChargeAffaire || '' : '';
     }
   };
   const getFields = (fields: MobileAppointmentField[]) => fields
     .map(field => ({ field, value: getFieldValue(field) }))
     .filter(({ value }) => value);
+
+   
   const primaryFields = getFields(displayConfig.primaryFields);
   const secondaryFields = getFields(displayConfig.secondaryFields);
   const titleField = primaryFields[0] || secondaryFields[0];
+  const canRenderCard = showCard && (!preview || primaryFields.length > 0);
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLButtonElement>) => {
+    touchStartY.current = event.touches[0]?.clientY ?? null;
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLButtonElement>) => {
+    if (touchStartY.current === null) return;
+    const distance = event.touches[0]?.clientY - touchStartY.current;
+    if (distance > 0) setDrawerOffset(Math.min(distance, 180));
+  };
+
+  const handleTouchEnd = () => {
+    if (drawerOffset > 80) {
+      setIsSecondaryOpen(false);
+    }
+    setDrawerOffset(0);
+    touchStartY.current = null;
+  };
   
   return (
     <>
-      {showCard && <div 
+      {canRenderCard && <div 
         className={`${preview ? 'rounded-xl p-3 mb-0' : 'rounded-3xl p-5 mb-4'} border flex items-start group transition-all duration-300`}
         style={{
           backgroundColor: 'var(--bg-card)',
@@ -97,13 +122,22 @@ export const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employ
             aria-label="Fermer les détails"
             onClick={() => setIsSecondaryOpen(false)}
           />}
-          <div className={preview ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3" : "relative w-full rounded-t-[2rem] bg-secondary-bg p-5 shadow-2xl animate-in slide-in-from-bottom-full duration-300"}>
-            {!preview && <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-secondary" />}
+          <div
+            className={preview ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3" : "relative w-full rounded-t-[2rem] bg-secondary-bg p-5 shadow-2xl animate-in slide-in-from-bottom-full duration-300"}
+            style={!preview ? { transform: `translateY(${drawerOffset}px)`, transition: drawerOffset ? 'none' : 'transform 180ms ease-out' } : undefined}
+          >
+            {!preview && <button
+              type="button"
+              className="-mx-5 -mt-5 mb-3 flex h-7 w-[calc(100%+2.5rem)] touch-none cursor-grab items-start justify-center rounded-t-[2rem] focus:outline-none focus:ring-2 focus:ring-primary active:cursor-grabbing"
+              aria-label="Glisser vers le bas pour fermer"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <span className="mt-2 block h-1 w-10 rounded-full bg-gray-300" aria-hidden="true" />
+            </button>}
             <div className={`flex items-center justify-between ${preview ? 'mb-2' : 'mb-5'}`}>
               <h2 className={`${preview ? 'text-sm' : 'text-lg'} font-bold text-primary`}>Détails du rendez-vous</h2>
-              {!preview && <button type="button" className="text-sm font-semibold text-primary" onClick={() => setIsSecondaryOpen(false)}>
-                Fermer
-              </button>}
             </div>
             <div className={`${preview ? 'gap-1' : 'max-h-[65vh] overflow-y-auto gap-3'} flex flex-col`}>
               {secondaryFields.map(({ field, value }) => (
@@ -115,7 +149,10 @@ export const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employ
                       field === 'FinPlanningEvenement' ? 'Date et heure de fin' :
                       field === 'AnnotationPlanningEvenement' ? 'Annotation du rendez-vous' :
                       field === 'IdEmploye' ? 'Employé du rendez-vous' :
-                      field === 'EtapeValidation' ? 'Étape de validation' : 'Étiquette du rendez-vous'}
+                      field === 'EtapeValidation' ? 'Étape de validation' :
+                      field === 'ChefChantier' ? 'Chef de chantier' : 
+                      field === 'ChargeAffaire' ? 'Chargé d\'affaire' : field
+                    }
                   </span>
                   <span className={`${preview ? 'text-xs' : 'text-sm'} text-primary`}>{value}</span>
                 </div>

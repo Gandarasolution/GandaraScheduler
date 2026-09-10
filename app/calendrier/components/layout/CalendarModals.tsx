@@ -24,7 +24,11 @@ const FilterModal = lazy(() => import('../modals/FilterModal'));
 const DeleteModal = lazy(() => import('../modals/DeleteModal'));
 
 // Composant de fallback pour le chargement
-const ModalLoadingFallback = () => <Loader className="p-8" />;
+const ModalLoadingFallback = () => (
+  <div className="flex min-h-[320px] w-full items-center justify-center rounded-xl bg-secondary-bg">
+    <Loader size="lg" message="Chargement en cours..." />
+  </div>
+);
 
 interface CalendarModalsProps {
   user: User;
@@ -197,7 +201,7 @@ export const CalendarModals = memo(({
       ]
     },
     {
-      category: "Affichage mobile des rendez-vous",
+      category: "Affichage mobile des événements",
       items: [
         {
           id: "mobileAppointmentFields",
@@ -240,7 +244,11 @@ export const CalendarModals = memo(({
     if (modalsState.extendData) return "Prolonger le rendez-vous";
     if (modalsState.selectedAppointmentForm) {
         if (resourceEditMode === 'createRessource') return "Création de la ressource";
-        if (resourceEditMode === 'editRessource') return `Modification de la ressource - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource}`;
+        if (resourceEditMode === 'editRessource') 
+          return `Modification de la ressource ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.Type === 'Projet' 
+            ? ` - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource}` 
+            : '' 
+          }`;
         return `Modifier l'Évènement - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource || 'Ressource inconnue'}`;
     }
     return "Ajouter un rendez-vous";
@@ -315,6 +323,7 @@ export const CalendarModals = memo(({
         ) : (
           /* CAS 3: Formulaire de RDV */
           <AppointmentForm
+            key={`${resourceEditMode ?? 'new'}-${modalsState.selectedAppointmentForm?.IdPlanningEvenement ?? 'empty'}-${modalsState.selectedAppointmentForm?.IdPlanningRessource ?? 'empty'}`}
             appointments={data.appointments}
             tagPlacement={modalsState.tagPlacement}
             appointment={modalsState.selectedAppointmentForm as Appointment}

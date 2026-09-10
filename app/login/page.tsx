@@ -67,7 +67,7 @@ export default function LoginPage({ login }: LoginPageProps) {
   }, []);
 
   // 2. Appel à l'API Gandara pour récupérer la bonne URL
-  const resolveCompanyCode = async (code: string) => {
+  const resolveCompanyCode = async (code: string): Promise<boolean> => {
     setLoading(true);
     setError('');
     
@@ -98,32 +98,41 @@ export default function LoginPage({ login }: LoginPageProps) {
       }
 
       setNeedsCompanyCode(false);
+      return true;
     } catch (err: any) {
       setError(err.message || "Impossible de résoudre l'environnement.");
       Cookies.remove('client_api_url');
       Cookies.remove('client_mercure_url');
       Cookies.remove('client_logo_url');
       setNeedsCompanyCode(true);
+      return false;
     } finally {
       setLoading(false);
       setIsInitializing(false);
     }
   };
 
-  // 3. Soumission du formulaire "Code Entreprise" (Manuel)
-  const handleCompanySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!companyCode.trim()) return;
-    await resolveCompanyCode(companyCode.trim());
-  };
-
-  // 4. Soumission du formulaire de Login final
+  // Soumission du formulaire de login et résolution éventuelle de l'environnement
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      if (needsCompanyCode) {
+        if (!companyCode.trim()) {
+          setError("Saisissez le code entreprise.");
+          setLoading(false);
+          return;
+        }
+
+        const environmentResolved = await resolveCompanyCode(companyCode.trim());
+        if (!environmentResolved) {
+          setLoading(false);
+          return;
+        }
+      }
+
       const result = await login(formData.login, formData.password);
       if (!result.success) {
         setError(result.message || 'Échec de la connexion');
@@ -141,15 +150,15 @@ export default function LoginPage({ login }: LoginPageProps) {
   // ÉCRAN DE CHARGEMENT INITIAL (Pour éviter le clignotement)
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-ultra-light via-white to-primary-lighter">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-ultra-light via-white to-primary-lighter px-4 py-6 sm:px-6">
-      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-md border border-light transition-all duration-300">
+    <div className="min-h-screen flex items-center justify-center px-4 py-6 sm:px-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="p-6 sm:p-8 rounded-2xl shadow-md w-full max-w-md border border-light transition-all duration-300" style={{ backgroundColor: 'var(--bg-card)' }}>
         
         {/* Logo et Titre */}
         <div className="text-center mb-8">
@@ -171,45 +180,27 @@ export default function LoginPage({ login }: LoginPageProps) {
           </div>
         )}
 
-        {/* CONDITION : Affiche soit la demande de code, soit le login */}
-        {needsCompanyCode ? (
-          /* FORMULAIRE 1 : CODE ENTREPRISE */
-          <form onSubmit={handleCompanySubmit} className="space-y-4 sm:space-y-5">
-            <div>
-              <label htmlFor="companyCode" className="block text-sm font-medium text-primary mb-2 poppins">
-                Code Entreprise
-              </label>
-              <input
-                id="companyCode"
-                type="text"
-                value={companyCode}
-                onChange={(e) => setCompanyCode(e.target.value)}
-                required
-                placeholder="Ex: gandara-dev"
-                className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
-              />
-              <p className="text-xs text-gray-400 mt-2 poppins">
-                Entrez le code fourni par votre administrateur pour accéder à votre environnement.
-              </p>
-            </div>
-            <button
-              type="submit"
-              disabled={loading || !companyCode.trim()}
-              className="w-full min-h-12 bg-primary hover:bg-primary-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg poppins flex justify-center items-center"
-            >
-              {loading ? (
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : (
-                'Continuer'
-              )}
-            </button>
-          </form>
-        ) : (
-          /* FORMULAIRE 2 : CONNEXION (Existant) */
-          <form onSubmit={handleLoginSubmit} className="space-y-4 sm:space-y-5">
+        <form onSubmit={handleLoginSubmit} className="space-y-4 sm:space-y-5">
+            {needsCompanyCode && (
+              <div>
+                <label htmlFor="companyCode" className="block text-sm font-medium text-primary mb-2 poppins">
+                  Code Entreprise
+                </label>
+                <input
+                  id="companyCode"
+                  type="text"
+                  value={companyCode}
+                  onChange={(e) => setCompanyCode(e.target.value)}
+                  required
+                  placeholder="Ex: gandara-dev"
+                  className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
+                  style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                />
+                <p className="text-xs text-tertiary mt-2 poppins">
+                  Entrez le code fourni par votre administrateur pour accéder à votre environnement.
+                </p>
+              </div>
+            )}
             <div>
               <label htmlFor="login" className="block text-sm font-medium text-primary mb-2 poppins">
                 Identifiant
@@ -222,6 +213,7 @@ export default function LoginPage({ login }: LoginPageProps) {
                 required
                 placeholder="Votre identifiant"
                 className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
+                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
               />
             </div>
 
@@ -237,6 +229,7 @@ export default function LoginPage({ login }: LoginPageProps) {
                 required
                 placeholder="••••••••"
                 className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
+                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
               />
             </div>
 
@@ -258,7 +251,6 @@ export default function LoginPage({ login }: LoginPageProps) {
               )}
             </button>
             
-            {/* Petit bouton pour changer d'environnement si besoin */}
             <div className="text-center mt-4">
               <button 
                 type="button" 
@@ -274,8 +266,7 @@ export default function LoginPage({ login }: LoginPageProps) {
                 Changer d'espace de travail
               </button>
             </div>
-          </form>
-        )}
+        </form>
       </div>
     </div>
   );

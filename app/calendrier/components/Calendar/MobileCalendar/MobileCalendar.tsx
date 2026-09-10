@@ -416,7 +416,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 style={{ borderWidth: '1px', borderColor: 'var(--border-light)' }}
               >
                 <img
-                  src={user.Image?.image || '/default-avatar.png'}
+                  src={user.Image?.image || `https://placehold.co/32x32/cccccc/333333?text=${user.Nom.charAt(0)}`}
                   alt="Avatar"
                   className="w-8 h-8 object-cover"
                 />

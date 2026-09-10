@@ -34,6 +34,8 @@ const previewItem = {
   CouleurTextePlanningRessource: "#ffffff",
   CodePlanningRessource: "MAINT-001",
   Type: "Projet",
+  ChefChantier : "Dupont Jean",
+  ChargeAffaire : "Durand Marie",
 } as Item;
 
 const previewEmployee: User = {
@@ -123,18 +125,88 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="w-full">
                         {setting.isLoading ? (
                           <Loader size="md" className="min-h-40 rounded-xl border border-light" message="Chargement..." />
-                        ) : <div className="max-h-[38vh] overflow-auto rounded-xl">
-                        <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-x-2 border-spacing-y-1 text-sm">
+                        ) : <div className="max-h-[55vh] overflow-auto rounded-xl">
+                        <div className="space-y-3 md:hidden">
+                          <div className="rounded-xl border border-light bg-secondary p-3 text-xs text-secondary">
+                            Activez les champs à afficher dans la carte mobile. Les informations secondaires apparaîtront dans le panneau « Voir plus ».
+                          </div>
+                          {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
+                            const primaryChecked = setting.value.primaryFields.includes(option.CodeChamp);
+                            const secondaryChecked = setting.value.secondaryFields.includes(option.CodeChamp);
+                            const updateFields = (column: "primaryFields" | "secondaryFields", checked: boolean) => {
+                              const current = setting.value[column];
+                              const fields = checked
+                                ? [...current, option.CodeChamp]
+                                : current.filter((field: string) => field !== option.CodeChamp);
+                              setting.onChange({ ...setting.value, [column]: fields });
+                            };
+                            return (
+                              <div key={option.CodeChamp} className="rounded-xl border border-ultra-light bg-secondary-bg p-3">
+                                <p className="mb-3 text-sm font-semibold text-primary">{option.Libelle}</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {([["primaryFields", "Principale", primaryChecked], ["secondaryFields", "Secondaire", secondaryChecked]] as const).map(([column, label, checked]) => (
+                                    <button
+                                      key={column}
+                                      type="button"
+                                      aria-pressed={checked}
+                                      onClick={() => updateFields(column, !checked)}
+                                      className={`flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${checked ? "border-primary bg-primary text-white" : "border-light bg-secondary text-secondary"}`}
+                                    >
+                                      <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${checked ? "border-white" : "border-secondary"}`} aria-hidden="true">
+                                        {checked ? "✓" : ""}
+                                      </span>
+                                      {label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="rounded-xl border-t-2 border-primary bg-secondary-bg p-3">
+                            <div className="mb-3 flex items-center gap-3">
+                              <p className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</p>
+                              <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
+                            </div>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <div className="min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
+                                <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
+                                <div className="min-h-24">
+                                  <AppointmentCard
+                                    app={previewAppointment}
+                                    items={[previewItem]}
+                                    employees={[previewEmployee]}
+                                    preview
+                                    displayConfig={{ primaryFields: setting.value.primaryFields, secondaryFields: [] } as MobileAppointmentDisplayConfig}
+                                  />
+                                </div>
+                              </div>
+                              <div className="min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
+                                <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
+                                <div className="min-h-24">
+                                  <AppointmentCard
+                                    app={previewAppointment}
+                                    items={[previewItem]}
+                                    employees={[previewEmployee]}
+                                    preview
+                                    showCard={false}
+                                    displayConfig={{ primaryFields: [], secondaryFields: setting.value.secondaryFields } as MobileAppointmentDisplayConfig}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <table className="hidden w-full min-w-[720px] table-fixed border-separate border-spacing-y-1 text-sm md:table">
                           <colgroup>
                             <col className="w-[30%]" />
                             <col className="w-[35%]" />
                             <col className="w-[35%]" />
                           </colgroup>
-                          <thead>
-                            <tr className="border-b border-light bg-secondary-bg text-left">
+                          <thead className="border-t-4 border-primary">
+                            <tr className="border-b-2 border-light bg-secondary-bg text-left">
                               <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold">Champs</th>
-                              <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold text-center">Principale</th>
-                              <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold text-center">Secondaire</th>
+                              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Principale</th>
+                              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Secondaire</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -151,31 +223,63 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               return (
                                 <tr key={option.CodeChamp} className="border-b border-ultra-light">
                                   <td className="px-3 py-3">{option.Libelle}</td>
-                                  <td className="px-3 py-3 text-center align-middle">
+                                  <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
+                                    <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
                                     <button
+                                      className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${primaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
                                       type="button"
                                       aria-pressed={primaryChecked}
                                       aria-label={`${option.Libelle} dans l'affichage principal`}
                                       onClick={() => updateFields("primaryFields", !primaryChecked)}
-                                      className={`inline-flex cursor-pointer h-7 w-7 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${primaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
                                     >
-                                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
-                                        <path d="M6 6l12 12M18 6L6 18" />
+                                      <svg
+                                        className="h-4 w-4"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        aria-hidden="true"
+                                      >
+                                        <path d="M5 12l4 4L19 6" />
                                       </svg>
                                     </button>
+                                    {primaryChecked ? (
+                                      <span className="whitespace-nowrap">Affiché</span>
+                                    ) : (
+                                      <span className="whitespace-nowrap">Masqué</span>
+                                    )}
+                                    </div>
                                   </td>
-                                  <td className="px-3 py-3 text-center align-middle">
+                                  <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
+                                    <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
                                     <button
+                                      className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${secondaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
                                       type="button"
                                       aria-pressed={secondaryChecked}
                                       aria-label={`${option.Libelle} dans l'affichage secondaire`}
                                       onClick={() => updateFields("secondaryFields", !secondaryChecked)}
-                                      className={`inline-flex cursor-pointer h-7 w-7 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${secondaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
                                     >
-                                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
-                                        <path d="M6 6l12 12M18 6L6 18" />
+                                      <svg
+                                        className="h-4 w-4"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        aria-hidden="true"
+                                      >
+                                        <path d="M5 12l4 4L19 6" />
                                       </svg>
                                     </button>
+                                    {secondaryChecked ? (
+                                      <span className="whitespace-nowrap">Affiché</span>
+                                    ) : (
+                                      <span className="whitespace-nowrap">Masqué</span>
+                                    )}
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -183,31 +287,44 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           </tbody>
                           <tfoot>
                             <tr>
-                              <td className="px-3 pt-5 align-top text-xs font-semibold text-secondary">Prévisualisation</td>
-                              <td className="px-3 pt-5 align-top">      
-                                  <AppointmentCard
-                                    app={previewAppointment}
-                                    items={[previewItem]}
-                                    employees={[previewEmployee]}
-                                    preview
-                                    displayConfig={{
-                                      primaryFields: setting.value.primaryFields,
-                                      secondaryFields: [],
-                                    } as MobileAppointmentDisplayConfig}
-                                  />
+                              <td colSpan={3} className="border-t-2 border-light px-3 pt-5">
+                                <div className="flex items-center gap-3">
+                                  <span className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</span>
+                                  <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
+                                </div>
                               </td>
-                              <td className="px-3 pt-5 align-top">
-                                  <AppointmentCard
-                                    app={previewAppointment}
-                                    items={[previewItem]}
-                                    employees={[previewEmployee]}
-                                    preview
-                                    showCard={false}
-                                    displayConfig={{
-                                      primaryFields: [],
-                                      secondaryFields: setting.value.secondaryFields,
-                                    } as MobileAppointmentDisplayConfig}
-                                  />
+                            </tr>
+                            <tr>
+                              <td colSpan={3} className="px-3 pt-3 align-top">
+                                <div className="grid w-full grid-cols-2 gap-4">
+                                  <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
+                                    <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
+                                    <AppointmentCard
+                                      app={previewAppointment}
+                                      items={[previewItem]}
+                                      employees={[previewEmployee]}
+                                      preview
+                                      displayConfig={{
+                                        primaryFields: setting.value.primaryFields,
+                                        secondaryFields: [],
+                                      } as MobileAppointmentDisplayConfig}
+                                    />
+                                  </div>
+                                  <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
+                                    <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
+                                    <AppointmentCard
+                                      app={previewAppointment}
+                                      items={[previewItem]}
+                                      employees={[previewEmployee]}
+                                      preview
+                                      showCard={false}
+                                      displayConfig={{
+                                        primaryFields: [],
+                                        secondaryFields: setting.value.secondaryFields,
+                                      } as MobileAppointmentDisplayConfig}
+                                    />
+                                  </div>
+                                </div>
                               </td>
                             </tr>
                           </tfoot>

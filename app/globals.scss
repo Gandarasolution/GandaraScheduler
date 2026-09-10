@@ -304,16 +304,16 @@
   // ══════════════════════════════════════════════════════════════════════════
   // COULEURS DE MARQUE (PRIMARY) - Mode Sombre
   // ══════════════════════════════════════════════════════════════════════════
-  --color-primary-50: #e7f4f2;
-  --color-primary-100: #757575;
-  --color-primary-200: #666666;
-  --color-primary-300: #585858;
-  --color-primary-400: #4a4a4a;
+  --color-primary-50: #d9f7f0;
+  --color-primary-100: #b6eee2;
+  --color-primary-200: #82dfcf;
+  --color-primary-300: #4ccbb7;
+  --color-primary-400: #22b39d;
   --color-primary-500: #00b597;       // Vert plus lumineux pour contraste ⭐ BASE
-  --color-primary-600: #009580;
-  --color-primary-700: #008068;
-  --color-primary-800: #006b55;
-  --color-primary-900: #005642;
+  --color-primary-600: #00a187;
+  --color-primary-700: #008f79;
+  --color-primary-800: #007565;
+  --color-primary-900: #00584e;
 
   // ══════════════════════════════════════════════════════════════════════════
   // COULEURS NEUTRES (GRIS) - Mode Sombre (inversées)
@@ -393,9 +393,9 @@
   // COULEURS DE TEXTE - Mode Sombre
   // ══════════════════════════════════════════════════════════════════════════
   --text-primary: #f4f4f5;            // Texte principal (très clair)
-  --text-secondary: #d4d4d8;          // Texte secondaire (clair)
-  --text-tertiary: #a1a1aa;           // Texte tertiaire
-  --text-disabled: #52525b;           // Texte désactivé
+  --text-secondary: #c4c9d4;          // Texte secondaire (clair)
+  --text-tertiary: #969eae;           // Texte tertiaire
+  --text-disabled: #687184;           // Texte désactivé
   --text-inverse: #18181b;            // Texte sur fond clair
   --text-link: #00b597;               // Liens
   --text-link-hover: #00d4ad;         // Liens au survol
@@ -408,56 +408,56 @@
   // ══════════════════════════════════════════════════════════════════════════
   // COULEURS DE FOND - Mode Sombre
   // ══════════════════════════════════════════════════════════════════════════
-  --bg-page: #0a0a0b;                 // Background page principale (noir profond)
-  --bg-primary: #121214;              // Background principal (plus sombre)
-  --bg-secondary: #1a1a1d;            // Background secondaire (plus sombre)
-  --bg-tertiary: #27272a;             // Background tertiaire
-  --bg-quaternary: #3f3f46;           // Background quaternaire
+  --bg-page: #0d1418;                 // Background page principale
+  --bg-primary: #131d23;              // Background principal
+  --bg-secondary: #1b2930;            // Background secondaire
+  --bg-tertiary: #263943;             // Background tertiaire
+  --bg-quaternary: #344b57;           // Background quaternaire
   
   // États interactifs
-  --bg-hover: #232326;                // Background au survol
-  --bg-active: #1a3d38;               // Background élément actif
-  --bg-disabled: #18181b;             // Background désactivé
-  --bg-focus: #1a3d38;                // Background focus
+  --bg-hover: #29404a;                // Background au survol
+  --bg-active: #164d47;               // Background élément actif
+  --bg-disabled: #172229;             // Background désactivé
+  --bg-focus: #164d47;                // Background focus
   
   // Hiérarchie visuelle
-  --bg-card: #161618;                 // Background cartes/modales (plus sombre)
-  --bg-elevated: #1e1e21;             // Background élevé
+  --bg-card: #17232a;                 // Background cartes/modales
+  --bg-elevated: #22333c;             // Background élevé
   --bg-overlay: rgba(0, 0, 0, 0.8);   // Overlay plus sombre
-  --bg-subtle: #141416;               // Background subtil
+  --bg-subtle: #111b21;               // Background subtil
   
   // Backgrounds de notification
   --bg-notification: #1a3d38;         // Background notifications
-  --bg-header-table: #1a1a1d;         // Background en-têtes de tableau (plus sombre)
+  --bg-header-table: #1d2c34;         // Background en-têtes de tableau
   
   // ══════════════════════════════════════════════════════════════════════════
   // COULEURS SPÉCIFIQUES AU CALENDRIER - Mode Sombre
   // ══════════════════════════════════════════════════════════════════════════
-  --calendar-bg-weekend: #181c24;              // Week-end (bleu très foncé)
-  --calendar-bg-holiday: #4a1414;              // Jours fériés (rouge foncé)
-  --calendar-bg-non-working: #1a1a1d;          // Jours non travaillés
-  --calendar-bg-today: #991b1b;                // Aujourd'hui (rouge visible)
-  --calendar-bg-today-hover: #b91c1c;          // Aujourd'hui au survol
-  --calendar-bg-cell-hover: #1f3a35;           // Cellule au survol (plus sombre)
-  --calendar-bg-cell-active: #1a3d38;          // Cellule active
-  --calendar-border: #3f3f46;                  // Bordures du calendrier
+  --calendar-bg-weekend: #182a33;              // Week-end
+  --calendar-bg-holiday: #44252c;              // Jours fériés
+  --calendar-bg-non-working: #202d34;          // Jours non travaillés
+  --calendar-bg-today: #164d47;                // Aujourd'hui
+  --calendar-bg-today-hover: #1d665d;          // Aujourd'hui au survol
+  --calendar-bg-cell-hover: #1b343b;           // Cellule au survol, plus sombre
+  --calendar-bg-cell-active: #155047;          // Cellule active
+  --calendar-border: #47616d;                  // Bordures du calendrier
   --calendar-indicator-filter: invert(0.9) brightness(1.2); // Filtre date picker (clair)
   
   // ══════════════════════════════════════════════════════════════════════════
   // COULEURS DE BORDURES - Mode Sombre (plus claires pour la visibilité)
   // ══════════════════════════════════════════════════════════════════════════
-  --border-50: #27272a;
-  --border-100: #3f3f46;              // Plus clair pour démarcations
-  --border-200: #52525b;              // Plus clair
-  --border-300: #63636d;              // Plus clair
-  --border-400: #7c7c88;              // Plus clair
-  --border-500: #a1a1aa;
-  --border-600: #d4d4d8;
+  --border-50: #24343d;
+  --border-100: #344a55;              // Plus clair pour démarcations
+  --border-200: #47616d;              // Plus clair
+  --border-300: #5c7782;              // Plus clair
+  --border-400: #78929d;              // Plus clair
+  --border-500: #9db2ba;
+  --border-600: #d5e0e3;
   
   // Bordures sémantiques
-  --border-default: #52525b;          // Plus clair pour démarcations visibles
-  --border-light: #3f3f46;            // Plus clair
-  --border-dark: #7c7c88;             // Plus clair
+  --border-default: #47616d;          // Plus clair pour démarcations visibles
+  --border-light: #344a55;            // Plus clair
+  --border-dark: #78929d;             // Plus clair
   --border-focus: #00b597;
   --border-error: #f87171;
   --border-success: #22c55e;

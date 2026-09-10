@@ -209,7 +209,9 @@ export type MobileAppointmentField =
   | 'AnnotationPlanningEvenement'
   | 'IdEmploye'
   | 'EtapeValidation'
-  | 'Etiquette';
+  | 'Etiquette'
+  | 'ChefChantier'
+  | 'ChargeAffaire';
 
 export interface MobileAppointmentDisplayConfig {
   primaryFields: MobileAppointmentField[];

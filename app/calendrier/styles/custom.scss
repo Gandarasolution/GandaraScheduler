@@ -66,9 +66,13 @@
 // ============================================================================
 .calendar-table {
   border-spacing: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--calendar-border);
   
   .calendar-cell {
     position: relative;
+    border-color: var(--calendar-border);
     // Pas de transition pour éviter les lags - changement instantané
     will-change: auto; // Retirer will-change pour réduire la consommation mémoire
   }
