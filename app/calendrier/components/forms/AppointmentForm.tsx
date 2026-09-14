@@ -815,7 +815,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
         {/* Section extensible - Options avancées */}
         {isExpanded && (
-          <div className="w-full lg:w-[650px] p-4 flex flex-col gap-6 animate-in slide-in-from-right text-primary duration-300 lg:border-l border-light mt-4 lg:mt-0">
+          <div className="w-full lg:w-[500px] p-4 flex flex-col gap-6 animate-in slide-in-from-right text-primary duration-300 lg:border-l border-light mt-4 lg:mt-0">
             
             {/* AnnotationsField - Zone de texte pour annotations */}
             <AnnotationsField

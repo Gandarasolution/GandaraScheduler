@@ -169,19 +169,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    const handleWindowClose = (e: { preventDefault: () => void; }) => {
-      console.log("Fermeture de la fenêtre détectée");
-      logout();
-      e.preventDefault();
-    };
-
 
     const intervalId = window.setInterval(checkLoginCookie, 1000);
-    window.addEventListener('beforeunload', handleWindowClose);
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('beforeunload', handleWindowClose);
-    }
+    return () => window.clearInterval(intervalId);
   }, [logout]);
 
   return (

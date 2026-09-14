@@ -133,12 +133,12 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 key: 'IG',
                 label: 'Informations Générales', 
                 attributes: [
-                    { key: 'Image', label: '', sortable: false , width:50, renderer: (value, item) => imageRendererChantierAndPaie(value, item, deps)},
-                    { key: 'PoleActivite',   label: 'Pôle', type:'string', width:120 },
+                    { key: 'Image', label: '', sortable: false , /*width:50,*/ renderer: (value, item) => imageRendererChantierAndPaie(value, item, deps)},
+                    { key: 'PoleActivite',   label: 'Pôle', type:'string', /*width:120 */},
                     { key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
-                    { key: 'Identifiant',  label: 'Identifiant', type:'string', width:125 },
+                    { key: 'Identifiant',  label: 'Identifiant', type:'string', /*width:125 */},
                     { key: 'LibellePlanningRessource' , label: 'Libellé', type:'string' },
-                    { key: 'Etat', label: 'État', type:'string', width:90, 
+                    { key: 'Etat', label: 'État', type:'string', /*width:90,*/ 
                     renderer:(value: string) => {
                         const statusColors: Record<string, string> = {
                         'En cours': 'bg-green-100 text-green-800',
@@ -157,17 +157,17 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                         );
                     },
                     },
-                    { key: 'ChargeAffaire',  label: 'Chargé d\'Affaires', type:'string', width:140 },
-                    { key: 'ChefChantier',  label: 'Chef de Chantier', type:'string', width:140 },
-                    { key: 'DateOS' , label: 'Date OS', type:'date', width:100 },
-                    { key: 'DateFin', label: 'Date Fin', type:'date', width:100 }
+                    { key: 'ChargeAffaire',  label: 'Chargé d\'Affaires', type:'string', /*width:140 */ },
+                    { key: 'ChefChantier',  label: 'Chef de Chantier', type:'string', /*width:140 */ },
+                    //{ key: 'DateOS' , label: 'Date OS', type:'date', width:100 },
+                    //{ key: 'DateFin', label: 'Date Fin', type:'date', width:100 }
                 ]
             },
             {
                 key: 'analyse',
                 label: 'Analyse Chantier',
                 attributes: [
-                    { key: 'TM',  label: 'Temps Marché', type:'string', width:80, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'TM')},      // Temps Marché
+                    //{ key: 'TM',  label: 'Temps Marché', type:'string', width:80, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'TM')},      // Temps Marché
                     { key: 'HR',  label: 'Heures Réalisées', type:'string' , width:90, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'HR')},       // Heures Réalisées
                     { key: 'SH',  label: 'Solde Heures', type:'string', width:80, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'SH') },       // Solde Heure
                     { key: 'DPF',  label: 'Durée Planifiée', type:'string', width:85, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'DPF') },    // Durée Planifiée

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { authService } from '@/app/service';
+import Loader from '@/app/calendrier/components/ui/Loader';
 
 type LoginPageProps = {
   login: (login: string, password: string) => Promise<{ success: boolean; message?: string }>;
@@ -151,7 +152,7 @@ export default function LoginPage({ login }: LoginPageProps) {
   if (isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
-         <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary"></div>
+         <Loader message="Chargement..." />
       </div>
     );
   }

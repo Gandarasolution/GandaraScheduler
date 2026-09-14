@@ -55,7 +55,7 @@ export interface PermissionsPanelProps {
 
 /**
  * Composant PermissionsPanel
- * Affiche une liste d'utilisateurs avec des boutons radio pour sélectionner un niveau d'accès.
+ * Affiche une liste d'utilisateurs avec un select pour sélectionner un niveau d'accès.
  */
 export function PermissionsPanel({
   usersWithPermission,
@@ -77,9 +77,9 @@ export function PermissionsPanel({
     
     const query = searchQuery.toLowerCase();
     return usersWithPermission.filter(user => 
-      user.NomPersonnel.toLowerCase().includes(query) ||
-      user.PrenomPersonnel.toLowerCase().includes(query) ||
-      (user.Initials && user.Initials.toLowerCase().includes(query))
+      user.NomPersonnel?.toLowerCase().includes(query) ||
+      user.PrenomPersonnel?.toLowerCase().includes(query) ||
+      (user?.Initials && user?.Initials.toLowerCase().includes(query))
     );
   }, [usersWithPermission, searchQuery]);
 
@@ -149,20 +149,9 @@ export function PermissionsPanel({
                   <th className="text-left py-3 px-3 font-semibold text-primary border-b border-default">
                     Utilisateur
                   </th>
-                  {permissions.map(level => (
-                    <th 
-                      key={level.IdDroit}
-                      className="text-center py-3 px-2 font-semibold text-primary border-b border-default"
-                      title={level.Description || ''}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        {level.Icon || (
-                          <div className="w-4 h-4" /> /* Placeholder si pas d'icône */
-                        )}
-                        <span className="text-[10px] font-normal">{level.LibelleDroit}</span>
-                      </div>
-                    </th>
-                  ))}
+                  <th className="text-left py-3 px-3 font-semibold text-primary border-b border-default">
+                    Niveau d'accès
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -183,28 +172,32 @@ export function PermissionsPanel({
                         {user.NomPersonnel} {user.PrenomPersonnel}
                       </div>
                     </td>
-                    {permissions.map(level => {
-                      // Vérifie si l'utilisateur possède CE niveau spécifique
-                      const isChecked = user.IdDroit === level.IdDroit;
-                      return (
-                        <td key={level.IdDroit} className="text-center py-2.5 px-2">
-                          <label className="inline-flex items-center justify-center cursor-pointer w-full h-full">
-                            <input
-                              type="radio"
-                              name={`perm-${user.IdPersonnel}`}
-                              checked={isChecked}
-                              onChange={() => onPermissionChange(user.IdPersonnel, level.IdDroit)}
-                              className="w-4 h-4 cursor-pointer accent-primary"
-                            />
-                          </label>
-                        </td>
-                      );
-                    })}
+                    <td className="py-2.5 px-3">
+                      <select
+                        value={String(user.IdDroit)}
+                        onChange={(event) => {
+                          const selectedPermission = permissions.find(
+                            permission => String(permission.IdDroit) === event.target.value
+                          );
+                          if (selectedPermission) {
+                            onPermissionChange(user.IdPersonnel, selectedPermission.IdDroit);
+                          }
+                        }}
+                        aria-label={`Niveau d'accès pour ${user.NomPersonnel} ${user.PrenomPersonnel}`}
+                        className="w-full min-w-0 rounded-lg border border-default bg-secondary-bg px-3 py-2 text-xs font-medium text-primary shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        {permissions.map(permission => (
+                          <option key={permission.IdDroit} value={String(permission.IdDroit)}>
+                            {permission.LibelleDroit}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                   </tr>
                 ))}
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={permissions.length + 1} className="py-8 text-center text-tertiary">
+                    <td colSpan={2} className="py-8 text-center text-tertiary">
                       <div className="flex flex-col items-center gap-2">
                         <svg className="w-8 h-8 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"/>

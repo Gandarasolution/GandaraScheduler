@@ -1,6 +1,6 @@
 import React, { memo, useRef, useState } from 'react';
 import { Appointment, Item, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from '../../../types/index';
-import { Clock, X } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Clock, FileText, Folder, HardHat, MessageSquareText, Tag, UserRound, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -44,6 +44,34 @@ export const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employ
   const secondaryFields = getFields(displayConfig.secondaryFields);
   const titleField = primaryFields[0] || secondaryFields[0];
   const canRenderCard = showCard && (!preview || primaryFields.length > 0);
+
+  const getFieldLabel = (field: MobileAppointmentField) => ({
+    LibellePlanningRessource: 'Rubrique',
+    Type: 'Type de ressource',
+    DebutPlanningEvenement: 'Date et heure de début',
+    FinPlanningEvenement: 'Date et heure de fin',
+    AnnotationPlanningEvenement: 'Annotation',
+    IdEmploye: 'Employé du rendez-vous',
+    EtapeValidation: 'Étape de validation',
+    Etiquette: 'Étiquette du rendez-vous',
+    ChefChantier: 'Chef de chantier',
+    ChargeAffaire: "Chargé d'affaire",
+  }[field] || field);
+
+  const getFieldIcon = (field: MobileAppointmentField) => {
+    const iconProps = { size: 16, strokeWidth: 1.8 };
+    switch (field) {
+      case 'LibellePlanningRessource': return <Folder {...iconProps} />;
+      case 'AnnotationPlanningEvenement': return <MessageSquareText {...iconProps} />;
+      case 'ChargeAffaire': return <UserRound {...iconProps} />;
+      case 'ChefChantier': return <HardHat {...iconProps} />;
+      case 'DebutPlanningEvenement':
+      case 'FinPlanningEvenement': return <CalendarDays {...iconProps} />;
+      case 'EtapeValidation': return <CheckCircle2 {...iconProps} />;
+      case 'Etiquette': return <Tag {...iconProps} />;
+      default: return <FileText {...iconProps} />;
+    }
+  };
 
   const handleTouchStart = (event: React.TouchEvent<HTMLButtonElement>) => {
     touchStartY.current = event.touches[0]?.clientY ?? null;
@@ -123,38 +151,40 @@ export const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employ
             onClick={() => setIsSecondaryOpen(false)}
           />}
           <div
-            className={preview ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3" : "relative w-full rounded-t-[2rem] bg-secondary-bg p-5 shadow-2xl animate-in slide-in-from-bottom-full duration-300"}
+            className={preview ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3" : "relative max-h-[68vh] w-full overflow-hidden rounded-t-[2rem] bg-secondary-bg p-5 shadow-2xl animate-in slide-in-from-bottom-full duration-300"}
             style={!preview ? { transform: `translateY(${drawerOffset}px)`, transition: drawerOffset ? 'none' : 'transform 180ms ease-out' } : undefined}
           >
             {!preview && <button
               type="button"
-              className="-mx-5 -mt-5 mb-3 flex h-7 w-[calc(100%+2.5rem)] touch-none cursor-grab items-start justify-center rounded-t-[2rem] focus:outline-none focus:ring-2 focus:ring-primary active:cursor-grabbing"
+              className="-mx-5 -mt-5 mb-1 flex h-6 w-[calc(100%+2.5rem)] touch-none cursor-grab items-start justify-center rounded-t-[2rem] focus:outline-none focus:ring-2 focus:ring-primary active:cursor-grabbing"
               aria-label="Glisser vers le bas pour fermer"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              <span className="mt-2 block h-1 w-10 rounded-full bg-gray-300" aria-hidden="true" />
+              <span className="mt-1 block h-1 w-10 rounded-full bg-gray-300" aria-hidden="true" />
             </button>}
-            <div className={`flex items-center justify-between ${preview ? 'mb-2' : 'mb-5'}`}>
-              <h2 className={`${preview ? 'text-sm' : 'text-lg'} font-bold text-primary`}>Détails du rendez-vous</h2>
+            <div className={`flex shrink-0 items-center justify-between ${preview ? 'mb-2' : 'mb-5'}`}>
+              <h2 className={`${preview ? 'text-sm' : 'text-[18px]'} font-semibold text-primary`}>Détails du rendez-vous</h2>
+              {!preview && <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-secondary transition-colors hover:bg-tertiary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                aria-label="Fermer les détails"
+                onClick={() => setIsSecondaryOpen(false)}
+              >
+                <X size={18} />
+              </button>}
             </div>
-            <div className={`${preview ? 'gap-1' : 'max-h-[65vh] overflow-y-auto gap-3'} flex flex-col`}>
+            <div className={`${preview ? 'gap-1' : 'max-h-[calc(68vh-92px)] overflow-y-auto pb-4'} flex flex-col`}>
               {secondaryFields.map(({ field, value }) => (
-                <div key={field} className={`${preview ? 'rounded-lg p-2' : 'rounded-xl p-3'} flex flex-col gap-1 border border-ultra-light`}>
-                  <span className="text-xs text-secondary">
-                    {field === 'LibellePlanningRessource' ? 'Libellé de la rubrique' :
-                      field === 'Type' ? 'Type de ressource' :
-                      field === 'DebutPlanningEvenement' ? 'Date et heure de début' :
-                      field === 'FinPlanningEvenement' ? 'Date et heure de fin' :
-                      field === 'AnnotationPlanningEvenement' ? 'Annotation du rendez-vous' :
-                      field === 'IdEmploye' ? 'Employé du rendez-vous' :
-                      field === 'EtapeValidation' ? 'Étape de validation' :
-                      field === 'ChefChantier' ? 'Chef de chantier' : 
-                      field === 'ChargeAffaire' ? 'Chargé d\'affaire' : field
-                    }
-                  </span>
-                  <span className={`${preview ? 'text-xs' : 'text-sm'} text-primary`}>{value}</span>
+                <div key={field} className={`${preview ? 'py-1' : 'py-2'} flex items-start gap-3 border-b border-ultra-light last:border-b-0`}>
+                  <span className="mt-0.5 shrink-0 text-secondary" aria-hidden="true">{getFieldIcon(field)}</span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-[11px] font-semibold uppercase leading-4 tracking-wide text-primary/60">
+                      {getFieldLabel(field)}
+                    </span>
+                    <span className={`${preview ? 'text-xs' : 'text-sm'} mt-0.5 block leading-5 text-primary`}>{value}</span>
+                  </div>
                 </div>
               ))}
             </div>
