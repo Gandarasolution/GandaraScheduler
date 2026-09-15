@@ -44,7 +44,7 @@ const imageRendererChantierAndPaie = (value: any, item: any, deps: TableConfigDe
           chargeeAffaire=''
           source='demo'
           className='cursor-pointer'
-          onDoubleClick={() => {
+          onClick={() => {
             if (deps.ressources) deps.ressources[Number(Item.IdPlanningRessource)] = Item; // Assurer que la ressource est à jour
             const newAppointment: Appointment = {
                 IdPlanningEvenement: 0,
@@ -135,7 +135,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 attributes: [
                     { key: 'Image', label: '', sortable: false , /*width:50,*/ renderer: (value, item) => imageRendererChantierAndPaie(value, item, deps)},
                     { key: 'PoleActivite',   label: 'Pôle', type:'string', /*width:120 */},
-                    { key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
+                    //{ key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
                     { key: 'Identifiant',  label: 'Identifiant', type:'string', /*width:125 */},
                     { key: 'LibellePlanningRessource' , label: 'Libellé', type:'string' },
                     { key: 'Etat', label: 'État', type:'string', /*width:90,*/ 
@@ -150,7 +150,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                         const colorClass = statusColors[value] || 'bg-gray-100 text-gray-800';
                         return (
                         <div className="flex items-center justify-center w-full h-full">
-                            <span className={`inline-flex w-[80px] h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+                            <span className={`inline-flex h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
                             {value}
                             </span>
                         </div>

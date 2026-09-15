@@ -142,14 +142,14 @@ export function PermissionsPanel({
           </div>
 
           {/* Tableau des permissions */}
-          <div className="max-h-[500px] overflow-y-auto border border-default rounded-lg shadow-sm">
+          <div className="max-h-[300px] overflow-y-auto border border-default rounded-lg shadow-sm">
             <table className="w-full text-xs">
               <thead className="bg-primary-bg sticky top-0 z-10 shadow-sm">
                 <tr>
-                  <th className="text-left py-3 px-3 font-semibold text-primary border-b border-default">
+                  <th className="w-1/3 text-left py-3 px-3 font-semibold text-primary border-b border-default">
                     Utilisateur
                   </th>
-                  <th className="text-left py-3 px-3 font-semibold text-primary border-b border-default">
+                  <th className="w-2/3 text-left py-3 px-3 font-semibold text-primary border-b border-default">
                     Niveau d'accès
                   </th>
                 </tr>

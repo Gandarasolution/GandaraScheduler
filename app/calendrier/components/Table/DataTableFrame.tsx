@@ -1259,7 +1259,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                   <div 
                     key={`row-${item.id}`} 
                     // Application de la grille sur la ligne
-                    className="grid transition-colors border-b border-default"
+                    className={`grid transition-colors border-b border-default ${onRowClick ? 'cursor-pointer' : ''}`}
                     style={{
                       ...style,
                       width: `${tableWidth.current}px`,

@@ -248,7 +248,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     top: computedTop,
     // Le conteneur principal devient transparent si c'est un Ghost
     // car les backgrounds sont gérés par les enfants (Ghost Part vs Real Part)
-    backgroundColor: isGhost ? 'transparent' : (isHovered ? 'white' : appointmentColor), 
+    backgroundColor: isGhost ? 'transparent' : (isHovered && source === 'calendar' ? 'white' : appointmentColor), 
     border: isGhost ? 'none' : `2px solid ${appointmentBorderColor}`,
     transition: isDragging ? 'none' : 'box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out, opacity 0.2s ease-in-out transform 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé

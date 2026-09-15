@@ -201,6 +201,29 @@ export default function HomePage({
     viewState.setIsSearchOverlayOpen(true);
   }, [viewState.setIsSearchOverlayOpen]);
 
+  const handleTableRowClick = useCallback((item: any) => {
+    if (viewState.viewType === 'employee-table') return;
+
+    const resourceId = Number(item.IdPlanningRessource);
+    if (!Number.isFinite(resourceId)) return;
+
+    dataLayer.itemsRef.current[resourceId] = {
+      ...item,
+      IdPlanningRessource: resourceId,
+    };
+
+    const now = Date.now();
+    appointmentLogic.handleOpenEditModal({
+      IdPlanningEvenement: 0,
+      AnnotationPlanningEvenement: '',
+      IdPlanningRessource: resourceId,
+      DebutPlanningEvenement: now,
+      FinPlanningEvenement: now,
+      IdEmploye: Number(item.IdEmploye) || 0,
+      isLocked: false,
+    });
+  }, [appointmentLogic.handleOpenEditModal, dataLayer.itemsRef, viewState.viewType]);
+
   const handleSearchOverlayItemAction = useCallback((item: SearchableItem) => {
     if (!appointmentLogic.selectedCell) {
       return;
@@ -763,6 +786,7 @@ export default function HomePage({
                       refreshKey={dataLayer.appointmentsVersion}
                       loadingElement={<Loader message="Chargement des données..." />}
                       showGroupHeaders={viewState.viewType === 'chantier-table'}
+                      onRowClick={handleTableRowClick}
                       onRightClick={interaction.handleDataTableContextMenu}
                       heightCell={60}
                   />

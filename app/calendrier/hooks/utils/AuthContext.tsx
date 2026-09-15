@@ -33,6 +33,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AUTH_STATE_KEY = 'isAuthenticated';
 const SESSION_EXPIRED_KEY = 'session_expired';
+const PAGE_CLOSED_KEY = 'page_closed';
 const LOGIN_COOKIE_NAME = 'is_logged_in';
 const SESSION_EXPIRED_MESSAGE = 'Vous avez été déconnecté à cause de votre inactivité.';
 
@@ -119,7 +120,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (Cookies.get(LOGIN_COOKIE_NAME) !== 'true') {
-        logout('inactive');
+        const pageWasClosed = localStorage.getItem(PAGE_CLOSED_KEY) === 'true';
+        localStorage.removeItem(PAGE_CLOSED_KEY);
+        logout(pageWasClosed ? undefined : 'inactive');
         setIsLoading(false);
         return;
       }
@@ -169,9 +172,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
+    const markPageClosed = () => {
+      localStorage.setItem(PAGE_CLOSED_KEY, 'true');
+    };
+
+    window.addEventListener('pagehide', markPageClosed);
 
     const intervalId = window.setInterval(checkLoginCookie, 1000);
-    return () => window.clearInterval(intervalId);
+    return () => {
+      window.removeEventListener('pagehide', markPageClosed);
+      window.clearInterval(intervalId);
+    };
   }, [logout]);
 
   return (
