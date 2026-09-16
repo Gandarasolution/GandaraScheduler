@@ -404,12 +404,12 @@ export interface User{
 }
 
 
-export interface MockNotification {
-  id: string;
-  userId: number;
-  type: 'success' | 'error' | 'warning' | 'info';
-  title: string;
-  message: string;
-  timestamp: number;
-  isRead: boolean;
+
+export interface Notification {
+  Id: string;
+  Type: 'Succès' | 'Erreur' | 'Avertissement' | 'Information';
+  Titre: string;
+  Message: string;
+  Timestamp: string;
+  IsRead: boolean;
 }

@@ -1,9 +1,18 @@
-import { getRequest } from "./axios.service";
+import { getRequest, patchRequest } from "./axios.service";
 
-async function getNotificationsByUserId(userId: number) {
-  return await getRequest(`/api/notifications?userId=${userId}`, 'getNotificationsByUserId');
+async function getNotificationsByUserId() {
+  return await getRequest(`/api/notifications`, 'getNotificationsByUserId');
+}
+
+async function markNotificationAsRead(notificationIds: string[]) {
+  return await patchRequest(
+    `/api/notifications/read`,
+    {notificationIds},
+    'markNotificationAsRead'
+  );
 }
 
 export default {
   getNotificationsByUserId,
+  markNotificationAsRead,
 };

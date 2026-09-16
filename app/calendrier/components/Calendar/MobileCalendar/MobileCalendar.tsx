@@ -13,7 +13,7 @@ import { endOfMonth, startOfMonth } from 'date-fns';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
-import { Appointment, Equipe, Item, MockNotification, User, MobileAppointmentDisplayConfig } from '../../../types/index';
+import { Appointment, Equipe, Item, User, MobileAppointmentDisplayConfig } from '../../../types/index';
 
 // Composants
 
@@ -27,7 +27,6 @@ import type { SearchableItem } from '../../modals/SearchOverlay';
 
 // Hooks & Utils
 import { useNotifications, useCalendarWorker } from '../../../hooks';
-import notificationApiService from '@/app/service/notificationApi.service';
 import { HALF_DAY_INTERVALS } from '../../../utils/constants';
 import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
 import { getCachedImageById } from '../../../utils/imageCacheStore';
@@ -77,7 +76,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
 
   // ----- HOOKS PERSONNALISÉS -----
-  const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
+  const { notifications, unreadCount, markAsRead, loadNotifications } = useNotifications();
   const { logout } = useAuth();
   const worker = useCalendarWorker();
   
@@ -227,29 +226,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   
   // Charger les notifications au montage
   useEffect(() => {
-    let isMounted = true;
-
-    const loadNotifications = async () => {
-      const response = await notificationApiService.getNotificationsByUserId(user.IdPersonnel);
-      if (!isMounted) return;
-
-      const userNotifications = response?.error === 0 && Array.isArray(response.data) ? response.data : [];
-
-      userNotifications.forEach((notif: MockNotification) => {
-        addNotification(notif.type, notif.title, notif.message);
-      });
-    };
-
-    loadNotifications();
-    
-    setTimeout(() => {
-      addNotification('info', 'Bienvenue', `Bonjour ${user.Nom} ${user.Prenom} !`);
-    }, 500);
-
-    return () => {
-      isMounted = false;
-    };
-  }, [addNotification, user.IdPersonnel, user.Nom, user.Prenom]);
+    void loadNotifications();
+  }, [loadNotifications]);
 
   // ----- HANDLERS -----
   
@@ -267,7 +245,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     
     if (!canCreate) {
       // Afficher une notification d'erreur
-      addNotification('error', 'Permission refusée', `Vous n'avez pas les droits pour créer des événements de type "${item.Type}"`);
       return;
     }
     
@@ -279,7 +256,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const handleSaveAppointment = (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean): Promise<{success: boolean}> => {
     if (onAddAppointment) {
       return onAddAppointment(appointment, item, includeAllNonWorkingDays, appointment.IdPlanningEvenement <= 0 ? 'create' : 'update').then(() => {
-        addNotification('success', 'Rendez-vous créé', 'Le rendez-vous a été ajouté avec succès');
         setShowAppointmentForm(false);
         return { success: true };
       });
@@ -512,8 +488,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 notifications={notifications}
                 onClose={() => setShowNotifications(false)}
                 onMarkAsRead={markAsRead}
-                onRemove={removeNotification}
-                onClearAll={clearAll}
+                variant="mobile"
               />
             )}
           </div>

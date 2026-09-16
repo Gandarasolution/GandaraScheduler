@@ -22,9 +22,6 @@ export * from './types';
 // ===== HOOKS =====
 export * from './hooks';
 
-// ===== SERVICES =====
-export * from './services';
-
 // ===== UTILITAIRES =====
 export * from './utils';
 

@@ -29,7 +29,6 @@ import TagsManager from './TagsManager';
 import { FormPreview, EmployeeSelector, AnnotationsField, ExpandButton, ActionButtons, Employee } from './FormComponents';
 import { useModalContext } from '@/app/calendrier/components/modals/Modal';
 import ressourceService from '@/app/service/ressource.service';
-import { notificationService } from '../..';
 /**
  * Interface définissant les propriétés du composant AppointmentForm
  * @interface AppointmentFormProps
@@ -503,7 +502,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       // Ajout du nouvel événement
       const result = await handleAddManualRessource({...formDataItemType} as AutreItem);
       if (!result.success) {
-        notificationService.error('Erreur', result.message || 'Erreur lors de l\'ajout de la ressource.');
         setSaveError(result.message || 'Erreur lors de l\'ajout de la ressource.');
       } else if (onClose) {
         onClose();
@@ -530,14 +528,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           try {
             const permissionResult = await onSetPermissions(updatedPermissions);
             if (permissionResult?.error === 1) {
-              notificationService.error('Erreur', permissionResult.message || 'Erreur lors de la mise à jour des permissions.');
               setSaveError(permissionResult.message || 'Erreur lors de la mise à jour des permissions.');
               setIsSaving(false);
               return;
             }
           } catch (error) {
             console.error("Erreur lors de la mise à jour des permissions :", error);
-            notificationService.error('Erreur', 'Erreur lors de la mise à jour des permissions.');
             setSaveError('Erreur lors de la mise à jour des permissions.');
             setIsSaving(false);
             return;
@@ -548,7 +544,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       // Mise à jour de l'événement existant
       const result = await handleEditRessource(formDataItemType);
       if (!result.success) {
-        notificationService.error('Erreur', result.message || 'Erreur lors de la mise à jour de la ressource.');
         setSaveError(result.message || 'Erreur lors de la mise à jour de la ressource.');
       }else if (onClose) {
         onClose();

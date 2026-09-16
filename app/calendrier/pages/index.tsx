@@ -51,7 +51,6 @@ import {
 import { useTheme } from '../utils/themeManager';
 
 // --- CONTEXTES & SERVICES ---
-import { notificationService } from "../services";
 import employeeService from '@/app/service/employee.service';
 import evenementService from '@/app/service/evenement.service';
 import ressourceService from '@/app/service/ressource.service';
@@ -96,7 +95,12 @@ export default function HomePage({
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
-  const notifications = useNotifications();
+  const notifications = useNotifications(setLockNotification);
+
+  useEffect(() => {
+    if (!user?.IdPersonnel) return;
+    void notifications.loadNotifications();
+  }, [notifications.loadNotifications]);
 
   // État pour la confirmation de suppression de rubrique
   const [deleteConfirmData, setDeleteConfirmData] = useState<{ item: Item, isUsedInPlanning: boolean, isActive: boolean } | null>(null);
@@ -342,11 +346,10 @@ export default function HomePage({
 
   // Init global: notifications + theme (indépendant de la vue)
   useEffect(() => {
-    notificationService.setNotificationCallback(notifications.addNotification);
     if (user.theme) {
       setTheme(user.theme as any);
     }
-  }, [notifications.addNotification, user.theme, setTheme]);
+  }, [user.theme, setTheme]);
 
   // Init unique: configuration utilisateur + données planning (employés, équipes, RDV)
   useEffect(() => {
@@ -831,20 +834,8 @@ export default function HomePage({
               saveAppointment: appointmentLogic.handleSaveAppointment,
               handleAddManualRessource: appointmentLogic.handleAddManualRessource,
               handleEditRessource: appointmentLogic.handleEditRessource,
-              handleDeleteManualRessource: (dimensionId: number, forceDelete: boolean = false) => {
-                const result = appointmentLogic.handleDeleteManualRessource(dimensionId, forceDelete);
-                if (result.success) {
-                  notificationService.info('Suppression réussie', result.message);
-                }
-                return result;
-              },
-              handleDeactivateDimension: (dimensionId: number) => {
-                const result = appointmentLogic.handleDeactivateDimension(dimensionId);
-                if (result.success) {
-                  notificationService.info('Désactivation réussie', result.message);
-                }
-                return result;
-              },
+              handleDeleteManualRessource: appointmentLogic.handleDeleteManualRessource,
+              handleDeactivateDimension: appointmentLogic.handleDeactivateDimension,
               setDeleteConfirmData: setDeleteConfirmData,
               
               // Repeat / Extend
@@ -888,10 +879,7 @@ export default function HomePage({
               closeConfigModal: viewState.calendarConfigHook.closeConfigModal,
               setCurrentConfig: viewState.onCalendarConfigChange,
               saveCustomConfig: viewState.calendarConfigHook.saveConfig,
-              deleteCustomConfig: (id) => {
-                 viewState.calendarConfigHook.deleteConfig(id);
-                 notificationService.info('Configuration supprimée', 'La vue a été supprimée avec succès');
-              },
+              deleteCustomConfig: viewState.calendarConfigHook.deleteConfig,
               setEditingConfig: viewState.calendarConfigHook.setEditingConfig,
               setIsCreatingConfig: viewState.calendarConfigHook.setIsCreatingConfig,
 
@@ -946,8 +934,6 @@ export default function HomePage({
             onClose={() => viewState.setIsNotificationsPanelOpen(false)}
             notifications={notifications.notifications}
             onMarkAsRead={notifications.markAsRead}
-            onRemove={notifications.removeNotification}
-            onClearAll={notifications.clearAll}
           />
 
           <AlertModal

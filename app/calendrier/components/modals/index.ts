@@ -3,7 +3,7 @@ export { default as AlertModal } from './AlertModal';
 export { default as ConfigurationModal } from './ConfigurationModal';
 export { default as DeleteModal } from './DeleteModal';
 export { default as FilterModal } from './FilterModal';
-export { default as Notificationspanel } from './Notificationspanel';
+export { default as Notificationspanel } from './NotificationsPanel';
 export { default as SearchOverlay } from './SearchOverlay';
 export { default as SettingsModal } from './SettingsModal';
 export { default as ImageSelectorContentModal } from './imageSelectorContentModal';

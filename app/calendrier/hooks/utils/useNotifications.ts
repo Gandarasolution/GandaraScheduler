@@ -13,73 +13,97 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import notificationApiService from '@/app/service/notificationApi.service';
+import { Notification } from '@/app/calendrier/types';
 
-export interface Notification {
-  id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
-  title: string;
-  message: string;
-  timestamp: number;
-  isRead: boolean;
-}
+
 
 export interface NotificationsState {
   notifications: Notification[];
   unreadCount: number;
-  addNotification: (type: Notification['type'], title: string, message: string) => void;
-  markAsRead: (id: string) => void;
+  loadNotifications: () => Promise<void>;
+  markAsRead: (ids: string[]) => Promise<void>;
   removeNotification: (id: string) => void;
   clearAll: () => void;
 }
 
 /**
  * Hook pour la gestion des notifications
+ * @param setNotification - Fonction pour afficher une notification à l'utilisateur
  * @returns {NotificationsState} État et fonctions de gestion des notifications
  */
-export const useNotifications = (): NotificationsState => {
+export const useNotifications = (setNotification?: (message: string) => void): NotificationsState => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const addNotification = useCallback((
-    type: Notification['type'],
-    title: string,
-    message: string
-  ) => {
-    const newNotification: Notification = {
-      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      title,
-      message,
-      timestamp: Date.now(),
-      isRead: false
-    };
-    
-    setNotifications(prev => [newNotification, ...prev].slice(0, 50)); // Garder seulement les 50 dernières
-    
-    // Les notifications restent jusqu'à suppression manuelle
+  const loadNotifications = useCallback(async () => {
+    const response = await notificationApiService.getNotificationsByUserId();
+    if (response?.error !== 0 || !Array.isArray(response.data)) return;
+
+    console.log('Loaded notifications:', response.data);
+    const loadedNotifications: Notification[] = response.data.map((notification: Notification) => ({
+      ...notification,
+      Id: String(notification.Id),
+      Timestamp: new Date(notification.Timestamp).getTime(),
+      isRead: Boolean(notification.IsRead),
+    }));
+
+    setNotifications(loadedNotifications);
   }, []);
 
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  }, []);
+
+
+  const markAsRead = useCallback(async (ids: string[]) => {
+    const wasUnread = notifications.some(notification => 
+        ids.includes(String(notification.Id)) && !notification.IsRead
+    );
+
+    console.log('markAsRead called with ids:', ids, 'wasUnread:', wasUnread, notifications);
+    if (!wasUnread) return;
+
+    setNotifications(prev => prev.map(notification => {
+        if (!ids.includes(String(notification.Id)) || notification.IsRead) {
+            return notification;
+        }
+        return { ...notification, IsRead: true };
+    }));
+
+    try {
+        const response = await notificationApiService.markNotificationAsRead(ids);
+        console.log('markNotificationAsRead response:', response);
+        
+        if (response?.error !== 0) {
+            throw new Error('L\'API a renvoyé une erreur : ' + response?.message);
+        }
+        
+    } catch (error) {
+        console.error('Erreur attrapée dans le catch :', error);
+        setNotification?.('Erreur lors de la mise à jour des notifications.');
+        
+        setNotifications(prev => prev.map(notification =>
+            ids.includes(String(notification.Id)) ? { ...notification, IsRead: false } : notification
+        ));
+    }
+  }, [notifications]);
+
+  const unreadCount = useMemo(() => {
+    return notifications.filter(n => !n.IsRead).length;
+  }, [notifications]);
 
   const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications(prev => prev.filter(n => n.Id !== id));
   }, []);
 
   const clearAll = useCallback(() => {
     setNotifications([]);
   }, []);
 
-  const unreadCount = useMemo(() => {
-    return notifications.filter(n => !n.isRead).length;
-  }, [notifications]);
 
   return {
     notifications,
     unreadCount,
-    addNotification,
+    loadNotifications,
     markAsRead,
     removeNotification,
-    clearAll
+    clearAll,
   };
 };

@@ -2,10 +2,8 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { addHours, eachDayOfInterval } from "date-fns";
 import { Appointment, User, HistoryAction, Item, Tag, AutreItem } from '../../types';
 import { createAppointmentUtils } from '../../utils/appointmentUtils';
-import { notificationService } from "../../services";
 import { getWorkedDayIntervals, isWeekend } from "../../utils/dates";
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
-import { on } from 'events';
 import ressourceService from '@/app/service/ressource.service';
 import { useAuth } from '../utils/AuthContext';
 
@@ -186,7 +184,6 @@ export const useAppointmentLogic = ({
 
   const undoLastAction = useCallback(async () => {    
     if (history.current.length === 0) {
-      notificationService.warning('Aucune action', 'Aucune action à annuler');
       return;
     }
 
@@ -205,7 +202,6 @@ export const useAppointmentLogic = ({
           if (result.error === 1) {
             appointmentsRef.current = before;
           }
-          notificationService.undoSuccess('Création');
         }
         break;
 
@@ -228,7 +224,6 @@ export const useAppointmentLogic = ({
           if (result.error === 1) {
             appointmentsRef.current = before;
           }
-          notificationService.undoSuccess('Suppression');
         }
         break;
 
@@ -254,7 +249,6 @@ export const useAppointmentLogic = ({
             appointmentsRef.current = before;
           }
 
-          notificationService.undoSuccess(lastAction.type === 'move' ? 'Déplacement' : 'Modification');
         }
         break;
 
@@ -293,7 +287,6 @@ export const useAppointmentLogic = ({
             console.error('Error occurred while undoing resize_split:', error);
           }
 
-          notificationService.undoSuccess('Division');
         }
         break;
     }
@@ -351,16 +344,13 @@ export const useAppointmentLogic = ({
         IdPlanningEtiquette: updatedAppointment.Etiquette?.IdPlanningEtiquette,
       }).then((resp) => {
         if (isApiSuccess(resp)) {
-          notificationService.appointmentUpdated();
           return;
         }
 
         appointmentsRef.current = previousAppointments;
-        notificationService.error('Modification annulée', 'Le serveur a refusé la mise à jour.');
       }).catch((err) => {
         console.error('Erreur réseau updateEvenement', err);
         appointmentsRef.current = previousAppointments;
-        notificationService.error('Erreur réseau', 'Impossible de mettre à jour l\'événement sur le serveur');
       });
   }, [appointmentsRef, onUpdate, saveAppointmentState, api, employees, reorganizePriorities, isApiSuccess]);
 
@@ -375,7 +365,6 @@ export const useAppointmentLogic = ({
       const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
 
       if (!employee) {
-        notificationService.error('Création impossible', 'Employé introuvable.');
         return null;
       }
 
@@ -434,7 +423,6 @@ export const useAppointmentLogic = ({
                   : resp.data;
 
               if (!apiCreated) {
-                notificationService.error('Erreur création', 'Réponse serveur invalide.');
                 return;
               }
 
@@ -455,18 +443,15 @@ export const useAppointmentLogic = ({
 
             onLockedError(resp?.message);
             appointmentsRef.current = previousAppointments;
-            notificationService.error('Erreur création', 'Le serveur n\'a pas créé l\'événement.');
           } catch (e) {
             console.error('Erreur traitement réponse createEvenement', e);
             appointmentsRef.current = previousAppointments;
             onUpdate();
-            notificationService.error('Erreur création', 'Impossible de finaliser la création. Les modifications ont été annulées.');
           }
         })
         .catch((err) => {
           console.error('Erreur réseau createEvenement', err);
           appointmentsRef.current = previousAppointments;
-          notificationService.error('Erreur réseau', 'Impossible de créer l\'événement sur le serveur');
         });
 
       return localAppointment;
@@ -504,15 +489,14 @@ export const useAppointmentLogic = ({
       }
       console.log('Found appointment:', appointment);
       const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(newEmployeeId));
-      if (!employee) {
-        notificationService.error('Action interdite', 'Employé introuvable. Le rendez-vous ne peut pas être déplacé.');
+      if (!employee) {   
         return { success: false, message: 'Employé introuvable.' };
       }
       console.log('Found employee:', employee);
 
       const ressource = eventsRef.current[Number(idRessource)] ;
       if (!ressource) {
-        notificationService.error('Action interdite', 'Ressource introuvable. Le rendez-vous ne peut pas être déplacé.');
+        
         return { success: false, message: 'Ressource introuvable.' };
       }
 
@@ -637,6 +621,7 @@ export const useAppointmentLogic = ({
           onLockedError(resp?.message || 'Un autre utilisateur a modifié cet événement.');
           appointmentsRef.current = previousAppointments;
           onUpdate();
+          return { success: false, message: resp?.message || 'Conflit de modification.' };
         }
         else if (!isApiSuccess(resp)) {
           appointmentsRef.current = previousAppointments;
@@ -645,20 +630,18 @@ export const useAppointmentLogic = ({
 
           return { success: false, message: resp.message};
         } else 
-
-        notificationService.appointmentUpdated();
+        
         return { success: true };
       }catch (error) {
         console.error('Erreur réseau updateEvenement', error);
         appointmentsRef.current = previousAppointments;
         onUpdate();
         onLockedError('Impossible de mettre à jour l\'événement sur le serveur. Veuillez réessayer.');
-        notificationService.error('Erreur réseau', 'Impossible de mettre à jour l\'événement sur le serveur');
         return { success: false, message: 'Erreur réseau' };
       }
       
       
-    }, [appointmentsRef, employees, timelineStateRef, updateAppointmentBounds, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities, api, isApiSuccess]);
+  }, [appointmentsRef, employees, timelineStateRef, updateAppointmentBounds, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities, api, isApiSuccess]);
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
 
@@ -672,16 +655,13 @@ export const useAppointmentLogic = ({
   ): Promise<{ success: boolean; message?: string }> => {
       // Vérifier si l'événement est désactivé (pour les types absence/autre)      
       if ('Actif' in eventUpdate && !eventUpdate.Actif) {
-        notificationService.error('Action interdite', 'Cette rubrique est désactivée et ne peut plus être utilisée pour créer ou modifier des rendez-vous.');
         return { success: false, message: 'Cette rubrique est désactivée.' };
       }
 
       if (type === 'update' && !api?.updateEvenementAndRessource) {
-        notificationService.error('Erreur API', 'Impossible de sauvegarder : API de mise à jour indisponible.');
         return { success: false, message: 'API de mise à jour indisponible.' };
       }
       else if (type === 'create' && !api?.createEvenement) {
-        notificationService.error('Erreur API', 'Impossible de sauvegarder : API de création indisponible.');
         return { success: false, message: 'API de création indisponible.' };
       }
 
@@ -714,7 +694,6 @@ export const useAppointmentLogic = ({
 
         if (!isApiSuccess(apiResp)) {
           const apiMessage = apiResp?.message || 'Le serveur a refusé la sauvegarde.';
-          notificationService.error('Sauvegarde annulée', apiMessage);
           return { success: false, message: apiMessage };
         }
 
@@ -845,7 +824,6 @@ export const useAppointmentLogic = ({
         return { success: true };
       } catch (error) {
         console.error('Erreur réseau handleSaveAppointment', error);
-        notificationService.error('Erreur réseau', 'Impossible de sauvegarder l\'événement sur le serveur');
         return { success: false, message: 'Impossible de sauvegarder l\'événement sur le serveur.' };
       }
   }, [appointmentsRef, eventsRef, timelineState, createAppointment, saveAppointmentState, onUpdate, api, isApiSuccess, updateAppointmentBounds, reorganizePriorities, addMissingResourcesToCache]);
@@ -877,19 +855,16 @@ export const useAppointmentLogic = ({
           void api.deleteEvenement(String(id))
             .then((resp) => {
               if (isApiSuccess(resp)) {
-                notificationService.appointmentDeleted();
                 return;
               }
 
               appointmentsRef.current = previousAppointments;
               onUpdate();
-              notificationService.error('Suppression annulée', 'Le serveur a refusé la suppression.');
             })
             .catch((err) => {
               console.error('Erreur réseau deleteEvenement', err);
               appointmentsRef.current = previousAppointments;
               onUpdate();
-              notificationService.error('Erreur réseau', 'Impossible de supprimer l\'événement sur le serveur');
             });
         }
 
@@ -949,7 +924,6 @@ export const useAppointmentLogic = ({
     const ressource = eventsRef.current[Number(appointment.IdPlanningRessource)];
 
     if (!employee || !ressource) {
-      notificationService.error('Action interdite', 'Employé ou ressource introuvable. Le rendez-vous ne peut pas être divisé.');
       return;
     }
 
@@ -986,7 +960,6 @@ export const useAppointmentLogic = ({
     if (!newAppointment) {
       appointmentsRef.current = previousAppointments;
       onUpdate();
-      notificationService.error('Division annulée', 'Impossible de créer le rendez-vous divisé localement.');
       return;
     }
 
@@ -1010,13 +983,11 @@ export const useAppointmentLogic = ({
       }
       appointmentsRef.current = previousAppointments;
       onUpdate();
-      notificationService.error('Division annulée', 'Le serveur a refusé la division.');
     })
     .catch((err) => {
       console.error('Erreur réseau divideEvenement', err);
       appointmentsRef.current = previousAppointments;
       onUpdate();
-      notificationService.error('Erreur réseau', 'Impossible de diviser l\'événement sur le serveur');
     });
     
 
@@ -1088,7 +1059,6 @@ export const useAppointmentLogic = ({
 
     if (!api?.repeatEvenement) {
       const message = 'API de répétition indisponible.';
-      notificationService.error('Erreur API', message);
       return { success: false, message };
     }
 
@@ -1111,13 +1081,11 @@ export const useAppointmentLogic = ({
         }
 
         const message = 'Réponse serveur invalide lors de la répétition.';
-        notificationService.error('Répétition annulée', message);
         return { success: false, message } as ActionResult;
       }else {
         appointmentsRef.current = previousAppointments;
         onUpdate();
         const message = 'Le serveur a refusé la création des rendez-vous répétés.';
-        notificationService.error('Répétition annulée', message);
         return { success: false, message } as ActionResult;
       }
     })
@@ -1126,7 +1094,6 @@ export const useAppointmentLogic = ({
       appointmentsRef.current = previousAppointments;
       onUpdate();
       const message = 'Impossible de créer les rendez-vous répétés sur le serveur';
-      notificationService.error('Erreur réseau', message);
       return { success: false, message } as ActionResult;
     });
 
@@ -1134,7 +1101,6 @@ export const useAppointmentLogic = ({
       return result;
     }
     onUpdate();
-    notificationService.appointmentRepeated(newAppointments.length);
     setRepeatData(null);
     return { success: true };
   }, [repeatData, selectedAppointment, appointmentUtils, timelineState, appointmentsRef, onUpdate]);
@@ -1146,7 +1112,6 @@ export const useAppointmentLogic = ({
 
     const ressource = eventsRef.current[Number(selectedAppointment.IdPlanningRessource)];
     if (!ressource) {
-      notificationService.error('Action interdite', 'Ressource introuvable. Le rendez-vous ne peut pas être étendu.');
       return { success: false, message: 'Ressource introuvable. Le rendez-vous ne peut pas être étendu.' };
     }
     
@@ -1204,7 +1169,6 @@ export const useAppointmentLogic = ({
       
       // Vérifier si l'événement est désactivé (pour les types absence/autre)
       if ('actif' in event && !event.actif) {
-        notificationService.error('Action interdite', `La rubrique "${event.LibellePlanningRessource}" est désactivée et ne peut plus être placée dans le planning.`);
         return;
       }
       
@@ -1242,7 +1206,6 @@ export const useAppointmentLogic = ({
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
     if (app) {
       clipboardAppointment.current = app;
-      notificationService.info('Rendez-vous copié', 'Le rendez-vous a été copié dans le presse-papier');
       return clipboardAppointment.current;
     } 
     return null;
@@ -1283,7 +1246,6 @@ export const useAppointmentLogic = ({
     };
 
     if (!api?.createEvenement) {
-      notificationService.error('Erreur API', 'API de création indisponible. Le collage est annulé.');
       return;
     }
 
@@ -1293,7 +1255,6 @@ export const useAppointmentLogic = ({
       console.log('Response from createEvenement:', resp);
     if (!isApiSuccess(resp)) {
       const apiMessage = resp?.message || 'Le serveur a refusé la création du rendez-vous.';
-      notificationService.error('Création annulée', apiMessage);
       return;
     }
 
@@ -1320,7 +1281,6 @@ export const useAppointmentLogic = ({
       }));
 
     if (createdAppointments.length === 0) {
-      notificationService.error('Création annulée', 'Réponse serveur invalide : aucun rendez-vous créé.');
       return;
     }
 
@@ -1330,11 +1290,9 @@ export const useAppointmentLogic = ({
 
     appointmentsRef.current = [...appointmentsRef.current, ...createdAppointments];
     onUpdate();
-    notificationService.appointmentCreated(createdAppointments.length);
     })
     .catch((err) => {
       console.error('Erreur réseau pasteAppointment/createEvenement', err);
-      notificationService.error('Erreur réseau', 'Impossible de coller le rendez-vous sur le serveur');
     });
   }, [selectedCell, timelineState, appointmentsRef, onUpdate, api, isApiSuccess, addMissingResourcesToCache]);
 
@@ -1396,14 +1354,12 @@ export const useAppointmentLogic = ({
         console.log('Ressource ajoutée avec succès, ID:', newId);
       } else {
         const message = result?.message || 'Le serveur a refusé l\'ajout de la ressource.';
-        notificationService.error('Ajout annulé', message);
           // Nettoyer la ressource ajoutée localement en cas d'échec
         delete eventsRef.current[Number(dimension.IdPlanningRessource)];
         return { success: false, message: message };
       }
     } catch (error) {
       console.error('Erreur réseau lors de l\'ajout de la ressource', error);
-      notificationService.error('Erreur réseau', 'Impossible d\'ajouter la ressource sur le serveur');
       return { success: false, message: error instanceof Error ? error.message : 'Erreur inconnue' };
     }
 
@@ -1433,12 +1389,10 @@ export const useAppointmentLogic = ({
       console.log('Résultat de la modification de ressource', result);
       if (!isApiSuccess(result)) {
         const message = result?.message || 'Le serveur a refusé la modification de la ressource.';
-        notificationService.error('Modification annulée', message);
         return { success: false, message };
       }     }
     catch(error){
       console.error('Erreur réseau lors de la modification de la ressource', error);
-      notificationService.error('Erreur réseau', 'Impossible de modifier la ressource sur le serveur');
       return { success: false, message: 'Erreur réseau' };
     }
 
