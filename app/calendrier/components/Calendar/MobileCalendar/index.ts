@@ -6,6 +6,7 @@
  */
 
 export { MobileCalendar } from './MobileCalendar';
+export type { MobileCalendarState } from './MobileCalendar';
 export { EmployeeSelector } from './EmployeeSelector';
 export { MobileCalendarGrid } from './MobileCalendarGrid';
 export { default as NotificationPanel } from '../../modals/NotificationsPanel';

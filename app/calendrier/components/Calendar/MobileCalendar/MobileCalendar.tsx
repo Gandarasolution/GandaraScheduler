@@ -8,33 +8,54 @@
  * @version 2.0.0
  */
 
-import React, { useCallback, useEffect, useState , useMemo, useRef } from 'react';
-import { endOfMonth, startOfMonth } from 'date-fns';
+import React from 'react';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
 import { Appointment, Equipe, Item, User, MobileAppointmentDisplayConfig } from '../../../types/index';
+import { HALF_DAY_INTERVALS } from '../../../utils/constants';
+import type { Notification } from '../../../types';
+import { AppointmentForm } from '@/app/calendrier/components';
 
 // Composants
 
-import {
-  AppointmentForm
-} from '@/app/calendrier/components';
-
 import { EmployeeSelector, MobileCalendarGrid, NotificationPanel, AppointmentList} from './index';
 import SearchOverlay from '../../modals/SearchOverlay';
-import type { SearchableItem } from '../../modals/SearchOverlay';
-
-// Hooks & Utils
-import { useNotifications, useCalendarWorker } from '../../../hooks';
-import { HALF_DAY_INTERVALS } from '../../../utils/constants';
-import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
-import { getCachedImageById } from '../../../utils/imageCacheStore';
-import { useAuth } from '@/app/calendrier/hooks/utils/AuthContext';
 
 // Lazy loading des composants lourds
 
 // ===== TYPES =====
+
+export interface MobileCalendarState {
+  selectedDate: Date;
+  setSelectedDate: (date: Date) => void;
+  showLogout: boolean;
+  setShowLogout: (value: boolean) => void;
+  showNotifications: boolean;
+  setShowNotifications: (value: boolean) => void;
+  showAppointmentForm: boolean;
+  setShowAppointmentForm: (value: boolean) => void;
+  showSearchModal: boolean;
+  setShowSearchModal: (value: boolean) => void;
+  selectedItem: Item | null;
+  setSelectedItem: (item: Item | null) => void;
+  monthlyAppointments: Appointment[];
+  selectedDayAppointments: Appointment[];
+  selectedEmployee: User | null;
+  setSelectedEmployee: (employee: User) => void;
+  visibleEmployees: User[];
+  notifications: Notification[];
+  unreadCount: number;
+  markAsRead: (ids: string[]) => void | Promise<void>;
+  logout: () => void;
+  hasPermission: (permissionId: number) => boolean;
+  handleOpenAddAppointment: () => void;
+  searchOverlayItems: (query: string) => Promise<any>;
+  handleSelectItem: (item: Item) => void;
+  handleSaveAppointment: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => Promise<{ success: boolean }>;
+  createEmptyAppointment: (id?: number) => Appointment;
+  createEmptyItem: () => Item;
+}
 
 interface MobileCalendarGridProps {
   employees: User[];
@@ -43,9 +64,8 @@ interface MobileCalendarGridProps {
   user: User;
   items: Item[];
   nonWorkingDates: Record<string, number>;
-  onLoadAppointmentsInRange?: (startDate: number, endDate: number, employeeId?: number) => Promise<boolean>;
-  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
   mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
+  mobileState: MobileCalendarState;
 }
 
 // ===== COMPOSANT PRINCIPAL =====
@@ -54,299 +74,25 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   employees, 
   teams,
   appointments, 
-  user, 
+  user,
   items, 
   nonWorkingDates,
-  onAddAppointment,
-  onLoadAppointmentsInRange,
-  mobileAppointmentDisplay
+  mobileAppointmentDisplay,
+  mobileState
 }) => {
-  // ----- ÉTATS LOCAUX -----
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showLogout, setShowLogout] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);0
-  const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
-  const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
-
-  const monthDisplay = useRef(selectedDate.getMonth());
-  const yearDisplay = useRef(selectedDate.getFullYear());
-
-
-  // ----- HOOKS PERSONNALISÉS -----
-  const { notifications, unreadCount, markAsRead, loadNotifications } = useNotifications();
-  const { logout } = useAuth();
-  const worker = useCalendarWorker();
-  
-
-  // ----- GESTION DES DROITS D'ACCÈS -----
-  const isAdmin = user.role === 'admin';
-  const isManager = user.role === 'manager';
-  //const userPermissions = getUserPermissions(user.role);
-  
-  // Filtrer les items selon les permissions de l'utilisateur
-  const allowedItems = useMemo(() => {
-    return items.filter(item => canCreateEvent(user.role, item.Type));
-  }, [items, user.role]);
-  
-  // Les admins et managers peuvent voir tous les employés
-  // Les users voient seulement leur propre calendrier  
-  const visibleEmployees = useMemo(() => {
-    const baseEmployees = (isAdmin || isManager)
-      ? employees 
-      : employees.filter(emp => emp.IdPersonnel === user.IdPersonnel);
-    
-    // Filtrer les employés inactifs qui n'ont pas de rdv dans le mois visible
-    return baseEmployees.filter(emp => {
-      // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
-      if (emp.Actif !== false) {
-        return true;
-      }
-      
-      // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
-      const hasMonthlyAppointments = monthlyAppointments.some(app => 
-        app.IdEmploye === emp.IdPersonnel
-      );
-      
-      return hasMonthlyAppointments;
-    });
-  }, [employees, isAdmin, isManager, user.IdPersonnel, monthlyAppointments]);
-  
-  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(() => {
-    if (!isAdmin && !isManager) {
-      return employees.find(emp => emp.IdPersonnel === user.IdPersonnel) || user;
-    }
-    return employees[0] || user;
-  });
-
-  useEffect(() => {
-    if (selectedEmployee || employees.length === 0) return;
-
-    const defaultEmployee = (isAdmin || isManager)
-      ? employees[0]
-      : employees.find(emp => emp.IdPersonnel === user.IdPersonnel);
-
-    if (defaultEmployee) {
-      setSelectedEmployee(defaultEmployee);
-    }
-  }, [employees, isAdmin, isManager, selectedEmployee, user.IdPersonnel]);
-
-  // Charge uniquement le mois visible et l'employe selectionne.
-  useEffect(() => {
-    if (!onLoadAppointmentsInRange || !selectedEmployee) return;
-    if (monthDisplay.current === selectedDate.getMonth() && yearDisplay.current === selectedDate.getFullYear()) {
-      return; // Pas de changement de mois, pas besoin de recharger
-    }
-    monthDisplay.current = selectedDate.getMonth();
-    yearDisplay.current = selectedDate.getFullYear();
-    const monthStart = startOfMonth(selectedDate).getTime();
-    const monthEnd = endOfMonth(selectedDate).getTime();
-    void onLoadAppointmentsInRange(monthStart, monthEnd, selectedEmployee.IdPersonnel);
-  }, [onLoadAppointmentsInRange, selectedDate, selectedEmployee]);
-
-
-  // ----- FILTRAGE DES RENDEZ-VOUS (Web Worker) -----
-  
-  // Filtrage mensuel avec Web Worker
-  useEffect(() => {
-    if (!worker.isReady) {
-      // Fallback synchrone si worker non prêt
-      const monthStart = startOfMonth(selectedDate).getTime();
-      const monthEnd = endOfMonth(selectedDate).getTime();
-      
-      let filteredApps = appointments;
-      
-      // Filtrer par rôle : users et viewers ne voient que leurs propres RDV
-      if (user.role === 'user' || user.role === 'viewer') {
-        filteredApps = appointments.filter(app => app.IdEmploye === user.IdPersonnel);
-      }
-      
-      const filtered = filteredApps.filter(app => {
-        const matchesEmployee = !selectedEmployee || app.IdEmploye === selectedEmployee.IdPersonnel;
-        const isInMonth = app.DebutPlanningEvenement <= monthEnd && app.FinPlanningEvenement >= monthStart;
-        return matchesEmployee && isInMonth;
-      });
-      
-      setMonthlyAppointments(filtered);
-      return;
-    }
-    
-    // Utiliser le Web Worker pour les calculs
-    const filterAppointments = async () => {      
-      const filtered = await worker.filterMonthlyAppointments(
-        appointments,
-        selectedDate,
-        selectedEmployee,
-        user.role || 'viewer',
-        user.IdPersonnel
-      );
-      
-      if (filtered) {
-        setMonthlyAppointments(filtered);
-      }
-      
-    };
-    
-    filterAppointments();
-  }, [worker.isReady, appointments, selectedDate, selectedEmployee, user.role, user.IdPersonnel]);
-
-  // Filtrage journalier avec Web Worker
-  useEffect(() => {
-    if (!worker.isReady) {
-      // Fallback synchrone
-      const selectedDayStart = new Date(selectedDate).setHours(0, 0, 0, 0);
-      const selectedDayEnd = new Date(selectedDate).setHours(23, 59, 59, 999);
-      
-      const filtered = monthlyAppointments.filter(app => 
-        app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement > selectedDayStart
-      );
-      
-      setSelectedDayAppointments(filtered);
-      return;
-    }
-    
-    // Utiliser le Web Worker
-    const filterDaily = async () => {
-      const filtered = await worker.filterDailyAppointments(
-        monthlyAppointments,
-        selectedDate
-      );
-      
-      if (filtered) {
-        setSelectedDayAppointments(filtered);
-      }
-    };
-    
-    filterDaily();
-  }, [worker.isReady, monthlyAppointments, selectedDate]);
-
-  // ----- EFFETS DE BORD -----
-  
-  // Charger les notifications au montage
-  useEffect(() => {
-    void loadNotifications();
-  }, [loadNotifications]);
-
-  // ----- HANDLERS -----
-  
-
-  const handleOpenAddAppointment = () => {
-    // Seulement les admins et managers peuvent ajouter des événements
-    if (isAdmin || isManager) {
-      setShowSearchModal(true);
-    }
-  };
-
-  const handleSelectItem = (item: Item) => {
-    // Vérifier les permissions selon le type d'événement
-    const canCreate = canCreateEvent(user.role, item.Type);
-    
-    if (!canCreate) {
-      // Afficher une notification d'erreur
-      return;
-    }
-    
-    setSelectedItem(item);
-    setShowSearchModal(false);
-    setShowAppointmentForm(true);
-  };
-
-  const handleSaveAppointment = (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean): Promise<{success: boolean}> => {
-    if (onAddAppointment) {
-      return onAddAppointment(appointment, item, includeAllNonWorkingDays, appointment.IdPlanningEvenement <= 0 ? 'create' : 'update').then(() => {
-        setShowAppointmentForm(false);
-        return { success: true };
-      });
-    }
-    setShowAppointmentForm(false);
-    setSelectedItem(null);
-    return Promise.resolve({ success: false });
-  };
+  const {
+    selectedDate, setSelectedDate, showLogout, setShowLogout,
+    showNotifications, setShowNotifications, showAppointmentForm,
+    setShowAppointmentForm, showSearchModal, setShowSearchModal,
+    selectedItem, setSelectedItem, monthlyAppointments, selectedDayAppointments,
+    selectedEmployee, setSelectedEmployee, visibleEmployees, notifications,
+    unreadCount, markAsRead, logout, hasPermission, handleOpenAddAppointment, searchOverlayItems,
+    handleSelectItem, handleSaveAppointment, createEmptyAppointment, createEmptyItem,
+  } = mobileState;
 
   const handleCloseMenus = () => {
     setShowLogout(false);
     setShowNotifications(false);
-  };
-
-  const searchOverlayItems = useCallback(async (query: string): Promise<{ error: number; data: SearchableItem[]; message?: string }> => {
-    const trimmedQuery = query.trim().toLowerCase();
-    if (!trimmedQuery) {
-      return { error: 0, data: [] };
-    }
-
-    const data = allowedItems.filter(item => {
-      const matchLabel = item.LibellePlanningRessource?.toLowerCase().includes(trimmedQuery);
-      const matchCode = item.CodePlanningRessource?.toLowerCase().includes(trimmedQuery);
-
-      if (item.Type === 'Projet') {
-        const chantierItem = item as any;
-        return matchLabel || matchCode ||
-          chantierItem.identifiant?.toLowerCase().includes(trimmedQuery) ||
-          chantierItem.libelle?.toLowerCase().includes(trimmedQuery);
-      }
-
-      return matchLabel || matchCode;
-    }).map(item => ({
-      ...item,
-      id: (item as any).IdPlanningRessource || (item as any).id,
-      label: item.LibellePlanningRessource || (item as any).label
-    }));
-    return { error: 0, data };
-  }, [allowedItems]);
-
-  // ----- FACTORIES -----
-  
-  const createEmptyAppointment = (id?: number): Appointment => {
-    const startOfSelectedDay = new Date(selectedDate).setHours(8, 0, 0, 0);
-    const endOfSelectedDay = new Date(selectedDate).setHours(17, 0, 0, 0);
-    
-    const appointmentEmployee = selectedEmployee || employees[0];
-    if (!appointmentEmployee) {
-      throw new Error('No employee available for appointment creation');
-    }
-    
-    return {
-      IdPlanningEvenement: id ?? -1,
-      AnnotationPlanningEvenement: '',
-      DebutPlanningEvenement: startOfSelectedDay,
-      FinPlanningEvenement: endOfSelectedDay,
-      IdEmploye: appointmentEmployee.IdPersonnel,
-      IdPlanningRessource: 0,
-      PlanningEvenementPriorite: 0,
-      isLocked: false,
-    };
-  };
-
-  const createEmptyItem = (): Item => {
-    if (selectedItem) {
-      return selectedItem;
-    }
-    
-    return {
-      IdPlanningRessource: 0,
-      Type: 'Projet',
-      LibellePlanningRessource: '',
-      CouleurFondPlanningRessource: '#3953aaff',
-      CouleurBordurePlanningRessource: '#2c4086',
-      CouleurTextePlanningRessource: '#ffffff',
-      CodePlanningRessource: '',
-      Identifiant: '',
-      PoleActivite: '',
-      Etat: 'En cours',
-      ChargeAffaire: '',
-      ChefChantier: '',
-      DateOS: '',
-      DateFin: '',
-      TM: 0,
-      HR: 0,
-      SH: 0,
-      DPF: 0,
-      RPF: 0,
-      AP: 0,
-      SP: 0,
-    } as Item;
   };
 
   // ----- RENDU =====
@@ -392,7 +138,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 style={{ borderWidth: '1px', borderColor: 'var(--border-light)' }}
               >
                 <img
-                  src={user.Image?.image || `https://placehold.co/32x32/cccccc/333333?text=${user.Nom.charAt(0)}`}
+                  src={user.Image || `https://placehold.co/32x32/cccccc/333333?text=${user.Nom.charAt(0)}`}
                   alt="Avatar"
                   className="w-8 h-8 object-cover"
                 />
@@ -501,7 +247,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         >
           
           {/* Employee Selector - visible seulement pour les admins et managers */}
-          {(isAdmin || isManager) && employees.length > 0 && (
+          {(hasPermission(22) || hasPermission(23)) && employees.length > 0 && (
             <EmployeeSelector 
               employees={visibleEmployees}
               teams={teams}
@@ -529,7 +275,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         </main>
 
         {/* Floating Action Button - Visible pour les admins et managers */}
-        {(isAdmin || isManager) && (
+        {(hasPermission(22) || hasPermission(23)) && (
           <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none flex justify-center items-end h-32"
             style={{
               backgroundImage: `linear-gradient(to top, var(--bg-secondary), transparent)`
@@ -563,7 +309,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal de recherche d'événement */}
-        {(isAdmin || isManager) && showSearchModal && (
+        {(hasPermission(22) || hasPermission(23)) && showSearchModal && (
           <SearchOverlay
             isOpen={showSearchModal}
             onClose={() => {
@@ -632,7 +378,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal d'ajout de rendez-vous */}
-        {(isAdmin || isManager) && showAppointmentForm && (
+        {(hasPermission(22) || hasPermission(23)) && showAppointmentForm && (
           <div 
             className="fixed inset-0 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200"
             style={{ backgroundColor: 'var(--bg-overlay)' }}

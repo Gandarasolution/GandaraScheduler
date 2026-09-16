@@ -5,8 +5,12 @@ import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { axiosAgent } from '@/app/service/axios.service';
 import { calendarConfigService } from '@/app/service';
+import { useAuth } from '../utils/AuthContext';
+
 
 export const useCalendarView = (idPlanning: number, user: User, isMobile: boolean) => {
+
+  const { hasPermission } = useAuth(); 
 
   const defaultMobileAppointmentDisplay: MobileAppointmentDisplayConfig = {
     primaryFields: ['LibellePlanningRessource', 'Type'],
@@ -50,7 +54,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       const savedView = (saved as any) || 'calendar';
       
       // Bloquer l'accès aux vues interdites pour users et viewers
-      if ((user?.role === 'user' || user?.role === 'viewer') && 
+      if (hasPermission(21) && 
           (savedView === 'paie-table' || savedView === 'manual-event-table')) {
         return 'calendar';
       }
@@ -240,9 +244,8 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     },
     viewType, setViewType: (v: any) => {
         // Bloquer l'accès à paie-table et manual-event-table pour users et viewers
-        if ((user.role === 'user' || user.role === 'viewer') && 
+        if (hasPermission(21) && 
             (v === 'paie-table' || v === 'manual-event-table')) {
-          // Rediriger vers calendar
           setViewType('calendar');
           setTimeout(() => localStorage.setItem('viewType', 'calendar'), 0);
           return;

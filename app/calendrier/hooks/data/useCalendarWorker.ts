@@ -124,14 +124,12 @@ export const useCalendarWorker = () => {
     appointments: any[],
     currentDate: Date,
     selectedEmployee: any,
-    userRole: string,
     userId: number
   ) => {
     return executeTask('FILTER_MONTHLY', {
       appointments,
       currentDate: currentDate.toISOString(),
       selectedEmployee,
-      userRole,
       userId,
     });
   }, [executeTask]);

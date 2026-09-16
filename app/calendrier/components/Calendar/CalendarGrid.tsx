@@ -26,6 +26,7 @@ import {
   useCalendarInteractions
  } from '@/app/calendrier/hooks';
 import { DesktopCalendarGrid, MobileCalendar } from '@/app/calendrier/components';
+import type { MobileCalendarState } from './MobileCalendar';
 import { CELL_WIDTH } from '../../utils/constants';
 
 interface CalendarGridProps {
@@ -61,6 +62,7 @@ interface CalendarGridProps {
   mouseUpAfterScroll: () => void;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
   onLockedError: (message: string) => void;
+  mobileState: MobileCalendarState;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -95,7 +97,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   //reloadToken,
   mouseUpAfterScroll,
   onAddAppointment,
-  onLockedError
+  onLockedError,
+  mobileState
 }) => {
 
   
@@ -150,9 +153,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         user={user}
         items={Object.values(events)}
         nonWorkingDates={nonWorkingDates}
-        onLoadAppointmentsInRange={onLoadAppointmentsInRange}
-        onAddAppointment={onAddAppointment}
         mobileAppointmentDisplay={mobileAppointmentDisplay}
+        mobileState={mobileState}
       />
     );
   }

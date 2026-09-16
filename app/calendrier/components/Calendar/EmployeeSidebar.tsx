@@ -226,9 +226,9 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                     }}
                   >
                     <div className="relative">
-                      {employee.Image?.image ? (
+                      {employee.Image ? (
                         <img  
-                          src={employee.Image.image}
+                          src={employee.Image}
                           className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
                         />
                       ) : (

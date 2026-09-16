@@ -1170,9 +1170,7 @@ export const useAppointmentLogic = ({
       // Vérifier si l'événement est désactivé (pour les types absence/autre)
       if ('actif' in event && !event.actif) {
         return;
-      }
-      
-      
+      }  
       createAppointment(
         {
           startDate: selectedCell.date,
@@ -1183,22 +1181,6 @@ export const useAppointmentLogic = ({
         },
         true,
       );
-      
-      // handleSaveAppointment(
-      //   {
-      //     id:-1,
-      //     description: event.LibellePlanningRessource,
-      //     startDate: selectedCell.date,
-      //     endDate: (timelineState.isFullDay ? addHours(selectedCell.date, 23) : addHours(selectedCell.date, 11)).getTime() + 59 * 60 * 1000 + 59 * 1000,
-      //     employeeId: selectedCell.employeeId,
-      //     employee: employee as User,
-      //     type: (event as any).Type.toLowerCase() as "chantier" | "absence" | "autre",
-      //     EventId: event.IdPlanningRessource,
-      //   } as Appointment,
-        
-      //   event as Item,
-      //   false
-      // );
   }, [selectedCell, timelineState.isFullDay, handleSaveAppointment, employees]);
 
   // --- PRESSE-PAPIER ---

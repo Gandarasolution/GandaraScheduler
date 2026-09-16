@@ -337,7 +337,7 @@ interface EmployeeItemProps {
 }
 
 const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSelect, showBadge }) => {
-  const avatarSource = employee.Image?.image || `https://ui-avatars.com/api/?name=${employee.Nom}+${employee.Prenom}&background=009580&color=fff`;
+  const avatarSource = employee.Image || `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`;
   const isInactive = employee.Actif === false;
   
   return (

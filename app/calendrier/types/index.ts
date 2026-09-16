@@ -393,12 +393,10 @@ export interface User{
   Type: 'SALARIE' | 'INTERIM';
   /** Référence à l'équipe (relation) */
   Equipe: Equipe['Id'] | null;
-  /** Rôle de l'utilisateur dans l'application */
-  role?: UserRole;
   /** Thème préféré de l'utilisateur */
   theme?: string;
   /** Image de profil de l'utilisateur */
-  Image?: ImageType;
+  Image?: string;
   /** Statut actif de l'utilisateur (défaut: true) */
   Actif?: boolean;
 }

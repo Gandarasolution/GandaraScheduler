@@ -15,7 +15,7 @@ import '../styles/custom.scss';
 import React, { useEffect, useRef, useMemo, useCallback, lazy, Suspense, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { format } from "date-fns";
+import { endOfMonth, format, startOfMonth } from "date-fns";
 
 
 // --- COMPOSANTS UI (Eager loading pour éviter le flash) ---
@@ -47,6 +47,8 @@ import {
   useInteraction,
   useNotifications
  } from "@/app/calendrier/hooks";
+import { useCalendarWorker } from '@/app/calendrier/hooks';
+import type { MobileCalendarState } from '../components/Calendar/MobileCalendar/MobileCalendar';
 
 import { useTheme } from '../utils/themeManager';
 
@@ -58,7 +60,8 @@ import calendarConfigService from '@/app/service/calendarConfig.service';
 
 // --- UTILITAIRES ---
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
-import { User, Item } from '../types';
+import { Appointment, User, Item } from '../types';
+import type { Notification } from '../types';
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
 import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
@@ -92,6 +95,14 @@ export default function HomePage({
   const [loadCalendar, setLoadCalendar] = useState(true); 
   const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
   const [lockNotification, setLockNotification] = useState<string | null>(null);
+  const [showLogout, setShowLogout] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
+  const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
@@ -124,6 +135,13 @@ export default function HomePage({
     setGlobalEmployees, 
     setNotification: setLockNotification
   });
+
+  const mobileWorker = useCalendarWorker();
+
+  const visibleEmployees = useMemo(() => globalEmployees.filter((employee) => {
+    if (employee.Actif !== false) return true;
+    return monthlyAppointments.some((appointment) => appointment.IdEmploye === employee.IdPersonnel);
+  }), [globalEmployees, monthlyAppointments]);
 
 
 
@@ -166,6 +184,62 @@ export default function HomePage({
       lockEvenement: evenementService.lockQuickEvenement,
     },
   });
+
+  useEffect(() => {
+    if (selectedEmployee || globalEmployees.length === 0) return;
+    setSelectedEmployee(globalEmployees[0] || user);
+  }, [globalEmployees, selectedEmployee, user]);
+
+  useEffect(() => {
+    if (!selectedEmployee) return;
+    void dataLayer.loadAppointmentsInRange(
+      startOfMonth(new Date(viewState.selectedDate)).getTime(),
+      endOfMonth(new Date(viewState.selectedDate)).getTime(),
+      selectedEmployee.IdPersonnel
+    );
+  }, [dataLayer.loadAppointmentsInRange, selectedEmployee, viewState.selectedDate]);
+
+  useEffect(() => {
+    const loadMonthlyAppointments = async () => {
+      if (!mobileWorker.isReady) {
+        const monthStart = startOfMonth(new Date(viewState.selectedDate)).getTime();
+        const monthEnd = endOfMonth(new Date(viewState.selectedDate)).getTime();
+        setMonthlyAppointments(dataLayer.appointmentsRef.current.filter((appointment) =>
+          (!selectedEmployee || appointment.IdEmploye === selectedEmployee.IdPersonnel) &&
+          appointment.DebutPlanningEvenement <= monthEnd && appointment.FinPlanningEvenement >= monthStart
+        ));
+        return;
+      }
+
+      const filtered = await mobileWorker.filterMonthlyAppointments(
+        dataLayer.appointmentsRef.current,
+        new Date(viewState.selectedDate),
+        selectedEmployee,
+        user.IdPersonnel
+      );
+      if (filtered) setMonthlyAppointments(filtered);
+    };
+
+    void loadMonthlyAppointments();
+  }, [dataLayer.appointmentsVersion, mobileWorker.isReady, selectedEmployee, user.IdPersonnel, viewState.selectedDate]);
+
+  useEffect(() => {
+    const loadDailyAppointments = async () => {
+      if (!mobileWorker.isReady) {
+        const dayStart = new Date(viewState.selectedDate).setHours(0, 0, 0, 0);
+        const dayEnd = new Date(viewState.selectedDate).setHours(23, 59, 59, 999);
+        setSelectedDayAppointments(monthlyAppointments.filter((appointment) =>
+          appointment.DebutPlanningEvenement <= dayEnd && appointment.FinPlanningEvenement > dayStart
+        ));
+        return;
+      }
+
+      const filtered = await mobileWorker.filterDailyAppointments(monthlyAppointments, new Date(viewState.selectedDate));
+      if (filtered) setSelectedDayAppointments(filtered);
+    };
+
+    void loadDailyAppointments();
+  }, [mobileWorker.isReady, monthlyAppointments, viewState.selectedDate]);
 
   
   // 6. INTERACTIONS UTILISATEUR (Clic droit, Clavier, Copier/Coller)
@@ -229,6 +303,20 @@ export default function HomePage({
   }, [appointmentLogic.handleOpenEditModal, dataLayer.itemsRef, viewState.viewType]);
 
   const handleSearchOverlayItemAction = useCallback((item: SearchableItem) => {
+    if(isMobile){
+       // Vérifier les permissions selon le type d'événement
+          const canCreate = (item.Type === 'Projet' && hasPermission(22)) || 
+                            (item.Type === 'Paie' && hasPermission(23)) 
+          
+          if (!canCreate) {
+            // Afficher une notification d'erreur
+            return;
+          }
+          
+          setSelectedItem(item as unknown as Item);
+          setShowSearchModal(false);
+          setShowAppointmentForm(true);
+    }
     if (!appointmentLogic.selectedCell) {
       return;
     }
@@ -249,9 +337,6 @@ export default function HomePage({
 
     const data = (response.data as Item[])
       .filter((item) => {
-        // if (!canCreateEvent(user.role, item.Type)) {
-        //   return false;
-        // }
 
         if ('Actif' in item) {
           return item.Actif !== false && item.Actif !== null;
@@ -266,7 +351,95 @@ export default function HomePage({
       }));
     
     return { error: 0, data };
-  }, [user.role]);
+  }, []);
+
+  const handleOpenMobileAppointment = useCallback(() => {
+    setShowSearchModal(true);
+  }, []);
+
+  const handleSelectMobileItem = useCallback((item: Item) => {
+    const canCreate = (item.Type === 'Projet' && hasPermission(22)) ||
+      (item.Type === 'Paie' && hasPermission(23));
+    if (!canCreate) return;
+    setSelectedItem(item);
+    setShowSearchModal(false);
+    setShowAppointmentForm(true);
+  }, [hasPermission]);
+
+  const handleSaveMobileAppointment = useCallback(async (
+    appointment: Appointment,
+    item: Item,
+    includeAllNonWorkingDays: boolean
+  ) => {
+    const result = await appointmentLogic.handleSaveAppointment(
+      appointment,
+      item,
+      includeAllNonWorkingDays,
+      appointment.IdPlanningEvenement <= 0 ? 'create' : 'update'
+    );
+    if (result.success) {
+      setShowAppointmentForm(false);
+      setSelectedItem(null);
+    }
+    return result;
+  }, [appointmentLogic.handleSaveAppointment]);
+
+  const createMobileAppointment = useCallback((id?: number): Appointment => {
+    const employee = selectedEmployee || globalEmployees[0];
+    if (!employee) throw new Error('No employee available for appointment creation');
+    const start = new Date(viewState.selectedDate).setHours(8, 0, 0, 0);
+    return {
+      IdPlanningEvenement: id ?? -1,
+      AnnotationPlanningEvenement: '',
+      DebutPlanningEvenement: start,
+      FinPlanningEvenement: new Date(viewState.selectedDate).setHours(17, 0, 0, 0),
+      IdEmploye: employee.IdPersonnel,
+      IdPlanningRessource: 0,
+      PlanningEvenementPriorite: 0,
+      isLocked: false,
+    };
+  }, [globalEmployees, selectedEmployee, viewState.selectedDate]);
+
+  const createMobileItem = useCallback(() => selectedItem || ({
+    IdPlanningRessource: 0,
+    Type: 'Projet',
+    LibellePlanningRessource: '',
+    CouleurFondPlanningRessource: '#3953aaff',
+    CouleurBordurePlanningRessource: '#2c4086',
+    CouleurTextePlanningRessource: '#ffffff',
+    CodePlanningRessource: '',
+  } as Item), [selectedItem]);
+
+  const mobileState: MobileCalendarState = {
+    selectedDate: new Date(viewState.selectedDate),
+    setSelectedDate: (date) => viewState.setSelectedDate(date.getTime()),
+    showLogout,
+    setShowLogout,
+    showNotifications,
+    setShowNotifications,
+    showAppointmentForm,
+    setShowAppointmentForm,
+    showSearchModal,
+    setShowSearchModal,
+    selectedItem,
+    setSelectedItem,
+    monthlyAppointments,
+    selectedDayAppointments,
+    selectedEmployee,
+    setSelectedEmployee,
+    visibleEmployees,
+    notifications: notifications.notifications as Notification[],
+    unreadCount: notifications.unreadCount,
+    markAsRead: notifications.markAsRead,
+    logout,
+    hasPermission,
+    handleOpenAddAppointment: handleOpenMobileAppointment,
+    searchOverlayItems,
+    handleSelectItem: handleSelectMobileItem,
+    handleSaveAppointment: handleSaveMobileAppointment,
+    createEmptyAppointment: createMobileAppointment,
+    createEmptyItem: createMobileItem,
+  };
 
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
@@ -761,6 +934,7 @@ export default function HomePage({
                       mouseUpAfterScroll={timeline.getFirstDayAppearing}
                       onAddAppointment={appointmentLogic.handleSaveAppointment}
                       onLockedError={setLockNotification}
+                      mobileState={mobileState}
                       
                       /* Sélection Optimisée */
                       selectedCell={appointmentLogic.selectedCell}
@@ -951,10 +1125,63 @@ export default function HomePage({
             onItemAction={handleSearchOverlayItemAction}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
-              noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
-              noResults: { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
+              noInput: isMobile 
+              ? {
+                  icon: (
+                    <svg className="w-16 h-16 mx-auto mb-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  ),
+                  title: "Rechercher un événement",
+                  description: "Tapez pour rechercher un chantier, paie ou congé"
+                }
+              : { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
+              noResults: isMobile 
+                ? {
+                  icon: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="w-16 h-16 mx-auto mb-4 text-gray-400" viewBox="0 0 16 16">
+                      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
+                    </svg>
+                  ),
+                  title: "Aucun résultat",
+                  description: "Aucun événement ne correspond à votre recherche"
+                }
+                : { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
-            renderItem={(event: any, index: number) => (                            
+            renderItem={(event: any, index: number) => {
+              if (isMobile){
+                const itemData = event as any as Item;
+                const isChantier = itemData.Type === 'Projet';
+                const chantierData = isChantier ? itemData as any : null;
+                
+                return (
+                  <div className="flex-1 py-3 px-2">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-4 h-4 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: itemData.CouleurFondPlanningRessource }}
+                      />
+                      <div className="flex-1">
+                        <p 
+                          className="font-semibold"
+                          style={{ color: 'var(--text-primary)' }}
+                        >
+                          {itemData.LibellePlanningRessource}
+                        </p>
+                        {isChantier && (chantierData?.code || chantierData?.identifiant) && (
+                          <p 
+                            className="text-xs"
+                            style={{ color: 'var(--text-secondary)' }}
+                          >
+                            {[chantierData.code, chantierData.identifiant].filter(Boolean).join(' - ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+            );
+              }                        
               <DraggableSource
                 key={`${event.label}-${event.id}-${index}`}
                 id={event.id as number}
@@ -964,7 +1191,7 @@ export default function HomePage({
                 type={(event as any).Type as "Projet" | "Paie" | "Rubrique Perso"}
                 className="w-full"
               />
-            )}
+            }}
             actionLabel="+"
             enableDragDetection={true}
           />

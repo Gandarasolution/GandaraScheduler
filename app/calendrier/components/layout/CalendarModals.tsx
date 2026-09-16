@@ -369,7 +369,7 @@ export const CalendarModals = memo(({
       {modalsState.isImageSelectorOpen && (
         <Suspense fallback={<ModalLoadingFallback />}>
           <ImageSelectorContentModal
-            actualImage={config.viewType === 'employee-table' ? data.selectedEmployee?.Image : data.selectedItem?.Image}
+            actualImage={data.selectedItem?.Image}
             isOpen={modalsState.isImageSelectorOpen}
             onClose={handlers.closeImageModal}
             onImageSelect={handlers.handleImageSelect}
