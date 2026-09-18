@@ -24,8 +24,8 @@ type ConfigurationModalProps = {
   availableConfigs: CalendarConfig[];
   currentConfig: CalendarConfig | null;
   onConfigChange: (config: CalendarConfig) => void;
-  onSaveConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
-  onDeleteConfig: (configId: number) => Promise<{error: number, message?: string} | void> | void;
+  onSaveConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{success: boolean, data: any} | {success: boolean, message: string} | void> | void;
+  onDeleteConfig: (configId: number) => Promise<{success: boolean, message?: string} | void> | void;
   editingConfig: CalendarConfig | null;
   setEditingConfig: (config: CalendarConfig | null) => void;
   isCreatingConfig: boolean;
@@ -131,7 +131,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
     try {
       const response = await onDeleteConfig(configId);
-      if (response && response.error === 1) {
+      if (response && response.success === false) {
         setDeleteError(response.message || "Impossible de supprimer cette configuration.");
         setDeletingConfigId(null);
       }
@@ -165,7 +165,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
       if (editingConfig) {
         calendarConfigService.lockCalendarConfig(fetchId).then((response) => {
-          if (response?.error !== 0) {
+          if (response?.success === false) {
             console.error('Erreur lors du verrouillage de la configuration :', response?.message);
           }
         }).catch(console.error);
@@ -267,7 +267,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     const planningVue = {
       IdPlanningVue: editingConfig?.IdPlanningVue || 0,
       LibellePlanningVue: configName.trim(),
-      DescriptionPlanningVue: configDescription.trim() || undefined,
+      DescriptionPlanningVue: configDescription?.trim(),
       IdPlanningImage: configImage?.id,
       Group: (groupingLevel1 || groupingLevel2) ? {
         ChampsPremierGroupePlanningVue: groupingLevel1,
@@ -293,14 +293,14 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         return {
         'IdFiltre': f.IdFiltre,
         'EstFiltreGandara': f.EstFiltreGandara,
-        'Valeurs': valeursSelectionnees.length > 0 ? valeursSelectionnees : null
+        'Valeurs': valeursSelectionnees.length > 0 ? valeursSelectionnees : []
         };
       });
       
     try {
       const response = await onSaveConfig({ planningVue, filtrePerso: filtre, utilisateursAutorises: isPrivate ? Array.from(new Set([user.IdPersonnel, ...selectedUsers])) : [] });
       
-      if (response && response.error === 1) {
+      if (response && response.success === false) {
         setSaveError((response as any).message || "Une erreur s'est produite lors de l'enregistrement de la vue.");
         setIsSaving(false);
         return; 

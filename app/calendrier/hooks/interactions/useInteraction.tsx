@@ -249,9 +249,9 @@ export const useInteraction = ({
           throw new Error('Le fichier est trop volumineux. Taille maximum : 200 Ko');
         }
   
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (!allowedTypes.includes(file.type)) {
-          throw new Error('Format non supporté. Formats acceptés : JPG, PNG, GIF, WebP, SVG');
+          throw new Error('Format non supporté. Formats acceptés : JPG, PNG, WebP');
         }
   
         return new Promise((resolve, reject) => {
@@ -275,8 +275,7 @@ export const useInteraction = ({
             
             const dataURL = canvas.toDataURL('image/png');
 
-            const newImageId = Date.now();
-            const result = addImage({ id: newImageId, image: dataURL });
+            const result = addImage({ id: 0, image: dataURL });
         
             setIsUploading(false);
             resolve(result);

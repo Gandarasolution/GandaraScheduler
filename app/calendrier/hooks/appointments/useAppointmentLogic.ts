@@ -6,6 +6,7 @@ import { getWorkedDayIntervals, isWeekend } from "../../utils/dates";
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
 import ressourceService from '@/app/service/ressource.service';
 import { useAuth } from '../utils/AuthContext';
+import imageService from '@/app/service/image.service';
 
 // Type pour les données de répétition
 export type RepeatData = {
@@ -102,7 +103,7 @@ export const useAppointmentLogic = ({
   });
 
   const isApiSuccess = useCallback((resp: any) => {
-    return !!resp && (resp.error === 0 || typeof resp.error === 'undefined');
+    return !!resp && (resp.success || typeof resp.error === 'undefined');
   }, []);
 
   const addMissingResourcesToCache = useCallback((resources: Item[]) => {
@@ -199,7 +200,7 @@ export const useAppointmentLogic = ({
           appointmentsRef.current = appointmentsRef.current.filter(app => app.IdPlanningEvenement !== lastAction.appointment!.IdPlanningEvenement);
 
           const result = await api?.deleteEvenement(String(lastAction.appointment.IdPlanningEvenement));
-          if (result.error === 1) {
+          if (result.success === false || result.error === 1) {
             appointmentsRef.current = before;
           }
         }
@@ -221,7 +222,7 @@ export const useAppointmentLogic = ({
           };
 
           const result = await api?.createEvenement(payload);
-          if (result.error === 1) {
+          if (result.success === false || result.error === 1) {
             appointmentsRef.current = before;
           }
         }
@@ -245,7 +246,7 @@ export const useAppointmentLogic = ({
           };
 
           const result = await api?.createEvenement(payload);
-          if (result.error === 1) {
+          if (result.success === false || result.error === 1) {
             appointmentsRef.current = before;
           }
 
@@ -279,7 +280,7 @@ export const useAppointmentLogic = ({
 
               api?.deleteEvenements(lastAction.createdAppointments.map(app => String(app.IdPlanningEvenement)))
             ]);
-            if (result.some(res => res?.error === 1)) {
+            if (result.some(res => res?.success === false || res?.error === 1)) {
               appointmentsRef.current = before;
             }
             
@@ -410,7 +411,7 @@ export const useAppointmentLogic = ({
 
             console.log('createEvenement response:', resp);
 
-            if (resp && resp.error === 0) {
+            if (resp && resp.success) {
               const apiData = resp?.data;
               const apiResources = Array.isArray(apiData?.ressources) ? apiData.ressources : [];
               
@@ -612,18 +613,8 @@ export const useAppointmentLogic = ({
       };
 
       try{
-        console.log('Payload for updateEvenement:', payload);
         const resp = await api.updateEvenement(String(id), payload);
-        console.log('Response from updateEvenement:', resp);
-        if (resp.error === 409){
-          console.log('Response from updateEvenement:', resp);
-
-          onLockedError(resp?.message || 'Un autre utilisateur a modifié cet événement.');
-          appointmentsRef.current = previousAppointments;
-          onUpdate();
-          return { success: false, message: resp?.message || 'Conflit de modification.' };
-        }
-        else if (!isApiSuccess(resp)) {
+        if (!isApiSuccess(resp)) {
           appointmentsRef.current = previousAppointments;
           onUpdate();
           onLockedError(resp?.message);
@@ -668,6 +659,20 @@ export const useAppointmentLogic = ({
       const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(appointment.IdEmploye));
 
       try {
+        if(eventUpdate.Image?.id === 0){
+          const imageBase64 = eventUpdate.Image.image;
+
+          const nativeFile = await base64ToFile(imageBase64, 'image-rdv.png');
+          const result = await imageService.uploadImage(nativeFile)
+          if (result.success && result.id) {
+            eventUpdate.Image.id = result.id;
+          } else {
+            onLockedError(result.message || 'Erreur lors de l\'upload de l\'image.');
+            console.error('Erreur lors de l\'upload de l\'image:', result.message);
+            return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
+          }
+        }
+        console.log('handleSaveAppointment called with:', eventUpdate);
         const payload = {
           DebutPlanningEvenement: appointment.DebutPlanningEvenement,
           FinPlanningEvenement: appointment.FinPlanningEvenement,
@@ -1479,3 +1484,12 @@ export const useAppointmentLogic = ({
     pasteAppointment
   };
 };
+
+
+async function base64ToFile(base64String: string, filename: string): Promise<File> {
+  const res = await fetch(base64String);
+  const blob = await res.blob();
+  
+  // On retourne un vrai objet File, prêt à être mis dans un FormData
+  return new File([blob], filename, { type: blob.type });
+}

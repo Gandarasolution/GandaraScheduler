@@ -105,7 +105,7 @@ export type CellRenderer<T = GenericDataItem> = (
 ) => React.ReactNode;
 
 export type PaginatedSearchResponse<T = GenericDataItem> = {
-  error?: number;
+  success: boolean;
   data?:
     | T[]
     | {
@@ -427,7 +427,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
 
       response  = await callSearch();
 
-      if (response?.error && response.error !== 0) {
+      if (response?.success === false) {
         setRemotePageItems([]);
         setRemoteTotalPages(1);
         return;

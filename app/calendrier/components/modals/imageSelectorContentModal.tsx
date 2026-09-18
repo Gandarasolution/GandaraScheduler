@@ -15,7 +15,6 @@ interface ImageSelectorContentProps {
   uploadError: string | null;
   // La fonction de fetch devient l'unique source de vérité
   fetchPaginatedImages: (page: number, limit: number) => Promise<{ image: ImageType[]; totalLignes: number }>; 
-  addImageToDatabase?: (file: File) => Promise<void>;
 }
 
 /**
@@ -30,7 +29,6 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
   isUploading,
   uploadError,
   fetchPaginatedImages,
-  addImageToDatabase,
 }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
@@ -199,7 +197,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                   </button>
                 </div>
                 <div className="text-xs text-secondary">
-                  Formats acceptés : JPG, PNG, GIF, WebP, SVG - Max 480x480px, 200Ko
+                  Formats acceptés : JPG, PNG, WebP - Max 480x480px, 200Ko
                 </div>
               </div>
             )}

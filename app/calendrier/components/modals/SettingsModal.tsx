@@ -390,7 +390,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 try {
                                   if (setting.addNonWorkingDatesToPlanning) { // Appeler la fonction passée en props
                                      const response = await setting.addNonWorkingDatesToPlanning(parsedDate);
-                                     if (response && response.error === 0 && response.data) {
+                                     if (response && response.success && response.data) {
                                        setting.setNonWorkingDates((prev: Record<string, number>) => ({
                                          ...prev,
                                          [format(parsedDate, "yyyy-MM-dd")]: Number(response.data)
@@ -454,7 +454,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                       try {
                                         if (setting.removeNonWorkingDatesFromPlanning) {
                                           const response = await setting.removeNonWorkingDatesFromPlanning(id); // TODO: Replace with real idPlanning if not 3
-                                          if (response && response.error === 0) {
+                                          if (response && response.success) {
                                             setting.setNonWorkingDates((prev: any) => {
                                                 const newDates = { ...prev };
                                                 delete newDates[dateKey];

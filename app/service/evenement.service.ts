@@ -15,7 +15,7 @@ function normalizeEvent(rawEvent: any) {
 }
 
 function normalizeEventListResponse(response: any) {
-    if (response?.error === 0 && response?.data && typeof response.data === 'object') {
+    if (response?.success && response?.data && typeof response.data === 'object') {
         const appointments = Array.isArray(response.data.appointments)
             ? response.data.appointments.map(normalizeEvent)
             : [];
@@ -35,12 +35,12 @@ function normalizeEventListResponse(response: any) {
 
     if (Array.isArray(response)) {
         return {
-            error: 0,
+            success: true,
             data: response.map(normalizeEvent),
         };
     }
 
-    if (response?.error === 0 && Array.isArray(response.data)) {
+    if (response?.success && Array.isArray(response.data)) {
         return {
             ...response,
             data: response.data.map(normalizeEvent),
@@ -51,7 +51,7 @@ function normalizeEventListResponse(response: any) {
 }
 
 function normalizeSingleEventResponse(response: any) {
-    if (response?.error === 0 && response?.data && typeof response.data === 'object') {
+    if (response?.success && response?.data && typeof response.data === 'object') {
         const appointments = Array.isArray(response.data.appointments)
             ? response.data.appointments.map(normalizeEvent)
             : [];
@@ -71,19 +71,19 @@ function normalizeSingleEventResponse(response: any) {
 
     if (Array.isArray(response)) {
         return {
-            error: 0,
+            success: true,
             data: normalizeEvent(response[0] ?? null),
         };
     }
 
-    if (response?.error === 0 && Array.isArray(response.data)) {
+    if (response?.success && Array.isArray(response.data)) {
         return {
             ...response,
             data: normalizeEvent(response.data[0] ?? null),
         };
     }
 
-    if (response?.error === 0 && response?.data) {
+    if (response?.success && response?.data) {
         return {
             ...response,
             data: normalizeEvent(response.data),

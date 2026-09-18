@@ -37,7 +37,7 @@ export const useNotifications = (setNotification?: (message: string) => void): N
 
   const loadNotifications = useCallback(async () => {
     const response = await notificationApiService.getNotificationsByUserId();
-    if (response?.error !== 0 || !Array.isArray(response.data)) return;
+    if (response?.success === false || !Array.isArray(response.data)) return;
 
     console.log('Loaded notifications:', response.data);
     const loadedNotifications: Notification[] = response.data.map((notification: Notification) => ({
@@ -71,7 +71,7 @@ export const useNotifications = (setNotification?: (message: string) => void): N
         const response = await notificationApiService.markNotificationAsRead(ids);
         console.log('markNotificationAsRead response:', response);
         
-        if (response?.error !== 0) {
+        if (response?.success === false) {
             throw new Error('L\'API a renvoyé une erreur : ' + response?.message);
         }
         

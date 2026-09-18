@@ -78,8 +78,8 @@ interface CalendarModalsProps {
     // Config Calendar
     closeConfigModal: () => void;
     setCurrentConfig: (config: CalendarConfig) => void;
-    saveCustomConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
-    deleteCustomConfig: (configId: number) => Promise<{error: number, message?: string} | void> | void;
+    saveCustomConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{success: boolean, data: any} | {success: boolean, message: string} | void> | void;
+    deleteCustomConfig: (configId: number) => Promise<{success: boolean, message?: string} | void> | void;
     
     // Config Configuration Editing State (from hook)
     setEditingConfig: (config: any) => void;
@@ -377,10 +377,6 @@ export const CalendarModals = memo(({
             isUploading={data.isUploading}
             uploadError={data.uploadError}
             fetchPaginatedImages={handlers.fetchPaginatedImages}
-            addImageToDatabase={async (file) => {
-              // TODO: Appeler imageService.uploadImage(file)
-              console.log('Appel de addImageToDatabase', { file });
-            }}
           />
         </Suspense>
       )}
@@ -618,11 +614,10 @@ const RepeatAppointmentContent = ({
     eventService.getEvenement(appointment.IdPlanningEvenement).then(response => {
       if (!isMounted) return;
       
-      if (response?.error === 409 || response?.isLocked) {
-        // 🚨 Verrou pris par un autre
+      if (!response?.success || response?.isLocked) {
         onClose();
-        onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition.");
-      } else if (response?.error === 0 && response?.data) {
+        onLockedError(response?.message);
+      } else if (response?.success && response?.data) {
         const fetchedApp = response.data.appointments[0] ?? response.data.appointments;
         setFreshApp(fetchedApp);
         setIsLoading(false);
@@ -802,10 +797,10 @@ const ExtendAppointmentContent = ({
     setIsLoading(true);
     eventService.getEvenement(appointment.IdPlanningEvenement).then(response => {
       if (!isMounted) return;
-      if (response?.error === 409 || response?.isLocked) {
+      if (response?.success === false || response?.isLocked) {
         onClose();
-        onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition.");
-      } else if (response?.error === 0 && response?.data) {
+        onLockedError(response?.message);
+      } else if (response?.success && response?.data) {
         const fetchedApp = response.data.appointments[0] ?? response.data.appointments;
         setFreshApp(fetchedApp);
         setIsLoading(false);

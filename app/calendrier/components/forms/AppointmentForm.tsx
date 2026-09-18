@@ -209,7 +209,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             onFetchEventAndRessource(formDataAppointment.IdPlanningEvenement)
               .then(response => {
                 console.log("Réponse de onFetchEventAndRessource :", response);
-                if (response?.error === 409 && response?.isLocked) {
+                if (response?.success === false && response?.isLocked) {
                   onClose(); // On ferme la modale immédiatement
                   if (onLockedError) {
                     onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition par un collègue.");
@@ -217,7 +217,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                   return;
                 }
 
-                if (response?.error === 0 && response?.data) {
+                if (response?.success && response?.data) {
                   const { appointments, ressources } = response.data;
                   const loadedAppointment = appointments[0] ?? appointments;
                   setFormDataAppointment(loadedAppointment);
@@ -238,7 +238,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           promises.push(
             onFetchRessourceById(item?.IdPlanningRessource, item?.Type)
               .then(response => {
-                if (response?.error === 0 && response?.data) {
+                if (response?.success && response?.data) {
                   setFormDataItemType(response.data[0] ?? response.data);
                 }
               })
@@ -318,7 +318,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     setTagError(null);
     try {
       const result = await onRemoveTagFromAppointments(tagId);
-      if (result?.error === 1) {
+      if (result?.success === false) {
         setTagError(result.message || "Erreur lors de la suppression de l'étiquette");
         return;
       }
@@ -487,18 +487,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     // Gestion de la crÃ©ation d'une nouvelle ressource
     if (isCreatingResource) {
       setIsSaving(true);
-            
-      // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      // if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
-      //   employeePermissions.forEach((perm) => {
-      //     void socialPermissionService.setSocialItemPermission({
-      //       ...perm,
-      //       itemId: newItemId, // Utiliser le nouvel ID
-      //     });
-      //   });
-      // }
-      
-    
+
       // Ajout du nouvel événement
       const result = await handleAddManualRessource({...formDataItemType} as AutreItem);
       if (!result.success) {
@@ -527,7 +516,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         if (onSetPermissions && updatedPermissions.length > 0) {
           try {
             const permissionResult = await onSetPermissions(updatedPermissions);
-            if (permissionResult?.error === 1) {
+            if (permissionResult?.success === false) {
               setSaveError(permissionResult.message || 'Erreur lors de la mise à jour des permissions.');
               setIsSaving(false);
               return;
@@ -541,6 +530,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         }
       }
       
+      console.log("Données de ressource à sauvegarder :", formDataItemType);
       // Mise à jour de l'événement existant
       const result = await handleEditRessource(formDataItemType);
       if (!result.success) {
@@ -588,7 +578,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           const result = await ressourceService.verifyUniqueCode(upperCode);
           console.log("Résultat de la vérification d'unicité du code :", result);
 
-          if(result.error === 1) {
+          if(result.success === false) {
             console.error("Erreur lors de la vérification du code :", result.message);
             return;
           }

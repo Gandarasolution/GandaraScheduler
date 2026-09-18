@@ -22,12 +22,6 @@ export * from './domIds';
 // Utilitaires de filtrage
 export * from './filters';
 
-// Gestion de la compression d'images
-export * from './imageCompressionUtils';
-
-// Service de base de données d'images
-export * from './imageDatabaseService';
-
 // Gestionnaire d'upload d'images
 export * from './imageUploadHandler';
 

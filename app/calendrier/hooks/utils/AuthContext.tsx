@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     console.log('login response:', response);
         
-    if (response?.error === 0 && response.user) {
+    if (response?.success && response.user) {
       const id = response.planning[0]?.IdPlanning || -1;
       if (id >= 0) {
         axiosAgent.defaults.headers.common['X-Planning-Id'] = id;
@@ -103,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentVueId(idVue);
     calendarConfigService.setLastVueForUser(idVue)
       .then(response => {
-        if (response.error === 0) {
+        if (response.success) {
           axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = idVue;
         }
       })

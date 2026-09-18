@@ -90,7 +90,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       if (cancelled) return;
 
       const config = result?.data;
-      if (result?.error === 0 && config) {
+      if (result?.success && config) {
         const primaryFields = Array.isArray(config.primaryFields) ? config.primaryFields : [];
         const secondaryFields = Array.isArray(config.secondaryFields) ? config.secondaryFields : [];
         setMobileAppointmentDisplayState({
@@ -114,7 +114,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     setMobileAppointmentSettingsLoading(true);
     try {
       const result = await calendarConfigService.getMobileAppointmentDisplayConfigSettings();
-      if (result?.error !== 0 || !result.data) return;
+      if (result?.success === false || !result.data) return;
 
       const fields = Array.isArray(result.data) ? result.data : result.data.fields;
       if (Array.isArray(fields)) {
@@ -145,21 +145,21 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   const viewDropdownRef = useRef<HTMLDivElement>(null);
 
   const onCalendarConfigChange = (config: CalendarConfig) => {
-    setCurrentCalendarConfig(config);
-    calendarConfigService.setLastVueForUser(config.IdPlanningVue || -1).then(() => {
+    calendarConfigService.setLastVueForUser(config.IdPlanningVue || -1)
+    .then(() => {
       console.log(`Last view for user ${user.IdPersonnel} set to ${config.IdPlanningVue}`);
       axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = config.IdPlanningVue;
+      setCurrentCalendarConfig(config);
     }).catch((error) => {
       console.error('Error setting last view for user:', error);
     }); 
   }
 
 
-  
-  const loadNonWorkingDates = async (): Promise<{ error: number; message: string }> => {
+  const loadNonWorkingDates = async (): Promise<{ success: boolean; message: string }> => {
       const result = await calendarConfigService.getNonWorkingDatesByPlanningId();
       console.log('Résultat du chargement des jours non travaillés :', result);
-      if (result?.error === 0 && result.data) {
+      if (result?.success && result.data) {
         const recordData = Object.fromEntries(
           result.data.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [
               item.DatePlanningJourNontravaille, // La clé (string)
@@ -170,9 +170,9 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
         // 2. On met à jour le state
         setNonWorkingDates(recordData);
 
-        return { error: 0, message: 'Jours non travaillés chargés avec succès' };
+        return { success: true, message: 'Jours non travaillés chargés avec succès' };
       }else {
-        return { error: result?.error || 1, message: result?.message || 'Erreur lors du chargement des jours non travaillés'};
+        return { success: false, message: result?.message || 'Erreur lors du chargement des jours non travaillés'};
       }
     };
 

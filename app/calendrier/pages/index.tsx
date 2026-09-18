@@ -186,18 +186,21 @@ export default function HomePage({
   });
 
   useEffect(() => {
+    if(!isMobile) return;
     if (selectedEmployee || globalEmployees.length === 0) return;
     setSelectedEmployee(globalEmployees[0] || user);
-  }, [globalEmployees, selectedEmployee, user]);
+  }, [globalEmployees, selectedEmployee, user, isMobile]);
 
   useEffect(() => {
+    if(!isMobile) return;
+
     if (!selectedEmployee) return;
     void dataLayer.loadAppointmentsInRange(
       startOfMonth(new Date(viewState.selectedDate)).getTime(),
       endOfMonth(new Date(viewState.selectedDate)).getTime(),
       selectedEmployee.IdPersonnel
     );
-  }, [dataLayer.loadAppointmentsInRange, selectedEmployee, viewState.selectedDate]);
+  }, [dataLayer.loadAppointmentsInRange, selectedEmployee, viewState.selectedDate, isMobile]);
 
   useEffect(() => {
     const loadMonthlyAppointments = async () => {
@@ -324,15 +327,15 @@ export default function HomePage({
     appointmentLogic.handleSearchItemAction(item as unknown as Item);
   }, [appointmentLogic.selectedCell, appointmentLogic.handleSearchItemAction, dataLayer.itemsRef]);
 
-  const searchOverlayItems = useCallback(async (query: string): Promise<{ error: number; data: SearchableItem[]; message?: string }> => {
+  const searchOverlayItems = useCallback(async (query: string): Promise<{ success: boolean; data: SearchableItem[]; message?: string }> => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) {
-      return { error: 0, data: [] };
+      return { success: true, data: [] };
     }
 
     const response = await ressourceService.searchRessources(trimmedQuery, [], 20);
-    if (response?.error !== 0 || !Array.isArray(response.data)) {
-      return { error: 1, data: [], message: 'Erreur lors de la recherche. Veuillez réessayer.' };
+    if (response?.success === false || !Array.isArray(response.data)) {
+      return { success: false, data: [], message: 'Erreur lors de la recherche. Veuillez réessayer.' };
     }
 
     const data = (response.data as Item[])
@@ -350,7 +353,7 @@ export default function HomePage({
         label: item.LibellePlanningRessource,
       }));
     
-    return { error: 0, data };
+    return { success: true, data };
   }, []);
 
   const handleOpenMobileAppointment = useCallback(() => {
@@ -534,7 +537,7 @@ export default function HomePage({
       if (!isMounted || hasInitializedNonWorkingDatesRef.current) return;
       hasInitializedNonWorkingDatesRef.current = true;
       const result = await viewState.loadNonWorkingDates();
-      if (result.error === 1){
+      if (!result.success){
         setLoadCalendar(false);
         setErrorPlanning(result.message || "Erreur lors du chargement des jours non travaillés. Veuillez réessayer.");
       }
@@ -545,8 +548,7 @@ export default function HomePage({
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
 
-      const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-
+      console.log(isMobile)
       // Sur mobile, le calendrier est personnel : les listes employees, equipes
       // et poles ne sont pas necessaires pour afficher les rendez-vous.
       if (isMobile) {
@@ -572,7 +574,7 @@ export default function HomePage({
       if (!hasInitializedEmployeesRef.current) {
         const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
         console.log('Employees Response:', employeesResponse);
-        if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+        if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
           setGlobalEmployees(employeesResponse.data);
         } else {
           setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
@@ -587,7 +589,7 @@ export default function HomePage({
 
       let rep = await dataLayer.loadTeams();
       console.log('Teams Response:', rep);
-      if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
+      if (rep?.success === false || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
         setLoadCalendar(false);
         return;
@@ -595,7 +597,7 @@ export default function HomePage({
 
       rep = await dataLayer.loadPoleActivites();
       console.log('Pole Activités Response:', rep);
-      if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
+      if (rep?.success === false || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
         setLoadCalendar(false);
         return;
@@ -619,7 +621,8 @@ export default function HomePage({
       hasInitializedEmployeesRef.current = true;
       const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : null;
 
-      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+
+      if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
       } else {
         setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
@@ -629,7 +632,6 @@ export default function HomePage({
       }
     }
     
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
     if (!isMobile) {
       initializeNonWorkingDates();
     }
@@ -678,7 +680,7 @@ export default function HomePage({
         : await employeeService.getEmployee(user.IdPersonnel);
 
         console.log('Employees Response:', employeesResponse);
-      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+      if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
         setEmployeesVersion(prev => prev + 1);
       } else {
@@ -689,14 +691,14 @@ export default function HomePage({
       }
 
       const teamsResponse = await dataLayer.loadTeams();
-      if (teamsResponse?.error !== 0 || !Array.isArray(teamsResponse.data) || teamsResponse.data.length === 0) {
+      if (teamsResponse?.success === false || !Array.isArray(teamsResponse.data) || teamsResponse.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
         setLoadCalendar(false);
         return;
       }
 
       const poleActivitesResponse = await dataLayer.loadPoleActivites();
-      if (poleActivitesResponse?.error !== 0 || !Array.isArray(poleActivitesResponse.data) || poleActivitesResponse.data.length === 0) {
+      if (poleActivitesResponse?.success === false || !Array.isArray(poleActivitesResponse.data) || poleActivitesResponse.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
         setLoadCalendar(false);
         return;
@@ -846,18 +848,15 @@ export default function HomePage({
 
   // 2. On branche la radio !
   useMercureSync(currentPlanningId, handleMercureEvent, setLockNotification);
+  useEffect(() => {
+    console.log(viewState.viewType, "vue active");
+  }, [viewState.viewType]);
 
   // --- RENDU VISUEL ---
 
   return (
     <NoSSR>
-      <DndProvider backend={HTML5Backend}>
-        {/* Overlay de loading pendant le centrage initial */}
-        {viewState.viewType === 'calendar' && loadCalendar && (
-          <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
-            <Loader message="Chargement du calendrier..." className="h-full" />
-          </div>
-        )}      
+      <DndProvider backend={HTML5Backend}>          
         {lockNotification && (
             <TopNotification 
               message={lockNotification} 
@@ -883,8 +882,12 @@ export default function HomePage({
             <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!viewState.isMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
               <div className={`flex-grow rounded-lg w-full h-full pb-4 ${dataLayer.isLoading ? "pointer-events-none opacity-60" : ""}`}>
                 
-                {/* Injection des contextes pour les composants enfants */}          
-                {viewState.viewType === 'calendar' ? (
+                {viewState.viewType === 'calendar' && loadCalendar && (
+                  <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
+                    <Loader message="Chargement du calendrier..." className="h-full" />
+                  </div>
+                )}   
+                {viewState.viewType === 'calendar' && !loadCalendar ? (
                   /* VUE PLANNING */
                   (errorPlanning) ? (
                     <div className="flex items-center justify-center h-full">
@@ -972,6 +975,8 @@ export default function HomePage({
               </div>
             </div>
           </div>
+        
+         
 
           {/* --- COMPOSANTS FLOTTANTS & MODALES --- */}
           
@@ -1195,14 +1200,6 @@ export default function HomePage({
             actionLabel="+"
             enableDragDetection={true}
           />
-
-          {/* Indicateur de chargement global */}
-          {dataLayer.isLoading && (
-             <div className="fixed top-0 left-0 w-full h-1 bg-primary z-50">
-               <div className="h-full bg-primary animate-pulse w-1/3 rounded-r-full" />
-             </div>
-          )}
-
         </div>
       </DndProvider>
     </NoSSR>

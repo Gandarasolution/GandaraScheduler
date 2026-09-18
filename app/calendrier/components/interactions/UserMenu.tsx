@@ -1,8 +1,6 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
 import { User } from '../../types';
-import { getCachedImageById } from '../../utils/imageCacheStore';
 import { useAuth } from '../../hooks/utils/AuthContext';
 
 interface UserMenuProps {

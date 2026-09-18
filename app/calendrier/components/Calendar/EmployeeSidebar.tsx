@@ -226,19 +226,12 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                     }}
                   >
                     <div className="relative">
-                      {employee.Image ? (
-                        <img  
-                          src={employee.Image}
-                          className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
-                        />
-                      ) : (
-                        <img
-                          src={`https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`}
-                          alt={employee.Nom}
-                          className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
-                          onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`; }}
-                        />
-                      )}
+                      <img  
+                        src={employee.Image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`}
+                        alt={employee.Nom}
+                        loading="lazy"
+                        className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+                      />   
                       {employee.Type === 'INTERIM' && (
                         <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
                       )}

@@ -4,7 +4,6 @@ import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAnd
 import { employeeService, equipeService, evenementService, imageService } from '@/app/service';
 import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
 import { getCachedImages, subscribeToImageCache, upsertCachedImage } from '../../utils/imageCacheStore';
-import { set } from 'date-fns';
 
 
 interface DataLayerProps {
@@ -48,7 +47,7 @@ export const useDataLayer = ({
   const loadTeams = useCallback(async () => {    
     const response = await equipeService.getEquipes();
     
-    if (response?.error === 0 && Array.isArray(response.data)) {
+    if (response?.success && Array.isArray(response.data)) {
       const teamsRecord: Record<number, Equipe> = {};
       response.data.forEach((team: Equipe) => {
         teamsRecord[team.Id] = team;
@@ -60,7 +59,7 @@ export const useDataLayer = ({
 
   const loadPoleActivites = useCallback(async () => {
     const response = await equipeService.getPoleActivites();
-    if (response?.error === 0 && Array.isArray(response.data)) {
+    if (response?.success && Array.isArray(response.data)) {
       const poleActivitesRecord: Record<number, PoleActivite> = {};
       response.data.forEach((pole: PoleActivite) => {
         poleActivitesRecord[pole.Id] = pole;
@@ -141,20 +140,17 @@ export const useDataLayer = ({
       const response = await evenementService.getEvenements(startDate, endDate, employeeId);
       const payloadData = response?.data;
 
-      if(response?.error !== 0) {
+      if(response?.success === false) {
         console.error("Erreur lors du chargement des rendez-vous:", response?.message || "Erreur inconnue");
         setNotification("Erreur lors du chargement des rendez-vous. Veuillez réessayer plus tard.");
         return false;
       }
 
-      const newAppointments = response?.error === 0
-        ? (Array.isArray(payloadData?.appointments)
-            ? payloadData.appointments
-            : []
-          )
+      const newAppointments = response?.success === true && Array.isArray(payloadData?.appointments)
+        ? payloadData.appointments
         : [];
 
-      const newResources = response?.error === 0 && Array.isArray(payloadData?.ressources)
+      const newResources = response?.success === true && Array.isArray(payloadData?.ressources)
         ? payloadData.ressources
         : [];
         
@@ -188,7 +184,7 @@ export const useDataLayer = ({
   const fetchPaginatedImages = useCallback(async (page: number, limit?: number): Promise<{ image: ImageType[]; totalLignes: number }> => {
     try {
       const response = await imageService.getImagesPaginated(page, limit || 8);
-      if (response?.error === 0 && Array.isArray(response.data.image)) {
+      if (response?.success && Array.isArray(response.data.image)) {
               console.log('Réponse de l\'API getImagesPaginated:', response);
 
         const images = response.data.image;
@@ -225,7 +221,7 @@ export const useDataLayer = ({
 
     try {
       const response = await employeeService.updateEquipeEmployee(employee.IdPersonnel, { Type: employee.Type, IdEquipe: groupId });
-      if (response?.error === 0) {
+      if (response?.success) {
         return { success: true };
       }
       console.error("Erreur lors de la mise à jour de l'équipe de l'employé:", response?.message || "Erreur inconnue");

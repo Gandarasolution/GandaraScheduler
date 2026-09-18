@@ -39,6 +39,12 @@ axiosAgent.interceptors.request.use((config) => {
     config.baseURL = clientApiUrl;
   }
 
+  // Si la donnée est un FormData (donc un envoi de fichier)
+  if (config.data instanceof FormData) {
+      // On supprime le header forcé pour laisser le navigateur générer le 'multipart/form-data'
+      delete config.headers['Content-Type'];
+  }
+
   return config;
 });
 
@@ -59,23 +65,6 @@ axiosAgent.interceptors.response.use(
 );
 
 
-
-/* Pour la démonstration, décommenter l'instruction suivnante.
-  Cela permet d'ajouter à toutes les requêtes une entête api-key.
-  Malheureusement, cette entête n'est pas autorisée par l'API
-  ce qui va faire échouer toutes les requêtes, avec un message du sytle :
-
-  https://apidemo.iut-bm.univ-fcomte.fr/rpg/towns/get' from origin 'http://localhost:8080'
-  has been blocked by CORS policy: Request header field api-key is not allowed by Access-Control-Allow-Headers
-  in preflight response.
-
-  Il est donc important  d'écrire le front en fonction de ce qu'autorise l'API.
-
-axiosAgent.interceptors.request.use(
-    config => { return { ...config, headers: { "api-key": "1234azer" } } },
-    error => { return Promise.reject(error) }
-)
-*/
 
 function handleError(serviceName, err) {
     console.log("handleError called for service " + serviceName + " with error: " + err);
@@ -114,17 +103,7 @@ function handleError(serviceName, err) {
     }
 }
 
-/* Fonctions génériques pour envoyer des requêtes http
 
-NB: ces fonctions n'échouent jamais et renvoient forcément un objet ayant la même structure que les données
-renvoyées par l'API, même en cas d'erreur.
-*/
-
-/*
-- uri est l'URI qui complète l'URL de base. Si on interroge une API  REST,
-  cela correspond donc à route demandée, par ex /rpg/items/get
-- name est un "surnom" de l'uri, pour les message de debug
- */
 async function getRequest(uri, name, config = {}) {
     let response = null
     try {
@@ -138,11 +117,6 @@ async function getRequest(uri, name, config = {}) {
     return response.data;
 }
 
-// NB: pour une requête post/patch, les données associées à la requête sont transmises
-// par axios sous la forme d'un objet JSON contenant ces données, et axios les transmet
-// de façon compactée dans le "corps" de la requête (c.a.d. la partie body). Du côté serveur, il faut "analyser"
-// le corps (donc utiliser le module body-parser) afin d'avoir le contenu de l'objet dans req.body.
-// Dans la méthode ci-dessous, le paramètre data correspond à l'objet JSON
 async function postRequest(uri, data, name, config = {}) {
     let response = null
     try {

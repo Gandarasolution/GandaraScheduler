@@ -156,7 +156,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
     evenementService.lockQuickEvenement(appointment.IdPlanningEvenement)
       .then(response => {
-        if (response.error === 409) {
+        if (response.success === false) {
           document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
           if (onLockedError) {
             onLockedError(response.message || 'Un autre utilisateur modifie cet événement.');
@@ -416,6 +416,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             <img
               src={event.Image.image}
               className="w-8 h-8 object-cover flex-shrink-0 rounded-full"
+              loading="lazy"
             />
           ): (
               <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>

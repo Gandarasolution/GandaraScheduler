@@ -27,7 +27,7 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
       const response = hasPermission ? await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel, idPlanning) : null;
       console.log('Load Configs Response:', response);
       
-      if (response?.error === 0 && Array.isArray(response.data.Configs)) {
+      if (response?.success && Array.isArray(response.data.Configs)) {
 
         setConfigs(response.data.Configs);
         setCurrentCalendarConfig(response.data.Configs.find((config: { IdPlanningVue: number | null; }) => Number(config.IdPlanningVue) === Number(currentVueId)) || null);
@@ -61,7 +61,7 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
     if (isCreatingConfig) {
       const response = await calendarConfigService.createCalendarConfig(config);
       console.log('Create Config Response:', response);
-      if (response?.error === 0 && (response.data || response.message)) {
+      if (response?.success) {
         console.log('Config created successfully:', response.data);
         setConfigs(prev => [...prev, response.data]);
         
@@ -72,7 +72,7 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
       }
     } else if (editingConfig) {
       const response = await calendarConfigService.updateCalendarConfig(editingConfig.IdPlanningVue, config);
-      if (response?.error === 0 && (response.data || response.message)) {
+      if (response?.success && (response.data || response.message)) {
         setConfigs(prev => prev.map(c => c.IdPlanningVue === editingConfig.IdPlanningVue ? response.data : c));
         return response;
       } else {
@@ -82,12 +82,12 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
     }
   }, [isCreatingConfig, editingConfig, closeConfigModal, user.IdPersonnel]);
 
-  const deleteConfig = useCallback(async (configId: number): Promise<{error: number, message?: string} | void> => {
+  const deleteConfig = useCallback(async (configId: number): Promise<{success: boolean, message?: string} | void> => {
     try {
       const response = await calendarConfigService.deleteCalendarConfig(configId);
       
       // On vérifie si la réponse existe et si l'erreur est 0
-      if (response && response.error === 0) {
+      if (response && response.success) {
         setConfigs(prev => prev.filter(c => c.IdPlanningVue !== configId));
       }
       
@@ -96,7 +96,7 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
     } catch (error) {
       console.error("Erreur lors de l'appel API de suppression:", error);
       // On retourne une structure d'erreur cohérente en cas de crash réseau
-      return { error: 1, message: "Erreur de communication avec le serveur." };
+      return { success: false, message: "Erreur de communication avec le serveur." };
     }
   }, []);
 

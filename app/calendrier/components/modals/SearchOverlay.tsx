@@ -84,7 +84,7 @@ type SearchOverlayProps<T extends SearchableItem = SearchableItem> = {
   /** Callback de fermeture */
   onClose: () => void;
   /** Fonction de recherche (sync ou async) appelée avec la query */
-  onSearch: (query: string) => Promise<{ error: number; data: T[]; message?: string }>;
+  onSearch: (query: string) => Promise<{ success: boolean; data: T[]; message?: string }>;
   /** Placeholder de l'input de recherche */
   placeholder?: string;
   /** Configuration des états vides */
@@ -161,7 +161,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
     await onSearch(query).then(result => {
       if (requestId !== lastRequestId.current) return;
-      if (result.error === 0) {
+      if (result.success ) {
         console.log(result.data);
         
         setItems(result.data);
