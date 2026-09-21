@@ -264,18 +264,24 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
       />
 
       {/* Conteneur principal */}
-      <div 
-        className={`fixed z-60 bg-opacity-0 rounded-2xl 
-          w-[calc(100vw-2rem)] left-4 top-[10%] 
-          sm:w-[calc(100vw-4rem)] sm:left-8 sm:top-[20%] 
-          lg:w-auto lg:max-w-${maxWidth} lg:left-[32%] lg:top-[35%] 
-          max-h-[80vh] flex flex-col ${
-          enableDragDetection && isDragging ? 'opacity-0' : 'opacity-100'
-        } transition-all duration-300 ease-in-out ${className}`}
+      <div
+        className={`fixed z-60 bg-opacity-0 rounded-2xl
+          left-1/2 top-1/2
+          -translate-x-1/2 -translate-y-1/2
+          w-[calc(100vw-2rem)]
+          sm:w-[calc(100vw-4rem)]
+          lg:w-auto lg:max-w-${maxWidth}
+          max-h-[80vh]
+          flex flex-col
+          ${
+            enableDragDetection && isDragging
+              ? 'opacity-0'
+              : 'opacity-100'
+          }
+          transition-opacity duration-300 ease-in-out
+          ${className}`}
         onClick={(e) => e.stopPropagation()}
-        style={{ 
-          ...(window.innerWidth >= 1024 ? position : {}),
-          left: enableDragDetection && isDragging ? '100%' : (window.innerWidth < 640 ? '1rem' : window.innerWidth < 1024 ? '2rem' : position.left),
+        style={{
           minWidth: window.innerWidth >= 1024 ? '675px' : undefined,
           ...style
         }}

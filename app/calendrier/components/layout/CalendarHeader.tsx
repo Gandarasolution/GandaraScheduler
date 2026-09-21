@@ -287,7 +287,7 @@ export const CalendarHeader = memo(({
       {/* BARRE D'OUTILS INFERIEURE (Titres, Filtres, Date) - Visible si Expanded */}
       <div className={`flex items-center justify-between w-full ${!isExpanded ? 'hidden' : 'h-[50px]'}`}>
         <div className={`${viewType === 'calendar' ? 'ml-80' : 'ml-7'}`}>
-          <p className="text-5xl poppins text-primary">
+          <p className={`text-5xl poppins text-primary ${viewType !== 'calendar' ? 'mt-[30px]' : ''}`} >
             {
               viewType === 'calendar' ? 'Planning' 
               : viewType === 'chantier-table' ? 'Liste des chantiers' 

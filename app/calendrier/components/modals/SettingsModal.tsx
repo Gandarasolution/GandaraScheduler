@@ -9,6 +9,7 @@ type SettingsModalProps = {
   onClose: () => void;
   settings: any;
   isSettingsOpen: boolean;
+  setNotification: (notifications: any) => void;
 };
 
 const previewAppointment: Appointment = {
@@ -50,7 +51,8 @@ const previewEmployee: User = {
 const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   isSettingsOpen,
-  settings
+  settings,
+  setNotification
 }) => {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
@@ -453,13 +455,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                       setDeletingDate(dateKey);
                                       try {
                                         if (setting.removeNonWorkingDatesFromPlanning) {
-                                          const response = await setting.removeNonWorkingDatesFromPlanning(id); // TODO: Replace with real idPlanning if not 3
+                                          const response = await setting.removeNonWorkingDatesFromPlanning(id);
                                           if (response && response.success) {
                                             setting.setNonWorkingDates((prev: any) => {
                                                 const newDates = { ...prev };
                                                 delete newDates[dateKey];
                                                 return newDates;
                                             });
+                                          }else{
+                                            setNotification(response?.message || "Erreur lors de la suppression de la date non travaillée");
                                           }
                                         } else {
                                           setting.setNonWorkingDates((prev: any) => {

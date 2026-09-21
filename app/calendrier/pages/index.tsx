@@ -1105,6 +1105,7 @@ export default function HomePage({
               isFullDay: viewState.isFullDay,
               isDisplayWeekend: viewState.isDisplayWeekend,
               viewType: viewState.viewType,
+              setNotification: setLockNotification,
             }}
           />
 
@@ -1155,6 +1156,7 @@ export default function HomePage({
                 : { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
             renderItem={(event: any, index: number) => {
+              console.log("Rendering search item:", event, "at index:", index);
               if (isMobile){
                 const itemData = event as any as Item;
                 const isChantier = itemData.Type === 'Projet';
@@ -1185,17 +1187,19 @@ export default function HomePage({
                       </div>
                     </div>
                   </div>
-            );
-              }                        
-              <DraggableSource
-                key={`${event.label}-${event.id}-${index}`}
-                id={event.id as number}
-                item={event as Item}
-                imageUrl={event.image?.image}
-                title={event.label}
-                type={(event as any).Type as "Projet" | "Paie" | "Rubrique Perso"}
-                className="w-full"
-              />
+                );
+              }
+              return (                        
+                <DraggableSource
+                  key={`${event.label}-${event.id}-${index}`}
+                  id={event.id as number}
+                  item={event as Item}
+                  imageUrl={event.Image}
+                  title={event.label}
+                  type={(event as any).Type as "Projet" | "Paie" | "Rubrique Perso"}
+                  className="w-full"
+                />
+              );
             }}
             actionLabel="+"
             enableDragDetection={true}

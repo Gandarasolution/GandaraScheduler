@@ -662,8 +662,7 @@ export const useAppointmentLogic = ({
         if(eventUpdate.Image?.id === 0){
           const imageBase64 = eventUpdate.Image.image;
 
-          const nativeFile = await base64ToFile(imageBase64, 'image-rdv.png');
-          const result = await imageService.uploadImage(nativeFile)
+          const result = await imageService.uploadImage(imageBase64)
           if (result.success && result.id) {
             eventUpdate.Image.id = result.id;
           } else {

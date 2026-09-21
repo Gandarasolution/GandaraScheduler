@@ -122,6 +122,8 @@ interface CalendarModalsProps {
     mobileAppointmentFieldOptions: Array<{ CodeChamp: MobileAppointmentField; Libelle: string }>;
     mobileAppointmentSettingsLoading: boolean;
     loadMobileAppointmentSettings: () => Promise<void>;
+
+    setNotification: (notifications: any) => void;
     
     // Constants
     HALF_DAY_INTERVALS: any[];
@@ -327,20 +329,7 @@ export const CalendarModals = memo(({
             appointments={data.appointments}
             tagPlacement={modalsState.tagPlacement}
             appointment={modalsState.selectedAppointmentForm as Appointment}
-            item={modalsState.selectedAppointmentForm?.IdPlanningRessource === -1 
-              ? {
-                  IdPlanningRessource: -1,
-                  CodePlanningRessource: '',
-                  LibellePlanningRessource: '',
-                  Type: 'Rubrique Perso',
-                  CouleurFondPlanningRessource: '#ffffff',
-                  CouleurBordurePlanningRessource: '#000000',
-                  CouleurTextePlanningRessource: '#000000',
-                  Actif: false,
-                  Verrou: false,
-                  Category: 'dimension',
-              } 
-              : data.selectedItem as Item}
+            item={data.selectedItem as Item}
             isReducedVersion={resourceEditMode !== null}
             resourceEditMode={resourceEditMode}
             employees={data.employees}
@@ -387,6 +376,7 @@ export const CalendarModals = memo(({
           onClose={handlers.closeSettings}
           settings={settings} 
           isSettingsOpen={modalsState.isSettingsOpen}
+          setNotification={config.setNotification}
         />
       )}
       

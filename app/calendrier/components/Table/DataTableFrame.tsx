@@ -1218,7 +1218,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                 className="relative overflow-hidden border-b border-default bg-gray-200"
                 style={{
                   width: `${containerWidth}px`,
-                  height: `${heightCell}px`,
+                  minHeight: `${heightCell}px`,
+                  height: '100%',
                   //gridTemplateColumns: gridTemplateColumns.length > 0 ? gridTemplateColumns : 'repeat(auto-fit, minmax(100px, 1fr))'
                 }}
               >
@@ -1292,7 +1293,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                             key={`${item.id}-${attributeKey}`}
                             className="bg-gradient-to-r from-gray-50 to-gray-100"
                             style={{
-                              height: `${heightCell}px`,
+                              minHeight: `${heightCell}px`,
+                              height: '100%',
                               borderRight: isNextHidden ? '1px dashed #e5e7eb' : '1px solid #e5e7eb',
                               // ...
                             }}
@@ -1308,12 +1310,15 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                       return (
                         <div // Remplacé <td> par <div>
                           key={`${item.id}-${attributeKey}`}
-                          className={`border-r border-default overflow-hidden text-sm transition-colors text-primary flex items-center ${cellClasses}`}
+                          className={`border-r border-default text-sm transition-colors text-primary flex items-center ${cellClasses}`}
                           title={`${attributeLabel}: ${value || '-'}`}
                           style={{
-                            height: `${heightCell}px`,
+                            minHeight: `${heightCell}px`,
+                            height: '100%',
                             padding: `${cellPadding}px`,
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'normal',
+                            overflowWrap: 'break-word',
+                            wordBreak: 'break-word'
                           }}
                           onMouseEnter={() => {
                             setItemHoveredId(item.id);

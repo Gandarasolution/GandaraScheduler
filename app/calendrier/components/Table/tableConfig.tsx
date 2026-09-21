@@ -105,26 +105,25 @@ return (
 };
 
   // 3. Renderer pour l'image des employés (Avatar rond)
-// const imageRendererEmployee = (value: any, item: User, deps: TableConfigDeps) => {
-//     const isInactive = item.Actif === false;
-//     return (
-//         <div className="relative inline-block" style={{ opacity: isInactive ? 0.5 : 1 }}>
-//         <img
-//             src={/*item.IdImage ??*/ `https://placehold.co/32x32/cccccc/333333?text=${item.Nom?.charAt(0) || '?'}`}
-//             alt={item.Nom + ' ' + item.Prenom}
-//             className={`cursor-pointer w-8 h-8 rounded-full border shadow ${item.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
-//             onError={(e) => { e.currentTarget.src = `https://placehold.co/32x32/cccccc/333333?text=${item.Nom?.charAt(0) || '?'}`; }}
-//             onClick={(e) => {
-//                 e.stopPropagation();
-//                 if (deps.onImageClick) deps.onImageClick(item);
-//             }}
-//         />
-//         {item.Type === 'INTERIM' && (
-//             <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
-//         )}
-//         </div>
-//     );
-// };
+const imageRendererEmployee = (value: any, item: User, deps: TableConfigDeps) => {
+    const isInactive = item.Actif === false;
+    return (
+        <div className="relative inline-block" style={{ opacity: isInactive ? 0.5 : 1 }}>
+        <img
+            src={item.Image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.Nom.charAt(0)}`}
+            alt={item.Nom + ' ' + item.Prenom}
+            className={`cursor-pointer w-10 h-10 rounded-full border shadow ${item.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+            onClick={(e) => {
+                e.stopPropagation();
+                if (deps.onImageClick) deps.onImageClick(item);
+            }}
+        />
+        {item.Type === 'INTERIM' && (
+            <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
+        )}
+        </div>
+    );
+};
 
 export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}): CategoryStructure[] => {
     if (viewType === 'chantier-table') 
@@ -135,9 +134,18 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 attributes: [
                     { key: 'Image', label: '', sortable: false , /*width:50,*/ renderer: (value, item) => imageRendererChantierAndPaie(value, item, deps)},
                     { key: 'PoleActivite',   label: 'Pôle', type:'string', /*width:120 */},
-                    //{ key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
-                    { key: 'Identifiant',  label: 'Identifiant', type:'string', /*width:125 */},
-                    { key: 'LibellePlanningRessource' , label: 'Libellé', type:'string' },
+                    { key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
+                    { key: 'Identifiant',  label: 'Identifiant', type:'string' /*width:125 */, 
+                        renderer: (value: string) => (
+                        <div className="flex items-center justify-start w-full h-full">
+                            <span className="poppins break-words">{value}</span>
+                        </div>
+                        )},
+                    { key: 'LibellePlanningRessource' , label: 'Libellé', type:'string', renderer: (value: string) => (
+                        <div className="flex items-center justify-start w-full h-full">
+                            <span className="poppins break-words">{value}</span>
+                        </div>
+                    )},
                     { key: 'Etat', label: 'État', type:'string', /*width:90,*/ 
                     renderer:(value: string) => {
                         const statusColors: Record<string, string> = {
@@ -149,7 +157,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                         };
                         const colorClass = statusColors[value] || 'bg-gray-100 text-gray-800';
                         return (
-                        <div className="flex items-center justify-center w-full h-full">
+                        <div className="flex items-center justify-center w-full h-full whitespace-nowrap">
                             <span className={`inline-flex h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
                             {value}
                             </span>
@@ -218,7 +226,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
             key: 'all',
             label: '',
             attributes: [
-            { key: 'Image', label: '', sortable: false, width:50, /*renderer: (value: any, item: GenericDataItem) => imageRendererEmployee(value, item as unknown as User, deps) */},
+            { key: 'Image', label: '', sortable: false, width:60, renderer: (value: any, item: GenericDataItem) => imageRendererEmployee(value, item as unknown as User, deps)},
             { key: 'Code', label: 'Code' },
             { key: 'Nom', label: 'Nom' },
             { key: 'Prenom', label: 'Prénom'}, 

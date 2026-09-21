@@ -29,6 +29,8 @@ const DraggableSource: React.FC<DraggableSourceProps> = ({ id, item, title, imag
     }),
   });
 
+  console.log('DraggableSource rendered with props:', { id, item, title, imageUrl, type, className });
+
   return (
     <div
       ref={(node) => {
@@ -47,11 +49,10 @@ const DraggableSource: React.FC<DraggableSourceProps> = ({ id, item, title, imag
         <img 
           src={imageUrl} 
           alt="Icône" 
-          className="w-12 h-12 rounded border border-default object-cover" 
+          className="w-10 h-10 rounded border border-default object-cover" 
         />
       ) : (
-        // CAS 2 : Pas d'image -> Fond gris avec une croix
-        <div className="w-12 h-12 rounded border border-default bg-gray-200 flex items-center justify-center text-gray-400">
+        <div className="w-10 h-10 shrink-0 rounded border border-default bg-gray-200 flex items-center justify-center text-gray-400">
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             fill="none" 
