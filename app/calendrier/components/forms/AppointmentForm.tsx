@@ -187,6 +187,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    */
   const changedEmployeePermissions = useRef<Record<number, number>>({});
   
+  console.log(new Date(formDataAppointment.DebutPlanningEvenement), new Date(formDataAppointment.FinPlanningEvenement));
 
   // console.log("Ressource actuelle :", formDataItemType);
   // console.log("isResourceMode :", isResourceMode);

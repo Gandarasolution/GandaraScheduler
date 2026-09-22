@@ -878,7 +878,7 @@ export default function HomePage({
           )}
 
           {/* CORPS PRINCIPAL : Grille ou Tableaux */}
-          <div className="flex-1 flex min-h-0 box-border">
+          <div className="flex-1 flex min-h-0 box-border ">
             <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!viewState.isMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
               <div className={`flex-grow rounded-lg w-full h-full pb-4 ${dataLayer.isLoading ? "pointer-events-none opacity-60" : ""}`}>
                 
@@ -1156,7 +1156,6 @@ export default function HomePage({
                 : { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
             renderItem={(event: any, index: number) => {
-              console.log("Rendering search item:", event, "at index:", index);
               if (isMobile){
                 const itemData = event as any as Item;
                 const isChantier = itemData.Type === 'Projet';

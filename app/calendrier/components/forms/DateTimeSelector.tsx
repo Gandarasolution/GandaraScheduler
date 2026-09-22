@@ -8,7 +8,7 @@
 
 "use client";
 import React from 'react';
-import { format, startOfDay } from 'date-fns';
+import { addMinutes, format, startOfDay } from 'date-fns';
 import DatePicker from '../ui/DatePicker';
 
 /**
@@ -237,7 +237,7 @@ export const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
         <div className="flex flex-col w-full">
           <div className="flex flex-row gap-2 w-full justify-end">
             <DatePicker
-              value={endDate}
+              value={addMinutes(new Date(endDate), -1)}
               onChange={(d) => handleDateChange('end', format(new Date(d), 'yyyy-MM-dd'))}
               className="w-[145px]"
               inputClassName={`w-full p-2 border ${validationError ? 'border-red-500' : 'border-default'} rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm`}

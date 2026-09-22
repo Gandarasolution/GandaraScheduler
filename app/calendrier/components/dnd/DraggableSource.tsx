@@ -29,7 +29,6 @@ const DraggableSource: React.FC<DraggableSourceProps> = ({ id, item, title, imag
     }),
   });
 
-  console.log('DraggableSource rendered with props:', { id, item, title, imageUrl, type, className });
 
   return (
     <div

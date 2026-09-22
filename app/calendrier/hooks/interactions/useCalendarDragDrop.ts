@@ -64,6 +64,7 @@ export const useCalendarDragDrop = ({
   const [, dropRef] = useDrop(() => ({
     accept: ['appointment', 'external-item'],
     drop: (item: DragItem, monitor) => {
+      console.log('Dropped item:', item);
       if (!tableRef.current || rowBoundaries.length === 0 || dayInTimeline.length === 0) return;
       
       const clientOffset = monitor.getClientOffset();

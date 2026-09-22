@@ -186,12 +186,29 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
     const monitor = dragDropManager.getMonitor();
 
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     const unsubscribe = monitor.subscribeToStateChange(() => {
-      const isDragInProgress = monitor.isDragging();
-      setIsDragging(isDragInProgress);
+      const dragInProgress = monitor.isDragging();
+
+      if (dragInProgress) {
+        timer = setTimeout(() => {
+          setIsDragging(true);
+        }, 0);
+      } else {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+
+        setIsDragging(false);
+      }
     });
 
-    return unsubscribe;
+    return () => {
+      if (timer) clearTimeout(timer);
+      unsubscribe();
+    };
   }, [dragDropManager, enableDragDetection]);
 
   useEffect(() => {
@@ -266,25 +283,20 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
       {/* Conteneur principal */}
       <div
         className={`fixed z-60 bg-opacity-0 rounded-2xl
-          left-1/2 top-1/2
-          -translate-x-1/2 -translate-y-1/2
           w-[calc(100vw-2rem)]
+          -translate-x-1/2 -translate-y-1/2
           sm:w-[calc(100vw-4rem)]
           lg:w-auto lg:max-w-${maxWidth}
           max-h-[80vh]
           flex flex-col
+
           ${
             enableDragDetection && isDragging
-              ? 'opacity-0'
-              : 'opacity-100'
+              ? 'opacity-0 left-[-9999px] top-[-9999px]'
+              : 'opacity-100 left-1/2 top-1/2'
           }
-          transition-opacity duration-300 ease-in-out
+
           ${className}`}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          minWidth: window.innerWidth >= 1024 ? '675px' : undefined,
-          ...style
-        }}
       >
         {/* Barre de recherche */}
         <div className="">
