@@ -108,7 +108,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
     if (diffMinutes < 1) return "A l'instant";
     if (diffMinutes < 60) return `Il y a ${diffMinutes} min`;
     if (diffMinutes < 1440) return `Il y a ${Math.floor(diffMinutes / 60)}h`;
-    return format(date, 'dd/MM a HH:mm', { locale: fr });
+    return format(date, 'dd/MM à HH:mm', { locale: fr });
   };
 
   const onMarkAllAsRead = () => {

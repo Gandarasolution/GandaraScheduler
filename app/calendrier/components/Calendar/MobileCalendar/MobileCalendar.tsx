@@ -8,7 +8,7 @@
  * @version 2.0.0
  */
 
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
@@ -21,6 +21,9 @@ import { AppointmentForm } from '@/app/calendrier/components';
 
 import { EmployeeSelector, MobileCalendarGrid, NotificationPanel, AppointmentList} from './index';
 import SearchOverlay from '../../modals/SearchOverlay';
+import { endOfMonth, startOfMonth } from 'date-fns';
+import { useAuth } from '@/app/calendrier/hooks/utils/AuthContext';
+import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
 
 // Lazy loading des composants lourds
 
@@ -29,32 +32,20 @@ import SearchOverlay from '../../modals/SearchOverlay';
 export interface MobileCalendarState {
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
-  showLogout: boolean;
-  setShowLogout: (value: boolean) => void;
-  showNotifications: boolean;
-  setShowNotifications: (value: boolean) => void;
   showAppointmentForm: boolean;
-  setShowAppointmentForm: (value: boolean) => void;
-  showSearchModal: boolean;
-  setShowSearchModal: (value: boolean) => void;
+  setShowAppointmentForm: (show: boolean) => void;
   selectedItem: Item | null;
   setSelectedItem: (item: Item | null) => void;
-  monthlyAppointments: Appointment[];
-  selectedDayAppointments: Appointment[];
-  selectedEmployee: User | null;
-  setSelectedEmployee: (employee: User) => void;
-  visibleEmployees: User[];
   notifications: Notification[];
   unreadCount: number;
   markAsRead: (ids: string[]) => void | Promise<void>;
   logout: () => void;
-  hasPermission: (permissionId: number) => boolean;
   handleOpenAddAppointment: () => void;
   searchOverlayItems: (query: string) => Promise<any>;
   handleSelectItem: (item: Item) => void;
   handleSaveAppointment: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => Promise<{ success: boolean }>;
-  createEmptyAppointment: (id?: number) => Appointment;
-  createEmptyItem: () => Item;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeId?: number) => Promise<boolean>;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
 }
 
 interface MobileCalendarGridProps {
@@ -80,21 +71,138 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   mobileAppointmentDisplay,
   mobileState
 }) => {
+
+  const worker = useCalendarWorker();
+
+
+  const { hasPermission } = useAuth();
+
   const {
-    selectedDate, setSelectedDate, showLogout, setShowLogout,
-    showNotifications, setShowNotifications, showAppointmentForm,
-    setShowAppointmentForm, showSearchModal, setShowSearchModal,
-    selectedItem, setSelectedItem, monthlyAppointments, selectedDayAppointments,
-    selectedEmployee, setSelectedEmployee, visibleEmployees, notifications,
-    unreadCount, markAsRead, logout, hasPermission, handleOpenAddAppointment, searchOverlayItems,
-    handleSelectItem, handleSaveAppointment, createEmptyAppointment, createEmptyItem,
+    setSelectedItem, setShowAppointmentForm,
+    selectedDate, setSelectedDate, notifications, selectedItem, showAppointmentForm,
+    unreadCount, markAsRead, logout, handleOpenAddAppointment, searchOverlayItems,
+    handleSelectItem, handleSaveAppointment,
+    onLoadAppointmentsInRange,
+    onAddAppointment, 
   } = mobileState;
+
+  const [showLogout, setShowLogout] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(user || null);
+  const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
+
+  const monthDisplay = useRef(selectedDate.getMonth());
+  const yearDisplay = useRef(selectedDate.getFullYear());
+  const selectedEmployeeRef = useRef<User | null>(selectedEmployee);
 
   const handleCloseMenus = () => {
     setShowLogout(false);
     setShowNotifications(false);
   };
 
+   useEffect(() => {
+    if (selectedEmployee || employees.length === 0) return;
+
+    const defaultEmployee = hasPermission(22) || hasPermission(23)
+      ? employees[0]
+      : employees.find(emp => emp.IdPersonnel === user.IdPersonnel);
+
+    if (defaultEmployee) {
+      setSelectedEmployee(defaultEmployee);
+    }
+  }, [employees, selectedEmployee, user.IdPersonnel]);
+
+  useEffect(() => {
+    if (!onLoadAppointmentsInRange || !selectedEmployee) return;
+    selectedEmployeeRef.current = selectedEmployee;
+    if (selectedEmployeeRef.current === selectedEmployee && monthDisplay.current === selectedDate.getMonth() && yearDisplay.current === selectedDate.getFullYear()) {
+      return; 
+    }
+    selectedEmployeeRef.current = selectedEmployee;
+    monthDisplay.current = selectedDate.getMonth();
+    yearDisplay.current = selectedDate.getFullYear();
+    const monthStart = startOfMonth(selectedDate).getTime();
+    const monthEnd = endOfMonth(selectedDate).getTime();
+    void onLoadAppointmentsInRange(monthStart, monthEnd, selectedEmployee.IdPersonnel);
+  }, [onLoadAppointmentsInRange, selectedDate, selectedEmployee]);
+  
+ const visibleEmployees = useMemo(() => {
+    const baseEmployees = hasPermission(22) || hasPermission(23)
+      ? employees 
+      : employees.filter(emp => emp.IdPersonnel === user.IdPersonnel);
+    
+    // Filtrer les employés inactifs qui n'ont pas de rdv dans le mois visible
+    return baseEmployees.filter(emp => {
+      // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
+      if (emp.Actif !== false) {
+        return true;
+      }
+      
+      // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
+      const hasMonthlyAppointments = appointments.some(app => 
+        app.IdEmploye === emp.IdPersonnel
+      );
+      
+      return hasMonthlyAppointments;
+    });
+  }, [employees, user.IdPersonnel, appointments, hasPermission]);
+
+  useEffect(() => {
+    if (!worker.isReady) {
+      // Fallback synchrone
+      const selectedDayStart = new Date(selectedDate).setHours(0, 0, 0, 0);
+      const selectedDayEnd = new Date(selectedDate).setHours(23, 59, 59, 999);
+      
+      const filtered = appointments.filter(app => 
+        app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement > selectedDayStart
+      );
+      
+      setSelectedDayAppointments(filtered);
+      return;
+    }
+    
+    // Utiliser le Web Worker
+    const filterDaily = async () => {
+      const filtered = await worker.filterDailyAppointments(
+        appointments,
+        selectedDate
+      );
+      
+      if (filtered) {
+        setSelectedDayAppointments(filtered);
+      }
+    };
+    
+    filterDaily();
+  }, [worker.isReady, appointments, selectedDate]);
+
+  const createEmptyAppointment = useCallback((id?: number): Appointment => {
+      const employee = selectedEmployee;
+      if (!employee) throw new Error('No employee available for appointment creation');
+      const start = new Date(selectedDate).setHours(8, 0, 0, 0);
+      return {
+        IdPlanningEvenement: id ?? -1,
+        AnnotationPlanningEvenement: '',
+        DebutPlanningEvenement: start,
+        FinPlanningEvenement: new Date(selectedDate).setHours(17, 0, 0, 0),
+        IdEmploye: employee.IdPersonnel,
+        IdPlanningRessource: 0,
+        PlanningEvenementPriorite: 0,
+        isLocked: false,
+      };
+    }, [selectedEmployee, selectedDate]);
+  
+  const createEmptyItem = useCallback(() => selectedItem || ({
+    IdPlanningRessource: 0,
+    Type: 'Projet',
+    LibellePlanningRessource: '',
+    CouleurFondPlanningRessource: '#3953aaff',
+    CouleurBordurePlanningRessource: '#2c4086',
+    CouleurTextePlanningRessource: '#ffffff',
+    CodePlanningRessource: '',
+  } as Item), [selectedItem]);
+  
   // ----- RENDU =====
   
   return (
@@ -260,7 +368,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
           <MobileCalendarGrid 
             currentDate={selectedDate}
             selectedDate={selectedDate}
-            appointments={monthlyAppointments}
+            appointments={appointments}
             onDateSelect={setSelectedDate}
           />
 
@@ -409,7 +517,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 >
                   {selectedItem ? 'Nouveau rendez-vous' : 'Nouveau rendez-vous'}
                 </h2>
-                <button 
+                {/* <button 
                   onClick={() => {
                     setShowAppointmentForm(false);
                     setSelectedItem(null);
@@ -424,7 +532,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   }}
                 >
                   <X size={20} style={{ color: 'var(--text-secondary)' }} />
-                </button>
+                </button> */}
               </div>
               
               {/* Contenu scrollable */}

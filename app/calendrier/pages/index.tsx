@@ -95,14 +95,13 @@ export default function HomePage({
   const [loadCalendar, setLoadCalendar] = useState(true); 
   const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
   const [lockNotification, setLockNotification] = useState<string | null>(null);
-  const [showLogout, setShowLogout] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
-  const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
-  const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  
+  
+  
+  
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
@@ -135,14 +134,6 @@ export default function HomePage({
     setGlobalEmployees, 
     setNotification: setLockNotification
   });
-
-  const mobileWorker = useCalendarWorker();
-
-  const visibleEmployees = useMemo(() => globalEmployees.filter((employee) => {
-    if (employee.Actif !== false) return true;
-    return monthlyAppointments.some((appointment) => appointment.IdEmploye === employee.IdPersonnel);
-  }), [globalEmployees, monthlyAppointments]);
-
 
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
@@ -185,64 +176,6 @@ export default function HomePage({
     },
   });
 
-  useEffect(() => {
-    if(!isMobile) return;
-    if (selectedEmployee || globalEmployees.length === 0) return;
-    setSelectedEmployee(globalEmployees[0] || user);
-  }, [globalEmployees, selectedEmployee, user, isMobile]);
-
-  useEffect(() => {
-    if(!isMobile) return;
-
-    if (!selectedEmployee) return;
-    void dataLayer.loadAppointmentsInRange(
-      startOfMonth(new Date(viewState.selectedDate)).getTime(),
-      endOfMonth(new Date(viewState.selectedDate)).getTime(),
-      selectedEmployee.IdPersonnel
-    );
-  }, [dataLayer.loadAppointmentsInRange, selectedEmployee, viewState.selectedDate, isMobile]);
-
-  useEffect(() => {
-    const loadMonthlyAppointments = async () => {
-      if (!mobileWorker.isReady) {
-        const monthStart = startOfMonth(new Date(viewState.selectedDate)).getTime();
-        const monthEnd = endOfMonth(new Date(viewState.selectedDate)).getTime();
-        setMonthlyAppointments(dataLayer.appointmentsRef.current.filter((appointment) =>
-          (!selectedEmployee || appointment.IdEmploye === selectedEmployee.IdPersonnel) &&
-          appointment.DebutPlanningEvenement <= monthEnd && appointment.FinPlanningEvenement >= monthStart
-        ));
-        return;
-      }
-
-      const filtered = await mobileWorker.filterMonthlyAppointments(
-        dataLayer.appointmentsRef.current,
-        new Date(viewState.selectedDate),
-        selectedEmployee,
-        user.IdPersonnel
-      );
-      if (filtered) setMonthlyAppointments(filtered);
-    };
-
-    void loadMonthlyAppointments();
-  }, [dataLayer.appointmentsVersion, mobileWorker.isReady, selectedEmployee, user.IdPersonnel, viewState.selectedDate]);
-
-  useEffect(() => {
-    const loadDailyAppointments = async () => {
-      if (!mobileWorker.isReady) {
-        const dayStart = new Date(viewState.selectedDate).setHours(0, 0, 0, 0);
-        const dayEnd = new Date(viewState.selectedDate).setHours(23, 59, 59, 999);
-        setSelectedDayAppointments(monthlyAppointments.filter((appointment) =>
-          appointment.DebutPlanningEvenement <= dayEnd && appointment.FinPlanningEvenement > dayStart
-        ));
-        return;
-      }
-
-      const filtered = await mobileWorker.filterDailyAppointments(monthlyAppointments, new Date(viewState.selectedDate));
-      if (filtered) setSelectedDayAppointments(filtered);
-    };
-
-    void loadDailyAppointments();
-  }, [mobileWorker.isReady, monthlyAppointments, viewState.selectedDate]);
 
   
   // 6. INTERACTIONS UTILISATEUR (Clic droit, Clavier, Copier/Coller)
@@ -387,61 +320,24 @@ export default function HomePage({
     return result;
   }, [appointmentLogic.handleSaveAppointment]);
 
-  const createMobileAppointment = useCallback((id?: number): Appointment => {
-    const employee = selectedEmployee || globalEmployees[0];
-    if (!employee) throw new Error('No employee available for appointment creation');
-    const start = new Date(viewState.selectedDate).setHours(8, 0, 0, 0);
-    return {
-      IdPlanningEvenement: id ?? -1,
-      AnnotationPlanningEvenement: '',
-      DebutPlanningEvenement: start,
-      FinPlanningEvenement: new Date(viewState.selectedDate).setHours(17, 0, 0, 0),
-      IdEmploye: employee.IdPersonnel,
-      IdPlanningRessource: 0,
-      PlanningEvenementPriorite: 0,
-      isLocked: false,
-    };
-  }, [globalEmployees, selectedEmployee, viewState.selectedDate]);
-
-  const createMobileItem = useCallback(() => selectedItem || ({
-    IdPlanningRessource: 0,
-    Type: 'Projet',
-    LibellePlanningRessource: '',
-    CouleurFondPlanningRessource: '#3953aaff',
-    CouleurBordurePlanningRessource: '#2c4086',
-    CouleurTextePlanningRessource: '#ffffff',
-    CodePlanningRessource: '',
-  } as Item), [selectedItem]);
-
+  
   const mobileState: MobileCalendarState = {
     selectedDate: new Date(viewState.selectedDate),
     setSelectedDate: (date) => viewState.setSelectedDate(date.getTime()),
-    showLogout,
-    setShowLogout,
-    showNotifications,
-    setShowNotifications,
-    showAppointmentForm,
-    setShowAppointmentForm,
-    showSearchModal,
-    setShowSearchModal,
-    selectedItem,
-    setSelectedItem,
-    monthlyAppointments,
-    selectedDayAppointments,
-    selectedEmployee,
-    setSelectedEmployee,
-    visibleEmployees,
     notifications: notifications.notifications as Notification[],
+    selectedItem: selectedItem,
+    setSelectedItem: setSelectedItem,
+    showAppointmentForm: showAppointmentForm,
+    setShowAppointmentForm: setShowAppointmentForm,
     unreadCount: notifications.unreadCount,
     markAsRead: notifications.markAsRead,
     logout,
-    hasPermission,
     handleOpenAddAppointment: handleOpenMobileAppointment,
     searchOverlayItems,
     handleSelectItem: handleSelectMobileItem,
     handleSaveAppointment: handleSaveMobileAppointment,
-    createEmptyAppointment: createMobileAppointment,
-    createEmptyItem: createMobileItem,
+    onLoadAppointmentsInRange: dataLayer.loadAppointmentsInRange,
+    onAddAppointment: appointmentLogic.handleSaveAppointment,
   };
 
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
@@ -547,28 +443,11 @@ export default function HomePage({
       if (!isMounted || hasInitializedPlanningRef.current) return;
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
-
-      console.log(isMobile)
       // Sur mobile, le calendrier est personnel : les listes employees, equipes
       // et poles ne sont pas necessaires pour afficher les rendez-vous.
-      if (isMobile) {
-        const monthStart = new Date();
-        monthStart.setDate(1);
-        monthStart.setHours(0, 0, 0, 0);
-        const monthEnd = new Date(monthStart);
-        monthEnd.setMonth(monthEnd.getMonth() + 1);
-        monthEnd.setMilliseconds(-1);
+      
 
-        await dataLayer.loadAppointmentsInRange(
-          monthStart.getTime(),
-          monthEnd.getTime(),
-          user.IdPersonnel
-        );
-        setLoadCalendar(false);
-        return;
-      }
-
-      await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
+      if (!isMobile) await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
 
       // Chargement des employés selon les permissions
       if (!hasInitializedEmployeesRef.current) {
@@ -589,15 +468,32 @@ export default function HomePage({
 
       let rep = await dataLayer.loadTeams();
       console.log('Teams Response:', rep);
-      if (rep?.success === false || !Array.isArray(rep.data) || rep.data.length === 0) {
+      if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
+
+      if (isMobile) {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+        const monthEnd = new Date(monthStart);
+        monthEnd.setMonth(monthEnd.getMonth() + 1);
+        monthEnd.setMilliseconds(-1);
+
+        await dataLayer.loadAppointmentsInRange(
+          monthStart.getTime(),
+          monthEnd.getTime(),
+          user.IdPersonnel
+        );
         setLoadCalendar(false);
         return;
       }
 
       rep = await dataLayer.loadPoleActivites();
       console.log('Pole Activités Response:', rep);
-      if (rep?.success === false || !Array.isArray(rep.data) || rep.data.length === 0) {
+      if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
         setLoadCalendar(false);
         return;
@@ -620,7 +516,6 @@ export default function HomePage({
       if (!isMounted || hasInitializedEmployeesRef.current) return;
       hasInitializedEmployeesRef.current = true;
       const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : null;
-
 
       if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
@@ -669,6 +564,7 @@ export default function HomePage({
         isFirstRenderRef.current = false;
         return; 
     }
+
     const reloadPlanningDataForCurrentView = async () => {
       setErrorPlanning(null);
       setLoadCalendar(true);
@@ -886,91 +782,100 @@ export default function HomePage({
                   <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
                     <Loader message="Chargement du calendrier..." className="h-full" />
                   </div>
-                )}   
-                {viewState.viewType === 'calendar' && !loadCalendar ? (
-                  /* VUE PLANNING */
-                  (errorPlanning) ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <p className="text-red-600 text-lg font-semibold">{errorPlanning}</p>
-                      </div>
-                    </div>
-                  ) :
-                  (viewState.isMobile || viewState.currentCalendarConfig || hasPermission(21)) && (
-                    <CalendarGrid
-                      /* Données */
-                      employees={globalEmployees}
-                      appointments={filteredCalendarAppointments}
-                      user={user}
+                )}
+                {!loadCalendar && (
+                  <>
+                    {viewState.viewType === 'calendar' ? (
+                      /* VUE PLANNING */
+                      errorPlanning ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <p className="text-red-600 text-lg font-semibold">
+                              {errorPlanning}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        (viewState.isMobile ||
+                          viewState.currentCalendarConfig ||
+                          hasPermission(21)) && (
+                          <CalendarGrid
+                            /* Données */
+                            employees={globalEmployees}
+                            appointments={filteredCalendarAppointments}
+                            user={user}
 
-                      /* Équipes & Événements */
-                      initialTeams={dataLayer.initialTeams}
-                      poleActivites={dataLayer.poleActivites}
-                      events={dataLayer.itemsRef.current}
-                      
-                      /* État Temporel */
-                      dayInTimeline={timeline.days}
-                      mainScrollRef={timeline.mainScrollRef}
-                      
-                      /* Configuration */
-                      isDisplayWeekend={viewState.isDisplayWeekend}
-                      isFullDay={viewState.isFullDay}
-                      isMobile={viewState.isMobile}
-                      nonWorkingDates={viewState.nonWorkingDates}
-                      tagPlacement={viewState.tagPlacement}
-                      mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
-                      HALF_DAY_INTERVALS={viewState.constants.intervals}
-                      
-                      /* Config Calendrier */
-                      calendarConfig={viewState.currentCalendarConfig}
-                      onCalendarConfigChange={viewState.onCalendarConfigChange}
-                      availableConfigs={viewState.availableConfigs}
-                      
-                      /* Actions & Events */
-                      onAppointmentMoved={appointmentLogic.moveAppointment}
-                      onCellDoubleClick={handleCellDoubleClick}
-                      onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
-                      onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
-                      handleContextMenu={interaction.handleContextMenu}
-                      onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
-                      //reloadToken={dataLayer.loadingWindowVersion}
-                      mouseUpAfterScroll={timeline.getFirstDayAppearing}
-                      onAddAppointment={appointmentLogic.handleSaveAppointment}
-                      onLockedError={setLockNotification}
-                      mobileState={mobileState}
-                      
-                      /* Sélection Optimisée */
-                      selectedCell={appointmentLogic.selectedCell}
-                      selectedAppointmentId={appointmentLogic.selectedAppointment?.IdPlanningEvenement}
-                      onSelectCell={appointmentLogic.setSelectedCell}
-                      onSelectAppointment={appointmentLogic.setSelectedAppointment}
-                    />
-                  )
-                ) : (
-                  /* VUES TABLEAUX (Chantier, Paie, Employés) */
-                  <Suspense fallback={<Loader message="Chargement du tableau..." />}>
-                    <DataTableFrame 
-                      categoriesStructure={getTableStructure(
-                        viewState.viewType, 
-                        {
-                          handleOpenEditModal: appointmentLogic.handleOpenEditModal,
-                          onImageClick: interaction.handleOpenImageModal,
-                          initialTeams: dataLayer.initialTeams,
-                          onTeamChange: dataLayer.updateEmployeeGroup,
-                          ressources: dataLayer.itemsRef.current
-                        }
-                      ) || []}
-                      realtimeUpdate={lastMercureEvent}
-                      enablePagination={true}
-                      paginatedSearchFunction={handlePaginatedSearch}
-                      refreshKey={dataLayer.appointmentsVersion}
-                      loadingElement={<Loader message="Chargement des données..." />}
-                      showGroupHeaders={viewState.viewType === 'chantier-table'}
-                      onRowClick={handleTableRowClick}
-                      onRightClick={interaction.handleDataTableContextMenu}
-                      heightCell={60}
-                  />
-                  </Suspense>
+                            /* Équipes & Événements */
+                            initialTeams={dataLayer.initialTeams}
+                            poleActivites={dataLayer.poleActivites}
+                            events={dataLayer.itemsRef.current}
+
+                            /* État Temporel */
+                            dayInTimeline={timeline.days}
+                            mainScrollRef={timeline.mainScrollRef}
+
+                            /* Configuration */
+                            isDisplayWeekend={viewState.isDisplayWeekend}
+                            isFullDay={viewState.isFullDay}
+                            isMobile={viewState.isMobile}
+                            nonWorkingDates={viewState.nonWorkingDates}
+                            tagPlacement={viewState.tagPlacement}
+                            mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
+                            HALF_DAY_INTERVALS={viewState.constants.intervals}
+
+                            /* Config Calendrier */
+                            calendarConfig={viewState.currentCalendarConfig}
+                            onCalendarConfigChange={viewState.onCalendarConfigChange}
+                            availableConfigs={viewState.availableConfigs}
+
+                            /* Actions & Events */
+                            onAppointmentMoved={appointmentLogic.moveAppointment}
+                            onCellDoubleClick={handleCellDoubleClick}
+                            onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
+                            onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
+                            handleContextMenu={interaction.handleContextMenu}
+                            onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
+                            mouseUpAfterScroll={timeline.getFirstDayAppearing}
+                            onAddAppointment={appointmentLogic.handleSaveAppointment}
+                            onLockedError={setLockNotification}
+                            mobileState={mobileState}
+
+                            /* Sélection Optimisée */
+                            selectedCell={appointmentLogic.selectedCell}
+                            selectedAppointmentId={
+                              appointmentLogic.selectedAppointment?.IdPlanningEvenement
+                            }
+                            onSelectCell={appointmentLogic.setSelectedCell}
+                            onSelectAppointment={appointmentLogic.setSelectedAppointment}
+                          />
+                        )
+                      )
+                    ) : (
+                      /* VUES TABLEAUX (Chantier, Paie, Employés) */
+                      <Suspense fallback={<Loader message="Chargement du tableau..." />}>
+                        <DataTableFrame
+                          categoriesStructure={
+                            getTableStructure(viewState.viewType, {
+                              handleOpenEditModal: appointmentLogic.handleOpenEditModal,
+                              onImageClick: interaction.handleOpenImageModal,
+                              initialTeams: dataLayer.initialTeams,
+                              onTeamChange: dataLayer.updateEmployeeGroup,
+                              ressources: dataLayer.itemsRef.current,
+                            }) || []
+                          }
+                          realtimeUpdate={lastMercureEvent}
+                          enablePagination={true}
+                          paginatedSearchFunction={handlePaginatedSearch}
+                          refreshKey={dataLayer.appointmentsVersion}
+                          loadingElement={<Loader message="Chargement des données..." />}
+                          showGroupHeaders={viewState.viewType === 'chantier-table'}
+                          onRowClick={handleTableRowClick}
+                          onRightClick={interaction.handleDataTableContextMenu}
+                          heightCell={60}
+                        />
+                      </Suspense>
+                    )}
+                  </>
                 )}
               </div>
             </div>

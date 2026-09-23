@@ -369,6 +369,7 @@ export const useAppointmentLogic = ({
         return null;
       }
 
+      console.log(new Date(startDate), new Date(endDate));
 
       const payload = {
         AnnotationPlanningEvenement: description || `Nouveau rendez-vous`,
