@@ -1,4 +1,3 @@
-import { isArray } from "util";
 import { getRequest, postRequest, putRequest, deleteRequest } from "./axios.service";
 
 
@@ -121,13 +120,8 @@ async function addRessourceManual(ressourceData: any) {
 
 async function editRessource(ressourceId: number, ressourceData: any) {
 
-  if(ressourceData.IdImage && typeof ressourceData.IdImage === 'object' && ressourceData.IdImage.id) {
-    ressourceData.IdImage = ressourceData.IdImage.id
-  }
-
   return await putRequest(`/api/ressources/${ressourceId}`, ressourceData, 'editRessource');
 }
-
 
 export default {
   searchRessources,

@@ -661,16 +661,17 @@ export const useAppointmentLogic = ({
 
       try {
         if(eventUpdate.Image?.id === 0){
+          let result: { success: boolean; id?: number; message?: string } = { success: true };
+
           const imageBase64 = eventUpdate.Image.image;
 
-          const result = await imageService.uploadImage(imageBase64)
-          if (result.success && result.id) {
-            eventUpdate.Image.id = result.id;
-          } else {
-            onLockedError(result.message || 'Erreur lors de l\'upload de l\'image.');
-            console.error('Erreur lors de l\'upload de l\'image:', result.message);
-            return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
+          result = await addImage(imageBase64)
+
+          if(!result.success || !result.id) {
+            return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
           }
+          eventUpdate.Image.id = result.id;
+            
         }
         console.log('handleSaveAppointment called with:', eventUpdate);
         const payload = {
@@ -1315,6 +1316,20 @@ export const useAppointmentLogic = ({
     eventsRef.current[Number(dimension.IdPlanningRessource)] = newItem;
 
     try {
+      if(dimension.Image?.id === 0){
+        let result: { success: boolean; id?: number; message?: string } = { success: true };
+
+        const imageBase64 = dimension.Image.image;
+
+        result = await addImage(imageBase64)
+
+        if(!result.success || !result.id) {
+          return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
+        }
+        dimension.Image.id = result.id;
+          
+      }
+
       const apiPayload = {
         CodePlanningRessource: dimension.CodePlanningRessource,
         LibellePlanningRessource: dimension.LibellePlanningRessource,
@@ -1322,7 +1337,7 @@ export const useAppointmentLogic = ({
         CouleurBordurePlanningRessource: dimension.CouleurBordurePlanningRessource,
         CouleurTextePlanningRessource: dimension.CouleurTextePlanningRessource,
         Actif: dimension.Actif,
-        IdImage: dimension.Image,
+        IdPlanningImage: dimension.Image?.id,
       };
       const result = await ressourceService.addRessourceManual(apiPayload);
       console.log('Résultat de l\'ajout de ressource', result);
@@ -1360,6 +1375,21 @@ export const useAppointmentLogic = ({
 
   const handleEditRessource = useCallback(async (dimension: Item): Promise<{ success: boolean, message?: string }> => {
     try{
+
+      if(dimension.Image?.id === 0){
+        let result: { success: boolean; id?: number; message?: string } = { success: true };
+
+        const imageBase64 = dimension.Image.image;
+
+        result = await addImage(imageBase64)
+
+        if(!result.success || !result.id) {
+          return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
+        }
+        dimension.Image.id = result.id;
+          
+      }
+
       const apiPayload = {
         CouleurFondPlanningRessource: dimension.CouleurFondPlanningRessource,
         CouleurBordurePlanningRessource: dimension.CouleurBordurePlanningRessource,
@@ -1370,7 +1400,7 @@ export const useAppointmentLogic = ({
             LibellePlanningRessource: dimension.LibellePlanningRessource,
             Actif: dimension.Actif,
           } : {}),
-        IdImage: dimension.Image,
+        IdPlanningImage: dimension.Image?.id,
       };
       const result = await ressourceService.editRessource(dimension.IdPlanningRessource, apiPayload);
       console.log('Résultat de la modification de ressource', result);
@@ -1445,6 +1475,23 @@ export const useAppointmentLogic = ({
       success: true,
       message: 'Rubrique désactivée avec succès. Elle reste visible mais ne peut plus être utilisée.'
     };
+  }, []);
+
+
+  const addImage = useCallback(async (base64String: string, filename?: string): Promise<{ success: boolean; id?: number; message?: string }> => {
+    try {
+        const result = await imageService.uploadImage(base64String)
+        if (result.success && result.id) {
+          return { success: true, id: result.id };
+        } else {
+          onLockedError(result.message || 'Erreur lors de l\'upload de l\'image.');
+          console.error('Erreur lors de l\'upload de l\'image:', result.message);
+          return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
+        }
+    }catch (error) {
+      console.error('Erreur lors de l\'upload de l\'image:', error);
+      return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
+    }
   }, []);
 
 

@@ -2,23 +2,23 @@ import { useState, useRef, useEffect, useMemo, useCallback, use } from 'react';
 import { Appointment, User, Item, CalendarConfig, ImageType, UserRole, Equipe, PoleActivite, ChantierItem } from '../../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
 import { employeeService, equipeService, evenementService, imageService } from '@/app/service';
-import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
 import { getCachedImages, subscribeToImageCache, upsertCachedImage } from '../../utils/imageCacheStore';
 
 
 interface DataLayerProps {
   globalEmployees: User[];
   setGlobalEmployees: React.Dispatch<React.SetStateAction<User[]>>;
-   setNotification: (message: string) => void
+  setNotification: (message: string) => void
+  isMobile?: boolean;
 }
 
 export const useDataLayer = ({
   globalEmployees,
   setGlobalEmployees,
-  setNotification
+  setNotification,
+  isMobile = false
 }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const worker = useCalendarWorker();
   const [teams, setTeams] = useState<Record<number, Equipe>>({});
   const [poleActivites, setPoleActivites] = useState<Record<number, PoleActivite>>({});
   
@@ -119,20 +119,22 @@ export const useDataLayer = ({
 
   const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number, employeeId?: number): Promise<boolean> => {
     setIsLoading(true);
-    const diff = endDate - startDate;
-    if (employeeId == null && lastLoadedRangeRef.current && startDate >= lastLoadedRangeRef.current.startDate && endDate <= lastLoadedRangeRef.current.endDate) {
-      setIsLoading(false);
-      return true; // Déjà chargé
-    }
+    if (!isMobile) {
+      const diff = endDate - startDate;
+      if (employeeId == null && lastLoadedRangeRef.current && startDate >= lastLoadedRangeRef.current.startDate && endDate <= lastLoadedRangeRef.current.endDate) {
+        setIsLoading(false);
+        return true; // Déjà chargé
+      }
 
-    if (employeeId == null && lastLoadedRangeRef.current && startDate < lastLoadedRangeRef.current.endDate && endDate > lastLoadedRangeRef.current?.endDate) {
-      startDate = lastLoadedRangeRef.current.endDate;
-      endDate = startDate + diff; // On garde la même durée
-    }
+      if (employeeId == null && lastLoadedRangeRef.current && startDate < lastLoadedRangeRef.current.endDate && endDate > lastLoadedRangeRef.current?.endDate) {
+        startDate = lastLoadedRangeRef.current.endDate;
+        endDate = startDate + diff; // On garde la même durée
+      }
 
-    if (employeeId == null && lastLoadedRangeRef.current && endDate > lastLoadedRangeRef.current.startDate && startDate < lastLoadedRangeRef.current?.startDate) {
-      endDate = lastLoadedRangeRef.current.startDate;
-      startDate = endDate - diff; // On garde la même durée
+      if (employeeId == null && lastLoadedRangeRef.current && endDate > lastLoadedRangeRef.current.startDate && startDate < lastLoadedRangeRef.current?.startDate) {
+        endDate = lastLoadedRangeRef.current.startDate;
+        startDate = endDate - diff; // On garde la même durée
+      }
     }
 
     try {
@@ -154,6 +156,14 @@ export const useDataLayer = ({
         ? payloadData.ressources
         : [];
         
+
+      if(isMobile){
+        appointmentsRef.current = newAppointments;
+        addMissingResourcesToCache(newResources);
+        setAppointmentsVersion(prev => prev + 1);
+        return true;
+      }
+
       // Ajouter au cache uniquement les ressources absentes.
       addMissingResourcesToCache(newResources);
       

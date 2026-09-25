@@ -782,154 +782,143 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   const calculateColumnWidths = useMemo(() => {
     const MIN_WIDTH = 50;
     const MAX_WIDTH = 450;
-    const HIDDEN_COLUMN_WIDTH = 20; // Largeur fine pour colonnes cachées
-    const PADDING = 10; // Padding supplémentaire pour l'espacement
-    
-    if (!displayedItems.length) return attributeLabels.map(() => containerWidth/attributeLabels.length);
+    const HIDDEN_COLUMN_WIDTH = 20;
+    const PADDING = 10;
 
-    // Calculer la largeur max pour chaque colonne
-    const columnWidths = attributeKeys.map((key, columnIndex) => {
-      // Trouver la configuration de l'attribut
+    // 1. Détermination de la largeur cible brute pour chaque colonne
+    const columnWidths = attributeKeys.map((key) => {
       const attributeConfig = categoriesStructure
-        .flatMap(cat => cat.attributes)
-        .find(attr => attr.key === key);
-      
-      // Check for custom column width configuration
-      const customConfig = attributeConfig?.width;
+        .flatMap((cat) => cat.attributes)
+        .find((attr) => attr.key === key);
 
-      // Si c'est une colonne "hidden-column" (colonne cachée à réafficher)
+      // Colonne cachée
       if (attributeConfig?.type === 'hidden-column') {
         return { width: HIDDEN_COLUMN_WIDTH, isFixed: true };
       }
 
-      // Handle custom fixed width
-      if (customConfig) {
-        if (typeof customConfig === 'number') {
-             return { width: customConfig, isFixed: true };
-        } else if (customConfig.fixed) {
-             return { width: customConfig.fixed, isFixed: true };
-        }
+      const customConfig = attributeConfig?.width;
+
+      // RÈGLE STRICTE : Largeur fixe imposée (number ou { fixed: number })
+      if (typeof customConfig === 'number') {
+        return { width: customConfig, isFixed: true };
       }
-      
-      // Mesurer la largeur du header
-      //const headerWidth = measureTextWidth(attributeLabels[columnIndex], 14);
-      
-      // Mesurer la largeur maximale du contenu
+      if (customConfig && typeof customConfig === 'object' && typeof customConfig.fixed === 'number') {
+        return { width: customConfig.fixed, isFixed: true };
+      }
+
+      // Si pas de données : largeur par défaut pour les colonnes flexibles
+      if (!displayedItems.length) {
+        return { width: 150, isFixed: false };
+      }
+
+      // Mesure du contenu réel pour les colonnes flexibles
       let maxContentWidth = MIN_WIDTH;
-      
-      displayedItems.forEach(item => {
+      displayedItems.forEach((item) => {
         if (!item) return;
-        
         const value = getAttributeValue(item, attributeConfig || { key, label: '' });
-        
         if (value != null && value !== undefined) {
           const textValue = String(value);
           const contentWidth = measureTextWidth(textValue, FontSize);
           maxContentWidth = Math.max(maxContentWidth, contentWidth);
         }
       });
-      
-      // Appliquer les limites min/max et ajouter du padding
+
       let min = MIN_WIDTH;
       let max = MAX_WIDTH;
-
       if (customConfig && typeof customConfig === 'object') {
-          if (customConfig.min) min = customConfig.min;
-          if (customConfig.max) max = customConfig.max;
+        if (customConfig.min) min = customConfig.min;
+        if (customConfig.max) max = customConfig.max;
       }
 
       const idealWidth = Math.min(Math.max(maxContentWidth + PADDING, min), max);
-    
       return { width: idealWidth, isFixed: false };
     });
 
-    
     const fixedColumns = columnWidths.filter(col => col.isFixed);
     const flexibleColumns = columnWidths.filter(col => !col.isFixed);
-  
-    const totalFixedWidth = fixedColumns.reduce((sum, col) => sum + col.width, 0);
-    const totalFlexibleWidth = flexibleColumns.reduce((sum, col) => sum + col.width, 0);
 
-    const totalWidth = totalFixedWidth + totalFlexibleWidth;
-    const availableWidth = containerWidth - totalWidth;
+    const totalFixedWidth = fixedColumns.reduce(
+      (sum, col) => sum + col.width,
+      0
+    );
 
-    //console.log(availableWidth);
-    
+    const totalFlexibleWidth = flexibleColumns.reduce(
+      (sum, col) => sum + col.width,
+      0
+    );
+
+    // Espace réellement disponible pour les colonnes FLEXIBLES.
+    // Les colonnes fixes ne seront JAMAIS touchées.
+    const availableForFlexible = Math.max(
+      0,
+      containerWidth - totalFixedWidth
+    );
+
     let adjustedWidths: number[];
 
-    // console.log('totalWidth:', totalWidth);
-    // console.log('availableWidth:', availableWidth);
-    // console.log('containerWidth:', containerWidth);
-    
+    if (flexibleColumns.length === 0) {
+      // Toutes les colonnes sont fixes :
+      // on applique exactement les valeurs demandées.
+      adjustedWidths = columnWidths.map(col => col.width);
+    }
+    else if (totalFlexibleWidth > availableForFlexible) {
+      // Pas assez de place : on réduit UNIQUEMENT les flexibles
+      const missingSpace =
+        totalFlexibleWidth - availableForFlexible;
 
-    if (totalWidth > containerWidth) {
-      // CAS 1 : Le tableau est trop large - réduire proportionnellement
-      const ratio = availableWidth / flexibleColumns.length;
-      //console.log('ratio', ratio);
-      
-      
+      const reductionPerColumn =
+        missingSpace / flexibleColumns.length;
+
       adjustedWidths = columnWidths.map(col => {
-        if (col.isFixed) return col.width;
-        
-        // Réduire proportionnellement, mais respecter le minimum
-        const reducedWidth = Math.floor(col.width + ratio);
-        return Math.max(reducedWidth, MIN_WIDTH);
+        if (col.isFixed) {
+          return col.width; // ← intouchable
+        }
+
+        return Math.max(
+          MIN_WIDTH,
+          Math.floor(col.width - reductionPerColumn)
+        );
       });
-      
-    } 
-    else if (totalWidth < containerWidth) {
-    // CAS 2 : Le tableau est trop petit - distribuer l'espace supplémentaire
-    const extraSpace = availableWidth;
-    const extraPerColumn = extraSpace / flexibleColumns.length;
-    //console.log('extraPerColumn', extraPerColumn);
-    
-
-    adjustedWidths = columnWidths.map(col => {
-      if (col.isFixed) return col.width;
-      
-      // Ajouter l'espace supplémentaire, mais respecter le maximum
-      const expandedWidth = Math.floor(col.width + extraPerColumn);
-      return Math.min(expandedWidth, MAX_WIDTH);
-    });
-    
-  } else {
-    // CAS 3 : Taille parfaite - utiliser les largeurs idéales
-    adjustedWidths = columnWidths.map(col => col.width);
-  }
-
-  
-  // Étape 4 : CORRECTION FINALE - Ajuster pour correspondre EXACTEMENT à containerWidth
-  // Cette étape élimine les erreurs d'arrondi
-  const currentTotal = adjustedWidths.reduce((sum, width) => sum + width, 0);
-  const difference = containerWidth - currentTotal;
-  // console.log('currentTotal:', currentTotal);
-  // console.log('difference:', difference);
-  
-  if (difference !== 0) {
-    // Trouver l'index de la dernière colonne flexible (non-fixe)
-    let lastFlexibleIndex = -1;
-    for (let i = adjustedWidths.length - 1; i >= 0; i--) {
-      if (!columnWidths[i].isFixed) {
-        lastFlexibleIndex = i;
-        break;
-      }
     }
-    
-    // Ajuster la dernière colonne flexible pour compenser la différence
-    if (lastFlexibleIndex !== -1) {
-      adjustedWidths[lastFlexibleIndex] += difference;
-      
-      // S'assurer que la largeur reste dans les limites min/max
-      adjustedWidths[lastFlexibleIndex] = Math.max(
-        MIN_WIDTH,
-        Math.min(adjustedWidths[lastFlexibleIndex], MAX_WIDTH)
-      );
+    else if (totalFlexibleWidth < availableForFlexible) {
+      // De la place restante : on agrandit UNIQUEMENT les flexibles
+      const extraSpace =
+        availableForFlexible - totalFlexibleWidth;
+
+      const extraPerColumn =
+        extraSpace / flexibleColumns.length;
+
+      adjustedWidths = columnWidths.map(col => {
+        if (col.isFixed) {
+          return col.width; // ← intouchable
+        }
+
+        return Math.min(
+          MAX_WIDTH,
+          Math.floor(col.width + extraPerColumn)
+        );
+      });
     }
-  }
-    tableWidth.current = adjustedWidths.reduce((sum, width) => sum + width, 0);
+    else {
+      adjustedWidths = columnWidths.map(col => col.width);
+    }
+
+    tableWidth.current = adjustedWidths.reduce(
+      (sum, width) => sum + width,
+      0
+    );
 
     return adjustedWidths;
-  }, [attributeLabels, attributeKeys, containerWidth, displayedItems, categoriesStructure, getAttributeValue, measureTextWidth, FontSize]);
+  }, [
+    attributeKeys,
+    categoriesStructure,
+    containerWidth,
+    displayedItems,
+    getAttributeValue,
+    measureTextWidth,
+    FontSize,
+  ]);
+
 
   
   // Style CSS Grid

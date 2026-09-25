@@ -16,7 +16,7 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect, useCallback, useRef } from 'react';
-import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, Tag, AutreItem } from '../../types';
+import {HalfDayInterval, Item, CommonPaieAttributs, User, Tag, AutreItem, Appointment } from '../../types';
 import { isSameDay, isSameYear, isSameMonth, format } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 import socialPermissionService from '@/app/service/permission.service';
@@ -221,7 +221,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                 if (response?.success && response?.data) {
                   const { appointments, ressources } = response.data;
                   const loadedAppointment = appointments[0] ?? appointments;
-                  setFormDataAppointment(loadedAppointment);
+                  setFormDataAppointment({...loadedAppointment, isLocked: false});
                   setFormStartDate(new Date(loadedAppointment.DebutPlanningEvenement));
                   setFormEndDate(new Date(loadedAppointment.FinPlanningEvenement));
                   setFormDataItemType(ressources[0] ?? ressources);
@@ -414,26 +414,55 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   useEffect(() => {
     if (!onDirtyChange) return;
 
+    const appointmentKeys = [
+      'IdPlanningEvenement',
+      'AnnotationPlanningEvenement',
+      'IdEmploye',
+      'IdPlanningRessource',
+      'Etiquette',
+      'isReadOnly',
+      'PlanningEvenementPriorite',
+      'isLocked',
+      'DebutPlanningEvenement',
+      'FinPlanningEvenement',
+    ] as const satisfies readonly (keyof Appointment)[];
+
+    function pick<T extends object, K extends keyof T>(
+      obj: T,
+      keys: readonly K[]
+    ): Pick<T, K> {
+      return Object.fromEntries(
+        keys.map(key => [key, obj[key]])
+      ) as Pick<T, K>;
+    }
+
     // Comparaison simple pour détecter les changements
     // Note: Pour une comparaison plus robuste, on pourrait utiliser lodash.isEqual
     // ou une comparaison champ par champ spécifique
     
     // On ignore certaines propriétés qui peuvent changer sans impacter la "saleté" du formulaire
     // comme l'ordre des clés ou des références d'objets identiques
-    
-    const isAppDirty = JSON.stringify({
-      ...formDataAppointment,
-      // Normalisation des dates pour éviter les faux positifs dus aux millisecondes
-      startDate: formDataAppointment.DebutPlanningEvenement,
-      endDate: formDataAppointment.FinPlanningEvenement
-    }) !== JSON.stringify({
-      ...appointment,
-      startDate: appointment.DebutPlanningEvenement,
-      endDate: appointment.FinPlanningEvenement
-    });
+
+
+    const currentAppointment = pick(
+      formDataAppointment,
+      appointmentKeys
+    );
+
+    const originalAppointment = pick(
+      appointment,
+      appointmentKeys
+    );
+
+    const isAppDirty =
+      JSON.stringify(currentAppointment) !==
+      JSON.stringify(originalAppointment);
+
 
     const isItemDirty = JSON.stringify(formDataItemType) !== JSON.stringify(item);
     const isIncludeDirty = includeAllNonWorkingDays !== isAppointmentSplitByNotWorkingDay;
+
+    console.log("isAppDirty:", isAppDirty, "isItemDirty:", isItemDirty, "isIncludeDirty:", isIncludeDirty);
 
     onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
   }, [formDataAppointment, formDataItemType, includeAllNonWorkingDays, appointment, item, isAppointmentSplitByNotWorkingDay, onDirtyChange]);

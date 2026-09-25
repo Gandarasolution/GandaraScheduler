@@ -47,7 +47,6 @@ import {
   useInteraction,
   useNotifications
  } from "@/app/calendrier/hooks";
-import { useCalendarWorker } from '@/app/calendrier/hooks';
 import type { MobileCalendarState } from '../components/Calendar/MobileCalendar/MobileCalendar';
 
 import { useTheme } from '../utils/themeManager';
@@ -132,7 +131,8 @@ export default function HomePage({
   const dataLayer = useDataLayer({ 
     globalEmployees: globalEmployees,
     setGlobalEmployees, 
-    setNotification: setLockNotification
+    setNotification: setLockNotification,
+    isMobile
   });
 
 
@@ -536,7 +536,7 @@ export default function HomePage({
       initializeEmployeeTable();
     }
     else if (viewState.viewType === 'paie-table' || viewState.viewType === 'manual-event-table') {
-      if (hasPermission(23) && hasPermission(22)) {
+      if (hasPermission(23) || hasPermission(22)) {
         console.log("Initialisation de la table Paie et de la table des événements manuels...");
         initializePaieTableAndManualEventTable();
       }else {
@@ -544,7 +544,6 @@ export default function HomePage({
         setLoadCalendar(false);
       }
     }
-
     return () => {
       isMounted = false;
     };
@@ -744,10 +743,7 @@ export default function HomePage({
 
   // 2. On branche la radio !
   useMercureSync(currentPlanningId, handleMercureEvent, setLockNotification);
-  useEffect(() => {
-    console.log(viewState.viewType, "vue active");
-  }, [viewState.viewType]);
-
+  
   // --- RENDU VISUEL ---
 
   return (
@@ -783,100 +779,100 @@ export default function HomePage({
                     <Loader message="Chargement du calendrier..." className="h-full" />
                   </div>
                 )}
-                {!loadCalendar && (
-                  <>
-                    {viewState.viewType === 'calendar' ? (
-                      /* VUE PLANNING */
-                      errorPlanning ? (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center">
-                            <p className="text-red-600 text-lg font-semibold">
-                              {errorPlanning}
-                            </p>
-                          </div>
+                
+                <>
+                  {viewState.viewType === 'calendar' &&  !loadCalendar ? (
+                    /* VUE PLANNING */
+                    errorPlanning ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <p className="text-red-600 text-lg font-semibold">
+                            {errorPlanning}
+                          </p>
                         </div>
-                      ) : (
-                        (viewState.isMobile ||
-                          viewState.currentCalendarConfig ||
-                          hasPermission(21)) && (
-                          <CalendarGrid
-                            /* Données */
-                            employees={globalEmployees}
-                            appointments={filteredCalendarAppointments}
-                            user={user}
-
-                            /* Équipes & Événements */
-                            initialTeams={dataLayer.initialTeams}
-                            poleActivites={dataLayer.poleActivites}
-                            events={dataLayer.itemsRef.current}
-
-                            /* État Temporel */
-                            dayInTimeline={timeline.days}
-                            mainScrollRef={timeline.mainScrollRef}
-
-                            /* Configuration */
-                            isDisplayWeekend={viewState.isDisplayWeekend}
-                            isFullDay={viewState.isFullDay}
-                            isMobile={viewState.isMobile}
-                            nonWorkingDates={viewState.nonWorkingDates}
-                            tagPlacement={viewState.tagPlacement}
-                            mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
-                            HALF_DAY_INTERVALS={viewState.constants.intervals}
-
-                            /* Config Calendrier */
-                            calendarConfig={viewState.currentCalendarConfig}
-                            onCalendarConfigChange={viewState.onCalendarConfigChange}
-                            availableConfigs={viewState.availableConfigs}
-
-                            /* Actions & Events */
-                            onAppointmentMoved={appointmentLogic.moveAppointment}
-                            onCellDoubleClick={handleCellDoubleClick}
-                            onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
-                            onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
-                            handleContextMenu={interaction.handleContextMenu}
-                            onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
-                            mouseUpAfterScroll={timeline.getFirstDayAppearing}
-                            onAddAppointment={appointmentLogic.handleSaveAppointment}
-                            onLockedError={setLockNotification}
-                            mobileState={mobileState}
-
-                            /* Sélection Optimisée */
-                            selectedCell={appointmentLogic.selectedCell}
-                            selectedAppointmentId={
-                              appointmentLogic.selectedAppointment?.IdPlanningEvenement
-                            }
-                            onSelectCell={appointmentLogic.setSelectedCell}
-                            onSelectAppointment={appointmentLogic.setSelectedAppointment}
-                          />
-                        )
-                      )
+                      </div>
                     ) : (
-                      /* VUES TABLEAUX (Chantier, Paie, Employés) */
-                      <Suspense fallback={<Loader message="Chargement du tableau..." />}>
-                        <DataTableFrame
-                          categoriesStructure={
-                            getTableStructure(viewState.viewType, {
-                              handleOpenEditModal: appointmentLogic.handleOpenEditModal,
-                              onImageClick: interaction.handleOpenImageModal,
-                              initialTeams: dataLayer.initialTeams,
-                              onTeamChange: dataLayer.updateEmployeeGroup,
-                              ressources: dataLayer.itemsRef.current,
-                            }) || []
+                      (viewState.isMobile ||
+                        viewState.currentCalendarConfig ||
+                        hasPermission(21)) && (
+                        <CalendarGrid
+                          /* Données */
+                          employees={globalEmployees}
+                          appointments={filteredCalendarAppointments}
+                          user={user}
+
+                          /* Équipes & Événements */
+                          initialTeams={dataLayer.initialTeams}
+                          poleActivites={dataLayer.poleActivites}
+                          events={dataLayer.itemsRef.current}
+
+                          /* État Temporel */
+                          dayInTimeline={timeline.days}
+                          mainScrollRef={timeline.mainScrollRef}
+
+                          /* Configuration */
+                          isDisplayWeekend={viewState.isDisplayWeekend}
+                          isFullDay={viewState.isFullDay}
+                          isMobile={viewState.isMobile}
+                          nonWorkingDates={viewState.nonWorkingDates}
+                          tagPlacement={viewState.tagPlacement}
+                          mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
+                          HALF_DAY_INTERVALS={viewState.constants.intervals}
+
+                          /* Config Calendrier */
+                          calendarConfig={viewState.currentCalendarConfig}
+                          onCalendarConfigChange={viewState.onCalendarConfigChange}
+                          availableConfigs={viewState.availableConfigs}
+
+                          /* Actions & Events */
+                          onAppointmentMoved={appointmentLogic.moveAppointment}
+                          onCellDoubleClick={handleCellDoubleClick}
+                          onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
+                          onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
+                          handleContextMenu={interaction.handleContextMenu}
+                          onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
+                          mouseUpAfterScroll={timeline.getFirstDayAppearing}
+                          onAddAppointment={appointmentLogic.handleSaveAppointment}
+                          onLockedError={setLockNotification}
+                          mobileState={mobileState}
+
+                          /* Sélection Optimisée */
+                          selectedCell={appointmentLogic.selectedCell}
+                          selectedAppointmentId={
+                            appointmentLogic.selectedAppointment?.IdPlanningEvenement
                           }
-                          realtimeUpdate={lastMercureEvent}
-                          enablePagination={true}
-                          paginatedSearchFunction={handlePaginatedSearch}
-                          refreshKey={dataLayer.appointmentsVersion}
-                          loadingElement={<Loader message="Chargement des données..." />}
-                          showGroupHeaders={viewState.viewType === 'chantier-table'}
-                          onRowClick={handleTableRowClick}
-                          onRightClick={interaction.handleDataTableContextMenu}
-                          heightCell={60}
+                          onSelectCell={appointmentLogic.setSelectedCell}
+                          onSelectAppointment={appointmentLogic.setSelectedAppointment}
                         />
-                      </Suspense>
-                    )}
-                  </>
-                )}
+                      )
+                    )
+                  ) : (
+                    /* VUES TABLEAUX (Chantier, Paie, Employés) */
+                    <Suspense fallback={<Loader message="Chargement du tableau..." />}>
+                      <DataTableFrame
+                        categoriesStructure={
+                          getTableStructure(viewState.viewType, {
+                            handleOpenEditModal: appointmentLogic.handleOpenEditModal,
+                            onImageClick: interaction.handleOpenImageModal,
+                            initialTeams: dataLayer.initialTeams,
+                            onTeamChange: dataLayer.updateEmployeeGroup,
+                            ressources: dataLayer.itemsRef.current,
+                          }) || []
+                        }
+                        realtimeUpdate={lastMercureEvent}
+                        enablePagination={true}
+                        paginatedSearchFunction={handlePaginatedSearch}
+                        refreshKey={dataLayer.appointmentsVersion}
+                        loadingElement={<Loader message="Chargement des données..." />}
+                        showGroupHeaders={viewState.viewType === 'chantier-table'}
+                        onRowClick={handleTableRowClick}
+                        onRightClick={interaction.handleDataTableContextMenu}
+                        heightCell={60}
+                      />
+                    </Suspense>
+                  )}
+                </>
+                
               </div>
             </div>
           </div>

@@ -18,6 +18,8 @@ import {
   startOfWeek, 
   endOfWeek,
   eachDayOfInterval,
+  startOfDay,
+  endOfDay,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Appointment } from '../../../types';
@@ -54,16 +56,16 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
 
   // Vérifier si un jour a des rendez-vous
   const hasAppointment = (day: number) => {
-    const start = new Date(day).setHours(0, 0, 0, 0);
-    const end = new Date(day).setHours(23, 59, 59, 999);
+    const start = startOfDay(day).getTime();
+    const end = endOfDay(day).getTime();
     return appointments.some((app) =>app.DebutPlanningEvenement <= end && app.FinPlanningEvenement > start);
   };
 
   // Compter le nombre de rendez-vous pour un jour
   const getDayAppointmentCount = (day: number) => {
-    const start = new Date(day).setHours(0, 0, 0, 0);
-    const end = new Date(day).setHours(23, 59, 59, 999);
-    return appointments.filter(app => app.DebutPlanningEvenement <= end && app.FinPlanningEvenement >= start).length;
+    const selectedDayStart = startOfDay(day).getTime();
+    const selectedDayEnd = endOfDay(day).getTime();
+    return appointments.filter(app => app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement > selectedDayStart).length;
   };
 
   return (

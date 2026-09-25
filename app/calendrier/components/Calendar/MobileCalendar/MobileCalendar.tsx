@@ -21,9 +21,8 @@ import { AppointmentForm } from '@/app/calendrier/components';
 
 import { EmployeeSelector, MobileCalendarGrid, NotificationPanel, AppointmentList} from './index';
 import SearchOverlay from '../../modals/SearchOverlay';
-import { endOfMonth, startOfMonth } from 'date-fns';
+import { endOfDay, endOfMonth, startOfDay, startOfMonth } from 'date-fns';
 import { useAuth } from '@/app/calendrier/hooks/utils/AuthContext';
-import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
 
 // Lazy loading des composants lourds
 
@@ -72,8 +71,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   mobileState
 }) => {
 
-  const worker = useCalendarWorker();
-
 
   const { hasPermission } = useAuth();
 
@@ -91,6 +88,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(user || null);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
+
 
   const monthDisplay = useRef(selectedDate.getMonth());
   const yearDisplay = useRef(selectedDate.getFullYear());
@@ -115,7 +113,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
   useEffect(() => {
     if (!onLoadAppointmentsInRange || !selectedEmployee) return;
-    selectedEmployeeRef.current = selectedEmployee;
     if (selectedEmployeeRef.current === selectedEmployee && monthDisplay.current === selectedDate.getMonth() && yearDisplay.current === selectedDate.getFullYear()) {
       return; 
     }
@@ -148,34 +145,23 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     });
   }, [employees, user.IdPersonnel, appointments, hasPermission]);
 
+
   useEffect(() => {
-    if (!worker.isReady) {
-      // Fallback synchrone
-      const selectedDayStart = new Date(selectedDate).setHours(0, 0, 0, 0);
-      const selectedDayEnd = new Date(selectedDate).setHours(23, 59, 59, 999);
-      
-      const filtered = appointments.filter(app => 
-        app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement > selectedDayStart
-      );
-      
-      setSelectedDayAppointments(filtered);
-      return;
-    }
+
+    // Fallback synchrone
+    const selectedDayStart = startOfDay(selectedDate).getTime();
+    const selectedDayEnd = endOfDay(selectedDate).getTime();
     
-    // Utiliser le Web Worker
-    const filterDaily = async () => {
-      const filtered = await worker.filterDailyAppointments(
-        appointments,
-        selectedDate
-      );
-      
-      if (filtered) {
-        setSelectedDayAppointments(filtered);
-      }
-    };
     
-    filterDaily();
-  }, [worker.isReady, appointments, selectedDate]);
+    
+    const filtered = appointments.filter(app => 
+      app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement > selectedDayStart
+    );
+    
+    setSelectedDayAppointments(filtered);
+    return;
+    
+    }, [appointments, selectedDate]);
 
   const createEmptyAppointment = useCallback((id?: number): Appointment => {
       const employee = selectedEmployee;
@@ -202,6 +188,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     CouleurTextePlanningRessource: '#ffffff',
     CodePlanningRessource: '',
   } as Item), [selectedItem]);
+
+  
   
   // ----- RENDU =====
   
@@ -383,7 +371,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         </main>
 
         {/* Floating Action Button - Visible pour les admins et managers */}
-        {(hasPermission(22) || hasPermission(23)) && (
+        {(hasPermission(22) || hasPermission(23)) && false && (
           <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none flex justify-center items-end h-32"
             style={{
               backgroundImage: `linear-gradient(to top, var(--bg-secondary), transparent)`
@@ -517,7 +505,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 >
                   {selectedItem ? 'Nouveau rendez-vous' : 'Nouveau rendez-vous'}
                 </h2>
-                {/* <button 
+                <button 
                   onClick={() => {
                     setShowAppointmentForm(false);
                     setSelectedItem(null);
@@ -532,7 +520,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   }}
                 >
                   <X size={20} style={{ color: 'var(--text-secondary)' }} />
-                </button> */}
+                </button>
               </div>
               
               {/* Contenu scrollable */}

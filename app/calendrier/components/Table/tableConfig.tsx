@@ -132,7 +132,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 key: 'IG',
                 label: 'Informations Générales', 
                 attributes: [
-                    { key: 'Image', label: '', sortable: false , /*width:50,*/ renderer: (value, item) => imageRendererChantierAndPaie(value, item, deps)},
+                    { key: 'Image', label: '', sortable: false , width:60, renderer: (value, item) => imageRendererChantierAndPaie(value, item, deps)},
                     { key: 'PoleActivite',   label: 'Pôle', type:'string', /*width:120 */},
                     { key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
                     { key: 'Identifiant',  label: 'Identifiant', type:'string' /*width:125 */, 
@@ -146,7 +146,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                             <span className="poppins break-words">{value}</span>
                         </div>
                     )},
-                    { key: 'Etat', label: 'État', type:'string', /*width:90,*/ 
+                    { key: 'Etat', label: 'État', type:'string', width:140,
                     renderer:(value: string) => {
                         const statusColors: Record<string, string> = {
                         'En cours': 'bg-green-100 text-green-800',
@@ -181,7 +181,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                     { key: 'DPF',  label: 'Durée Planifiée', type:'string', width:85, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'DPF') },    // Durée Planifiée
                     { key: 'RPF',  label: 'Réalisé + Futur', type:'string', width:80, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'RPF') },  // Réalisé + Future
                     { key: 'AP',  label: 'Avancement Prévisionnel', type:'string', width:110, renderer:(value: any, item: any) => analyseChantierRender(value, item, 'AP') },       // Avancement Prév.
-                    { key: 'SP',  label: 'Solde P.', type:'string', width:80, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'SP')}        // Solde Prév.
+                    { key: 'SP',  label: 'Solde P.', type:'string', width:100, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'SP')}        // Solde Prév.
                 ]
             }
         ] 
@@ -226,7 +226,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
             key: 'all',
             label: '',
             attributes: [
-            { key: 'Image', label: '', sortable: false, width:60, renderer: (value: any, item: GenericDataItem) => imageRendererEmployee(value, item as unknown as User, deps)},
+            { key: 'Image', label: '', sortable: false, width:50, renderer: (value: any, item: GenericDataItem) => imageRendererEmployee(value, item as unknown as User, deps)},
             { key: 'Code', label: 'Code' },
             { key: 'Nom', label: 'Nom' },
             { key: 'Prenom', label: 'Prénom'}, 
