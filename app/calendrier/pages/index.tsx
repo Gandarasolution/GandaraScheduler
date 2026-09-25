@@ -429,6 +429,8 @@ export default function HomePage({
 
     let isMounted = true;
 
+
+
     const initializeNonWorkingDates = async () => {
       if (!isMounted || hasInitializedNonWorkingDatesRef.current) return;
       hasInitializedNonWorkingDatesRef.current = true;
@@ -772,8 +774,9 @@ export default function HomePage({
           {/* CORPS PRINCIPAL : Grille ou Tableaux */}
           <div className="flex-1 flex min-h-0 box-border ">
             <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!viewState.isMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
-              <div className={`flex-grow rounded-lg w-full h-full pb-4 ${dataLayer.isLoading ? "pointer-events-none opacity-60" : ""}`}>
+              <div className={`flex-grow rounded-lg w-full h-full pb-4 `}>
                 
+              
                 {viewState.viewType === 'calendar' && loadCalendar && (
                   <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
                     <Loader message="Chargement du calendrier..." className="h-full" />
@@ -792,61 +795,79 @@ export default function HomePage({
                         </div>
                       </div>
                     ) : (
+                    
                       (viewState.isMobile ||
-                        viewState.currentCalendarConfig ||
-                        hasPermission(21)) && (
-                        <CalendarGrid
-                          /* Données */
-                          employees={globalEmployees}
-                          appointments={filteredCalendarAppointments}
-                          user={user}
+                      viewState.currentCalendarConfig ||
+                      hasPermission(21)) && (
+                        <div className="relative flex flex-col h-full w-full">
 
-                          /* Équipes & Événements */
-                          initialTeams={dataLayer.initialTeams}
-                          poleActivites={dataLayer.poleActivites}
-                          events={dataLayer.itemsRef.current}
+                          {/* Bloque les interactions pendant le chargement */}
+                          {dataLayer.isLoading && (
+                            <div className="absolute inset-0 z-[9999] pointer-events-auto" />
+                          )}
 
-                          /* État Temporel */
-                          dayInTimeline={timeline.days}
-                          mainScrollRef={timeline.mainScrollRef}
+                          <div
+                            className={`h-full w-full ${
+                              dataLayer.isLoading
+                                ? "pointer-events-none opacity-60"
+                                : ""
+                            }`}
+                          >
+                            <CalendarGrid
+                              /* Données */
+                              employees={globalEmployees}
+                              appointments={filteredCalendarAppointments}
+                              user={user}
 
-                          /* Configuration */
-                          isDisplayWeekend={viewState.isDisplayWeekend}
-                          isFullDay={viewState.isFullDay}
-                          isMobile={viewState.isMobile}
-                          nonWorkingDates={viewState.nonWorkingDates}
-                          tagPlacement={viewState.tagPlacement}
-                          mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
-                          HALF_DAY_INTERVALS={viewState.constants.intervals}
+                              /* Équipes & Événements */
+                              initialTeams={dataLayer.initialTeams}
+                              poleActivites={dataLayer.poleActivites}
+                              events={dataLayer.itemsRef.current}
 
-                          /* Config Calendrier */
-                          calendarConfig={viewState.currentCalendarConfig}
-                          onCalendarConfigChange={viewState.onCalendarConfigChange}
-                          availableConfigs={viewState.availableConfigs}
+                              /* État Temporel */
+                              dayInTimeline={timeline.days}
+                              mainScrollRef={timeline.mainScrollRef}
 
-                          /* Actions & Events */
-                          onAppointmentMoved={appointmentLogic.moveAppointment}
-                          onCellDoubleClick={handleCellDoubleClick}
-                          onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
-                          onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
-                          handleContextMenu={interaction.handleContextMenu}
-                          onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
-                          mouseUpAfterScroll={timeline.getFirstDayAppearing}
-                          onAddAppointment={appointmentLogic.handleSaveAppointment}
-                          onLockedError={setLockNotification}
-                          mobileState={mobileState}
+                              /* Configuration */
+                              isDisplayWeekend={viewState.isDisplayWeekend}
+                              isFullDay={viewState.isFullDay}
+                              isMobile={viewState.isMobile}
+                              nonWorkingDates={viewState.nonWorkingDates}
+                              tagPlacement={viewState.tagPlacement}
+                              mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
+                              HALF_DAY_INTERVALS={viewState.constants.intervals}
 
-                          /* Sélection Optimisée */
-                          selectedCell={appointmentLogic.selectedCell}
-                          selectedAppointmentId={
-                            appointmentLogic.selectedAppointment?.IdPlanningEvenement
-                          }
-                          onSelectCell={appointmentLogic.setSelectedCell}
-                          onSelectAppointment={appointmentLogic.setSelectedAppointment}
-                        />
+                              /* Config Calendrier */
+                              calendarConfig={viewState.currentCalendarConfig}
+                              onCalendarConfigChange={viewState.onCalendarConfigChange}
+                              availableConfigs={viewState.availableConfigs}
+
+                              /* Actions & Events */
+                              onAppointmentMoved={appointmentLogic.moveAppointment}
+                              onCellDoubleClick={handleCellDoubleClick}
+                              onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
+                              onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
+                              handleContextMenu={interaction.handleContextMenu}
+                              onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
+                              mouseUpAfterScroll={timeline.getFirstDayAppearing}
+                              onAddAppointment={appointmentLogic.handleSaveAppointment}
+                              onLockedError={setLockNotification}
+                              mobileState={mobileState}
+
+                              /* Sélection Optimisée */
+                              selectedCell={appointmentLogic.selectedCell}
+                              selectedAppointmentId={
+                                appointmentLogic.selectedAppointment?.IdPlanningEvenement
+                              }
+                              onSelectCell={appointmentLogic.setSelectedCell}
+                              onSelectAppointment={appointmentLogic.setSelectedAppointment}
+                            />
+                          </div>
+
+                        </div>
                       )
                     )
-                  ) : (
+                  ) : viewState.viewType !== 'calendar' ? (
                     /* VUES TABLEAUX (Chantier, Paie, Employés) */
                     <Suspense fallback={<Loader message="Chargement du tableau..." />}>
                       <DataTableFrame
@@ -870,6 +891,9 @@ export default function HomePage({
                         heightCell={60}
                       />
                     </Suspense>
+                  ) : (
+                    <>
+                    </>
                   )}
                 </>
                 

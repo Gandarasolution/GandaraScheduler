@@ -106,11 +106,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     onAppointmentResize,
   });
 
-  if(appointment.IdPlanningEvenement === 620) {
-    console.log('AppointmentItem render', appointment);
-    console.log('item', event);
-  }
-
   // Hook de calcul des segments Ghost
   const ghostSegments = useGhostSegments({
     isGhost: isGhost ?? false,
@@ -324,7 +319,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         appointment-item rounded-xl text-sm shadow-md
         flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
         z-20 h-11 group
-        ${isDragging  ? 'opacity-60 scale-95 duration-0' : 'opacity-100 duration-200'}
+        ${isDragging && source === 'calendar'  ? 'opacity-60 scale-95 duration-0' : 'opacity-100 duration-200'}
         ${source === 'calendar' && isSelected ? 'ring-3 ring-color' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
@@ -372,7 +367,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                       style={{
                           left: `${leftOffset + segment.widthGhost}px`,
                           width: `${segment.widthNoGhost}px`,
-                          backgroundColor: isHovered ? 'white' : appointmentColor,
+                          backgroundColor: isHovered && source === 'calendar'? 'white' : appointmentColor,
                           border: `2px solid ${appointmentBorderColor}`,
                           borderLeft: segment.widthGhost > 0 ? 'none' : (isFirst ? undefined : 'none'),
                           borderRight: isLast ? undefined : 'none',
@@ -441,7 +436,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 <span 
                   className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-sm`}
                   style={{ 
-                      color: (isHovered || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                      color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
                   }}
                 >
                   {event?.LibellePlanningRessource}
@@ -457,7 +452,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 <span 
                     className="truncate transition-colors duration-200"
                     style={{ 
-                    color: (isHovered || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                    color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
                     }}
                 >
                     {appointment.isReadOnly ? appointment.EtapeValidation : chargeeAffaire}
@@ -470,10 +465,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                       tagColor={event?.CouleurFondPlanningRessource}
                       color={isGhost ? '#333' : appointmentColor}
                       textColor={isGhost ? '#000' : appointmentTextColor}
-                      isHovered={isHovered}
+                      isHovered={isHovered && source === 'calendar'}
                       mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
                       annotationImgSvg={
-                        <svg height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
+                        <svg height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg" style={{ color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
                           <path d="m22 12c0 5.5228-4.4772 10-10 10-5.52285 0-10-4.4772-10-10 0-5.52285 4.47715-10 10-10 5.5228 0 10 4.47715 10 10z" 
                                 fill="none" 
                                 stroke="currentColor" 
@@ -484,7 +479,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                         </svg>
                       }
                       tagImgSvg={
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
                           <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
                         </svg>
                       }

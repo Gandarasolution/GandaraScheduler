@@ -304,6 +304,8 @@ export const useAppointmentLogic = ({
     syncWithApi: boolean = true,
   ) => {
       const { id, newStartDate, newEndDate, newEmployee, annotation, Etiquette } = data;
+
+      console.log('updateAppointmentBounds called with:', data);
       const appointmentToResize = appointmentsRef.current.find(app => Number(app.IdPlanningEvenement) === Number(id));
       if (!appointmentToResize) return;
 
@@ -489,12 +491,10 @@ export const useAppointmentLogic = ({
       if (!appointment) {
         return { success: false, message: 'Rendez-vous introuvable.' };
       }
-      console.log('Found appointment:', appointment);
       const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(newEmployeeId));
       if (!employee) {   
         return { success: false, message: 'Employé introuvable.' };
       }
-      console.log('Found employee:', employee);
 
       const ressource = eventsRef.current[Number(idRessource)] ;
       if (!ressource) {
@@ -502,7 +502,6 @@ export const useAppointmentLogic = ({
         return { success: false, message: 'Ressource introuvable.' };
       }
 
-      console.log('Found ressource:', ressource);
 
       if(appointment.DebutPlanningEvenement === newStartDate && appointment.FinPlanningEvenement === newEndDate && appointment.IdEmploye === newEmployeeId) {
         api?.unlockEvenement(appointment.IdPlanningEvenement).catch((err) => {
@@ -555,6 +554,8 @@ export const useAppointmentLogic = ({
               newStartDate: mainStart,
               newEndDate: mainEnd,
               newEmployee: employee,
+              Etiquette: appointment.Etiquette,
+              annotation: appointment.AnnotationPlanningEvenement
             },
             false,
             newPriority,

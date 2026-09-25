@@ -304,7 +304,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     visibleWindowEnd,
     isGrabbing,
     isScrolling,
-    //resetToken: reloadToken,
     onLoadAppointmentsInRange: async (start, end) => {
       await onLoadAppointmentsInRange(start, end);
     },
@@ -419,7 +418,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
 
   return (
-    <div className="relative flex h-full flex-row calendar-grid" data-testid="calendar-grid">
+    <div className="relative flex h-full flex-row calendar-grid z-500" data-testid="calendar-grid">
       <EmployeeSidebar
         dimensionItems={dimensionItems}
         employeesByDimension={employeesByDimension}

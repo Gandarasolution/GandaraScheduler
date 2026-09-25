@@ -166,11 +166,12 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     return groups.map(({ key, apps }) => ({ key, apps }));
   }, [positionedAppointments]);
 
-  // if (Number(employee.IdPersonnel) === 5404) {
-  // console.log(overlappingGroups);
-  // console.log(positionedAppointments);
-  // }
-  //console.log(employee.IdPersonnel, (Number(employee.IdPersonnel) === 5404));
+
+
+
+  if (Number(employee.IdPersonnel) === 9) {
+    console.log(overlappingGroups);
+  }
   
 
   const hasExpandedGroup = useMemo(() => overlappingGroups.some((g) => expandedGroups[g.key]), [overlappingGroups, expandedGroups]);
@@ -246,7 +247,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   return (
     <div 
       id={getRowId('employee', employee.IdPersonnel)}
-      className="calendar-row employee-row flex w-fit relative" 
+      className="calendar-row employee-row flex w-fit relative z-300" 
       data-employee-id={employee.IdPersonnel}
       role="row"
       onClick={handleRowClick}
@@ -297,6 +298,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         return (
           <React.Fragment key={groupUniqueKey}>
             {appsToRender.map((app, index) => {
+
+              if (!isDisplayWeekend && (new Date(app.DebutPlanningEvenement).getDay() === 0 || new Date(app.DebutPlanningEvenement).getDay() === 6)) return null;
             
               const ressource = events[Number(app.IdPlanningRessource)];
               if (!ressource) return null;

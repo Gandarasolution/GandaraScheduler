@@ -226,7 +226,7 @@ export const CalendarModals = memo(({
           value: config.tagPlacement,
           onChange: config.setTagPlacement,
           options: [
-            { value: 'hover', label: 'Au survol (animation)' },
+            { value: 'hover', label: 'Au clic sur une icône' },
             { value: 'fixed', label: 'Toujours visible (bord inférieur)' }
           ]
         }
