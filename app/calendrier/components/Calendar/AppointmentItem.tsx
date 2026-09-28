@@ -247,7 +247,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     border: isGhost ? 'none' : `2px solid ${appointmentBorderColor}`,
     transition: isDragging ? 'none' : 'box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out, opacity 0.2s ease-in-out transform 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
-    zIndex: isHovered ? 9999 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0)))),
+    zIndex: isHovered ? 50 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0)))),
     cursor: (isInactive || isLocked || isReadOnly) ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' && hasPermission(23) ? 'grab' : 'cursor')),
   }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment, isInactive, isReadOnly, isResizingLeft, isResizingRight]);
 

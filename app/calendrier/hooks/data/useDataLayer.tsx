@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useMemo, useCallback, use } from 'react';
 import { Appointment, User, Item, CalendarConfig, ImageType, UserRole, Equipe, PoleActivite, ChantierItem } from '../../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
 import { employeeService, equipeService, evenementService, imageService } from '@/app/service';
-import { getCachedImages, subscribeToImageCache, upsertCachedImage } from '../../utils/imageCacheStore';
 
 
 interface DataLayerProps {
@@ -10,13 +9,15 @@ interface DataLayerProps {
   setGlobalEmployees: React.Dispatch<React.SetStateAction<User[]>>;
   setNotification: (message: string) => void
   isMobile?: boolean;
+  onError: (message: string) => void;
 }
 
 export const useDataLayer = ({
   globalEmployees,
   setGlobalEmployees,
   setNotification,
-  isMobile = false
+  isMobile = false,
+  onError
 }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [teams, setTeams] = useState<Record<number, Equipe>>({});
@@ -30,19 +31,7 @@ export const useDataLayer = ({
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
   //const [loadingWindowVersion, setLoadingWindowVersion] = useState(0);
-  const [availableImages, setAvailableImages] = useState<ImageType[]>(() => getCachedImages());
 
-
- 
-  useEffect(() => {
-    const unsubscribe = subscribeToImageCache((images) => {
-      setAvailableImages(images);
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
 
   const loadTeams = useCallback(async () => {    
     const response = await equipeService.getEquipes();
@@ -186,10 +175,21 @@ export const useDataLayer = ({
   // --- Trigger de refresh ---
   const refreshData = useCallback(() => setAppointmentsVersion(prev => prev + 1), []);
 
-  const addImage = (newImage: ImageType) => {
-    upsertCachedImage(newImage);
-    return newImage;
-  };
+  const addImage = useCallback(async (base64String: string, filename?: string): Promise<{ success: boolean; id?: number; message?: string }> => {
+    try {
+        const result = await imageService.uploadImage(base64String)
+        if (result.success && result.id) {
+          return { success: true, id: result.id };
+        } else {
+          onError(result.message || 'Erreur lors de l\'upload de l\'image.');
+          console.error('Erreur lors de l\'upload de l\'image:', result.message);
+          return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
+        }
+    }catch (error) {
+      console.error('Erreur lors de l\'upload de l\'image:', error);
+      return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
+    }
+  }, []);
 
   const fetchPaginatedImages = useCallback(async (page: number, limit?: number): Promise<{ image: ImageType[]; totalLignes: number }> => {
     try {
@@ -198,7 +198,7 @@ export const useDataLayer = ({
               console.log('Réponse de l\'API getImagesPaginated:', response);
 
         const images = response.data.image;
-        images.forEach((img: ImageType) => upsertCachedImage(img));
+        
         return { image: images, totalLignes: response.data.totalLignes || 0 };
       }
 
@@ -297,7 +297,6 @@ export const useDataLayer = ({
     isLoading,
     itemsRef,
     appointmentsRef,
-    availableImages,
     initialTeams: teams,
     poleActivites,
     updateEmployeeGroup,

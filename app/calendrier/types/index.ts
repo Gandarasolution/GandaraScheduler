@@ -218,20 +218,6 @@ export interface MobileAppointmentDisplayConfig {
   secondaryFields: MobileAppointmentField[];
 }
 
-export const MOBILE_APPOINTMENT_FIELD_OPTIONS: Array<{
-  CodeChamp: MobileAppointmentField;
-  Libelle: string;
-}> = [
-  { CodeChamp: 'LibellePlanningRessource', Libelle: 'Libellé de la rubrique' },
-  { CodeChamp: 'Type', Libelle: 'Type de ressource' },
-  { CodeChamp: 'DebutPlanningEvenement', Libelle: 'Date et heure de début' },
-  { CodeChamp: 'FinPlanningEvenement', Libelle: 'Date et heure de fin' },
-  { CodeChamp: 'AnnotationPlanningEvenement', Libelle: 'Annotation du rendez-vous' },
-  { CodeChamp: 'IdEmploye', Libelle: 'Employé du rendez-vous' },
-  { CodeChamp: 'EtapeValidation', Libelle: 'Étape de validation' },
-  { CodeChamp: 'Etiquette', Libelle: 'Étiquette du rendez-vous' },
-];
-
 
 
 /**
@@ -286,7 +272,7 @@ export interface CalendarConfig {
   IdPlanningVue: number;
   LibellePlanningVue: string;
   /** Image associée à la vue */
-  PlanningImage?: ImageType;
+  PlanningVueImage?: ImageType;
   /** Description de la vue */
   DescriptionPlanningVue?: string;
   /** Configuration des niveaux de groupement (équipe et pole) */

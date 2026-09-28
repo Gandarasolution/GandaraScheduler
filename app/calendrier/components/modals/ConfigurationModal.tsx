@@ -20,7 +20,6 @@ type ConfigurationModalProps = {
   user: User;
   isOpen: boolean;
   onClose: () => void;
-  availablesImages: ImageType[];
   availableConfigs: CalendarConfig[];
   currentConfig: CalendarConfig | null;
   onConfigChange: (config: CalendarConfig) => void;
@@ -30,13 +29,14 @@ type ConfigurationModalProps = {
   setEditingConfig: (config: CalendarConfig | null) => void;
   isCreatingConfig: boolean;
   setIsCreatingConfig: (isCreating: boolean) => void;
+  handleOpenImageModal: (actualImage: ImageType | undefined, onSelect: (image: ImageType) => void) => void;
+  addImage: (base64: string) => Promise<{ success: boolean; id?: number; message?: string }>;
 };
 
 const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   user,
   isOpen,
   onClose,
-  availablesImages,
   availableConfigs,
   currentConfig,
   onConfigChange,
@@ -45,7 +45,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
   editingConfig,
   setEditingConfig,
   isCreatingConfig,
-  setIsCreatingConfig
+  setIsCreatingConfig,
+  handleOpenImageModal,
+  addImage
 }) => {
   const { hasPermission } = useAuth();
 
@@ -181,11 +183,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
           if (planningVue) {
             setConfigName(planningVue.LibellePlanningVue || '');
             setConfigDescription(planningVue.DescriptionPlanningVue || '');
-            setConfigImage(
-              planningVue.IdPlanningImage 
-                ? availablesImages.find(img => img.id === planningVue.IdPlanningImage) 
-                : undefined
-            );
+            setConfigImage(planningVue.PlanningVueImage);
             
             if (planningVue.Group) {
               setGroupingLevel1(planningVue.Group.ChampsPremierGroupePlanningVue);
@@ -238,7 +236,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     } else {
       resetForm();
     }
-  }, [editingConfig, isCreatingConfig, availablesImages]);
+  }, [editingConfig, isCreatingConfig]);
 
   const handleSave = async () => {
     if (!configName.trim()) return;
@@ -298,6 +296,21 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       });
       
     try {
+
+      if (configImage?.image && planningVue.IdPlanningImage === 0) {
+         let result: { success: boolean; id?: number; message?: string } = { success: true };
+
+          const imageBase64 = configImage?.image;
+          
+
+          result = await addImage(imageBase64)
+
+          if(!result.success || !result.id) {
+            return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
+          }
+          planningVue.IdPlanningImage = result.id;
+      }
+
       const response = await onSaveConfig({ planningVue, filtrePerso: filtre, utilisateursAutorises: isPrivate ? Array.from(new Set([user.IdPersonnel, ...selectedUsers])) : [] });
       
       if (response && response.success === false) {
@@ -342,10 +355,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
           
           {currentConfig ? (
             <div className="flex items-start gap-4 relative z-10">
-              {currentConfig.PlanningImage?.image && (
+              {currentConfig.PlanningVueImage?.image && (
                 <div className="relative">
                   <img 
-                    src={currentConfig.PlanningImage.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
+                    src={currentConfig.PlanningVueImage?.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
                     className="w-16 h-16 object-cover rounded-xl shadow-sm flex-shrink-0 border border-white"
                     alt="Config image"
                   />
@@ -420,9 +433,9 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 }`}
               >
                 <div className="flex items-start gap-4 mb-2">
-                  {config.PlanningImage?.image && (
+                  {config.PlanningVueImage?.image && (
                     <img 
-                      src={config.PlanningImage.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
+                      src={config.PlanningVueImage.image || 'https://placehold.co/64x64/eeeeee/666666?text=No+Image'} 
                       className="w-12 h-12 object-cover rounded-lg flex-shrink-0 border border-gray-100"
                       alt="Config image"
                     />
@@ -470,7 +483,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       }
                     }}
                     disabled={config.isLocked}
-                    className={`p-1.5 rounded-md transition-all duration-200 ${
+                    className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
                       config.isLocked ? 'text-red-300 cursor-not-allowed' : 'text-secondary hover:text-primary hover:bg-primary-ultra-light'
                     }`}
                     title={config.isLocked ? "Verrouillé" : "Modifier"}
@@ -481,7 +494,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   <button
                     onClick={(e) => handleDeleteConfig(e, config.IdPlanningVue)}
                     disabled={config.isLocked || deletingConfigId === config.IdPlanningVue}
-                    className={`p-1.5 rounded-md transition-all duration-200 ${
+                    className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
                       config.isLocked || deletingConfigId === config.IdPlanningVue 
                       ? 'text-red-300 cursor-not-allowed' 
                       : 'text-secondary hover:text-red-500 hover:bg-red-50'
@@ -659,17 +672,22 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   {/* Image */}
                   <div className="bg-secondary-bg/30 p-5 rounded-2xl border border-ultra-light/50 flex flex-col">
                     <label className="block text-sm font-semibold text-primary mb-3">Icône de la vue</label>
-                    <div className="flex-1 border-2 border-dashed border-gray-300 bg-white rounded-xl p-3 flex flex-col items-center justify-center hover:border-primary hover:bg-primary-ultra-light/20 transition-all cursor-pointer group">
+                    <div
+                      onClick={() => handleOpenImageModal(configImage, setConfigImage)}
+                      className="flex-1 border-2 border-dashed border-gray-300 bg-white rounded-xl p-3 flex flex-col items-center justify-center hover:border-primary hover:bg-primary-ultra-light/20 transition-all cursor-pointer group"
+                    >
                       {configImage ? (
                         <div className="flex items-center gap-3 w-full justify-between">
                           <img src={configImage.image} alt="Config" className="w-10 h-10 object-cover rounded-lg shadow-sm" />
-                          <button onClick={(e) => { e.stopPropagation(); setConfigImage(undefined); }} className="text-red-400 hover:text-red-600 p-2 bg-red-50 rounded-lg">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setConfigImage(undefined); }} className="cursor-pointer text-red-400 hover:text-red-600 p-2 bg-red-50 rounded-lg">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
                         </div>
                       ) : (
                         <div className="text-secondary/70 flex flex-col items-center">
-                          <svg className="w-6 h-6 mb-1 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          <svg className="w-6 h-6 mb-1 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
                           <span className="text-xs font-medium">Choisir</span>
                         </div>
                       )}

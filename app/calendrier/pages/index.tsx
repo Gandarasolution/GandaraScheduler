@@ -132,7 +132,8 @@ export default function HomePage({
     globalEmployees: globalEmployees,
     setGlobalEmployees, 
     setNotification: setLockNotification,
-    isMobile
+    isMobile,
+    onError: setLockNotification
   });
 
 
@@ -173,6 +174,7 @@ export default function HomePage({
       repeatEvenement: evenementService.repeatEvenement,
       unlockEvenement: evenementService.unlockEvenement,
       lockEvenement: evenementService.lockQuickEvenement,
+      addImage: dataLayer.addImage,
     },
   });
 
@@ -993,6 +995,7 @@ export default function HomePage({
               
               addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
               removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,
+              addImage: dataLayer.addImage,
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,
@@ -1000,8 +1003,6 @@ export default function HomePage({
               employees: globalEmployees,
               selectedItem: appointmentLogic.selectedItem,
               selectedEmployee: appointmentLogic.selectedEmployee,
-              // Correction : Passer les images disponibles
-              availableImages: dataLayer.availableImages, 
               // Correction : Passer la config de filtre calculée
               filterConfig: filterConfig, 
               isUploading: interaction.isUploading,

@@ -66,7 +66,7 @@ interface CalendarModalsProps {
     closeImageModal: () => void;
     handleImageSelect: (image: ImageType) => void;
     handleImageUpload: (file: File) => Promise<ImageType>;
-    openImageModalForEvent: (id: number) => void;
+    openImageModalForEvent: (id?: number) => void;
     fetchPaginatedImages: (page: number, limit?: number) => Promise<{ image: ImageType[]; totalLignes: number }>;
 
     // Settings & Config Handlers
@@ -89,6 +89,8 @@ interface CalendarModalsProps {
 
     setSelectedItem: (item: Item | null) => void;
     onLockedError: (message: string) => void;
+
+    addImage: (base64: string) => Promise<{ success: boolean; id?: number; message?: string }>;
   };
   data: {
     appointments: Appointment[];
@@ -96,7 +98,6 @@ interface CalendarModalsProps {
     employees: User[];
     selectedItem: Item | null;
     selectedEmployee: User | null;
-    availableImages: ImageType[];
     filterConfig: any; // Options pour le filtre
     isUploading: boolean;
     uploadError: string | null;
@@ -144,6 +145,32 @@ export const CalendarModals = memo(({
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
+
+ 
+  const [configImageSelectorContext, setConfigImageSelectorContext] = useState<{
+    actualImage?: ImageType;
+    onSelect: (image: ImageType) => void;
+  } | null>(null);
+
+  const openImageModalForConfig = (actualImage: ImageType | undefined, onSelect: (image: ImageType) => void) => {
+    setConfigImageSelectorContext({ actualImage, onSelect });
+    handlers.openImageModalForEvent();
+  };
+
+  const closeImageSelector = () => {
+    setConfigImageSelectorContext(null);
+    handlers.closeImageModal();
+  };
+
+  const handleImageSelectorSelect = (image: ImageType) => {
+    if (configImageSelectorContext) {
+      configImageSelectorContext.onSelect(image);
+      closeImageSelector();
+      return;
+    }
+
+    handlers.handleImageSelect(image);
+  };
 
   const handleRepeatSubmit = async () => {
     if (isSubmittingModalAction) return;
@@ -354,22 +381,6 @@ export const CalendarModals = memo(({
         )}
       </Modal>
 
-      {/* --- SELECTEUR D'IMAGES --- */}
-      {modalsState.isImageSelectorOpen && (
-        <Suspense fallback={<ModalLoadingFallback />}>
-          <ImageSelectorContentModal
-            actualImage={data.selectedItem?.Image}
-            isOpen={modalsState.isImageSelectorOpen}
-            onClose={handlers.closeImageModal}
-            onImageSelect={handlers.handleImageSelect}
-            onImageUpload={handlers.handleImageUpload}
-            isUploading={data.isUploading}
-            uploadError={data.uploadError}
-            fetchPaginatedImages={handlers.fetchPaginatedImages}
-          />
-        </Suspense>
-      )}
-
       {/* --- PARAMETRES --- */}
       {modalsState.isSettingsOpen && (
         <SettingsModal 
@@ -386,7 +397,6 @@ export const CalendarModals = memo(({
           user={user}
           isOpen={modalsState.isConfigModalOpen}
           onClose={handlers.closeConfigModal}
-          availablesImages={data.availableImages}
           availableConfigs={data.availableConfigs}
           currentConfig={data.currentConfig}
           onConfigChange={handlers.setCurrentConfig}
@@ -396,9 +406,27 @@ export const CalendarModals = memo(({
           setEditingConfig={handlers.setEditingConfig}
           isCreatingConfig={data.isCreatingConfig}
           setIsCreatingConfig={handlers.setIsCreatingConfig}
+          handleOpenImageModal={openImageModalForConfig}
+          addImage={handlers.addImage}
         />
       )}
       
+      {/* --- SELECTEUR D'IMAGES --- */}
+      {modalsState.isImageSelectorOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <ImageSelectorContentModal
+            actualImage={configImageSelectorContext ? configImageSelectorContext.actualImage : data.selectedItem?.Image}
+            isOpen={modalsState.isImageSelectorOpen}
+            onClose={closeImageSelector}
+            onImageSelect={handleImageSelectorSelect}
+            onImageUpload={handlers.handleImageUpload}
+            isUploading={data.isUploading}
+            uploadError={data.uploadError}
+            fetchPaginatedImages={handlers.fetchPaginatedImages}
+          />
+        </Suspense>
+      )}
+
       {/* --- FILTRES TABLEAUX --- */}
       {modalsState.isFilterModalOpen && (
         <FilterModal

@@ -30,7 +30,7 @@ interface InteractionProps {
   HALF_DAY_INTERVALS: { startHour: number; endHour: number }[];
 
   viewType: string;
-  addImage: (newImage: ImageType) => ImageType;
+  addImage: (base64: string) => Promise<{ success: boolean; id?: number; message?: string }>;
 
   setIsViewDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -275,7 +275,7 @@ export const useInteraction = ({
             
             const dataURL = canvas.toDataURL('image/png');
 
-            const result = addImage({ id: 0, image: dataURL });
+            const result = { id: 0, image: dataURL };
         
             setIsUploading(false);
             resolve(result);

@@ -13,7 +13,7 @@ import {
   HOUR_MS,
   CELL_HEIGHT,
 } from '../../utils/constants';
-import {getDimensionItemKey, getHierarchicalDimensionItems, groupEmployeesHierarchically } from '../../utils/filters';
+import { getDimensionItemKey, getHierarchicalDimensionItems, groupEmployeesHierarchically, HierarchicalGroupItem } from '../../utils/filters';
 import { isSameDay } from 'date-fns';
 import { useSmartScroll } from '../../hooks/interactions/useSmartScroll';
 import { useAutoScrollOnDrag } from '../../hooks/interactions/useAutoScrollOnDrag';
@@ -61,6 +61,14 @@ interface DesktopCalendarGridProps {
   mouseUpAfterScroll: () => void;
   onLockedError: (message: string) => void;
 }
+
+
+const getAllDimensionItemKeys = (items: HierarchicalGroupItem[]): (string | number)[] => {
+  return items.flatMap(item => [
+    getDimensionItemKey(item.id),
+    ...(item.children?.length ? getAllDimensionItemKeys(item.children) : []),
+  ]);
+};
 
 
 const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
@@ -140,17 +148,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       return { employeeId: employee.IdPersonnel, height: calculatedHeight, dayKey: undefined };
     });
     
-  }, [employees, appointments]);
+  }, [employees, appointments, tagPlacement]);
 
 
-  const dimensionItems = useMemo(() => {
-    return getHierarchicalDimensionItems(calendarConfig?.Group, employees, initialTeams, poleActivites);
-  }, [calendarConfig?.Group, employees, initialTeams, poleActivites]);
-
-  
-  const [openItems, setOpenItems] = useState<(string | number)[]>(() => {
-    return dimensionItems.map(i => getDimensionItemKey(i.id));
-  });  
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
   
@@ -168,10 +168,6 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       left: 0, 
       width: 0 
   });
-
-  useEffect(() => {
-    setOpenItems(dimensionItems.map(i => getDimensionItemKey(i.id)));
-  }, [dimensionItems]);
 
   const { isGrabbing, isScrolling } = useSmartScroll(mainScrollRef as React.RefObject<HTMLElement>, mouseUpAfterScroll);
 
@@ -253,6 +249,23 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       return visibleEmployeeIdsInWindow.has(emp.IdPersonnel);
     });
   }, [employees, visibleEmployeeIdsInWindow]);
+
+  // La hiérarchie doit être construite avec la même liste d'employés que celle réellement affichée.
+  const dimensionItems = useMemo(() => {
+    return getHierarchicalDimensionItems(
+      calendarConfig?.Group,
+      filteredEmployees,
+      initialTeams,
+      poleActivites
+    );
+  }, [calendarConfig?.Group, filteredEmployees, initialTeams, poleActivites]);
+
+  const [openItems, setOpenItems] = useState<(string | number)[]>([]);
+
+  // Ouvre par défaut les deux niveaux de la hiérarchie.
+  useEffect(() => {
+    setOpenItems(getAllDimensionItemKeys(dimensionItems));
+  }, [dimensionItems]);
 
   const employeesByDimension = useMemo(() => {
     return groupEmployeesHierarchically(filteredEmployees, calendarConfig?.Group, initialTeams, poleActivites);
@@ -418,7 +431,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
 
   return (
-    <div className="relative flex h-full flex-row calendar-grid z-500" data-testid="calendar-grid">
+    <div className="relative flex h-full flex-row calendar-grid" data-testid="calendar-grid">
       <EmployeeSidebar
         dimensionItems={dimensionItems}
         employeesByDimension={employeesByDimension}

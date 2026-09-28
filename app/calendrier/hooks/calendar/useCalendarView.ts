@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CalendarConfig, MobileAppointmentDisplayConfig, MobileAppointmentField, User, MOBILE_APPOINTMENT_FIELD_OPTIONS } from '../../types'; // Assumed type
+import { CalendarConfig, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
@@ -24,7 +24,10 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     ],
   };
   const mobileDisplayLoadedRef = useRef(false);
-  const [mobileAppointmentFieldOptions, setMobileAppointmentFieldOptions] = useState(MOBILE_APPOINTMENT_FIELD_OPTIONS);
+  const [mobileAppointmentFieldOptions, setMobileAppointmentFieldOptions] = useState<Array<{
+                                                                                      CodeChamp: MobileAppointmentField;
+                                                                                      Libelle: string;
+                                                                                    }>>([]);
   const [mobileAppointmentSettingsLoading, setMobileAppointmentSettingsLoading] = useState(false);
 
   // --- Préférences persistantes ---

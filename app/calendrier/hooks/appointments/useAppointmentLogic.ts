@@ -43,6 +43,7 @@ interface LogicProps {
     deleteEvenements: (ids: string[]) => Promise<any>;
     unlockEvenement: (id: number | null | undefined) => Promise<any>;
     lockEvenement: (id: number | null | undefined) => Promise<any>;
+    addImage: (base64: string) => Promise<{ success: boolean; id?: number; message?: string }>;
   };
 }
 
@@ -666,7 +667,7 @@ export const useAppointmentLogic = ({
 
           const imageBase64 = eventUpdate.Image.image;
 
-          result = await addImage(imageBase64)
+          result = await api.addImage(imageBase64)
 
           if(!result.success || !result.id) {
             return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
@@ -1322,7 +1323,7 @@ export const useAppointmentLogic = ({
 
         const imageBase64 = dimension.Image.image;
 
-        result = await addImage(imageBase64)
+        result = await api.addImage(imageBase64)
 
         if(!result.success || !result.id) {
           return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
@@ -1382,7 +1383,7 @@ export const useAppointmentLogic = ({
 
         const imageBase64 = dimension.Image.image;
 
-        result = await addImage(imageBase64)
+        result = await api.addImage(imageBase64)
 
         if(!result.success || !result.id) {
           return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
@@ -1479,21 +1480,7 @@ export const useAppointmentLogic = ({
   }, []);
 
 
-  const addImage = useCallback(async (base64String: string, filename?: string): Promise<{ success: boolean; id?: number; message?: string }> => {
-    try {
-        const result = await imageService.uploadImage(base64String)
-        if (result.success && result.id) {
-          return { success: true, id: result.id };
-        } else {
-          onLockedError(result.message || 'Erreur lors de l\'upload de l\'image.');
-          console.error('Erreur lors de l\'upload de l\'image:', result.message);
-          return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
-        }
-    }catch (error) {
-      console.error('Erreur lors de l\'upload de l\'image:', error);
-      return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
-    }
-  }, []);
+  
 
 
   return {
@@ -1529,7 +1516,8 @@ export const useAppointmentLogic = ({
     // Utils
     undoLastAction,
     copyAppointmentToClipboard,
-    pasteAppointment
+    pasteAppointment,
+
   };
 };
 
