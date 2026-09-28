@@ -19,7 +19,7 @@ import { AppointmentForm } from '@/app/calendrier/components';
 
 // Composants
 
-import { EmployeeSelector, MobileCalendarGrid, NotificationPanel, AppointmentList} from './index';
+import { NotificationsPanel, EmployeeSelector, MobileCalendarGrid, AppointmentList} from '@/app/calendrier/index';
 import SearchOverlay from '../../modals/SearchOverlay';
 import { endOfDay, endOfMonth, startOfDay, startOfMonth } from 'date-fns';
 import { useAuth } from '@/app/calendrier/hooks/utils/AuthContext';
@@ -326,7 +326,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             
             {/* Panneau de notifications */}
             {showNotifications && (
-              <NotificationPanel 
+              <NotificationsPanel 
                 notifications={notifications}
                 onClose={() => setShowNotifications(false)}
                 onMarkAsRead={markAsRead}

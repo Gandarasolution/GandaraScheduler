@@ -22,7 +22,7 @@ import { endOfMonth, format, startOfMonth } from "date-fns";
 import { 
   ThemeSelector, 
   RightClickComponent,
-  Notificationspanel,
+  NotificationsPanel,
   AlertModal,
   SearchOverlay,
   CalendarHeader,
@@ -1035,7 +1035,7 @@ export default function HomePage({
             }}
           />
 
-          <Notificationspanel 
+          <NotificationsPanel 
             isOpen={viewState.isNotificationsPanelOpen}
             onClose={() => viewState.setIsNotificationsPanelOpen(false)}
             notifications={notifications.notifications}

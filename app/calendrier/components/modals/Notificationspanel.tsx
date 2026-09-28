@@ -19,8 +19,6 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
   onClose,
   notifications,
   onMarkAsRead,
-  onRemove,
-  onClearAll,
   variant = 'desktop'
 }) => {
   const observer = useRef<IntersectionObserver | null>(null);
