@@ -109,18 +109,19 @@ const imageRendererEmployee = (value: any, item: User, deps: TableConfigDeps) =>
     const isInactive = item.Actif === false;
     return (
         <div className="relative inline-block" style={{ opacity: isInactive ? 0.5 : 1 }}>
-        <img
-            src={item.Image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.Nom.charAt(0)}`}
-            alt={item.Nom + ' ' + item.Prenom}
-            className={`cursor-pointer w-10 h-10 rounded-full border shadow ${item.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
-            onClick={(e) => {
-                e.stopPropagation();
-                if (deps.onImageClick) deps.onImageClick(item);
-            }}
-        />
-        {item.Type === 'INTERIM' && (
-            <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
-        )}
+            <img
+                src={item.Image ?? `https://placehold.co/32x32/cccccc/333333?text=${item.Nom.charAt(0)}`}
+                alt={item.Nom + ' ' + item.Prenom}
+                loading="lazy"
+                className={`w-10 h-10 rounded-full border shadow ${item.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+                // onClick={(e) => {
+                //     e.stopPropagation();
+                //     if (deps.onImageClick) deps.onImageClick(item);
+                // }}
+            />
+            {item.Type === 'INTERIM' && (
+                <span className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}></span>
+            )}
         </div>
     );
 };
@@ -226,7 +227,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
             key: 'all',
             label: '',
             attributes: [
-            { key: 'Image', label: '', sortable: false, width:50, renderer: (value: any, item: GenericDataItem) => imageRendererEmployee(value, item as unknown as User, deps)},
+            { key: 'Image', label: '', sortable: false, width:60, renderer: (value: any, item: GenericDataItem) => imageRendererEmployee(value, item as unknown as User, deps)},
             { key: 'Code', label: 'Code' },
             { key: 'Nom', label: 'Nom' },
             { key: 'Prenom', label: 'Prénom'}, 

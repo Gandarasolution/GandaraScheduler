@@ -52,8 +52,8 @@ export const CalendarHeader = memo(({
       <div className="flex flex-row w-full">
         {/* LOGO */}
         <div 
-          className={`p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}
-        >
+          className={`${viewType === 'calendar' ? '' : ''} pl-7 p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'} transition-[padding] duration-300 ease-in-out`}
+        > 
           <img 
             src={logoSrc}
             alt="Logo" 

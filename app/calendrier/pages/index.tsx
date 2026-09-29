@@ -888,8 +888,8 @@ export default function HomePage({
                         refreshKey={dataLayer.appointmentsVersion}
                         loadingElement={<Loader message="Chargement des données..." />}
                         showGroupHeaders={viewState.viewType === 'chantier-table'}
-                        onRowClick={handleTableRowClick}
-                        onRightClick={interaction.handleDataTableContextMenu}
+                        onRowClick={viewState.viewType === 'employee-table' ? undefined : handleTableRowClick}
+                        onRightClick={viewState.viewType === 'employee-table' ? undefined : interaction.handleDataTableContextMenu}
                         heightCell={60}
                       />
                     </Suspense>
