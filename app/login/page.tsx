@@ -37,28 +37,29 @@ export default function LoginPage({ login }: LoginPageProps) {
   useEffect(() => {
     const checkEnvironment = async () => {
       const host = window.location.host;
-      
-      // On vérifie si on a DÉJÀ un cookie valide (ex: utilisateur déconnecté qui se reconnecte)
+
       const existingApiUrl = Cookies.get('client_api_url');
-      
 
-      
+      const isCanonical =
+        await authService.SchedulerIsURICannonical(host);
 
-      //console.log('window.location', window.location);
-      // LOGIQUE CANONIQUE : Adapte cette condition selon ton domaine principal
-      // Ex: si on n'est pas sur localhost et pas sur www.tondomaine.com
-      const isCanonical = await authService.SchedulerIsURICannonical(host);
-
-      console.log('isCanonical', isCanonical, 'existingApiUrl', existingApiUrl);
+      console.log(
+        'isCanonical',
+        isCanonical,
+        'existingApiUrl',
+        existingApiUrl
+      );
 
       if (isCanonical && !existingApiUrl) {
-        await resolveCompanyCode(host);
+        // Appel automatique via l'URL :
+        // aucune erreur affichée à l'utilisateur
+        await resolveCompanyCode(host, false);
+
       } else if (!existingApiUrl) {
-        // L'utilisateur est sur localhost ou le domaine générique sans cookie
         setNeedsCompanyCode(true);
         setIsInitializing(false);
+
       } else {
-        // On a déjà l'URL de l'API en cookie, on affiche direct le login
         setNeedsCompanyCode(false);
         setIsInitializing(false);
       }
@@ -68,13 +69,16 @@ export default function LoginPage({ login }: LoginPageProps) {
   }, []);
 
   // 2. Appel à l'API Gandara pour récupérer la bonne URL
-  const resolveCompanyCode = async (code: string): Promise<boolean> => {
+  const resolveCompanyCode = async (
+    code: string,
+    showApiError: boolean = false
+  ): Promise<boolean> => {
     setLoading(true);
     setError('');
-    
+
     try {
-      // On utilise fetch direct pour éviter l'intercepteur Axios qui pourrait bloquer
       const response = await authService.SchedulerGetAPI(code);
+
       if (!response) {
         throw new Error("Code entreprise introuvable.");
       }
@@ -82,30 +86,54 @@ export default function LoginPage({ login }: LoginPageProps) {
       const resolvedEnvironment = await authService.resolveApiEnvironment(response);
 
       if (!resolvedEnvironment) {
-        throw new Error("Aucune URL d'API accessible. Vérifiez le réseau ou votre environnement.");
+        if (showApiError) {
+          setError(
+            "Aucune URL d'API accessible. Vérifiez le réseau ou votre environnement."
+          );
+        }
+
+        return false;
       }
 
-      Cookies.set('client_api_url', resolvedEnvironment.apiUrl, { expires: 365 });
+      Cookies.set('client_api_url', resolvedEnvironment.apiUrl, {
+        expires: 365
+      });
+
       if (resolvedEnvironment.mercureUrl) {
-        Cookies.set('client_mercure_url', resolvedEnvironment.mercureUrl, { expires: 365 });
+        Cookies.set(
+          'client_mercure_url',
+          resolvedEnvironment.mercureUrl,
+          { expires: 365 }
+        );
       } else {
         Cookies.remove('client_mercure_url');
       }
+
       if (resolvedEnvironment.logoClient) {
-        console.log('Setting client_logo_url cookie:', resolvedEnvironment.logoClient);
-        localStorage.setItem('client_logo_url', resolvedEnvironment.logoClient);
+        localStorage.setItem(
+          'client_logo_url',
+          resolvedEnvironment.logoClient
+        );
       } else {
-        Cookies.remove('client_logo_url');
+        localStorage.removeItem('client_logo_url');
       }
 
       setNeedsCompanyCode(false);
+
       return true;
     } catch (err: any) {
-      setError(err.message || "Impossible de résoudre l'environnement.");
+      if (showApiError) {
+        setError(
+          err.message || "Impossible de résoudre l'environnement."
+        );
+      }
+
       Cookies.remove('client_api_url');
       Cookies.remove('client_mercure_url');
-      Cookies.remove('client_logo_url');
+      localStorage.removeItem('client_logo_url');
+
       setNeedsCompanyCode(true);
+
       return false;
     } finally {
       setLoading(false);
@@ -116,6 +144,7 @@ export default function LoginPage({ login }: LoginPageProps) {
   // Soumission du formulaire de login et résolution éventuelle de l'environnement
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setLoading(true);
     setError('');
 
@@ -127,21 +156,32 @@ export default function LoginPage({ login }: LoginPageProps) {
           return;
         }
 
-        const environmentResolved = await resolveCompanyCode(companyCode.trim());
+        // Appel manuel via le code entreprise :
+        // on affiche les erreurs
+        const environmentResolved = await resolveCompanyCode(
+          companyCode.trim(),
+          true
+        );
+
         if (!environmentResolved) {
           setLoading(false);
           return;
         }
       }
 
-      const result = await login(formData.login, formData.password);
+      const result = await login(
+        formData.login,
+        formData.password
+      );
+
       if (!result.success) {
         setError(result.message || 'Échec de la connexion');
         setLoading(false);
         return;
       }
-      // On ne set pas loading à false ici car la redirection vers '/' va recharger l'app
+
       router.push('/');
+
     } catch {
       setError('Une erreur réseau est survenue.');
       setLoading(false);
