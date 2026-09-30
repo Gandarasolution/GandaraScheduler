@@ -50,10 +50,30 @@ axiosAgent.interceptors.request.use((config) => {
 
 axiosAgent.interceptors.response.use(
     // 1. Si la réponse est un succès (2XX), on la laisse passer normalement
-    (response) => response,
+    (response) => {
+        const expiresAt = response.data?.token_expires_at;
+        console.log("axiosAgent.interceptors.response.use: response.data = " + JSON.stringify(response.data));
+        console.log("axiosAgent.interceptors.response.use: x-token-expires-at = " + expiresAt);
+
+        if (expiresAt) {
+        Cookies.set('is_logged_in', 'true', {
+            expires: new Date(Number(expiresAt) * 1000),
+            path: '/',
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+        });
+        }
+
+        return response;
+    },
     
     // 2. Si la réponse est une erreur (4XX, 5XX)
     async (error) => {
+        console.log('❌ INTERCEPTOR ERROR', {
+            url: error.config?.url,
+            status: error.response?.status,
+            error,
+        });
         // Si l'erreur est 401 (Non autorisé / JWT expiré)
         if (error.response && error.response.status === 401) {
             window.dispatchEvent(new Event('auth:expired'));

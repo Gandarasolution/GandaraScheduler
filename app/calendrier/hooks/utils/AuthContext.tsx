@@ -59,12 +59,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const id = response.planning[0]?.IdPlanning || -1;
       if (id >= 0) {
         axiosAgent.defaults.headers.common['X-Planning-Id'] = id;
-
         if(response.planning.length === 1) {
           setCurrentPlanningId(id); 
         }else {
           setCurrentPlanningId(-1); 
         }
+       
       }else {
         return { success: false, message: 'Aucun planning valide trouvé pour l\'utilisateur.' };
       }
@@ -85,6 +85,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (reason === 'inactive') {
       localStorage.setItem(SESSION_EXPIRED_KEY, SESSION_EXPIRED_MESSAGE);
     }
+
+    Cookies.remove(LOGIN_COOKIE_NAME, {
+      path: '/',
+    });
+
     // On ne supprime pas forcément le cookie 'client_api_url' ici, 
     // pour que le client reste sur son environnement s'il veut juste se reconnecter.
     setUser(undefined);

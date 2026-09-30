@@ -59,9 +59,10 @@ async function resolveApiEnvironment(
   if (!payload) return null;
 
   const candidates: Array<{ apiUrl?: string | null; mercureUrl?: string | null }> = [
+    { apiUrl: 'http://localhost:8000/', mercureUrl: 'http://localhost:3000/' },
     { apiUrl: payload.urlAPI, mercureUrl: payload.urlMercure },
     { apiUrl: payload.urlAPIInterne, mercureUrl: payload.urlMercureInterne },
-    { apiUrl: 'http://localhost:8000/', mercureUrl: 'http://localhost:3000/' },
+    
   ];
 
   for (const candidate of candidates) {
