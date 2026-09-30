@@ -284,11 +284,15 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
       <div
         className={`fixed z-60 bg-opacity-0 rounded-2xl
           w-[calc(100vw-2rem)]
-          -translate-x-1/2 -translate-y-1/2
           sm:w-[calc(100vw-4rem)]
-          lg:w-auto lg:max-w-${maxWidth}
-          max-h-[80vh]
+          lg:w-[900px]
+          lg:max-w-[calc(100vw-6rem)]
+
+          h-[50vh]
+
+          -translate-x-1/2 -translate-y-1/2
           flex flex-col
+
 
           ${
             enableDragDetection && isDragging

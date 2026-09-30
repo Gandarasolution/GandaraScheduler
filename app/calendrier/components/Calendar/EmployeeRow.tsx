@@ -366,7 +366,19 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               
               <button
                 type="button"
-                className="absolute z-30 text-[11px] font-semibold rounded-full px-2 py-0.5 shadow-sm border border-gray-200 bg-white/95 text-gray-700 flex items-center gap-1 transition-transform hover:-translate-y-0.5 hover:shadow-md hover:bg-white"
+                className="
+                  absolute z-30
+                  text-[11px] font-semibold
+                  rounded-full px-2 py-0.5
+                  shadow-sm
+                  border border-gray-200
+                  bg-white/95 text-gray-700
+                  flex items-center gap-1
+                  transition-transform
+                  hover:-translate-y-0.5
+                  hover:shadow-md
+                  hover:bg-white
+                "
                 style={{
                   left: (group.apps[0].left + group.apps[0].width) - 24,
                   top: baseTopPx - 6,
