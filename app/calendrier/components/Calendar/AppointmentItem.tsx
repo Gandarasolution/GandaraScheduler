@@ -4,7 +4,7 @@
  */
 
 "use client";
-import React, { useState, memo, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, memo, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
 import { isWeekend } from 'date-fns';
 import { Appointment, Item } from '../../types';
@@ -71,6 +71,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const { hasPermission } = useAuth();
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isHovered, setIsHovered] = useState(false);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragLockSentRef = useRef(false);
+  const dragLockPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const startDate = React.useMemo(() => appointment.DebutPlanningEvenement, [appointment.DebutPlanningEvenement]);
   const endDate = React.useMemo(() => appointment.FinPlanningEvenement, [appointment.FinPlanningEvenement]);
@@ -104,6 +107,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     isFullDay,
     isDisplayWeekend: isDisplayWeekend ?? false,
     onAppointmentResize,
+    onLockedError,
   });
 
   // Hook de calcul des segments Ghost
@@ -129,17 +133,52 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   // --- Drag & Drop ---
   const [{ isDragging }, drag] = useDrag({
     type: 'appointment',
+    // Aucun effet de bord ici : item() décrit seulement l'objet déplacé.
     item: () => ({
       id: appointment.IdPlanningEvenement,
       type: 'appointment',
-      startDate: startDate,
-      endDate: endDate,
+      startDate,
+      endDate,
       dragOffset,
     }),
-    canDrag: () => !isResizingLeft && !isResizingRight && !isLocked && !isReadOnly && !isInactive && (hasPermission(23) || hasPermission(22)),
+    canDrag: () =>
+      !isResizingLeft &&
+      !isResizingRight &&
+      !isLocked &&
+      !isReadOnly &&
+      !isInactive &&
+      (hasPermission(23) || hasPermission(22)),
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+
+    // Appelé une seule fois quand le drag se termine,
+    // que le rendez-vous soit réellement droppé ou que le drag soit annulé.
+    end: async () => {
+      const lockPromise = dragLockPromiseRef.current;
+      dragLockPromiseRef.current = null;
+
+      // Si le lockQuick n'a pas encore fini, attendre son résultat
+      // avant d'envoyer l'unlock.
+      const lockAcquired = lockPromise ? await lockPromise : dragLockSentRef.current;
+
+      if (!lockAcquired) {
+        return;
+      }
+
+      try {
+        await evenementService.unlockEvenement(
+          appointment.IdPlanningEvenement
+        );
+      } catch (error) {
+        console.error(
+          'Erreur lors du déverrouillage après drag/drop :',
+          error
+        );
+      } finally {
+        dragLockSentRef.current = false;
+      }
+    },
   });
 
   const isAnyDragging = useDragLayer((monitor) => monitor.isDragging());
@@ -149,19 +188,67 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isReadOnly || isLocked || isInactive || source === 'demo') return;
 
-    evenementService.lockQuickEvenement(appointment.IdPlanningEvenement)
-      .then(response => {
-        if (response.success === false) {
-          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
-          if (onLockedError) {
-            onLockedError(response.message || 'Un autre utilisateur modifie cet événement.');
-          }        
-        }
-      });
-
+    // Le mouseDown sert uniquement à calculer l'offset.
     const rect = e.currentTarget.getBoundingClientRect();
     setDragOffset(e.clientX - rect.left);
-  }, [appointment.IdPlanningEvenement, isInactive, isLocked, isReadOnly, onLockedError]);
+  }, [isInactive, isLocked, isReadOnly, source]);
+
+  // Le lockQuick est envoyé uniquement lorsqu'un VRAI drag commence.
+  // Cela évite les lockQuick parasites sur simple/double clic.
+  useEffect(() => {
+    if (!isDragging) {
+      return;
+    }
+
+    if (
+      dragLockSentRef.current ||
+      isReadOnly ||
+      isLocked ||
+      isInactive ||
+      source === 'demo'
+    ) {
+      return;
+    }
+
+    dragLockSentRef.current = true;
+
+    dragLockPromiseRef.current = evenementService
+      .lockQuickEvenement(appointment.IdPlanningEvenement)
+      .then(response => {
+        if (response.success === false) {
+          dragLockSentRef.current = false;
+
+          document.dispatchEvent(
+            new KeyboardEvent('keydown', {
+              key: 'Escape',
+              keyCode: 27,
+              bubbles: true,
+            })
+          );
+
+          onLockedError?.(
+            response.message || 'Un autre utilisateur modifie cet événement.'
+          );
+
+          return false;
+        }
+
+        return true;
+      })
+      .catch(error => {
+        dragLockSentRef.current = false;
+        console.error('Erreur lors du verrouillage rapide du rendez-vous :', error);
+        return false;
+      });
+  }, [
+    isDragging,
+    appointment.IdPlanningEvenement,
+    isInactive,
+    isLocked,
+    isReadOnly,
+    onLockedError,
+    source,
+  ]);
 
   // Calcul de la largeur et position lors du resize
   useEffect(() => {
@@ -191,6 +278,83 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   const hasSpaceForBothHandles = appointmentWidthPx >= 60;
   const isSmallAppointment = appointmentWidthPx < (INTERVAL_WIDTH * 1.5);
+
+  // --- Clic / double-clic ---
+  const handleAppointmentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+
+    if (isReadOnly) return;
+
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+
+    clickTimeoutRef.current = setTimeout(() => {
+      clickTimeoutRef.current = null;
+      onClick?.(appointment);
+    }, 220);
+  }, [appointment, isReadOnly, onClick]);
+
+  const handleAppointmentDoubleClick = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Annuler le simple clic encore en attente.
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
+
+    if (isLocked || isReadOnly) return;
+
+    setIsHovered(false);
+
+    if ((!isInactive && hasPermission(23)) || source === 'demo') {
+      // En mode démo, aucune API de lock.
+      if (source === 'demo') {
+        onDoubleClick?.(appointment);
+        return;
+      }
+
+      // Un seul lockQuick pour l'ouverture en édition.
+      try {
+        const response = await evenementService.lockQuickEvenement(
+          appointment.IdPlanningEvenement
+        );
+
+        if (response.success === false) {
+          onLockedError?.(
+            response.message || 'Un autre utilisateur modifie cet événement.'
+          );
+          return;
+        }
+
+        onDoubleClick?.(appointment);
+      } catch (error) {
+        console.error(
+          'Erreur lors du verrouillage avant ouverture du formulaire :',
+          error
+        );
+      }
+    }
+  }, [
+    appointment,
+    hasPermission,
+    isInactive,
+    isLocked,
+    isReadOnly,
+    onDoubleClick,
+    onLockedError,
+    source,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Calculer le padding nécessaire pour le chargé d'affaire si les icônes sont présentes
   const chargeAffairePaddingRight = useMemo(() => {
@@ -255,19 +419,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     <div
       key={`${appointment.IdPlanningEvenement}-${appointment.DebutPlanningEvenement}-${appointment.FinPlanningEvenement}-${appointment.AnnotationPlanningEvenement}`} // Clé unique basée sur les propriétés de l'appointment 
       ref={(node) => { if (node && source === 'calendar' && !isInactive && !isLocked && !isReadOnly && hasPermission(23)) drag(node); }}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (isReadOnly) return;
-        onClick && onClick(appointment);
-      }}
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        if (isLocked || isReadOnly) return;
-        setIsHovered(false); // Masquer le tooltip au double-clic
-        if ((!isInactive && hasPermission(23)) || source === 'demo') {
-          onDoubleClick && onDoubleClick(appointment);
-        }
-      }}
+      onClick={handleAppointmentClick}
+      onDoubleClick={handleAppointmentDoubleClick}
       onContextMenu={(e) => {
          if (isReadOnly) {
            e.preventDefault();

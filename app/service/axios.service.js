@@ -52,9 +52,6 @@ axiosAgent.interceptors.response.use(
     // 1. Si la réponse est un succès (2XX), on la laisse passer normalement
     (response) => {
         const expiresAt = response.data?.token_expires_at;
-        console.log("axiosAgent.interceptors.response.use: response.data = " + JSON.stringify(response.data));
-        console.log("axiosAgent.interceptors.response.use: x-token-expires-at = " + expiresAt);
-
         if (expiresAt) {
         Cookies.set('is_logged_in', 'true', {
             expires: new Date(Number(expiresAt) * 1000),

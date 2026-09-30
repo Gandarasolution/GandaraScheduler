@@ -27,7 +27,8 @@ interface UseAppointmentResizeParams {
     newEnd: number, 
     resizeDirection: 'left' | 'right', 
     priority: number
-  ) => void;
+  ) => void | Promise<void>;
+  onLockedError?: (message: string) => void;
 }
 
 interface UseAppointmentResizeReturn {
@@ -55,6 +56,7 @@ export const useAppointmentResize = ({
   isFullDay,
   isDisplayWeekend,
   onAppointmentResize,
+  onLockedError,
 }: UseAppointmentResizeParams): UseAppointmentResizeReturn => {
   
   const [isResizingLeft, setIsResizingLeft] = useState(false);
@@ -65,6 +67,7 @@ export const useAppointmentResize = ({
   const dragStartRef = useRef<number>(startDate);
   const dragEndRef = useRef<number>(endDate);
   const initialX = useRef(0);
+  const resizeLockPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
 
@@ -116,23 +119,45 @@ export const useAppointmentResize = ({
    * Gère le début du resize
    */
   const handleMouseDown = useCallback((e: React.MouseEvent, handleType: 'left' | 'right') => {
+    e.preventDefault();
     e.stopPropagation();
 
-    evenementService.unlockEvenement(appointmentId).catch((err) => {
-          console.error('Erreur lors du déverrouillage du rendez-vous:', err);
-    });
-
     initialX.current = e.clientX;
+    dragStartRef.current = startDate;
+    dragEndRef.current = endDate;
     setDragStart(startDate);
     setDragEnd(endDate);
-    
+
     if (handleType === 'left') {
       setIsResizingLeft(true);
     } else {
       setIsResizingRight(true);
     }
-    
-  }, [startDate, endDate]);
+
+    // Verrouiller au DÉBUT du resize, pas déverrouiller.
+    resizeLockPromiseRef.current = evenementService
+      .lockQuickEvenement(appointmentId)
+      .then((response) => {
+        if (response.success === false) {
+          setIsResizingLeft(false);
+          setIsResizingRight(false);
+
+          onLockedError?.(
+            response.message || 'Un autre utilisateur modifie cet événement.'
+          );
+
+          return false;
+        }
+
+        return true;
+      })
+      .catch((error) => {
+        console.error('Erreur lors du verrouillage du rendez-vous pour le resize :', error);
+        setIsResizingLeft(false);
+        setIsResizingRight(false);
+        return false;
+      });
+  }, [appointmentId, endDate, onLockedError, startDate]);
 
   /**
    * Gère le mouvement pendant le resize
@@ -170,30 +195,63 @@ export const useAppointmentResize = ({
   /**
    * Gère la fin du resize
    */
-  const handleMouseUp = useCallback(() => {
-    if (isResizingRight && onAppointmentResize) {
-      onAppointmentResize(
-        appointmentId, 
-        dragStartRef.current, 
-        dragEndRef.current, 
-        'right', 
-        priority
-      );
-    }
-    
-    if (isResizingLeft && onAppointmentResize) {      
-      onAppointmentResize(
-        appointmentId, 
-        dragStartRef.current, 
-        dragEndRef.current, 
-        'left', 
-        priority
-      );
-    }
-    
+  const handleMouseUp = useCallback(async () => {
+    const wasResizingRight = isResizingRight;
+    const wasResizingLeft = isResizingLeft;
+
+    // Le geste est terminé visuellement dès le mouseUp.
     setIsResizingLeft(false);
     setIsResizingRight(false);
-  }, [isResizingLeft, isResizingRight, onAppointmentResize, appointmentId, priority]);
+
+    const lockPromise = resizeLockPromiseRef.current;
+    resizeLockPromiseRef.current = null;
+
+    // Attendre la réponse du lockQuick si elle n'est pas encore arrivée.
+    const lockAcquired = lockPromise ? await lockPromise : false;
+
+    if (!lockAcquired) {
+      return;
+    }
+
+    try {
+      if (wasResizingRight && onAppointmentResize) {
+        await Promise.resolve(
+          onAppointmentResize(
+            appointmentId,
+            dragStartRef.current,
+            dragEndRef.current,
+            'right',
+            priority
+          )
+        );
+      }
+
+      if (wasResizingLeft && onAppointmentResize) {
+        await Promise.resolve(
+          onAppointmentResize(
+            appointmentId,
+            dragStartRef.current,
+            dragEndRef.current,
+            'left',
+            priority
+          )
+        );
+      }
+    } finally {
+      // Déverrouiller uniquement une fois le resize terminé.
+      try {
+        await evenementService.unlockEvenement(appointmentId);
+      } catch (error) {
+        console.error('Erreur lors du déverrouillage après resize :', error);
+      }
+    }
+  }, [
+    isResizingLeft,
+    isResizingRight,
+    onAppointmentResize,
+    appointmentId,
+    priority,
+  ]);
 
   /**
    * Attacher/détacher les événements souris

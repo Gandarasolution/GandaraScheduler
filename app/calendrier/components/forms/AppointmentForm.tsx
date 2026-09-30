@@ -186,6 +186,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * États pour la gestion des permissions par employé (rubriques sociales et rubrique perso uniquement)
    */
   const changedEmployeePermissions = useRef<Record<number, number>>({});
+
+  // Baseline du formulaire : on compare les modifications utilisateur
+  // à la dernière version réellement chargée depuis l'API.
+  const initialAppointmentRef = useRef<Appointment>(appointment);
+  const initialItemRef = useRef<Item>(item);
+  const [dirtyReady, setDirtyReady] = useState(false);
   
   console.log(formDataAppointment);
 
@@ -194,8 +200,22 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
   useEffect(() => {
     const loadAllFormData = async () => {
-      // Sécurité : Si aucune fonction de fetch n'est fournie, pas besoin de charger
-      if (!onFetchTagsForResource && !onFetchEventAndRessource && !onFetchRessourceById) return;
+      // Tant que les données fraîches ne sont pas chargées,
+      // le formulaire ne doit jamais être considéré comme modifié.
+      setDirtyReady(false);
+      onDirtyChange?.(false);
+
+      // Baseline de secours. Elle sera remplacée par les données fraîches
+      // venant de l'API dès qu'elles seront disponibles.
+      initialAppointmentRef.current = appointment;
+      initialItemRef.current = item;
+
+      // Si rien n'est à charger, les props constituent simplement la baseline.
+      if (!onFetchTagsForResource && !onFetchEventAndRessource && !onFetchRessourceById) {
+        setIsLoading(false);
+        setDirtyReady(true);
+        return;
+      }
 
       setIsLoading(true);
       setTagError(null);
@@ -221,10 +241,23 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                 if (response?.success && response?.data) {
                   const { appointments, ressources } = response.data;
                   const loadedAppointment = appointments[0] ?? appointments;
-                  setFormDataAppointment({...loadedAppointment, isLocked: false});
-                  setFormStartDate(new Date(loadedAppointment.DebutPlanningEvenement));
-                  setFormEndDate(new Date(loadedAppointment.FinPlanningEvenement));
-                  setFormDataItemType(ressources[0] ?? ressources);
+                  const loadedItem = ressources[0] ?? ressources;
+
+                  const normalizedAppointment = {
+                    ...loadedAppointment,
+                    isLocked: false,
+                  };
+
+                  // La version fraîche de l'API devient la référence initiale.
+                  // Ainsi, un resize/drag effectué juste avant l'ouverture
+                  // n'est pas interprété comme une modification du formulaire.
+                  initialAppointmentRef.current = normalizedAppointment;
+                  initialItemRef.current = loadedItem;
+
+                  setFormDataAppointment(normalizedAppointment);
+                  setFormStartDate(new Date(normalizedAppointment.DebutPlanningEvenement));
+                  setFormEndDate(new Date(normalizedAppointment.FinPlanningEvenement));
+                  setFormDataItemType(loadedItem);
                 }
               })
               .catch(err => {
@@ -240,7 +273,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             onFetchRessourceById(item?.IdPlanningRessource, item?.Type)
               .then(response => {
                 if (response?.success && response?.data) {
-                  setFormDataItemType(response.data[0] ?? response.data);
+                  const loadedItem = response.data[0] ?? response.data;
+                  initialItemRef.current = loadedItem;
+                  setFormDataItemType(loadedItem);
                 }
               })
               .catch(err => {
@@ -283,8 +318,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       } catch (globalError) {
         console.error("Erreur générale lors du chargement du formulaire", globalError);
       } finally {
-        // On n'éteint le chargement QUE lorsque tout est fini (succès ou échec)
+        // Le formulaire possède maintenant sa baseline réelle.
         setIsLoading(false);
+        setDirtyReady(true);
       }
     };
 
@@ -412,7 +448,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * Détection des changements non sauvegardés
    */
   useEffect(() => {
-    if (!onDirtyChange) return;
+    if (!onDirtyChange || !dirtyReady) return;
 
     const appointmentKeys = [
       'IdPlanningEvenement',
@@ -422,7 +458,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       'Etiquette',
       'isReadOnly',
       'PlanningEvenementPriorite',
-      'isLocked',
       'DebutPlanningEvenement',
       'FinPlanningEvenement',
     ] as const satisfies readonly (keyof Appointment)[];
@@ -436,21 +471,16 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       ) as Pick<T, K>;
     }
 
-    // Comparaison simple pour détecter les changements
-    // Note: Pour une comparaison plus robuste, on pourrait utiliser lodash.isEqual
-    // ou une comparaison champ par champ spécifique
-    
-    // On ignore certaines propriétés qui peuvent changer sans impacter la "saleté" du formulaire
-    // comme l'ordre des clés ou des références d'objets identiques
-
-
     const currentAppointment = pick(
       formDataAppointment,
       appointmentKeys
     );
 
+    // IMPORTANT :
+    // on compare avec la version réellement chargée à l'ouverture,
+    // pas avec la prop `appointment` qui peut dater d'avant un drag/resize.
     const originalAppointment = pick(
-      appointment,
+      initialAppointmentRef.current,
       appointmentKeys
     );
 
@@ -458,14 +488,28 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       JSON.stringify(currentAppointment) !==
       JSON.stringify(originalAppointment);
 
+    const isItemDirty =
+      JSON.stringify(formDataItemType) !==
+      JSON.stringify(initialItemRef.current);
 
-    const isItemDirty = JSON.stringify(formDataItemType) !== JSON.stringify(item);
-    const isIncludeDirty = includeAllNonWorkingDays !== isAppointmentSplitByNotWorkingDay;
+    const isIncludeDirty =
+      includeAllNonWorkingDays !== isAppointmentSplitByNotWorkingDay;
 
-    console.log("isAppDirty:", isAppDirty, "isItemDirty:", isItemDirty, "isIncludeDirty:", isIncludeDirty);
+    console.log(
+      "isAppDirty:", isAppDirty,
+      "isItemDirty:", isItemDirty,
+      "isIncludeDirty:", isIncludeDirty
+    );
 
     onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
-  }, [formDataAppointment, formDataItemType, includeAllNonWorkingDays, appointment, item, isAppointmentSplitByNotWorkingDay, onDirtyChange]);
+  }, [
+    dirtyReady,
+    formDataAppointment,
+    formDataItemType,
+    includeAllNonWorkingDays,
+    isAppointmentSplitByNotWorkingDay,
+    onDirtyChange,
+  ]);
 
 
   /**
