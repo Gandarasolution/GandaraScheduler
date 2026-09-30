@@ -115,22 +115,22 @@ export const useCalendarDragDrop = ({
       }
 
       // Calcul de la durée et nouvelle fin
-      const duration = item.endDate - item.startDate;
+      const duration = item.sourceType === 'external' ? HOUR_MS * 24 : item.endDate - item.startDate;
       const newEnd = targetDate + duration;
 
       // Gestion de la priorité : détecter sur quel rdv (position Y) l'utilisateur drop
       const targetEmployeeId = Number(targetRow.id);
 
-      console.log('Drop target:', targetEmployeeId)
       
       // Trouver tous les rdv qui chevauchent la nouvelle position
       const overlappingAppointments = appointments.filter(app => 
-        app.IdPlanningEvenement !== item.id &&
-        app.IdEmploye === targetEmployeeId &&
+        (item.sourceType === 'external' || Number(app.IdPlanningEvenement) !== Number(item.id)) &&
+        Number(app.IdEmploye) === targetEmployeeId &&
         app.DebutPlanningEvenement < newEnd &&
         app.FinPlanningEvenement > targetDate
       );
 
+      console.log('Overlapping appointments:', overlappingAppointments);
       
       // Gestion des éléments externes
       if (item.sourceType === 'external') {
@@ -141,7 +141,7 @@ export const useCalendarDragDrop = ({
           draggedItem,
           targetDate,
           targetInterval,
-          Number(targetRow.id),
+          targetEmployeeId,
           overlappingAppointments.length
         );
         return;

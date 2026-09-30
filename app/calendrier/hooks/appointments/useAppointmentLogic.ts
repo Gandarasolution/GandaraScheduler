@@ -381,6 +381,7 @@ export const useAppointmentLogic = ({
         IdEmploye: employeeId,
         Type: employee.Type,
         IdPlanningRessource: ressource.IdPlanningRessource,
+        PlanningEvenementPriorite: priority,
       };
 
       const idTemp = Date.now();
@@ -1152,6 +1153,7 @@ export const useAppointmentLogic = ({
       const startDate =  new Date(date).setHours(startHour, 0, 0, 0);
       const endDate = new Date(date).setHours(endHour);      
 
+      console.log('priority:', priority);
       // Crée un RDV localement (avec id temporaire). La logique de createAppointment
       // va déclencher l'appel API en arrière-plan et mettre à jour l'ID lorsque la
       // réponse serveur sera reçue.
