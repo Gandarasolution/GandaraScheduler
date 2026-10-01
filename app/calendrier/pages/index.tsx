@@ -1101,12 +1101,12 @@ export default function HomePage({
                         >
                           {itemData.LibellePlanningRessource}
                         </p>
-                        {isChantier && (chantierData?.code || chantierData?.identifiant) && (
+                        {isChantier && (chantierData?.CodePlanningRessource || chantierData?.identifiant) && (
                           <p 
                             className="text-xs"
                             style={{ color: 'var(--text-secondary)' }}
                           >
-                            {[chantierData.code, chantierData.identifiant].filter(Boolean).join(' - ')}
+                            {[chantierData.CodePlanningRessource, chantierData.identifiant].filter(Boolean).join(' - ')}
                           </p>
                         )}
                       </div>
@@ -1121,6 +1121,7 @@ export default function HomePage({
                   item={event as Item}
                   imageUrl={event.Image}
                   title={event.label}
+                  codeItem={(event as any).CodePlanningRessource || (event as any).identifiant || ""}
                   type={(event as any).Type as "Projet" | "Paie" | "Rubrique Perso"}
                   className="w-full"
                 />
