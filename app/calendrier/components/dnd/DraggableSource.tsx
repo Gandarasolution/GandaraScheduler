@@ -99,65 +99,92 @@ const DraggableSource: React.FC<DraggableSourceProps> = ({ id, item, title, Iden
         )}
       </div>
 
-      {/* CONTENU */}
-      <div className="flex flex-1 min-w-0 items-center gap-3">
+      {type === "Projet" ? (
+        <div className="flex flex-1 min-w-0 items-center">
 
-        {/* BLOC TEXTE */}
-        <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0">
 
-          {/* LIGNE PRINCIPALE */}
-          <div className="flex  gap-2 min-w-0">
-            {codeItem && (
+            {/* CODE + IDENTIFIANT */}
+            <div className="flex items-center gap-2 min-w-0">
+
+              {codeItem && (
+                <span
+                  className="
+                    shrink-0
+                    px-2
+                    text-sm
+                    font-semibold
+                    text-gray-500
+                    whitespace-nowrap
+                  "
+                >
+                  {codeItem}
+                </span>
+              )}
+
+              {codeItem && IdentifiantProjet && (
+                <span className="shrink-0 text-gray-300">
+                  -
+                </span>
+              )}
+
+              {IdentifiantProjet && (
+                <span
+                  className="
+                    min-w-0
+                    text-sm
+                    font-semibold
+                    text-gray-500
+                    whitespace-normal
+                    break-words
+                    leading-5
+                  "
+                  title={IdentifiantProjet}
+                >
+                  {IdentifiantProjet}
+                </span>
+              )}
+            </div>
+
+            {/* LIBELLÉ */}
+            <div className="mt-1 px-2 min-w-0">
               <span
                 className="
-                  shrink-0
-                  px-2 py-1
-                  rounded-md
-                  text-xs font-semibold
-                  text-gray-500
-                  whitespace-nowrap
-                "
-              >
-                {codeItem}
-              </span>
-            )}
-            -
-            <span
-              className="
-                flex-1 min-w-0
-                text-sm font-medium
-                text-gray-700
-                whitespace-normal
-                break-words
-                leading-5
-              "
-              title={title}
-            >
-              {title}
-            </span>
-          </div>
-
-          {/* IDENTIFIANT */}
-          {IdentifiantProjet && (
-            <div className="mt-1 pl-0">
-              <span
-                className="
-                  text-[11px]
-                  px-2 py-1
+                  block
+                  min-w-0
+                  text-xs
                   font-medium
                   text-gray-400
-                  whitespace-nowrap
+                  whitespace-normal
+                  break-words
+                  leading-4
                 "
+                title={title}
               >
-                {IdentifiantProjet}
+                {title}
               </span>
             </div>
-          )}
 
+          </div>
         </div>
-      </div>
-      
-
+      ) : (
+        <div className="flex flex-1 min-w-0 items-center px-2">
+          <span
+            className="
+              min-w-0
+              text-sm
+              font-semibold
+              text-gray-500
+              whitespace-normal
+              break-words
+              leading-5
+            "
+            title={title}
+          >
+            {title}
+          </span>
+        </div>
+      )}
       {/* INDICATEUR DRAG */}
       <div
         className="
