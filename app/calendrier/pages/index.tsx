@@ -15,19 +15,20 @@ import '../styles/custom.scss';
 import React, { useEffect, useRef, useMemo, useCallback, lazy, Suspense, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { format } from "date-fns";
+import { endOfMonth, format, startOfMonth } from "date-fns";
 
 
 // --- COMPOSANTS UI (Eager loading pour éviter le flash) ---
 import { 
   ThemeSelector, 
   RightClickComponent,
-  Notificationspanel,
+  NotificationsPanel,
   AlertModal,
   SearchOverlay,
   CalendarHeader,
   CalendarModals,
   DraggableSource,
+  Loader,
 } from '@/app/calendrier/components';
 import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOverlay';
 import { getTableStructure } from '../components/Table/tableConfig';
@@ -46,11 +47,11 @@ import {
   useInteraction,
   useNotifications
  } from "@/app/calendrier/hooks";
+import type { MobileCalendarState } from '../components/Calendar/MobileCalendar/MobileCalendar';
 
 import { useTheme } from '../utils/themeManager';
 
 // --- CONTEXTES & SERVICES ---
-import { notificationService } from "../services";
 import employeeService from '@/app/service/employee.service';
 import evenementService from '@/app/service/evenement.service';
 import ressourceService from '@/app/service/ressource.service';
@@ -58,21 +59,13 @@ import calendarConfigService from '@/app/service/calendarConfig.service';
 
 // --- UTILITAIRES ---
 import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
-import { User, Item } from '../types';
+import { Appointment, User, Item } from '../types';
+import type { Notification } from '../types';
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
 import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
 import TopNotification from '../components/ui/TopNotification';
 
-// Composant de chargement réutilisable
-const LoadingFallback = ({ message = "Chargement..." }: { message?: string }) => (
-  <div className="flex items-center justify-center h-full">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-      <p className="text-gray-600">{message}</p>
-    </div>
-  </div>
-);
 
 /**
  * Composant wrapper pour éviter les erreurs d'hydratation Next.js
@@ -89,22 +82,34 @@ function NoSSR({ children }: { children: React.ReactNode }) {
  * Composant Principal HomePage
  */
 export default function HomePage({
-  onThemeChange,
+    isMobile,
 }: {
-  onThemeChange?: (theme: any) => void;
+    isMobile: boolean;
 }) {
 
-  const { hasPermission, currentPlanningId, setUser, logout } = useAuth();
+  const { hasPermission, currentPlanningId, logout } = useAuth();
   
   const user = useCurrentUser();
   
   const [loadCalendar, setLoadCalendar] = useState(true); 
   const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
   const [lockNotification, setLockNotification] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  
+  
+  
+  
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
-  const notifications = useNotifications();
+  const notifications = useNotifications(setLockNotification);
+
+  useEffect(() => {
+    if (!user?.IdPersonnel) return;
+    void notifications.loadNotifications();
+  }, [notifications.loadNotifications]);
 
   // État pour la confirmation de suppression de rubrique
   const [deleteConfirmData, setDeleteConfirmData] = useState<{ item: Item, isUsedInPlanning: boolean, isActive: boolean } | null>(null);
@@ -120,15 +125,16 @@ export default function HomePage({
   const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
-  const viewState = useCalendarView(currentPlanningId, user );
+  const viewState = useCalendarView(currentPlanningId, user, isMobile);
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
     globalEmployees: globalEmployees,
     setGlobalEmployees, 
-    setNotification: setLockNotification
+    setNotification: setLockNotification,
+    isMobile,
+    onError: setLockNotification
   });
-
 
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
@@ -168,8 +174,10 @@ export default function HomePage({
       repeatEvenement: evenementService.repeatEvenement,
       unlockEvenement: evenementService.unlockEvenement,
       lockEvenement: evenementService.lockQuickEvenement,
+      addImage: dataLayer.addImage,
     },
   });
+
 
   
   // 6. INTERACTIONS UTILISATEUR (Clic droit, Clavier, Copier/Coller)
@@ -209,7 +217,44 @@ export default function HomePage({
     viewState.setIsSearchOverlayOpen(true);
   }, [viewState.setIsSearchOverlayOpen]);
 
+  const handleTableRowClick = useCallback((item: any) => {
+    if (viewState.viewType === 'employee-table') return;
+
+    const resourceId = Number(item.IdPlanningRessource);
+    if (!Number.isFinite(resourceId)) return;
+
+    dataLayer.itemsRef.current[resourceId] = {
+      ...item,
+      IdPlanningRessource: resourceId,
+    };
+
+    const now = Date.now();
+    appointmentLogic.handleOpenEditModal({
+      IdPlanningEvenement: 0,
+      AnnotationPlanningEvenement: '',
+      IdPlanningRessource: resourceId,
+      DebutPlanningEvenement: now,
+      FinPlanningEvenement: now,
+      IdEmploye: Number(item.IdEmploye) || 0,
+      isLocked: false,
+    });
+  }, [appointmentLogic.handleOpenEditModal, dataLayer.itemsRef, viewState.viewType]);
+
   const handleSearchOverlayItemAction = useCallback((item: SearchableItem) => {
+    if(isMobile){
+       // Vérifier les permissions selon le type d'événement
+          const canCreate = (item.Type === 'Projet' && hasPermission(22)) || 
+                            (item.Type === 'Paie' && hasPermission(23)) 
+          
+          if (!canCreate) {
+            // Afficher une notification d'erreur
+            return;
+          }
+          
+          setSelectedItem(item as unknown as Item);
+          setShowSearchModal(false);
+          setShowAppointmentForm(true);
+    }
     if (!appointmentLogic.selectedCell) {
       return;
     }
@@ -217,22 +262,19 @@ export default function HomePage({
     appointmentLogic.handleSearchItemAction(item as unknown as Item);
   }, [appointmentLogic.selectedCell, appointmentLogic.handleSearchItemAction, dataLayer.itemsRef]);
 
-  const searchOverlayItems = useCallback(async (query: string): Promise<{ error: number; data: SearchableItem[]; message?: string }> => {
+  const searchOverlayItems = useCallback(async (query: string): Promise<{ success: boolean; data: SearchableItem[]; message?: string }> => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) {
-      return { error: 0, data: [] };
+      return { success: true, data: [] };
     }
 
     const response = await ressourceService.searchRessources(trimmedQuery, [], 20);
-    if (response?.error !== 0 || !Array.isArray(response.data)) {
-      return { error: 1, data: [], message: 'Erreur lors de la recherche. Veuillez réessayer.' };
+    if (response?.success === false || !Array.isArray(response.data)) {
+      return { success: false, data: [], message: 'Erreur lors de la recherche. Veuillez réessayer.' };
     }
 
     const data = (response.data as Item[])
       .filter((item) => {
-        // if (!canCreateEvent(user.role, item.Type)) {
-        //   return false;
-        // }
 
         if ('Actif' in item) {
           return item.Actif !== false && item.Actif !== null;
@@ -246,8 +288,59 @@ export default function HomePage({
         label: item.LibellePlanningRessource,
       }));
     
-    return { error: 0, data };
-  }, [user.role]);
+    return { success: true, data };
+  }, []);
+
+  const handleOpenMobileAppointment = useCallback(() => {
+    setShowSearchModal(true);
+  }, []);
+
+  const handleSelectMobileItem = useCallback((item: Item) => {
+    const canCreate = (item.Type === 'Projet' && hasPermission(22)) ||
+      (item.Type === 'Paie' && hasPermission(23));
+    if (!canCreate) return;
+    setSelectedItem(item);
+    setShowSearchModal(false);
+    setShowAppointmentForm(true);
+  }, [hasPermission]);
+
+  const handleSaveMobileAppointment = useCallback(async (
+    appointment: Appointment,
+    item: Item,
+    includeAllNonWorkingDays: boolean
+  ) => {
+    const result = await appointmentLogic.handleSaveAppointment(
+      appointment,
+      item,
+      includeAllNonWorkingDays,
+      appointment.IdPlanningEvenement <= 0 ? 'create' : 'update'
+    );
+    if (result.success) {
+      setShowAppointmentForm(false);
+      setSelectedItem(null);
+    }
+    return result;
+  }, [appointmentLogic.handleSaveAppointment]);
+
+  
+  const mobileState: MobileCalendarState = {
+    selectedDate: new Date(viewState.selectedDate),
+    setSelectedDate: (date) => viewState.setSelectedDate(date.getTime()),
+    notifications: notifications.notifications as Notification[],
+    selectedItem: selectedItem,
+    setSelectedItem: setSelectedItem,
+    showAppointmentForm: showAppointmentForm,
+    setShowAppointmentForm: setShowAppointmentForm,
+    unreadCount: notifications.unreadCount,
+    markAsRead: notifications.markAsRead,
+    logout,
+    handleOpenAddAppointment: handleOpenMobileAppointment,
+    searchOverlayItems,
+    handleSelectItem: handleSelectMobileItem,
+    handleSaveAppointment: handleSaveMobileAppointment,
+    onLoadAppointmentsInRange: dataLayer.loadAppointmentsInRange,
+    onAddAppointment: appointmentLogic.handleSaveAppointment,
+  };
 
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
@@ -327,11 +420,10 @@ export default function HomePage({
 
   // Init global: notifications + theme (indépendant de la vue)
   useEffect(() => {
-    notificationService.setNotificationCallback(notifications.addNotification);
     if (user.theme) {
       setTheme(user.theme as any);
     }
-  }, [notifications.addNotification, user.theme, setTheme]);
+  }, [user.theme, setTheme]);
 
   // Init unique: configuration utilisateur + données planning (employés, équipes, RDV)
   useEffect(() => {
@@ -339,11 +431,13 @@ export default function HomePage({
 
     let isMounted = true;
 
+
+
     const initializeNonWorkingDates = async () => {
       if (!isMounted || hasInitializedNonWorkingDatesRef.current) return;
       hasInitializedNonWorkingDatesRef.current = true;
       const result = await viewState.loadNonWorkingDates();
-      if (result.error === 1){
+      if (!result.success){
         setLoadCalendar(false);
         setErrorPlanning(result.message || "Erreur lors du chargement des jours non travaillés. Veuillez réessayer.");
       }
@@ -353,14 +447,17 @@ export default function HomePage({
       if (!isMounted || hasInitializedPlanningRef.current) return;
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
+      // Sur mobile, le calendrier est personnel : les listes employees, equipes
+      // et poles ne sont pas necessaires pour afficher les rendez-vous.
       
-      await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
+
+      if (!isMobile) await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
 
       // Chargement des employés selon les permissions
       if (!hasInitializedEmployeesRef.current) {
         const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
         console.log('Employees Response:', employeesResponse);
-        if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+        if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
           setGlobalEmployees(employeesResponse.data);
         } else {
           setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
@@ -375,15 +472,32 @@ export default function HomePage({
 
       let rep = await dataLayer.loadTeams();
       console.log('Teams Response:', rep);
-      if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
+      if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
+        setLoadCalendar(false);
+        return;
+      }
+
+      if (isMobile) {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+        const monthEnd = new Date(monthStart);
+        monthEnd.setMonth(monthEnd.getMonth() + 1);
+        monthEnd.setMilliseconds(-1);
+
+        await dataLayer.loadAppointmentsInRange(
+          monthStart.getTime(),
+          monthEnd.getTime(),
+          user.IdPersonnel
+        );
         setLoadCalendar(false);
         return;
       }
 
       rep = await dataLayer.loadPoleActivites();
       console.log('Pole Activités Response:', rep);
-      if (rep?.error !== 0 || !Array.isArray(rep.data) || rep.data.length === 0) {
+      if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
         setLoadCalendar(false);
         return;
@@ -407,7 +521,7 @@ export default function HomePage({
       hasInitializedEmployeesRef.current = true;
       const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : null;
 
-      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+      if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
       } else {
         setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
@@ -417,14 +531,16 @@ export default function HomePage({
       }
     }
     
-    initializeNonWorkingDates();
+    if (!isMobile) {
+      initializeNonWorkingDates();
+    }
     if (viewState.viewType === 'calendar') {
       initializePlanning();
     } else if (viewState.viewType === 'employee-table') {
       initializeEmployeeTable();
     }
     else if (viewState.viewType === 'paie-table' || viewState.viewType === 'manual-event-table') {
-      if (hasPermission(23) && hasPermission(22)) {
+      if (hasPermission(23) || hasPermission(22)) {
         console.log("Initialisation de la table Paie et de la table des événements manuels...");
         initializePaieTableAndManualEventTable();
       }else {
@@ -432,7 +548,6 @@ export default function HomePage({
         setLoadCalendar(false);
       }
     }
-
     return () => {
       isMounted = false;
     };
@@ -452,6 +567,7 @@ export default function HomePage({
         isFirstRenderRef.current = false;
         return; 
     }
+
     const reloadPlanningDataForCurrentView = async () => {
       setErrorPlanning(null);
       setLoadCalendar(true);
@@ -463,7 +579,7 @@ export default function HomePage({
         : await employeeService.getEmployee(user.IdPersonnel);
 
         console.log('Employees Response:', employeesResponse);
-      if (employeesResponse?.error === 0 && Array.isArray(employeesResponse.data)) {
+      if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
         setEmployeesVersion(prev => prev + 1);
       } else {
@@ -474,14 +590,14 @@ export default function HomePage({
       }
 
       const teamsResponse = await dataLayer.loadTeams();
-      if (teamsResponse?.error !== 0 || !Array.isArray(teamsResponse.data) || teamsResponse.data.length === 0) {
+      if (teamsResponse?.success === false || !Array.isArray(teamsResponse.data) || teamsResponse.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
         setLoadCalendar(false);
         return;
       }
 
       const poleActivitesResponse = await dataLayer.loadPoleActivites();
-      if (poleActivitesResponse?.error !== 0 || !Array.isArray(poleActivitesResponse.data) || poleActivitesResponse.data.length === 0) {
+      if (poleActivitesResponse?.success === false || !Array.isArray(poleActivitesResponse.data) || poleActivitesResponse.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
         setLoadCalendar(false);
         return;
@@ -631,18 +747,12 @@ export default function HomePage({
 
   // 2. On branche la radio !
   useMercureSync(currentPlanningId, handleMercureEvent, setLockNotification);
-
+  
   // --- RENDU VISUEL ---
 
   return (
     <NoSSR>
-      <DndProvider backend={HTML5Backend}>
-        {/* Overlay de loading pendant le centrage initial */}
-        {viewState.viewType === 'calendar' && loadCalendar && (
-          <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
-            <LoadingFallback message="Chargement du calendrier..." />
-          </div>
-        )}      
+      <DndProvider backend={HTML5Backend}>          
         {lockNotification && (
             <TopNotification 
               message={lockNotification} 
@@ -664,96 +774,136 @@ export default function HomePage({
           )}
 
           {/* CORPS PRINCIPAL : Grille ou Tableaux */}
-          <div className="flex-1 flex min-h-0 box-border">
+          <div className="flex-1 flex min-h-0 box-border ">
             <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!viewState.isMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
-              <div className={`flex-grow rounded-lg w-full h-full pb-4 ${dataLayer.isLoading ? "pointer-events-none opacity-60" : ""}`}>
+              <div className={`flex-grow rounded-lg w-full h-full pb-4 `}>
                 
-                {/* Injection des contextes pour les composants enfants */}          
-                {viewState.viewType === 'calendar' ? (
-                  /* VUE PLANNING */
-                  (errorPlanning) ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <p className="text-red-600 text-lg font-semibold">{errorPlanning}</p>
-                      </div>
-                    </div>
-                  ) :
-                  (viewState.currentCalendarConfig || hasPermission(21)) && (
-                    <CalendarGrid
-                      /* Données */
-                      employees={globalEmployees}
-                      appointments={filteredCalendarAppointments}
-                      user={user}
-
-                      /* Équipes & Événements */
-                      initialTeams={dataLayer.initialTeams}
-                      poleActivites={dataLayer.poleActivites}
-                      events={dataLayer.itemsRef.current}
-                      
-                      /* État Temporel */
-                      dayInTimeline={timeline.days}
-                      mainScrollRef={timeline.mainScrollRef}
-                      
-                      /* Configuration */
-                      isDisplayWeekend={viewState.isDisplayWeekend}
-                      isFullDay={viewState.isFullDay}
-                      isMobile={viewState.isMobile}
-                      nonWorkingDates={viewState.nonWorkingDates}
-                      tagPlacement={viewState.tagPlacement}
-                      HALF_DAY_INTERVALS={viewState.constants.intervals}
-                      
-                      /* Config Calendrier */
-                      calendarConfig={viewState.currentCalendarConfig}
-                      onCalendarConfigChange={viewState.onCalendarConfigChange}
-                      availableConfigs={viewState.availableConfigs}
-                      
-                      /* Actions & Events */
-                      onAppointmentMoved={appointmentLogic.moveAppointment}
-                      onCellDoubleClick={handleCellDoubleClick}
-                      onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
-                      onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
-                      handleContextMenu={interaction.handleContextMenu}
-                      onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
-                      //reloadToken={dataLayer.loadingWindowVersion}
-                      mouseUpAfterScroll={timeline.getFirstDayAppearing}
-                      onAddAppointment={appointmentLogic.handleSaveAppointment}
-                      onLockedError={setLockNotification}
-                      
-                      /* Sélection Optimisée */
-                      selectedCell={appointmentLogic.selectedCell}
-                      selectedAppointmentId={appointmentLogic.selectedAppointment?.IdPlanningEvenement}
-                      onSelectCell={appointmentLogic.setSelectedCell}
-                      onSelectAppointment={appointmentLogic.setSelectedAppointment}
-                    />
-                  )
-                ) : (
-                  /* VUES TABLEAUX (Chantier, Paie, Employés) */
-                  <Suspense fallback={<LoadingFallback message="Chargement du tableau..." />}>
-                    <DataTableFrame 
-                      categoriesStructure={getTableStructure(
-                        viewState.viewType, 
-                        {
-                          handleOpenEditModal: appointmentLogic.handleOpenEditModal,
-                          onImageClick: interaction.handleOpenImageModal,
-                          initialTeams: dataLayer.initialTeams,
-                          onTeamChange: dataLayer.updateEmployeeGroup,
-                          ressources: dataLayer.itemsRef.current
-                        }
-                      ) || []}
-                      realtimeUpdate={lastMercureEvent}
-                      enablePagination={true}
-                      paginatedSearchFunction={handlePaginatedSearch}
-                      refreshKey={dataLayer.appointmentsVersion}
-                      loadingElement={<LoadingFallback message="Chargement des données..." />}
-                      showGroupHeaders={viewState.viewType === 'chantier-table'}
-                      onRightClick={interaction.handleDataTableContextMenu}
-                      heightCell={60}
-                  />
-                  </Suspense>
+              
+                {viewState.viewType === 'calendar' && loadCalendar && (
+                  <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
+                    <Loader message="Chargement du calendrier..." className="h-full" />
+                  </div>
                 )}
+                
+                <>
+                  {viewState.viewType === 'calendar' &&  !loadCalendar ? (
+                    /* VUE PLANNING */
+                    errorPlanning ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <p className="text-red-600 text-lg font-semibold">
+                            {errorPlanning}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                    
+                      (viewState.isMobile ||
+                      viewState.currentCalendarConfig ||
+                      hasPermission(21)) && (
+                        <div className="relative flex flex-col h-full w-full">
+
+                          {/* Bloque les interactions pendant le chargement */}
+                          {dataLayer.isLoading && (
+                            <div className="absolute inset-0 z-[9999] pointer-events-auto" />
+                          )}
+
+                          <div
+                            className={`h-full w-full ${
+                              dataLayer.isLoading
+                                ? "pointer-events-none opacity-60"
+                                : ""
+                            }`}
+                          >
+                            <CalendarGrid
+                              /* Données */
+                              employees={globalEmployees}
+                              appointments={filteredCalendarAppointments}
+                              user={user}
+
+                              /* Équipes & Événements */
+                              initialTeams={dataLayer.initialTeams}
+                              poleActivites={dataLayer.poleActivites}
+                              events={dataLayer.itemsRef.current}
+
+                              /* État Temporel */
+                              dayInTimeline={timeline.days}
+                              mainScrollRef={timeline.mainScrollRef}
+
+                              /* Configuration */
+                              isDisplayWeekend={viewState.isDisplayWeekend}
+                              isFullDay={viewState.isFullDay}
+                              isMobile={viewState.isMobile}
+                              nonWorkingDates={viewState.nonWorkingDates}
+                              tagPlacement={viewState.tagPlacement}
+                              mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
+                              HALF_DAY_INTERVALS={viewState.constants.intervals}
+
+                              /* Config Calendrier */
+                              calendarConfig={viewState.currentCalendarConfig}
+                              onCalendarConfigChange={viewState.onCalendarConfigChange}
+                              availableConfigs={viewState.availableConfigs}
+
+                              /* Actions & Events */
+                              onAppointmentMoved={appointmentLogic.moveAppointment}
+                              onCellDoubleClick={handleCellDoubleClick}
+                              onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
+                              onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
+                              handleContextMenu={interaction.handleContextMenu}
+                              onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
+                              mouseUpAfterScroll={timeline.getFirstDayAppearing}
+                              onAddAppointment={appointmentLogic.handleSaveAppointment}
+                              onLockedError={setLockNotification}
+                              mobileState={mobileState}
+
+                              /* Sélection Optimisée */
+                              selectedCell={appointmentLogic.selectedCell}
+                              selectedAppointmentId={
+                                appointmentLogic.selectedAppointment?.IdPlanningEvenement
+                              }
+                              onSelectCell={appointmentLogic.setSelectedCell}
+                              onSelectAppointment={appointmentLogic.setSelectedAppointment}
+                            />
+                          </div>
+
+                        </div>
+                      )
+                    )
+                  ) : viewState.viewType !== 'calendar' ? (
+                    /* VUES TABLEAUX (Chantier, Paie, Employés) */
+                    <Suspense fallback={<Loader message="Chargement du tableau..." />}>
+                      <DataTableFrame
+                        categoriesStructure={
+                          getTableStructure(viewState.viewType, {
+                            handleOpenEditModal: appointmentLogic.handleOpenEditModal,
+                            onImageClick: interaction.handleOpenImageModal,
+                            initialTeams: dataLayer.initialTeams,
+                            onTeamChange: dataLayer.updateEmployeeGroup,
+                            ressources: dataLayer.itemsRef.current,
+                          }) || []
+                        }
+                        realtimeUpdate={lastMercureEvent}
+                        enablePagination={true}
+                        paginatedSearchFunction={handlePaginatedSearch}
+                        refreshKey={dataLayer.appointmentsVersion}
+                        loadingElement={<Loader message="Chargement des données..." />}
+                        showGroupHeaders={viewState.viewType === 'chantier-table'}
+                        onRowClick={viewState.viewType === 'employee-table' ? undefined : handleTableRowClick}
+                        onRightClick={viewState.viewType === 'employee-table' ? undefined : interaction.handleDataTableContextMenu}
+                        heightCell={60}
+                      />
+                    </Suspense>
+                  ) : (
+                    <>
+                    </>
+                  )}
+                </>
+                
               </div>
             </div>
           </div>
+        
+         
 
           {/* --- COMPOSANTS FLOTTANTS & MODALES --- */}
           
@@ -790,20 +940,8 @@ export default function HomePage({
               saveAppointment: appointmentLogic.handleSaveAppointment,
               handleAddManualRessource: appointmentLogic.handleAddManualRessource,
               handleEditRessource: appointmentLogic.handleEditRessource,
-              handleDeleteManualRessource: (dimensionId: number, forceDelete: boolean = false) => {
-                const result = appointmentLogic.handleDeleteManualRessource(dimensionId, forceDelete);
-                if (result.success) {
-                  notificationService.info('Suppression réussie', result.message);
-                }
-                return result;
-              },
-              handleDeactivateDimension: (dimensionId: number) => {
-                const result = appointmentLogic.handleDeactivateDimension(dimensionId);
-                if (result.success) {
-                  notificationService.info('Désactivation réussie', result.message);
-                }
-                return result;
-              },
+              handleDeleteManualRessource: appointmentLogic.handleDeleteManualRessource,
+              handleDeactivateDimension: appointmentLogic.handleDeactivateDimension,
               setDeleteConfirmData: setDeleteConfirmData,
               
               // Repeat / Extend
@@ -847,10 +985,7 @@ export default function HomePage({
               closeConfigModal: viewState.calendarConfigHook.closeConfigModal,
               setCurrentConfig: viewState.onCalendarConfigChange,
               saveCustomConfig: viewState.calendarConfigHook.saveConfig,
-              deleteCustomConfig: (id) => {
-                 viewState.calendarConfigHook.deleteConfig(id);
-                 notificationService.info('Configuration supprimée', 'La vue a été supprimée avec succès');
-              },
+              deleteCustomConfig: viewState.calendarConfigHook.deleteConfig,
               setEditingConfig: viewState.calendarConfigHook.setEditingConfig,
               setIsCreatingConfig: viewState.calendarConfigHook.setIsCreatingConfig,
 
@@ -860,6 +995,7 @@ export default function HomePage({
               
               addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
               removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,
+              addImage: dataLayer.addImage,
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,
@@ -867,8 +1003,6 @@ export default function HomePage({
               employees: globalEmployees,
               selectedItem: appointmentLogic.selectedItem,
               selectedEmployee: appointmentLogic.selectedEmployee,
-              // Correction : Passer les images disponibles
-              availableImages: dataLayer.availableImages, 
               // Correction : Passer la config de filtre calculée
               filterConfig: filterConfig, 
               isUploading: interaction.isUploading,
@@ -888,20 +1022,24 @@ export default function HomePage({
               setNonWorkingDates: viewState.setNonWorkingDates,
               tagPlacement: viewState.tagPlacement,
               setTagPlacement: viewState.setTagPlacement,
+              mobileAppointmentDisplay: viewState.mobileAppointmentDisplay,
+              setMobileAppointmentDisplay: viewState.setMobileAppointmentDisplay,
+              mobileAppointmentFieldOptions: viewState.mobileAppointmentFieldOptions,
+              mobileAppointmentSettingsLoading: viewState.mobileAppointmentSettingsLoading,
+              loadMobileAppointmentSettings: viewState.loadMobileAppointmentSettings,
               HALF_DAY_INTERVALS: viewState.constants.intervals,
               isFullDay: viewState.isFullDay,
               isDisplayWeekend: viewState.isDisplayWeekend,
               viewType: viewState.viewType,
+              setNotification: setLockNotification,
             }}
           />
 
-          <Notificationspanel 
+          <NotificationsPanel 
             isOpen={viewState.isNotificationsPanelOpen}
             onClose={() => viewState.setIsNotificationsPanelOpen(false)}
             notifications={notifications.notifications}
             onMarkAsRead={notifications.markAsRead}
-            onRemove={notifications.removeNotification}
-            onClearAll={notifications.clearAll}
           />
 
           <AlertModal
@@ -919,31 +1057,79 @@ export default function HomePage({
             onItemAction={handleSearchOverlayItemAction}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
-              noInput: { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
-              noResults: { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
+              noInput: isMobile 
+              ? {
+                  icon: (
+                    <svg className="w-16 h-16 mx-auto mb-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  ),
+                  title: "Rechercher un événement",
+                  description: "Tapez pour rechercher un chantier, paie ou congé"
+                }
+              : { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
+              noResults: isMobile 
+                ? {
+                  icon: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="w-16 h-16 mx-auto mb-4 text-gray-400" viewBox="0 0 16 16">
+                      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
+                    </svg>
+                  ),
+                  title: "Aucun résultat",
+                  description: "Aucun événement ne correspond à votre recherche"
+                }
+                : { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
-            renderItem={(event: any, index: number) => (                            
-              <DraggableSource
-                key={`${event.label}-${event.id}-${index}`}
-                id={event.id as number}
-                item={event as Item}
-                imageUrl={event.image?.image}
-                title={event.label}
-                type={(event as any).Type as "Projet" | "Paie" | "Rubrique Perso"}
-                className="w-full"
-              />
-            )}
+            renderItem={(event: any, index: number) => {
+              if (isMobile){
+                const itemData = event as any as Item;
+                const isChantier = itemData.Type === 'Projet';
+                const chantierData = isChantier ? itemData as any : null;
+                
+                return (
+                  <div className="flex-1 py-3 px-2">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-4 h-4 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: itemData.CouleurFondPlanningRessource }}
+                      />
+                      <div className="flex-1">
+                        <p 
+                          className="font-semibold"
+                          style={{ color: 'var(--text-primary)' }}
+                        >
+                          {itemData.LibellePlanningRessource}
+                        </p>
+                        {isChantier && (chantierData?.CodePlanningRessource || chantierData?.identifiant) && (
+                          <p 
+                            className="text-xs"
+                            style={{ color: 'var(--text-secondary)' }}
+                          >
+                            {[chantierData.CodePlanningRessource, chantierData.identifiant].filter(Boolean).join(' - ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return (                        
+                <DraggableSource
+                  key={`${event.label}-${event.id}-${index}`}
+                  id={event.id as number}
+                  item={event as Item}
+                  imageUrl={event.Image}
+                  title={event.label}
+                  codeItem={(event as any).CodePlanningRessource || (event as any).identifiant || ""}
+                  type={(event as any).Type as "Projet" | "Paie" | "Rubrique Perso"}
+                  className="w-full"
+                />
+              );
+            }}
             actionLabel="+"
             enableDragDetection={true}
           />
-
-          {/* Indicateur de chargement global */}
-          {dataLayer.isLoading && (
-             <div className="fixed top-0 left-0 w-full h-1 bg-primary z-50">
-               <div className="h-full bg-primary animate-pulse w-1/3 rounded-r-full" />
-             </div>
-          )}
-
         </div>
       </DndProvider>
     </NoSSR>

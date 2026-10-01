@@ -225,7 +225,7 @@ const AppointmentMetadata: React.FC<AppointmentMetadataProps> = ({
               backgroundColor: 'var(--bg-card)',
             }}
           >
-            {annotation && (
+            {annotation && showAnnotationTooltip && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <svg 
@@ -250,8 +250,8 @@ const AppointmentMetadata: React.FC<AppointmentMetadataProps> = ({
               </div>
             )}
 
-            {tagText &&(
-              <div className='mt-4'>
+            {showTagTooltip && tagText &&(
+              <div>
                 <div className="flex items-center gap-2 mb-2">
                   <svg 
                     width="16" 
@@ -262,18 +262,17 @@ const AppointmentMetadata: React.FC<AppointmentMetadataProps> = ({
                   >
                     <path d={tagIconPathDefault} />
                   </svg>
-                  <div 
-                    className="px-3 py-2 rounded-md font-bold uppercase text-xs"
-                    style={{ 
-                      backgroundColor: tagColor || color,
-                      color: textColor,
-                    }}
-                  >
-                    {tagText}
-                  </div>
+                  <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                    Étiquette
+                  </span>
                 </div>
-                
-              </div>
+                <div 
+                  className="text-sm whitespace-pre-wrap break-words"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  {tagText}
+                </div>
+              </div>           
             )}
           </div>
         

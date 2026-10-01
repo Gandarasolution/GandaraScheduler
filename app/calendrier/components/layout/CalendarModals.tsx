@@ -5,7 +5,8 @@ import {
   ImageSelectorContentModal,
   Modal, 
 } from '@/app/calendrier/components';
-import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem } from '../../types';
+import Loader from '../ui/Loader';
+import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MobileAppointmentField } from '../../types';
 import { ActiveFilters } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
@@ -24,8 +25,8 @@ const DeleteModal = lazy(() => import('../modals/DeleteModal'));
 
 // Composant de fallback pour le chargement
 const ModalLoadingFallback = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  <div className="flex min-h-[320px] w-full items-center justify-center rounded-xl bg-secondary-bg">
+    <Loader size="lg" message="Chargement en cours..." />
   </div>
 );
 
@@ -65,7 +66,7 @@ interface CalendarModalsProps {
     closeImageModal: () => void;
     handleImageSelect: (image: ImageType) => void;
     handleImageUpload: (file: File) => Promise<ImageType>;
-    openImageModalForEvent: (id: number) => void;
+    openImageModalForEvent: (id?: number) => void;
     fetchPaginatedImages: (page: number, limit?: number) => Promise<{ image: ImageType[]; totalLignes: number }>;
 
     // Settings & Config Handlers
@@ -77,8 +78,8 @@ interface CalendarModalsProps {
     // Config Calendar
     closeConfigModal: () => void;
     setCurrentConfig: (config: CalendarConfig) => void;
-    saveCustomConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{error: number, data: any} | {error: number, message: string} | void> | void;
-    deleteCustomConfig: (configId: number) => Promise<{error: number, message?: string} | void> | void;
+    saveCustomConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{success: boolean, data: any} | {success: boolean, message: string} | void> | void;
+    deleteCustomConfig: (configId: number) => Promise<{success: boolean, message?: string} | void> | void;
     
     // Config Configuration Editing State (from hook)
     setEditingConfig: (config: any) => void;
@@ -88,6 +89,8 @@ interface CalendarModalsProps {
 
     setSelectedItem: (item: Item | null) => void;
     onLockedError: (message: string) => void;
+
+    addImage: (base64: string) => Promise<{ success: boolean; id?: number; message?: string }>;
   };
   data: {
     appointments: Appointment[];
@@ -95,7 +98,6 @@ interface CalendarModalsProps {
     employees: User[];
     selectedItem: Item | null;
     selectedEmployee: User | null;
-    availableImages: ImageType[];
     filterConfig: any; // Options pour le filtre
     isUploading: boolean;
     uploadError: string | null;
@@ -116,6 +118,13 @@ interface CalendarModalsProps {
     setNonWorkingDates: (dates: Record<string, number>) => void;
     tagPlacement: 'hover' | 'fixed';
     setTagPlacement: (v: 'hover' | 'fixed') => void;
+    mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
+    setMobileAppointmentDisplay: (v: MobileAppointmentDisplayConfig) => void;
+    mobileAppointmentFieldOptions: Array<{ CodeChamp: MobileAppointmentField; Libelle: string }>;
+    mobileAppointmentSettingsLoading: boolean;
+    loadMobileAppointmentSettings: () => Promise<void>;
+
+    setNotification: (notifications: any) => void;
     
     // Constants
     HALF_DAY_INTERVALS: any[];
@@ -136,6 +145,32 @@ export const CalendarModals = memo(({
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
+
+ 
+  const [configImageSelectorContext, setConfigImageSelectorContext] = useState<{
+    actualImage?: ImageType;
+    onSelect: (image: ImageType) => void;
+  } | null>(null);
+
+  const openImageModalForConfig = (actualImage: ImageType | undefined, onSelect: (image: ImageType) => void) => {
+    setConfigImageSelectorContext({ actualImage, onSelect });
+    handlers.openImageModalForEvent();
+  };
+
+  const closeImageSelector = () => {
+    setConfigImageSelectorContext(null);
+    handlers.closeImageModal();
+  };
+
+  const handleImageSelectorSelect = (image: ImageType) => {
+    if (configImageSelectorContext) {
+      configImageSelectorContext.onSelect(image);
+      closeImageSelector();
+      return;
+    }
+
+    handlers.handleImageSelect(image);
+  };
 
   const handleRepeatSubmit = async () => {
     if (isSubmittingModalAction) return;
@@ -172,6 +207,12 @@ export const CalendarModals = memo(({
     }
   }, [modalsState.repeatData, modalsState.extendData]);
 
+  useEffect(() => {
+    if (modalsState.isSettingsOpen) {
+      void config.loadMobileAppointmentSettings();
+    }
+  }, [modalsState.isSettingsOpen, config.loadMobileAppointmentSettings]);
+
   const settings = useMemo(() => [
     ...(hasPermission(23) ? [
       {
@@ -187,6 +228,20 @@ export const CalendarModals = memo(({
           removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
         }
       ]
+    },
+    {
+      category: "Affichage mobile des événements",
+      items: [
+        {
+          id: "mobileAppointmentFields",
+          label: null,
+          type: "mobile-appointment-fields",
+          value: config.mobileAppointmentDisplay,
+          onChange: config.setMobileAppointmentDisplay,
+          options: config.mobileAppointmentFieldOptions,
+          isLoading: config.mobileAppointmentSettingsLoading
+        }
+      ]
     }] : []),
     {
       category: "Affichage des étiquettes",
@@ -198,13 +253,13 @@ export const CalendarModals = memo(({
           value: config.tagPlacement,
           onChange: config.setTagPlacement,
           options: [
-            { value: 'hover', label: 'Au survol (animation)' },
+            { value: 'hover', label: 'Au clic sur une icône' },
             { value: 'fixed', label: 'Toujours visible (bord inférieur)' }
           ]
         }
       ]
     }
-  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
+  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, config.mobileAppointmentDisplay, config.setMobileAppointmentDisplay, config.mobileAppointmentFieldOptions, config.mobileAppointmentSettingsLoading, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
 
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;
@@ -218,7 +273,11 @@ export const CalendarModals = memo(({
     if (modalsState.extendData) return "Prolonger le rendez-vous";
     if (modalsState.selectedAppointmentForm) {
         if (resourceEditMode === 'createRessource') return "Création de la ressource";
-        if (resourceEditMode === 'editRessource') return `Modification de la ressource - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource}`;
+        if (resourceEditMode === 'editRessource') 
+          return `Modification de la ressource ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.Type === 'Projet' 
+            ? ` - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource}` 
+            : '' 
+          }`;
         return `Modifier l'Évènement - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource || 'Ressource inconnue'}`;
     }
     return "Ajouter un rendez-vous";
@@ -293,23 +352,11 @@ export const CalendarModals = memo(({
         ) : (
           /* CAS 3: Formulaire de RDV */
           <AppointmentForm
+            key={`${resourceEditMode ?? 'new'}-${modalsState.selectedAppointmentForm?.IdPlanningEvenement ?? 'empty'}-${modalsState.selectedAppointmentForm?.IdPlanningRessource ?? 'empty'}`}
             appointments={data.appointments}
             tagPlacement={modalsState.tagPlacement}
             appointment={modalsState.selectedAppointmentForm as Appointment}
-            item={modalsState.selectedAppointmentForm?.IdPlanningRessource === -1 
-              ? {
-                  IdPlanningRessource: -1,
-                  CodePlanningRessource: '',
-                  LibellePlanningRessource: '',
-                  Type: 'Rubrique Perso',
-                  CouleurFondPlanningRessource: '#ffffff',
-                  CouleurBordurePlanningRessource: '#000000',
-                  CouleurTextePlanningRessource: '#000000',
-                  Actif: false,
-                  Verrou: false,
-                  Category: 'dimension',
-              } 
-              : data.selectedItem as Item}
+            item={data.selectedItem as Item}
             isReducedVersion={resourceEditMode !== null}
             resourceEditMode={resourceEditMode}
             employees={data.employees}
@@ -334,32 +381,13 @@ export const CalendarModals = memo(({
         )}
       </Modal>
 
-      {/* --- SELECTEUR D'IMAGES --- */}
-      {modalsState.isImageSelectorOpen && (
-        <Suspense fallback={<ModalLoadingFallback />}>
-          <ImageSelectorContentModal
-            actualImage={config.viewType === 'employee-table' ? data.selectedEmployee?.Image : data.selectedItem?.Image}
-            isOpen={modalsState.isImageSelectorOpen}
-            onClose={handlers.closeImageModal}
-            onImageSelect={handlers.handleImageSelect}
-            onImageUpload={handlers.handleImageUpload}
-            isUploading={data.isUploading}
-            uploadError={data.uploadError}
-            fetchPaginatedImages={handlers.fetchPaginatedImages}
-            addImageToDatabase={async (file) => {
-              // TODO: Appeler imageService.uploadImage(file)
-              console.log('Appel de addImageToDatabase', { file });
-            }}
-          />
-        </Suspense>
-      )}
-
       {/* --- PARAMETRES --- */}
       {modalsState.isSettingsOpen && (
         <SettingsModal 
           onClose={handlers.closeSettings}
           settings={settings} 
           isSettingsOpen={modalsState.isSettingsOpen}
+          setNotification={config.setNotification}
         />
       )}
       
@@ -369,7 +397,6 @@ export const CalendarModals = memo(({
           user={user}
           isOpen={modalsState.isConfigModalOpen}
           onClose={handlers.closeConfigModal}
-          availablesImages={data.availableImages}
           availableConfigs={data.availableConfigs}
           currentConfig={data.currentConfig}
           onConfigChange={handlers.setCurrentConfig}
@@ -379,9 +406,27 @@ export const CalendarModals = memo(({
           setEditingConfig={handlers.setEditingConfig}
           isCreatingConfig={data.isCreatingConfig}
           setIsCreatingConfig={handlers.setIsCreatingConfig}
+          handleOpenImageModal={openImageModalForConfig}
+          addImage={handlers.addImage}
         />
       )}
       
+      {/* --- SELECTEUR D'IMAGES --- */}
+      {modalsState.isImageSelectorOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <ImageSelectorContentModal
+            actualImage={configImageSelectorContext ? configImageSelectorContext.actualImage : data.selectedItem?.Image}
+            isOpen={modalsState.isImageSelectorOpen}
+            onClose={closeImageSelector}
+            onImageSelect={handleImageSelectorSelect}
+            onImageUpload={handlers.handleImageUpload}
+            isUploading={data.isUploading}
+            uploadError={data.uploadError}
+            fetchPaginatedImages={handlers.fetchPaginatedImages}
+          />
+        </Suspense>
+      )}
+
       {/* --- FILTRES TABLEAUX --- */}
       {modalsState.isFilterModalOpen && (
         <FilterModal
@@ -587,11 +632,10 @@ const RepeatAppointmentContent = ({
     eventService.getEvenement(appointment.IdPlanningEvenement).then(response => {
       if (!isMounted) return;
       
-      if (response?.error === 409 || response?.isLocked) {
-        // 🚨 Verrou pris par un autre
+      if (!response?.success || response?.isLocked) {
         onClose();
-        onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition.");
-      } else if (response?.error === 0 && response?.data) {
+        onLockedError(response?.message);
+      } else if (response?.success && response?.data) {
         const fetchedApp = response.data.appointments[0] ?? response.data.appointments;
         setFreshApp(fetchedApp);
         setIsLoading(false);
@@ -771,10 +815,10 @@ const ExtendAppointmentContent = ({
     setIsLoading(true);
     eventService.getEvenement(appointment.IdPlanningEvenement).then(response => {
       if (!isMounted) return;
-      if (response?.error === 409 || response?.isLocked) {
+      if (response?.success === false || response?.isLocked) {
         onClose();
-        onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition.");
-      } else if (response?.error === 0 && response?.data) {
+        onLockedError(response?.message);
+      } else if (response?.success && response?.data) {
         const fetchedApp = response.data.appointments[0] ?? response.data.appointments;
         setFreshApp(fetchedApp);
         setIsLoading(false);

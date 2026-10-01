@@ -1,8 +1,4 @@
-import { format } from 'date-fns';
 import { UserMenu } from '../index'; 
-
-import LogoUrlN from "../../image/LOGO_couleur_police_noire.svg";
-import LogoUrlB from "../../image/LOGO_couleur_police_blanche.svg";
 import { Appointment, Item, User } from '../../types';
 import { memo, use, useEffect } from 'react';
 import DatePicker from '../ui/DatePicker';
@@ -48,19 +44,20 @@ export const CalendarHeader = memo(({
   } = viewState;
 
   const { hasPermission } = useAuth();
-
+  const clientLogo = localStorage.getItem('client_logo_url');
+  const logoSrc = clientLogo || `/assets/logo-${theme}.svg`;
 
   return (
     <div className="flex flex-col items-center pr-9">
       <div className="flex flex-row w-full">
         {/* LOGO */}
         <div 
-          className={`p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'}`}
-        >
+          className={`${viewType === 'calendar' ? '' : ''} pl-7 p-2 w-80 ${!isExpanded ? 'h-[80px]' : 'h-full'} transition-[padding] duration-300 ease-in-out`}
+        > 
           <img 
-            src={theme === 'dark' ? LogoUrlB.src : LogoUrlN.src} 
+            src={logoSrc}
             alt="Logo" 
-            className="h-20 w-auto mb-2 cursor-pointer" 
+            className="h-20 w-auto mb-2 cursor-pointer object-contain" 
             onClick={() => setViewType('calendar')}
           />
         </div>
@@ -290,7 +287,7 @@ export const CalendarHeader = memo(({
       {/* BARRE D'OUTILS INFERIEURE (Titres, Filtres, Date) - Visible si Expanded */}
       <div className={`flex items-center justify-between w-full ${!isExpanded ? 'hidden' : 'h-[50px]'}`}>
         <div className={`${viewType === 'calendar' ? 'ml-80' : 'ml-7'}`}>
-          <p className="text-5xl poppins text-primary">
+          <p className={`text-5xl poppins text-primary ${viewType !== 'calendar' ? 'mt-[30px]' : ''}`} >
             {
               viewType === 'calendar' ? 'Planning' 
               : viewType === 'chantier-table' ? 'Liste des chantiers' 

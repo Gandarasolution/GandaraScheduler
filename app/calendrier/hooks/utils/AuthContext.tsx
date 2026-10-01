@@ -3,6 +3,7 @@
 import { authService, calendarConfigService } from '@/app/service';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User } from '../../types';
+import Loader from '../../components/ui/Loader';
 import { axiosAgent } from '@/app/service/axios.service';
 import Cookies from 'js-cookie';
 
@@ -24,12 +25,17 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (login: string, password: string) => Promise<{ success: boolean; message?: string }>;
-  logout: () => void;
+  logout: (reason?: 'inactive') => void;
   hasPermission: (permissionId: number) => boolean;
   setLastVueForUser: (idVue: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_STATE_KEY = 'isAuthenticated';
+const SESSION_EXPIRED_KEY = 'session_expired';
+const PAGE_CLOSED_KEY = 'page_closed';
+const LOGIN_COOKIE_NAME = 'is_logged_in';
+const SESSION_EXPIRED_MESSAGE = 'Vous avez été déconnecté à cause de votre inactivité.';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>();
@@ -49,16 +55,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     console.log('login response:', response);
         
-    if (response?.error === 0 && response.user) {
+    if (response?.success && response.user) {
       const id = response.planning[0]?.IdPlanning || -1;
       if (id >= 0) {
         axiosAgent.defaults.headers.common['X-Planning-Id'] = id;
-
         if(response.planning.length === 1) {
           setCurrentPlanningId(id); 
         }else {
           setCurrentPlanningId(-1); 
         }
+       
       }else {
         return { success: false, message: 'Aucun planning valide trouvé pour l\'utilisateur.' };
       }
@@ -66,15 +72,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserPlanning(response.planning || []);
       setUser(response.user);
       setPermissions(response.permissions || 0);
-      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem(AUTH_STATE_KEY, 'true');
+      localStorage.removeItem(SESSION_EXPIRED_KEY);
       return { success: true };
     } 
 
     return { success: false, message: response?.data || response?.message || 'Identifiants incorrects' };
   };
 
-  const logout = () => {
-    localStorage.removeItem('isAuthenticated');
+  const logout = useCallback((reason?: 'inactive') => {
+    localStorage.removeItem(AUTH_STATE_KEY);
+    if (reason === 'inactive') {
+      localStorage.setItem(SESSION_EXPIRED_KEY, SESSION_EXPIRED_MESSAGE);
+    }
+
+    Cookies.remove(LOGIN_COOKIE_NAME, {
+      path: '/',
+    });
+
     // On ne supprime pas forcément le cookie 'client_api_url' ici, 
     // pour que le client reste sur son environnement s'il veut juste se reconnecter.
     setUser(undefined);
@@ -83,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentPlanningId(-1);
     setCurrentVueId(null);
     axiosAgent.defaults.headers.common['X-Planning-Id'] = '';
-  };
+  }, []);
 
   const hasPermission = useCallback((permissionId: number) => {
     return Number(permissions) === Number(permissionId);
@@ -93,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentVueId(idVue);
     calendarConfigService.setLastVueForUser(idVue)
       .then(response => {
-        if (response.error === 0) {
+        if (response.success) {
           axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = idVue;
         }
       })
@@ -104,6 +119,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      if (localStorage.getItem(AUTH_STATE_KEY) !== 'true') {
+        setIsLoading(false);
+        return;
+      }
+
+      if (Cookies.get(LOGIN_COOKIE_NAME) !== 'true') {
+        const pageWasClosed = localStorage.getItem(PAGE_CLOSED_KEY) === 'true';
+        localStorage.removeItem(PAGE_CLOSED_KEY);
+        logout(pageWasClosed ? undefined : 'inactive');
+        setIsLoading(false);
+        return;
+      }
+
       const clientApiUrl = Cookies.get('client_api_url');
       
       if (!clientApiUrl) {
@@ -111,11 +139,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
         setUser(undefined);
         return; // On arrête tout, l'utilisateur n'est pas authentifié.
-      }
-
-      if (localStorage.getItem('isAuthenticated') !== 'true') {
-        setIsLoading(false);
-        return;
       }
 
       try {
@@ -134,17 +157,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(response.user);
         setPermissions(response.permissions || 0);
         setCurrentVueId(null);
-        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem(AUTH_STATE_KEY, 'true');
       } catch (error) {
         setUser(undefined);
-        localStorage.removeItem('isAuthenticated'); // Sécurité en cas de token expiré
+        localStorage.removeItem(AUTH_STATE_KEY);
       } finally {
         setIsLoading(false);
       }
     };
 
     checkAuth();
-  }, []);
+
+    const checkLoginCookie = () => {
+      if (
+        localStorage.getItem(AUTH_STATE_KEY) === 'true' &&
+        Cookies.get(LOGIN_COOKIE_NAME) !== 'true'
+      ) {
+        logout('inactive');
+      }
+    };
+
+    const markPageClosed = () => {
+      localStorage.setItem(PAGE_CLOSED_KEY, 'true');
+    };
+
+    window.addEventListener('pagehide', markPageClosed);
+
+    const intervalId = window.setInterval(checkLoginCookie, 1000);
+    return () => {
+      window.removeEventListener('pagehide', markPageClosed);
+      window.clearInterval(intervalId);
+    };
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ 
@@ -154,7 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }}>
       {isLoading ? (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-ultra-light via-white to-primary-lighter">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-primary"></div>
+          <Loader size="lg" />
         </div>
       ) : (
         children

@@ -21,11 +21,12 @@
 
 "use client";
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Appointment, HalfDayInterval, Equipe, CalendarConfig, Item, User, PoleActivite } from '../../types';
+import { Appointment, HalfDayInterval, Equipe, CalendarConfig, Item, User, PoleActivite, MobileAppointmentDisplayConfig } from '../../types';
 import { 
   useCalendarInteractions
  } from '@/app/calendrier/hooks';
 import { DesktopCalendarGrid, MobileCalendar } from '@/app/calendrier/components';
+import type { MobileCalendarState } from './MobileCalendar';
 import { CELL_WIDTH } from '../../utils/constants';
 
 interface CalendarGridProps {
@@ -42,6 +43,7 @@ interface CalendarGridProps {
   isMobile: boolean;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
+  mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   calendarConfig: CalendarConfig | null;
   onCalendarConfigChange: (config: CalendarConfig) => void;
@@ -55,11 +57,12 @@ interface CalendarGridProps {
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
-  onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeId?: number) => Promise<boolean>;
   //reloadToken?: number;
   mouseUpAfterScroll: () => void;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
   onLockedError: (message: string) => void;
+  mobileState: MobileCalendarState;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -76,6 +79,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   isMobile,
   isDisplayWeekend,
   tagPlacement = 'hover',
+  mobileAppointmentDisplay,
   mainScrollRef,
   calendarConfig,
   onCalendarConfigChange,
@@ -93,7 +97,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   //reloadToken,
   mouseUpAfterScroll,
   onAddAppointment,
-  onLockedError
+  onLockedError,
+  mobileState
 }) => {
 
   
@@ -148,7 +153,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         user={user}
         items={Object.values(events)}
         nonWorkingDates={nonWorkingDates}
-        onAddAppointment={onAddAppointment}
+        mobileAppointmentDisplay={mobileAppointmentDisplay}
+        mobileState={mobileState}
       />
     );
   }

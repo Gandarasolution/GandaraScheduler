@@ -15,7 +15,6 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, Clock, Users } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { Equipe, User } from '../../../types';
-import { getCachedImageById } from '../../../utils/imageCacheStore';
 import { 
   useDebounce,
   useRecentEmployees
@@ -337,7 +336,7 @@ interface EmployeeItemProps {
 }
 
 const EmployeeItem: React.FC<EmployeeItemProps> = ({ employee, isSelected, onSelect, showBadge }) => {
-  const avatarSource = employee.Image?.image || `https://ui-avatars.com/api/?name=${employee.Nom}+${employee.Prenom}&background=009580&color=fff`;
+  const avatarSource = employee.Image || `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`;
   const isInactive = employee.Actif === false;
   
   return (

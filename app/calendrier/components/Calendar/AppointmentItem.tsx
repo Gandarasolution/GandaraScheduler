@@ -4,7 +4,7 @@
  */
 
 "use client";
-import React, { useState, memo, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, memo, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useDrag, useDragLayer } from 'react-dnd';
 import { isWeekend } from 'date-fns';
 import { Appointment, Item } from '../../types';
@@ -71,11 +71,15 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const { hasPermission } = useAuth();
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isHovered, setIsHovered] = useState(false);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragLockSentRef = useRef(false);
+  const dragLockPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const startDate = React.useMemo(() => appointment.DebutPlanningEvenement, [appointment.DebutPlanningEvenement]);
   const endDate = React.useMemo(() => appointment.FinPlanningEvenement, [appointment.FinPlanningEvenement]);
   
   const isLocked = React.useMemo(() => appointment.isLocked === true, [appointment.isLocked]);
+  const isReadOnly = React.useMemo(() => appointment.isReadOnly === true, [appointment.isReadOnly]);
   
   // console.log('AppointmentItem render', appointment);
   // console.log('top', absoluteTop);
@@ -103,12 +107,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     isFullDay,
     isDisplayWeekend: isDisplayWeekend ?? false,
     onAppointmentResize,
+    onLockedError,
   });
-
-  if(appointment.IdPlanningEvenement === 620) {
-    console.log('AppointmentItem render', appointment);
-    console.log('item', event);
-  }
 
   // Hook de calcul des segments Ghost
   const ghostSegments = useGhostSegments({
@@ -133,17 +133,52 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   // --- Drag & Drop ---
   const [{ isDragging }, drag] = useDrag({
     type: 'appointment',
+    // Aucun effet de bord ici : item() décrit seulement l'objet déplacé.
     item: () => ({
       id: appointment.IdPlanningEvenement,
       type: 'appointment',
-      startDate: startDate,
-      endDate: endDate,
+      startDate,
+      endDate,
       dragOffset,
     }),
-    canDrag: () => !isResizingLeft && !isResizingRight && !isLocked && !isInactive && (hasPermission(23) || hasPermission(22)),
+    canDrag: () =>
+      !isResizingLeft &&
+      !isResizingRight &&
+      !isLocked &&
+      !isReadOnly &&
+      !isInactive &&
+      (hasPermission(23) || hasPermission(22)),
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+
+    // Appelé une seule fois quand le drag se termine,
+    // que le rendez-vous soit réellement droppé ou que le drag soit annulé.
+    end: async () => {
+      const lockPromise = dragLockPromiseRef.current;
+      dragLockPromiseRef.current = null;
+
+      // Si le lockQuick n'a pas encore fini, attendre son résultat
+      // avant d'envoyer l'unlock.
+      const lockAcquired = lockPromise ? await lockPromise : dragLockSentRef.current;
+
+      if (!lockAcquired) {
+        return;
+      }
+
+      try {
+        await evenementService.unlockEvenement(
+          appointment.IdPlanningEvenement
+        );
+      } catch (error) {
+        console.error(
+          'Erreur lors du déverrouillage après drag/drop :',
+          error
+        );
+      } finally {
+        dragLockSentRef.current = false;
+      }
+    },
   });
 
   const isAnyDragging = useDragLayer((monitor) => monitor.isDragging());
@@ -151,19 +186,69 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   
   // --- Handlers (Drag) ---
   const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    evenementService.lockQuickEvenement(appointment.IdPlanningEvenement)
-      .then(response => {
-        if (response.error === 409) {
-          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
-          if (onLockedError) {
-            onLockedError(response.message || 'Un autre utilisateur modifie cet événement.');
-          }        
-        }
-      });
+    if (isReadOnly || isLocked || isInactive || source === 'demo') return;
 
+    // Le mouseDown sert uniquement à calculer l'offset.
     const rect = e.currentTarget.getBoundingClientRect();
     setDragOffset(e.clientX - rect.left);
-  }, []);
+  }, [isInactive, isLocked, isReadOnly, source]);
+
+  // Le lockQuick est envoyé uniquement lorsqu'un VRAI drag commence.
+  // Cela évite les lockQuick parasites sur simple/double clic.
+  useEffect(() => {
+    if (!isDragging) {
+      return;
+    }
+
+    if (
+      dragLockSentRef.current ||
+      isReadOnly ||
+      isLocked ||
+      isInactive ||
+      source === 'demo'
+    ) {
+      return;
+    }
+
+    dragLockSentRef.current = true;
+
+    dragLockPromiseRef.current = evenementService
+      .lockQuickEvenement(appointment.IdPlanningEvenement)
+      .then(response => {
+        if (response.success === false) {
+          dragLockSentRef.current = false;
+
+          document.dispatchEvent(
+            new KeyboardEvent('keydown', {
+              key: 'Escape',
+              keyCode: 27,
+              bubbles: true,
+            })
+          );
+
+          onLockedError?.(
+            response.message || 'Un autre utilisateur modifie cet événement.'
+          );
+
+          return false;
+        }
+
+        return true;
+      })
+      .catch(error => {
+        dragLockSentRef.current = false;
+        console.error('Erreur lors du verrouillage rapide du rendez-vous :', error);
+        return false;
+      });
+  }, [
+    isDragging,
+    appointment.IdPlanningEvenement,
+    isInactive,
+    isLocked,
+    isReadOnly,
+    onLockedError,
+    source,
+  ]);
 
   // Calcul de la largeur et position lors du resize
   useEffect(() => {
@@ -193,6 +278,83 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   const hasSpaceForBothHandles = appointmentWidthPx >= 60;
   const isSmallAppointment = appointmentWidthPx < (INTERVAL_WIDTH * 1.5);
+
+  // --- Clic / double-clic ---
+  const handleAppointmentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+
+    if (isReadOnly) return;
+
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+
+    clickTimeoutRef.current = setTimeout(() => {
+      clickTimeoutRef.current = null;
+      onClick?.(appointment);
+    }, 220);
+  }, [appointment, isReadOnly, onClick]);
+
+  const handleAppointmentDoubleClick = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Annuler le simple clic encore en attente.
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
+
+    if (isLocked || isReadOnly) return;
+
+    setIsHovered(false);
+
+    if ((!isInactive && hasPermission(23)) || source === 'demo') {
+      // En mode démo, aucune API de lock.
+      if (source === 'demo') {
+        onDoubleClick?.(appointment);
+        return;
+      }
+
+      // Un seul lockQuick pour l'ouverture en édition.
+      try {
+        const response = await evenementService.lockQuickEvenement(
+          appointment.IdPlanningEvenement
+        );
+
+        if (response.success === false) {
+          onLockedError?.(
+            response.message || 'Un autre utilisateur modifie cet événement.'
+          );
+          return;
+        }
+
+        onDoubleClick?.(appointment);
+      } catch (error) {
+        console.error(
+          'Erreur lors du verrouillage avant ouverture du formulaire :',
+          error
+        );
+      }
+    }
+  }, [
+    appointment,
+    hasPermission,
+    isInactive,
+    isLocked,
+    isReadOnly,
+    onDoubleClick,
+    onLockedError,
+    source,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Calculer le padding nécessaire pour le chargé d'affaire si les icônes sont présentes
   const chargeAffairePaddingRight = useMemo(() => {
@@ -245,31 +407,27 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     top: computedTop,
     // Le conteneur principal devient transparent si c'est un Ghost
     // car les backgrounds sont gérés par les enfants (Ghost Part vs Real Part)
-    backgroundColor: isGhost ? 'transparent' : (isHovered ? 'white' : appointmentColor), 
+    backgroundColor: isGhost ? 'transparent' : (isHovered && source === 'calendar' ? 'white' : appointmentColor), 
     border: isGhost ? 'none' : `2px solid ${appointmentBorderColor}`,
     transition: isDragging ? 'none' : 'box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out, opacity 0.2s ease-in-out transform 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
-    zIndex: isHovered ? 9999 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0)))),
-    cursor: (isInactive || isLocked) ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' && hasPermission(23) ? 'grab' : 'cursor')),
-  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment, isInactive, isResizingLeft, isResizingRight]);
+    zIndex: isHovered ? 30 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0)))),
+    cursor: (isInactive || isLocked || isReadOnly) ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' && hasPermission(23) ? 'grab' : 'cursor')),
+  }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment, isInactive, isReadOnly, isResizingLeft, isResizingRight]);
 
   return (
     <div
       key={`${appointment.IdPlanningEvenement}-${appointment.DebutPlanningEvenement}-${appointment.FinPlanningEvenement}-${appointment.AnnotationPlanningEvenement}`} // Clé unique basée sur les propriétés de l'appointment 
-      ref={(node) => { if (node && source === 'calendar' && !isInactive && !isLocked && hasPermission(23)) drag(node); }}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick && onClick(appointment);
-      }}
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        if (isLocked) return; // Empêcher l'action si le rendez-vous est verrouillé
-        setIsHovered(false); // Masquer le tooltip au double-clic
-        if ((!isInactive && hasPermission(23)) || source === 'demo') {
-          onDoubleClick && onDoubleClick(appointment);
-        }
-      }}
+      ref={(node) => { if (node && source === 'calendar' && !isInactive && !isLocked && !isReadOnly && hasPermission(23)) drag(node); }}
+      onClick={handleAppointmentClick}
+      onDoubleClick={handleAppointmentDoubleClick}
       onContextMenu={(e) => {
+         if (isReadOnly) {
+           e.preventDefault();
+           e.stopPropagation();
+           return;
+         }
+
          // (Logique Context Menu inchangée)
          const rect = e.currentTarget.getBoundingClientRect();
          const mouseX = e.clientX - rect.left;
@@ -307,14 +465,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
          
          handleContextMenu && handleContextMenu(e, 'appointment', appointment, cellUnderMouse);
       }}
-      onMouseDown={hasPermission(23) ? handleDragStart : undefined}
+      onMouseDown={hasPermission(23) && !isReadOnly ? handleDragStart : undefined}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
         appointment-item rounded-xl text-sm shadow-md
         flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
         z-20 h-11 group
-        ${isDragging  ? 'opacity-60 scale-95 duration-0' : 'opacity-100 duration-200'}
+        ${isDragging && source === 'calendar'  ? 'opacity-60 scale-95 duration-0' : 'opacity-100 duration-200'}
         ${source === 'calendar' && isSelected ? 'ring-3 ring-color' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
@@ -362,7 +520,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                       style={{
                           left: `${leftOffset + segment.widthGhost}px`,
                           width: `${segment.widthNoGhost}px`,
-                          backgroundColor: isHovered ? 'white' : appointmentColor,
+                          backgroundColor: isHovered && source === 'calendar'? 'white' : appointmentColor,
                           border: `2px solid ${appointmentBorderColor}`,
                           borderLeft: segment.widthGhost > 0 ? 'none' : (isFirst ? undefined : 'none'),
                           borderRight: isLast ? undefined : 'none',
@@ -379,11 +537,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}
 
       {/* Handle de redimensionnement à gauche */}
-      {source === 'calendar' && !isInactive && !isLocked && (
+      {source === 'calendar' && !isInactive && !isLocked && !isReadOnly && (
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30`}
           title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
-          onMouseDown={(e) => !isInactive && !isLocked && hasPermission(23) && handleMouseDown(e, 'left')}
+          onMouseDown={(e) => !isInactive && !isLocked && !isReadOnly && hasPermission(23) && handleMouseDown(e, 'left')}
           style={{ 
             borderRadius: '4px 0 0 4px',
             cursor: isInactive  ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',
@@ -406,6 +564,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             <img
               src={event.Image.image}
               className="w-8 h-8 object-cover flex-shrink-0 rounded-full"
+              loading="lazy"
             />
           ): (
               <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>
@@ -430,7 +589,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 <span 
                   className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-sm`}
                   style={{ 
-                      color: (isHovered || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                      color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
                   }}
                 >
                   {event?.LibellePlanningRessource}
@@ -446,10 +605,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 <span 
                     className="truncate transition-colors duration-200"
                     style={{ 
-                    color: (isHovered || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                    color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
                     }}
                 >
-                    {chargeeAffaire}
+                    {appointment.isReadOnly ? appointment.EtapeValidation : chargeeAffaire}
                 </span>
                 {((appointment.Etiquette && !isGhost) || appointment.AnnotationPlanningEvenement) && (
                   <div className="absolute right-1 bottom-0.5 z-40">
@@ -459,10 +618,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                       tagColor={event?.CouleurFondPlanningRessource}
                       color={isGhost ? '#333' : appointmentColor}
                       textColor={isGhost ? '#000' : appointmentTextColor}
-                      isHovered={isHovered}
+                      isHovered={isHovered && source === 'calendar'}
                       mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}
                       annotationImgSvg={
-                        <svg height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
+                        <svg height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg" style={{ color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
                           <path d="m22 12c0 5.5228-4.4772 10-10 10-5.52285 0-10-4.4772-10-10 0-5.52285 4.47715-10 10-10 5.5228 0 10 4.47715 10 10z" 
                                 fill="none" 
                                 stroke="currentColor" 
@@ -473,7 +632,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                         </svg>
                       }
                       tagImgSvg={
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ color: (isHovered || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? (event.CouleurFondPlanningRessource) : event.CouleurTextePlanningRessource }}>
                           <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
                         </svg>
                       }
@@ -502,7 +661,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       )}      
 
       {/* Handle de redimensionnement à droite */}
-      {source === 'calendar' && !isInactive && !isLocked && (
+      {source === 'calendar' && !isInactive && !isLocked && !isReadOnly && (
         <div
           className={`absolute top-0 h-full cursor-ew-resize z-30 ${
             isSmallAppointment || !hasSpaceForBothHandles 
@@ -510,7 +669,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               : '-right-1 w-3'
           }`}
           title={isSmallAppointment ? "Redimensionner (côté droit)" : "Redimensionner"}
-          onMouseDown={(e) => !isInactive && !isLocked && hasPermission(23) && handleMouseDown(e, 'right')}
+          onMouseDown={(e) => !isInactive && !isLocked && !isReadOnly && hasPermission(23) && handleMouseDown(e, 'right')}
           style={{ 
             borderRadius: '0 4px 4px 0', 
             cursor: isInactive  ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',

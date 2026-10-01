@@ -1,3 +1,4 @@
+import { MERCURE_TOPIC } from "../calendrier";
 import { getRequest, postRequest } from "./axios.service";
 
 type LoginPayload = {
@@ -5,30 +6,19 @@ type LoginPayload = {
   password: string;
 };
 
+type ClientEnvironmentPayload = {
+  urlAPI?: string | null;
+  urlMercure?: string | null;
+  urlAPIInterne?: string | null;
+  urlMercureInterne?: string | null;
+  logoClient?: string | null;
+};
 
-// function saveSession(token: string) {
-//   if (typeof window === "undefined") return;
-//   localStorage.setItem("token", token);
-//   localStorage.setItem("isAuthenticated", "true");
-// }
-
-// function clearSession() {
-//   if (typeof window === "undefined") return;
-//   localStorage.removeItem("token");
-//   localStorage.removeItem("isAuthenticated");
-// }
-
-// function getSessionUser(): string | null {
-//   if (typeof window === "undefined") return null;
-//   const raw = localStorage.getItem("token");
-//   if (!raw) return null;
-
-//   try {
-//     return JSON.parse(raw) as string;
-//   } catch {
-//     return null;
-//   }
-// }
+type ResolvedClientEnvironment = {
+  apiUrl: string;
+  mercureUrl: string;
+  logoClient?: string;
+};
 
 async function login(payload: LoginPayload) {
   return await postRequest("/api/login", payload, "login");
@@ -46,6 +36,102 @@ async function refreshToken() {
   return await postRequest("/api/token/refresh", {}, "refreshToken");
 }
 
+async function isApiReachable(url: string | null | undefined): Promise<boolean> {
+  if (!url) return false;
+
+  try {
+    const cleanUrl = url.trim();
+    const response = await fetch(cleanUrl, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-store',
+    });
+
+    return response instanceof Response;
+  } catch (error) {
+    console.warn('URL API non accessible:', url, error);
+    return false;
+  }
+}
+
+async function isMercureReachable(url: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 3000);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    return response.status < 500;
+  } catch (error) {
+    console.warn(`Mercure inaccessible : ${url}`, error);
+    return false;
+  }
+}
+
+async function resolveApiEnvironment(
+  payload: ClientEnvironmentPayload | null | undefined,
+): Promise<ResolvedClientEnvironment | null> {
+  if (!payload) return null;
+
+  const apiCandidates = [
+    process.env.NODE_ENV === 'development' ? 'http://localhost:8000/' : null,
+    payload.urlAPI,
+    payload.urlAPIInterne,
+  ];
+
+  const mercureCandidates = [
+    process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
+    payload.urlMercure,
+    payload.urlMercureInterne,
+  ];
+
+  // 1. Recherche de la première API accessible
+  let resolvedApiUrl: string | null = null;
+
+  for (const candidate of apiCandidates) {
+    const apiUrl = candidate?.trim();
+
+    if (!apiUrl) continue;
+
+    if (await isApiReachable(apiUrl)) {
+      resolvedApiUrl = apiUrl;
+      break;
+    }
+  }
+
+  // Sans API fonctionnelle, l'environnement n'est pas valide
+  if (!resolvedApiUrl) {
+    return null;
+  }
+
+  // 2. Recherche du premier Mercure accessible
+  let resolvedMercureUrl = '';
+
+  for (const candidate of mercureCandidates) {
+    const mercureUrl = candidate?.trim();
+
+    if (!mercureUrl) continue;
+
+    if (await isMercureReachable(`${mercureUrl.replace(/\/$/, '')}/.well-known/mercure?topic=${MERCURE_TOPIC}`)) {
+      resolvedMercureUrl = mercureUrl;
+      break;
+    }
+  }
+
+  return {
+    apiUrl: resolvedApiUrl,
+    mercureUrl: resolvedMercureUrl,
+    logoClient: payload.logoClient?.trim() || undefined,
+  };
+}
 
 async function SchedulerIsURICannonical(hostname: string): Promise<boolean> {
   try {
@@ -55,22 +141,20 @@ async function SchedulerIsURICannonical(hostname: string): Promise<boolean> {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      // Pas de withCredentials ici !
       body: JSON.stringify({ uri: hostname })
     });
 
     const data = await response.json();
     console.log('SchedulerIsURICannonical response:', data);
-    
-    // Adapte selon ce que ton API renvoie vraiment (ex: data.data === 1)
-    return data === 1; 
+
+    return data === 1;
   } catch (error) {
     console.error('Erreur lors de la vérification de l\'URL canonique:', error);
     return false;
   }
 }
 
-async function SchedulerGetAPI(hostname: string): Promise<string | null> {
+async function SchedulerGetAPI(hostname: string): Promise<ClientEnvironmentPayload | null> {
   try {
     const response = await fetch("https://extranet.palissot.fr/extranet/inc_librairie/API/routes.php?endpoint=SchedulerGetAPI", {
       method: 'POST',
@@ -82,23 +166,31 @@ async function SchedulerGetAPI(hostname: string): Promise<string | null> {
     });
 
     const data = await response.json();
-    // Adapte selon la structure exacte renvoyée, par exemple data.data.urlAPI
-    return data?.urlAPI || null; 
+    const payload = data?.data ?? data;
+
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    return {
+      urlAPI: payload.urlAPI ?? null,
+      urlMercure: payload.urlMercure ?? null,
+      urlAPIInterne: payload.urlAPIInterne ?? null,
+      urlMercureInterne: payload.urlMercureInterne ?? null,
+      logoClient: payload.logoClient ?? null,
+    };
   } catch (error) {
     console.error('Erreur lors de la récupération de l\'API:', error);
     return null;
   }
 }
 
-
 export default {
   login,
   me,
   logout,
   refreshToken,
+  resolveApiEnvironment,
   SchedulerIsURICannonical,
   SchedulerGetAPI,
-  // saveSession,
-  // clearSession,
-  // getSessionUser,
 };

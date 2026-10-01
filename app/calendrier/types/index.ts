@@ -123,11 +123,11 @@ interface BaseItem {
   Image?: ImageType;
   defaultDescription?: string;
   Etiquettes?: Tag[];
+  Adresse?: string;
 }
 
 export interface ChantierItem extends BaseItem {
   Type: "Projet";
-  Identifiant: string;
   PoleActivite: string;
   Etat: string;
   ChargeAffaire: string;
@@ -158,6 +158,7 @@ export interface AutreItem extends CommonPaieAttributs {
   Type: "Rubrique Perso";
 }
 
+
 export type SocialItem = AbsenceItem | AutreItem;
 export type Item = ChantierItem | SocialItem;
 
@@ -186,10 +187,34 @@ export interface Appointment{
   IdPlanningRessource: Item["IdPlanningRessource"];
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
   Etiquette?: Tag;
+  EtapeValidation?: string; // Étape de validation du rendez-vous (ex: "En attente", "Validé", etc.)
+  isReadOnly?: boolean; // Indique si le rendez-vous est en lecture seule (non modifiable)
   /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */
   PlanningEvenementPriorite?: number;
   
   isLocked: boolean; // Indique si le rendez-vous est verrouillé (non modifiable)
+}
+
+/**
+ * Champs disponibles dans la carte d'un rendez-vous sur mobile.
+ * Les valeurs sont volontairement stables afin de pouvoir être utilisées
+ * directement par le futur endpoint de configuration.
+ */
+export type MobileAppointmentField =
+  | 'LibellePlanningRessource'
+  | 'Type'
+  | 'DebutPlanningEvenement'
+  | 'FinPlanningEvenement'
+  | 'AnnotationPlanningEvenement'
+  | 'IdEmploye'
+  | 'EtapeValidation'
+  | 'Etiquette'
+  | 'ChefChantier'
+  | 'ChargeAffaire';
+
+export interface MobileAppointmentDisplayConfig {
+  primaryFields: MobileAppointmentField[];
+  secondaryFields: MobileAppointmentField[];
 }
 
 
@@ -246,7 +271,7 @@ export interface CalendarConfig {
   IdPlanningVue: number;
   LibellePlanningVue: string;
   /** Image associée à la vue */
-  PlanningImage?: ImageType;
+  PlanningVueImage?: ImageType;
   /** Description de la vue */
   DescriptionPlanningVue?: string;
   /** Configuration des niveaux de groupement (équipe et pole) */
@@ -353,23 +378,21 @@ export interface User{
   Type: 'SALARIE' | 'INTERIM';
   /** Référence à l'équipe (relation) */
   Equipe: Equipe['Id'] | null;
-  /** Rôle de l'utilisateur dans l'application */
-  role?: UserRole;
   /** Thème préféré de l'utilisateur */
   theme?: string;
   /** Image de profil de l'utilisateur */
-  Image?: ImageType;
+  Image?: string;
   /** Statut actif de l'utilisateur (défaut: true) */
   Actif?: boolean;
 }
 
 
-export interface MockNotification {
-  id: string;
-  userId: number;
-  type: 'success' | 'error' | 'warning' | 'info';
-  title: string;
-  message: string;
-  timestamp: number;
-  isRead: boolean;
+
+export interface Notification {
+  Id: string;
+  Type: 'Succès' | 'Erreur' | 'Avertissement' | 'Information';
+  Titre: string;
+  Message: string;
+  Timestamp: string;
+  IsRead: boolean;
 }

@@ -32,12 +32,12 @@ const TopNotification: React.FC<TopNotificationProps> = ({
 
   return (
     // Conteneur fixe, centré en haut de l'écran avec un z-index maximal
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center">
+    <div className="fixed top-4 left-3 right-3 sm:top-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[99999] pointer-events-none flex flex-col items-center">
       
       {/* La bulle avec l'animation Tailwind */}
       <div 
         className={`
-          pointer-events-auto flex items-center gap-3 px-5 py-3 
+          pointer-events-auto w-full sm:w-auto flex items-start gap-3 px-4 sm:px-5 py-3
           bg-gray-900 text-white rounded-full shadow-2xl border border-gray-700/50
           transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]
           ${isVisible ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-8 opacity-0 scale-95'}
@@ -51,7 +51,7 @@ const TopNotification: React.FC<TopNotificationProps> = ({
         </div>
 
         {/* Le message d'erreur */}
-        <p className="text-sm font-medium whitespace-nowrap">
+        <p className="text-sm font-medium leading-5 break-words sm:whitespace-nowrap">
           {message}
         </p>
 

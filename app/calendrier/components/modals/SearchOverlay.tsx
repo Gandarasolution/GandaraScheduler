@@ -84,7 +84,7 @@ type SearchOverlayProps<T extends SearchableItem = SearchableItem> = {
   /** Callback de fermeture */
   onClose: () => void;
   /** Fonction de recherche (sync ou async) appelée avec la query */
-  onSearch: (query: string) => Promise<{ error: number; data: T[]; message?: string }>;
+  onSearch: (query: string) => Promise<{ success: boolean; data: T[]; message?: string }>;
   /** Placeholder de l'input de recherche */
   placeholder?: string;
   /** Configuration des états vides */
@@ -161,7 +161,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
     await onSearch(query).then(result => {
       if (requestId !== lastRequestId.current) return;
-      if (result.error === 0) {
+      if (result.success ) {
         console.log(result.data);
         
         setItems(result.data);
@@ -186,12 +186,29 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
     const monitor = dragDropManager.getMonitor();
 
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     const unsubscribe = monitor.subscribeToStateChange(() => {
-      const isDragInProgress = monitor.isDragging();
-      setIsDragging(isDragInProgress);
+      const dragInProgress = monitor.isDragging();
+
+      if (dragInProgress) {
+        timer = setTimeout(() => {
+          setIsDragging(true);
+        }, 0);
+      } else {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+
+        setIsDragging(false);
+      }
     });
 
-    return unsubscribe;
+    return () => {
+      if (timer) clearTimeout(timer);
+      unsubscribe();
+    };
   }, [dragDropManager, enableDragDetection]);
 
   useEffect(() => {
@@ -264,21 +281,26 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
       />
 
       {/* Conteneur principal */}
-      <div 
-        className={`fixed z-60 bg-opacity-0 rounded-2xl 
-          w-[calc(100vw-2rem)] left-4 top-[10%] 
-          sm:w-[calc(100vw-4rem)] sm:left-8 sm:top-[20%] 
-          lg:w-auto lg:max-w-${maxWidth} lg:left-[32%] lg:top-[35%] 
-          max-h-[80vh] flex flex-col ${
-          enableDragDetection && isDragging ? 'opacity-0' : 'opacity-100'
-        } transition-all duration-300 ease-in-out ${className}`}
-        onClick={(e) => e.stopPropagation()}
-        style={{ 
-          ...(window.innerWidth >= 1024 ? position : {}),
-          left: enableDragDetection && isDragging ? '100%' : (window.innerWidth < 640 ? '1rem' : window.innerWidth < 1024 ? '2rem' : position.left),
-          minWidth: window.innerWidth >= 1024 ? '675px' : undefined,
-          ...style
-        }}
+      <div
+        className={`fixed z-60 bg-opacity-0 rounded-2xl
+          w-[calc(100vw-2rem)]
+          sm:w-[calc(100vw-4rem)]
+          lg:w-[900px]
+          lg:max-w-[calc(100vw-6rem)]
+
+          h-[50vh]
+
+          -translate-x-1/2 -translate-y-1/2
+          flex flex-col
+
+
+          ${
+            enableDragDetection && isDragging
+              ? 'opacity-0 left-[-9999px] top-[-9999px]'
+              : 'opacity-100 left-1/2 top-1/2'
+          }
+
+          ${className}`}
       >
         {/* Barre de recherche */}
         <div className="">

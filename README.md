@@ -113,7 +113,7 @@ npm install
 npm run dev
 ```
 
-Ouvrir [http://localhost:8080](http://localhost:8080) dans votre navigateur (port configuré dans `package.json`).
+Ouvrir [http://localhost:3001](http://localhost:3001) dans votre navigateur (port configuré dans `package.json`).
 
 ### Tests
 
@@ -182,4 +182,4 @@ Propriété de Gandara Solutions © 2026
 ## 👨‍💻 Auteur
 
 **Gandara Solutions**  
-Version 2.0.1
+Version 0.5

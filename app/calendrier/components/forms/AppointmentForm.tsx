@@ -16,7 +16,7 @@
 "use client";
 // components/AppointmentForm.tsx
 import React, { useState, memo, useMemo, useEffect, useCallback, useRef } from 'react';
-import {Appointment, HalfDayInterval, Item, CommonPaieAttributs, User, Tag, AutreItem } from '../../types';
+import {HalfDayInterval, Item, CommonPaieAttributs, User, Tag, AutreItem, Appointment } from '../../types';
 import { isSameDay, isSameYear, isSameMonth, format } from 'date-fns';
 import { isHoliday, isWeekend, eachDayOfInterval } from '../../utils/dates';
 import socialPermissionService from '@/app/service/permission.service';
@@ -29,7 +29,6 @@ import TagsManager from './TagsManager';
 import { FormPreview, EmployeeSelector, AnnotationsField, ExpandButton, ActionButtons, Employee } from './FormComponents';
 import { useModalContext } from '@/app/calendrier/components/modals/Modal';
 import ressourceService from '@/app/service/ressource.service';
-import { notificationService } from '../..';
 /**
  * Interface définissant les propriétés du composant AppointmentForm
  * @interface AppointmentFormProps
@@ -153,6 +152,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const isCreatingResource = resourceEditMode === 'createRessource';
   const isEditingResource = resourceEditMode === 'editRessource';
   const isEditingAppointment = resourceEditMode === 'editAppointment';
+  const hasPermissionsPanel = isEditingResource &&
+    (item?.Type === 'Paie' || item?.Type === 'Rubrique Perso');
 
   // On simplifie la logique d'affichage 
   // - Les options de ressources (couleurs, code, ect.) sont toujours affichées dans tous les modes pour les rubriques perso
@@ -166,6 +167,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * Initialisé avec les données existantes ou des valeurs par défaut
    */
   const [formDataAppointment, setFormDataAppointment] = useState<Appointment>(appointment);
+  const [formStartDate, setFormStartDate] = useState(() => new Date(appointment.DebutPlanningEvenement));
+  const [formEndDate, setFormEndDate] = useState(() => new Date(appointment.FinPlanningEvenement));
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);
@@ -183,15 +186,36 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * États pour la gestion des permissions par employé (rubriques sociales et rubrique perso uniquement)
    */
   const changedEmployeePermissions = useRef<Record<number, number>>({});
+
+  // Baseline du formulaire : on compare les modifications utilisateur
+  // à la dernière version réellement chargée depuis l'API.
+  const initialAppointmentRef = useRef<Appointment>(appointment);
+  const initialItemRef = useRef<Item>(item);
+  const [dirtyReady, setDirtyReady] = useState(false);
   
+  console.log(formDataAppointment);
 
   // console.log("Ressource actuelle :", formDataItemType);
   // console.log("isResourceMode :", isResourceMode);
 
   useEffect(() => {
     const loadAllFormData = async () => {
-      // Sécurité : Si aucune fonction de fetch n'est fournie, pas besoin de charger
-      if (!onFetchTagsForResource && !onFetchEventAndRessource && !onFetchRessourceById) return;
+      // Tant que les données fraîches ne sont pas chargées,
+      // le formulaire ne doit jamais être considéré comme modifié.
+      setDirtyReady(false);
+      onDirtyChange?.(false);
+
+      // Baseline de secours. Elle sera remplacée par les données fraîches
+      // venant de l'API dès qu'elles seront disponibles.
+      initialAppointmentRef.current = appointment;
+      initialItemRef.current = item;
+
+      // Si rien n'est à charger, les props constituent simplement la baseline.
+      if (!onFetchTagsForResource && !onFetchEventAndRessource && !onFetchRessourceById) {
+        setIsLoading(false);
+        setDirtyReady(true);
+        return;
+      }
 
       setIsLoading(true);
       setTagError(null);
@@ -206,7 +230,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             onFetchEventAndRessource(formDataAppointment.IdPlanningEvenement)
               .then(response => {
                 console.log("Réponse de onFetchEventAndRessource :", response);
-                if (response?.error === 409 && response?.isLocked) {
+                if (response?.success === false && response?.isLocked) {
                   onClose(); // On ferme la modale immédiatement
                   if (onLockedError) {
                     onLockedError(response?.message || "Accès refusé. Ce rendez-vous est déjà en cours d'édition par un collègue.");
@@ -214,10 +238,26 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                   return;
                 }
 
-                if (response?.error === 0 && response?.data) {
+                if (response?.success && response?.data) {
                   const { appointments, ressources } = response.data;
-                  setFormDataAppointment(appointments[0] ?? appointments);
-                  setFormDataItemType(ressources[0] ?? ressources);
+                  const loadedAppointment = appointments[0] ?? appointments;
+                  const loadedItem = ressources[0] ?? ressources;
+
+                  const normalizedAppointment = {
+                    ...loadedAppointment,
+                    isLocked: false,
+                  };
+
+                  // La version fraîche de l'API devient la référence initiale.
+                  // Ainsi, un resize/drag effectué juste avant l'ouverture
+                  // n'est pas interprété comme une modification du formulaire.
+                  initialAppointmentRef.current = normalizedAppointment;
+                  initialItemRef.current = loadedItem;
+
+                  setFormDataAppointment(normalizedAppointment);
+                  setFormStartDate(new Date(normalizedAppointment.DebutPlanningEvenement));
+                  setFormEndDate(new Date(normalizedAppointment.FinPlanningEvenement));
+                  setFormDataItemType(loadedItem);
                 }
               })
               .catch(err => {
@@ -232,8 +272,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           promises.push(
             onFetchRessourceById(item?.IdPlanningRessource, item?.Type)
               .then(response => {
-                if (response?.error === 0 && response?.data) {
-                  setFormDataItemType(response.data[0] ?? response.data);
+                if (response?.success && response?.data) {
+                  const loadedItem = response.data[0] ?? response.data;
+                  initialItemRef.current = loadedItem;
+                  setFormDataItemType(loadedItem);
                 }
               })
               .catch(err => {
@@ -276,8 +318,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       } catch (globalError) {
         console.error("Erreur générale lors du chargement du formulaire", globalError);
       } finally {
-        // On n'éteint le chargement QUE lorsque tout est fini (succès ou échec)
+        // Le formulaire possède maintenant sa baseline réelle.
         setIsLoading(false);
+        setDirtyReady(true);
       }
     };
 
@@ -312,7 +355,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     setTagError(null);
     try {
       const result = await onRemoveTagFromAppointments(tagId);
-      if (result?.error === 1) {
+      if (result?.success === false) {
         setTagError(result.message || "Erreur lors de la suppression de l'étiquette");
         return;
       }
@@ -333,7 +376,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     const performAppointmentSave = async (): Promise<void> => {
       if (isSaving) return;
 
-      if (formDataAppointment.DebutPlanningEvenement >= formDataAppointment.FinPlanningEvenement) {
+      if (formStartDate >= formEndDate) {
         setDateValidationError(true);
         return;
       }
@@ -344,7 +387,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
       try {
         const result = await onSave(
-          formDataAppointment,
+          {
+            ...formDataAppointment,
+            DebutPlanningEvenement: formStartDate.getTime(),
+            FinPlanningEvenement: formEndDate.getTime(),
+          },
           formDataItemType,
           includeAllNonWorkingDays,
           formDataAppointment.IdPlanningEvenement <= 0 ? 'create' : 'update'
@@ -367,7 +414,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   /**
    * État pour contrôler l'expansion du panel d'options avancées
    */
-  const [isExpanded, setIsExpanded] = useState(isReducedVersion ? false : true);
+  const [isExpanded, setIsExpanded] = useState(!isReducedVersion || hasPermissionsPanel);
 
 
   useEffect(() => {
@@ -401,31 +448,68 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
    * Détection des changements non sauvegardés
    */
   useEffect(() => {
-    if (!onDirtyChange) return;
+    if (!onDirtyChange || !dirtyReady) return;
 
-    // Comparaison simple pour détecter les changements
-    // Note: Pour une comparaison plus robuste, on pourrait utiliser lodash.isEqual
-    // ou une comparaison champ par champ spécifique
-    
-    // On ignore certaines propriétés qui peuvent changer sans impacter la "saleté" du formulaire
-    // comme l'ordre des clés ou des références d'objets identiques
-    
-    const isAppDirty = JSON.stringify({
-      ...formDataAppointment,
-      // Normalisation des dates pour éviter les faux positifs dus aux millisecondes
-      startDate: formDataAppointment.DebutPlanningEvenement,
-      endDate: formDataAppointment.FinPlanningEvenement
-    }) !== JSON.stringify({
-      ...appointment,
-      startDate: appointment.DebutPlanningEvenement,
-      endDate: appointment.FinPlanningEvenement
-    });
+    const appointmentKeys = [
+      'IdPlanningEvenement',
+      'AnnotationPlanningEvenement',
+      'IdEmploye',
+      'IdPlanningRessource',
+      'Etiquette',
+      'isReadOnly',
+      'PlanningEvenementPriorite',
+      'DebutPlanningEvenement',
+      'FinPlanningEvenement',
+    ] as const satisfies readonly (keyof Appointment)[];
 
-    const isItemDirty = JSON.stringify(formDataItemType) !== JSON.stringify(item);
-    const isIncludeDirty = includeAllNonWorkingDays !== isAppointmentSplitByNotWorkingDay;
+    function pick<T extends object, K extends keyof T>(
+      obj: T,
+      keys: readonly K[]
+    ): Pick<T, K> {
+      return Object.fromEntries(
+        keys.map(key => [key, obj[key]])
+      ) as Pick<T, K>;
+    }
+
+    const currentAppointment = pick(
+      formDataAppointment,
+      appointmentKeys
+    );
+
+    // IMPORTANT :
+    // on compare avec la version réellement chargée à l'ouverture,
+    // pas avec la prop `appointment` qui peut dater d'avant un drag/resize.
+    const originalAppointment = pick(
+      initialAppointmentRef.current,
+      appointmentKeys
+    );
+
+    const isAppDirty =
+      JSON.stringify(currentAppointment) !==
+      JSON.stringify(originalAppointment);
+
+    const isItemDirty =
+      JSON.stringify(formDataItemType) !==
+      JSON.stringify(initialItemRef.current);
+
+    const isIncludeDirty =
+      includeAllNonWorkingDays !== isAppointmentSplitByNotWorkingDay;
+
+    console.log(
+      "isAppDirty:", isAppDirty,
+      "isItemDirty:", isItemDirty,
+      "isIncludeDirty:", isIncludeDirty
+    );
 
     onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
-  }, [formDataAppointment, formDataItemType, includeAllNonWorkingDays, appointment, item, isAppointmentSplitByNotWorkingDay, onDirtyChange]);
+  }, [
+    dirtyReady,
+    formDataAppointment,
+    formDataItemType,
+    includeAllNonWorkingDays,
+    isAppointmentSplitByNotWorkingDay,
+    onDirtyChange,
+  ]);
 
 
   /**
@@ -452,9 +536,16 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       setDateValidationError(false);
     }
 
-    setFormDataAppointment(prev => ({ 
-      ...prev, 
-      [dateType === 'start' ? 'DebutPlanningEvenement' : 'FinPlanningEvenement']: newDate 
+    const date = new Date(newDate);
+
+    if (dateType === 'start') {
+      setFormStartDate(date);
+    } else {
+      setFormEndDate(date);
+    }
+    setFormDataAppointment(prev => ({
+      ...prev,
+      [dateType === 'start' ? 'DebutPlanningEvenement' : 'FinPlanningEvenement']: date.getTime(),
     }));
   };
 
@@ -470,22 +561,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     // Gestion de la crÃ©ation d'une nouvelle ressource
     if (isCreatingResource) {
       setIsSaving(true);
-            
-      // Sauvegarde des permissions pour les rubriques sociales et événements manuels
-      // if (formDataItemType.Type === 'Paie' || formDataItemType.Type === 'Rubrique Perso') {
-      //   employeePermissions.forEach((perm) => {
-      //     void socialPermissionService.setSocialItemPermission({
-      //       ...perm,
-      //       itemId: newItemId, // Utiliser le nouvel ID
-      //     });
-      //   });
-      // }
-      
-    
+
       // Ajout du nouvel événement
       const result = await handleAddManualRessource({...formDataItemType} as AutreItem);
       if (!result.success) {
-        notificationService.error('Erreur', result.message || 'Erreur lors de l\'ajout de la ressource.');
         setSaveError(result.message || 'Erreur lors de l\'ajout de la ressource.');
       } else if (onClose) {
         onClose();
@@ -511,15 +590,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         if (onSetPermissions && updatedPermissions.length > 0) {
           try {
             const permissionResult = await onSetPermissions(updatedPermissions);
-            if (permissionResult?.error === 1) {
-              notificationService.error('Erreur', permissionResult.message || 'Erreur lors de la mise à jour des permissions.');
+            if (permissionResult?.success === false) {
               setSaveError(permissionResult.message || 'Erreur lors de la mise à jour des permissions.');
               setIsSaving(false);
               return;
             }
           } catch (error) {
             console.error("Erreur lors de la mise à jour des permissions :", error);
-            notificationService.error('Erreur', 'Erreur lors de la mise à jour des permissions.');
             setSaveError('Erreur lors de la mise à jour des permissions.');
             setIsSaving(false);
             return;
@@ -527,10 +604,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         }
       }
       
+      console.log("Données de ressource à sauvegarder :", formDataItemType);
       // Mise à jour de l'événement existant
       const result = await handleEditRessource(formDataItemType);
       if (!result.success) {
-        notificationService.error('Erreur', result.message || 'Erreur lors de la mise à jour de la ressource.');
         setSaveError(result.message || 'Erreur lors de la mise à jour de la ressource.');
       }else if (onClose) {
         onClose();
@@ -575,7 +652,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           const result = await ressourceService.verifyUniqueCode(upperCode);
           console.log("Résultat de la vérification d'unicité du code :", result);
 
-          if(result.error === 1) {
+          if(result.success === false) {
             console.error("Erreur lors de la vérification du code :", result.message);
             return;
           }
@@ -736,24 +813,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             />
           </FormPreview>
         
-          {/* PermissionsPanel - Gestion des permissions par employé */}
-          {isEditingResource && (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') && (
-            <PermissionsPanel
-              usersWithPermission={usersWithPermission}
-              permissions={permissions.current}
-              onPermissionChange={handlePermissionChange}
-              title="Gestion des permissions"
-              defaultOpen={false}
-              searchPlaceholder="Rechercher un employé..."
-            />
-          )}
-
           {!isResourceMode && (
             <>
               {/* DateTimeSelector - Dates et créneaux */}
               <DateTimeSelector
-                startDate={formDataAppointment.DebutPlanningEvenement}
-                endDate={formDataAppointment.FinPlanningEvenement}
+                startDate={formStartDate.getTime()}
+                endDate={formEndDate.getTime()}
                 onDateChange={handleDateChange}
                 intervals={timeIntervals}
                 isFullDay={isFullDay}
@@ -809,7 +874,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
 
         {/* Section extensible - Options avancées */}
         {isExpanded && (
-          <div className="w-full lg:w-[530px] p-4 flex flex-col gap-6 animate-in slide-in-from-right text-primary duration-300 lg:border-l border-light mt-4 lg:mt-0">
+          <div className="w-full lg:w-[550px] p-4 flex flex-col gap-6 animate-in slide-in-from-right text-primary duration-300 lg:border-l border-light mt-4 lg:mt-0">
             
             {/* AnnotationsField - Zone de texte pour annotations */}
             <AnnotationsField
@@ -819,6 +884,18 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               placeholder="Ajoutez des annotations..."
               height={96}
             />
+
+            {/* PermissionsPanel - Gestion des permissions par employé */}
+            {hasPermissionsPanel && (
+              <PermissionsPanel
+                usersWithPermission={usersWithPermission}
+                permissions={permissions.current}
+                onPermissionChange={handlePermissionChange}
+                title="Gestion des permissions"
+                defaultOpen={false}
+                searchPlaceholder="Rechercher un employé..."
+              />
+            )}
 
             {/* TagsManager - Sélecteur d'étiquette (version étendue pour chantiers) */}
             {formDataItemType?.Type === 'Projet' && (

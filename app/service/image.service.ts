@@ -12,8 +12,8 @@ async function getImagesPaginated(page: number, limit: number) {
   return await getRequest(`/api/images${queryParams}`, 'getImagesPaginated');
 }
 
-async function uploadImage(data: any) {
-  return await postRequest('/api/images', data, 'uploadImage');
+async function uploadImage(image: string) {
+  return await postRequest('/api/images/upload', { image }, 'uploadImage');
 }
 
 export default {

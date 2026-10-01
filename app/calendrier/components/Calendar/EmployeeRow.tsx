@@ -166,11 +166,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     return groups.map(({ key, apps }) => ({ key, apps }));
   }, [positionedAppointments]);
 
-  // if (Number(employee.IdPersonnel) === 5404) {
-  // console.log(overlappingGroups);
-  // console.log(positionedAppointments);
-  // }
-  //console.log(employee.IdPersonnel, (Number(employee.IdPersonnel) === 5404));
   
 
   const hasExpandedGroup = useMemo(() => overlappingGroups.some((g) => expandedGroups[g.key]), [overlappingGroups, expandedGroups]);
@@ -297,6 +292,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         return (
           <React.Fragment key={groupUniqueKey}>
             {appsToRender.map((app, index) => {
+
+              if (!isDisplayWeekend && (new Date(app.DebutPlanningEvenement).getDay() === 0 || new Date(app.DebutPlanningEvenement).getDay() === 6)) return null;
             
               const ressource = events[Number(app.IdPlanningRessource)];
               if (!ressource) return null;
@@ -369,7 +366,20 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               
               <button
                 type="button"
-                className="absolute z-30 text-[11px] font-semibold rounded-full px-2 py-0.5 shadow-sm border border-gray-200 bg-white/95 text-gray-700 flex items-center gap-1 transition-transform hover:-translate-y-0.5 hover:shadow-md hover:bg-white"
+                className="
+                  absolute z-30
+                  text-[11px] font-semibold
+                  rounded-full px-2 py-0.5
+                  shadow-sm
+                  border border-gray-200
+                  bg-white/95 text-gray-700
+                  flex items-center gap-1
+                  transition-transform
+                  hover:-translate-y-0.5
+                  hover:shadow-md
+                  hover:bg-white
+                  cursor-pointer
+                "
                 style={{
                   left: (group.apps[0].left + group.apps[0].width) - 24,
                   top: baseTopPx - 6,
@@ -388,7 +398,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               
               <button
                 type="button"
-                className="absolute z-30 text-[11px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
+                className="absolute z-30 text-[11px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition cursor-pointer"
                 style={{
                   left: (group.apps[0]?.left + group.apps[0]?.width) - 36,
                   top: group.apps[0]?.topPx - 12,

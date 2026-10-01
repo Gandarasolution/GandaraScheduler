@@ -1,17 +1,58 @@
 import { memo, useState } from "react";
 import Modal from "./Modal";
+import Loader from "../ui/Loader";
 import { format } from "date-fns";
+import { Appointment, Item, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from "../../types";
+import { AppointmentCard } from "../Calendar/MobileCalendar/AppointmentList";
 
 type SettingsModalProps = {  
   onClose: () => void;
   settings: any;
   isSettingsOpen: boolean;
+  setNotification: (notifications: any) => void;
+};
+
+const previewAppointment: Appointment = {
+  IdPlanningEvenement: -1,
+  AnnotationPlanningEvenement: "Prévoir le matériel nécessaire",
+  DebutPlanningEvenement: new Date(2026, 8, 7, 9, 0).getTime(),
+  FinPlanningEvenement: new Date(2026, 8, 7, 11, 0).getTime(),
+  IdEmploye: 1,
+  IdPlanningRessource: 1,
+  EtapeValidation: "Validé",
+  Etiquette: {
+    IdPlanningEtiquette: 1,
+    LibelleLongPlanningEtiquette: "Urgent",
+  },
+  isLocked: false,
+};
+
+const previewItem = {
+  IdPlanningRessource: 1,
+  LibellePlanningRessource: "Maintenance chaudière",
+  CouleurFondPlanningRessource: "#2563eb",
+  CouleurBordurePlanningRessource: "#1d4ed8",
+  CouleurTextePlanningRessource: "#ffffff",
+  CodePlanningRessource: "MAINT-001",
+  Type: "Projet",
+  ChefChantier : "Dupont Jean",
+  ChargeAffaire : "Durand Marie",
+} as Item;
+
+const previewEmployee: User = {
+  IdPersonnel: 1,
+  Nom: "Martin",
+  Prenom: "Camille",
+  PoleActivite: null,
+  Type: "SALARIE",
+  Equipe: null,
 };
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   isSettingsOpen,
-  settings
+  settings,
+  setNotification
 }) => {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
@@ -23,9 +64,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       isOpen={isSettingsOpen}
       onClose={onClose}
       title="Paramètres"
-      className="px-4 py-4"
+      className="w-[min(94vw,860px)] max-w-[860px] max-h-[86vh] overflow-hidden"
+      classNameContent="max-h-[calc(86vh-72px)] overflow-y-auto px-1"
     >
-      <div className="flex flex-col gap-6 poppins">
+      <div className="flex flex-col gap-4 p-2 poppins">
         {settings.map((cat: any, idx: number) => (
           <div key={cat.category} className="border border-light text-primary rounded-2xl overflow-hidden bg-secondary-bg shadow-lg hover:shadow-xl transition-all duration-300">
             <button
@@ -34,12 +76,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               onClick={() => setOpenCategory(openCategory === cat.category ? null : cat.category)}
             >
               <div className="flex items-center gap-3">
-                <div className="w-2 h-8 bg-primary rounded-full"></div>
+                <div className="w-1 h-6 bg-primary rounded-full"></div>
                 <span className="text-lg poppins font-medium">{cat.category}</span>
               </div>
-              <div className={`p-2 rounded-full transition-all duration-300 ${openCategory === cat.category ? 'bg-primary text-white rotate-180' : 'bg-transparent text-gray-500'}`}>
+              <div className={`p-1 text-secondary transition-transform duration-300 ${openCategory === cat.category ? 'rotate-180' : ''}`}>
                 <svg 
-                  className="w-5 h-5 transition-transform duration-300"
+                  className="w-5 h-5"
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -49,14 +91,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </button>
             
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${openCategory === cat.category ? 'max-h-150 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="px-6 py-6 bg-secondary-bg">
+            <div className={`transition-all duration-300 ease-in-out ${openCategory === cat.category ? 'opacity-100' : 'max-h-0 overflow-hidden opacity-0'}`}>
+              <div className="px-4 py-4 bg-secondary-bg">
                 {cat.items.map((setting: any, settingIdx: number) => (
                   <div key={setting.id} className={`flex flex-col lg:flex-row lg:items-center justify-between py-4 ${settingIdx !== cat.items.length - 1 ? 'border-b border-ultra-light' : ''}`}>
-                    <div className="mb-3 lg:mb-0 lg:mr-6 min-w-[200px]">
-                      <label htmlFor={setting.id} className="text-base font-medium poppins block">
-                        {setting.label}
-                      </label>
+                    {setting.type !== "mobile-appointment-fields" && (
+                      <div className="mb-3 lg:mb-0 lg:mr-6 min-w-[200px]">
+                        <label htmlFor={setting.id} className="text-base font-medium poppins block">
+                          {setting.label}
+                        </label>
                       {/* {setting.id === "includeWeekend" && (
                         <p className="text-xs text-secondary mt-1 poppins">
                           Permet de placer des rendez-vous les samedis et dimanches
@@ -77,9 +120,221 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           Choisissez comment afficher l'étiquette sur les rendez-vous
                         </p>
                       )}
-                    </div>
+                      </div>
+                    )}
                     
-                    {setting.type === "select" ? (
+                    {setting.type === "mobile-appointment-fields" ? (
+                      <div className="w-full">
+                        {setting.isLoading ? (
+                          <Loader size="md" className="min-h-40 rounded-xl border border-light" message="Chargement..." />
+                        ) : <div className="max-h-[55vh] overflow-auto rounded-xl">
+                        <div className="space-y-3 md:hidden">
+                          <div className="rounded-xl border border-light bg-secondary p-3 text-xs text-secondary">
+                            Activez les champs à afficher dans la carte mobile. Les informations secondaires apparaîtront dans le panneau « Voir plus ».
+                          </div>
+                          {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
+                            const primaryChecked = setting.value.primaryFields.includes(option.CodeChamp);
+                            const secondaryChecked = setting.value.secondaryFields.includes(option.CodeChamp);
+                            const updateFields = (column: "primaryFields" | "secondaryFields", checked: boolean) => {
+                              const current = setting.value[column];
+                              const fields = checked
+                                ? [...current, option.CodeChamp]
+                                : current.filter((field: string) => field !== option.CodeChamp);
+                              setting.onChange({ ...setting.value, [column]: fields });
+                            };
+                            return (
+                              <div key={option.CodeChamp} className="rounded-xl border border-ultra-light bg-secondary-bg p-3">
+                                <p className="mb-3 text-sm font-semibold text-primary">{option.Libelle}</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {([["primaryFields", "Principale", primaryChecked], ["secondaryFields", "Secondaire", secondaryChecked]] as const).map(([column, label, checked]) => (
+                                    <button
+                                      key={column}
+                                      type="button"
+                                      aria-pressed={checked}
+                                      onClick={() => updateFields(column, !checked)}
+                                      className={`flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${checked ? "border-primary bg-primary text-white" : "border-light bg-secondary text-secondary"}`}
+                                    >
+                                      <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${checked ? "border-white" : "border-secondary"}`} aria-hidden="true">
+                                        {checked ? "✓" : ""}
+                                      </span>
+                                      {label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="rounded-xl border-t-2 border-primary bg-secondary-bg p-3">
+                            <div className="mb-3 flex items-center gap-3">
+                              <p className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</p>
+                              <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
+                            </div>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <div className="min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
+                                <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
+                                <div className="min-h-24">
+                                  <AppointmentCard
+                                    app={previewAppointment}
+                                    items={[previewItem]}
+                                    employees={[previewEmployee]}
+                                    preview
+                                    displayConfig={{ primaryFields: setting.value.primaryFields, secondaryFields: [] } as MobileAppointmentDisplayConfig}
+                                  />
+                                </div>
+                              </div>
+                              <div className="min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
+                                <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
+                                <div className="min-h-24">
+                                  <AppointmentCard
+                                    app={previewAppointment}
+                                    items={[previewItem]}
+                                    employees={[previewEmployee]}
+                                    preview
+                                    showCard={false}
+                                    displayConfig={{ primaryFields: [], secondaryFields: setting.value.secondaryFields } as MobileAppointmentDisplayConfig}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <table className="hidden w-full min-w-[720px] table-fixed border-separate border-spacing-y-1 text-sm md:table">
+                          <colgroup>
+                            <col className="w-[30%]" />
+                            <col className="w-[35%]" />
+                            <col className="w-[35%]" />
+                          </colgroup>
+                          <thead className="border-t-4 border-primary">
+                            <tr className="border-b-2 border-light bg-secondary-bg text-left">
+                              <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold">Champs</th>
+                              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Principale</th>
+                              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Secondaire</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
+                              const primaryChecked = setting.value.primaryFields.includes(option.CodeChamp);
+                              const secondaryChecked = setting.value.secondaryFields.includes(option.CodeChamp);
+                              const updateFields = (column: "primaryFields" | "secondaryFields", checked: boolean) => {
+                                const current = setting.value[column];
+                                const fields = checked
+                                  ? [...current, option.CodeChamp]
+                                  : current.filter((field: string) => field !== option.CodeChamp);
+                                setting.onChange({ ...setting.value, [column]: fields });
+                              };
+                              return (
+                                <tr key={option.CodeChamp} className="border-b border-ultra-light">
+                                  <td className="px-3 py-3">{option.Libelle}</td>
+                                  <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
+                                    <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
+                                    <button
+                                      className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${primaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
+                                      type="button"
+                                      aria-pressed={primaryChecked}
+                                      aria-label={`${option.Libelle} dans l'affichage principal`}
+                                      onClick={() => updateFields("primaryFields", !primaryChecked)}
+                                    >
+                                      <svg
+                                        className="h-4 w-4"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        aria-hidden="true"
+                                      >
+                                        <path d="M5 12l4 4L19 6" />
+                                      </svg>
+                                    </button>
+                                    {primaryChecked ? (
+                                      <span className="whitespace-nowrap">Affiché</span>
+                                    ) : (
+                                      <span className="whitespace-nowrap">Masqué</span>
+                                    )}
+                                    </div>
+                                  </td>
+                                  <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
+                                    <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
+                                    <button
+                                      className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${secondaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
+                                      type="button"
+                                      aria-pressed={secondaryChecked}
+                                      aria-label={`${option.Libelle} dans l'affichage secondaire`}
+                                      onClick={() => updateFields("secondaryFields", !secondaryChecked)}
+                                    >
+                                      <svg
+                                        className="h-4 w-4"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        aria-hidden="true"
+                                      >
+                                        <path d="M5 12l4 4L19 6" />
+                                      </svg>
+                                    </button>
+                                    {secondaryChecked ? (
+                                      <span className="whitespace-nowrap">Affiché</span>
+                                    ) : (
+                                      <span className="whitespace-nowrap">Masqué</span>
+                                    )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr>
+                              <td colSpan={3} className="border-t-2 border-light px-3 pt-5">
+                                <div className="flex items-center gap-3">
+                                  <span className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</span>
+                                  <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td colSpan={3} className="px-3 pt-3 align-top">
+                                <div className="grid w-full grid-cols-2 gap-4">
+                                  <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
+                                    <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
+                                    <AppointmentCard
+                                      app={previewAppointment}
+                                      items={[previewItem]}
+                                      employees={[previewEmployee]}
+                                      preview
+                                      displayConfig={{
+                                        primaryFields: setting.value.primaryFields,
+                                        secondaryFields: [],
+                                      } as MobileAppointmentDisplayConfig}
+                                    />
+                                  </div>
+                                  <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
+                                    <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
+                                    <AppointmentCard
+                                      app={previewAppointment}
+                                      items={[previewItem]}
+                                      employees={[previewEmployee]}
+                                      preview
+                                      showCard={false}
+                                      displayConfig={{
+                                        primaryFields: [],
+                                        secondaryFields: setting.value.secondaryFields,
+                                      } as MobileAppointmentDisplayConfig}
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                        </div>
+                        }
+                      </div>
+                    ) : setting.type === "select" ? (
                       <select
                         id={setting.id}
                         className="border border-default rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-color transition-all duration-200 poppins text-sm bg-transparent shadow-sm hover:shadow-md"
@@ -92,6 +347,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           </option>
                         ))}
                       </select>
+                    ) : setting.type === "multi-select" ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+                        {setting.options?.map((option: any) => {
+                          const checked = setting.value.includes(option.value);
+                          return (
+                            <label key={option.value} className="flex items-center gap-3 cursor-pointer text-sm">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  const nextValue = checked
+                                    ? setting.value.filter((value: string) => value !== option.value)
+                                    : [...setting.value, option.value];
+                                  setting.onChange(nextValue);
+                                }}
+                                className="h-4 w-4 accent-primary"
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     ) : setting.type === "custom-non-working-dates" ? (
                       <div className="flex flex-col gap-4 w-full max-w-lg">
                         <div className="flex gap-3 items-center">
@@ -115,7 +392,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 try {
                                   if (setting.addNonWorkingDatesToPlanning) { // Appeler la fonction passée en props
                                      const response = await setting.addNonWorkingDatesToPlanning(parsedDate);
-                                     if (response && response.error === 0 && response.data) {
+                                     if (response && response.success && response.data) {
                                        setting.setNonWorkingDates((prev: Record<string, number>) => ({
                                          ...prev,
                                          [format(parsedDate, "yyyy-MM-dd")]: Number(response.data)
@@ -178,13 +455,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                       setDeletingDate(dateKey);
                                       try {
                                         if (setting.removeNonWorkingDatesFromPlanning) {
-                                          const response = await setting.removeNonWorkingDatesFromPlanning(id); // TODO: Replace with real idPlanning if not 3
-                                          if (response && response.error === 0) {
+                                          const response = await setting.removeNonWorkingDatesFromPlanning(id);
+                                          if (response && response.success) {
                                             setting.setNonWorkingDates((prev: any) => {
                                                 const newDates = { ...prev };
                                                 delete newDates[dateKey];
                                                 return newDates;
                                             });
+                                          }else{
+                                            setNotification(response?.message || "Erreur lors de la suppression de la date non travaillée");
                                           }
                                         } else {
                                           setting.setNonWorkingDates((prev: any) => {
@@ -258,9 +537,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2"
             onClick={onClose}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
             Fermer
           </button>
         </div>
@@ -270,5 +546,3 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 };
 
 export default memo(SettingsModal);
-
-

@@ -2,24 +2,24 @@ import { useState, useRef, useEffect, useMemo, useCallback, use } from 'react';
 import { Appointment, User, Item, CalendarConfig, ImageType, UserRole, Equipe, PoleActivite, ChantierItem } from '../../types';
 import { ActiveFilters, createSearchAndFilterUtils } from '../../utils/searchAndFilterUtils';
 import { employeeService, equipeService, evenementService, imageService } from '@/app/service';
-import { useCalendarWorker } from '@/app/calendrier/hooks/data/useCalendarWorker';
-import { getCachedImages, subscribeToImageCache, upsertCachedImage } from '../../utils/imageCacheStore';
-import { set } from 'date-fns';
 
 
 interface DataLayerProps {
   globalEmployees: User[];
   setGlobalEmployees: React.Dispatch<React.SetStateAction<User[]>>;
-   setNotification: (message: string) => void
+  setNotification: (message: string) => void
+  isMobile?: boolean;
+  onError: (message: string) => void;
 }
 
 export const useDataLayer = ({
   globalEmployees,
   setGlobalEmployees,
-  setNotification
+  setNotification,
+  isMobile = false,
+  onError
 }: DataLayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const worker = useCalendarWorker();
   const [teams, setTeams] = useState<Record<number, Equipe>>({});
   const [poleActivites, setPoleActivites] = useState<Record<number, PoleActivite>>({});
   
@@ -31,24 +31,12 @@ export const useDataLayer = ({
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
   //const [loadingWindowVersion, setLoadingWindowVersion] = useState(0);
-  const [availableImages, setAvailableImages] = useState<ImageType[]>(() => getCachedImages());
 
-
- 
-  useEffect(() => {
-    const unsubscribe = subscribeToImageCache((images) => {
-      setAvailableImages(images);
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
 
   const loadTeams = useCallback(async () => {    
     const response = await equipeService.getEquipes();
     
-    if (response?.error === 0 && Array.isArray(response.data)) {
+    if (response?.success && Array.isArray(response.data)) {
       const teamsRecord: Record<number, Equipe> = {};
       response.data.forEach((team: Equipe) => {
         teamsRecord[team.Id] = team;
@@ -60,7 +48,7 @@ export const useDataLayer = ({
 
   const loadPoleActivites = useCallback(async () => {
     const response = await equipeService.getPoleActivites();
-    if (response?.error === 0 && Array.isArray(response.data)) {
+    if (response?.success && Array.isArray(response.data)) {
       const poleActivitesRecord: Record<number, PoleActivite> = {};
       response.data.forEach((pole: PoleActivite) => {
         poleActivitesRecord[pole.Id] = pole;
@@ -118,50 +106,61 @@ export const useDataLayer = ({
 
 
 
-  const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number): Promise<boolean> => {
+  const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number, employeeId?: number): Promise<boolean> => {
     setIsLoading(true);
-    const diff = endDate - startDate;
-    if (lastLoadedRangeRef.current && startDate >= lastLoadedRangeRef.current.startDate && endDate <= lastLoadedRangeRef.current.endDate) {
-      setIsLoading(false);
-      return true; // Déjà chargé
-    }
+    if (!isMobile) {
+      const diff = endDate - startDate;
+      if (employeeId == null && lastLoadedRangeRef.current && startDate >= lastLoadedRangeRef.current.startDate && endDate <= lastLoadedRangeRef.current.endDate) {
+        setIsLoading(false);
+        return true; // Déjà chargé
+      }
 
-    if (lastLoadedRangeRef.current && startDate < lastLoadedRangeRef.current.endDate && endDate > lastLoadedRangeRef.current?.endDate) {
-      startDate = lastLoadedRangeRef.current.endDate;
-      endDate = startDate + diff; // On garde la même durée
-    }
+      if (employeeId == null && lastLoadedRangeRef.current && startDate < lastLoadedRangeRef.current.endDate && endDate > lastLoadedRangeRef.current?.endDate) {
+        startDate = lastLoadedRangeRef.current.endDate;
+        endDate = startDate + diff; // On garde la même durée
+      }
 
-    if (lastLoadedRangeRef.current && endDate > lastLoadedRangeRef.current.startDate && startDate < lastLoadedRangeRef.current?.startDate) {
-      endDate = lastLoadedRangeRef.current.startDate;
-      startDate = endDate - diff; // On garde la même durée
+      if (employeeId == null && lastLoadedRangeRef.current && endDate > lastLoadedRangeRef.current.startDate && startDate < lastLoadedRangeRef.current?.startDate) {
+        endDate = lastLoadedRangeRef.current.startDate;
+        startDate = endDate - diff; // On garde la même durée
+      }
     }
 
     try {
-      const response = await evenementService.getEvenements(startDate, endDate);
+      console.log('employeeId:', employeeId);
+      const response = await evenementService.getEvenements(startDate, endDate, employeeId);
       const payloadData = response?.data;
 
-      if(response?.error !== 0) {
+      if(response?.success === false) {
         console.error("Erreur lors du chargement des rendez-vous:", response?.message || "Erreur inconnue");
         setNotification("Erreur lors du chargement des rendez-vous. Veuillez réessayer plus tard.");
         return false;
       }
 
-      const newAppointments = response?.error === 0
-        ? (Array.isArray(payloadData?.appointments)
-            ? payloadData.appointments
-            : []
-          )
+      const newAppointments = response?.success === true && Array.isArray(payloadData?.appointments)
+        ? payloadData.appointments
         : [];
 
-      const newResources = response?.error === 0 && Array.isArray(payloadData?.ressources)
+      const newResources = response?.success === true && Array.isArray(payloadData?.ressources)
         ? payloadData.ressources
         : [];
         
+
+      if(isMobile){
+        appointmentsRef.current = newAppointments;
+        addMissingResourcesToCache(newResources);
+        setAppointmentsVersion(prev => prev + 1);
+        return true;
+      }
+
       // Ajouter au cache uniquement les ressources absentes.
       addMissingResourcesToCache(newResources);
       
       // Ajouter au cache uniquement les rendez-vous absents.
       addMissingAppointmentsToCache(newAppointments);
+      if (employeeId == null) {
+        lastLoadedRangeRef.current = { startDate, endDate };
+      }
       setAppointmentsVersion(prev => prev + 1);
     } catch (error) {
       console.error("Erreur lors du chargement des rendez-vous:", error);
@@ -176,19 +175,30 @@ export const useDataLayer = ({
   // --- Trigger de refresh ---
   const refreshData = useCallback(() => setAppointmentsVersion(prev => prev + 1), []);
 
-  const addImage = (newImage: ImageType) => {
-    upsertCachedImage(newImage);
-    return newImage;
-  };
+  const addImage = useCallback(async (base64String: string, filename?: string): Promise<{ success: boolean; id?: number; message?: string }> => {
+    try {
+        const result = await imageService.uploadImage(base64String)
+        if (result.success && result.id) {
+          return { success: true, id: result.id };
+        } else {
+          onError(result.message || 'Erreur lors de l\'upload de l\'image.');
+          console.error('Erreur lors de l\'upload de l\'image:', result.message);
+          return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
+        }
+    }catch (error) {
+      console.error('Erreur lors de l\'upload de l\'image:', error);
+      return { success: false, message: 'Erreur lors de l\'upload de l\'image.' };
+    }
+  }, []);
 
   const fetchPaginatedImages = useCallback(async (page: number, limit?: number): Promise<{ image: ImageType[]; totalLignes: number }> => {
     try {
       const response = await imageService.getImagesPaginated(page, limit || 8);
-      if (response?.error === 0 && Array.isArray(response.data.image)) {
+      if (response?.success && Array.isArray(response.data.image)) {
               console.log('Réponse de l\'API getImagesPaginated:', response);
 
         const images = response.data.image;
-        images.forEach((img: ImageType) => upsertCachedImage(img));
+        
         return { image: images, totalLignes: response.data.totalLignes || 0 };
       }
 
@@ -221,7 +231,7 @@ export const useDataLayer = ({
 
     try {
       const response = await employeeService.updateEquipeEmployee(employee.IdPersonnel, { Type: employee.Type, IdEquipe: groupId });
-      if (response?.error === 0) {
+      if (response?.success) {
         return { success: true };
       }
       console.error("Erreur lors de la mise à jour de l'équipe de l'employé:", response?.message || "Erreur inconnue");
@@ -287,7 +297,6 @@ export const useDataLayer = ({
     isLoading,
     itemsRef,
     appointmentsRef,
-    availableImages,
     initialTeams: teams,
     poleActivites,
     updateEmployeeGroup,

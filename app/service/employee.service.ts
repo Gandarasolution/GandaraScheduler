@@ -17,7 +17,7 @@ async function getEmployeesPag(limit: number = 20, pageNum: number = 1, query: s
     }
 
     return await getRequest(
-        `/api/employees?${params.toString()}`,
+        `/api/employees/search?${params.toString()}`,
         'getEmployees',
         { timeout: timeoutMs }
     );

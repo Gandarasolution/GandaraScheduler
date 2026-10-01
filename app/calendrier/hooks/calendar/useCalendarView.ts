@@ -1,21 +1,42 @@
-import { useState, useEffect, useRef } from 'react';
-import { CalendarConfig, User } from '../../types'; // Assumed type
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { CalendarConfig, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { axiosAgent } from '@/app/service/axios.service';
 import { calendarConfigService } from '@/app/service';
+import { useAuth } from '../utils/AuthContext';
 
-export const useCalendarView = (idPlanning: number, user: User) => {
 
-  // --- Préférences persistantes (localStorage) ---
+export const useCalendarView = (idPlanning: number, user: User, isMobile: boolean) => {
+
+  const { hasPermission } = useAuth(); 
+
+  const defaultMobileAppointmentDisplay: MobileAppointmentDisplayConfig = {
+    primaryFields: ['LibellePlanningRessource', 'Type'],
+    secondaryFields: [
+      'DebutPlanningEvenement',
+      'FinPlanningEvenement',
+      'AnnotationPlanningEvenement',
+      'IdEmploye',
+      'EtapeValidation',
+      'Etiquette',
+    ],
+  };
+  const mobileDisplayLoadedRef = useRef(false);
+  const [mobileAppointmentFieldOptions, setMobileAppointmentFieldOptions] = useState<Array<{
+                                                                                      CodeChamp: MobileAppointmentField;
+                                                                                      Libelle: string;
+                                                                                    }>>([]);
+  const [mobileAppointmentSettingsLoading, setMobileAppointmentSettingsLoading] = useState(false);
+
+  // --- Préférences persistantes ---
   const getStoredBool = (key: string, def: boolean) => {
     if (typeof window !== 'undefined' && window.localStorage) {
       return localStorage.getItem(key) === 'true';
     }
     return def;
   };
-  const [isMobile, setIsMobile] = useState(false);
 
   const [isDisplayWeekend, setIsDisplayWeekend] = useState(() => getStoredBool('isDisplayWeekend', false));
   const [includeWeekend, setIncludeWeekend] = useState(true); // Pas de persistence pour celui-ci, c'est une option temporaire
@@ -28,6 +49,7 @@ export const useCalendarView = (idPlanning: number, user: User) => {
     }
     return 'hover';
   });
+  const [mobileAppointmentDisplay, setMobileAppointmentDisplayState] = useState<MobileAppointmentDisplayConfig>(defaultMobileAppointmentDisplay);
   
   const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -35,7 +57,7 @@ export const useCalendarView = (idPlanning: number, user: User) => {
       const savedView = (saved as any) || 'calendar';
       
       // Bloquer l'accès aux vues interdites pour users et viewers
-      if ((user?.role === 'user' || user?.role === 'viewer') && 
+      if (hasPermission(21) && 
           (savedView === 'paie-table' || savedView === 'manual-event-table')) {
         return 'calendar';
       }
@@ -62,27 +84,85 @@ export const useCalendarView = (idPlanning: number, user: User) => {
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
   const calendarConfigHook = useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig });
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMobileAppointmentDisplay = async () => {
+      if (!isMobile || !user?.IdPersonnel) return;
+      const result = await calendarConfigService.getMobileAppointmentDisplayConfig();
+      if (cancelled) return;
+
+      const config = result?.data;
+      if (result?.success && config) {
+        const primaryFields = Array.isArray(config.primaryFields) ? config.primaryFields : [];
+        const secondaryFields = Array.isArray(config.secondaryFields) ? config.secondaryFields : [];
+        setMobileAppointmentDisplayState({
+          primaryFields: primaryFields as MobileAppointmentField[],
+          secondaryFields: secondaryFields as MobileAppointmentField[],
+        });
+      } else {
+        setMobileAppointmentDisplayState(defaultMobileAppointmentDisplay);
+      }
+      mobileDisplayLoadedRef.current = true;
+    };
+
+    void loadMobileAppointmentDisplay();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.IdPersonnel, currentCalendarConfig?.IdPlanningVue, isMobile]);
+
+  const loadMobileAppointmentSettings = useCallback(async () => {
+    if (!user?.IdPersonnel) return;
+    setMobileAppointmentSettingsLoading(true);
+    try {
+      const result = await calendarConfigService.getMobileAppointmentDisplayConfigSettings();
+      if (result?.success === false || !result.data) return;
+
+      const fields = Array.isArray(result.data) ? result.data : result.data.fields;
+      if (Array.isArray(fields)) {
+        setMobileAppointmentFieldOptions(fields.map((field: any) => ({
+          CodeChamp: field.CodeChamp ?? field.value,
+          Libelle: field.Libelle ?? field.label,
+        })).filter((field: { CodeChamp?: string; Libelle?: string }) => field.CodeChamp && field.Libelle));
+      }
+
+      if (!isMobile) {
+        const config = result.data.config ?? result.data.displayConfig ?? result.data;
+        if (Array.isArray(config.primaryFields) && Array.isArray(config.secondaryFields)) {
+          setMobileAppointmentDisplayState({
+            primaryFields: config.primaryFields as MobileAppointmentField[],
+            secondaryFields: config.secondaryFields as MobileAppointmentField[],
+          });
+          mobileDisplayLoadedRef.current = true;
+        }
+      }
+    } finally {
+      setMobileAppointmentSettingsLoading(false);
+    }
+  }, [user?.IdPersonnel, isMobile]);
+
 
    // État local pour le menu déroulant des vues
   const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
   const viewDropdownRef = useRef<HTMLDivElement>(null);
 
   const onCalendarConfigChange = (config: CalendarConfig) => {
-    setCurrentCalendarConfig(config);
-    calendarConfigService.setLastVueForUser(config.IdPlanningVue || -1).then(() => {
+    calendarConfigService.setLastVueForUser(config.IdPlanningVue || -1)
+    .then(() => {
       console.log(`Last view for user ${user.IdPersonnel} set to ${config.IdPlanningVue}`);
       axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = config.IdPlanningVue;
+      setCurrentCalendarConfig(config);
     }).catch((error) => {
       console.error('Error setting last view for user:', error);
     }); 
   }
 
 
-  
-  const loadNonWorkingDates = async (): Promise<{ error: number; message: string }> => {
+  const loadNonWorkingDates = async (): Promise<{ success: boolean; message: string }> => {
       const result = await calendarConfigService.getNonWorkingDatesByPlanningId();
       console.log('Résultat du chargement des jours non travaillés :', result);
-      if (result?.error === 0 && result.data) {
+      if (result?.success && result.data) {
         const recordData = Object.fromEntries(
           result.data.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [
               item.DatePlanningJourNontravaille, // La clé (string)
@@ -93,9 +173,9 @@ export const useCalendarView = (idPlanning: number, user: User) => {
         // 2. On met à jour le state
         setNonWorkingDates(recordData);
 
-        return { error: 0, message: 'Jours non travaillés chargés avec succès' };
+        return { success: true, message: 'Jours non travaillés chargés avec succès' };
       }else {
-        return { error: result?.error || 1, message: result?.message || 'Erreur lors du chargement des jours non travaillés'};
+        return { success: false, message: result?.message || 'Erreur lors du chargement des jours non travaillés'};
       }
     };
 
@@ -106,20 +186,6 @@ export const useCalendarView = (idPlanning: number, user: User) => {
     setTimeout(() => localStorage.setItem(key, JSON.stringify(value)), 0);
   };
   
-  // --- Detection Mobile ---
-  useEffect(() => {
-    const handleResize = () => {
-      const isTrue = window.innerWidth < 640;
-      setIsMobile(isTrue);
-
-      if (isTrue) {
-        setViewType('calendar');
-      }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     setSearchInput('');
@@ -147,6 +213,14 @@ export const useCalendarView = (idPlanning: number, user: User) => {
   }, [isViewDropdownOpen]);
     
 
+  useEffect(() => {
+    if (isMobile) {
+      setViewType('calendar');
+      setTimeout(() => localStorage.setItem('viewType', 'calendar'), 0);
+    }
+  }, [isMobile]);
+
+  
   return {
     // États
     isDisplayWeekend, setIsDisplayWeekend: (v: boolean) => toggleSet('isDisplayWeekend', setIsDisplayWeekend, v),
@@ -158,11 +232,23 @@ export const useCalendarView = (idPlanning: number, user: User) => {
       setTagPlacement(v);
       setTimeout(() => localStorage.setItem('tagPlacement', v), 0);
     },
+    mobileAppointmentDisplay,
+    mobileAppointmentFieldOptions,
+    mobileAppointmentSettingsLoading,
+    loadMobileAppointmentSettings,
+    setMobileAppointmentDisplay: (value: MobileAppointmentDisplayConfig) => {
+      setMobileAppointmentDisplayState(value);
+      if (!mobileDisplayLoadedRef.current || !user?.IdPersonnel) return;
+      void calendarConfigService.saveMobileAppointmentDisplayConfig({
+        idPersonnel: user.IdPersonnel,
+        primaryFields: value.primaryFields,
+        secondaryFields: value.secondaryFields,
+      });
+    },
     viewType, setViewType: (v: any) => {
         // Bloquer l'accès à paie-table et manual-event-table pour users et viewers
-        if ((user.role === 'user' || user.role === 'viewer') && 
+        if (hasPermission(21) && 
             (v === 'paie-table' || v === 'manual-event-table')) {
-          // Rediriger vers calendar
           setViewType('calendar');
           setTimeout(() => localStorage.setItem('viewType', 'calendar'), 0);
           return;

@@ -201,7 +201,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
 
       ressourceService.getFilterOptionsDynamic(viewType || '', keys)
         .then(response => {
-          if (response?.error === 0 && response.data) {
+          if (response?.success && response.data) {
             // Mettre en cache la réponse
             filterOptionsCache[cacheKey] = {
               timestamp: Date.now(),

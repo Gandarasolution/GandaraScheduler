@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+import Cookies from 'js-cookie';
 import { useCurrentUser } from './AuthContext'; 
+import { MERCURE_TOPIC } from '../..';
 
 export const useMercureSync = (
   planningId: number | null, 
@@ -9,15 +11,17 @@ export const useMercureSync = (
   const user = useCurrentUser();
 
   useEffect(() => {
-    // 1. Si aucun planning n'est sélectionné, on ne s'abonne à rien
     if (!planningId) return;
 
-    // 2. On construit l'URL exacte du Topic Mercure (doit correspondre à Symfony)
-    const topic = encodeURIComponent(`https://gandara.com/planning/${planningId}`);
-    
-    const mercureHubUrl = `http://localhost:3000/.well-known/mercure?topic=${topic}`;
+    const mercureBaseUrl = Cookies.get('client_mercure_url');
+    if (!mercureBaseUrl) {
+      console.warn('Aucune URL Mercure disponible pour le client.');
+      return;
+    }
 
-    // 3. On ouvre la connexion radio (EventSource)
+    
+    const mercureHubUrl = `${mercureBaseUrl.replace(/\/$/, '')}/.well-known/mercure?topic=${MERCURE_TOPIC}`;
+
     const eventSource = new EventSource(mercureHubUrl, {
       withCredentials: true
     });
@@ -41,8 +45,13 @@ export const useMercureSync = (
     };
 
     eventSource.onerror = (error) => {
-      setNotification("Erreur de connexion à Mercure. Veuillez vérifier votre connexion ou réessayer plus tard.");
-      console.error("Erreur de connexion à Mercure", error);
+      if (eventSource.readyState === 0) {
+        console.info("🔌 Connexion à Mercure interrompue. Tentative de reconnexion...");
+      }
+      else {
+        setNotification("Erreur de connexion à Mercure. Veuillez vérifier votre connexion ou réessayer plus tard.");
+        console.error("Erreur de connexion à Mercure", error);
+      }
     };
 
     eventSource.onopen = () => {

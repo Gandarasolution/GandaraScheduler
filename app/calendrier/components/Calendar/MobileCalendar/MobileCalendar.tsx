@@ -8,33 +8,44 @@
  * @version 2.0.0
  */
 
-import React, { useCallback, useEffect, useState , useMemo } from 'react';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Bell, MoreHorizontal, LogOut, X } from 'lucide-react';
 
 // Types
-import { Appointment, Equipe, Item, MockNotification, User } from '../../../types/index';
+import { Appointment, Equipe, Item, User, MobileAppointmentDisplayConfig } from '../../../types/index';
+import { HALF_DAY_INTERVALS } from '../../../utils/constants';
+import type { Notification } from '../../../types';
+import { AppointmentForm } from '@/app/calendrier/components';
 
 // Composants
 
-import {
-  AppointmentForm
-} from '@/app/calendrier/components';
-
-import { EmployeeSelector, MobileCalendarGrid, NotificationPanel, AppointmentList} from './index';
+import { NotificationsPanel, EmployeeSelector, MobileCalendarGrid, AppointmentList} from '@/app/calendrier/index';
 import SearchOverlay from '../../modals/SearchOverlay';
-import type { SearchableItem } from '../../modals/SearchOverlay';
-
-// Hooks & Utils
-import { useNotifications, useCalendarWorker } from '../../../hooks';
-import notificationApiService from '@/app/service/notificationApi.service';
-import { HALF_DAY_INTERVALS } from '../../../utils/constants';
-import { canCreateEvent, /*getUserPermissions*/ } from '../../../utils/permissions';
-import { getCachedImageById } from '../../../utils/imageCacheStore';
+import { endOfDay, endOfMonth, startOfDay, startOfMonth } from 'date-fns';
+import { useAuth } from '@/app/calendrier/hooks/utils/AuthContext';
 
 // Lazy loading des composants lourds
 
 // ===== TYPES =====
+
+export interface MobileCalendarState {
+  selectedDate: Date;
+  setSelectedDate: (date: Date) => void;
+  showAppointmentForm: boolean;
+  setShowAppointmentForm: (show: boolean) => void;
+  selectedItem: Item | null;
+  setSelectedItem: (item: Item | null) => void;
+  notifications: Notification[];
+  unreadCount: number;
+  markAsRead: (ids: string[]) => void | Promise<void>;
+  logout: () => void;
+  handleOpenAddAppointment: () => void;
+  searchOverlayItems: (query: string) => Promise<any>;
+  handleSelectItem: (item: Item) => void;
+  handleSaveAppointment: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => Promise<{ success: boolean }>;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeId?: number) => Promise<boolean>;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
+}
 
 interface MobileCalendarGridProps {
   employees: User[];
@@ -43,7 +54,8 @@ interface MobileCalendarGridProps {
   user: User;
   items: Item[];
   nonWorkingDates: Record<string, number>;
-  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
+  mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
+  mobileState: MobileCalendarState;
 }
 
 // ===== COMPOSANT PRINCIPAL =====
@@ -52,42 +64,68 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   employees, 
   teams,
   appointments, 
-  user, 
+  user,
   items, 
   nonWorkingDates,
-  onAddAppointment 
+  mobileAppointmentDisplay,
+  mobileState
 }) => {
-  // ----- ÉTATS LOCAUX -----
-  const currentDate = useMemo(() => new Date(), []); // Date actuelle, mémorisée pour éviter les recalculs
-  const [selectedDate, setSelectedDate] = useState(new Date());
+
+
+  const { hasPermission } = useAuth();
+
+  const {
+    setSelectedItem, setShowAppointmentForm,
+    selectedDate, setSelectedDate, notifications, selectedItem, showAppointmentForm,
+    unreadCount, markAsRead, logout, handleOpenAddAppointment, searchOverlayItems,
+    handleSelectItem, handleSaveAppointment,
+    onLoadAppointmentsInRange,
+    onAddAppointment, 
+  } = mobileState;
+
   const [showLogout, setShowLogout] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(user || null);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
 
 
-  // ----- HOOKS PERSONNALISÉS -----
-  const { notifications, unreadCount, addNotification, markAsRead, removeNotification, clearAll } = useNotifications();
-  const worker = useCalendarWorker();
-  
+  const monthDisplay = useRef(selectedDate.getMonth());
+  const yearDisplay = useRef(selectedDate.getFullYear());
+  const selectedEmployeeRef = useRef<User | null>(selectedEmployee);
 
-  // ----- GESTION DES DROITS D'ACCÈS -----
-  const isAdmin = user.role === 'admin';
-  const isManager = user.role === 'manager';
-  //const userPermissions = getUserPermissions(user.role);
+  const handleCloseMenus = () => {
+    setShowLogout(false);
+    setShowNotifications(false);
+  };
+
+   useEffect(() => {
+    if (selectedEmployee || employees.length === 0) return;
+
+    const defaultEmployee = hasPermission(22) || hasPermission(23)
+      ? employees[0]
+      : employees.find(emp => emp.IdPersonnel === user.IdPersonnel);
+
+    if (defaultEmployee) {
+      setSelectedEmployee(defaultEmployee);
+    }
+  }, [employees, selectedEmployee, user.IdPersonnel]);
+
+  useEffect(() => {
+    if (!onLoadAppointmentsInRange || !selectedEmployee) return;
+    if (selectedEmployeeRef.current === selectedEmployee && monthDisplay.current === selectedDate.getMonth() && yearDisplay.current === selectedDate.getFullYear()) {
+      return; 
+    }
+    selectedEmployeeRef.current = selectedEmployee;
+    monthDisplay.current = selectedDate.getMonth();
+    yearDisplay.current = selectedDate.getFullYear();
+    const monthStart = startOfMonth(selectedDate).getTime();
+    const monthEnd = endOfMonth(selectedDate).getTime();
+    void onLoadAppointmentsInRange(monthStart, monthEnd, selectedEmployee.IdPersonnel);
+  }, [onLoadAppointmentsInRange, selectedDate, selectedEmployee]);
   
-  // Filtrer les items selon les permissions de l'utilisateur
-  const allowedItems = useMemo(() => {
-    return items.filter(item => canCreateEvent(user.role, item.Type));
-  }, [items, user.role]);
-  
-  // Les admins et managers peuvent voir tous les employés
-  // Les users voient seulement leur propre calendrier  
-  const visibleEmployees = useMemo(() => {
-    const baseEmployees = (isAdmin || isManager)
+ const visibleEmployees = useMemo(() => {
+    const baseEmployees = hasPermission(22) || hasPermission(23)
       ? employees 
       : employees.filter(emp => emp.IdPersonnel === user.IdPersonnel);
     
@@ -99,249 +137,60 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       }
       
       // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
-      const hasMonthlyAppointments = monthlyAppointments.some(app => 
+      const hasMonthlyAppointments = appointments.some(app => 
         app.IdEmploye === emp.IdPersonnel
       );
       
       return hasMonthlyAppointments;
     });
-  }, [employees, isAdmin, isManager, user.IdPersonnel, monthlyAppointments]);
-  
-  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(() => {
-    if (!isAdmin && !isManager) {
-      return employees.find(emp => emp.IdPersonnel === user.IdPersonnel) || null;
-    }
-    return employees[0] || null;
-  });
+  }, [employees, user.IdPersonnel, appointments, hasPermission]);
 
-  // ----- FILTRAGE DES RENDEZ-VOUS (Web Worker) -----
-  
-  // Filtrage mensuel avec Web Worker
+
   useEffect(() => {
-    if (!worker.isReady) {
-      // Fallback synchrone si worker non prêt
-      const monthStart = startOfMonth(currentDate).getTime();
-      const monthEnd = endOfMonth(currentDate).getTime();
-      
-      let filteredApps = appointments;
-      
-      // Filtrer par rôle : users et viewers ne voient que leurs propres RDV
-      if (user.role === 'user' || user.role === 'viewer') {
-        filteredApps = appointments.filter(app => app.IdEmploye === user.IdPersonnel);
-      }
-      
-      const filtered = filteredApps.filter(app => {
-        const matchesEmployee = !selectedEmployee || app.IdEmploye === selectedEmployee.IdPersonnel;
-        const isInMonth = app.DebutPlanningEvenement <= monthEnd && app.FinPlanningEvenement >= monthStart;
-        return matchesEmployee && isInMonth;
-      });
-      
-      setMonthlyAppointments(filtered);
-      return;
-    }
-    
-    // Utiliser le Web Worker pour les calculs
-    const filterAppointments = async () => {      
-      const filtered = await worker.filterMonthlyAppointments(
-        appointments,
-        currentDate,
-        selectedEmployee,
-        user.role || 'viewer',
-        user.IdPersonnel
-      );
-      
-      if (filtered) {
-        setMonthlyAppointments(filtered);
-      }
-      
-    };
-    
-    filterAppointments();
-  }, [worker.isReady, appointments, currentDate, selectedEmployee, user.role, user.IdPersonnel]);
 
-  // Filtrage journalier avec Web Worker
-  useEffect(() => {
-    if (!worker.isReady) {
-      // Fallback synchrone
-      const selectedDayStart = new Date(selectedDate).setHours(0, 0, 0, 0);
-      const selectedDayEnd = new Date(selectedDate).setHours(23, 59, 59, 999);
-      
-      const filtered = monthlyAppointments.filter(app => 
-        app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement >= selectedDayStart
-      );
-      
-      setSelectedDayAppointments(filtered);
-      return;
-    }
+    // Fallback synchrone
+    const selectedDayStart = startOfDay(selectedDate).getTime();
+    const selectedDayEnd = endOfDay(selectedDate).getTime();
     
-    // Utiliser le Web Worker
-    const filterDaily = async () => {
-      const filtered = await worker.filterDailyAppointments(
-        monthlyAppointments,
-        selectedDate
-      );
-      
-      if (filtered) {
-        setSelectedDayAppointments(filtered);
-      }
-    };
     
-    filterDaily();
-  }, [worker.isReady, monthlyAppointments, selectedDate]);
+    
+    const filtered = appointments.filter(app => 
+      app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement > selectedDayStart
+    );
+    
+    setSelectedDayAppointments(filtered);
+    return;
+    
+    }, [appointments, selectedDate]);
 
-  // ----- EFFETS DE BORD -----
+  const createEmptyAppointment = useCallback((id?: number): Appointment => {
+      const employee = selectedEmployee;
+      if (!employee) throw new Error('No employee available for appointment creation');
+      const start = new Date(selectedDate).setHours(8, 0, 0, 0);
+      return {
+        IdPlanningEvenement: id ?? -1,
+        AnnotationPlanningEvenement: '',
+        DebutPlanningEvenement: start,
+        FinPlanningEvenement: new Date(selectedDate).setHours(17, 0, 0, 0),
+        IdEmploye: employee.IdPersonnel,
+        IdPlanningRessource: 0,
+        PlanningEvenementPriorite: 0,
+        isLocked: false,
+      };
+    }, [selectedEmployee, selectedDate]);
   
-  // Charger les notifications au montage
-  useEffect(() => {
-    let isMounted = true;
+  const createEmptyItem = useCallback(() => selectedItem || ({
+    IdPlanningRessource: 0,
+    Type: 'Projet',
+    LibellePlanningRessource: '',
+    CouleurFondPlanningRessource: '#3953aaff',
+    CouleurBordurePlanningRessource: '#2c4086',
+    CouleurTextePlanningRessource: '#ffffff',
+    CodePlanningRessource: '',
+  } as Item), [selectedItem]);
 
-    const loadNotifications = async () => {
-      const response = await notificationApiService.getNotificationsByUserId(user.IdPersonnel);
-      if (!isMounted) return;
-
-      const userNotifications = response?.error === 0 && Array.isArray(response.data) ? response.data : [];
-
-      userNotifications.forEach((notif: MockNotification) => {
-        addNotification(notif.type, notif.title, notif.message);
-      });
-    };
-
-    loadNotifications();
-    
-    setTimeout(() => {
-      addNotification('info', 'Bienvenue', `Bonjour ${user.Nom} ${user.Prenom} !`);
-    }, 500);
-
-    return () => {
-      isMounted = false;
-    };
-  }, [addNotification, user.IdPersonnel, user.Nom, user.Prenom]);
-
-  // ----- HANDLERS -----
   
-  const handleLogout = () => {
-    alert("Déconnexion...");
-  };
-
-  const handleOpenAddAppointment = () => {
-    // Seulement les admins et managers peuvent ajouter des événements
-    if (isAdmin || isManager) {
-      setShowSearchModal(true);
-    }
-  };
-
-  const handleSelectItem = (item: Item) => {
-    // Vérifier les permissions selon le type d'événement
-    const canCreate = canCreateEvent(user.role, item.Type);
-    
-    if (!canCreate) {
-      // Afficher une notification d'erreur
-      addNotification('error', 'Permission refusée', `Vous n'avez pas les droits pour créer des événements de type "${item.Type}"`);
-      return;
-    }
-    
-    setSelectedItem(item);
-    setShowSearchModal(false);
-    setShowAppointmentForm(true);
-  };
-
-  const handleSaveAppointment = (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean): Promise<{success: boolean}> => {
-    if (onAddAppointment) {
-      return onAddAppointment(appointment, item, includeAllNonWorkingDays, appointment.IdPlanningEvenement <= 0 ? 'create' : 'update').then(() => {
-        addNotification('success', 'Rendez-vous créé', 'Le rendez-vous a été ajouté avec succès');
-        setShowAppointmentForm(false);
-        return { success: true };
-      });
-    }
-    setShowAppointmentForm(false);
-    setSelectedItem(null);
-    return Promise.resolve({ success: false });
-  };
-
-  const handleCloseMenus = () => {
-    setShowLogout(false);
-    setShowNotifications(false);
-  };
-
-  const searchOverlayItems = useCallback(async (query: string): Promise<{ error: number; data: SearchableItem[]; message?: string }> => {
-    const trimmedQuery = query.trim().toLowerCase();
-    if (!trimmedQuery) {
-      return { error: 0, data: [] };
-    }
-
-    const data = allowedItems.filter(item => {
-      const matchLabel = item.LibellePlanningRessource?.toLowerCase().includes(trimmedQuery);
-      const matchCode = item.CodePlanningRessource?.toLowerCase().includes(trimmedQuery);
-
-      if (item.Type === 'Projet') {
-        const chantierItem = item as any;
-        return matchLabel || matchCode ||
-          chantierItem.identifiant?.toLowerCase().includes(trimmedQuery) ||
-          chantierItem.libelle?.toLowerCase().includes(trimmedQuery);
-      }
-
-      return matchLabel || matchCode;
-    }).map(item => ({
-      ...item,
-      id: (item as any).IdPlanningRessource || (item as any).id,
-      label: item.LibellePlanningRessource || (item as any).label
-    }));
-    return { error: 0, data };
-  }, [allowedItems]);
-
-  // ----- FACTORIES -----
   
-  const createEmptyAppointment = (id?: number): Appointment => {
-    const startOfSelectedDay = new Date(selectedDate).setHours(8, 0, 0, 0);
-    const endOfSelectedDay = new Date(selectedDate).setHours(17, 0, 0, 0);
-    
-    const appointmentEmployee = selectedEmployee || employees[0];
-    if (!appointmentEmployee) {
-      throw new Error('No employee available for appointment creation');
-    }
-    
-    return {
-      IdPlanningEvenement: id ?? -1,
-      AnnotationPlanningEvenement: '',
-      DebutPlanningEvenement: startOfSelectedDay,
-      FinPlanningEvenement: endOfSelectedDay,
-      IdEmploye: appointmentEmployee.IdPersonnel,
-      IdPlanningRessource: 0,
-      PlanningEvenementPriorite: 0,
-      isLocked: false,
-    };
-  };
-
-  const createEmptyItem = (): Item => {
-    if (selectedItem) {
-      return selectedItem;
-    }
-    
-    return {
-      IdPlanningRessource: 0,
-      Type: 'Projet',
-      LibellePlanningRessource: '',
-      CouleurFondPlanningRessource: '#3953aaff',
-      CouleurBordurePlanningRessource: '#2c4086',
-      CouleurTextePlanningRessource: '#ffffff',
-      CodePlanningRessource: '',
-      Identifiant: '',
-      PoleActivite: '',
-      Etat: 'En cours',
-      ChargeAffaire: '',
-      ChefChantier: '',
-      DateOS: '',
-      DateFin: '',
-      TM: 0,
-      HR: 0,
-      SH: 0,
-      DPF: 0,
-      RPF: 0,
-      AP: 0,
-      SP: 0,
-    } as Item;
-  };
-
   // ----- RENDU =====
   
   return (
@@ -385,7 +234,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 style={{ borderWidth: '1px', borderColor: 'var(--border-light)' }}
               >
                 <img
-                  src={user.Image?.image || '/default-avatar.png'}
+                  src={user.Image || `https://placehold.co/32x32/cccccc/333333?text=${user.Nom.charAt(0)}`}
                   alt="Avatar"
                   className="w-8 h-8 object-cover"
                 />
@@ -410,7 +259,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 }}
               >
                 <button 
-                  onClick={handleLogout}
+                  onClick={() => logout()}
                   className="w-full text-left px-4 py-2 text-sm flex items-center transition-colors"
                   style={{ color: 'var(--color-error)' }}
                   onMouseEnter={(e) => {
@@ -477,12 +326,11 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             
             {/* Panneau de notifications */}
             {showNotifications && (
-              <NotificationPanel 
+              <NotificationsPanel 
                 notifications={notifications}
                 onClose={() => setShowNotifications(false)}
                 onMarkAsRead={markAsRead}
-                onRemove={removeNotification}
-                onClearAll={clearAll}
+                variant="mobile"
               />
             )}
           </div>
@@ -495,7 +343,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         >
           
           {/* Employee Selector - visible seulement pour les admins et managers */}
-          {(isAdmin || isManager) && (
+          {(hasPermission(22) || hasPermission(23)) && employees.length > 0 && (
             <EmployeeSelector 
               employees={visibleEmployees}
               teams={teams}
@@ -506,9 +354,9 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
 
           {/* Calendar */}
           <MobileCalendarGrid 
-            currentDate={currentDate}
+            currentDate={selectedDate}
             selectedDate={selectedDate}
-            appointments={monthlyAppointments}
+            appointments={appointments}
             onDateSelect={setSelectedDate}
           />
 
@@ -517,11 +365,13 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             appointments={selectedDayAppointments}
             selectedDate={selectedDate}
             items={items}
+            employees={employees}
+            displayConfig={mobileAppointmentDisplay}
           />
         </main>
 
         {/* Floating Action Button - Visible pour les admins et managers */}
-        {(isAdmin || isManager) && (
+        {(hasPermission(22) || hasPermission(23)) && false && (
           <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none flex justify-center items-end h-32"
             style={{
               backgroundImage: `linear-gradient(to top, var(--bg-secondary), transparent)`
@@ -555,7 +405,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal de recherche d'événement */}
-        {(isAdmin || isManager) && showSearchModal && (
+        {(hasPermission(22) || hasPermission(23)) && showSearchModal && (
           <SearchOverlay
             isOpen={showSearchModal}
             onClose={() => {
@@ -624,7 +474,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal d'ajout de rendez-vous */}
-        {(isAdmin || isManager) && showAppointmentForm && (
+        {(hasPermission(22) || hasPermission(23)) && showAppointmentForm && (
           <div 
             className="fixed inset-0 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200"
             style={{ backgroundColor: 'var(--bg-overlay)' }}
