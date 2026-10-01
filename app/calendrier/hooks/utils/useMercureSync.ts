@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import Cookies from 'js-cookie';
 import { useCurrentUser } from './AuthContext'; 
+import { MERCURE_TOPIC } from '../..';
 
 export const useMercureSync = (
   planningId: number | null, 
@@ -18,8 +19,8 @@ export const useMercureSync = (
       return;
     }
 
-    const topic = encodeURIComponent(`https://gandara.com/planning/update`);
-    const mercureHubUrl = `${mercureBaseUrl.replace(/\/$/, '')}/.well-known/mercure?topic=${topic}`;
+    
+    const mercureHubUrl = `${mercureBaseUrl.replace(/\/$/, '')}/.well-known/mercure?topic=${MERCURE_TOPIC}`;
 
     const eventSource = new EventSource(mercureHubUrl, {
       withCredentials: true

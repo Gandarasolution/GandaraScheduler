@@ -1,3 +1,4 @@
+import { MERCURE_TOPIC } from "../calendrier";
 import { getRequest, postRequest } from "./axios.service";
 
 type LoginPayload = {
@@ -53,35 +54,83 @@ async function isApiReachable(url: string | null | undefined): Promise<boolean> 
   }
 }
 
+async function isMercureReachable(url: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 3000);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    return response.status < 500;
+  } catch (error) {
+    console.warn(`Mercure inaccessible : ${url}`, error);
+    return false;
+  }
+}
+
 async function resolveApiEnvironment(
   payload: ClientEnvironmentPayload | null | undefined,
 ): Promise<ResolvedClientEnvironment | null> {
   if (!payload) return null;
 
-  const candidates: Array<{ apiUrl?: string | null; mercureUrl?: string | null }> = [
-    //{ apiUrl: 'http://localhost:8000/', mercureUrl: 'http://localhost:3000/' },
-    { apiUrl: payload.urlAPI, mercureUrl: payload.urlMercure },
-    { apiUrl: payload.urlAPIInterne, mercureUrl: payload.urlMercureInterne },
-    
+  const apiCandidates = [
+    process.env.NODE_ENV === 'development' ? 'http://localhost:8000/' : null,
+    payload.urlAPI,
+    payload.urlAPIInterne,
   ];
 
-  for (const candidate of candidates) {
-    const apiUrl = candidate.apiUrl?.trim();
+  const mercureCandidates = [
+    process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
+    payload.urlMercure,
+    payload.urlMercureInterne,
+  ];
 
-    if (!apiUrl || !(await isApiReachable(apiUrl))) {
-      continue;
+  // 1. Recherche de la première API accessible
+  let resolvedApiUrl: string | null = null;
+
+  for (const candidate of apiCandidates) {
+    const apiUrl = candidate?.trim();
+
+    if (!apiUrl) continue;
+
+    if (await isApiReachable(apiUrl)) {
+      resolvedApiUrl = apiUrl;
+      break;
     }
-
-    const mercureUrl = candidate.mercureUrl?.trim();
-
-    return {
-      apiUrl,
-      mercureUrl: mercureUrl || '',
-      logoClient: payload.logoClient?.trim() || undefined,
-    };
   }
 
-  return null;
+  // Sans API fonctionnelle, l'environnement n'est pas valide
+  if (!resolvedApiUrl) {
+    return null;
+  }
+
+  // 2. Recherche du premier Mercure accessible
+  let resolvedMercureUrl = '';
+
+  for (const candidate of mercureCandidates) {
+    const mercureUrl = candidate?.trim();
+
+    if (!mercureUrl) continue;
+
+    if (await isMercureReachable(`${mercureUrl.replace(/\/$/, '')}/.well-known/mercure?topic=${MERCURE_TOPIC}`)) {
+      resolvedMercureUrl = mercureUrl;
+      break;
+    }
+  }
+
+  return {
+    apiUrl: resolvedApiUrl,
+    mercureUrl: resolvedMercureUrl,
+    logoClient: payload.logoClient?.trim() || undefined,
+  };
 }
 
 async function SchedulerIsURICannonical(hostname: string): Promise<boolean> {

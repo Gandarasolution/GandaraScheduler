@@ -115,3 +115,7 @@ export const SEARCH_API_TIMEOUT_MS = 5000;
 export const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
 export const SEARCH_CACHE_MAX_ENTRIES = 50;
 export const FAVORITE_ITEMS_LIMIT = 10;
+
+
+
+export const MERCURE_TOPIC = encodeURIComponent(`https://gandara.com/planning/update`);
