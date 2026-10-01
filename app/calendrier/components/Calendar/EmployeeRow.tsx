@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Appointment, Item, User } from '../../types';
 import { CELL_WIDTH, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
@@ -61,6 +61,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   onLockedError
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
+
   useEffect(() => {
     setExpandedGroups({});
   }, [collapseTrigger]);
@@ -168,8 +169,39 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
   
 
-  const hasExpandedGroup = useMemo(() => overlappingGroups.some((g) => expandedGroups[g.key]), [overlappingGroups, expandedGroups]);
-  
+  const initializedGroupsRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    setExpandedGroups((previous) => {
+      const next = { ...previous };
+
+      overlappingGroups.forEach((group) => {
+        if (group.apps.length < 2) return;
+
+        if (!initializedGroupsRef.current.has(group.key) && next[group.key] === undefined) {
+          next[group.key] = true;
+          initializedGroupsRef.current.add(group.key);
+        }
+      });
+
+      return next;
+    });
+  }, [overlappingGroups]);
+
+  useEffect(() => {
+    if (!isOverlapExpanded) return;
+
+    setExpandedGroups((previous) => {
+      const next = { ...previous };
+      overlappingGroups.forEach((group) => {
+        if (group.apps.length < 2) return;
+
+        next[group.key] = true;
+      });
+      return next;
+    });
+  }, [isOverlapExpanded, overlappingGroups]);
+
   // Nettoyer les groupes étendus qui n'existent plus
   useEffect(() => {
     const validKeys = new Set(overlappingGroups.map(g => g.key));
@@ -184,14 +216,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     });
   }, [overlappingGroups]);
   
-
-  useEffect(() => {
-    if (hasExpandedGroup && !isOverlapExpanded) {
-      onSetExpansion(employee.IdPersonnel, true);
-    } else if (!hasExpandedGroup && isOverlapExpanded) {
-      onSetExpansion(employee.IdPersonnel, false);
-    }
-  }, [hasExpandedGroup, isOverlapExpanded, onSetExpansion, employee.IdPersonnel]);
 
   const selectionOverlay = useMemo(() => {
     if (!selectedCell || selectedCell.employeeId !== employee.IdPersonnel) return null;

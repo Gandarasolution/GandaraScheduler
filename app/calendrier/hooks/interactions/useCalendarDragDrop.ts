@@ -84,7 +84,7 @@ export const useCalendarDragDrop = ({
 
       const dragOffset = item.dragOffset ?? 0;
       const adjustedX = Math.min(
-        Math.max(relativeX - (relativeX % intervalWidth) - (dragOffset - (dragOffset % intervalWidth)), 0),
+        Math.max(Math.floor((relativeX - dragOffset) / intervalWidth) * intervalWidth, 0),
         totalIntervals * intervalWidth - 1
       );
 

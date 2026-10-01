@@ -31,6 +31,7 @@ interface EmployeeSidebarProps {
   expandedOverlapRows: Record<number, boolean>;
   onToggleItem: (itemId: string | number) => void;
   onCollapseRow: (employeeId: number) => void;
+  onExpandRow: (employeeId: number) => void;
   calendarConfig: CalendarConfig | null;
   availableConfigs: CalendarConfig[];
   onCalendarConfigChange: (config: CalendarConfig) => void;
@@ -82,6 +83,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   expandedOverlapRows,
   onToggleItem,
   onCollapseRow,
+  onExpandRow,
   calendarConfig,
   availableConfigs,
   onCalendarConfigChange,
@@ -149,16 +151,21 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             </span>
           </div>
 
-          {expandedOverlapRows[employee.IdPersonnel] && (
+          {expandedOverlapRows[employee.IdPersonnel] !== undefined && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onCollapseRow(employee.IdPersonnel);
+                if (expandedOverlapRows[employee.IdPersonnel]) {
+                  onCollapseRow(employee.IdPersonnel);
+                } else {
+                  onExpandRow(employee.IdPersonnel);
+                }
               }}
-              className="text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
+              className="cursor-pointer text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
               type="button"
+              title={expandedOverlapRows[employee.IdPersonnel] ? 'Masquer les rendez-vous qui se chevauchent' : 'Étendre pour afficher tous les rendez-vous qui se chevauchent'}
             >
-              Masquer
+              {expandedOverlapRows[employee.IdPersonnel] ? 'Masquer' : 'Étendre'}
             </button>
           )}
         </div>

@@ -153,6 +153,46 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
+
+  const overlappingEmployeeIds = useMemo(() => {
+    const ids = new Set<number>();
+    const appointmentsByEmployee = new Map<number, Appointment[]>();
+
+    appointments.forEach((appointment) => {
+      const employeeId = Number(appointment.IdEmploye);
+      const employeeAppointments = appointmentsByEmployee.get(employeeId) ?? [];
+      employeeAppointments.push(appointment);
+      appointmentsByEmployee.set(employeeId, employeeAppointments);
+    });
+
+    appointmentsByEmployee.forEach((employeeAppointments, employeeId) => {
+      const sortedAppointments = [...employeeAppointments].sort(
+        (a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement
+      );
+      let latestEnd = 0;
+
+      sortedAppointments.forEach((appointment) => {
+        if (appointment.DebutPlanningEvenement < latestEnd) {
+          ids.add(employeeId);
+        }
+        latestEnd = Math.max(latestEnd, appointment.FinPlanningEvenement);
+      });
+    });
+
+    return ids;
+  }, [appointments]);
+
+  useEffect(() => {
+    setExpandedOverlapRows((previous) => {
+      const next: Record<number, boolean> = {};
+
+      overlappingEmployeeIds.forEach((employeeId) => {
+        next[employeeId] = previous[employeeId] ?? true;
+      });
+
+      return next;
+    });
+  }, [overlappingEmployeeIds]);
   
   // Use a stable empty array reference
   const EMPTY_APPOINTMENTS = useMemo(() => [], []);
@@ -176,7 +216,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     scrollContainerRef: mainScrollRef as React.RefObject<HTMLElement>,
     enabled: isGrabbing,
     edgeThreshold: 160,
-    scrollSpeed: 100,
+    scrollSpeed: 10,
   });
 
   //Virtualization calcules 
@@ -397,6 +437,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     setCollapseTriggers(prev => ({ ...prev, [employeeId]: (prev[employeeId] || 0) + 1 }));
   }, []);
 
+  const handleExpandRow = useCallback((employeeId: number) => {
+    setExpandedOverlapRows(prev => ({ ...prev, [employeeId]: true }));
+  }, []);
+
   
   useEffect(() => {
     setTodayTs(Date.now());
@@ -440,6 +484,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         expandedOverlapRows={expandedOverlapRows}
         onToggleItem={toggleItem}
         onCollapseRow={handleCollapseRow}
+        onExpandRow={handleExpandRow}
         calendarConfig={calendarConfig}
         availableConfigs={availableConfigs}
         onCalendarConfigChange={onCalendarConfigChange}
