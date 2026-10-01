@@ -95,7 +95,7 @@ export const colors: string[] = [
 ];
 
 
-export const WINDOW_SIZE = 1460;
+export const WINDOW_SIZE = 180;
 
 // ===== CALCULS MÉTIER =====
 
