@@ -128,6 +128,7 @@ interface BaseItem {
 
 export interface ChantierItem extends BaseItem {
   Type: "Projet";
+  Identifiant: number;
   PoleActivite: string;
   Etat: string;
   ChargeAffaire: string;

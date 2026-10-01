@@ -1118,6 +1118,7 @@ export default function HomePage({
                 <DraggableSource
                   key={`${event.label}-${event.id}-${index}`}
                   id={event.id as number}
+                  IdentifiantProjet={(event as any).Identifiant}
                   item={event as Item}
                   imageUrl={event.Image}
                   title={event.label}
