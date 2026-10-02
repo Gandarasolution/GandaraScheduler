@@ -95,7 +95,8 @@ export const colors: string[] = [
 ];
 
 
-export const WINDOW_SIZE = 180;
+export const WINDOW_DAYS_BEFORE = 60;
+export const WINDOW_DAYS_AFTER = 120;
 
 // ===== CALCULS MÉTIER =====
 

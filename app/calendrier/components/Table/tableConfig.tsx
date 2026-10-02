@@ -25,7 +25,7 @@ export interface TableConfigDeps {
 
 // 1. Renderer pour les images de Chantiers / Paie (Affiche un mini AppointmentItem)
 const imageRendererChantierAndPaie = (value: any, item: any, deps: TableConfigDeps) => {
-    //console.log('Rendering image for item:', item);
+    ////console.log('Rendering image for item:', item);
     const Item = { ...item, IdPlanningRessource: Number(item.IdPlanningRessource)}
     return (
         <AppointmentItem
@@ -279,7 +279,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 <div 
                     className="flex items-center justify-center cursor-pointer"
                     onDoubleClick={() => {
-                        console.log('Double click on item:', item);
+                        //console.log('Double click on item:', item);
                         const Item = { ...item, IdPlanningRessource: Number(item.IdPlanningRessource)}
                         if (deps.ressources) deps.ressources[Number(Item.IdPlanningRessource)] = Item as unknown as AutreItem; // Assurer que la ressource est à jour
 

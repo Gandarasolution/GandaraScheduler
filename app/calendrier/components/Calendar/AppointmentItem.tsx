@@ -81,14 +81,14 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const isLocked = React.useMemo(() => appointment.isLocked === true, [appointment.isLocked]);
   const isReadOnly = React.useMemo(() => appointment.isReadOnly === true, [appointment.isReadOnly]);
   
-  // console.log('AppointmentItem render', appointment);
-  // console.log('top', absoluteTop);
+  // //console.log('AppointmentItem render', appointment);
+  // //console.log('top', absoluteTop);
   
 
   // useEffect(() => {
   //   if (appointment.IdPlanningEvenement === 145) {
-  //     console.log('AppointmentItem render', appointment);
-  //     console.log('locked', isLocked);
+  //     //console.log('AppointmentItem render', appointment);
+  //     //console.log('locked', isLocked);
   //   }
   // }, [appointment]);
 
@@ -391,9 +391,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const appointmentTextColor = event?.CouleurTextePlanningRessource || '#FFFFFF';
 
   // if (event.label === '1052 Logements Vesoul') {
-  //   console.log('appointmentColor', appointmentColor);
-  //   console.log('appointmentBorderColor', appointmentBorderColor);
-  //   console.log('appointmentTextColor', appointmentTextColor);
+  //   //console.log('appointmentColor', appointmentColor);
+  //   //console.log('appointmentBorderColor', appointmentBorderColor);
+  //   //console.log('appointmentTextColor', appointmentTextColor);
   // }
 
   const containerStyle = useMemo(() => ({

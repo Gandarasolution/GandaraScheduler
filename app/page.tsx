@@ -94,7 +94,7 @@ export default function Home() {
           
           const response = await calendarConfigService.getLastVueForUser();
           
-          console.log('Réponse de l\'API getLastVueForUser :', response);
+          //console.log('Réponse de l\'API getLastVueForUser :', response);
           if (response.success && response.data) {
             const vuesData = response.data;
             // Ta route peut renvoyer un objet unique (préférence) ou un tableau de vues

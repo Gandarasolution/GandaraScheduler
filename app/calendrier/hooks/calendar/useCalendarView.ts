@@ -72,12 +72,30 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({ empty: [] });
-  const [selectedDate, setSelectedDate] = useState<number>(new Date().setHours(0,0,0,0));
+  const selectedDateStorageKey = `calendar-selected-date-${user?.IdPersonnel ?? 'anonymous'}`;
+  const [selectedDate, setSelectedDate] = useState<number>(() => {
+    const today = new Date().setHours(0, 0, 0, 0);
+
+    if (typeof window === 'undefined') return today;
+
+    const storedDate = Number(window.localStorage.getItem(selectedDateStorageKey));
+    if (!Number.isFinite(storedDate) || storedDate <= 0) return today;
+
+    const parsedDate = new Date(storedDate);
+    return Number.isNaN(parsedDate.getTime())
+      ? today
+      : parsedDate.setHours(0, 0, 0, 0);
+  });
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
   const [nonWorkingDates, setNonWorkingDates] = useState<Record<string, number>>({});
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
   const [searchInput, setSearchInput] = useState<string>('');
   const [dimensionSearchInput, setDimensionsSearchInput] = useState<string>('');
+
+  useEffect(() => {
+    if (!Number.isFinite(selectedDate) || selectedDate <= 0) return;
+    window.localStorage.setItem(selectedDateStorageKey, String(selectedDate));
+  }, [selectedDate, selectedDateStorageKey]);
 
 
   // --- Hook de configuration existant ---
@@ -150,7 +168,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   const onCalendarConfigChange = (config: CalendarConfig) => {
     calendarConfigService.setLastVueForUser(config.IdPlanningVue || -1)
     .then(() => {
-      console.log(`Last view for user ${user.IdPersonnel} set to ${config.IdPlanningVue}`);
+      //console.log(`Last view for user ${user.IdPersonnel} set to ${config.IdPlanningVue}`);
       axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = config.IdPlanningVue;
       setCurrentCalendarConfig(config);
     }).catch((error) => {
@@ -161,7 +179,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
 
   const loadNonWorkingDates = async (): Promise<{ success: boolean; message: string }> => {
       const result = await calendarConfigService.getNonWorkingDatesByPlanningId();
-      console.log('Résultat du chargement des jours non travaillés :', result);
+      //console.log('Résultat du chargement des jours non travaillés :', result);
       if (result?.success && result.data) {
         const recordData = Object.fromEntries(
           result.data.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [

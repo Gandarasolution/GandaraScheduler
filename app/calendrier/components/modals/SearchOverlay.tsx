@@ -162,7 +162,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
     await onSearch(query).then(result => {
       if (requestId !== lastRequestId.current) return;
       if (result.success ) {
-        console.log(result.data);
+        //console.log(result.data);
         
         setItems(result.data);
       } else {

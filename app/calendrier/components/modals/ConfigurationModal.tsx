@@ -633,7 +633,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                              // Gérer les différentes structures d'objet utilisateur venant de l'API
                               const uid = Number(u.Id);
                               const isMe = Number(uid) === Number(user.IdPersonnel); // Désactiver la case de l'utilisateur courant pour éviter de se retirer l'accès
-                              console.log(selectedUsers.includes(uid))
+                              //console.log(selectedUsers.includes(uid))
                               return (
                                 <label key={uid} className={`flex items-center gap-3 p-3 hover:bg-white cursor-pointer transition-colors ${isMe ? 'opacity-70 bg-gray-100 hover:bg-gray-100' : ''}`}>
                                   <input

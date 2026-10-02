@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Appointment, ImageType, User } from '@/app/calendrier';
+import { Appointment, Equipe, ImageType, User } from '@/app/calendrier';
 
 // Interface complète des props
 interface InteractionProps {
@@ -8,11 +8,14 @@ interface InteractionProps {
   selectedCell: { employeeId: number; date: number } | null;
   setSelectedCell: (cell: { employeeId: number; date: number } | null) => void;
   setSelectedEmployee: (employee: User | null) => void;
+  initialTeams: Record<number, Equipe>;
+  updateEmployeeGroup: (employee: User, groupId: number | null) => Promise<{ success: boolean }>;
   
   // Actions provenant de useAppointmentLogic
   copyAppointment: (app: Appointment) => void;
   pasteAppointment: (cell?: { employeeId: number; date: number } | null) => void;
   undoAction: () => void;
+  canUndo: boolean;
   deleteAction: (appointment?: Appointment) => void;
   
   // Actions UI & Modales
@@ -38,8 +41,10 @@ interface InteractionProps {
 export const useInteraction = ({
     selectedAppointment, setSelectedAppointment,
     selectedCell, setSelectedCell, setSelectedEmployee,
+    initialTeams, updateEmployeeGroup,
     copyAppointment, pasteAppointment,
     undoAction, deleteAction, openSearch,
+    canUndo,
     handleOpenEditModal,
     handleRepeat, handleExtend, handleDivide,
     isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS,
@@ -61,6 +66,40 @@ export const useInteraction = ({
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
+  const handleEmployeeContextMenu = useCallback((e: React.MouseEvent, employee: User) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const teamOptions = Object.values(initialTeams).map((team) => (
+      <option key={team.Id} value={team.Id}>{team.Nom}</option>
+    ));
+
+    const items: any[] = [{
+      label: 'Équipe',
+      logo: <span className="w-4 h-4 rounded-full bg-primary inline-block" />,
+      control: (
+        <select
+          value={employee.Equipe ?? ''}
+          className="max-w-40 rounded-lg border border-default bg-secondary-bg px-2 py-1 text-sm"
+          onClick={(event) => event.stopPropagation()}
+          onChange={async (event) => {
+            const value = event.target.value;
+            const result = await updateEmployeeGroup(employee, value ? Number(value) : null);
+            setContextMenu(null);
+            if (!result.success) {
+              window.alert("Erreur lors de la mise à jour de l'équipe. Veuillez réessayer.");
+            }
+          }}
+        >
+          <option value="">Aucune équipe</option>
+          {teamOptions}
+        </select>
+      ),
+    }];
+
+    setContextMenu({ x: e.clientX, y: e.clientY, item: items });
+  }, [initialTeams, updateEmployeeGroup]);
+
   const handleContextMenu = useCallback((e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => {
     e.preventDefault();
     e.stopPropagation();
@@ -71,6 +110,13 @@ export const useInteraction = ({
     if (origin === 'appointment' && appointment && cell) {
         setSelectedAppointment(appointment);
         setSelectedCell(cell);
+
+        items.push({
+          label: 'Annuler',
+          logo: <span className="text-lg leading-none">↶</span>,
+          action: undoAction,
+          disabled: !canUndo,
+        });
         
         // Item: Modifier
         items.push({
@@ -140,6 +186,13 @@ export const useInteraction = ({
     // 2. Clic Droit sur une CELLULE VIDE
     else if (origin === 'cell' && cell) {
         setSelectedCell(cell);
+
+        items.push({
+          label: 'Annuler',
+          logo: <span className="text-lg leading-none">↶</span>,
+          action: undoAction,
+          disabled: !canUndo,
+        });
         
         // Item: Coller
         items.push({ 
@@ -159,7 +212,7 @@ export const useInteraction = ({
     if (items.length > 0) {
         setContextMenu({ x: e.clientX, y: e.clientY, item: items });
     }
-  }, [deleteAction, copyAppointment, pasteAppointment, openSearch, handleOpenEditModal, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, setSelectedAppointment, setSelectedCell, handleRepeat, handleExtend, handleDivide]);
+  }, [deleteAction, copyAppointment, pasteAppointment, openSearch, handleOpenEditModal, isFullDay, DAY_INTERVALS, HALF_DAY_INTERVALS, setSelectedAppointment, setSelectedCell, handleRepeat, handleExtend, handleDivide, undoAction, canUndo]);
 
   // --- GESTION CLAVIER GLOBAL ---
 
@@ -304,6 +357,7 @@ export const useInteraction = ({
       contextMenu,
       closeContextMenu,
       handleContextMenu,
+      handleEmployeeContextMenu,
       handleDataTableContextMenu,
       
       // Clavier

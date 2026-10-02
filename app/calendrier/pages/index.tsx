@@ -187,9 +187,12 @@ export default function HomePage({
     selectedCell: appointmentLogic.selectedCell,
     setSelectedCell: appointmentLogic.setSelectedCell,
     setSelectedEmployee: appointmentLogic.setSelectedEmployee,
+    initialTeams: dataLayer.initialTeams,
+    updateEmployeeGroup: dataLayer.updateEmployeeGroup,
     copyAppointment: appointmentLogic.copyAppointmentToClipboard,
     pasteAppointment: appointmentLogic.pasteAppointment,
     undoAction: appointmentLogic.undoLastAction,
+    canUndo: appointmentLogic.canUndo,
     deleteAction: appointmentLogic.handleDeleteAppointmentConfirm,
     openSearch: () => viewState.setIsSearchOverlayOpen(true),
     handleOpenEditModal: appointmentLogic.handleOpenEditModal,
@@ -456,7 +459,7 @@ export default function HomePage({
       // Chargement des employés selon les permissions
       if (!hasInitializedEmployeesRef.current) {
         const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
-        console.log('Employees Response:', employeesResponse);
+        //console.log('Employees Response:', employeesResponse);
         if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
           setGlobalEmployees(employeesResponse.data);
         } else {
@@ -471,7 +474,7 @@ export default function HomePage({
 
 
       let rep = await dataLayer.loadTeams();
-      console.log('Teams Response:', rep);
+      //console.log('Teams Response:', rep);
       if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
         setLoadCalendar(false);
@@ -479,7 +482,7 @@ export default function HomePage({
       }
 
       if (isMobile) {
-        const monthStart = new Date();
+        const monthStart = new Date(viewState.selectedDate);
         monthStart.setDate(1);
         monthStart.setHours(0, 0, 0, 0);
         const monthEnd = new Date(monthStart);
@@ -496,15 +499,15 @@ export default function HomePage({
       }
 
       rep = await dataLayer.loadPoleActivites();
-      console.log('Pole Activités Response:', rep);
+      //console.log('Pole Activités Response:', rep);
       if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
         setLoadCalendar(false);
         return;
       }
 
-      const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
-      const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
+      const startDate = viewState.selectedDate - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
+      const endDate = viewState.selectedDate + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
       await dataLayer.loadAppointmentsInRange(startDate, endDate);
 
       setLoadCalendar(false);
@@ -541,7 +544,7 @@ export default function HomePage({
     }
     else if (viewState.viewType === 'paie-table' || viewState.viewType === 'manual-event-table') {
       if (hasPermission(23) || hasPermission(22)) {
-        console.log("Initialisation de la table Paie et de la table des événements manuels...");
+        //console.log("Initialisation de la table Paie et de la table des événements manuels...");
         initializePaieTableAndManualEventTable();
       }else {
         setErrorPlanning("Vous n'avez pas les droits nécessaires pour accéder à cette vue.");
@@ -578,7 +581,7 @@ export default function HomePage({
         ? await employeeService.getEmployees()
         : await employeeService.getEmployee(user.IdPersonnel);
 
-        console.log('Employees Response:', employeesResponse);
+        //console.log('Employees Response:', employeesResponse);
       if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
         setEmployeesVersion(prev => prev + 1);
@@ -603,8 +606,8 @@ export default function HomePage({
         return;
       }
 
-      const startDate = Date.now() - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
-      const endDate = Date.now() + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
+      const startDate = viewState.selectedDate - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
+      const endDate = viewState.selectedDate + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
       await dataLayer.loadAppointmentsInRange(startDate, endDate);
       setLoadCalendar(false);
     };
@@ -654,8 +657,8 @@ export default function HomePage({
 
   // 1. La fonction qui va réagir aux messages Mercure
   const handleMercureEvent = useCallback((action: string, data: any) => {
-    console.log("📥 Action reçue en direct :", action, data);
-    console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    //console.log("📥 Action reçue en direct :", action, data);
+    //console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     switch (action) {
       case 'APPOINTMENT_CREATED':
         if(globalEmployees.some(emp => emp.IdPersonnel === data.appointments.IdPersonnel)) {
@@ -741,7 +744,7 @@ export default function HomePage({
         console.warn("Action Mercure inconnue :", action);      
     }
     setLastMercureEvent({ action, data });
-    console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
+    //console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     dataLayer.refreshData(); 
   }, []);
 
@@ -828,6 +831,7 @@ export default function HomePage({
 
                               /* État Temporel */
                               dayInTimeline={timeline.days}
+                              selectedDate={viewState.selectedDate}
                               mainScrollRef={timeline.mainScrollRef}
 
                               /* Configuration */
@@ -850,6 +854,7 @@ export default function HomePage({
                               onAppointmentDoubleClick={appointmentLogic.handleOpenEditModal}
                               onExternalDragDrop={appointmentLogic.createAppointmentFromDrag}
                               handleContextMenu={interaction.handleContextMenu}
+                              handleEmployeeContextMenu={interaction.handleEmployeeContextMenu}
                               onLoadAppointmentsInRange={dataLayer.loadAppointmentsInRange}
                               mouseUpAfterScroll={timeline.getFirstDayAppearing}
                               onAddAppointment={appointmentLogic.handleSaveAppointment}
@@ -960,7 +965,7 @@ export default function HomePage({
                     dataLayer.updateEmployeeImage(id, newImage);
                 } else {
                   const id = appointmentLogic.selectedItem?.IdPlanningRessource || null;
-                  console.log("Selected Item ID:", id, "New Image:", newImage);
+                  //console.log("Selected Item ID:", id, "New Image:", newImage);
                     if (id === null) return;                    
                     appointmentLogic.setSelectedItem(prev => {
                         if (prev) {

@@ -23,9 +23,9 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
   const [isCreatingConfig, setIsCreatingConfig] = useState(false);
 
   const loadConfigs = async (hasPermission: boolean) => {
-    console.log('Loading configs with permission:', hasPermission);
+    //console.log('Loading configs with permission:', hasPermission);
       const response = hasPermission ? await calendarConfigService.getCalendarConfigsByUserId(user.IdPersonnel, idPlanning) : null;
-      console.log('Load Configs Response:', response);
+      //console.log('Load Configs Response:', response);
       
       if (response?.success && Array.isArray(response.data.Configs)) {
 
@@ -60,9 +60,9 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
   const saveConfig = useCallback(async (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => {
     if (isCreatingConfig) {
       const response = await calendarConfigService.createCalendarConfig(config);
-      console.log('Create Config Response:', response);
+      //console.log('Create Config Response:', response);
       if (response?.success) {
-        console.log('Config created successfully:', response.data);
+        //console.log('Config created successfully:', response.data);
         setConfigs(prev => [...prev, response.data]);
         
         return response;
@@ -101,7 +101,7 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
   }, []);
 
 useEffect(() => {
-  console.log(configs);
+  //console.log(configs);
 }, [configs]);
 
   return {

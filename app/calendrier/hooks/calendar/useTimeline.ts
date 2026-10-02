@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { addDays, isSameDay, isWeekend, startOfDay } from 'date-fns';
-import { CELL_WIDTH, WINDOW_SIZE } from '@/app/calendrier/utils/constants';
+import { CELL_WIDTH, WINDOW_DAYS_AFTER, WINDOW_DAYS_BEFORE } from '@/app/calendrier/utils/constants';
 
 interface UseTimelineProps {
   isDisplayWeekend: boolean;
@@ -48,8 +48,8 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate, i
     const includeCenter = shouldInclude(centerDate);
 
     // Nombre de jours à placer de part et d'autre de la date cible
-    const leftTarget = Math.floor(WINDOW_SIZE / 2);
-    const rightTarget = WINDOW_SIZE - leftTarget - (includeCenter ? 1 : 0);
+    const leftTarget = WINDOW_DAYS_BEFORE;
+    const rightTarget = WINDOW_DAYS_AFTER;
 
     // Fonction utilitaire pour ajouter/soustraire un jour en gérant l'heure d'été/hiver
     const addDays = (timestamp: number, days: number) => {

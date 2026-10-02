@@ -50,6 +50,7 @@ interface DesktopCalendarGridProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (item: Item, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, priority: number) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
+  handleEmployeeContextMenu: (e: React.MouseEvent, employee: User) => void;
   updateHighlightedEmployeeRow: (employeeId: number | null) => void;
   selectedCell: { employeeId: number; date: number } | null;
   selectedAppointmentId: number | undefined;
@@ -83,6 +84,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
+  handleEmployeeContextMenu,
   selectedCell,
   selectedAppointmentId,
   onSelectCell,
@@ -410,10 +412,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         map[rowId] = [];
       }
     });
-    //console.log(employeeRowIds);
+    ////console.log(employeeRowIds);
     
     appointmentsInHorizontalWindow.forEach(app => {
-      //console.log(app.IdEmploye, employeeRowIds.has(Number(app.IdEmploye)));
+      ////console.log(app.IdEmploye, employeeRowIds.has(Number(app.IdEmploye)));
       
       if (employeeRowIds.has(Number(app.IdEmploye))) {
         map[Number(app.IdEmploye)].push(app);
@@ -485,6 +487,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         onToggleItem={toggleItem}
         onCollapseRow={handleCollapseRow}
         onExpandRow={handleExpandRow}
+        onEmployeeContextMenu={handleEmployeeContextMenu}
         calendarConfig={calendarConfig}
         availableConfigs={availableConfigs}
         onCalendarConfigChange={onCalendarConfigChange}

@@ -67,8 +67,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   }, [collapseTrigger]);
   
   // if (employee.Nom === 'CABESTANT') {
-  //   console.log(employee);
-  //   console.log(appointments);
+  //   //console.log(employee);
+  //   //console.log(appointments);
   // }
   
   
@@ -117,7 +117,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
             && filterred[index - 1]?.Etiquette?.IdPlanningEtiquette ? 18 : 0
         ); // Décalage pour les tags en placement fixe
 
-      //console.log(topPx);
+      ////console.log(topPx);
       
       return { ...app, left, width, topPx } as Appointment & {
         left: number;
@@ -338,7 +338,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               // Sinon, on utilise sa propre position (+ décalage si l'événement précédent a un tag et taille similaire)
               const forcedTopPx = !isExpanded ? baseTopPx : shouldOffsetForTag ? app.topPx + 18 : app.topPx;
 
-              //console.log('top', shouldOffsetForTag, forcedTopPx );
+              ////console.log('top', shouldOffsetForTag, forcedTopPx );
 
 
               // Calcul des intervalles de chevauchement avec les RDV de priorité 0

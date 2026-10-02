@@ -31,7 +31,7 @@ interface RightClickComponentProps {
   /** Position initiale du menu (coordonnées du clic) */
   coordinates: { x: number; y: number } | null;
   /** Items du menu avec labels, icônes et actions */
-  rightClickItem: { label: string; logo: JSX.Element, action?: () => void; actif?: boolean }[];
+  rightClickItem: { label: string; logo: JSX.Element, action?: () => void; actif?: boolean; disabled?: boolean; control?: JSX.Element }[];
   /** Rendez-vous en presse-papiers (pour action Coller) */
   clipBoardAppointment: Appointment | null;
   /** Callback de fermeture du menu */
@@ -192,7 +192,7 @@ const RightClickComponent = ({
             key={item.label} 
             className={`
               flex items-center p-2 rounded-xl 
-              ${(item.label === 'Coller' && !clipBoardAppointment) || item.actif
+              ${(item.label === 'Coller' && !clipBoardAppointment) || (item.disabled && !item.control)
                 ? 'opacity-50 cursor-not-allowed pointer-events-none' 
                 : ' cursor-pointer'
               }
@@ -200,12 +200,14 @@ const RightClickComponent = ({
               `
             }
             onClick={() => {
+              if (item.control) return;
               item.action && item.action();
               onClose();
             }}
           >
             {item.logo}
-            <span className="ml-2 poppins">{item.label}</span>
+            <span className={`ml-2 poppins flex-1 ${item.control ? 'mr-2' : ''}`}>{item.label}</span>
+            {item.control}
           </div>
         ))}
       </div>

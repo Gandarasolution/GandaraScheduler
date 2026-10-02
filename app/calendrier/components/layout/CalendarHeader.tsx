@@ -1,6 +1,6 @@
 import { UserMenu } from '../index'; 
 import { Appointment, Item, User } from '../../types';
-import { memo, use, useEffect } from 'react';
+import { memo, use, useEffect, useState } from 'react';
 import DatePicker from '../ui/DatePicker';
 import { useAuth } from '../../hooks/utils/AuthContext';
 
@@ -70,6 +70,7 @@ export const CalendarHeader = memo(({
   } = viewState;
 
   const { hasPermission } = useAuth();
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const clientLogo = localStorage.getItem('client_logo_url');
   const logoSrc = clientLogo || `/assets/logo-${theme}.svg`;
 
@@ -113,6 +114,37 @@ export const CalendarHeader = memo(({
 
             {/* Boutons d'Actions (Droite) */}
             <div className="flex items-center gap-3 ml-auto">
+              <div className="relative order-last">
+                <button
+                  type="button"
+                  onClick={() => setIsHelpOpen((open) => !open)}
+                  className="w-9 h-9 rounded-full border border-default flex items-center justify-center hover:bg-primary-100 transition cursor-pointer"
+                  title="Aide et raccourcis clavier"
+                  aria-label="Aide et raccourcis clavier"
+                >
+                  <span className="text-lg font-semibold">?</span>
+                </button>
+                {isHelpOpen && (
+                  <div className="absolute right-0 top-11 z-50 w-64 rounded-xl border border-default bg-secondary-bg p-3 shadow-lg">
+                    <h3 className="mb-2 text-sm font-semibold">Raccourcis clavier</h3>
+                    <div className="space-y-1 text-sm">
+                      {[
+                        ['Ctrl + C', 'Copier'],
+                        ['Ctrl + V', 'Coller'],
+                        ['Ctrl + Z', 'Annuler'],
+                        ['Ctrl + F', 'Rechercher'],
+                        ['Ctrl + Q', 'Changer d’espace'],
+                        ['Delete', 'Supprimer'],
+                      ].map(([shortcut, label]) => (
+                        <div key={shortcut} className="flex items-center justify-between gap-3">
+                          <span>{label}</span>
+                          <kbd className="rounded border border-default px-1.5 py-0.5 text-xs">{shortcut}</kbd>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               
               {/* Bouton Expansion */}
               <button

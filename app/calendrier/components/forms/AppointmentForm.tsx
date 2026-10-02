@@ -193,10 +193,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const initialItemRef = useRef<Item>(item);
   const [dirtyReady, setDirtyReady] = useState(false);
   
-  console.log(formDataAppointment);
+  //console.log(formDataAppointment);
 
-  // console.log("Ressource actuelle :", formDataItemType);
-  // console.log("isResourceMode :", isResourceMode);
+  // //console.log("Ressource actuelle :", formDataItemType);
+  // //console.log("isResourceMode :", isResourceMode);
 
   useEffect(() => {
     const loadAllFormData = async () => {
@@ -229,7 +229,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           promises.push(
             onFetchEventAndRessource(formDataAppointment.IdPlanningEvenement)
               .then(response => {
-                console.log("Réponse de onFetchEventAndRessource :", response);
+                //console.log("Réponse de onFetchEventAndRessource :", response);
                 if (response?.success === false && response?.isLocked) {
                   onClose(); // On ferme la modale immédiatement
                   if (onLockedError) {
@@ -495,12 +495,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     const isIncludeDirty =
       includeAllNonWorkingDays !== isAppointmentSplitByNotWorkingDay;
 
-    console.log(
-      "isAppDirty:", isAppDirty,
-      "isItemDirty:", isItemDirty,
-      "isIncludeDirty:", isIncludeDirty
-    );
-
     onDirtyChange(isAppDirty || isItemDirty || isIncludeDirty);
   }, [
     dirtyReady,
@@ -574,7 +568,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     }
     // Gestion de la modification d'une ressource existante
     if (isEditingResource) {
-      console.log('Modification de ressource');
+      //console.log('Modification de ressource');
       setIsSaving(true);
 
       // Sauvegarde des permissions pour les rubriques sociales et événements manuels
@@ -604,7 +598,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
         }
       }
       
-      console.log("Données de ressource à sauvegarder :", formDataItemType);
+      //console.log("Données de ressource à sauvegarder :", formDataItemType);
       // Mise à jour de l'événement existant
       const result = await handleEditRessource(formDataItemType);
       if (!result.success) {
@@ -644,13 +638,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
       // Forcer les majuscules pour le champ code
       const upperCode = (value as string).toUpperCase();
       
-      console.log("Vérification de l'unicité du code :", upperCode);
+      //console.log("Vérification de l'unicité du code :", upperCode);
       setFormDataItemType(prev => ({ ...prev, CodePlanningRessource: upperCode }));
 
       if (upperCode.length > 0) {
         try {
           const result = await ressourceService.verifyUniqueCode(upperCode);
-          console.log("Résultat de la vérification d'unicité du code :", result);
+          //console.log("Résultat de la vérification d'unicité du code :", result);
 
           if(result.success === false) {
             console.error("Erreur lors de la vérification du code :", result.message);

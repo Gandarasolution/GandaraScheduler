@@ -127,7 +127,7 @@ export const useDataLayer = ({
     }
 
     try {
-      console.log('employeeId:', employeeId);
+      //console.log('employeeId:', employeeId);
       const response = await evenementService.getEvenements(startDate, endDate, employeeId);
       const payloadData = response?.data;
 
@@ -195,7 +195,7 @@ export const useDataLayer = ({
     try {
       const response = await imageService.getImagesPaginated(page, limit || 8);
       if (response?.success && Array.isArray(response.data.image)) {
-              console.log('Réponse de l\'API getImagesPaginated:', response);
+              //console.log('Réponse de l\'API getImagesPaginated:', response);
 
         const images = response.data.image;
         

@@ -39,7 +39,7 @@ export const useNotifications = (setNotification?: (message: string) => void): N
     const response = await notificationApiService.getNotificationsByUserId();
     if (response?.success === false || !Array.isArray(response.data)) return;
 
-    console.log('Loaded notifications:', response.data);
+    //console.log('Loaded notifications:', response.data);
     const loadedNotifications: Notification[] = response.data.map((notification: Notification) => ({
       ...notification,
       Id: String(notification.Id),
@@ -57,7 +57,7 @@ export const useNotifications = (setNotification?: (message: string) => void): N
         ids.includes(String(notification.Id)) && !notification.IsRead
     );
 
-    console.log('markAsRead called with ids:', ids, 'wasUnread:', wasUnread, notifications);
+    //console.log('markAsRead called with ids:', ids, 'wasUnread:', wasUnread, notifications);
     if (!wasUnread) return;
 
     setNotifications(prev => prev.map(notification => {
@@ -69,7 +69,7 @@ export const useNotifications = (setNotification?: (message: string) => void): N
 
     try {
         const response = await notificationApiService.markNotificationAsRead(ids);
-        console.log('markNotificationAsRead response:', response);
+        //console.log('markNotificationAsRead response:', response);
         
         if (response?.success === false) {
             throw new Error('L\'API a renvoyé une erreur : ' + response?.message);

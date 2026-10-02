@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login: login,
         password: password,
     });
-    console.log('login response:', response);
+    //console.log('login response:', response);
         
     if (response?.success && response.user) {
       const id = response.planning[0]?.IdPlanning || -1;
@@ -135,7 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const clientApiUrl = Cookies.get('client_api_url');
       
       if (!clientApiUrl) {
-        console.log("⚠️ Aucune URL d'API connue. Redirection vers le LoginPage (Résolution requise).");
+        //console.log("⚠️ Aucune URL d'API connue. Redirection vers le LoginPage (Résolution requise).");
         setIsLoading(false);
         setUser(undefined);
         return; // On arrête tout, l'utilisateur n'est pas authentifié.

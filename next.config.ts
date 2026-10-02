@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   // Optimisations de build
   compiler: {
-    // Supprimer les console.log en production
+    // Supprimer les //console.log en production
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn'],
     } : false,

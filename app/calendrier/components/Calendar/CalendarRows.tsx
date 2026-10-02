@@ -72,11 +72,11 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   tagPlacement,
   onLockedError
 }) => {
-  //console.log('Rendering CalendarRows with visibleRows:', visibleRows);
+  ////console.log('Rendering CalendarRows with visibleRows:', visibleRows);
   return (
     <>
       {visibleRows.map((row) => { 
-        //console.log(row);
+        ////console.log(row);
                
         const commonProps = {
           style: {
@@ -89,8 +89,8 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
           },
         };
         // if (row.data.Nom === 'CABESTANT') {
-        //   console.log(row.data);
-        //   console.log(appointmentsByEmployee);
+        //   //console.log(row.data);
+        //   //console.log(appointmentsByEmployee);
         // }
 
         return row.type === 'group' ? (

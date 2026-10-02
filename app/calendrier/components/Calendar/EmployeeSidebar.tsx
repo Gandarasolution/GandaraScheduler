@@ -32,6 +32,7 @@ interface EmployeeSidebarProps {
   onToggleItem: (itemId: string | number) => void;
   onCollapseRow: (employeeId: number) => void;
   onExpandRow: (employeeId: number) => void;
+  onEmployeeContextMenu: (event: React.MouseEvent, employee: User) => void;
   calendarConfig: CalendarConfig | null;
   availableConfigs: CalendarConfig[];
   onCalendarConfigChange: (config: CalendarConfig) => void;
@@ -84,6 +85,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   onToggleItem,
   onCollapseRow,
   onExpandRow,
+  onEmployeeContextMenu,
   calendarConfig,
   availableConfigs,
   onCalendarConfigChange,
@@ -127,6 +129,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
           className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-50 transition-colors duration-150 employee-row-item"
           data-employee-id={employee.IdPersonnel}
           onMouseOver={() => updateHighlightedEmployeeRow(employee.IdPersonnel)}
+          onContextMenu={(event) => onEmployeeContextMenu(event, employee)}
         >
           <div className="relative flex-shrink-0">
             <img

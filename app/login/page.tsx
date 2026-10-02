@@ -43,13 +43,6 @@ export default function LoginPage({ login }: LoginPageProps) {
       const isCanonical =
         await authService.SchedulerIsURICannonical(host);
 
-      console.log(
-        'isCanonical',
-        isCanonical,
-        'existingApiUrl',
-        existingApiUrl
-      );
-
       if (isCanonical && !existingApiUrl) {
         // Appel automatique via l'URL :
         // aucune erreur affichée à l'utilisateur

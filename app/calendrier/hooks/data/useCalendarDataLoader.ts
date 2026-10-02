@@ -76,7 +76,7 @@ export const useCalendarDataLoader = ({
     const isOutOfBoundRight = visibleWindowEnd > (visibleWindowEndInitial.current + thresholdAfter);
 
     if (forceReload || isOutOfBoundLeft || isOutOfBoundRight) {
-      console.log(`Loading data... Mode: ${forceCriticalCheck ? 'CRITICAL' : 'SOFT_STOP'}`);
+      //console.log(`Loading data... Mode: ${forceCriticalCheck ? 'CRITICAL' : 'SOFT_STOP'}`);
       isLoadingRef.current = true;
 
       const LOAD_BUFFER_BEFORE = INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * MS_PER_WEEK;

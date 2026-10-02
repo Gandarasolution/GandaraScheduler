@@ -66,6 +66,7 @@ export const useAppointmentLogic = ({
   
   // --- Refs pour la persistance hors rendu ---
   const history = useRef<HistoryAction[]>([]);
+  const [historyVersion, setHistoryVersion] = useState(0);
   const clipboardAppointment = useRef<Appointment | null>(null);
   const timestampCounter = useRef(1000);
   const timelineStateRef = useRef(timelineState);
@@ -182,6 +183,7 @@ export const useAppointmentLogic = ({
     if (history.current.length > 50) {
       history.current.shift();
     }
+    setHistoryVersion((version) => version + 1);
   }, [appointmentsRef]);
 
   const undoLastAction = useCallback(async () => {    
@@ -191,6 +193,7 @@ export const useAppointmentLogic = ({
 
     const lastAction = history.current.pop();
     if (!lastAction) return;
+    setHistoryVersion((version) => version + 1);
 
     const before =  appointmentsRef.current
 
@@ -306,7 +309,7 @@ export const useAppointmentLogic = ({
   ) => {
       const { id, newStartDate, newEndDate, newEmployee, annotation, Etiquette } = data;
 
-      console.log('updateAppointmentBounds called with:', data);
+      //console.log('updateAppointmentBounds called with:', data);
       const appointmentToResize = appointmentsRef.current.find(app => Number(app.IdPlanningEvenement) === Number(id));
       if (!appointmentToResize) return;
 
@@ -372,7 +375,7 @@ export const useAppointmentLogic = ({
         return null;
       }
 
-      console.log(new Date(startDate), new Date(endDate));
+      //console.log(new Date(startDate), new Date(endDate));
 
       const payload = {
         AnnotationPlanningEvenement: description || `Nouveau rendez-vous`,
@@ -414,7 +417,7 @@ export const useAppointmentLogic = ({
         .then((resp) => {
           try {
 
-            console.log('createEvenement response:', resp);
+            //console.log('createEvenement response:', resp);
 
             if (resp && resp.success) {
               const apiData = resp?.data;
@@ -488,7 +491,7 @@ export const useAppointmentLogic = ({
         resizeDirection = 'right',
       } = data;
 
-      console.log('moveAppointment called with:', data);
+      //console.log('moveAppointment called with:', data);
       const appointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
       if (!appointment) {
         return { success: false, message: 'Rendez-vous introuvable.' };
@@ -676,7 +679,7 @@ export const useAppointmentLogic = ({
           eventUpdate.Image.id = result.id;
             
         }
-        console.log('handleSaveAppointment called with:', eventUpdate);
+        //console.log('handleSaveAppointment called with:', eventUpdate);
         const payload = {
           DebutPlanningEvenement: appointment.DebutPlanningEvenement,
           FinPlanningEvenement: appointment.FinPlanningEvenement,
@@ -936,7 +939,7 @@ export const useAppointmentLogic = ({
       return;
     }
 
-    console.log(new Date(splitDate).toLocaleString(), 'Date de coupure calculée pour la division du rendez-vous');
+    //console.log(new Date(splitDate).toLocaleString(), 'Date de coupure calculée pour la division du rendez-vous');
   
 
     // 1. Redimensionner l'original
@@ -1073,9 +1076,9 @@ export const useAppointmentLogic = ({
 
     const result = await api.repeatEvenement(payloads)
     .then((resp) => {
-      console.log('repeatEvenement response:', resp);
+      //console.log('repeatEvenement response:', resp);
       if (isApiSuccess(resp)) {
-        console.log('repeatEvenement success:', resp);
+        //console.log('repeatEvenement success:', resp);
         const createdIds = resp?.data;
         if (Array.isArray(createdIds) && createdIds.length === newAppointments.length) {
           const repeatedAppointments = newAppointments.map((app, index) => ({
@@ -1084,7 +1087,7 @@ export const useAppointmentLogic = ({
           }));
           appointmentsRef.current = [...appointmentsRef.current, ...repeatedAppointments];
     
-          console.log('Rendez-vous répétés créés localement:', repeatedAppointments);
+          //console.log('Rendez-vous répétés créés localement:', repeatedAppointments);
           onUpdate();
           return { success: true } as ActionResult;
         }
@@ -1153,7 +1156,7 @@ export const useAppointmentLogic = ({
       const startDate =  new Date(date).setHours(startHour, 0, 0, 0);
       const endDate = new Date(date).setHours(endHour);      
 
-      console.log('priority:', priority);
+      //console.log('priority:', priority);
       // Crée un RDV localement (avec id temporaire). La logique de createAppointment
       // va déclencher l'appel API en arrière-plan et mettre à jour l'ID lorsque la
       // réponse serveur sera reçue.
@@ -1244,7 +1247,7 @@ export const useAppointmentLogic = ({
     
     await api.createEvenement({ ...payload })
     .then((resp) => {;
-      console.log('Response from createEvenement:', resp);
+      //console.log('Response from createEvenement:', resp);
     if (!isApiSuccess(resp)) {
       const apiMessage = resp?.message || 'Le serveur a refusé la création du rendez-vous.';
       return;
@@ -1344,7 +1347,7 @@ export const useAppointmentLogic = ({
         IdPlanningImage: dimension.Image?.id,
       };
       const result = await ressourceService.addRessourceManual(apiPayload);
-      console.log('Résultat de l\'ajout de ressource', result);
+      //console.log('Résultat de l\'ajout de ressource', result);
       if (isApiSuccess(result) && result.data) {
         const newId = result.data;
         // Mettre à jour l'ID de la ressource dans le cache et tous les rendez-vous qui l'utilisent
@@ -1357,7 +1360,7 @@ export const useAppointmentLogic = ({
           };
           delete eventsRef.current[Number(oldId)];
         }
-        console.log('Ressource ajoutée avec succès, ID:', newId);
+        //console.log('Ressource ajoutée avec succès, ID:', newId);
       } else {
         const message = result?.message || 'Le serveur a refusé l\'ajout de la ressource.';
           // Nettoyer la ressource ajoutée localement en cas d'échec
@@ -1369,7 +1372,7 @@ export const useAppointmentLogic = ({
       return { success: false, message: error instanceof Error ? error.message : 'Erreur inconnue' };
     }
 
-    console.log('Ressource ajoutée avec succès');
+    //console.log('Ressource ajoutée avec succès');
     
     setIsModalOpen(false);
     onUpdate();
@@ -1407,7 +1410,7 @@ export const useAppointmentLogic = ({
         IdPlanningImage: dimension.Image?.id,
       };
       const result = await ressourceService.editRessource(dimension.IdPlanningRessource, apiPayload);
-      console.log('Résultat de la modification de ressource', result);
+      //console.log('Résultat de la modification de ressource', result);
       if (!isApiSuccess(result)) {
         const message = result?.message || 'Le serveur a refusé la modification de la ressource.';
         return { success: false, message };
@@ -1443,7 +1446,7 @@ export const useAppointmentLogic = ({
 
     if (forceDelete) {
 
-      console.log("oui on force delete");
+      //console.log("oui on force delete");
       
       // Suppression forcée : supprimer la rubrique et tous les RDV associés
       delete eventsRef.current[Number(dimensionId)];
@@ -1517,6 +1520,7 @@ export const useAppointmentLogic = ({
     
     // Utils
     undoLastAction,
+    canUndo: historyVersion > 0,
     copyAppointmentToClipboard,
     pasteAppointment,
 

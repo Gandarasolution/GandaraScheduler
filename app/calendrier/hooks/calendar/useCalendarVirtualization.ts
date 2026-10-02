@@ -109,10 +109,10 @@ export const useCalendarVirtualization = ({
         });
       }      
       
-      //console.log('openItems.includes(item.id)', openItems.includes(item.id), item.id);
+      ////console.log('openItems.includes(item.id)', openItems.includes(item.id), item.id);
       if (openItems.includes(getDimensionItemKey(item.id))) {
         // Si l'item a des enfants (niveau 2), les traiter
-        //console.log('item.children', item.children, item.children?.length);
+        ////console.log('item.children', item.children, item.children?.length);
         if (item.children && item.children.length > 0) {
           item.children.forEach((child: any, childIdx: number) => {
             processHierarchicalItem(child, childIdx, true, idx, level + 1);
@@ -139,10 +139,10 @@ export const useCalendarVirtualization = ({
       }
     };
     
-    //console.log('Processing dimensionItems for virtualization:', dimensionItems);
+    ////console.log('Processing dimensionItems for virtualization:', dimensionItems);
     // Traiter tous les items de dimension
     dimensionItems.forEach((item, idx) => {
-      //console.log('Rows before processing item:', rows);
+      ////console.log('Rows before processing item:', rows);
       processHierarchicalItem(item, idx);
     });
 

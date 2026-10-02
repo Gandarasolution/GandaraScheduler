@@ -145,7 +145,7 @@ async function SchedulerIsURICannonical(hostname: string): Promise<boolean> {
     });
 
     const data = await response.json();
-    console.log('SchedulerIsURICannonical response:', data);
+    //console.log('SchedulerIsURICannonical response:', data);
 
     return data === 1;
   } catch (error) {

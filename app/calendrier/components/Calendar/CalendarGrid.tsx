@@ -37,6 +37,7 @@ interface CalendarGridProps {
   poleActivites: Record<number, PoleActivite>;
   user: User;
   dayInTimeline: number[];
+  selectedDate: number;
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   nonWorkingDates: Record<string, number>;
@@ -53,6 +54,7 @@ interface CalendarGridProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (item: Item, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, priority: number) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
+  handleEmployeeContextMenu: (e: React.MouseEvent, employee: User) => void;
   selectedCell: { employeeId: number; date: number } | null;
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
@@ -77,6 +79,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   user,
   nonWorkingDates,
   isMobile,
+  selectedDate,
   isDisplayWeekend,
   tagPlacement = 'hover',
   mobileAppointmentDisplay,
@@ -89,6 +92,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
+  handleEmployeeContextMenu,
   selectedCell,
   selectedAppointmentId,
   onSelectCell,
@@ -126,22 +130,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   });
 
  
-  // Scroll horizontally to today on initial render (desktop only)
+  // Scroll horizontally to the selected date on initial render (desktop only)
   useEffect(() => {
     if (isMobile) return;
     if (hasAutoScrolled.current) return;
     const scroller = mainScrollRef.current;
     if (!scroller) return;
 
-    const todayIdx = dayInTimeline.findIndex((d) => {
-      const now = new Date();
-      return new Date(d).setHours(0, 0, 0, 0) === now.setHours(0, 0, 0, 0);
-    });
-    if (todayIdx < 0) return;
+    const selectedDateIdx = dayInTimeline.findIndex((d) => (
+      new Date(d).setHours(0, 0, 0, 0) === new Date(selectedDate).setHours(0, 0, 0, 0)
+    ));
+    if (selectedDateIdx < 0) return;
 
-    scroller.scrollLeft = Math.max(0, todayIdx * CELL_WIDTH);
+    scroller.scrollLeft = Math.max(0, selectedDateIdx * CELL_WIDTH);
     hasAutoScrolled.current = true;
-  }, [dayInTimeline, isMobile, mainScrollRef]);
+  }, [dayInTimeline, isMobile, mainScrollRef, selectedDate]);
     
 
   if (isMobile) {
@@ -186,6 +189,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         onAppointmentDoubleClick={onAppointmentDoubleClick}
         onExternalDragDrop={onExternalDragDrop}
         handleContextMenu={handleContextMenu}
+        handleEmployeeContextMenu={handleEmployeeContextMenu}
         updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
         selectedCell={selectedCell}
         selectedAppointmentId={selectedAppointmentId}

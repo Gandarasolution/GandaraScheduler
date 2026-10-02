@@ -23,7 +23,7 @@ async function searchRessources(query: string = '', types: string[] = [], limit:
 
 async function getFilterOptionsDynamic(types: string, keys: string[]) {
 
-  //console.log(keys.join(','));
+  ////console.log(keys.join(','));
   
   const params = new URLSearchParams();
   if (types.length > 0) {
@@ -43,15 +43,15 @@ async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, quer
   params.set('q', query);
   
   for (const filterKey in activeFilters) {
-    //console.log(activeFilters[filterKey], activeFilters[filterKey].length);
+    ////console.log(activeFilters[filterKey], activeFilters[filterKey].length);
     
     if (activeFilters[filterKey].length > 0) {
-      //console.log(`Filtering by ${filterKey}:`, activeFilters[filterKey].join(','));
+      ////console.log(`Filtering by ${filterKey}:`, activeFilters[filterKey].join(','));
       
       params.set(filterKey, activeFilters[filterKey].join(','));
     }
   }
-  //console.log(activeFilters);
+  ////console.log(activeFilters);
 
   
 
@@ -94,7 +94,7 @@ async function getRubriquePaie(limit: number = 20, pageNum: number = 1, query: s
     }
   }
 
-  console.log(activeFilters);
+  //console.log(activeFilters);
 
   return await getRequest(
     `/api/ressources/rubrique-paie?${params.toString()}`,
