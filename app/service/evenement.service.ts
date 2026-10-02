@@ -178,7 +178,7 @@ async function updateEvenementAndRessource(id: string, data: any) {
             CouleurFondPlanningRessource: data?.CouleurFondPlanningRessource ?? data?.Ressource?.CouleurFondPlanningRessource ?? null,
             CouleurBordurePlanningRessource: data?.CouleurBordurePlanningRessource ?? data?.Ressource?.CouleurBordurePlanningRessource ?? null,
             CouleurTextePlanningRessource: data?.CouleurTextePlanningRessource ?? data?.Ressource?.CouleurTextePlanningRessource ?? null,
-            IdImage: data?.IdImage ?? data?.Ressource?.IdImage ?? null,
+            IdPlanningImage: data?.IdPlanningImage ?? data?.Ressource?.IdPlanningImage ?? null,
         },
     };    
     return await putRequest(`/api/event/updateRessourceAndEvent/${id}`, payload, 'updateEvenementAndRessource');

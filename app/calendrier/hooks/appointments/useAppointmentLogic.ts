@@ -690,7 +690,7 @@ export const useAppointmentLogic = ({
             CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
             CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
             CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
-            IdImage: eventUpdate.Image?.id,
+            IdPlanningImage: eventUpdate.Image?.id,
           },
         };
 
