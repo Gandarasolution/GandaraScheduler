@@ -432,7 +432,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   setExpandedGroups((prev) => ({ ...prev, [group.key]: false }));
                 }}
               >
-                Masquer
+                Réduire
               </button>
             )}
           </React.Fragment>

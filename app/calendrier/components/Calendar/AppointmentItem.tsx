@@ -69,7 +69,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 }) => {
 
   const { hasPermission } = useAuth();
-  const [dragOffset, setDragOffset] = useState<number>(0);
+  const dragOffsetRef = useRef(0);
   const [isHovered, setIsHovered] = useState(false);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragLockSentRef = useRef(false);
@@ -139,7 +139,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       type: 'appointment',
       startDate,
       endDate,
-      dragOffset,
+      dragOffset: dragOffsetRef.current,
     }),
     canDrag: () =>
       !isResizingLeft &&
@@ -190,7 +190,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
     // Le mouseDown sert uniquement à calculer l'offset.
     const rect = e.currentTarget.getBoundingClientRect();
-    setDragOffset(e.clientX - rect.left);
+    dragOffsetRef.current = e.clientX - rect.left;
   }, [isInactive, isLocked, isReadOnly, source]);
 
   // Le lockQuick est envoyé uniquement lorsqu'un VRAI drag commence.
@@ -472,7 +472,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         appointment-item rounded-xl text-sm shadow-md
         flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
         z-20 h-11 group
-        ${isDragging && source === 'calendar'  ? 'opacity-60 scale-95 duration-0' : 'opacity-100 duration-200'}
+        ${isDragging && source === 'calendar'  ? 'opacity-60 duration-0' : 'opacity-100 duration-200'}
         ${source === 'calendar' && isSelected ? 'ring-3 ring-color' : ''}
         ${isAnyDragging ? 'opacity-50 pointer-events-none' : ''}
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
@@ -563,6 +563,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           {event?.Image ? (
             <img
               src={event.Image.image}
+              draggable={false}
               className="w-8 h-8 object-cover flex-shrink-0 rounded-full"
               loading="lazy"
             />

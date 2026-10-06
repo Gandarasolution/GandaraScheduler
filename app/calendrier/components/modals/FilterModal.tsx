@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import Modal from "./Modal";
-import { FilterCategory, FilterConfigWithActive, ActiveFilters } from "../../utils/searchAndFilterUtils";
+import { FilterCategory, FilterConfig, ActiveFilters } from "../../utils/searchAndFilterUtils";
 import { Combobox } from "../ui/Combobox";
 import ressourceService from "@/app/service/ressource.service";
 
@@ -12,7 +12,7 @@ type FilterModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (filters: ActiveFilters) => void;
-  filterConfig: FilterConfigWithActive;
+  keyOfFilter: { [key: string]: { label: string; type: 'checkbox' | 'select' | 'radio' | 'search' | 'combobox' | 'badge'; badgeColors?: Record<string, string> } };
   onClearAll: () => void;
   title?: string;
   viewType?: string;
@@ -22,19 +22,24 @@ const FilterModal: React.FC<FilterModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  filterConfig,
+  keyOfFilter,
   onClearAll,
   title,
   viewType
 }) => {
-    
-  // On gère localement la config pour pouvoir la mettre à jour via l'API
-  const [localFilterConfig, setLocalFilterConfig] = useState<FilterConfigWithActive>(filterConfig);
-  const [isLoading, setIsLoading] = useState(false);
+  // La configuration des filtres est enrichie localement avec les options renvoyées par l'API.
+  const createLocalFilterConfig = (): FilterConfig =>
+    Object.entries(keyOfFilter).reduce((config, [key, filter]) => {
+      config[key] = {
+        ...filter,
+        options: []
+      };
+      return config;
+    }, {} as FilterConfig);
 
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>(
-    filterConfig.activeFilters  || {}
-  );
+  const [localFilterConfig, setLocalFilterConfig] = useState<FilterConfig>(createLocalFilterConfig);
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
 
 
   const toggleFilter = (categoryKey: string, value: string) => {
@@ -118,7 +123,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
       case 'select':        
         return (
           <select
-            value={activeFilters[categoryKey][0] || ''}
+            value={activeFilters[categoryKey]?.[0] || ''}
             onChange={(e) => setSelectFilter(categoryKey, e.target.value)}
             className="w-full p-2 border border-light rounded focus:outline-none focus:border-primary"
           >
@@ -167,13 +172,13 @@ const FilterModal: React.FC<FilterModalProps> = ({
   };
 
   useEffect(() => {
-    setActiveFilters(filterConfig.activeFilters || {});
-  }, [filterConfig.activeFilters]);
+    setLocalFilterConfig(createLocalFilterConfig());
+  }, [keyOfFilter]);
 
   // Récupérer les options dynamiquement depuis l'API à l'ouverture
   useEffect(() => {
     if (isOpen) {
-      const keys = Object.keys(filterConfig).filter(k => k !== 'activeFilters');
+      const keys = Object.keys(keyOfFilter);
       if (keys.length === 0) return;
 
       const cacheKey = (viewType || '') + '_' + keys.join(',');
@@ -225,7 +230,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
         .catch(err => console.error("Erreur lors de la récupération des options de filtres :", err))
         .finally(() => setIsLoading(false));
     }
-  }, [isOpen, filterConfig, viewType]);
+  }, [isOpen, keyOfFilter, viewType]);
 
   return (
     <Modal 
@@ -235,7 +240,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
         onSubmit(activeFilters);
       }} 
       title={title} 
-      className="max-w-lg w-full" 
+      className="w-[95vw] max-w-6xl"
       classNameContent="px-4"
     >
       {isLoading ? (
@@ -244,7 +249,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-6 poppins text-primary py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5 poppins text-primary py-4">
             {/* Rendu dynamique des filtres */}
             {Object.entries(localFilterConfig)
               .filter(([key]) => key !== 'activeFilters') // Exclure la propriété activeFilters
@@ -279,7 +284,10 @@ const FilterModal: React.FC<FilterModalProps> = ({
           </div>
           <div className="py-4 flex items-center justify-between">
             <button
-              onClick={onClearAll}
+              onClick={() => {
+                setActiveFilters({});
+                onClearAll();
+              }}
               className="text-primary-500 rounded-lg cursor-pointer hover:bg-gray-100 px-4 py-2"
             >
               Réinitialiser

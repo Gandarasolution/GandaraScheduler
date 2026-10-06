@@ -166,9 +166,9 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
               }}
               className="cursor-pointer text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
               type="button"
-              title={expandedOverlapRows[employee.IdPersonnel] ? 'Masquer les rendez-vous qui se chevauchent' : 'Étendre pour afficher tous les rendez-vous qui se chevauchent'}
+              title={expandedOverlapRows[employee.IdPersonnel] ? 'Réduire les rendez-vous qui se chevauchent' : 'Développer pour afficher tous les rendez-vous qui se chevauchent'}
             >
-              {expandedOverlapRows[employee.IdPersonnel] ? 'Masquer' : 'Étendre'}
+              {expandedOverlapRows[employee.IdPersonnel] ? 'Réduire' : 'Développer'}
             </button>
           )}
         </div>

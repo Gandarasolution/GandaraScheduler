@@ -7,7 +7,7 @@ import {
 } from '@/app/calendrier/components';
 import Loader from '../ui/Loader';
 import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MobileAppointmentField } from '../../types';
-import { ActiveFilters } from '../../utils/searchAndFilterUtils';
+import { ActiveFilters, FilterType } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
 import etiquetteService from '@/app/service/etiquette.service';
@@ -98,7 +98,7 @@ interface CalendarModalsProps {
     employees: User[];
     selectedItem: Item | null;
     selectedEmployee: User | null;
-    filterConfig: any; // Options pour le filtre
+    keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } };
     isUploading: boolean;
     uploadError: string | null;
     
@@ -434,7 +434,7 @@ export const CalendarModals = memo(({
           isOpen={modalsState.isFilterModalOpen}
           onSubmit={handlers.submitFilters}
           onClose={handlers.closeFilterModal}
-          filterConfig={data.filterConfig}
+          keyOfFilter={data.keyOfFilter}
           onClearAll={handlers.clearFilters}
           viewType={config.viewType}
         />

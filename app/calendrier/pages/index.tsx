@@ -378,7 +378,8 @@ export default function HomePage({
             }
           }, 
           chargeAffaire: { label: 'Chargé d\'Affaires', type: 'combobox' as FilterType }, 
-          chefChantier: { label: 'Chef de Chantier', type: 'combobox' as FilterType }
+          chefChantier: { label: 'Chef de Chantier', type: 'combobox' as FilterType },
+          libelle: { label: 'Libellé', type: 'combobox' as FilterType },
         };
     }
     // Par défaut ou autres vues
@@ -387,20 +388,8 @@ export default function HomePage({
     };
   }, [viewState.viewType]);
 
-  const filterConfig = useMemo(() => {
-      // Génération des options de filtre basées sur les données actuelles
-      const baseConfig = searchUtils.getFilterOptions(
-        Object.values(dataLayer.itemsRef.current),
-        viewState.viewType === 'chantier-table' ? 'chantier' : null,
-        keyOfFilter
-      );
-      
-      // Enrichir avec les filtres actifs
-      return {
-        ...baseConfig,
-        activeFilters: viewState.activeFilters
-      };
-  }, [searchUtils, dataLayer.itemsRef.current, viewState.viewType, keyOfFilter, viewState.activeFilters]);
+
+  //console.log("Filter Config:", filterConfig);
 
   const filteredCalendarAppointments = useMemo(() => {
     if (viewState.viewType !== 'calendar') {
@@ -1002,7 +991,7 @@ export default function HomePage({
               selectedItem: appointmentLogic.selectedItem,
               selectedEmployee: appointmentLogic.selectedEmployee,
               // Correction : Passer la config de filtre calculée
-              filterConfig: filterConfig, 
+              keyOfFilter: keyOfFilter,
               isUploading: interaction.isUploading,
               uploadError: interaction.uploadError,
               

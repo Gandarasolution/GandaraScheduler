@@ -154,6 +154,92 @@ export const useAppointmentLogic = ({
     });
   }, [appointmentsRef]);
 
+  const normalizePriorities = useCallback((employeeIds?: number[]) => {
+    const employeeFilter = employeeIds ? new Set(employeeIds.map(Number)) : undefined;
+    const appointmentsByEmployee = new Map<number, Appointment[]>();
+
+    appointmentsRef.current.forEach((app) => {
+      const employeeId = Number(app.IdEmploye);
+      if (employeeFilter && !employeeFilter.has(employeeId)) return;
+
+      const employeeAppointments = appointmentsByEmployee.get(employeeId) || [];
+      employeeAppointments.push(app);
+      appointmentsByEmployee.set(employeeId, employeeAppointments);
+    });
+
+    appointmentsByEmployee.forEach((employeeAppointments) => {
+      const sorted = [...employeeAppointments].sort(
+        (a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement
+      );
+      const groups: Appointment[][] = [];
+      let currentGroup: Appointment[] = [];
+      let groupEnd = 0;
+
+      sorted.forEach((app) => {
+        if (currentGroup.length > 0 && app.DebutPlanningEvenement >= groupEnd) {
+          groups.push(currentGroup);
+          currentGroup = [];
+        }
+
+        currentGroup.push(app);
+        groupEnd = Math.max(groupEnd, app.FinPlanningEvenement);
+      });
+
+      if (currentGroup.length > 0) groups.push(currentGroup);
+
+      groups.forEach((group) => {
+        group
+          .sort((a, b) => {
+            const priorityDifference =
+              (a.PlanningEvenementPriorite ?? 0) - (b.PlanningEvenementPriorite ?? 0);
+            return priorityDifference || a.DebutPlanningEvenement - b.DebutPlanningEvenement;
+          })
+          .forEach((app, index) => {
+            app.PlanningEvenementPriorite = index;
+          });
+      });
+    });
+  }, [appointmentsRef]);
+
+  const persistPriorityChanges = useCallback(async (
+    previousAppointments: Appointment[],
+    excludedId?: number
+  ) => {
+    if (!api?.updateEvenement) return;
+
+    const previousById = new Map(
+      previousAppointments.map((app) => [app.IdPlanningEvenement, app])
+    );
+    const changedAppointments = appointmentsRef.current.filter((app) => {
+      const previous = previousById.get(app.IdPlanningEvenement);
+      return previous &&
+        app.IdPlanningEvenement !== excludedId &&
+        (app.PlanningEvenementPriorite ?? 0) !== (previous.PlanningEvenementPriorite ?? 0);
+    });
+
+    try {
+      await Promise.all(changedAppointments.map((app) => {
+        const employee = employees.find(
+          (item) => Number(item.IdPersonnel) === Number(app.IdEmploye)
+        );
+
+        return api.updateEvenement(String(app.IdPlanningEvenement), {
+          DebutPlanningEvenement: app.DebutPlanningEvenement,
+          FinPlanningEvenement: app.FinPlanningEvenement,
+          Type: employee?.Type,
+          IdEmploye: app.IdEmploye,
+          IdPlanningRessource: app.IdPlanningRessource,
+          AnnotationPlanningEvenement: app.AnnotationPlanningEvenement,
+          PlanningEvenementPriorite: app.PlanningEvenementPriorite ?? 0,
+          IdPlanningEtiquette: app.Etiquette?.IdPlanningEtiquette,
+        });
+      }));
+    } catch (error) {
+      console.error('Erreur lors de la persistance des priorités réorganisées', error);
+      onLockedError('Les priorités des rendez-vous chevauchants n’ont pas pu être sauvegardées.');
+    }
+  }, [api, appointmentsRef, employees, onLockedError]);
+
   // --- GESTION DE L'HISTORIQUE (UNDO) ---
 
   /**
@@ -336,6 +422,7 @@ export const useAppointmentLogic = ({
 
       if (newPriority !== undefined && newEmployee) {
         reorganizePriorities(id, newPriority, newEmployee.IdPersonnel, newStartDate, newEndDate);
+        normalizePriorities([Number(newEmployee.IdPersonnel)]);
       }
       const updatedAppointment = appointmentsRef.current.find(app => Number(app.IdPlanningEvenement) === Number(id));
       if (!syncWithApi || !updatedAppointment || !api?.updateEvenement) return;
@@ -359,7 +446,7 @@ export const useAppointmentLogic = ({
         console.error('Erreur réseau updateEvenement', err);
         appointmentsRef.current = previousAppointments;
       });
-  }, [appointmentsRef, onUpdate, saveAppointmentState, api, employees, reorganizePriorities, isApiSuccess]);
+  }, [appointmentsRef, onUpdate, saveAppointmentState, api, employees, reorganizePriorities, normalizePriorities, isApiSuccess]);
 
   // Création unitaire d'un RDV
   const createAppointment = useCallback((
@@ -543,7 +630,8 @@ export const useAppointmentLogic = ({
         const createdAppointments: Appointment[] = [];
 
         if (newPriority !== undefined) {
-          reorganizePriorities(id, newPriority, newEmployeeId, newStartDate, newEndDate);
+          // La mise à jour des bornes réorganise les rendez-vous une seule fois,
+          // avant que la requête de persistance ne soit envoyée.
           appointment.PlanningEvenementPriorite = newPriority;
         }
 
@@ -605,6 +693,7 @@ export const useAppointmentLogic = ({
       applyLocalMove();
 
       if (!api?.updateEvenement) {
+        await persistPriorityChanges(previousAppointments, id);
         return { success: true };
       }
 
@@ -639,7 +728,7 @@ export const useAppointmentLogic = ({
       }
       
       
-  }, [appointmentsRef, employees, timelineStateRef, updateAppointmentBounds, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities, api, isApiSuccess]);
+  }, [appointmentsRef, employees, timelineStateRef, updateAppointmentBounds, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities, api, isApiSuccess, persistPriorityChanges]);
 
   // Sauvegarde depuis le formulaire (Création ou Édition)
 
@@ -861,12 +950,14 @@ export const useAppointmentLogic = ({
 
         const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
         appointmentsRef.current = appointmentsRef.current.filter((app) => app.IdPlanningEvenement !== id);
+        normalizePriorities(appointmentInRef ? [Number(appointmentInRef.IdEmploye)] : undefined);
         onUpdate();
 
         if (api?.deleteEvenement) {
           void api.deleteEvenement(String(id))
             .then((resp) => {
               if (isApiSuccess(resp)) {
+                void persistPriorityChanges(previousAppointments, id);
                 return;
               }
 
@@ -892,7 +983,7 @@ export const useAppointmentLogic = ({
       },
       fetchToLockAppointment: () => api?.lockEvenement(id),
     });
-  }, [selectedAppointment, appointmentsRef, saveAppointmentState, onUpdate, api, isApiSuccess]);
+  }, [selectedAppointment, appointmentsRef, saveAppointmentState, onUpdate, api, isApiSuccess, normalizePriorities, persistPriorityChanges]);
 
   const handleDivideAppointment = useCallback(async (appointment: Appointment) => {
     const id = appointment.IdPlanningEvenement;
