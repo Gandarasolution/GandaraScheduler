@@ -43,7 +43,7 @@ export interface MobileCalendarState {
   searchOverlayItems: (query: string) => Promise<any>;
   handleSelectItem: (item: Item) => void;
   handleSaveAppointment: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean) => Promise<{ success: boolean }>;
-  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeId?: number) => Promise<boolean>;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeIds?: number[]) => Promise<boolean>;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
 }
 
@@ -121,7 +121,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     yearDisplay.current = selectedDate.getFullYear();
     const monthStart = startOfMonth(selectedDate).getTime();
     const monthEnd = endOfMonth(selectedDate).getTime();
-    void onLoadAppointmentsInRange(monthStart, monthEnd, selectedEmployee.IdPersonnel);
+    void onLoadAppointmentsInRange(monthStart, monthEnd, [selectedEmployee.IdPersonnel]);
   }, [onLoadAppointmentsInRange, selectedDate, selectedEmployee]);
   
  const visibleEmployees = useMemo(() => {

@@ -57,7 +57,7 @@ interface DesktopCalendarGridProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   hoverColumnLeft: number | null;
-  onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<boolean>;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeIds?: number[]) => Promise<boolean>;
   //reloadToken?: number;
   mouseUpAfterScroll: () => void;
   onLockedError: (message: string) => void;
@@ -334,6 +334,13 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     overscanY: OVERSCAN_Y,
   });
 
+  const visibleEmployeeIds = useMemo(() => (
+    visibleRows
+      .filter((row) => row.type === 'employee')
+      .map((row) => Number(row.id))
+      .filter(Number.isFinite)
+  ), [visibleRows]);
+
   // Colonnes spéciales (week-ends, jours fériés, jours non travaillés)
   const { holidayColumns, weekendColumns, nonWorkingColumns } = useCalendarColumns({
     dayInTimeline,
@@ -359,8 +366,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     visibleWindowEnd,
     isGrabbing,
     isScrolling,
-    onLoadAppointmentsInRange: async (start, end) => {
-      await onLoadAppointmentsInRange(start, end);
+    visibleEmployeeIds,
+    onLoadAppointmentsInRange: (start, end, employeeIds) => {
+      return onLoadAppointmentsInRange(start, end, employeeIds);
     },
   });
 

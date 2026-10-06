@@ -27,7 +27,6 @@ Ces trois cas sont traités par une unique fonction handleError().
 export const axiosAgent = axios.create({
     withCredentials: true,
     headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json'
     },
 })

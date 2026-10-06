@@ -26,7 +26,12 @@ export const useDataLayer = ({
   const itemsRef = useRef<Record<number, Item>>({});
   const appointmentsRef = useRef<Appointment[]>([]);
 
-  const lastLoadedRangeRef = useRef<{ startDate: number; endDate: number } | null>(null);
+  const lastLoadedRangeRef = useRef<{
+    startDate: number;
+    endDate: number;
+    employeeIds: Set<number> | null;
+  } | null>(null);
+  const inFlightRequestKeysRef = useRef(new Set<string>());
   
   // Données Filtrées (State pour l'UI)
   const [appointmentsVersion, setAppointmentsVersion] = useState(0); // Trigger manuel
@@ -62,6 +67,7 @@ export const useDataLayer = ({
     itemsRef.current = {};
     appointmentsRef.current = [];
     lastLoadedRangeRef.current = null;
+    inFlightRequestKeysRef.current.clear();
     setTeams({});
     setPoleActivites({});
     setAppointmentsVersion(prev => prev + 1);
@@ -106,29 +112,65 @@ export const useDataLayer = ({
 
 
 
-  const loadAppointmentsInRange = useCallback(async (startDate: number, endDate: number, employeeId?: number): Promise<boolean> => {
-    setIsLoading(true);
+  const loadAppointmentsInRange = useCallback(async (
+    startDate: number,
+    endDate: number,
+    employeeIds?: number[]
+  ): Promise<boolean> => {
+    const normalizedEmployeeIds = [...new Set((employeeIds ?? []).map(Number))]
+      .filter(Number.isFinite);
+    let employeeIdsToRequest = normalizedEmployeeIds;
     if (!isMobile) {
       const diff = endDate - startDate;
-      if (employeeId == null && lastLoadedRangeRef.current && startDate >= lastLoadedRangeRef.current.startDate && endDate <= lastLoadedRangeRef.current.endDate) {
+      const loadedRange = lastLoadedRangeRef.current;
+      const loadedEmployeeIds = loadedRange?.employeeIds;
+      const isEmployeeSetLoaded = loadedRange
+        && (loadedEmployeeIds === null
+          || (loadedEmployeeIds !== undefined
+            && normalizedEmployeeIds.every((id) => loadedEmployeeIds.has(id))));
+      if (loadedRange && isEmployeeSetLoaded && startDate >= loadedRange.startDate && endDate <= loadedRange.endDate) {
         setIsLoading(false);
         return true; // Déjà chargé
       }
 
-      if (employeeId == null && lastLoadedRangeRef.current && startDate < lastLoadedRangeRef.current.endDate && endDate > lastLoadedRangeRef.current?.endDate) {
-        startDate = lastLoadedRangeRef.current.endDate;
+      const isDateRangeLoaded = loadedRange
+        && startDate >= loadedRange.startDate
+        && endDate <= loadedRange.endDate;
+      if (isDateRangeLoaded && loadedEmployeeIds !== null && loadedEmployeeIds !== undefined) {
+        employeeIdsToRequest = normalizedEmployeeIds.filter(
+          (id) => !loadedEmployeeIds.has(id)
+        );
+        if (employeeIdsToRequest.length === 0) {
+          return true;
+        }
+      }
+
+      if (loadedRange && isEmployeeSetLoaded && startDate < loadedRange.endDate && endDate > loadedRange.endDate) {
+        startDate = loadedRange.endDate;
         endDate = startDate + diff; // On garde la même durée
       }
 
-      if (employeeId == null && lastLoadedRangeRef.current && endDate > lastLoadedRangeRef.current.startDate && startDate < lastLoadedRangeRef.current?.startDate) {
-        endDate = lastLoadedRangeRef.current.startDate;
+      if (loadedRange && isEmployeeSetLoaded && endDate > loadedRange.startDate && startDate < loadedRange.startDate) {
+        endDate = loadedRange.startDate;
         startDate = endDate - diff; // On garde la même durée
       }
     }
 
+    const requestKey = [
+      startDate,
+      endDate,
+      employeeIdsToRequest.join(','),
+    ].join('|');
+    if (inFlightRequestKeysRef.current.has(requestKey)) {
+      return true;
+    }
+
+    inFlightRequestKeysRef.current.add(requestKey);
+    setIsLoading(true);
+
     try {
-      //console.log('employeeId:', employeeId);
-      const response = await evenementService.getEvenements(startDate, endDate, employeeId);
+      const requestedEmployeeIds = new Set(employeeIdsToRequest);
+      const response = await evenementService.getEvenements(startDate, endDate, employeeIdsToRequest);
       const payloadData = response?.data;
 
       if(response?.success === false) {
@@ -158,17 +200,32 @@ export const useDataLayer = ({
       
       // Ajouter au cache uniquement les rendez-vous absents.
       addMissingAppointmentsToCache(newAppointments);
-      if (employeeId == null) {
-        lastLoadedRangeRef.current = { startDate, endDate };
+      if (!isMobile) {
+        const previousRange = lastLoadedRangeRef.current;
+        const canMergeEmployeeIds = previousRange
+          && previousRange.startDate <= startDate
+          && previousRange.endDate >= endDate;
+        const employeeIdsForRange = previousRange?.employeeIds === null
+          ? null
+          : new Set([
+              ...(canMergeEmployeeIds && previousRange ? previousRange.employeeIds : []),
+              ...requestedEmployeeIds,
+            ]);
+        lastLoadedRangeRef.current = {
+          startDate: canMergeEmployeeIds && previousRange ? previousRange.startDate : startDate,
+          endDate: canMergeEmployeeIds && previousRange ? previousRange.endDate : endDate,
+          employeeIds: employeeIdsForRange,
+        };
       }
       setAppointmentsVersion(prev => prev + 1);
     } catch (error) {
       console.error("Erreur lors du chargement des rendez-vous:", error);
     } finally {
+      inFlightRequestKeysRef.current.delete(requestKey);
       setIsLoading(false);
     }
     return true;
-  }, [addMissingResourcesToCache, addMissingAppointmentsToCache]);
+  }, [addMissingResourcesToCache, addMissingAppointmentsToCache, isMobile, setNotification]);
 
   
 

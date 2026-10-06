@@ -59,7 +59,7 @@ interface CalendarGridProps {
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
-  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeId?: number) => Promise<boolean>;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeIds?: number[]) => Promise<boolean>;
   //reloadToken?: number;
   mouseUpAfterScroll: () => void;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;

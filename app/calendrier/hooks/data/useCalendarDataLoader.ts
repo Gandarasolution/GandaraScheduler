@@ -11,7 +11,7 @@
  * @version 1.0.0
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, 
   INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER 
@@ -22,8 +22,9 @@ interface UseCalendarDataLoaderParams {
   visibleWindowEnd: number;
   isGrabbing: boolean;
   isScrolling: boolean;
+  visibleEmployeeIds: number[];
   //resetToken?: number;
-  onLoadAppointmentsInRange: (startDate: number, endDate: number) => Promise<void>;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeIds?: number[]) => Promise<boolean>;
 }
 
 /**
@@ -38,6 +39,7 @@ export const useCalendarDataLoader = ({
   visibleWindowEnd,
   isGrabbing,
   isScrolling,
+  visibleEmployeeIds,
   //resetToken,
   onLoadAppointmentsInRange,
 }: UseCalendarDataLoaderParams): void => {
@@ -45,10 +47,15 @@ export const useCalendarDataLoader = ({
   const isLoadingRef = useRef(false);
   const visibleWindowStartInitial = useRef(0);
   const visibleWindowEndInitial = useRef(0);
+  const previousEmployeeIdsKey = useRef<string | null>(null);
+  const employeeIdsKey = useMemo(
+    () => [...new Set(visibleEmployeeIds)].sort((a, b) => a - b).join(','),
+    [visibleEmployeeIds]
+  );
 
   // Fonction de chargement centralisée
-  const checkAndLoadData = useCallback((forceCriticalCheck = false, forceReload = false) => {
-    if (isLoadingRef.current) return;
+  const checkAndLoadData = useCallback((forceCriticalCheck = false, forceReload = false): boolean => {
+    if (isLoadingRef.current) return false;
 
     // Configuration des seuils
     const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -64,11 +71,13 @@ export const useCalendarDataLoader = ({
     const thresholdBefore = forceCriticalCheck ? HARD_THRESHOLD : SOFT_THRESHOLD_BEFORE;
     const thresholdAfter = forceCriticalCheck ? HARD_THRESHOLD : SOFT_THRESHOLD_AFTER;
 
-    // Initialisation si vide
+    if (visibleEmployeeIds.length === 0) return false;
+
+    // Première fenêtre : charger directement les employés actuellement virtualisés.
     if (!forceReload && visibleWindowStartInitial.current === 0) {
       visibleWindowStartInitial.current = visibleWindowStart;
       visibleWindowEndInitial.current = visibleWindowEnd;
-      return;
+      forceReload = true;
     }
 
     // Vérification des limites
@@ -85,15 +94,34 @@ export const useCalendarDataLoader = ({
       const newLoadStart = visibleWindowStart - LOAD_BUFFER_BEFORE;
       const newLoadEnd = visibleWindowEnd + LOAD_BUFFER_AFTER;
 
-      onLoadAppointmentsInRange(newLoadStart, newLoadEnd).finally(() => {
+      onLoadAppointmentsInRange(newLoadStart, newLoadEnd, visibleEmployeeIds).finally(() => {
         isLoadingRef.current = false;
       });
 
       // Mise à jour optimiste
       if (forceReload || isOutOfBoundLeft) visibleWindowStartInitial.current = newLoadStart;
       if (forceReload || isOutOfBoundRight) visibleWindowEndInitial.current = newLoadEnd;
+      return true;
     }
-  }, [visibleWindowStart, visibleWindowEnd, onLoadAppointmentsInRange]);
+
+    return false;
+  }, [visibleWindowStart, visibleWindowEnd, visibleEmployeeIds, onLoadAppointmentsInRange]);
+
+  useEffect(() => {
+    if (visibleEmployeeIds.length === 0 || (visibleWindowStart === 0 && visibleWindowEnd === 0)) return;
+
+    const employeeIdsChanged = previousEmployeeIdsKey.current !== employeeIdsKey;
+    if (!employeeIdsChanged && visibleWindowStartInitial.current !== 0) return;
+
+    const debounceTimer = window.setTimeout(() => {
+      const requestStarted = checkAndLoadData(false, employeeIdsChanged);
+      if (requestStarted) {
+        previousEmployeeIdsKey.current = employeeIdsKey;
+      }
+    }, 250);
+
+    return () => window.clearTimeout(debounceTimer);
+  }, [checkAndLoadData, employeeIdsKey, visibleEmployeeIds.length, visibleWindowStart, visibleWindowEnd]);
 
   // useEffect(() => {
   //   if (visibleWindowStart === 0 && visibleWindowEnd === 0) return;

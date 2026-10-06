@@ -94,23 +94,25 @@ export const CalendarHeader = memo(({
           <div className="flex items-center justify-between w-full h-[50px]">
             
             {/* Barre de Recherche */}
-            {/* <div className="flex flex-col gap-1">
-              <div className="relative w-72 max-w-full">
-                <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400 bg-icon" aria-hidden="true" fill="none" viewBox="0 0 20 20">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-                  </svg>
+            {viewType !== 'calendar' && (
+              <div className="flex flex-col gap-1">
+                <div className="relative w-72 max-w-full">
+                  <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400 bg-icon" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="search"
+                    id="search"
+                    className="block w-full p-3 pl-8 text-base placeholder:bg-icon bg-icon rounded-xl transition focus:outline-0 poppins text-[14px]"
+                    placeholder="Rechercher"
+                    value={searchInput || ""}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                  />
                 </div>
-                <input
-                  type="search"
-                  id="search"
-                  className="block w-full p-3 pl-8 text-base placeholder:bg-icon bg-icon rounded-xl transition focus:outline-0 poppins text-[14px]"
-                  placeholder="Rechercher"
-                  value={searchInput || ""}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
               </div>
-            </div> */}
+            )}
 
             {/* Boutons d'Actions (Droite) */}
             <div className="flex items-center gap-3 ml-auto">

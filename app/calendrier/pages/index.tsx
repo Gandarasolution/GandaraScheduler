@@ -492,7 +492,7 @@ export default function HomePage({
         await dataLayer.loadAppointmentsInRange(
           monthStart.getTime(),
           monthEnd.getTime(),
-          user.IdPersonnel
+          [user.IdPersonnel]
         );
         setLoadCalendar(false);
         return;
@@ -505,10 +505,6 @@ export default function HomePage({
         setLoadCalendar(false);
         return;
       }
-
-      const startDate = viewState.selectedDate - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
-      const endDate = viewState.selectedDate + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
-      await dataLayer.loadAppointmentsInRange(startDate, endDate);
 
       setLoadCalendar(false);
     };
@@ -606,9 +602,6 @@ export default function HomePage({
         return;
       }
 
-      const startDate = viewState.selectedDate - (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * 7 * 24 * 60 * 60 * 1000);
-      const endDate = viewState.selectedDate + (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * 7 * 24 * 60 * 60 * 1000);
-      await dataLayer.loadAppointmentsInRange(startDate, endDate);
       setLoadCalendar(false);
     };
 
