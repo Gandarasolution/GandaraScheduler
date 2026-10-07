@@ -146,6 +146,15 @@ export default function HomePage({
     setIsLoading: dataLayer.setIsLoading,
   });
 
+  const lastPositionNavigationRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!viewState.lastPositionLoaded || currentPlanningId <= 0) return;
+    const navigationKey = `${currentPlanningId}-${viewState.lastPositionLoaded}`;
+    if (lastPositionNavigationRef.current === navigationKey) return;
+    lastPositionNavigationRef.current = navigationKey;
+    timeline.goToDate(viewState.selectedDate);
+  }, [currentPlanningId, timeline.goToDate, viewState.lastPositionLoaded]);
+
   // 5. LOGIQUE MÉTIER (CRUD, Règles de gestion, Historique)
   const timelineState = useMemo(() => ({
     isFullDay: viewState.isFullDay, 
@@ -814,6 +823,8 @@ export default function HomePage({
                               /* État Temporel */
                               dayInTimeline={timeline.days}
                               selectedDate={viewState.selectedDate}
+                              initialEmployeeId={viewState.lastPositionEmployeeId}
+                              onCalendarPositionChange={viewState.handleCalendarPositionChange}
                               mainScrollRef={timeline.mainScrollRef}
 
                               /* Configuration */

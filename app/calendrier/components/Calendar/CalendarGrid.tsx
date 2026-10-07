@@ -38,6 +38,7 @@ interface CalendarGridProps {
   user: User;
   dayInTimeline: number[];
   selectedDate: number;
+  initialEmployeeId: number | null;
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   nonWorkingDates: Record<string, number>;
@@ -64,6 +65,7 @@ interface CalendarGridProps {
   mouseUpAfterScroll: () => void;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
   onLockedError: (message: string) => void;
+  onCalendarPositionChange: (position: { date?: number; idPersonnel?: number }) => void;
   mobileState: MobileCalendarState;
 }
 
@@ -80,6 +82,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   nonWorkingDates,
   isMobile,
   selectedDate,
+  initialEmployeeId,
   isDisplayWeekend,
   tagPlacement = 'hover',
   mobileAppointmentDisplay,
@@ -102,6 +105,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   mouseUpAfterScroll,
   onAddAppointment,
   onLockedError,
+  onCalendarPositionChange,
   mobileState
 }) => {
 
@@ -197,6 +201,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         onSelectAppointment={onSelectAppointment}
         hoverColumnLeft={hoverColumnLeft}
         onLoadAppointmentsInRange={onLoadAppointmentsInRange}
+            initialEmployeeId={initialEmployeeId}
+            onCalendarPositionChange={onCalendarPositionChange}
         //reloadToken={reloadToken}
         mouseUpAfterScroll={mouseUpAfterScroll}
         onLockedError={onLockedError}

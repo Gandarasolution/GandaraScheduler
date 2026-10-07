@@ -72,13 +72,23 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({ empty: [] });
-  const selectedDateStorageKey = `calendar-selected-date-${user?.IdPersonnel ?? 'anonymous'}`;
+  const lastPositionStorageKey = `calendar-last-position-${user?.IdPersonnel ?? 'anonymous'}-${idPlanning}`;
+  const [lastPositionEmployeeId, setLastPositionEmployeeId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<number>(() => {
     const today = new Date().setHours(0, 0, 0, 0);
 
     if (typeof window === 'undefined') return today;
 
-    const storedDate = Number(window.localStorage.getItem(selectedDateStorageKey));
+    const storedPosition = window.localStorage.getItem(lastPositionStorageKey);
+    const storedDate = storedPosition
+      ? Number((() => {
+        try {
+          return JSON.parse(storedPosition).date;
+        } catch {
+          return null;
+        }
+      })())
+      : Number(window.localStorage.getItem(`calendar-selected-date-${user?.IdPersonnel ?? 'anonymous'}`));
     if (!Number.isFinite(storedDate) || storedDate <= 0) return today;
 
     const parsedDate = new Date(storedDate);
@@ -94,8 +104,119 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
 
   useEffect(() => {
     if (!Number.isFinite(selectedDate) || selectedDate <= 0) return;
-    window.localStorage.setItem(selectedDateStorageKey, String(selectedDate));
-  }, [selectedDate, selectedDateStorageKey]);
+    const currentPosition = {
+      date: selectedDate,
+      idPersonnel: lastPositionEmployeeId,
+    };
+    window.localStorage.setItem(lastPositionStorageKey, JSON.stringify(currentPosition));
+  }, [lastPositionEmployeeId, selectedDate, lastPositionStorageKey]);
+
+  const positionLoadedRef = useRef(false);
+  const canSetLastPositionRef = useRef(false);
+  const [lastPositionLoaded, setLastPositionLoaded] = useState(false);
+  const pendingPositionRef = useRef<number| null>(null);
+  const positionSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveLastPosition = useCallback((position: { date: number; idPersonnel: number }) => {
+    if (!canSetLastPositionRef.current) return;
+
+    pendingPositionRef.current = position.date;
+    if (positionSaveTimeoutRef.current) clearTimeout(positionSaveTimeoutRef.current);
+    positionSaveTimeoutRef.current = setTimeout(() => {
+      const pendingPosition = pendingPositionRef.current;
+      if (!pendingPosition) return;
+      void calendarConfigService.setLastPositionForUser(pendingPosition).then((response) => {
+        if (response?.success === false) {
+          console.error('Erreur lors de l’enregistrement de la dernière position du calendrier :', response.message);
+        }
+      }).catch((error) => {
+        console.error('Erreur lors de l’enregistrement de la dernière position du calendrier :', error);
+      });
+    }, 1000); // 1 seconde de délai pour éviter les appels trop fréquents
+  }, []);
+
+  useEffect(() => {
+    if (!idPlanning || idPlanning <= 0 || !user?.IdPersonnel) return;
+
+    let cancelled = false;
+    positionLoadedRef.current = false;
+    canSetLastPositionRef.current = false;
+    setLastPositionLoaded(false);
+
+    const loadLastPosition = async () => {
+      const storedPosition = window.localStorage.getItem(lastPositionStorageKey);
+      if (storedPosition) {
+        try {
+          const localPosition = JSON.parse(storedPosition);
+          const localEmployeeId = Number(localPosition?.idPersonnel);
+          if (Number.isFinite(localEmployeeId) && localEmployeeId > 0) {
+            setLastPositionEmployeeId(localEmployeeId);
+          }
+        } catch {
+          console.error('La dernière position locale du calendrier est invalide.');
+        }
+      }
+
+      try {
+        const response = await calendarConfigService.getLastPositionForUser();
+        if (cancelled) return;
+
+        canSetLastPositionRef.current = response?.data?.canSetLastPosition === true;
+
+        if (response?.success && response.data == null) {
+          const today = new Date().setHours(0, 0, 0, 0);
+          setSelectedDate(today);
+          setLastPositionEmployeeId(null);
+          return;
+        }
+
+        const position = response?.data;
+        const date = Number(position?.date ?? position?.Date ?? position?.DatePosition ?? position?.dernierePosition ?? position?.DernierePosition);
+        const employeeId = Number(position?.idPersonnel ?? position?.IdPersonnel ?? position?.IdEmploye);
+        if (response?.success && Number.isFinite(date) && date > 0) {
+          setSelectedDate(new Date(date).setHours(0, 0, 0, 0));
+          if (Number.isFinite(employeeId) && employeeId > 0) setLastPositionEmployeeId(employeeId);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération de la dernière position du calendrier :', error);
+      } finally {
+        if (!cancelled) {
+          positionLoadedRef.current = true;
+          setLastPositionLoaded(true);
+        }
+      }
+    };
+
+    void loadLastPosition();
+    return () => {
+      cancelled = true;
+      if (positionSaveTimeoutRef.current) clearTimeout(positionSaveTimeoutRef.current);
+    };
+  }, [idPlanning, lastPositionStorageKey, user?.IdPersonnel]);
+
+  const handleCalendarPositionChange = useCallback((position: { date?: number; idPersonnel?: number }) => {
+    const date = position.date ?? selectedDate;
+    const idPersonnel = position.idPersonnel ?? lastPositionEmployeeId;
+    if (
+      !positionLoadedRef.current ||
+      !Number.isFinite(date) ||
+      idPersonnel === null ||
+      !Number.isFinite(idPersonnel) ||
+      idPersonnel <= 0
+    ) return;
+    setSelectedDate(date);
+    setLastPositionEmployeeId(idPersonnel);
+    saveLastPosition({ date, idPersonnel });
+  }, [lastPositionEmployeeId, saveLastPosition, selectedDate]);
+
+  useEffect(() => {
+    if (!positionLoadedRef.current || !Number.isFinite(selectedDate) || !lastPositionEmployeeId) return;
+    saveLastPosition({ date: selectedDate, idPersonnel: lastPositionEmployeeId });
+  }, [lastPositionEmployeeId, saveLastPosition, selectedDate]);
+
+  useEffect(() => () => {
+    if (positionSaveTimeoutRef.current) clearTimeout(positionSaveTimeoutRef.current);
+  }, []);
 
 
   // --- Hook de configuration existant ---
@@ -283,6 +404,8 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     isSearchOverlayOpen, setIsSearchOverlayOpen,
     activeFilters, setActiveFilters,
     selectedDate, setSelectedDate,
+    lastPositionEmployeeId, setLastPositionEmployeeId, handleCalendarPositionChange,
+    lastPositionLoaded,
     modalInfo, setModalInfo,
     nonWorkingDates, setNonWorkingDates,
     isNotificationsPanelOpen, setIsNotificationsPanelOpen,

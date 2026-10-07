@@ -44,6 +44,14 @@ async function setLastVueForUser(idVue: number) {
   return await postRequest(`/api/planning/setLastVue`, { idVue }, 'setLastVueForUser');
 }
 
+async function getLastPositionForUser() {
+  return await getRequest(`/api/planning/getLastPosition`, 'getLastPositionForUser');
+}
+
+async function setLastPositionForUser(date: number) {
+  return await postRequest(`/api/planning/setLastPosition`, { date }, 'setLastPositionForUser');
+}
+
 async function getVueDetails(id: number) {
   return await getRequest(`/api/planning/vue/${id}`, 'getVueDetails');
 }
@@ -81,6 +89,8 @@ export default {
   lockCalendarConfig,
   getLastVueForUser,
   setLastVueForUser,
+  getLastPositionForUser,
+  setLastPositionForUser,
   getVueDetails,
   getAllUsersForVue,
   getMobileAppointmentDisplayConfig,

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, memo, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, memo, useCallback, useRef } from 'react';
 import { Appointment, CalendarConfig, Item, HalfDayInterval, User, PoleActivite, Equipe } from '../../types';
 import { TimelineFrame } from './index';
 import CalendarRows from './CalendarRows';
@@ -53,6 +53,7 @@ interface DesktopCalendarGridProps {
   handleEmployeeContextMenu: (e: React.MouseEvent, employee: User) => void;
   updateHighlightedEmployeeRow: (employeeId: number | null) => void;
   selectedCell: { employeeId: number; date: number } | null;
+  initialEmployeeId: number | null;
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
@@ -61,6 +62,7 @@ interface DesktopCalendarGridProps {
   //reloadToken?: number;
   mouseUpAfterScroll: () => void;
   onLockedError: (message: string) => void;
+  onCalendarPositionChange: (position: { date?: number; idPersonnel?: number }) => void;
 }
 
 
@@ -86,6 +88,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   handleContextMenu,
   handleEmployeeContextMenu,
   selectedCell,
+  initialEmployeeId,
   selectedAppointmentId,
   onSelectCell,
   onSelectAppointment,
@@ -107,6 +110,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   tagPlacement = 'hover',
   //reloadToken,
   onLockedError,
+  onCalendarPositionChange,
   mouseUpAfterScroll
 }) => {
   
@@ -155,6 +159,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
+  const initialEmployeeScrolledRef = useRef<number | null>(null);
 
   const overlappingEmployeeIds = useMemo(() => {
     const ids = new Set<number>();
@@ -480,6 +485,39 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     node.addEventListener('scroll', handleViewport, { passive: true });
     return () => node.removeEventListener('scroll', handleViewport);
   }, [mainScrollRef]);
+
+  useEffect(() => {
+    if (!initialEmployeeId || !rowBoundaries.length || !mainScrollRef.current) return;
+    if (initialEmployeeScrolledRef.current === initialEmployeeId) return;
+    const targetRow = rowBoundaries.find(
+      (row) => row.type === 'employee' && Number(row.id) === initialEmployeeId
+    );
+    if (!targetRow) return;
+    mainScrollRef.current.scrollTop = targetRow.start;
+    initialEmployeeScrolledRef.current = initialEmployeeId;
+  }, [initialEmployeeId, mainScrollRef, rowBoundaries]);
+
+  useEffect(() => {
+    if (initialEmployeeId === null) initialEmployeeScrolledRef.current = null;
+  }, [initialEmployeeId]);
+
+  useEffect(() => {
+    const node = mainScrollRef.current;
+    if (!node || !rowBoundaries.length) return;
+
+    const handlePositionChange = () => {
+      const firstVisibleRow = rowBoundaries.find(
+        (row) => row.type === 'employee' && row.end > node.scrollTop
+      );
+      if (firstVisibleRow) {
+        onCalendarPositionChange({ idPersonnel: Number(firstVisibleRow.id) });
+      }
+    };
+
+    handlePositionChange();
+    node.addEventListener('scroll', handlePositionChange, { passive: true });
+    return () => node.removeEventListener('scroll', handlePositionChange);
+  }, [mainScrollRef, onCalendarPositionChange, rowBoundaries]);
 
 
 
