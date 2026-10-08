@@ -88,15 +88,13 @@ export default function LoginPage({ login }: LoginPageProps) {
         return false;
       }
 
-      Cookies.set('client_api_url', resolvedEnvironment.apiUrl, {
-        expires: 365
-      });
+      Cookies.set('client_api_url', resolvedEnvironment.apiUrl, { expires: 1 / 24 });
 
       if (resolvedEnvironment.mercureUrl) {
         Cookies.set(
           'client_mercure_url',
           resolvedEnvironment.mercureUrl,
-          { expires: 365 }
+          { expires: 1 / 24 }
         );
       } else {
         Cookies.remove('client_mercure_url');
