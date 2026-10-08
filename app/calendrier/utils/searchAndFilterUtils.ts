@@ -17,6 +17,11 @@ import { Appointment, Item, ChantierItem, User, SocialItem } from '../types';
 // Types pour la configuration des filtres
 export type FilterType = 'checkbox' | 'select' | 'radio' | 'search' | 'combobox' | 'badge';
 
+export type FilterOption = {
+  value: string;
+  label: string;
+};
+
 /**
  * Type représentant une catégorie de filtre
  * - label : Nom affiché de la catégorie
@@ -27,7 +32,7 @@ export type FilterType = 'checkbox' | 'select' | 'radio' | 'search' | 'combobox'
 export type FilterCategory = {
   label: string;
   type: FilterType;
-  options: string[];
+  options: FilterOption[];
   badgeColors?: Record<string, string>;
 };
 
@@ -216,4 +221,3 @@ export const createSearchAndFilterUtils = (): SearchAndFilterUtils => {
     getFilterOptions  
   };
 };
-

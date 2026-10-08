@@ -58,7 +58,7 @@ import ressourceService from '@/app/service/ressource.service';
 import calendarConfigService from '@/app/service/calendarConfig.service';
 
 // --- UTILITAIRES ---
-import { createSearchAndFilterUtils, FilterType } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
+import { createSearchAndFilterUtils, FilterType, ActiveFilters } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
 import { Appointment, User, Item } from '../types';
 import type { Notification } from '../types';
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
@@ -97,6 +97,7 @@ export default function HomePage({
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [tableRefreshVersion, setTableRefreshVersion] = useState(0);
   
   
   
@@ -357,7 +358,7 @@ export default function HomePage({
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
     return viewState.viewType === 'chantier-table' 
-      ? (ressourceService.getRessourcesProjet as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
+      ? ressourceService.getRessourcesProjet(limit, pageNum, viewState.searchInput, viewState.viewType, timeoutMs)
       : viewState.viewType === 'employee-table' && hasPermission(23) 
         ? (employeeService.getEmployeesPag as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
         : viewState.viewType === 'manual-event-table' && hasPermission(23) 
@@ -365,7 +366,46 @@ export default function HomePage({
           : viewState.viewType === 'paie-table' && hasPermission(23) 
             ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs)
             : undefined;
-  }, [viewState.viewType, viewState.activeFilters, viewState.searchInput, ]);
+  }, [viewState.viewType, viewState.searchInput, viewState.activeFilters]);
+
+  const saveChantierFilters = useCallback(async (filters: ActiveFilters): Promise<boolean> => {
+    if (viewState.viewType !== 'chantier-table') {
+      viewState.setActiveFilters(filters);
+      return true;
+    }
+
+    const persistedFilters = Object.fromEntries(
+      Object.entries(filters).filter(([, values]) => Array.isArray(values) && values.length > 0)
+    );
+    const response = await ressourceService.saveFilterOptions('chantier-table', persistedFilters);
+
+    if (response?.success === false) {
+      const message = response.message || 'Impossible d’enregistrer les filtres des chantiers.';
+      setLockNotification(message);
+      console.error(message);
+      return false;
+    }
+
+    viewState.setActiveFilters(persistedFilters);
+    setTableRefreshVersion((version) => version + 1);
+    return true;
+  }, [viewState.setActiveFilters, viewState.viewType]);
+
+  const clearChantierFilters = useCallback(async (): Promise<boolean> => {
+    if (viewState.viewType === 'chantier-table') {
+      const response = await ressourceService.saveFilterOptions('chantier-table', {});
+      if (response?.success === false) {
+        const message = response.message || 'Impossible de réinitialiser les filtres des chantiers.';
+        setLockNotification(message);
+        console.error(message);
+        return false;
+      }
+    }
+
+    viewState.setActiveFilters({});
+    setTableRefreshVersion((version) => version + 1);
+    return true;
+  }, [viewState.setActiveFilters, viewState.viewType]);
 
   // --- FILTRES ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -883,7 +923,7 @@ export default function HomePage({
                         realtimeUpdate={lastMercureEvent}
                         enablePagination={true}
                         paginatedSearchFunction={handlePaginatedSearch}
-                        refreshKey={dataLayer.appointmentsVersion}
+                        refreshKey={dataLayer.appointmentsVersion + tableRefreshVersion}
                         loadingElement={<Loader message="Chargement des données..." />}
                         showGroupHeaders={viewState.viewType === 'chantier-table'}
                         onRowClick={viewState.viewType === 'employee-table' ? undefined : handleTableRowClick}
@@ -977,8 +1017,8 @@ export default function HomePage({
               // Settings & Config
               closeSettings: () => viewState.setIsSettingsOpen(false),
               closeFilterModal: () => viewState.setIsFilterModalOpen(false),
-              submitFilters: (f) => viewState.setActiveFilters(f),
-              clearFilters: () => viewState.setActiveFilters({ empty: [] }),
+              submitFilters: saveChantierFilters,
+              clearFilters: clearChantierFilters,
               
               closeConfigModal: viewState.calendarConfigHook.closeConfigModal,
               setCurrentConfig: viewState.onCalendarConfigChange,

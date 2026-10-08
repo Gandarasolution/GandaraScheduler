@@ -2,8 +2,13 @@ import { useState, useRef, useEffect, memo } from 'react';
 
 
 
+export interface ComboboxOption {
+  value: string;
+  label: string;
+}
+
 interface ComboboxProps {
-  options: string[];
+  options: ComboboxOption[];
   value: string[];
   onValueChange: (value: string[]) => void;
   placeholder?: string;
@@ -14,12 +19,14 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOptions = options.filter(opt => value.includes(opt));
+  const selectedOptions = options.filter(opt => value.includes(opt.value));
 
+
+  console.log('Combobox render: ', { options, value, selectedOptions, searchQuery });
 
   const filteredOptions = options.filter(option =>
-    option?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    !value.includes(option)
+    option?.label?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    !value.includes(option.value)
   );
 
 
@@ -40,8 +47,8 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
     setIsOpen(true);
   };
 
-  const handleOptionClick = (option: string) => {
-    onValueChange([...value, option]);
+  const handleOptionClick = (option: ComboboxOption) => {
+    onValueChange([...value, option.value]);
     setSearchQuery('');
     setIsOpen(false);
   };
@@ -61,7 +68,7 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
         <div className="flex flex-wrap gap-2 mb-2">
           {selectedOptions.map((option) => (
             <div
-              key={option}
+              key={option.value}
               className="pl-3 pr-2 py-1 flex items-center gap-1 rounded-md"
               style={{
                 backgroundColor: 'var(--color-primary-100)',
@@ -69,10 +76,10 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
                 border: 'none'
               }}
             >
-              <span>{option}</span>
+              <span>{option.label}</span>
               <button
                 type="button"
-                onClick={() => handleRemoveOption(option)}
+                onClick={() => handleRemoveOption(option.value)}
                 className="rounded-full p-0.5 transition-colors"
                 style={{
                   color: 'var(--color-primary-600)'
@@ -124,7 +131,7 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
         >
           {filteredOptions.map((option) => (
             <button
-              key={option}
+              key={option.value}
               type="button"
               onClick={() => handleOptionClick(option)}
               className="w-full text-left px-3 py-2 transition-colors"
@@ -135,7 +142,7 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              {option}
+              {option.label}
             </button>
           ))}
         </div>

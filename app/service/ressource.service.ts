@@ -1,5 +1,7 @@
 import { getRequest, postRequest, putRequest, deleteRequest } from "./axios.service";
 
+type ActiveFilters = Record<string, string[]>;
+
 
 async function getRessourceById(ressourceId: number, timeoutMs: number = 5000) {
   return await getRequest(`/api/ressources/${ressourceId}`, 'getRessourceById', { timeout: timeoutMs });
@@ -35,25 +37,20 @@ async function getFilterOptionsDynamic(types: string, keys: string[]) {
   return await getRequest(`/api/filters-options?${params.toString()}`, 'getFilterOptionsDynamic');
 }
 
+async function saveFilterOptions(viewType: string, activeFilters: ActiveFilters) {
+  return await postRequest(
+    '/api/filters-options',
+    { viewType, activeFilters },
+    'saveFilterOptions'
+  );
+}
 
-async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, query: string = '', activeFilters: { [key: string]: string[] } = {}, timeoutMs: number = 15000) {
+async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, query: string = '', viewType: string = 'chantier-table', timeoutMs: number = 15000) {
   const params = new URLSearchParams();
   params.set('limit', String(limit));
   params.set('pageNum', String(pageNum));
   params.set('q', query);
-  
-  for (const filterKey in activeFilters) {
-    ////console.log(activeFilters[filterKey], activeFilters[filterKey].length);
-    
-    if (activeFilters[filterKey].length > 0) {
-      ////console.log(`Filtering by ${filterKey}:`, activeFilters[filterKey].join(','));
-      
-      params.set(filterKey, activeFilters[filterKey].join(','));
-    }
-  }
-  ////console.log(activeFilters);
-
-  
+  params.set('viewType', viewType);
 
   return await getRequest(
     `/api/ressources/projets?${params.toString()}`,
@@ -129,6 +126,7 @@ export default {
   getManualEvents,
   getRubriquePaie,
   getFilterOptionsDynamic,
+  saveFilterOptions,
   verifyUniqueCode,
   addRessourceManual,
   editRessource
