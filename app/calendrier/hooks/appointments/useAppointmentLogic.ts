@@ -392,6 +392,7 @@ export const useAppointmentLogic = ({
     saveToHistory: boolean = true,
     newPriority?: number,
     syncWithApi: boolean = true,
+    reorganizeOverlappingPriorities: boolean = true,
   ) => {
       const { id, newStartDate, newEndDate, newEmployee, annotation, Etiquette } = data;
 
@@ -420,7 +421,7 @@ export const useAppointmentLogic = ({
           : app
       );
 
-      if (newPriority !== undefined && newEmployee) {
+      if (newPriority !== undefined && newEmployee && reorganizeOverlappingPriorities) {
         reorganizePriorities(id, newPriority, newEmployee.IdPersonnel, newStartDate, newEndDate);
         normalizePriorities([Number(newEmployee.IdPersonnel)]);
       }
@@ -652,6 +653,7 @@ export const useAppointmentLogic = ({
             },
             false,
             newPriority,
+            false,
             false
           );
 

@@ -7,3 +7,4 @@ export { default as NotificationsPanel } from './NotificationsPanel';
 export { default as SearchOverlay } from './SearchOverlay';
 export { default as SettingsModal } from './SettingsModal';
 export { default as ImageSelectorContentModal } from './imageSelectorContentModal';
+export { default as TransferPlanningModal } from './TransferPlanningModal';

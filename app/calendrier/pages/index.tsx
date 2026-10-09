@@ -27,6 +27,7 @@ import {
   SearchOverlay,
   CalendarHeader,
   CalendarModals,
+  TransferPlanningModal,
   DraggableSource,
   Loader,
 } from '@/app/calendrier/components';
@@ -98,6 +99,7 @@ export default function HomePage({
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [tableRefreshVersion, setTableRefreshVersion] = useState(0);
+  const [transferEmployee, setTransferEmployee] = useState<User | null>(null);
   
   
   
@@ -367,6 +369,10 @@ export default function HomePage({
             ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs)
             : undefined;
   }, [viewState.viewType, viewState.searchInput, viewState.activeFilters]);
+
+  const handleTransferEmployee = useCallback((employee: User) => {
+    setTransferEmployee(employee);
+  }, []);
 
   const saveChantierFilters = useCallback(async (filters: ActiveFilters): Promise<boolean> => {
     if (viewState.viewType !== 'chantier-table') {
@@ -793,6 +799,15 @@ export default function HomePage({
               onClose={() => setLockNotification(null)} 
             />
           )}          
+        <TransferPlanningModal
+          isOpen={transferEmployee !== null}
+          sourceEmployee={transferEmployee}
+          onClose={() => setTransferEmployee(null)}
+          onSuccess={() => {
+            setTableRefreshVersion((version) => version + 1);
+            setLockNotification("Le planning a été transféré avec succès.");
+          }}
+        />
         <div className="h-screen flex flex-col overflow-hidden bg-page poppins">
     
           {/* HEADER : Navigation et Contrôles */}
@@ -917,6 +932,7 @@ export default function HomePage({
                             onImageClick: interaction.handleOpenImageModal,
                             initialTeams: dataLayer.initialTeams,
                             onTeamChange: dataLayer.updateEmployeeGroup,
+                            onTransfer: handleTransferEmployee,
                             ressources: dataLayer.itemsRef.current,
                           }) || []
                         }

@@ -202,6 +202,15 @@ async function repeatEvenement(repeatData: any) {
     return await postRequest(`/api/event/repeat/${repeatData.IdPlanningEvenement}`, payload, 'repeatEvenement');
 }
 
+async function transferPlanning(data: {
+    sourceEmployeeId: number;
+    targetEmployeeId: number;
+    startDate: string;
+    endDate: string;
+}) {
+    return await postRequest('/api/event/transfer', data, 'transferPlanning');
+}
+
 
 export default {
 
@@ -214,6 +223,7 @@ export default {
     updateEvenementAndRessource,
     divideEvenement,
     repeatEvenement,
+    transferPlanning,
     deleteEvenements,
     unlockEvenement,
     lockQuickEvenement

@@ -20,6 +20,7 @@ export interface TableConfigDeps {
   onImageClick?: (user: User) => void;
   initialTeams?: Record<number, Equipe>;
   onTeamChange?: (employee: User, groupId: number | null) => Promise<{ success: boolean }>;
+  onTransfer?: (employee: User) => void;
   ressources?: Record<number, Item>;
 }
 
@@ -258,6 +259,22 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                     </div>
                 );
                 }
+            },
+            { key: 'actions', label: 'Actions', sortable: false, width: 150,
+                renderer: (_value: any, item: GenericDataItem) => (
+                    <div className="flex items-center justify-center w-full h-full">
+                        <button
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                deps.onTransfer?.(item as unknown as User);
+                            }}
+                            className="px-3 py-1.5 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors cursor-pointer"
+                        >
+                            Transférer
+                        </button>
+                    </div>
+                )
             }
             ]
         }

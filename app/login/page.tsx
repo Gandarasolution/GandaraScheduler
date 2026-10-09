@@ -94,6 +94,7 @@ export default function LoginPage({ login }: LoginPageProps) {
         Cookies.set(
           'client_mercure_url',
           resolvedEnvironment.mercureUrl,
+
           { expires: 1 / 24 }
         );
       } else {

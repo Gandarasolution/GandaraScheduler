@@ -154,7 +154,8 @@ export const useCalendarDragDrop = ({
       
       
 
-      let newPriority: number | undefined = undefined;
+      // Un événement déplacé sans chevauchement doit revenir à la priorité de base.
+      let newPriority: number | undefined = overlappingAppointments.length === 0 ? 0 : undefined;
       
       if (overlappingAppointments.length > 0) {
         // Calculer la position Y relative à la ligne de l'employé
@@ -221,7 +222,15 @@ export const useCalendarDragDrop = ({
           }
         } else {
           if (rdvAtTargetPosition.length > 0) {
-            newPriority = (rdvAtTargetPosition[0].PlanningEvenementPriorite ?? 0) + 1;
+            // Un événement posé par-dessus plusieurs événements doit passer
+            // après la priorité la plus élevée de toute la période.
+            newPriority = overlappingAppointments.reduce(
+              (highestPriority, app) => Math.max(
+                highestPriority,
+                app.PlanningEvenementPriorite ?? 0
+              ),
+              -1
+            ) + 1;
           } else {
             newPriority = targetPriorityIndex;
           }
