@@ -23,6 +23,8 @@ interface CustomSelectWithImageProps {
   displayKey?: string; // Nouvelle prop pour choisir la clé d'affichage
   imageSize?: 'small' | 'medium' | 'large'; // Taille des images
   illustrationImage: React.ReactNode; 
+  onAddOption?: () => void;
+  addOptionLabel?: string;
 }
 
 /**
@@ -41,7 +43,9 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   showImages = false, // Par défaut, affiche du texte dans la liste
   displayKey = "name", // Par défaut, utilise "name"
   imageSize = "medium", // Taille par défaut
-  illustrationImage
+  illustrationImage,
+  onAddOption,
+  addOptionLabel = "Ajouter"
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -243,6 +247,13 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
                 )}
               </li>
             ))}
+            {onAddOption && (
+              <li className="border-t border-light px-3 py-2">
+                <button type="button" className="flex w-full items-center gap-2 text-left text-primary hover:text-primary-dark" onClick={() => { onAddOption(); setIsOpen(false); }}>
+                  <span className="text-lg leading-none">+</span>{addOptionLabel}
+                </button>
+              </li>
+            )}
           </ul>
         </div>
       )}

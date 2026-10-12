@@ -60,6 +60,25 @@ async function getAllUsersForVue() {
   return await getRequest(`/api/planning/vue/users`, 'getAllUsersForVue');
 }
 
+async function getChantierViews(userId: number, idPlanning: number) {
+  return await getRequest(
+    `/api/planning/vue/user/${userId}?idPlanning=${idPlanning}&viewType=chantier-table`,
+    'getChantierViews'
+  );
+}
+
+async function getChantierViewDetails(id: number) {
+  return await getRequest(`/api/planning/vue/${id}?viewType=chantier-table`, 'getChantierViewDetails');
+}
+
+async function createChantierView(data: {
+  planningVue: Record<string, unknown>;
+  filtrePerso: unknown[];
+  utilisateursAutorises: number[];
+}) {
+  return await postRequest('/api/planning/vue', data, 'createChantierView');
+}
+
 async function getMobileAppointmentDisplayConfig() {
   return await getRequest(`/api/planning/mobile/display`, 'getMobileAppointmentDisplayConfig');
 }
@@ -93,6 +112,9 @@ export default {
   setLastPositionForUser,
   getVueDetails,
   getAllUsersForVue,
+  getChantierViews,
+  getChantierViewDetails,
+  createChantierView,
   getMobileAppointmentDisplayConfig,
   getMobileAppointmentDisplayConfigSettings,
   saveMobileAppointmentDisplayConfig

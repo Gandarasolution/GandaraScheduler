@@ -33,6 +33,7 @@ import {
 } from '@/app/calendrier/components';
 import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOverlay';
 import { getTableStructure } from '../components/Table/tableConfig';
+import ChantierViewsControl, { ChantierView } from '../components/Table/ChantierViewsControl';
 
 
 // --- COMPOSANTS UI AVEC CODE SPLITTING ---
@@ -99,6 +100,7 @@ export default function HomePage({
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [tableRefreshVersion, setTableRefreshVersion] = useState(0);
+  const [chantierColumns, setChantierColumns] = useState<string[] | null>(null);
   const [transferEmployee, setTransferEmployee] = useState<User | null>(null);
   
   
@@ -360,7 +362,7 @@ export default function HomePage({
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
     return viewState.viewType === 'chantier-table' 
-      ? ressourceService.getRessourcesProjet(limit, pageNum, viewState.searchInput, viewState.viewType, timeoutMs)
+      ? ressourceService.getRessourcesProjet(limit, pageNum, viewState.searchInput, viewState.viewType, viewState.activeFilters, timeoutMs)
       : viewState.viewType === 'employee-table' && hasPermission(23) 
         ? (employeeService.getEmployeesPag as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
         : viewState.viewType === 'manual-event-table' && hasPermission(23) 
@@ -442,6 +444,24 @@ export default function HomePage({
         code: { label: 'Code', type: 'combobox' as FilterType },
     };
   }, [viewState.viewType]);
+
+  const chantierStructure = useMemo(() => getTableStructure('chantier-table', {
+    handleOpenEditModal: appointmentLogic.handleOpenEditModal,
+    onImageClick: interaction.handleOpenImageModal,
+    initialTeams: dataLayer.initialTeams,
+    onTeamChange: dataLayer.updateEmployeeGroup,
+    onTransfer: handleTransferEmployee,
+    ressources: dataLayer.itemsRef.current,
+  }) || [], [appointmentLogic.handleOpenEditModal, dataLayer.initialTeams, dataLayer.updateEmployeeGroup, handleTransferEmployee, interaction.handleOpenImageModal]);
+
+  const handleChantierViewChange = useCallback((view: ChantierView | null) => {
+    setChantierColumns(view?.columns || null);
+    setTableRefreshVersion(version => version + 1);
+  }, []);
+
+  const handleChantierViewFiltersChange = useCallback((filters: ActiveFilters) => {
+    void saveChantierFilters(filters);
+  }, [saveChantierFilters]);
 
 
   //console.log("Filter Config:", filterConfig);
@@ -925,17 +945,48 @@ export default function HomePage({
                   ) : viewState.viewType !== 'calendar' ? (
                     /* VUES TABLEAUX (Chantier, Paie, Employés) */
                     <Suspense fallback={<Loader message="Chargement du tableau..." />}>
+                      {viewState.viewType === 'chantier-table' && (
+                        <ChantierViewsControl
+                          structure={chantierStructure}
+                          keyOfFilter={keyOfFilter}
+                          activeFilters={viewState.activeFilters}
+                          userId={user?.IdPersonnel}
+                          planningId={currentPlanningId}
+                          onViewChange={handleChantierViewChange}
+                          onFiltersChange={handleChantierViewFiltersChange}
+                        />
+                      )}
                       <DataTableFrame
-                        categoriesStructure={
-                          getTableStructure(viewState.viewType, {
+                        categoriesStructure={(() => {
+                          const structure = viewState.viewType === 'chantier-table'
+                            ? chantierStructure
+                            : getTableStructure(viewState.viewType, {
                             handleOpenEditModal: appointmentLogic.handleOpenEditModal,
                             onImageClick: interaction.handleOpenImageModal,
                             initialTeams: dataLayer.initialTeams,
                             onTeamChange: dataLayer.updateEmployeeGroup,
                             onTransfer: handleTransferEmployee,
                             ressources: dataLayer.itemsRef.current,
-                          }) || []
-                        }
+                          }) || [];
+                          if (viewState.viewType !== 'chantier-table' || !chantierColumns) return structure;
+                          const order = new Map(chantierColumns.map((column, index) => [column, index]));
+                          return structure
+                            .map(category => ({
+                              ...category,
+                              attributes: category.attributes.filter(attribute =>
+                                chantierColumns.includes(`${category.key}.${attribute.key}`)
+                              ).sort((left, right) =>
+                                (order.get(`${category.key}.${left.key}`) ?? Number.MAX_SAFE_INTEGER) -
+                                (order.get(`${category.key}.${right.key}`) ?? Number.MAX_SAFE_INTEGER)
+                              ),
+                            }))
+                            .filter(category => category.attributes.length > 0)
+                            .sort((left, right) => {
+                              const leftOrder = order.get(`${left.key}.${left.attributes[0]?.key}`) ?? Number.MAX_SAFE_INTEGER;
+                              const rightOrder = order.get(`${right.key}.${right.attributes[0]?.key}`) ?? Number.MAX_SAFE_INTEGER;
+                              return leftOrder - rightOrder;
+                            });
+                        })()}
                         realtimeUpdate={lastMercureEvent}
                         enablePagination={true}
                         paginatedSearchFunction={handlePaginatedSearch}
