@@ -396,13 +396,42 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     if (Array.isArray(responseData)) {
       pageData = responseData;
     } else if (responseData && typeof responseData === 'object') {
-      const nested = responseData.data ?? responseData.rows ?? responseData.items;
-      pageData = Array.isArray(nested) ? nested : [];
+      const responseObject = responseData as Record<string, unknown>;
+      const nested = responseObject.data
+        ?? responseObject.rows
+        ?? responseObject.items
+        ?? responseObject.projets
+        ?? responseObject.Projets
+        ?? responseObject.ressources
+        ?? responseObject.Ressources
+        ?? responseObject.results
+        ?? responseObject.Results;
+      if (Array.isArray(nested)) {
+        pageData = nested;
+      } else if (nested && typeof nested === 'object') {
+        const nestedObject = nested as Record<string, unknown>;
+        const nestedData = nestedObject.data
+          ?? nestedObject.rows
+          ?? nestedObject.items
+          ?? nestedObject.projets
+          ?? nestedObject.Projets
+          ?? nestedObject.ressources
+          ?? nestedObject.Ressources
+          ?? nestedObject.results
+          ?? nestedObject.Results;
+        pageData = Array.isArray(nestedData) ? nestedData : [];
+      }
     }
 
     const totalFromDataObject =
       !Array.isArray(responseData) && responseData && typeof responseData === 'object'
-        ? Number(responseData.TotalLignes)
+        ? Number(
+            (responseData as Record<string, unknown>).TotalLignes
+              ?? (responseData as Record<string, unknown>).totalLignes
+              ?? (responseData as Record<string, unknown>).total
+              ?? (responseData as Record<string, unknown>).count
+              ?? (responseData as Record<string, unknown>).Total
+          )
         : NaN;
     const totalFromRoot = Number(response?.TotalLignes);
     const totalLines = Number.isFinite(totalFromDataObject)

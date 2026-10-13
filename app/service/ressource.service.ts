@@ -37,14 +37,6 @@ async function getFilterOptionsDynamic(types: string, keys: string[]) {
   return await getRequest(`/api/filters-options?${params.toString()}`, 'getFilterOptionsDynamic');
 }
 
-async function saveFilterOptions(viewType: string, activeFilters: ActiveFilters) {
-  return await postRequest(
-    '/api/filters-options',
-    { viewType, activeFilters },
-    'saveFilterOptions'
-  );
-}
-
 async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, query: string = '', viewType: string = 'chantier-table', activeFilters: ActiveFilters = {}, timeoutMs: number = 15000) {
   const params = new URLSearchParams();
   params.set('limit', String(limit));
@@ -129,7 +121,6 @@ export default {
   getManualEvents,
   getRubriquePaie,
   getFilterOptionsDynamic,
-  saveFilterOptions,
   verifyUniqueCode,
   addRessourceManual,
   editRessource

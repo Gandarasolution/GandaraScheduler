@@ -3,6 +3,7 @@ import { Appointment, Item, User } from '../../types';
 import { memo, use, useEffect, useState } from 'react';
 import DatePicker from '../ui/DatePicker';
 import { useAuth } from '../../hooks/utils/AuthContext';
+import ChantierViewsControl, { ChantierViewsControlProps } from '../Table/ChantierViewsControl';
 
 
 const SelectedCheck = () => (
@@ -37,6 +38,7 @@ interface CalendarHeaderProps {
   notifications: any; // Type retourné par useNotifications
   handleAddModal: (appointment: Appointment) => void;
   onNavigateDate: (date: number) => void;
+  chantierViewsControlProps?: ChantierViewsControlProps;
 }
 
 export const CalendarHeader = memo(({ 
@@ -46,6 +48,7 @@ export const CalendarHeader = memo(({
   notifications, 
   handleAddModal,
   onNavigateDate,
+  chantierViewsControlProps,
 }: CalendarHeaderProps) => {
   
   // Déstructuration du viewState pour simplifier l'accès dans le JSX
@@ -615,6 +618,10 @@ export const CalendarHeader = memo(({
               </div>
             )}
           </div>
+
+          {viewType === 'chantier-table' && chantierViewsControlProps && (
+            <ChantierViewsControl {...chantierViewsControlProps} compact />
+          )}
 
 
           {/* Toggle Weekend / Full Day / Filtres */}

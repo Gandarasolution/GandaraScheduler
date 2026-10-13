@@ -10,7 +10,7 @@ import { useAuth } from '../utils/AuthContext';
 
 export const useCalendarView = (idPlanning: number, user: User, isMobile: boolean) => {
 
-  const { hasPermission } = useAuth(); 
+  const { hasPermission, currentVueId, setCurrentVueId } = useAuth();
 
   const defaultMobileAppointmentDisplay: MobileAppointmentDisplayConfig = {
     primaryFields: ['LibellePlanningRessource', 'Type'],
@@ -222,6 +222,54 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   // --- Hook de configuration existant ---
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
   const calendarConfigHook = useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig });
+
+  useEffect(() => {
+    if (viewType !== 'calendar' || currentVueId !== 0 || !idPlanning || isMobile) return;
+
+    let cancelled = false;
+    const loadLastPlanningView = async () => {
+      try {
+        axiosAgent.defaults.headers.common['X-Planning-Id'] = idPlanning;
+        const response = await calendarConfigService.getLastVueForUser();
+        if (cancelled) return;
+
+        const payload = response?.data;
+        const rawViews = payload?.Configs ?? payload?.configs ?? payload;
+        const views = Array.isArray(rawViews) ? rawViews : rawViews ? [rawViews] : [];
+        const viewId = Number(
+          views[0]?.IdPlanningVue
+            ?? views[0]?.IdPlanningChantierVue
+            ?? views[0]?.ValeurParametre
+        );
+        if (!Number.isFinite(viewId) || viewId <= 0) {
+          throw new Error(response?.message || "Aucune vue planning n'est disponible.");
+        }
+
+        setCurrentVueId(viewId);
+        axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = viewId;
+      } catch (error) {
+        if (!cancelled) console.error("Impossible de charger la dernière vue du planning.", error);
+      }
+    };
+
+    void loadLastPlanningView();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentVueId, idPlanning, isMobile, setCurrentVueId, viewType]);
+
+  useEffect(() => {
+    if (viewType !== 'calendar' || currentVueId === null || currentVueId <= 0 || isMobile) return;
+    if (currentCalendarConfig?.IdPlanningVue === currentVueId) return;
+
+    void calendarConfigHook.loadConfigs(hasPermission(23) || hasPermission(22));
+  }, [
+    currentCalendarConfig?.IdPlanningVue,
+    currentVueId,
+    hasPermission,
+    isMobile,
+    viewType,
+  ]);
 
   useEffect(() => {
     let cancelled = false;

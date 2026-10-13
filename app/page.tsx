@@ -8,21 +8,16 @@ import { ErrorBoundary } from "./calendrier/components/ui/ErrorBoundary";
 import { useAuth } from './calendrier/hooks/utils/AuthContext';
 import SelectionScreen from './login/SelectionScreen';
 import { axiosAgent } from '@/app/service/axios.service';
-import { calendarConfigService } from './service';
 
 export default function Home() {
   const {
     user, login, isAuthenticated, setUser, 
     UserPlanning, currentPlanningId, setCurrentPlanningId,
-    currentVueId, setCurrentVueId, setLastVueForUser
+    currentVueId, setCurrentVueId
   } = useAuth();
 
   const { setTheme } = useTheme(user);
   
-  // Nouveaux états pour la gestion de l'API des Vues
-  const [availableVues, setAvailableVues] = useState<any[] | null>(null);
-  const [isLoadingVues, setIsLoadingVues] = useState(false);
-  const [vueError, setVueError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
 
@@ -73,54 +68,9 @@ export default function Home() {
   // LOGIQUE DU WORKFLOW : APPEL API POUR LES VUES
   // ==============================================================
   useEffect(() => {
-    // Dès qu'on a un Planning mais pas encore de Vue, on déclenche l'API
     if (currentPlanningId !== -1 && currentVueId === null) {
-      const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-
-      // La vue mobile n'utilise pas les configurations de vue du planning.
-      if (isMobile) {
-        setCurrentVueId(0);
-        axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = null;
-        return;
-      }
-
-      const fetchVues = async () => {
-        setIsLoadingVues(true);
-        setVueError(null);
-        
-        try {
-          // L'en-tête X-Planning-Id est déjà défini par AuthContext, mais on sécurise
-          axiosAgent.defaults.headers.common['X-Planning-Id'] = currentPlanningId;
-          
-          const response = await calendarConfigService.getLastVueForUser();
-          
-          //console.log('Réponse de l\'API getLastVueForUser :', response);
-          if (response.success && response.data) {
-            const vuesData = response.data;
-            // Ta route peut renvoyer un objet unique (préférence) ou un tableau de vues
-            const vues = Array.isArray(vuesData) ? vuesData : [vuesData];
-            
-            if (vues.length === 0) {
-              setVueError("Aucune vue n'est configurée ou disponible pour ce planning.");
-            } else if (vues.length === 1) {
-              // ⚡ MAGIC : S'il n'y a qu'une seule vue, on la sélectionne automatiquement !
-              setCurrentVueId(vues[0].IdPlanningVue);
-              axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = vues[0].IdPlanningVue;
-            } else {
-              // Sinon, on les met en mémoire pour afficher l'écran de sélection
-              setAvailableVues(vues);
-            }
-          } else {
-            setVueError(response?.message || "Erreur lors de la récupération de la vue.");
-          }
-        } catch (error: any) {
-          setVueError(error.response?.data?.message || "Impossible de joindre le serveur pour récupérer vos vues.");
-        } finally {
-          setIsLoadingVues(false);
-        }
-      };
-
-      fetchVues();
+      setCurrentVueId(0);
+      axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = null;
     }
   }, [currentPlanningId, currentVueId, setCurrentVueId]);
 
@@ -144,58 +94,17 @@ export default function Home() {
     );
   }
 
-  // ÉTAPE 2 : Choix de la Vue (ou Chargement/Erreur)
+  // ÉTAPE 2 : Initialisation du calendrier
   if (currentPlanningId !== -1 && currentVueId === null) {
-    // 2.A - L'appel API est en cours
-    if (isLoadingVues) {
-      return (
-        <SelectionScreen 
-          title="Chargement..."
-          subtitle="Récupération de vos préférences d'affichage"
-          options={[]}
-          onSelect={() => {}}
-          isLoading={true}
-        />
-      );
-    }
-
-    // 2.B - Erreur (ex: Utilisateur non autorisé ou aucune vue)
-    if (vueError || (availableVues && availableVues.length === 0)) {
-      return (
-        <SelectionScreen 
-          title="Erreur d'accès"
-          subtitle="Impossible de configurer l'espace"
-          options={[]}
-          onSelect={() => {}}
-          error={vueError || "Aucune configuration disponible."}
-          onBack={UserPlanning.length > 1 ? () => {
-            setCurrentPlanningId(-1);
-            setVueError(null);
-            setAvailableVues(null);
-          } : undefined}
-        />
-      );
-    }
-
-    // 2.C - S'il y a plusieurs vues, on demande à l'utilisateur
-    if (availableVues && availableVues.length > 1) {
-      return (
-        <SelectionScreen 
-          title="Choix de la configuration"
-          subtitle="Sélectionnez la vue que vous souhaitez afficher"
-          options={availableVues.map(v => ({ 
-            id: v.IdPlanningVue, 
-            name: v.LibellePlanningVue,
-            description: v.DescriptionPlanningVue 
-          }))}
-          onSelect={(id) => setLastVueForUser(id)}
-          onBack={UserPlanning.length > 1 ? () => {
-            setCurrentPlanningId(-1);
-            setAvailableVues(null);
-          } : undefined}
-        />
-      );
-    }
+    return (
+      <SelectionScreen
+        title="Chargement..."
+        subtitle="Ouverture du planning"
+        options={[]}
+        onSelect={() => {}}
+        isLoading={true}
+      />
+    );
   }
 
   // ÉTAPE 3 : Affichage du Calendrier

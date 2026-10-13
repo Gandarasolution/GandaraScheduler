@@ -33,7 +33,12 @@ import {
 } from '@/app/calendrier/components';
 import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOverlay';
 import { getTableStructure } from '../components/Table/tableConfig';
-import ChantierViewsControl, { ChantierView } from '../components/Table/ChantierViewsControl';
+import {
+  ChantierView,
+  extractLastChantierViewId,
+  normalizeChantierView,
+} from '../components/Table/ChantierViewsControl';
+import type { ChantierViewsControlProps } from '../components/Table/ChantierViewsControl';
 
 
 // --- COMPOSANTS UI AVEC CODE SPLITTING ---
@@ -101,6 +106,9 @@ export default function HomePage({
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [tableRefreshVersion, setTableRefreshVersion] = useState(0);
   const [chantierColumns, setChantierColumns] = useState<string[] | null>(null);
+  const [chantierViews, setChantierViews] = useState<ChantierView[]>([]);
+  const [chantierInitialViewId, setChantierInitialViewId] = useState<string | null>(null);
+  const [chantierViewsLoading, setChantierViewsLoading] = useState(false);
   const [transferEmployee, setTransferEmployee] = useState<User | null>(null);
   
   
@@ -377,43 +385,16 @@ export default function HomePage({
   }, []);
 
   const saveChantierFilters = useCallback(async (filters: ActiveFilters): Promise<boolean> => {
-    if (viewState.viewType !== 'chantier-table') {
-      viewState.setActiveFilters(filters);
-      return true;
-    }
-
-    const persistedFilters = Object.fromEntries(
-      Object.entries(filters).filter(([, values]) => Array.isArray(values) && values.length > 0)
-    );
-    const response = await ressourceService.saveFilterOptions('chantier-table', persistedFilters);
-
-    if (response?.success === false) {
-      const message = response.message || 'Impossible d’enregistrer les filtres des chantiers.';
-      setLockNotification(message);
-      console.error(message);
-      return false;
-    }
-
-    viewState.setActiveFilters(persistedFilters);
+    viewState.setActiveFilters(filters);
     setTableRefreshVersion((version) => version + 1);
     return true;
-  }, [viewState.setActiveFilters, viewState.viewType]);
+  }, [viewState.setActiveFilters]);
 
   const clearChantierFilters = useCallback(async (): Promise<boolean> => {
-    if (viewState.viewType === 'chantier-table') {
-      const response = await ressourceService.saveFilterOptions('chantier-table', {});
-      if (response?.success === false) {
-        const message = response.message || 'Impossible de réinitialiser les filtres des chantiers.';
-        setLockNotification(message);
-        console.error(message);
-        return false;
-      }
-    }
-
     viewState.setActiveFilters({});
     setTableRefreshVersion((version) => version + 1);
     return true;
-  }, [viewState.setActiveFilters, viewState.viewType]);
+  }, [viewState.setActiveFilters]);
 
   // --- FILTRES ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -454,14 +435,62 @@ export default function HomePage({
     ressources: dataLayer.itemsRef.current,
   }) || [], [appointmentLogic.handleOpenEditModal, dataLayer.initialTeams, dataLayer.updateEmployeeGroup, handleTransferEmployee, interaction.handleOpenImageModal]);
 
+  useEffect(() => {
+    if (viewState.viewType !== 'chantier-table' || !user?.IdPersonnel || currentPlanningId <= 0) return;
+
+    let cancelled = false;
+    setChantierViewsLoading(true);
+    setChantierViews([]);
+    setChantierInitialViewId(null);
+    setChantierColumns(null);
+
+    calendarConfigService.getLastChantierView()
+      .then(async lastViewResponse => {
+        if (cancelled) return;
+        const lastViewId = extractLastChantierViewId(lastViewResponse);
+        if (!lastViewId || !Number.isFinite(Number(lastViewId))) {
+          throw new Error('Aucune vue chantier disponible.');
+        }
+
+        const viewResponse = await calendarConfigService.getChantierViewDetails(Number(lastViewId), viewState.viewType);
+        if (cancelled) return;
+        if (viewResponse?.success === false) {
+          throw new Error(viewResponse.message || 'Impossible de charger la vue chantier.');
+        }
+
+        const loadedView = normalizeChantierView(viewResponse?.data ?? viewResponse);
+        setChantierViews([loadedView]);
+        setChantierInitialViewId(loadedView.id);
+        setChantierColumns(loadedView.columns);
+      })
+      .catch(reason => {
+        if (!cancelled) {
+          console.error('Impossible de charger les vues chantier.', reason);
+          setLockNotification(reason instanceof Error ? reason.message : 'Impossible de charger les vues chantier.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setChantierViewsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPlanningId, user?.IdPersonnel, viewState.viewType]);
+
   const handleChantierViewChange = useCallback((view: ChantierView | null) => {
     setChantierColumns(view?.columns || null);
     setTableRefreshVersion(version => version + 1);
   }, []);
 
-  const handleChantierViewFiltersChange = useCallback((filters: ActiveFilters) => {
-    void saveChantierFilters(filters);
-  }, [saveChantierFilters]);
+  const handleChantierViewFiltersChange = useCallback((filters: ActiveFilters, persist = true) => {
+    if (persist) {
+      void saveChantierFilters(filters);
+      return;
+    }
+
+    viewState.setActiveFilters(filters);
+  }, [saveChantierFilters, viewState.setActiveFilters]);
 
 
   //console.log("Filter Config:", filterConfig);
@@ -839,6 +868,17 @@ export default function HomePage({
               notifications={notifications}
               handleAddModal={appointmentLogic.handleOpenEditModal}
               onNavigateDate={timeline.goToDate}
+              chantierViewsControlProps={viewState.viewType === 'chantier-table' && !chantierViewsLoading ? {
+                structure: chantierStructure,
+                keyOfFilter,
+                activeFilters: viewState.activeFilters,
+                userId: user?.IdPersonnel,
+                planningId: currentPlanningId,
+                initialViews: chantierViews,
+                initialViewId: chantierInitialViewId,
+                onViewChange: handleChantierViewChange,
+                onFiltersChange: handleChantierViewFiltersChange,
+              } satisfies ChantierViewsControlProps : undefined}
             />
           )}
 
@@ -945,18 +985,12 @@ export default function HomePage({
                   ) : viewState.viewType !== 'calendar' ? (
                     /* VUES TABLEAUX (Chantier, Paie, Employés) */
                     <Suspense fallback={<Loader message="Chargement du tableau..." />}>
-                      {viewState.viewType === 'chantier-table' && (
-                        <ChantierViewsControl
-                          structure={chantierStructure}
-                          keyOfFilter={keyOfFilter}
-                          activeFilters={viewState.activeFilters}
-                          userId={user?.IdPersonnel}
-                          planningId={currentPlanningId}
-                          onViewChange={handleChantierViewChange}
-                          onFiltersChange={handleChantierViewFiltersChange}
-                        />
-                      )}
-                      <DataTableFrame
+                      {viewState.viewType === 'chantier-table' && chantierViewsLoading ? (
+                        <Loader message="Chargement de la vue chantier..." />
+                      ) : <DataTableFrame
+                        key={viewState.viewType === 'chantier-table'
+                          ? `chantier-${chantierInitialViewId ?? 'default'}-${tableRefreshVersion}`
+                          : viewState.viewType}
                         categoriesStructure={(() => {
                           const structure = viewState.viewType === 'chantier-table'
                             ? chantierStructure
@@ -969,11 +1003,12 @@ export default function HomePage({
                             ressources: dataLayer.itemsRef.current,
                           }) || [];
                           if (viewState.viewType !== 'chantier-table' || !chantierColumns) return structure;
+                          if (chantierColumns.length === 0) return structure;
                           const order = new Map(chantierColumns.map((column, index) => [column, index]));
-                          return structure
-                            .map(category => ({
-                              ...category,
-                              attributes: category.attributes.filter(attribute =>
+                          const filteredStructure = structure
+                          .map(category => ({
+                            ...category,
+                            attributes: category.attributes.filter(attribute =>
                                 chantierColumns.includes(`${category.key}.${attribute.key}`)
                               ).sort((left, right) =>
                                 (order.get(`${category.key}.${left.key}`) ?? Number.MAX_SAFE_INTEGER) -
@@ -986,6 +1021,7 @@ export default function HomePage({
                               const rightOrder = order.get(`${right.key}.${right.attributes[0]?.key}`) ?? Number.MAX_SAFE_INTEGER;
                               return leftOrder - rightOrder;
                             });
+                          return filteredStructure.length > 0 ? filteredStructure : structure;
                         })()}
                         realtimeUpdate={lastMercureEvent}
                         enablePagination={true}
@@ -996,7 +1032,7 @@ export default function HomePage({
                         onRowClick={viewState.viewType === 'employee-table' ? undefined : handleTableRowClick}
                         onRightClick={viewState.viewType === 'employee-table' ? undefined : interaction.handleDataTableContextMenu}
                         heightCell={60}
-                      />
+                      />}
                     </Suspense>
                   ) : (
                     <>
