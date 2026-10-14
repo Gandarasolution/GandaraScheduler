@@ -68,12 +68,54 @@ async function getChantierViewDetails(id: number, viewType: string) {
   return await getRequest(`/api/planning/chantier/vue/${id}?viewType=${viewType}`, 'getChantierViewDetails');
 }
 
+async function getChantierViewsByUserId(userId: number) {
+  return await getRequest(`/api/planning/chantier/vue/user/${userId}`, 'getChantierViewsByUserId');
+}
+
 async function createChantierView(data: {
   planningVue: Record<string, unknown>;
-  filtrePerso: unknown[];
+  filtres: {[k: string]: string[]};
   utilisateursAutorises: number[];
 }) {
-  return await postRequest('/api/planning/vue', data, 'createChantierView');
+  const planningVue = data.planningVue;
+  const chantierPlanningVue = {
+    IdPlanningVue: planningVue.IdPlanningVue ?? planningVue.id,
+    LibellePlanningVue: planningVue.LibellePlanningVue ?? planningVue.libelle,
+    DescriptionPlanningVue: planningVue.DescriptionPlanningVue ?? planningVue.description ?? '',
+    IdPlanningImage: planningVue.IdPlanningImage ?? planningVue.idImage ?? null,
+    filtres: data.filtres,
+    ChantierColonnes: planningVue.ChantierColonnes ?? planningVue.columns ?? [],
+  };
+
+  return await postRequest('/api/planning/vue', {
+      planningVue: chantierPlanningVue,
+      utilisateursAutorises: data.utilisateursAutorises,
+    }, 'createChantierView');
+}
+
+async function updateChantierView(id: number, data: {
+  planningVue: Record<string, unknown>;
+  filtres: {[k: string]: string[]};
+  utilisateursAutorises: number[];
+}) {
+  const planningVue = data.planningVue;
+  const chantierPlanningVue = {
+    IdPlanningVue: planningVue.IdPlanningVue ?? planningVue.id,
+    LibellePlanningVue: planningVue.LibellePlanningVue ?? planningVue.libelle,
+    DescriptionPlanningVue: planningVue.DescriptionPlanningVue ?? planningVue.description ?? '',
+    IdPlanningImage: planningVue.IdPlanningImage ?? planningVue.idImage ?? null,
+    filtres: data.filtres,
+    ChantierColonnes: planningVue.ChantierColonnes ?? planningVue.columns ?? [],
+  };
+
+  return await putRequest(
+    '/api/planning/chantier/vue/' + id,
+    {
+      planningVue: chantierPlanningVue,
+      utilisateursAutorises: data.utilisateursAutorises,
+    },
+    'updateChantierView',
+  );
 }
 
 async function getMobileAppointmentDisplayConfig() {
@@ -111,7 +153,9 @@ export default {
   getAllUsersForVue,
   getLastChantierView,
   getChantierViewDetails,
+  getChantierViewsByUserId,
   createChantierView,
+  updateChantierView,
   getMobileAppointmentDisplayConfig,
   getMobileAppointmentDisplayConfigSettings,
   saveMobileAppointmentDisplayConfig

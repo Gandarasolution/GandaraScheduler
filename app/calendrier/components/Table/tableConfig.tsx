@@ -136,6 +136,8 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 attributes: [
                     { key: 'Image', label: '', sortable: false , width:60, renderer: (value, item) => imageRendererChantierAndPaie(value, item, deps)},
                     { key: 'PoleActivite',   label: 'Pôle', type:'string', /*width:120 */},
+                    { key: 'DateOS', label: 'Date OS', type:'date', width:100 },
+                    { key: 'DateFin', label: 'Date Fin', type:'date', width:100 },
                     { key: 'CodePlanningRessource',  label: 'Code', type:'string', width:85 },
                     { key: 'Identifiant',  label: 'Identifiant', type:'string' /*width:125 */, 
                         renderer: (value: string) => (
@@ -174,7 +176,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 ]
             },
             {
-                key: 'analyse',
+                key: 'AC',
                 label: 'Analyse Chantier',
                 attributes: [
                     //{ key: 'TM',  label: 'Temps Marché', type:'string', width:80, renderer: (value: any, item: any) => analyseChantierRender(value, item, 'TM')},      // Temps Marché

@@ -35,7 +35,6 @@ import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOv
 import { getTableStructure } from '../components/Table/tableConfig';
 import {
   ChantierView,
-  extractLastChantierViewId,
   normalizeChantierView,
 } from '../components/Table/ChantierViewsControl';
 import type { ChantierViewsControlProps } from '../components/Table/ChantierViewsControl';
@@ -106,9 +105,11 @@ export default function HomePage({
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [tableRefreshVersion, setTableRefreshVersion] = useState(0);
   const [chantierColumns, setChantierColumns] = useState<string[] | null>(null);
+  const [chantierViewId, setChantierViewId] = useState<number | null>(null);
   const [chantierViews, setChantierViews] = useState<ChantierView[]>([]);
   const [chantierInitialViewId, setChantierInitialViewId] = useState<string | null>(null);
   const [chantierViewsLoading, setChantierViewsLoading] = useState(false);
+  const activeFiltersRef = useRef<ActiveFilters>({});
   const [transferEmployee, setTransferEmployee] = useState<User | null>(null);
   
   
@@ -265,6 +266,9 @@ export default function HomePage({
     });
   }, [appointmentLogic.handleOpenEditModal, dataLayer.itemsRef, viewState.viewType]);
 
+
+  
+
   const handleSearchOverlayItemAction = useCallback((item: SearchableItem) => {
     if(isMobile){
        // Vérifier les permissions selon le type d'événement
@@ -370,7 +374,7 @@ export default function HomePage({
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
     return viewState.viewType === 'chantier-table' 
-      ? ressourceService.getRessourcesProjet(limit, pageNum, viewState.searchInput, viewState.viewType, viewState.activeFilters, timeoutMs)
+      ? ressourceService.getRessourcesProjet(limit, pageNum, viewState.searchInput, viewState.viewType, viewState.activeFilters, chantierViewId ?? 0, timeoutMs)
       : viewState.viewType === 'employee-table' && hasPermission(23) 
         ? (employeeService.getEmployeesPag as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
         : viewState.viewType === 'manual-event-table' && hasPermission(23) 
@@ -378,23 +382,83 @@ export default function HomePage({
           : viewState.viewType === 'paie-table' && hasPermission(23) 
             ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs)
             : undefined;
-  }, [viewState.viewType, viewState.searchInput, viewState.activeFilters]);
+  }, [chantierViewId, viewState.viewType, viewState.searchInput, viewState.activeFilters]);
 
   const handleTransferEmployee = useCallback((employee: User) => {
     setTransferEmployee(employee);
   }, []);
 
+  const loadChantierViews = useCallback(async (appliedFilters?: ActiveFilters) => {
+    if (viewState.viewType !== 'chantier-table' || !user?.IdPersonnel || currentPlanningId <= 0) return;
+
+    setChantierViewsLoading(true);
+    try {
+      const response = await calendarConfigService.getChantierViewsByUserId(user.IdPersonnel);
+      if (response?.success === false) {
+        throw new Error(response.message || 'Impossible de charger les vues chantier.');
+      }
+
+      const payload = response?.data ?? response;
+      const rawViews = Array.isArray(payload) ? payload : payload?.vues ?? payload?.Vues ?? [];
+      const loadedViews = rawViews.map((view: any) => normalizeChantierView(view));
+      if (!loadedViews.length) {
+        throw new Error('Aucune vue chantier disponible.');
+      }
+
+      const hasFilters = Boolean(payload?.hasFiltres ?? payload?.HasFiltres);
+      const selectedView = loadedViews[0];
+      const initialView = hasFilters
+        ? {
+          ...selectedView,
+          id: `ephemeral-${selectedView.id}`,
+          sourceViewId: selectedView.id,
+          name: "Vue éphémère",
+          isEphemeral: true,
+          filters: appliedFilters ?? activeFiltersRef.current,
+        }
+        : selectedView;
+
+      setChantierViews(hasFilters ? [initialView, ...loadedViews] : loadedViews);
+      setChantierInitialViewId(initialView.id);
+      setChantierColumns(initialView.columns);
+      setChantierViewId(Number(initialView.sourceViewId ?? initialView.id));
+
+      if (appliedFilters) {
+        viewState.setActiveFilters(hasFilters ? appliedFilters : {});
+      } else if (!hasFilters) {
+        viewState.setActiveFilters(selectedView.filters);
+      }
+    } catch (error) {
+      console.error('Impossible de charger les vues chantier.', error);
+      setLockNotification(error instanceof Error ? error.message : 'Impossible de charger les vues chantier.');
+    } finally {
+      setChantierViewsLoading(false);
+    }
+  }, [currentPlanningId, user?.IdPersonnel, viewState.setActiveFilters, viewState.viewType]);
+
   const saveChantierFilters = useCallback(async (filters: ActiveFilters): Promise<boolean> => {
+    try {
+      const response = await ressourceService.saveFilterOptions(viewState.viewType, filters);
+      if (response?.success === false) {
+        console.error('Impossible de sauvegarder les filtres utilisateur.', response.message);
+        return false;
+      }
+      await loadChantierViews(filters);
+      return true;
+    } catch (error) {
+      console.error('Impossible de sauvegarder les filtres utilisateur.', error);
+      return false;
+    }
+  }, [loadChantierViews, viewState.viewType]);
+
+  const applyChantierFilters = useCallback((filters: ActiveFilters) => {
+    activeFiltersRef.current = filters;
     viewState.setActiveFilters(filters);
-    setTableRefreshVersion((version) => version + 1);
-    return true;
   }, [viewState.setActiveFilters]);
 
-  const clearChantierFilters = useCallback(async (): Promise<boolean> => {
-    viewState.setActiveFilters({});
-    setTableRefreshVersion((version) => version + 1);
-    return true;
-  }, [viewState.setActiveFilters]);
+  useEffect(() => {
+    activeFiltersRef.current = viewState.activeFilters;
+  }, [viewState.activeFilters]);
 
   // --- FILTRES ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
@@ -436,61 +500,16 @@ export default function HomePage({
   }) || [], [appointmentLogic.handleOpenEditModal, dataLayer.initialTeams, dataLayer.updateEmployeeGroup, handleTransferEmployee, interaction.handleOpenImageModal]);
 
   useEffect(() => {
-    if (viewState.viewType !== 'chantier-table' || !user?.IdPersonnel || currentPlanningId <= 0) return;
-
-    let cancelled = false;
-    setChantierViewsLoading(true);
-    setChantierViews([]);
-    setChantierInitialViewId(null);
-    setChantierColumns(null);
-
-    calendarConfigService.getLastChantierView()
-      .then(async lastViewResponse => {
-        if (cancelled) return;
-        const lastViewId = extractLastChantierViewId(lastViewResponse);
-        if (!lastViewId || !Number.isFinite(Number(lastViewId))) {
-          throw new Error('Aucune vue chantier disponible.');
-        }
-
-        const viewResponse = await calendarConfigService.getChantierViewDetails(Number(lastViewId), viewState.viewType);
-        if (cancelled) return;
-        if (viewResponse?.success === false) {
-          throw new Error(viewResponse.message || 'Impossible de charger la vue chantier.');
-        }
-
-        const loadedView = normalizeChantierView(viewResponse?.data ?? viewResponse);
-        setChantierViews([loadedView]);
-        setChantierInitialViewId(loadedView.id);
-        setChantierColumns(loadedView.columns);
-      })
-      .catch(reason => {
-        if (!cancelled) {
-          console.error('Impossible de charger les vues chantier.', reason);
-          setLockNotification(reason instanceof Error ? reason.message : 'Impossible de charger les vues chantier.');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setChantierViewsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentPlanningId, user?.IdPersonnel, viewState.viewType]);
+    void loadChantierViews();
+  }, [loadChantierViews]);
 
   const handleChantierViewChange = useCallback((view: ChantierView | null) => {
     setChantierColumns(view?.columns || null);
+    const sourceViewId = view?.sourceViewId ?? view?.id;
+    setChantierViewId(sourceViewId && Number.isFinite(Number(sourceViewId)) ? Number(sourceViewId) : null);
     setTableRefreshVersion(version => version + 1);
   }, []);
 
-  const handleChantierViewFiltersChange = useCallback((filters: ActiveFilters, persist = true) => {
-    if (persist) {
-      void saveChantierFilters(filters);
-      return;
-    }
-
-    viewState.setActiveFilters(filters);
-  }, [saveChantierFilters, viewState.setActiveFilters]);
 
 
   //console.log("Filter Config:", filterConfig);
@@ -826,6 +845,37 @@ export default function HomePage({
         viewState.setAvailableConfigs((prev) => prev.filter((config) => Number(config.IdPlanningVue) !== Number(data.IdPlanningVue)));
         break;
 
+      case 'CREATE_CHANTIER_VUE': {
+        const payload = data?.vue ?? data?.data ?? data;
+        const createdView = normalizeChantierView(payload);
+        if (!createdView.id || createdView.id === 'undefined') break;
+        setChantierViews((prev) => prev.some((view) => view.id === createdView.id)
+          ? prev
+          : [...prev, createdView]);
+        break;
+      }
+
+      case 'SET_CHANTIER_VUE': {
+        const payload = data?.vue ?? data?.data ?? data;
+        const updatedView = normalizeChantierView(payload);
+        if (!updatedView.id || updatedView.id === 'undefined') break;
+        setChantierViews((prev) => prev.map((view) => {
+          if (view.id !== updatedView.id) return view;
+          return {
+            ...view,
+            ...updatedView,
+            columns: updatedView.columns.length ? updatedView.columns : view.columns,
+            filters: Object.keys(updatedView.filters).length ? updatedView.filters : view.filters,
+          };
+        }));
+        setChantierColumns((prev) => {
+          return String(chantierViewId) === updatedView.id
+            ? (updatedView.columns.length ? updatedView.columns : prev)
+            : prev;
+        });
+        break;
+      }
+
       default:
         console.warn("Action Mercure inconnue :", action);      
     }
@@ -837,6 +887,7 @@ export default function HomePage({
   // 2. On branche la radio !
   useMercureSync(currentPlanningId, handleMercureEvent, setLockNotification);
   
+
   // --- RENDU VISUEL ---
 
   return (
@@ -877,7 +928,6 @@ export default function HomePage({
                 initialViews: chantierViews,
                 initialViewId: chantierInitialViewId,
                 onViewChange: handleChantierViewChange,
-                onFiltersChange: handleChantierViewFiltersChange,
               } satisfies ChantierViewsControlProps : undefined}
             />
           )}
@@ -988,9 +1038,7 @@ export default function HomePage({
                       {viewState.viewType === 'chantier-table' && chantierViewsLoading ? (
                         <Loader message="Chargement de la vue chantier..." />
                       ) : <DataTableFrame
-                        key={viewState.viewType === 'chantier-table'
-                          ? `chantier-${chantierInitialViewId ?? 'default'}-${tableRefreshVersion}`
-                          : viewState.viewType}
+                        key={viewState.viewType}
                         categoriesStructure={(() => {
                           const structure = viewState.viewType === 'chantier-table'
                             ? chantierStructure
@@ -1121,7 +1169,7 @@ export default function HomePage({
               closeSettings: () => viewState.setIsSettingsOpen(false),
               closeFilterModal: () => viewState.setIsFilterModalOpen(false),
               submitFilters: saveChantierFilters,
-              clearFilters: clearChantierFilters,
+              applyFilters: applyChantierFilters,
               
               closeConfigModal: viewState.calendarConfigHook.closeConfigModal,
               setCurrentConfig: viewState.onCalendarConfigChange,

@@ -72,8 +72,8 @@ interface CalendarModalsProps {
     // Settings & Config Handlers
     closeSettings: () => void;
     closeFilterModal: () => void;
-    submitFilters: (filters: ActiveFilters) => void;
-    clearFilters: () => void;
+    submitFilters: (filters: ActiveFilters) => Promise<boolean>;
+    applyFilters: (filters: ActiveFilters) => void;
     
     // Config Calendar
     closeConfigModal: () => void;
@@ -433,9 +433,9 @@ export const CalendarModals = memo(({
           title='Filtres avancés'
           isOpen={modalsState.isFilterModalOpen}
           onSubmit={handlers.submitFilters}
+          onApply={handlers.applyFilters}
           onClose={handlers.closeFilterModal}
           keyOfFilter={data.keyOfFilter}
-          onClearAll={handlers.clearFilters}
           viewType={config.viewType}
         />
       )}

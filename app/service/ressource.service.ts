@@ -37,12 +37,22 @@ async function getFilterOptionsDynamic(types: string, keys: string[]) {
   return await getRequest(`/api/filters-options?${params.toString()}`, 'getFilterOptionsDynamic');
 }
 
-async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, query: string = '', viewType: string = 'chantier-table', activeFilters: ActiveFilters = {}, timeoutMs: number = 15000) {
+async function saveFilterOptions(viewType: string, activeFilters: ActiveFilters) {
+  return await postRequest(
+    '/api/filters-options',
+    { viewType, activeFilters },
+    'saveFilterOptions'
+  );
+}
+
+
+async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, query: string = '', viewType: string = 'chantier-table', activeFilters: ActiveFilters = {}, idPlanningChantierVue: number, timeoutMs: number = 15000) {
   const params = new URLSearchParams();
   params.set('limit', String(limit));
   params.set('pageNum', String(pageNum));
   params.set('q', query);
   params.set('viewType', viewType);
+  params.set('idPlanningChantierVue', String(idPlanningChantierVue));
   Object.entries(activeFilters).forEach(([key, values]) => {
     if (values.length > 0) params.set(key, values.join(','));
   });
@@ -123,5 +133,6 @@ export default {
   getFilterOptionsDynamic,
   verifyUniqueCode,
   addRessourceManual,
-  editRessource
+  editRessource,
+  saveFilterOptions,
 };

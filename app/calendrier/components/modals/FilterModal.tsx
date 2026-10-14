@@ -20,8 +20,8 @@ type FilterModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (filters: ActiveFilters) => boolean | void | Promise<boolean | void>;
+  onApply: (filters: ActiveFilters) => void;
   keyOfFilter: { [key: string]: { label: string; type: 'checkbox' | 'select' | 'radio' | 'search' | 'combobox' | 'badge'; badgeColors?: Record<string, string> } };
-  onClearAll: () => void;
   title?: string;
   viewType?: string;
 };
@@ -30,8 +30,8 @@ const FilterModal: React.FC<FilterModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  onApply,
   keyOfFilter,
-  onClearAll,
   title,
   viewType
 }) => {
@@ -307,7 +307,6 @@ const FilterModal: React.FC<FilterModalProps> = ({
             <button
               onClick={() => {
                 setActiveFilters({});
-                onClearAll();
               }}
               className="text-primary-500 rounded-lg cursor-pointer hover:bg-gray-100 px-4 py-2"
             >
@@ -321,6 +320,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 const submitted = await onSubmit(activeFilters);
                 if (submitted !== false) {
                   onClose();
+                  onApply(activeFilters);
                 }
               } finally {
                 setIsSubmitting(false);
