@@ -139,6 +139,10 @@ async function saveMobileAppointmentDisplayConfig(data: {
   return await postRequest('/api/planning/mobile/save', data, 'saveMobileAppointmentDisplayConfig');
 }
 
+async function deleteChantierVue(id: number) {
+  return await deleteRequest(`/api/planning/chantier/vue/${id}`, 'deleteChantierVue', {});
+}
+
 
 export default {
   getCalendarConfigsByUserId,
@@ -163,5 +167,6 @@ export default {
   getMobileAppointmentDisplayConfig,
   getMobileAppointmentDisplayConfigSettings,
   saveMobileAppointmentDisplayConfig,
-  setLastChantierView
+  setLastChantierView,
+  deleteChantierVue
 };

@@ -1,4 +1,5 @@
 "use client";
+import { Loader2, Trash2 } from 'lucide-react';
 import React, { useState, useRef, useEffect, memo } from 'react';
 
 export interface SelectOptionWithImage {
@@ -7,6 +8,7 @@ export interface SelectOptionWithImage {
   value?: string | number;
   image?: string;
   icon?: React.ReactNode;
+  canDelete?: boolean;
   [key: string]: any; // Permet d'avoir d'autres propriétés dynamiques
 }
 
@@ -25,6 +27,8 @@ interface CustomSelectWithImageProps {
   illustrationImage: React.ReactNode; 
   onAddOption?: () => void;
   addOptionLabel?: string;
+  onDeleteOption?: (option: SelectOptionWithImage) => void | Promise<void>;
+  deletingOptionId?: string | number | null;
 }
 
 /**
@@ -46,6 +50,8 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   illustrationImage,
   onAddOption,
   addOptionLabel = "Ajouter",
+  onDeleteOption,
+  deletingOptionId = null 
   
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -139,6 +145,15 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
     setIsOpen(false);
   };
 
+  const handleDeleteClick = async (
+    event: React.MouseEvent,
+    option: SelectOptionWithImage
+  ) => {
+    event.stopPropagation();
+    if (!onDeleteOption || deletingOptionId !== null) return;
+    await onDeleteOption(option);
+  };
+
   const baseClasses = `
     relative border rounded-2xl
     poppins text-[14px] font-medium bg-primary-bg cursor-pointer
@@ -210,47 +225,82 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
       {/* Dropdown des options */}
       {isOpen && (
         <div className={`absolute z-50 ${showImages ? 'w-auto' : 'w-full'} mt-1 bg-secondary-bg text-primary rounded-2xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide`}>
-          <ul role="listbox" className="py-1">
-            {options.map((option) => (
-              <li
-                key={option.id}
-                className={`
-                  px-3 py-2 cursor-pointer flex items-center gap-2 transition-colors duration-150 
-                  ${String(option.value || option.id) === String(value) ? 'bg-primary-100 text-primary font-medium' : 'hover:bg-primary-50 hover:text-secondary'}
-                `}
-                onClick={() => handleOptionClick(option)}
-                role="option"
-                aria-selected={String(option.value || option.id) === String(value)}
-                title={showImages ? getDisplayText(option) : undefined} // Tooltip quand on affiche seulement l'image
-              >    
-                {/* Image dans la liste si activée */}
-                {showImages && (option.image || option.icon) && (
-                  <div className="flex-shrink-0">
-                    {renderImage(option, "w-6 h-6")}
-                  </div>
-                )}
-                
-                {/* Texte de l'option */}
-                {!showImages && (
-                  <span className="flex-1 truncate">{getDisplayText(option)}</span>
-                )}
-                
-                {/* Indicateur de sélection */}
-                {String(option.value || option.id) === String(value) && (
-                  <svg
-                    className="w-4 h-4 bg-icon flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
+          <ul role="listbox" className="">
+              {options.map((option) => {
+                const isSelected =
+                  String(option.value ?? option.id) === String(value);
+                const isDeletingThis =
+                  deletingOptionId !== null &&
+                  String(deletingOptionId) === String(option.id);
+                const canDelete =
+                  Boolean(onDeleteOption) && option.canDelete !== false;
+
+                return (
+                  <li
+                    key={option.id}
+                    className={`group flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors duration-150 ${
+                      isDeletingThis
+                        ? "bg-red-50 text-red-700"
+                        : isSelected
+                          ? "bg-primary-100 font-medium text-primary"
+                          : "hover:bg-primary-50 hover:text-secondary"
+                    }`}
+                    onClick={() => handleOptionClick(option)}
+                    role="option"
+                    aria-selected={isSelected}
+                    title={showImages ? getDisplayText(option) : undefined}
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </li>
-            ))}
+                    {/* Image dans la liste si activée */}
+                    {showImages && (option.image || option.icon) && (
+                      <div className="flex-shrink-0">
+                        {renderImage(option, "w-6 h-6")}
+                      </div>
+                    )}
+
+                    {/* Texte de l'option */}
+                    {!showImages && (
+                      <span className="flex-1 truncate">{getDisplayText(option)}</span>
+                    )}
+
+                    {/* Indicateur de sélection */}
+                    {isSelected && !isDeletingThis && (
+                      <svg
+                        className="h-4 w-4 flex-shrink-0 text-primary"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+
+                    {/* Bouton de suppression avec loader rouge */}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={(e) => void handleDeleteClick(e, option)}
+                        disabled={deletingOptionId !== null}
+                        title="Supprimer cette vue"
+                        aria-label={`Supprimer ${getDisplayText(option)}`}
+                        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg transition-all cursor-pointer ${
+                          isDeletingThis
+                            ? "bg-red-100 text-red-600"
+                            : "text-secondary/70 hover:bg-red-50 hover:text-red-600"
+                        } disabled:cursor-not-allowed`}
+                      >
+                        {isDeletingThis ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-red-600" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             {onAddOption && (
               <li className="border-t border-light px-3 py-2">
                 <button type="button" className="flex w-full items-center gap-2 text-left text-primary hover:text-primary-dark" onClick={() => { onAddOption(); setIsOpen(false); }}>

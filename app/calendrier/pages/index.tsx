@@ -926,6 +926,24 @@ export default function HomePage({
         break;
       }
 
+      case 'DELETE_CHANTIER_VUE': {
+        const payload = data?.vue ?? data?.data ?? data;
+        const deletedViewId = String(payload?.id ?? payload?.IdPlanningVue ?? payload?.IdPlanningChantierVue);
+        setChantierViews((prev) => prev.filter((view) => String(view.id) !== deletedViewId));
+        if (String(chantierViewId) === deletedViewId) {
+          const remainingViews = chantierViews.filter((view) => String(view.id) !== deletedViewId);
+          if (remainingViews.length > 0) {
+            const newView = remainingViews[0];
+            setChantierViewId(String(newView.id));
+            setChantierColumns(newView.columns);
+          } else {
+            setChantierViewId(null);
+            setChantierColumns(null);
+          }
+        }
+        break;
+      }
+
       default:
         console.warn("Action Mercure inconnue :", action);      
     }

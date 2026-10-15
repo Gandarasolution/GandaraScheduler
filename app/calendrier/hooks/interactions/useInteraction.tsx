@@ -220,26 +220,35 @@ export const useInteraction = ({
       if (e.ctrlKey) {
           switch(e.key.toLocaleLowerCase()) {
               case 'c' : 
+                if(viewType === 'planning') { 
                   if (selectedAppointment) {
                        copyAppointment(selectedAppointment);
                   }
+                }
                   break;
               case 'v':
+                if(viewType === 'planning') { 
                   if (selectedCell) {
                     pasteAppointment(selectedCell);
                   }
+                }
                   break;
               case 'z':
+                if(viewType === 'planning') { 
                   e.preventDefault();
                   undoAction();
+                }
                   break;
               case 'f':
+                if(viewType === 'planning') {  
                   e.preventDefault();
                   // Fermer les autres interfaces si ouvertes
                   setContextMenu(null);
                   setIsImageSelectorOpen(false);
                   openSearch();
+                }
                   break;
+
               case 'q':
                   e.preventDefault();
                   setIsViewDropdownOpen(prev => !prev);
