@@ -22,8 +22,6 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
   const selectedOptions = options.filter(opt => value.includes(opt.value));
 
 
-  console.log('Combobox render: ', { options, value, selectedOptions, searchQuery });
-
   const filteredOptions = options.filter(option =>
     option?.label?.toLowerCase().includes(searchQuery.toLowerCase()) &&
     !value.includes(option.value)

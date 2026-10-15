@@ -45,7 +45,8 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   imageSize = "medium", // Taille par défaut
   illustrationImage,
   onAddOption,
-  addOptionLabel = "Ajouter"
+  addOptionLabel = "Ajouter",
+  
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -58,6 +59,8 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   const selectedOption = options.find(option => 
     String(option.value) === String(value) || String(option.image) === String(value)
   );
+
+  console.log("selectedOption", selectedOption);
   
   // Tailles d'images
   const imageSizes = {
@@ -81,6 +84,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
           src={option.image} 
           alt={getDisplayText(option)}
           className={`${size} object-cover flex-shrink-0`}
+          loading ="lazy"
           onError={(e) => {
             // Fallback en cas d'erreur de chargement d'image
             e.currentTarget.style.display = 'none';

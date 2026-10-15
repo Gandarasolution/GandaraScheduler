@@ -64,6 +64,10 @@ async function getLastChantierView() {
   return await getRequest('/api/planning/chantier/getLastVue', 'getLastChantierView');
 }
 
+async function setLastChantierView(idVue: number) {
+  return await postRequest('/api/planning/chantier/setLastVue', { idVue }, 'setLastChantierView');
+}
+
 async function getChantierViewDetails(id: number, viewType: string) {
   return await getRequest(`/api/planning/chantier/vue/${id}?viewType=${viewType}`, 'getChantierViewDetails');
 }
@@ -87,7 +91,7 @@ async function createChantierView(data: {
     ChantierColonnes: planningVue.ChantierColonnes ?? planningVue.columns ?? [],
   };
 
-  return await postRequest('/api/planning/vue', {
+  return await postRequest('/api/planning/chantier/vue', {
       planningVue: chantierPlanningVue,
       utilisateursAutorises: data.utilisateursAutorises,
     }, 'createChantierView');
@@ -158,5 +162,6 @@ export default {
   updateChantierView,
   getMobileAppointmentDisplayConfig,
   getMobileAppointmentDisplayConfigSettings,
-  saveMobileAppointmentDisplayConfig
+  saveMobileAppointmentDisplayConfig,
+  setLastChantierView
 };

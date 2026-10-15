@@ -103,18 +103,19 @@ export default function HomePage({
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+
+
   const [tableRefreshVersion, setTableRefreshVersion] = useState(0);
   const [chantierColumns, setChantierColumns] = useState<string[] | null>(null);
-  const [chantierViewId, setChantierViewId] = useState<number | null>(null);
+  const [chantierViewId, setChantierViewId] = useState<string | null>(null);
   const [chantierViews, setChantierViews] = useState<ChantierView[]>([]);
-  const [chantierInitialViewId, setChantierInitialViewId] = useState<string | null>(null);
   const [chantierViewsLoading, setChantierViewsLoading] = useState(false);
   const activeFiltersRef = useRef<ActiveFilters>({});
+
+
   const [transferEmployee, setTransferEmployee] = useState<User | null>(null);
   
-  
-  
-  
+    
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
@@ -374,7 +375,20 @@ export default function HomePage({
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
     return viewState.viewType === 'chantier-table' 
-      ? ressourceService.getRessourcesProjet(limit, pageNum, viewState.searchInput, viewState.viewType, viewState.activeFilters, chantierViewId ?? 0, timeoutMs)
+      ? ressourceService.getRessourcesProjet(
+          limit, 
+          pageNum, 
+          viewState.searchInput, 
+          viewState.viewType, 
+          viewState.activeFilters, 
+          Number((() => {
+            const view = chantierViews.find(
+              (v) => String(v.id) === String(chantierViewId)
+            );
+            return view?.sourceViewId ?? view?.id;
+          })()), 
+          timeoutMs
+        )
       : viewState.viewType === 'employee-table' && hasPermission(23) 
         ? (employeeService.getEmployeesPag as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
         : viewState.viewType === 'manual-event-table' && hasPermission(23) 
@@ -410,18 +424,34 @@ export default function HomePage({
       const initialView = hasFilters
         ? {
           ...selectedView,
-          id: `ephemeral-${selectedView.id}`,
+          id: `ephemeral`,
           sourceViewId: selectedView.id,
-          name: "Vue éphémère",
+          name: `Vue éphémère(${selectedView.name})`,
           isEphemeral: true,
           filters: appliedFilters ?? activeFiltersRef.current,
         }
         : selectedView;
 
+
+      const rep = await calendarConfigService.getLastChantierView();
+
+
+      if (rep?.success === false) {
+        throw new Error(rep.message || 'Impossible de charger la dernière vue chantier.');
+      }
+      else if (!rep?.data && (!rep.data.IdPlanningVue || !rep.data.IdPlanningChantierVue)) {
+        console.warn('Aucune vue chantier trouvée pour l’utilisateur. Chargement de la première vue disponible.');
+      }
+      else if (rep?.data && (rep.data.IdPlanningVue || rep.data.IdPlanningChantierVue)) {
+        const lastViewId = rep.data.IdPlanningVue ?? rep.data.IdPlanningChantierVue;
+        setChantierViewId(String(lastViewId));
+      }else {
+        setChantierViewId(initialView.id ? String(initialView.id) : null);
+      }
+
       setChantierViews(hasFilters ? [initialView, ...loadedViews] : loadedViews);
-      setChantierInitialViewId(initialView.id);
       setChantierColumns(initialView.columns);
-      setChantierViewId(Number(initialView.sourceViewId ?? initialView.id));
+    
 
       if (appliedFilters) {
         viewState.setActiveFilters(hasFilters ? appliedFilters : {});
@@ -504,11 +534,31 @@ export default function HomePage({
   }, [loadChantierViews]);
 
   const handleChantierViewChange = useCallback((view: ChantierView | null) => {
+
+
     setChantierColumns(view?.columns || null);
-    const sourceViewId = view?.sourceViewId ?? view?.id;
-    setChantierViewId(sourceViewId && Number.isFinite(Number(sourceViewId)) ? Number(sourceViewId) : null);
+
+
+    const actualView = chantierViews.find(v => String(v.id) === String(chantierViewId));
+
+
+    setChantierViews(prevViews => {
+      const updatedViews = prevViews.map(v => {
+        if (v.isEphemeral) {
+          return { ...v, columns: view?.columns || [], name: `Vue éphémère(${view?.name})` };
+        }
+        return v;
+      });
+      return updatedViews;
+    });
+
+    console.log("handleChantierViewChange - actualView:", actualView);
+
+    !actualView?.isEphemeral && setChantierViewId(view?.id ? String(view.id) : null);
+
+  
     setTableRefreshVersion(version => version + 1);
-  }, []);
+  }, [chantierViewId, chantierViews]);
 
 
 
@@ -926,7 +976,7 @@ export default function HomePage({
                 userId: user?.IdPersonnel,
                 planningId: currentPlanningId,
                 initialViews: chantierViews,
-                initialViewId: chantierInitialViewId,
+                initialViewId: chantierViewId,
                 onViewChange: handleChantierViewChange,
               } satisfies ChantierViewsControlProps : undefined}
             />

@@ -364,6 +364,33 @@ const ChantierViewsControl: React.FC<
   );
   const draggedColumnRef = useRef<string | null>(null);
 
+  const persistLastChantierView = useCallback(
+    async (view: ChantierView) => {
+      const viewId = Number(view.sourceViewId ?? view.id);
+
+      if (!Number.isInteger(viewId) || viewId <= 0) return;
+
+      calendarConfigService.setLastChantierView(viewId)
+        .then((response) => {
+          if (!response.success) {
+            throw new Error(
+              "Impossible d'enregistrer la dernière vue sélectionnée."
+            );
+          }
+        })
+        .catch((reason) => {
+          const message = 
+            reason instanceof Error
+              ? reason.message
+              : "Impossible d'enregistrer la dernière vue sélectionnée.";
+          console.error(message, reason);
+          throw new Error(message);
+        });
+    },
+    []
+  );
+
+
   const selectView = useCallback(
     (view: ChantierView, persistFilters = true) => {
       setSelectedId(view.id);
@@ -373,15 +400,13 @@ const ChantierViewsControl: React.FC<
       setError(null);
       onViewChange(view);
 
-      const currentFilters = cleanFilters(
-        activeFiltersRef.current
-      );
-
+      void persistLastChantierView(view);
       
     },
     [defaultColumns, onViewChange]
   );
 
+ 
   useEffect(() => {
     activeFiltersRef.current = activeFilters;
   }, [activeFilters]);
@@ -390,6 +415,7 @@ const ChantierViewsControl: React.FC<
   initialViewsRef.current = initialViews;
 
   useEffect(() => {
+
     const currentViews = initialViewsRef.current;
     setViews(currentViews);
 
@@ -1109,6 +1135,8 @@ const ChantierViewsControl: React.FC<
                     (item) => item.id === String(value)
                   );
 
+                  //console.log("selected view", view);
+
                   if (view) void selectView(view);
                 }}
                 placeholder={
@@ -1157,19 +1185,6 @@ const ChantierViewsControl: React.FC<
             </button>
           </div>
         </div>
-
-        {error && (
-          <p
-            role="alert"
-            className={`rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 shadow-sm ${
-              compact
-                ? "absolute right-0 top-full z-10 mt-2"
-                : "ml-3"
-            }`}
-          >
-            {error}
-          </p>
-        )}
       </div>
 
       <Modal
