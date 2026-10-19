@@ -267,11 +267,12 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                     <div className="flex items-center justify-center w-full h-full">
                         <button
                             type="button"
+                            
                             onClick={(event) => {
                                 event.stopPropagation();
                                 deps.onTransfer?.(item as unknown as User);
                             }}
-                            className="px-3 py-1.5 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors cursor-pointer"
+                            className="px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500  cursor-pointer"
                         >
                             Transférer
                         </button>

@@ -216,33 +216,58 @@ export const CalendarModals = memo(({
   const settings = useMemo(() => [
     ...(hasPermission(23) ? [
       {
-      category: "Gestion des jours travaillés",
-      items: [
-        {
-          id: "nonWorkedDay", 
-          label: "Dates non travaillées personnalisées", 
-          type: "custom-non-working-dates",
-          nonWorkingDates: config.nonWorkingDates,
-          setNonWorkingDates: config.setNonWorkingDates,
-          addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
-          removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
-        }
-      ]
-    },
-    {
-      category: "Affichage mobile des événements",
-      items: [
-        {
-          id: "mobileAppointmentFields",
-          label: null,
-          type: "mobile-appointment-fields",
-          value: config.mobileAppointmentDisplay,
-          onChange: config.setMobileAppointmentDisplay,
-          options: config.mobileAppointmentFieldOptions,
-          isLoading: config.mobileAppointmentSettingsLoading
-        }
-      ]
-    }] : []),
+        category: "Gestion des jours travaillés",
+        items: [
+          {
+            id: "nonWorkedDay", 
+            label: "Dates non travaillées personnalisées", 
+            type: "custom-non-working-dates",
+            nonWorkingDates: config.nonWorkingDates,
+            setNonWorkingDates: config.setNonWorkingDates,
+            addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
+            removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
+            dayTypesOptions:  [
+              { id: "ferie", label: "Jour Férié", bgColor: "#fee2e2", textColor: "#991b1b", isBold: true, isItalic: false },
+              { id: "nonTravaille", label: "Non travaillé", bgColor: "#f3f4f6", textColor: "#374151", isBold: false, isItalic: true },
+              //{ id: "modulation", label: "Modulation", bgColor: "#e0e7ff", textColor: "#3730a3", isBold: true, isItalic: true },
+            ]
+          }
+        ]
+      },
+      {
+        category: "Affichage mobile des événements",
+        items: [
+          {
+            id: "mobileAppointmentFields",
+            label: null,
+            type: "mobile-appointment-fields",
+            value: config.mobileAppointmentDisplay,
+            onChange: config.setMobileAppointmentDisplay,
+            options: config.mobileAppointmentFieldOptions,
+            isLoading: config.mobileAppointmentSettingsLoading
+          }
+        ]
+      },
+      {
+        category: "Gestion des types de jours",
+        items: [
+          {
+            id: "dayTypeSettings",
+            label: "Styles des types de jours",
+            type: "day-type-settings",
+            dayTypes: /*dayTypesList ||*/ [
+              { id: "ferie", label: "Jour Férié", bgColor: "#fee2e2", textColor: "#991b1b", isBold: true, isItalic: false },
+              { id: "nonTravaille", label: "Non travaillé", bgColor: "#f3f4f6", textColor: "#374151", isBold: false, isItalic: true },
+            ],
+            fetchDayTypes: () => Promise.resolve([
+              { id: "ferie", label: "Jour Férié", bgColor: "#fee2e2", textColor: "#991b1b", isBold: true, isItalic: false },
+              { id: "nonTravaille", label: "Non travaillé", bgColor: "#f3f4f6", textColor: "#374151", isBold: false, isItalic: true },
+            ]),
+          },
+        ],
+      },
+      
+    ] : []),
     {
       category: "Affichage des étiquettes",
       items: [

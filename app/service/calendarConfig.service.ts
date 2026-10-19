@@ -142,7 +142,9 @@ async function saveMobileAppointmentDisplayConfig(data: {
 async function deleteChantierVue(id: number) {
   return await deleteRequest(`/api/planning/chantier/vue/${id}`, 'deleteChantierVue', {});
 }
-
+async function updateDayType(dayType: { id: string, label: string, bgColor: string, textColor: string, isBold: boolean, isItalic: boolean }) {
+  return await putRequest(`/api/planning/day-type/${dayType.id}`, dayType, 'updateDayType');
+}
 
 export default {
   getCalendarConfigsByUserId,
@@ -168,5 +170,6 @@ export default {
   getMobileAppointmentDisplayConfigSettings,
   saveMobileAppointmentDisplayConfig,
   setLastChantierView,
-  deleteChantierVue
+  deleteChantierVue,
+  updateDayType,
 };
