@@ -1,3 +1,4 @@
+import { DayType } from "../calendrier";
 import { getRequest, postRequest, putRequest, deleteRequest } from "./axios.service";
 
 async function getCalendarConfigsByUserId(userId: number, idPlanning: number) {
@@ -142,8 +143,22 @@ async function saveMobileAppointmentDisplayConfig(data: {
 async function deleteChantierVue(id: number) {
   return await deleteRequest(`/api/planning/chantier/vue/${id}`, 'deleteChantierVue', {});
 }
-async function updateDayType(dayType: { id: string, label: string, bgColor: string, textColor: string, isBold: boolean, isItalic: boolean }) {
-  return await putRequest(`/api/planning/day-type/${dayType.id}`, dayType, 'updateDayType');
+
+
+async function updateDayType(dayType: DayType) {
+  return await putRequest(`/api/planning/day-type/${dayType.Id}`, dayType, 'updateDayType');
+}
+
+async function addDayType(dayType: DayType) {
+  return await postRequest(`/api/planning/day-type`, dayType, 'addDayType');
+}
+
+async function removeDayType(dayTypeId: string) {
+  return await deleteRequest(`/api/planning/day-type/${dayTypeId}`, 'removeDayType', {});
+}
+
+async function getDayTypes() {
+  return await getRequest(`/api/planning/day-type`, 'getDayTypes');
 }
 
 export default {
@@ -172,4 +187,7 @@ export default {
   setLastChantierView,
   deleteChantierVue,
   updateDayType,
+  addDayType,
+  removeDayType,
+  getDayTypes,
 };

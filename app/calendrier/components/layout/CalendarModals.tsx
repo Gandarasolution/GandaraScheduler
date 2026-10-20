@@ -6,7 +6,7 @@ import {
   Modal, 
 } from '@/app/calendrier/components';
 import Loader from '../ui/Loader';
-import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MobileAppointmentField } from '../../types';
+import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MobileAppointmentField, DayType } from '../../types';
 import { ActiveFilters, FilterType } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
@@ -14,6 +14,7 @@ import etiquetteService from '@/app/service/etiquette.service';
 import eventService from '@/app/service/evenement.service';
 import { useAuth } from '../../hooks/utils/AuthContext';
 import permissionService from '@/app/service/permission.service';
+import { useDayTypes } from '../../hooks/data/useDayType';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -146,6 +147,8 @@ export const CalendarModals = memo(({
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
 
+  const useDayTypesList = useDayTypes({});
+
  
   const [configImageSelectorContext, setConfigImageSelectorContext] = useState<{
     actualImage?: ImageType;
@@ -255,18 +258,50 @@ export const CalendarModals = memo(({
             id: "dayTypeSettings",
             label: "Styles des types de jours",
             type: "day-type-settings",
-            dayTypes: /*dayTypesList ||*/ [
-              { id: "ferie", label: "Jour Férié", bgColor: "#fee2e2", textColor: "#991b1b", isBold: true, isItalic: false },
-              { id: "nonTravaille", label: "Non travaillé", bgColor: "#f3f4f6", textColor: "#374151", isBold: false, isItalic: true },
-            ],
-            fetchDayTypes: () => Promise.resolve([
-              { id: "ferie", label: "Jour Férié", bgColor: "#fee2e2", textColor: "#991b1b", isBold: true, isItalic: false },
-              { id: "nonTravaille", label: "Non travaillé", bgColor: "#f3f4f6", textColor: "#374151", isBold: false, isItalic: true },
-            ]),
+            dayTypes: useDayTypesList.DayTypes || [],
+
+            fetchDayTypes: async () => {
+              try {
+                const response = await useDayTypesList.fetchDayTypes(); 
+
+                return response
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors du chargement des types de jours" };
+              }
+            },
+
+            // 2. Ajout d'un type de jour
+            onAddDayType: async (newType: DayType) => {
+              try {
+                const response = await useDayTypesList.addDayType(newType); // Ton handler de création
+                return response;
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la création" };
+              }
+            },
+
+            // 3. Mise à jour d'un type de jour
+            onUpdateDayType: async (updatedType: DayType) => {
+              try {
+                const response = await useDayTypesList.updateDayType(updatedType); // Ton handler de mise à jour
+                return response;
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la mise à jour" };
+              }
+            },
+
+            // 4. Suppression d'un type de jour
+            onDeleteDayType: async (id: string) => {
+              try {
+                const response = await useDayTypesList.removeDayType(id); // Ton handler de suppression
+                return response;
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la suppression" };
+              }
+            },
           },
         ],
-      },
-      
+      }  
     ] : []),
     {
       category: "Affichage des étiquettes",
@@ -284,7 +319,24 @@ export const CalendarModals = memo(({
         }
       ]
     }
-  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, config.mobileAppointmentDisplay, config.setMobileAppointmentDisplay, config.mobileAppointmentFieldOptions, config.mobileAppointmentSettingsLoading, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
+  ], [
+    config.includeWeekend, 
+    config.respectNonWorkingDays, 
+    config.nonWorkingDates, 
+    config.setIncludeWeekend, 
+    config.setRespectNonWorkingDays, 
+    config.setNonWorkingDates, 
+    config.tagPlacement, 
+    config.setTagPlacement, 
+    config.mobileAppointmentDisplay, 
+    config.setMobileAppointmentDisplay, 
+    config.mobileAppointmentFieldOptions, 
+    config.mobileAppointmentSettingsLoading, 
+    handlers.addNonWorkingDatesToPlanning, 
+    handlers.removeNonWorkingDatesFromPlanning,
+    useDayTypesList.DayTypes,
+
+  ]);  
 
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;
@@ -412,7 +464,6 @@ export const CalendarModals = memo(({
           onClose={handlers.closeSettings}
           settings={settings} 
           isSettingsOpen={modalsState.isSettingsOpen}
-          setNotification={config.setNotification}
         />
       )}
       

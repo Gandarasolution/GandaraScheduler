@@ -1,15 +1,22 @@
-import { memo, useState, useMemo, useEffect } from "react";
+import { memo, useState, useMemo, useEffect, useRef } from "react";
 import Modal from "./Modal";
 import Loader from "../ui/Loader";
 import { format } from "date-fns";
-import { Appointment, Item, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from "../../types";
+import { Appointment, DayType, Item, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from "../../types";
 import { AppointmentCard } from "../Calendar/MobileCalendar/AppointmentList";
 
 type SettingsModalProps = {  
   onClose: () => void;
   settings: any;
   isSettingsOpen: boolean;
-  setNotification: (notifications: any) => void;
+};
+
+const normalizeColorForInput = (color: string | undefined, fallback: string = '#1E40AF'): string => {
+  if (!color) return fallback;
+  if (color.length === 9 && color.startsWith('#')) {
+    return color.substring(0, 7);
+  }
+  return color;
 };
 
 const previewAppointment: Appointment = {
@@ -49,156 +56,503 @@ const previewEmployee: User = {
 };
 
 /**
- * Éditeur pour un type de jour sélectionné (Modifiable : Libellé, Couleurs, Styles)
+ * Formulaire réductible pour créer un nouveau type de jour
  */
-const DayTypeSingleEditor = ({ dayType }: { dayType: any }) => {
+const NewDayTypeForm = ({
+  onAdd,
+  setError,
+}: {
+  onAdd?: (newType: any) => Promise<{ success: boolean; message?: string }>;
+  setError: (msg: string | null) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [Libelle, setLibelle] = useState("");
+  const [CouleurFond, setCouleurFond] = useState("#2563eb");
+  const [CouleurTexte, setCouleurTexte] = useState("#ffffff");
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setLibelle("");
+    setCouleurFond("#2563eb");
+    setCouleurTexte("#ffffff");
+    setIsBold(false);
+    setIsItalic(false);
+    setFormError(null);
+  };
+
+  const handleCreate = async () => {
+    if (!Libelle.trim()) {
+      setFormError("Le libellé est obligatoire.");
+      return;
+    }
+    setFormError(null);
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      if (onAdd) {
+        const res = await onAdd({
+          Libelle: Libelle.trim(),
+          CouleurFond: CouleurFond,
+          CouleurTexte: CouleurTexte,
+          isBold: isBold,
+          isItalic: isItalic,
+        });
+
+        if (res && res.success) {
+          resetForm();
+          setIsOpen(false);
+        } else {
+          setError(res?.message || "Erreur lors de la création du type de jour.");
+        }
+      }
+    } catch (e: any) {
+      setError(e?.message || "Une erreur inattendue est survenue.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setError(null);
+          setIsOpen(true);
+        }}
+        className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium text-sm poppins flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.99] shadow-sm mb-4 cursor-pointer"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        Ajouter un type de jour
+      </button>
+    );
+  }
+
+  return (
+    <div className="p-6 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-4 shadow-sm mb-6">
+      <div className="flex items-center justify-between pb-2 border-b border-primary/20">
+        <h4 className="text-sm font-semibold text-primary poppins flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Nouveau type de jour
+        </h4>
+        <button
+          type="button"
+          onClick={() => {
+            resetForm();
+            setIsOpen(false);
+          }}
+          className="text-secondary hover:text-primary transition-colors p-1 cursor-pointer"
+          title="Fermer"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
+        <div className="flex flex-wrap md:flex-nowrap gap-6 items-center w-full">
+          {/* Libellé */}
+          <div className="flex flex-col gap-2 min-w-[200px]">
+            <label htmlFor="newDayTypeLabel" className="text-xs text-secondary font-medium poppins">
+              Libellé
+            </label>
+            <input
+              id="newDayTypeLabel"
+              type="text"
+              value={Libelle}
+              onChange={(e) => {
+                setLibelle(e.target.value);
+                if (formError) setFormError(null);
+                setError(null);
+              }}
+              placeholder="Ex: Astreinte, Congé payé..."
+              className="border border-default rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-sm bg-white/80 shadow-sm hover:shadow-md max-w-md"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-center flex-1">
+            {/* Couleurs */}
+            <div className="flex flex-col gap-2 w-full">
+              <div className="relative group flex items-center gap-2">
+                <label 
+                  htmlFor="new-color-fond"
+                  className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                  style={{ backgroundColor: CouleurFond }}
+                  title="Couleur de fond"
+                />
+                <input
+                  id="new-color-fond"
+                  type="color"
+                  value={normalizeColorForInput(CouleurFond)}
+                  onChange={(e) => setCouleurFond(e.target.value)}
+                  className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+                />
+                <label htmlFor="new-color-fond" className="cursor-pointer text-sm flex-1">
+                  Couleur de fond
+                </label>
+              </div>        
+
+              <div className="relative group flex items-center gap-2">
+                <label 
+                  htmlFor="new-color-texte"
+                  className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                  style={{ backgroundColor: CouleurTexte }}
+                  title="Couleur de texte"
+                />
+                <input
+                  id="new-color-texte"
+                  type="color"
+                  value={normalizeColorForInput(CouleurTexte, '#FFFFFF')}
+                  onChange={(e) => setCouleurTexte(e.target.value)}
+                  className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+                />
+                <label htmlFor="new-color-texte" className="cursor-pointer text-sm flex-1">
+                  Couleur de texte
+                </label>
+              </div>
+            </div>
+
+            {/* Style */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs text-secondary font-medium poppins">Mise en forme</label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBold((prev) => !prev)}
+                  className={`flex-1 min-h-[40px] px-3 rounded-xl border text-xs font-bold poppins transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
+                    isBold
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-secondary/20 text-primary border-light hover:bg-secondary/40"
+                  }`}
+                >
+                  <span>B</span>
+                  <span className="font-normal text-[11px]">Gras</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsItalic((prev) => !prev)}
+                  className={`flex-1 min-h-[40px] px-3 rounded-xl border text-xs italic poppins transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
+                    isItalic
+                      ? "bg-primary text-white border-primary shadow-sm"
+                      : "bg-secondary/20 text-primary border-light hover:bg-secondary/40"
+                  }`}
+                >
+                  <span>I</span>
+                  <span className="not-italic font-normal text-[11px]">Italique</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Aperçu */}
+            <div className="flex items-center gap-3 bg-white/80 p-3 rounded-xl border border-light">
+              <span className="text-xs font-medium text-secondary poppins">Aperçu :</span>
+              <div className="w-14 h-14 border border-light overflow-hidden shrink-0">
+                <div
+                  className="flex flex-col justify-end border-b border-r border-light text-center text-sm p-1 h-full w-full relative day-cell transition-all"
+                  style={{
+                    backgroundColor: CouleurFond || "transparent",
+                    color: CouleurTexte || "inherit",
+                    fontWeight: isBold ? "700" : "400",
+                    fontStyle: isItalic ? "italic" : "normal",
+                  }}
+                >
+                  <div className="flex flex-col justify-center items-center h-full">
+                    <span className="block text-lg">14</span>
+                    <span className="block text-xs opacity-80">Lun.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bouton Valider */}
+        <button
+          type="button"
+          onClick={handleCreate}
+          disabled={isSubmitting}
+          title="Valider la création"
+          className="cursor-pointer bg-primary text-white p-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
+        >
+          {isSubmitting ? (
+            <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {formError && (
+        <p className="text-xs text-red-500 font-medium poppins">{formError}</p>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Éditeur pour un type de jour individuel
+ */
+const DayTypeSingleEditor = ({
+  dayType,
+  onUpdate,
+  onDelete,
+  setError,
+}: {
+  dayType: DayType;
+  onUpdate?: (updated: any) => Promise<{ success: boolean; message?: string }>;
+  onDelete?: (id: number | string) => Promise<{ success: boolean; message?: string }>;
+  setError: (msg: string | null) => void;
+}) => {
   const [localType, setLocalType] = useState(dayType);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setLocalType(dayType);
   }, [dayType]);
 
+  const isDirty =
+    localType.Libelle !== dayType.Libelle ||
+    localType.CouleurFond !== dayType.CouleurFond ||
+    localType.CouleurTexte !== dayType.CouleurTexte ||
+    localType.isBold !== dayType.isBold ||
+    localType.isItalic !== dayType.isItalic;
+
   const handleLabelChange = (value: string) => {
     setLocalType((prev: any) => ({ ...prev, label: value }));
-  };
-
-  const handleLabelBlur = () => {
-    if (localType.label !== dayType.label) {
-      dayType.onChange?.(localType);
-    }
+    setError(null);
   };
 
   const handleColorChange = (key: "bgColor" | "textColor", value: string) => {
     setLocalType((prev: any) => ({ ...prev, [key]: value }));
-  };
-
-  const handleColorBlur = () => {
-    if (
-      localType.bgColor !== dayType.bgColor ||
-      localType.textColor !== dayType.textColor
-    ) {
-      dayType.onChange?.(localType);
-    }
+    setError(null);
   };
 
   const handleToggle = (key: "isBold" | "isItalic") => {
-    const updated = { ...localType, [key]: !localType[key] };
-    setLocalType(updated);
-    dayType.onChange?.(updated);
+    setLocalType((prev: any) => ({ ...prev, [key]: !prev[key] }));
+    setError(null);
+  };
+
+  const handleSave = async () => {
+    if (!onUpdate) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const res = await onUpdate(localType);
+      if (res && !res.success) {
+        setError(res?.message || "Erreur lors de la mise à jour.");
+      }
+    } catch (e: any) {
+      setError(e?.message || "Erreur lors de la mise à jour.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    setIsDeleting(true);
+    setError(null);
+    try {
+      const res = await onDelete(dayType.Id);
+      if (res && !res.success) {
+        setError(res?.message || "Erreur lors de la suppression.");
+      }
+    } catch (e: any) {
+      setError(e?.message || "Erreur lors de la suppression.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
-    <div className="p-6 rounded-2xl border border-light bg-secondary/10 flex flex-col gap-6 shadow-sm">
-      <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-ultra-light">
-        <div>
-          <h4 className="font-semibold text-primary text-base poppins">{localType.label || "Type de jour"}</h4>
-          <p className="text-xs text-secondary poppins mt-0.5">Personnalisez le libellé et le style d'affichage sur le calendrier</p>
+    <div className="p-6 rounded-2xl border border-light bg-secondary/10 flex flex-col md:flex-row gap-6 shadow-sm items-center justify-between">
+      <div className="flex flex-wrap md:flex-nowrap gap-6 items-center w-full">
+        {/* Champ d'édition du Libellé */}
+        <div className="flex flex-col gap-2 min-w-[200px]">
+          <label htmlFor={`dayTypeLabelInput-${dayType.Id}`} className="text-xs text-secondary font-medium poppins">
+            Libellé
+          </label>
+          <input
+            id={`dayTypeLabelInput-${dayType.Id}`}
+            type="text"
+            value={localType.Libelle || ""}
+            onChange={(e) => handleLabelChange(e.target.value)}
+            placeholder="Ex: Jour Férié, RTT, Modulation..."
+            className="border border-default rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-sm bg-transparent shadow-sm hover:shadow-md max-w-md"
+            disabled={dayType.isLocked}
+          />
         </div>
-        
-        {/* Aperçu dynamique */}
-        <div className="flex items-center gap-3 bg-secondary-bg p-3 rounded-xl border border-light">
-          <span className="text-xs font-medium text-secondary poppins">Aperçu :</span>
-          <div className="w-14 h-14 border border-light overflow-hidden shadow-sm shrink-0 rounded-lg">
-            <div
-              className="flex flex-col justify-end border-b border-r border-light text-center text-sm p-1 h-full w-full relative day-cell transition-all"
-              style={{
-                backgroundColor: localType.bgColor || "transparent",
-                color: localType.textColor || "inherit",
-                fontWeight: localType.isBold ? "700" : "400",
-                fontStyle: localType.isItalic ? "italic" : "normal",
-              }}
-            >
-              <div className="flex flex-col justify-center items-center h-full">
-                <span className="block text-lg">14</span>
-                <span className="block text-xs opacity-80">Lun.</span>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-center flex-1">
+          {/* Couleur de fond & texte */}
+          <div className="flex flex-col gap-2 w-full">
+            <div className="relative group flex items-center gap-2">
+              <label 
+                htmlFor={`color-fond-${dayType.Id}`}
+                className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                style={{ backgroundColor: localType.CouleurFond || '#1E40AF' }}
+                title="Couleur de fond"
+              />
+              <input
+                id={`color-fond-${dayType.Id}`}
+                type="color"
+                value={normalizeColorForInput(localType.CouleurFond)}
+                onChange={(e) => handleColorChange("bgColor", e.target.value)}
+                className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+                title="Couleur de fond"
+              />
+              <label htmlFor={`color-fond-${dayType.Id}`} className="cursor-pointer text-sm flex-1">
+                Couleur de fond
+              </label>
+            </div>        
+
+            <div className="relative group flex items-center gap-2">
+              <label 
+                htmlFor={`color-texte-${dayType.Id}`}
+                className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                style={{ backgroundColor: localType.CouleurTexte || '#FFFFFF' }}
+                title="Couleur de texte"
+              />
+              <input
+                id={`color-texte-${dayType.Id}`}
+                type="color"
+                value={normalizeColorForInput(localType.CouleurTexte, '#FFFFFF')}
+                onChange={(e) => handleColorChange("textColor", e.target.value)}
+                className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+                title="Couleur de texte"
+              />
+              <label htmlFor={`color-texte-${dayType.Id}`} className="cursor-pointer text-sm flex-1">
+                Couleur de texte
+              </label>
+            </div>
+          </div>
+
+          {/* Style de police */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-secondary font-medium poppins">Mise en forme</label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleToggle("isBold")}
+                className={`flex-1 min-h-[40px] px-3 rounded-xl border text-xs font-bold poppins transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
+                  localType.isBold
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-secondary/20 text-primary border-light hover:bg-secondary/40"
+                }`}
+              >
+                <span>B</span>
+                <span className="font-normal text-[11px]">Gras</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleToggle("isItalic")}
+                className={`flex-1 min-h-[40px] px-3 rounded-xl border text-xs italic poppins transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
+                  localType.isItalic
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-secondary/20 text-primary border-light hover:bg-secondary/40"
+                }`}
+              >
+                <span>I</span>
+                <span className="not-italic font-normal text-[11px]">Italique</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Aperçu */}
+          <div className="flex items-center gap-3 bg-secondary-bg p-3 rounded-xl border border-light">
+            <span className="text-xs font-medium text-secondary poppins">Aperçu :</span>
+            <div className="w-14 h-14 border border-light overflow-hidden shrink-0">
+              <div
+                className="flex flex-col justify-end border-b border-r border-light text-center text-sm p-1 h-full w-full relative day-cell transition-all"
+                style={{
+                  backgroundColor: localType.CouleurFond || "transparent",
+                  color: localType.CouleurTexte || "inherit",
+                  fontWeight: localType.isBold ? "700" : "400",
+                  fontStyle: localType.isItalic ? "italic" : "normal",
+                }}
+              >
+                <div className="flex flex-col justify-center items-center h-full">
+                  <span className="block text-lg">14</span>
+                  <span className="block text-xs opacity-80">Lun.</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Champ d'édition du Libellé */}
-      <div className="flex flex-col gap-2">
-        <label htmlFor="dayTypeLabelInput" className="text-xs text-secondary font-medium poppins">
-          Libellé
-        </label>
-        <input
-          id="dayTypeLabelInput"
-          type="text"
-          value={localType.label || ""}
-          onChange={(e) => handleLabelChange(e.target.value)}
-          onBlur={handleLabelBlur}
-          placeholder="Ex: Jour Férié, RTT, Modulation..."
-          className="border border-default rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-sm bg-transparent shadow-sm hover:shadow-md max-w-md"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-center">
-        {/* Couleur de fond */}
-        <div className="flex flex-col gap-2">
-          <label className="text-xs text-secondary font-medium poppins">Couleur de fond</label>
-          <div className="flex items-center gap-3">
-            <input
-              type="color"
-              value={localType.bgColor || "#ffffff"}
-              onChange={(e) => handleColorChange("bgColor", e.target.value)}
-              onBlur={handleColorBlur}
-              className="w-10 h-10 rounded-xl cursor-pointer border border-light p-0.5 bg-white shadow-sm"
-            />
-            <span className="text-xs text-secondary font-mono uppercase bg-secondary/30 px-2.5 py-1.5 rounded-lg border border-ultra-light">
-              {localType.bgColor}
-            </span>
-          </div>
-        </div>
-
-        {/* Couleur du texte */}
-        <div className="flex flex-col gap-2">
-          <label className="text-xs text-secondary font-medium poppins">Couleur du texte</label>
-          <div className="flex items-center gap-3">
-            <input
-              type="color"
-              value={localType.textColor || "#000000"}
-              onChange={(e) => handleColorChange("textColor", e.target.value)}
-              onBlur={handleColorBlur}
-              className="w-10 h-10 rounded-xl cursor-pointer border border-light p-0.5 bg-white shadow-sm"
-            />
-            <span className="text-xs text-secondary font-mono uppercase bg-secondary/30 px-2.5 py-1.5 rounded-lg border border-ultra-light">
-              {localType.textColor}
-            </span>
-          </div>
-        </div>
-
-        {/* Style de police */}
-        <div className="flex flex-col gap-2">
-          <label className="text-xs text-secondary font-medium poppins">Mise en forme</label>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleToggle("isBold")}
-              className={`flex-1 min-h-[40px] px-3 rounded-xl border text-xs font-bold poppins transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95 ${
-                localType.isBold
-                  ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-secondary/20 text-primary border-light hover:bg-secondary/40"
-              }`}
-            >
-              <span>B</span>
-              <span className="font-normal text-[11px]">Gras</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleToggle("isItalic")}
-              className={`flex-1 min-h-[40px] px-3 rounded-xl border text-xs italic poppins transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95 ${
-                localType.isItalic
-                  ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-secondary/20 text-primary border-light hover:bg-secondary/40"
-              }`}
-            >
-              <span>I</span>
-              <span className="not-italic font-normal text-[11px]">Italique</span>
-            </button>
-          </div>
-        </div>
+      {/* Action unique : Valider en cas de modif, Supprimer si inchangé */}
+      <div className="flex items-center shrink-0">
+        {isDirty ? (
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            title="Enregistrer les modifications"
+            className="cursor-pointer bg-primary text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
+          >
+            {isSaving ? (
+              <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </button>
+        ) : !dayType.isLocked ? (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            title="Supprimer ce type de jour"
+            className="cursor-pointer bg-red-500 hover:bg-red-600 text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
+          >
+            {isDeleting ? (
+              <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            )}
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -208,33 +562,52 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   isSettingsOpen,
   settings,
-  setNotification
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>(settings?.[0]?.category || "");
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
   const [selectedDayTypeId, setSelectedDayTypeId] = useState<string>("");
-  const [selectedEditDayTypeId, setSelectedEditDayTypeId] = useState<string>("");
   const [isAddingDate, setIsAddingDate] = useState<boolean>(false);
   
   const [deletingDates, setDeletingDates] = useState<Record<string, boolean>>({});
   const [dateErrorMessage, setDateErrorMessage] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
 
   const currentCategoryObj = useMemo(() => {
     return settings.find((cat: any) => cat.category === activeCategory) || settings[0];
   }, [settings, activeCategory]);
 
-  // Chargement API lors de l'ouverture
+  // Réinitialiser les erreurs lors du changement d'onglet
+  const handleCategoryChange = (category: string) => {
+    setActiveCategory(category);
+    setApiError(null);
+    setDateErrorMessage(null);
+  };
+
+  // Exécution de fetchDayTypes à l'ouverture de la modal
   useEffect(() => {
-    if (isSettingsOpen) {
+    if (isSettingsOpen && !hasFetchedRef.current) { 
+      hasFetchedRef.current = true;
       settings.forEach((cat: any) => {
-        cat.items.forEach((setting: any) => {
+        cat.items?.forEach((setting: any) => {
           if (setting.type === "day-type-settings" && typeof setting.fetchDayTypes === "function") {
-            setting.fetchDayTypes();
+            setting.fetchDayTypes().then((res: any) => {
+              if (res && !res.success && res.message) {
+                setApiError(res.message);
+              }
+            }).catch((err: any) => {
+              setApiError(err?.message || "Erreur lors du chargement des types de jours.");
+            });
           }
         });
       });
     }
-  }, [isSettingsOpen, settings]);
+
+    if (!isSettingsOpen) {
+      setApiError(null);
+      setDateErrorMessage(null);
+    }
+  }, [isSettingsOpen]);
 
   const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewNonWorkingDate(e.target.value);
@@ -261,8 +634,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <button
                   key={cat.category}
                   type="button"
-                  onClick={() => setActiveCategory(cat.category)}
-                  className={`w-full text-left px-4 py-4 rounded-2xl transition-all duration-200 flex items-center justify-between text-sm ${
+                  onClick={() => handleCategoryChange(cat.category)}
+                  className={`w-full text-left px-4 py-4 rounded-2xl transition-all duration-200 flex items-center justify-between text-sm cursor-pointer ${
                     isActive
                       ? "bg-secondary-bg border border-light text-primary font-semibold shadow-md"
                       : "text-secondary hover:bg-secondary/40 font-normal"
@@ -283,16 +656,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Panneau central */}
-          <div className="bg-secondary-bg border border-light rounded-2xl p-6 shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
+          <div className="bg-secondary-bg border border-light rounded-2xl py-6 px-5 shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
             {currentCategoryObj && (
               <div className="flex flex-col h-full">
                 {/* En-tête de catégorie */}
-                <div className="flex items-center bg-secondary-bg gap-3 pb-4 mb-6 border-b border-ultra-light shrink-0">
+                <div className="flex items-center bg-secondary-bg gap-3 pb-4 mb-4 border-b border-ultra-light shrink-0">
                   <div className="w-1.5 h-6 bg-primary rounded-full"></div>
                   <h3 className="text-lg font-medium text-primary poppins">
                     {currentCategoryObj.category}
                   </h3>
                 </div>
+
+                {/* Bannière d'erreur API globale */}
+                {apiError && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start justify-between gap-3 text-red-700 text-sm poppins shadow-sm shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{apiError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setApiError(null)}
+                      className="text-red-400 hover:text-red-600 transition-colors cursor-pointer p-0.5"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
 
                 {/* Contenu de la catégorie */}
                 <div className="space-y-6 flex-1">
@@ -300,7 +694,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div
                       key={setting.id}
                       className={`flex flex-col lg:flex-row lg:items-center justify-between py-2 ${
-                        settingIdx !== currentCategoryObj.items.length - 1 ? "border-b border-ultra-light pb-4" : ""
+                        settingIdx !== currentCategoryObj.items.length - 1
+                          ? "border-b border-ultra-light pb-4"
+                          : ""
                       }`}
                     >
                       {setting.type !== "mobile-appointment-fields" && setting.type !== "day-type-settings" && (
@@ -364,6 +760,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   }
 
                                   setDateErrorMessage(null);
+                                  setApiError(null);
                                   setIsAddingDate(true);
                                   const parsedDate = new Date(newNonWorkingDate).getTime();
                                   const dayTypeObj = setting.dayTypesOptions?.find((dt: any) => String(dt.id) === String(selectedDayTypeId));
@@ -385,6 +782,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                           }
                                         }));
                                         setNewNonWorkingDate("");
+                                      } else {
+                                        setApiError(response?.message || "Erreur lors de l'ajout de la date.");
                                       }
                                     } else {
                                       setting.setNonWorkingDates((prev: Record<string, any>) => ({
@@ -401,8 +800,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                       }));
                                       setNewNonWorkingDate("");
                                     }
-                                  } catch (error) {
-                                    console.error("Error adding non-working date:", error);
+                                  } catch (error: any) {
+                                    setApiError(error?.message || "Erreur réseau lors de l'ajout de la date.");
                                   } finally {
                                     setIsAddingDate(false);
                                   }
@@ -466,10 +865,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                     </div>
 
                                     <button
-                                      className="text-red-500 hover:text-white hover:bg-red-500 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="text-red-500 hover:text-white hover:bg-red-500 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                       disabled={isDeletingThisDate}
                                       onClick={async () => {
                                         setDeletingDates(prev => ({ ...prev, [dateKey]: true }));
+                                        setApiError(null);
                                         
                                         try {
                                           if (setting.removeNonWorkingDatesFromPlanning) {
@@ -481,7 +881,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 return newDates;
                                               });
                                             } else {
-                                              setNotification(response?.message || "Erreur lors de la suppression de la date");
+                                              setApiError(response?.message || "Erreur lors de la suppression de la date.");
                                             }
                                           } else {
                                             setting.setNonWorkingDates((prev: any) => {
@@ -490,8 +890,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                               return newDates;
                                             });
                                           }
-                                        } catch (error) {
-                                          console.error("Error removing date:", error);
+                                        } catch (error: any) {
+                                          setApiError(error?.message || "Erreur lors de la suppression de la date.");
                                         } finally {
                                           setDeletingDates(prev => {
                                             const next = { ...prev };
@@ -522,36 +922,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       ) : setting.type === "day-type-settings" ? (
                         /* CATEGORIE : GESTION DES TYPES DE JOURS */
                         <div className="flex flex-col gap-6 w-full">
-                          <div className="flex flex-col gap-2">
-                            <label className="text-sm font-medium text-secondary poppins">
-                              Sélectionner le type de jour à modifier :
-                            </label>
-                            <select
-                              value={selectedEditDayTypeId || setting.dayTypes?.[0]?.id || ""}
-                              onChange={(e) => setSelectedEditDayTypeId(e.target.value)}
-                              className="border border-default rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-sm bg-transparent shadow-sm hover:shadow-md w-full max-w-md cursor-pointer font-medium"
-                            >
-                              {setting.dayTypes?.map((dt: any) => (
-                                <option key={dt.id} value={dt.id}>
-                                  {dt.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                          {/* Formulaire d'ajout */}
+                          <NewDayTypeForm
+                            onAdd={setting.onAddDayType}
+                            setError={setApiError}
+                          />
 
-                          {(() => {
-                            const currentTypeObj = setting.dayTypes?.find(
-                              (dt: any) => String(dt.id) === String(selectedEditDayTypeId || setting.dayTypes?.[0]?.id)
-                            ) || setting.dayTypes?.[0];
-
-                            return currentTypeObj ? (
-                              <DayTypeSingleEditor key={currentTypeObj.id} dayType={currentTypeObj} />
-                            ) : (
-                              <p className="text-sm text-secondary italic poppins">
-                                Aucun type de jour disponible.
-                              </p>
-                            );
-                          })()}
+                          {/* Liste des types de jours existants */}
+                          {setting.dayTypes && setting.dayTypes.length > 0 ? (
+                            setting.dayTypes.map((dayType: DayType) => (
+                              <DayTypeSingleEditor
+                                key={dayType.Id}
+                                dayType={dayType}
+                                onUpdate={setting.onUpdateDayType}
+                                onDelete={setting.onDeleteDayType}
+                                setError={setApiError}
+                              />
+                            ))
+                          ) : (
+                            <p className="text-sm text-secondary italic poppins">
+                              Aucun type de jour disponible.
+                            </p>
+                          )}
                         </div>
                       ) : setting.type === "mobile-appointment-fields" ? (
                         /* AFFICHAGE MOBILE */
@@ -585,7 +977,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                             type="button"
                                             aria-pressed={checked}
                                             onClick={() => updateFields(column, !checked)}
-                                            className={`flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${checked ? "border-primary bg-primary text-white" : "border-light bg-secondary text-secondary"}`}
+                                            className={`flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 cursor-pointer ${checked ? "border-primary bg-primary text-white" : "border-light bg-secondary text-secondary"}`}
                                           >
                                             <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${checked ? "border-white" : "border-secondary"}`} aria-hidden="true">
                                               {checked ? "✓" : ""}
@@ -775,7 +1167,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         
         <div className="flex justify-end pt-3 border-t border-ultra-light shrink-0">
           <button
-            className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md"
+            className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer"
             onClick={onClose}
           >
             Fermer

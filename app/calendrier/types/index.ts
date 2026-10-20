@@ -397,3 +397,14 @@ export interface Notification {
   Timestamp: string;
   IsRead: boolean;
 }
+
+
+export interface DayType {
+  Id: string;
+  Libelle: string;
+  CouleurFond: string;
+  CouleurTexte: string;
+  isBold: boolean;
+  isItalic: boolean;
+  isLocked: boolean;
+}
