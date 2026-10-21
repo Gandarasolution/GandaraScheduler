@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, {
@@ -354,7 +353,7 @@ const ChantierViewsControl: React.FC<
     useState<string | null>(null);
   const [activeFilterKey, setActiveFilterKey] =
     useState<string | null>(null);
-  
+
   const [deletingViewId, setDeletingViewId] = useState<string | null>(null);
 
   const activeFiltersRef = useRef(activeFilters);
@@ -394,7 +393,6 @@ const ChantierViewsControl: React.FC<
     []
   );
 
-
   const selectView = useCallback(
     (view: ChantierView, persistFilters = true) => {
       setSelectedId(view.id);
@@ -405,21 +403,17 @@ const ChantierViewsControl: React.FC<
       onViewChange(view);
 
       void persistLastChantierView(view);
-      
     },
-    [defaultColumns, onViewChange]
+    [defaultColumns, onViewChange, persistLastChantierView]
   );
 
- 
   useEffect(() => {
     activeFiltersRef.current = activeFilters;
   }, [activeFilters]);
 
-
   initialViewsRef.current = initialViews;
 
   useEffect(() => {
-
     const currentViews = initialViewsRef.current;
     setViews(currentViews);
 
@@ -442,9 +436,6 @@ const ChantierViewsControl: React.FC<
         ? current
         : nextColumns
     );
-
-
-
   }, [defaultColumns, initialViewId, initialViewsSignature]);
 
   const selectedView = views.find(
@@ -485,7 +476,6 @@ const ChantierViewsControl: React.FC<
     selectedView,
     views,
   ]);
-
 
   // Animation FLIP pour le déplacement des colonnes.
   useLayoutEffect(() => {
@@ -672,7 +662,7 @@ const ChantierViewsControl: React.FC<
     return () => {
       cancelled = true;
     };
-  }, [isEditorOpen, filterKeysSignature]);
+  }, [isEditorOpen, filterKeysSignature, keyOfFilter]);
 
   // Chargement des détails de la vue.
   useEffect(() => {
@@ -823,7 +813,6 @@ const ChantierViewsControl: React.FC<
 
     console.log("filters", filters);
 
-
     try {
       const payload = {
         planningVue: {
@@ -923,11 +912,6 @@ const ChantierViewsControl: React.FC<
   const isEditorLoading =
     isLoadingOptions || isLoadingDetails;
 
-  /*
-   * Répartition des filtres en deux listes indépendantes.
-   * Chaque colonne possède sa propre hauteur : aucun espace
-   * vide n'est créé par la hauteur d'un filtre voisin.
-   */
   const filterEntries = Object.entries(keyOfFilter);
 
   const leftFilterEntries = filterEntries.filter(
@@ -959,7 +943,7 @@ const ChantierViewsControl: React.FC<
             )
           }
           aria-expanded={isExpanded}
-          className=" cursor-pointer flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition-colors hover:bg-secondary-bg"
+          className="cursor-pointer flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition-colors hover:bg-secondary-bg"
         >
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold text-primary">
@@ -1253,8 +1237,6 @@ const ChantierViewsControl: React.FC<
                 illustrationImage={
                   <Globe2 className="h-4 w-4 text-primary" />
                 }
-                //onAddOption={() => openEditor()}
-                //addOptionLabel="Créer une nouvelle vue"
                 className="rounded-xl border-default bg-secondary-bg px-2 py-1.5"
               />
             </div>
@@ -1301,9 +1283,9 @@ const ChantierViewsControl: React.FC<
             ? "Modifier la vue du tableau"
             : "Créer une vue du tableau"
         }
-        className="w-[95vw] max-w-5xl overflow-hidden"
+        className="w-[98vw] max-w-8xl overflow-hidden"
       >
-        <div className="flex max-h-[82vh] flex-col">
+        <div className="flex max-h-[85vh] flex-col">
           {/* CORPS SCROLLABLE */}
           <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
             {/* Alerte d'erreur */}
@@ -1355,7 +1337,7 @@ const ChantierViewsControl: React.FC<
                 </p>
               </section>
 
-              {/* Visibilité avec GROS TOGGLE ULTRA-VISIBLE (6 cols) */}
+              {/* Visibilité avec TOGGLE (6 cols) */}
               <section
                 className={`flex flex-col justify-between rounded-2xl border-2 p-4 transition-all duration-200 sm:p-5 lg:col-span-6 ${
                   isPrivate
@@ -1524,396 +1506,399 @@ const ChantierViewsControl: React.FC<
               </section>
             )}
 
-            {/* SECTION 2 : COLONNES AVEC ANIMATION DE GLISSEMENT (FLIP) */}
-            <section className="rounded-2xl border border-default bg-secondary-bg/40 p-4 sm:p-5">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-primary">
-                    Colonnes affichées et ordre
-                  </h3>
-                  <p className="mt-0.5 text-xs text-secondary">
-                    Utilisez les flèches ou glissez les lignes pour faire glisser les colonnes à la position souhaitée.
-                  </p>
-                </div>
-
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {columns.length} colonne{columns.length > 1 ? "s" : ""}
-                </span>
-              </div>
-
-              {isLoadingDetails ? (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                  <Skeleton className="h-64 w-full rounded-2xl lg:col-span-5" />
-                  <Skeleton className="h-64 w-full rounded-2xl lg:col-span-7" />
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-                  {/* PANNEAU GAUCHE : Colonnes disponibles (5 cols) */}
-                  <div className="flex flex-col rounded-2xl border border-default bg-primary-bg p-3.5 lg:col-span-5">
-                    <div className="mb-3 flex items-center justify-between border-b border-default pb-2.5">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
-                        Colonnes disponibles ({availableColumns.length})
-                      </span>
-
-                      {availableColumns.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setColumns((current) => [
-                              ...current,
-                              ...availableColumns.map((col) => col.id),
-                            ])
-                          }
-                          className="cursor-pointer text-xs font-semibold text-primary transition-opacity hover:opacity-80"
-                        >
-                          + Tout ajouter
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="max-h-[360px] flex-1 space-y-4 overflow-y-auto pr-1">
-                      {Array.from(
-                        new Map(
-                          availableColumns.map((column) => [
-                            column.categoryLabel,
-                            availableColumns.filter(
-                              (availableColumn) =>
-                                availableColumn.categoryLabel === column.categoryLabel
-                            ),
-                          ])
-                        ).entries()
-                      ).map(([categoryLabel, categoryColumns]) => (
-                        <div key={categoryLabel} className="space-y-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-secondary/80">
-                            {categoryLabel}
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {categoryColumns.map((column) => (
-                              <button
-                                key={column.id}
-                                type="button"
-                                onClick={() =>
-                                  setColumns((current) => [...current, column.id])
-                                }
-                                className="cursor-pointer group inline-flex items-center gap-1.5 rounded-xl border border-dashed border-default bg-secondary-bg/40 px-2.5 py-1.5 text-xs font-medium text-primary transition-all duration-200 hover:-translate-y-0.5 hover:border-primary hover:bg-primary/10 active:translate-y-0"
-                              >
-                                <Plus className="h-3.5 w-3.5 text-primary transition-transform duration-200 group-hover:rotate-90" />
-                                <span className="truncate">{column.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-
-                      {!availableColumns.length && (
-                        <div className="flex h-40 flex-col items-center justify-center text-center">
-                          <span className="mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <Check className="h-4 w-4" />
-                          </span>
-                          <p className="text-xs font-medium text-primary">
-                            Toutes les colonnes sont déjà affichées.
-                          </p>
-                        </div>
-                      )}
-                    </div>
+            {/* GRILLE CÔTE À CÔTE : COLONNES (GAUCHE) ET FILTRES (DROITE) */}
+            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+              
+              {/* SECTION 2 : COLONNES */}
+              <section className="flex flex-col rounded-2xl border border-default bg-secondary-bg/40 p-4 sm:p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-primary">
+                      Colonnes affichées et ordre
+                    </h3>
+                    <p className="mt-0.5 text-xs text-secondary">
+                      Glissez ou utilisez les flèches pour réordonner les colonnes.
+                    </p>
                   </div>
 
-                  {/* PANNEAU DROIT : Colonnes actives avec ANIMATION DE GLISSEMENT (7 cols) */}
-                  <div className="flex flex-col rounded-2xl border border-default bg-primary-bg p-3.5 lg:col-span-7">
-                    <div className="mb-3 flex items-center justify-between border-b border-default pb-2.5">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
-                        Ordre d'affichage ({columns.length})
-                      </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    {columns.length} colonne{columns.length > 1 ? "s" : ""}
+                  </span>
+                </div>
 
-                      {columns.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setColumns([])}
-                          className="cursor-pointer text-xs font-medium text-secondary transition-colors hover:text-red-600"
-                        >
-                          Tout retirer
-                        </button>
-                      )}
+                {isLoadingDetails ? (
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+                    <Skeleton className="h-64 w-full rounded-2xl lg:col-span-4" />
+                    <Skeleton className="h-64 w-full rounded-2xl lg:col-span-8" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+                    {/* PANNEAU GAUCHE : Colonnes disponibles (réduit à 4 colonnes) */}
+                    <div className="flex flex-col rounded-2xl border border-default bg-primary-bg p-3.5 lg:col-span-4">
+                      <div className="mb-3 flex items-center justify-between border-b border-default pb-2.5">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
+                          Disponibles ({availableColumns.length})
+                        </span>
+
+                        {availableColumns.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setColumns((current) => [
+                                ...current,
+                                ...availableColumns.map((col) => col.id),
+                              ])
+                            }
+                            className="cursor-pointer text-xs font-semibold text-primary transition-opacity hover:opacity-80"
+                          >
+                            + Tout
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="max-h-[500px] flex-1 space-y-4 overflow-y-auto pr-1">
+                        {Array.from(
+                          new Map(
+                            availableColumns.map((column) => [
+                              column.categoryLabel,
+                              availableColumns.filter(
+                                (availableColumn) =>
+                                  availableColumn.categoryLabel === column.categoryLabel
+                              ),
+                            ])
+                          ).entries()
+                        ).map(([categoryLabel, categoryColumns]) => (
+                          <div key={categoryLabel} className="space-y-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-secondary/80">
+                              {categoryLabel}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {categoryColumns.map((column) => (
+                                <button
+                                  key={column.id}
+                                  type="button"
+                                  onClick={() =>
+                                    setColumns((current) => [...current, column.id])
+                                  }
+                                  className="cursor-pointer group inline-flex items-center gap-1.5 rounded-xl border border-dashed border-default bg-secondary-bg/40 px-2.5 py-1.5 text-xs font-medium text-primary transition-all duration-200 hover:-translate-y-0.5 hover:border-primary hover:bg-primary/10 active:translate-y-0"
+                                >
+                                  <Plus className="h-3.5 w-3.5 text-primary transition-transform duration-200 group-hover:rotate-90" />
+                                  <span className="truncate">{column.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+
+                        {!availableColumns.length && (
+                          <div className="flex h-32 flex-col items-center justify-center text-center">
+                            <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                              <Check className="h-4 w-4" />
+                            </span>
+                            <p className="text-xs font-medium text-primary">
+                              Toutes affichées.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {columns.length > 0 ? (
-                      <div className="relative max-h-[360px] flex-1 space-y-1.5 overflow-y-auto pr-1">
-                        {columns.map((id, index) => {
-                          const column = allColumns.find((item) => item.id === id);
-                          if (!column) return null;
+                    {/* PANNEAU DROIT : Ordre d'affichage (élargi à 8 colonnes, hauteur illimitée) */}
+                    <div className="flex flex-col rounded-2xl border border-default bg-primary-bg p-3.5 lg:col-span-8">
+                      <div className="mb-3 flex items-center justify-between border-b border-default pb-2.5">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
+                          Ordre d'affichage ({columns.length})
+                        </span>
 
-                          const isDragged = draggedColumn === id;
-                          const isDropTarget =
-                            dragOverColumn === id && draggedColumn !== id;
+                        {columns.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setColumns([])}
+                            className="cursor-pointer text-xs font-medium text-secondary transition-colors hover:text-red-600"
+                          >
+                            Tout retirer
+                          </button>
+                        )}
+                      </div>
 
-                          return (
-                            <div
-                              key={id}
-                              ref={(element) => {
-                                if (element) {
-                                  columnElementsRef.current.set(id, element);
+                      {columns.length > 0 ? (
+                        <div className="relative flex-1 space-y-1.5 pr-1">
+                          {columns.map((id, index) => {
+                            const column = allColumns.find((item) => item.id === id);
+                            if (!column) return null;
 
-                                  // Animation FLIP native : fait glisser physiquement la ligne quand son index change
-                                  const prevTopAttr = element.dataset.offsetTop;
-                                  const currentTop = element.offsetTop;
-                                  element.dataset.offsetTop = String(currentTop);
+                            const isDragged = draggedColumn === id;
+                            const isDropTarget =
+                              dragOverColumn === id && draggedColumn !== id;
 
-                                  if (prevTopAttr !== undefined) {
-                                    const deltaY = Number(prevTopAttr) - currentTop;
-                                    if (Math.abs(deltaY) > 2 && typeof element.animate === "function") {
+                            return (
+                              <div
+                                key={id}
+                                ref={(element) => {
+                                  if (element) {
+                                    columnElementsRef.current.set(id, element);
+
+                                    const prevTopAttr = element.dataset.offsetTop;
+                                    const currentTop = element.offsetTop;
+                                    element.dataset.offsetTop = String(currentTop);
+
+                                    if (prevTopAttr !== undefined) {
+                                      const deltaY = Number(prevTopAttr) - currentTop;
+                                      if (Math.abs(deltaY) > 2 && typeof element.animate === "function") {
+                                        element.animate(
+                                          [
+                                            {
+                                              transform: `translateY(${deltaY}px) scale(1.01)`,
+                                              zIndex: 20,
+                                              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.12)",
+                                            },
+                                            {
+                                              transform: "translateY(0px) scale(1)",
+                                              zIndex: 1,
+                                              boxShadow: "0 0 0 0 rgba(0, 0, 0, 0)",
+                                            },
+                                          ],
+                                          {
+                                            duration: 280,
+                                            easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+                                          }
+                                        );
+                                      }
+                                    } else if (typeof element.animate === "function") {
                                       element.animate(
                                         [
-                                          {
-                                            transform: `translateY(${deltaY}px) scale(1.01)`,
-                                            zIndex: 20,
-                                            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.12)",
-                                          },
-                                          {
-                                            transform: "translateY(0px) scale(1)",
-                                            zIndex: 1,
-                                            boxShadow: "0 0 0 0 rgba(0, 0, 0, 0)",
-                                          },
+                                          { opacity: 0, transform: "translateX(-16px)" },
+                                          { opacity: 1, transform: "translateX(0px)" },
                                         ],
                                         {
-                                          duration: 280,
+                                          duration: 220,
                                           easing: "cubic-bezier(0.22, 1, 0.36, 1)",
                                         }
                                       );
                                     }
-                                  } else if (typeof element.animate === "function") {
-                                    // Glissement d'entrée lors de l'ajout d'une colonne
-                                    element.animate(
-                                      [
-                                        { opacity: 0, transform: "translateX(-16px)" },
-                                        { opacity: 1, transform: "translateX(0px)" },
-                                      ],
-                                      {
-                                        duration: 220,
-                                        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-                                      }
-                                    );
+                                  } else {
+                                    columnElementsRef.current.delete(id);
                                   }
-                                } else {
-                                  columnElementsRef.current.delete(id);
-                                }
-                              }}
-                              onDragOver={(event) => {
-                                event.preventDefault();
-                                event.dataTransfer.dropEffect = "move";
-                                if (draggedColumn !== id) {
-                                  setDragOverColumn(id);
-                                }
-                              }}
-                              onDragLeave={(event) => {
-                                const related = event.relatedTarget;
-                                if (
-                                  !(related instanceof Node) ||
-                                  !event.currentTarget.contains(related)
-                                ) {
-                                  setDragOverColumn(null);
-                                }
-                              }}
-                              onDrop={(event) => {
-                                event.preventDefault();
-                                moveColumn(id);
-                                setDragOverColumn(null);
-                              }}
-                              className={[
-                                "group relative flex items-center gap-2.5 rounded-xl border px-3 py-2 text-sm text-primary",
-                                "transition-[background-color,border-color,transform,opacity] duration-200 ease-out",
-                                isDragged
-                                  ? "z-10 scale-[0.98] border-primary bg-primary/10 opacity-45"
-                                  : isDropTarget
-                                    ? "translate-y-1 border-primary bg-primary/10 shadow-md ring-2 ring-primary/20"
-                                    : "border-default/70 bg-secondary-bg/30 hover:border-default hover:bg-secondary-bg",
-                              ].join(" ")}
-                            >
-                              {/* Poignée de glissement */}
-                              <button
-                                type="button"
-                                draggable
-                                onDragStart={(event) => {
-                                  draggedColumnRef.current = id;
-                                  setDraggedColumn(id);
-                                  event.dataTransfer.effectAllowed = "move";
-                                  event.dataTransfer.setData("text/plain", id);
                                 }}
-                                onDragEnd={() => {
-                                  draggedColumnRef.current = null;
-                                  setDraggedColumn(null);
+                                onDragOver={(event) => {
+                                  event.preventDefault();
+                                  event.dataTransfer.dropEffect = "move";
+                                  if (draggedColumn !== id) {
+                                    setDragOverColumn(id);
+                                  }
+                                }}
+                                onDragLeave={(event) => {
+                                  const related = event.relatedTarget;
+                                  if (
+                                    !(related instanceof Node) ||
+                                    !event.currentTarget.contains(related)
+                                  ) {
+                                    setDragOverColumn(null);
+                                  }
+                                }}
+                                onDrop={(event) => {
+                                  event.preventDefault();
+                                  moveColumn(id);
                                   setDragOverColumn(null);
                                 }}
-                                className="flex h-8 w-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-secondary transition-colors hover:bg-primary/10 hover:text-primary active:cursor-grabbing"
-                                aria-label={`Déplacer ${column.label}`}
-                                title="Glisser pour déplacer"
+                                className={[
+                                  "group relative flex items-center gap-2.5 rounded-xl border px-3 py-2 text-sm text-primary",
+                                  "transition-[background-color,border-color,transform,opacity] duration-200 ease-out",
+                                  isDragged
+                                    ? "z-10 scale-[0.98] border-primary bg-primary/10 opacity-45"
+                                    : isDropTarget
+                                      ? "translate-y-1 border-primary bg-primary/10 shadow-md ring-2 ring-primary/20"
+                                      : "border-default/70 bg-secondary-bg/30 hover:border-default hover:bg-secondary-bg",
+                                ].join(" ")}
                               >
-                                <GripVertical className="h-4 w-4" />
-                              </button>
-
-                              {/* Numéro d'ordre */}
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold tabular-nums text-primary">
-                                {index + 1}
-                              </span>
-
-                              {/* Libellé de la colonne */}
-                              <span className="min-w-0 flex-1 truncate font-medium">
-                                {column.label}
-                              </span>
-
-                              {/* Catégorie */}
-                              <span className="hidden shrink-0 rounded-md bg-primary-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary sm:inline-block">
-                                {column.categoryLabel}
-                              </span>
-
-                              <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-default bg-primary-bg p-0.5">
+                                {/* Poignée de glissement */}
                                 <button
                                   type="button"
-                                  disabled={index === 0}
-                                  onClick={() =>
-                                    setColumns((current) => {
-                                      if (index <= 0) return current;
-                                      const next = [...current];
-                                      [next[index - 1], next[index]] = [
-                                        next[index],
-                                        next[index - 1],
-                                      ];
-                                      return next;
-                                    })
-                                  }
-                                  className="cursor-pointer flex h-6 w-6 items-center justify-center rounded-md text-secondary transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
-                                  aria-label={`Monter ${column.label}`}
-                                  title="Faire glisser vers le haut"
+                                  draggable
+                                  onDragStart={(event) => {
+                                    draggedColumnRef.current = id;
+                                    setDraggedColumn(id);
+                                    event.dataTransfer.effectAllowed = "move";
+                                    event.dataTransfer.setData("text/plain", id);
+                                  }}
+                                  onDragEnd={() => {
+                                    draggedColumnRef.current = null;
+                                    setDraggedColumn(null);
+                                    setDragOverColumn(null);
+                                  }}
+                                  className="flex h-8 w-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-secondary transition-colors hover:bg-primary/10 hover:text-primary active:cursor-grabbing"
+                                  aria-label={`Déplacer ${column.label}`}
+                                  title="Glisser pour déplacer"
                                 >
-                                  <svg
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="h-3.5 w-3.5"
-                                  >
-                                    <path d="m18 15-6-6-6 6" />
-                                  </svg>
+                                  <GripVertical className="h-4 w-4" />
                                 </button>
 
+                                {/* Numéro d'ordre */}
+                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold tabular-nums text-primary">
+                                  {index + 1}
+                                </span>
+
+                                {/* Libellé de la colonne */}
+                                <span className="min-w-0 flex-1 truncate font-medium">
+                                  {column.label}
+                                </span>
+
+                                {/* Catégorie */}
+                                <span className="hidden shrink-0 rounded-md bg-primary-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary sm:inline-block">
+                                  {column.categoryLabel}
+                                </span>
+
+                                <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-default bg-primary-bg p-0.5">
+                                  <button
+                                    type="button"
+                                    disabled={index === 0}
+                                    onClick={() =>
+                                      setColumns((current) => {
+                                        if (index <= 0) return current;
+                                        const next = [...current];
+                                        [next[index - 1], next[index]] = [
+                                          next[index],
+                                          next[index - 1],
+                                        ];
+                                        return next;
+                                      })
+                                    }
+                                    className="cursor-pointer flex h-6 w-6 items-center justify-center rounded-md text-secondary transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                                    aria-label={`Monter ${column.label}`}
+                                    title="Faire glisser vers le haut"
+                                  >
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="h-3.5 w-3.5"
+                                    >
+                                      <path d="m18 15-6-6-6 6" />
+                                    </svg>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={index === columns.length - 1}
+                                    onClick={() =>
+                                      setColumns((current) => {
+                                        if (index >= current.length - 1) return current;
+                                        const next = [...current];
+                                        [next[index], next[index + 1]] = [
+                                          next[index + 1],
+                                          next[index],
+                                        ];
+                                        return next;
+                                      })
+                                    }
+                                    className="cursor-pointer flex h-6 w-6 items-center justify-center rounded-md text-secondary transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                                    aria-label={`Descendre ${column.label}`}
+                                    title="Faire glisser vers le bas"
+                                  >
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="h-3.5 w-3.5"
+                                    >
+                                      <path d="m6 9 6 6 6-6" />
+                                    </svg>
+                                  </button>
+                                </div>
+
+                                {/* Bouton supprimer */}
                                 <button
                                   type="button"
-                                  disabled={index === columns.length - 1}
                                   onClick={() =>
-                                    setColumns((current) => {
-                                      if (index >= current.length - 1) return current;
-                                      const next = [...current];
-                                      [next[index], next[index + 1]] = [
-                                        next[index + 1],
-                                        next[index],
-                                      ];
-                                      return next;
-                                    })
+                                    setColumns((current) =>
+                                      current.filter((columnId) => columnId !== id)
+                                    )
                                   }
-                                  className="cursor-pointer flex h-6 w-6 items-center justify-center rounded-md text-secondary transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
-                                  aria-label={`Descendre ${column.label}`}
-                                  title="Faire glisser vers le bas"
+                                  className="cursor-pointer flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                                  aria-label={`Retirer ${column.label}`}
+                                  title="Retirer cette colonne"
                                 >
-                                  <svg
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="h-3.5 w-3.5"
-                                  >
-                                    <path d="m6 9 6 6 6-6" />
-                                  </svg>
+                                  <X className="h-4 w-4" />
                                 </button>
                               </div>
-
-                              {/* Bouton supprimer */}
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setColumns((current) =>
-                                    current.filter((columnId) => columnId !== id)
-                                  )
-                                }
-                                className="cursor-pointer flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                                aria-label={`Retirer ${column.label}`}
-                                title="Retirer cette colonne"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
-                        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary-bg text-secondary">
-                          <SlidersHorizontal className="h-5 w-5" />
+                            );
+                          })}
                         </div>
-                        <p className="text-sm font-semibold text-primary">
-                          Aucune colonne sélectionnée
-                        </p>
-                        <p className="mt-1 text-xs text-secondary">
-                          Ajoutez les colonnes nécessaires depuis la liste de gauche.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {/* SECTION 3 : FILTRES */}
-            <section className="rounded-2xl border border-default bg-secondary-bg/40 p-4 sm:p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <SlidersHorizontal className="h-5 w-5" />
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-primary">
-                      Filtres de la vue
-                    </h3>
-                    <p className="mt-0.5 text-xs text-secondary">
-                      Configurez les filtres enregistrés avec la vue.
-                    </p>
-                  </div>
-                </div>
-
-                <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-primary px-2.5 text-xs font-semibold text-white">
-                  {selectedFilterCount}
-                </span>
-              </div>
-
-              {isLoadingOptions ? (
-                <div role="status" className="grid gap-3 md:grid-cols-2">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="space-y-3 rounded-xl border border-default bg-primary-bg p-3"
-                    >
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-3 w-1/3" />
+                      ) : (
+                        <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
+                          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary-bg text-secondary">
+                            <SlidersHorizontal className="h-5 w-5" />
+                          </div>
+                          <p className="text-sm font-semibold text-primary">
+                            Aucune colonne sélectionnée
+                          </p>
+                          <p className="mt-1 text-xs text-secondary">
+                            Ajoutez les colonnes nécessaires depuis la liste de gauche.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  <span className="sr-only">Chargement des options de filtres...</span>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2">
-                  <div className="flex min-w-0 flex-col gap-3">
-                    {leftFilterEntries.map(renderFilterCard)}
+                  </div>
+                )}
+              </section>
+
+              {/* SECTION 3 : FILTRES */}
+              <section className="flex flex-col rounded-2xl border border-default bg-secondary-bg/40 p-4 sm:p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <SlidersHorizontal className="h-5 w-5" />
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold text-primary">
+                        Filtres de la vue
+                      </h3>
+                      <p className="mt-0.5 text-xs text-secondary">
+                        Configurez les filtres enregistrés avec la vue.
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex min-w-0 flex-col gap-3">
-                    {rightFilterEntries.map(renderFilterCard)}
-                  </div>
+                  <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-primary px-2.5 text-xs font-semibold text-white">
+                    {selectedFilterCount}
+                  </span>
                 </div>
-              )}
-            </section>
+
+                {isLoadingOptions ? (
+                  <div role="status" className="grid gap-3 md:grid-cols-2">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="space-y-3 rounded-xl border border-default bg-primary-bg p-3"
+                      >
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-3 w-1/3" />
+                      </div>
+                    ))}
+                    <span className="sr-only">Chargement des options de filtres...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2">
+                    <div className="flex min-w-0 flex-col gap-3">
+                      {leftFilterEntries.map(renderFilterCard)}
+                    </div>
+
+                    <div className="flex min-w-0 flex-col gap-3">
+                      {rightFilterEntries.map(renderFilterCard)}
+                    </div>
+                  </div>
+                )}
+              </section>
+
+            </div>
           </div>
 
           {/* FOOTER FIXE */}

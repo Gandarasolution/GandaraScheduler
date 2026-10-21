@@ -220,23 +220,6 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     if (positionSaveTimeoutRef.current) clearTimeout(positionSaveTimeoutRef.current);
   }, []);
 
-  const updateDayType = useCallback(async (dayType: { id: string, label: string, bgColor: string, textColor: string, isBold: boolean, isItalic: boolean }): Promise<{ success: boolean; message?: string }> => {
-
-    try {
-      const response = await calendarConfigService.updateDayType(dayType);
-      if (response?.success) {
-        setDayTypes((prevDayTypes) => {
-          const updatedDayTypes = prevDayTypes.map((dt) => dt.id === dayType.id ? { ...dt, ...dayType } : dt);
-          return updatedDayTypes;
-        });
-        return { success: true };
-      }
-      return { success: false, message: response?.message || 'Erreur lors de la mise à jour du type de jour' };
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du type de jour :', error);
-      return { success: false, message: 'Erreur lors de la mise à jour du type de jour' };
-    }
-  }, []);
 
 
   // --- Hook de configuration existant ---

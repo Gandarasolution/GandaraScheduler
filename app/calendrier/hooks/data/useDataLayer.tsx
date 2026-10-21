@@ -166,7 +166,7 @@ export const useDataLayer = ({
     }
 
     inFlightRequestKeysRef.current.add(requestKey);
-    setIsLoading(true);
+    //setIsLoading(true);
 
     try {
       const requestedEmployeeIds = new Set(employeeIdsToRequest);

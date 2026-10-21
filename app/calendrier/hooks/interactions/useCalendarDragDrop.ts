@@ -18,7 +18,6 @@ import { format, isSameDay, isWeekend } from 'date-fns';
 import { Appointment, HalfDayInterval, Item } from '../../types';
 import { CELL_WIDTH, CELL_HEIGHT, HOUR_MS, DAY_INTERVALS } from '../../utils/constants';
 import { isHoliday, getNextWorkedDay } from '../../utils/dates';
-import { RowWithBoundaries } from '@/app/calendrier';
 
 interface DragItem {
   id: number;
@@ -35,7 +34,16 @@ interface DragItem {
 
 interface UseCalendarDragDropParams {
   tableRef: RefObject<HTMLDivElement | null>;
-  rowBoundaries: RowWithBoundaries[];
+  rowBoundaries: {
+    start: number;
+    end: number;
+    domId: string;
+    type: "group" | "employee";
+    id: string | number;
+    uniqueKey: string;
+    data: any;
+    height: number;
+  }[];
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;

@@ -13,11 +13,19 @@ import React, { memo } from 'react';
 import { Appointment, Item } from '../../types';
 import EmployeeRow from './EmployeeRow';
 import GroupRow from './GroupRow';
-import { RowWithBoundaries } from '../../hooks';
 
 interface CalendarRowsProps {
   mainScrollRef:React.RefObject<HTMLDivElement>;
-  visibleRows: RowWithBoundaries[];
+  visibleRows:{
+    start: number;
+    end: number;
+    domId: string;
+    type: "group" | "employee";
+    id: string | number;
+    uniqueKey: string;
+    data: any;
+    height: number;
+  }[];
   dayInTimeline: number[];
   todayIndex: number;
   isFullDay: boolean;
@@ -76,7 +84,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   return (
     <>
       {visibleRows.map((row) => { 
-        ////console.log(row);
+        if(Number(row.id) === 1121) console.log(row);
                
         const commonProps = {
           style: {

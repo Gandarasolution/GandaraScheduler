@@ -65,8 +65,6 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   const selectedOption = options.find(option => 
     String(option.value) === String(value) || String(option.image) === String(value)
   );
-
-  console.log("selectedOption", selectedOption);
   
   // Tailles d'images
   const imageSizes = {

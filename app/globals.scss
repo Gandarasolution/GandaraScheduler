@@ -704,6 +704,10 @@ input[type="date"] { font-variant-numeric: tabular-nums; }
   background-color: var(--color-header-table) !important;
 }
 
+.flexibleFrame-content{
+  overscroll-behavior-y: contain;
+}
+
 
 /* ================================================== */
 /* 4. CLASSES UTILITAIRES (Syntaxe Tailwind v4)      */

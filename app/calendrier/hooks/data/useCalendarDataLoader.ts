@@ -23,7 +23,6 @@ interface UseCalendarDataLoaderParams {
   isGrabbing: boolean;
   isScrolling: boolean;
   visibleEmployeeIds: number[];
-  //resetToken?: number;
   onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeIds?: number[]) => Promise<boolean>;
 }
 
@@ -40,7 +39,6 @@ export const useCalendarDataLoader = ({
   isGrabbing,
   isScrolling,
   visibleEmployeeIds,
-  //resetToken,
   onLoadAppointmentsInRange,
 }: UseCalendarDataLoaderParams): void => {
 
@@ -101,6 +99,7 @@ export const useCalendarDataLoader = ({
       // Mise à jour optimiste
       if (forceReload || isOutOfBoundLeft) visibleWindowStartInitial.current = newLoadStart;
       if (forceReload || isOutOfBoundRight) visibleWindowEndInitial.current = newLoadEnd;
+
       return true;
     }
 
@@ -118,20 +117,12 @@ export const useCalendarDataLoader = ({
       if (requestStarted) {
         previousEmployeeIdsKey.current = employeeIdsKey;
       }
-    }, 250);
+    }, 150);
 
     return () => window.clearTimeout(debounceTimer);
   }, [checkAndLoadData, employeeIdsKey, visibleEmployeeIds.length, visibleWindowStart, visibleWindowEnd]);
 
-  // useEffect(() => {
-  //   if (visibleWindowStart === 0 && visibleWindowEnd === 0) return;
-
-  //   isLoadingRef.current = false;
-  //   visibleWindowStartInitial.current = 0;
-  //   visibleWindowEndInitial.current = 0;
-  //   checkAndLoadData(true, true);
-  // }, [resetToken]);
-
+  
   // SCÉNARIO A : Relâchement du grab
   const prevIsGrabbing = useRef(false);
   useEffect(() => {
