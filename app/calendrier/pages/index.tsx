@@ -420,7 +420,28 @@ export default function HomePage({
       }
 
       const hasFilters = Boolean(payload?.hasFiltres ?? payload?.HasFiltres);
-      const selectedView = loadedViews[0];
+      let selectedView = loadedViews[0];
+      
+
+
+      const rep = await calendarConfigService.getLastChantierView();
+
+      if (rep?.success === false) {
+        throw new Error(rep.message || 'Impossible de charger la dernière vue chantier.');
+      }
+      else if (!rep?.data && (!rep.data.IdPlanningVue || !rep.data.IdPlanningChantierVue)) {
+        console.warn('Aucune vue chantier trouvée pour l’utilisateur. Chargement de la première vue disponible.');
+      }
+      else if (rep?.data && (rep.data.IdPlanningVue || rep.data.IdPlanningChantierVue)) {
+        const lastViewId = rep.data.IdPlanningVue ?? rep.data.IdPlanningChantierVue;
+        selectedView = loadedViews.find((v: any) => String(v.id) === String(lastViewId)) || selectedView;
+        setChantierViewId(String(lastViewId));
+      }else {
+        setChantierViewId(selectedView.id ? String(selectedView.id) : null);
+      }
+
+
+
       const initialView = hasFilters
         ? {
           ...selectedView,
@@ -433,21 +454,6 @@ export default function HomePage({
         : selectedView;
 
 
-      const rep = await calendarConfigService.getLastChantierView();
-
-
-      if (rep?.success === false) {
-        throw new Error(rep.message || 'Impossible de charger la dernière vue chantier.');
-      }
-      else if (!rep?.data && (!rep.data.IdPlanningVue || !rep.data.IdPlanningChantierVue)) {
-        console.warn('Aucune vue chantier trouvée pour l’utilisateur. Chargement de la première vue disponible.');
-      }
-      else if (rep?.data && (rep.data.IdPlanningVue || rep.data.IdPlanningChantierVue)) {
-        const lastViewId = rep.data.IdPlanningVue ?? rep.data.IdPlanningChantierVue;
-        setChantierViewId(String(lastViewId));
-      }else {
-        setChantierViewId(initialView.id ? String(initialView.id) : null);
-      }
 
       setChantierViews(hasFilters ? [initialView, ...loadedViews] : loadedViews);
       setChantierColumns(initialView.columns);
@@ -466,6 +472,7 @@ export default function HomePage({
     }
   }, [currentPlanningId, user?.IdPersonnel, viewState.setActiveFilters, viewState.viewType]);
 
+  
   const saveChantierFilters = useCallback(async (filters: ActiveFilters): Promise<boolean> => {
     try {
       const response = await ressourceService.saveFilterOptions(viewState.viewType, filters);

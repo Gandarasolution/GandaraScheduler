@@ -153,11 +153,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                     { key: 'Etat', label: 'État', type:'string', width:140,
                     renderer:(value: string) => {
                         const statusColors: Record<string, string> = {
-                        'En cours': 'bg-green-100 text-green-800',
-                        'Planifié': 'bg-blue-100 text-blue-800',
-                        'Suspendu': 'bg-yellow-100 text-yellow-800',
-                        'Terminé': 'bg-gray-100 text-gray-800',
-                        'Annulé': 'bg-red-100 text-red-800'
+                        //'Annulé': 'bg-red-100 text-red-800'
                         };
                         const colorClass = statusColors[value] || 'bg-gray-100 text-gray-800';
                         return (

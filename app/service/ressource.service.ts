@@ -125,6 +125,7 @@ async function editRessource(ressourceId: number, ressourceData: any) {
   return await putRequest(`/api/ressources/${ressourceId}`, ressourceData, 'editRessource');
 }
 
+
 export default {
   searchRessources,
   getRessourcesProjet,

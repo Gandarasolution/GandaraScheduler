@@ -161,6 +161,12 @@ async function getDayTypes() {
   return await getRequest(`/api/planning/day-type`, 'getDayTypes');
 }
 
+async function getAvailableColumns(viewType: string, timeoutMs: number = 5000) {
+  const params = new URLSearchParams();
+  params.set('viewType', viewType);
+  return await getRequest(`/api/planning/vue/available-columns?${params.toString()}`, 'getAvailableColumns', { timeout: timeoutMs });
+}
+
 export default {
   getCalendarConfigsByUserId,
   createCalendarConfig,
@@ -190,4 +196,5 @@ export default {
   addDayType,
   removeDayType,
   getDayTypes,
+  getAvailableColumns,
 };
