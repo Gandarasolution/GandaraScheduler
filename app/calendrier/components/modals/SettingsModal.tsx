@@ -836,6 +836,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       className="w-[min(95vw,900px)] h-[85vh] max-h-[850px] overflow-hidden flex flex-col"
       classNameContent="flex-1 overflow-hidden p-4 flex flex-col min-h-0"
       confirmCloseOnOverlay={currentCategoryObj?.hasUnsavedChanges && pendingSaveAction?.isDirty}
+      onSave={pendingSaveAction?.save}
     >
       <div className="flex flex-col h-full min-h-0 poppins gap-4">
         
