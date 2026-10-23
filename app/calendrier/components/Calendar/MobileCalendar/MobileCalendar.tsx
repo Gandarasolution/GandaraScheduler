@@ -53,7 +53,7 @@ interface MobileCalendarGridProps {
   appointments: Appointment[];
   user: User;
   items: Item[];
-  nonWorkingDates: Record<string, number>;
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
   mobileState: MobileCalendarState;
 }

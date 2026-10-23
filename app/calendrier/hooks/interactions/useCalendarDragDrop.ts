@@ -47,7 +47,7 @@ interface UseCalendarDragDropParams {
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: Record<string, number>;
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   appointments: Appointment[];
   onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onExternalDragDrop: (item: Item, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number, priority: number) => void;

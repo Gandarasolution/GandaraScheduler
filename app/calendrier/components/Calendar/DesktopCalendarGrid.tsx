@@ -37,7 +37,7 @@ interface DesktopCalendarGridProps {
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   events: Record<number, Item>;
-  nonWorkingDates: Record<string, number>;
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
@@ -238,7 +238,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     visibleRows.filter((row) => row.type === 'employee').map((row) => Number(row.id))
   ), [visibleRows]);
 
-  const { holidayColumns, weekendColumns, nonWorkingColumns } = useCalendarColumns({ dayInTimeline, nonWorkingDates });
+  const { specialColumns } = useCalendarColumns({ dayInTimeline, nonWorkingDates });
 
   const dropRef = useCalendarDragDrop({
     tableRef, rowBoundaries: visibleRows, 
@@ -364,14 +364,17 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           onContextMenu={handleGridContextMenu}
           ref={setTableRef}
         >
-          {weekendColumns.map((col) => (
-            <div key={`weekend-${col.key}`} className="pointer-events-none absolute top-0 bottom-0 WEEKEND" style={{ left: col.left, width: CELL_WIDTH}} />
-          ))}
-          {nonWorkingColumns.map((col) => (
-            <div key={`nonworking-${col.key}`} className="pointer-events-none absolute top-0 bottom-0 NON-WORKING" style={{ left: col.left, width: CELL_WIDTH}} />
-          ))}
-          {holidayColumns.map((col) => (
-            <div key={col.key} className="pointer-events-none absolute top-0 bottom-0 FERIE" style={{ left: col.left, width: CELL_WIDTH}} />
+          {specialColumns.map((col) => (
+            <div 
+              key={`overlay-${col.key}`} 
+              className={`pointer-events-none absolute top-0 bottom-0 ${col.className}`} 
+              style={{ 
+                left: col.left, 
+                width: CELL_WIDTH,
+                backgroundColor: col.CouleurFond, // S'appliquera si défini via le contexte, sinon transparent/géré par CSS
+                color: col.CouleurTexte
+              }} 
+            />
           ))}
           
           {hoverColumnLeft !== null && (

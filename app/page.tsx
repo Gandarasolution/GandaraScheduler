@@ -8,6 +8,7 @@ import { ErrorBoundary } from "./calendrier/components/ui/ErrorBoundary";
 import { useAuth } from './calendrier/hooks/utils/AuthContext';
 import SelectionScreen from './login/SelectionScreen';
 import { axiosAgent } from '@/app/service/axios.service';
+import { DayTypesProvider } from './calendrier/hooks/data/dayTypesContext';
 
 export default function Home() {
   const {
@@ -117,7 +118,9 @@ export default function Home() {
           console.error('[Error Boundary]', error, errorInfo);
         }}
       >
-        <Calendrier isMobile={isMobile} />
+        <DayTypesProvider>
+          <Calendrier isMobile={isMobile} />
+        </DayTypesProvider>
       </ErrorBoundary>
     );
   }

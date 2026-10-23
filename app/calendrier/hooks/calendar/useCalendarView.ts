@@ -6,6 +6,7 @@ import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { axiosAgent } from '@/app/service/axios.service';
 import { calendarConfigService } from '@/app/service';
 import { useAuth } from '../utils/AuthContext';
+import { useDayTypesContext } from '../data/dayTypesContext';
 
 
 export const useCalendarView = (idPlanning: number, user: User, isMobile: boolean) => {
@@ -30,8 +31,6 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
                                                                                       Libelle: string;
                                                                                     }>>([]);
   const [mobileAppointmentSettingsLoading, setMobileAppointmentSettingsLoading] = useState(false);
-  const [dayTypes, setDayTypes] = useState<Array<{ id: string, label: string, bgColor: string, textColor: string, isBold: boolean, isItalic: boolean }>>([]);
-
   // --- Préférences persistantes ---
   const getStoredBool = (key: string, def: boolean) => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -52,6 +51,8 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     return 'hover';
   });
   const [mobileAppointmentDisplay, setMobileAppointmentDisplayState] = useState<MobileAppointmentDisplayConfig>(defaultMobileAppointmentDisplay);
+  
+  const { setDayTypes } = useDayTypesContext();
   
   const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -99,7 +100,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       : parsedDate.setHours(0, 0, 0, 0);
   });
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
-  const [nonWorkingDates, setNonWorkingDates] = useState<Record<string, number>>({});
+  const [nonWorkingDates, setNonWorkingDates] = useState<Record<string, {Id: number; TypeJourCode: string }>>({});
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
   const [searchInput, setSearchInput] = useState<string>('');
   const [dimensionSearchInput, setDimensionsSearchInput] = useState<string>('');
@@ -353,15 +354,25 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       const result = await calendarConfigService.getNonWorkingDatesByPlanningId();
       //console.log('Résultat du chargement des jours non travaillés :', result);
       if (result?.success && result.data) {
+        const nonWorkingDates = result.data.nonWorkingDates
         const recordData = Object.fromEntries(
-          result.data.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [
+          nonWorkingDates.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; TypeJourCode: string; }) => [
               item.DatePlanningJourNontravaille, // La clé (string)
-              Number(item.IdPlanningJourNontravaille) // La valeur (number)
+              { Id: Number(item.IdPlanningJourNontravaille), TypeJourCode: item.TypeJourCode } // La valeur (object)
           ])
         );
 
         // 2. On met à jour le state
         setNonWorkingDates(recordData);
+
+
+        const dayTypes = result.data.typesNonWorkingDates;
+        if (Array.isArray(dayTypes)) {
+          setDayTypes(dayTypes);
+        } else {
+          console.warn('Les types de jours non travaillés ne sont pas au format attendu :', dayTypes);
+        }
+
 
         return { success: true, message: 'Jours non travaillés chargés avec succès' };
       }else {

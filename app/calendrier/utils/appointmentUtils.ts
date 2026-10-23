@@ -33,7 +33,7 @@ export interface RepeatAppointmentParams {
   endDate?: number;
   numberCount?: number;
   isFullDay: boolean;
-  nonWorkingDates: Record<string, number>;
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   includeWeekend: boolean;
   includeNonWorkingDays: boolean;
 }

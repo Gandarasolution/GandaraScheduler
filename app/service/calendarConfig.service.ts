@@ -13,8 +13,8 @@ async function getNonWorkingDatesByPlanningId() {
   return await getRequest(`/api/planning/non-working-dates`, 'getNonWorkingDatesByPlanningId');
 }
 
-async function addNonWorkingDatesToPlanning(nonWorkingDate: number) {  
-  return await postRequest(`/api/planning/non-working-dates`, { nonWorkingDate }, 'addNonWorkingDatesToPlanning');
+async function addNonWorkingDatesToPlanning(nonWorkingDate: number, codeType: string) {  
+  return await postRequest(`/api/planning/non-working-dates`, { nonWorkingDate, typeJourCode: codeType }, 'addNonWorkingDatesToPlanning');
 }
 
 async function removeNonWorkingDatesFromPlanning(idDate: number) {

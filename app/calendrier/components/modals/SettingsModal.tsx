@@ -4,6 +4,7 @@ import Loader from "../ui/Loader";
 import { format } from "date-fns";
 import { Appointment, DayType, Item, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from "../../types";
 import { AppointmentCard } from "../Calendar/MobileCalendar/AppointmentList";
+import { useDayTypesContext } from "../../hooks/data/dayTypesContext";
 
 type SettingsModalProps = {  
   onClose: () => void;
@@ -56,8 +57,231 @@ const previewEmployee: User = {
 };
 
 /**
- * Formulaire réductible pour créer un nouveau type de jour
+ * Éditeur spécifique pour l'affichage mobile.
+ * Gère l'état local et expose l'action de sauvegarde au composant parent (pour le footer).
  */
+const MobileDisplayEditor = ({ 
+  setting, 
+  registerSaveAction 
+}: { 
+  setting: any, 
+  registerSaveAction: (action: { isDirty: boolean; save: () => Promise<void> } | null) => void 
+}) => {
+  const [localValue, setLocalValue] = useState<MobileAppointmentDisplayConfig>(setting.value);
+
+  useEffect(() => {
+    setLocalValue(setting.value);
+  }, [setting.value]);
+
+  const isDirty = 
+    JSON.stringify(localValue.primaryFields) !== JSON.stringify(setting.value.primaryFields) ||
+    JSON.stringify(localValue.secondaryFields) !== JSON.stringify(setting.value.secondaryFields);
+
+  // Exposer l'action de sauvegarde et l'état "dirty" au parent (SettingsModal)
+  useEffect(() => {
+    registerSaveAction({
+      isDirty,
+      save: async () => {
+        await setting.onChange(localValue);
+      }
+    });
+
+    return () => {
+      registerSaveAction(null);
+    };
+  }, [isDirty, localValue, setting, registerSaveAction]);
+
+  const updateFields = (column: "primaryFields" | "secondaryFields", optionCode: string, checked: boolean) => {
+    setLocalValue((prev: any) => {
+      const current = prev[column];
+      const fields = checked
+        ? [...current, optionCode]
+        : current.filter((field: string) => field !== optionCode);
+      return { ...prev, [column]: fields };
+    });
+  };
+
+  if (setting.isLoading) {
+    return <Loader size="md" className="min-h-40 rounded-xl border border-light" message="Chargement..." />;
+  }
+
+  return (
+    <div className="w-full flex flex-col gap-4">
+      <div className="rounded-xl">
+        <div className="space-y-3 md:hidden">
+          <div className="rounded-xl border border-light bg-secondary p-3 text-xs text-secondary">
+            Activez les champs à afficher dans la carte mobile. Les informations secondaires apparaîtront dans le panneau « Voir plus ».
+          </div>
+
+          {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
+            const primaryChecked = localValue.primaryFields.includes(option.CodeChamp);
+            const secondaryChecked = localValue.secondaryFields.includes(option.CodeChamp);
+            
+            return (
+              <div key={option.CodeChamp} className="rounded-xl border border-ultra-light bg-secondary-bg p-3">
+                <p className="mb-3 text-sm font-semibold text-primary">{option.Libelle}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([["primaryFields", "Principale", primaryChecked], ["secondaryFields", "Secondaire", secondaryChecked]] as const).map(([column, label, checked]) => (
+                    <button
+                      key={column}
+                      type="button"
+                      aria-pressed={checked}
+                      onClick={() => updateFields(column, option.CodeChamp, !checked)}
+                      className={`flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 cursor-pointer ${checked ? "border-primary bg-primary text-white" : "border-light bg-secondary text-secondary"}`}
+                    >
+                      <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${checked ? "border-white" : "border-secondary"}`} aria-hidden="true">
+                        {checked ? "✓" : ""}
+                      </span>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="rounded-xl border-t-2 border-primary bg-secondary-bg p-3">
+            <div className="mb-3 flex items-center gap-3">
+              <p className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</p>
+              <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
+                <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
+                <div className="min-h-24">
+                  <AppointmentCard
+                    app={previewAppointment}
+                    items={[previewItem]}
+                    employees={[previewEmployee]}
+                    preview
+                    displayConfig={{ primaryFields: localValue.primaryFields, secondaryFields: [] } as MobileAppointmentDisplayConfig}
+                  />
+                </div>
+              </div>
+              <div className="min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
+                <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
+                <div className="min-h-24">
+                  <AppointmentCard
+                    app={previewAppointment}
+                    items={[previewItem]}
+                    employees={[previewEmployee]}
+                    preview
+                    showCard={false}
+                    displayConfig={{ primaryFields: [], secondaryFields: localValue.secondaryFields } as MobileAppointmentDisplayConfig}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <table className="hidden w-full min-w-[580px] table-fixed border-separate border-spacing-y-1 text-sm md:table">
+          <colgroup>
+            <col className="w-[30%]" />
+            <col className="w-[35%]" />
+            <col className="w-[35%]" />
+          </colgroup>
+          <thead className="border-t-4 border-primary">
+            <tr className="border-b-2 border-light bg-secondary-bg text-left">
+              <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold">Champs</th>
+              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Principale</th>
+              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Secondaire</th>
+            </tr>
+          </thead>
+          <tbody>
+            {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
+              const primaryChecked = localValue.primaryFields.includes(option.CodeChamp);
+              const secondaryChecked = localValue.secondaryFields.includes(option.CodeChamp);
+              
+              return (
+                <tr key={option.CodeChamp} className="border-b border-ultra-light">
+                  <td className="px-3 py-3">{option.Libelle}</td>
+                  <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
+                    <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
+                      <button
+                        className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${primaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
+                        type="button"
+                        aria-pressed={primaryChecked}
+                        aria-label={`${option.Libelle} dans l'affichage principal`}
+                        onClick={() => updateFields("primaryFields", option.CodeChamp, !primaryChecked)}
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M5 12l4 4L19 6" />
+                        </svg>
+                      </button>
+                      <span className="whitespace-nowrap">{primaryChecked ? "Affiché" : "Masqué"}</span>
+                    </div>
+                  </td>
+                  <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
+                    <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
+                      <button
+                        className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${secondaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
+                        type="button"
+                        aria-pressed={secondaryChecked}
+                        aria-label={`${option.Libelle} dans l'affichage secondaire`}
+                        onClick={() => updateFields("secondaryFields", option.CodeChamp, !secondaryChecked)}
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M5 12l4 4L19 6" />
+                        </svg>
+                      </button>
+                      <span className="whitespace-nowrap">{secondaryChecked ? "Masqué" : "Masqué"}</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={3} className="border-t-2 border-light px-3 pt-5">
+                <div className="flex items-center gap-3">
+                  <span className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</span>
+                  <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={3} className="px-3 pt-3 align-top">
+                <div className="grid w-full grid-cols-2 gap-4">
+                  <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
+                    <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
+                    <AppointmentCard
+                      app={previewAppointment}
+                      items={[previewItem]}
+                      employees={[previewEmployee]}
+                      preview
+                      displayConfig={{
+                        primaryFields: localValue.primaryFields,
+                        secondaryFields: [],
+                      } as MobileAppointmentDisplayConfig}
+                    />
+                  </div>
+                  <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
+                    <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
+                    <AppointmentCard
+                      app={previewAppointment}
+                      items={[previewItem]}
+                      employees={[previewEmployee]}
+                      preview
+                      showCard={false}
+                      displayConfig={{
+                        primaryFields: [],
+                        secondaryFields: localValue.secondaryFields,
+                      } as MobileAppointmentDisplayConfig}
+                    />
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+
 const NewDayTypeForm = ({
   onAdd,
   setError,
@@ -160,7 +384,6 @@ const NewDayTypeForm = ({
 
       <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
         <div className="flex flex-wrap md:flex-nowrap gap-6 items-center w-full">
-          {/* Libellé */}
           <div className="flex flex-col gap-2 min-w-[200px]">
             <label htmlFor="newDayTypeLabel" className="text-xs text-secondary font-medium poppins">
               Libellé
@@ -180,7 +403,6 @@ const NewDayTypeForm = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-center flex-1">
-            {/* Couleurs */}
             <div className="flex flex-col gap-2 w-full">
               <div className="relative group flex items-center gap-2">
                 <label 
@@ -221,7 +443,6 @@ const NewDayTypeForm = ({
               </div>
             </div>
 
-            {/* Style */}
             <div className="flex flex-col gap-2">
               <label className="text-xs text-secondary font-medium poppins">Mise en forme</label>
               <div className="flex items-center gap-2">
@@ -253,7 +474,6 @@ const NewDayTypeForm = ({
               </div>
             </div>
 
-            {/* Aperçu */}
             <div className="flex items-center gap-3 bg-white/80 p-3 rounded-xl border border-light">
               <span className="text-xs font-medium text-secondary poppins">Aperçu :</span>
               <div className="w-14 h-14 border border-light overflow-hidden shrink-0">
@@ -276,7 +496,6 @@ const NewDayTypeForm = ({
           </div>
         </div>
 
-        {/* Bouton Valider */}
         <button
           type="button"
           onClick={handleCreate}
@@ -311,9 +530,6 @@ const NewDayTypeForm = ({
   );
 };
 
-/**
- * Éditeur pour un type de jour individuel
- */
 const DayTypeSingleEditor = ({
   dayType,
   onUpdate,
@@ -390,7 +606,6 @@ const DayTypeSingleEditor = ({
   return (
     <div className="p-6 rounded-2xl border border-light bg-secondary/10 flex flex-col md:flex-row gap-6 shadow-sm items-center justify-between">
       <div className="flex flex-wrap md:flex-nowrap gap-6 items-center w-full">
-        {/* Champ d'édition du Libellé */}
         <div className="flex flex-col gap-2 min-w-[200px]">
           <label htmlFor={`dayTypeLabelInput-${dayType.Id}`} className="text-xs text-secondary font-medium poppins">
             Libellé
@@ -407,7 +622,6 @@ const DayTypeSingleEditor = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-center flex-1">
-          {/* Couleur de fond & texte */}
           <div className="flex flex-col gap-2 w-full">
             <div className="relative group flex items-center gap-2">
               <label 
@@ -450,7 +664,6 @@ const DayTypeSingleEditor = ({
             </div>
           </div>
 
-          {/* Style de police */}
           <div className="flex flex-col gap-2">
             <label className="text-xs text-secondary font-medium poppins">Mise en forme</label>
             <div className="flex items-center gap-2">
@@ -482,7 +695,6 @@ const DayTypeSingleEditor = ({
             </div>
           </div>
 
-          {/* Aperçu */}
           <div className="flex items-center gap-3 bg-secondary-bg p-3 rounded-xl border border-light">
             <span className="text-xs font-medium text-secondary poppins">Aperçu :</span>
             <div className="w-14 h-14 border border-light overflow-hidden shrink-0">
@@ -505,7 +717,6 @@ const DayTypeSingleEditor = ({
         </div>
       </div>
 
-      {/* Action unique : Valider en cas de modif, Supprimer si inchangé */}
       <div className="flex items-center shrink-0">
         {isDirty ? (
           <button
@@ -563,28 +774,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   isSettingsOpen,
   settings,
 }) => {
-  const [activeCategory, setActiveCategory] = useState<string>(settings?.[0]?.category || "");
+  const { DayTypes } = useDayTypesContext();
+
+  const [activeCategory, setActiveCategory] = useState<string>(() => {
+    return sessionStorage.getItem('activeSettingsCategory') || settings?.[0]?.category || "";
+  });
+  
   const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
-  const [selectedDayTypeId, setSelectedDayTypeId] = useState<string>("");
+  const [selectedDayTypeId, setSelectedDayTypeId] = useState<string>(DayTypes?.[0]?.Id?.toString() || "");
   const [isAddingDate, setIsAddingDate] = useState<boolean>(false);
   
   const [deletingDates, setDeletingDates] = useState<Record<string, boolean>>({});
   const [dateErrorMessage, setDateErrorMessage] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  
+  // États pour gérer la sauvegarde depuis le footer
+  const [pendingSaveAction, setPendingSaveAction] = useState<{ isDirty: boolean; save: () => Promise<void> } | null>(null);
+  const [isSavingPending, setIsSavingPending] = useState(false);
+
   const hasFetchedRef = useRef(false);
 
   const currentCategoryObj = useMemo(() => {
     return settings.find((cat: any) => cat.category === activeCategory) || settings[0];
   }, [settings, activeCategory]);
 
-  // Réinitialiser les erreurs lors du changement d'onglet
-  const handleCategoryChange = (category: string) => {
-    setActiveCategory(category);
-    setApiError(null);
-    setDateErrorMessage(null);
-  };
-
-  // Exécution de fetchDayTypes à l'ouverture de la modal
   useEffect(() => {
     if (isSettingsOpen && !hasFetchedRef.current) { 
       hasFetchedRef.current = true;
@@ -606,6 +819,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!isSettingsOpen) {
       setApiError(null);
       setDateErrorMessage(null);
+      setPendingSaveAction(null);
     }
   }, [isSettingsOpen]);
 
@@ -619,47 +833,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       isOpen={isSettingsOpen}
       onClose={onClose}
       title="Paramètres"
-      className="w-[min(95vw,1200px)] h-[85vh] max-h-[850px] overflow-hidden flex flex-col"
+      className="w-[min(95vw,900px)] h-[85vh] max-h-[850px] overflow-hidden flex flex-col"
       classNameContent="flex-1 overflow-hidden p-4 flex flex-col min-h-0"
+      confirmCloseOnOverlay={currentCategoryObj?.hasUnsavedChanges && pendingSaveAction?.isDirty}
     >
       <div className="flex flex-col h-full min-h-0 poppins gap-4">
         
-        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6 flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           
-          {/* Navigation latérale */}
-          <div className="flex flex-col gap-2 overflow-y-auto pr-1 shrink-0">
-            {settings.map((cat: any) => {
-              const isActive = (activeCategory || settings[0]?.category) === cat.category;
-              return (
-                <button
-                  key={cat.category}
-                  type="button"
-                  onClick={() => handleCategoryChange(cat.category)}
-                  className={`w-full text-left px-4 py-4 rounded-2xl transition-all duration-200 flex items-center justify-between text-sm cursor-pointer ${
-                    isActive
-                      ? "bg-secondary-bg border border-light text-primary font-semibold shadow-md"
-                      : "text-secondary hover:bg-secondary/40 font-normal"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {isActive && <div className="w-1.5 h-6 bg-primary rounded-full shrink-0" />}
-                    <span>{cat.category}</span>
-                  </div>
-                  {!isActive && (
-                    <svg className="w-4 h-4 text-secondary/50 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Panneau central */}
           <div className="bg-secondary-bg border border-light rounded-2xl py-6 px-5 shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
             {currentCategoryObj && (
               <div className="flex flex-col h-full">
-                {/* En-tête de catégorie */}
                 <div className="flex items-center bg-secondary-bg gap-3 pb-4 mb-4 border-b border-ultra-light shrink-0">
                   <div className="w-1.5 h-6 bg-primary rounded-full"></div>
                   <h3 className="text-lg font-medium text-primary poppins">
@@ -667,7 +851,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </h3>
                 </div>
 
-                {/* Bannière d'erreur API globale */}
                 {apiError && (
                   <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start justify-between gap-3 text-red-700 text-sm poppins shadow-sm shrink-0">
                     <div className="flex items-center gap-2.5">
@@ -688,7 +871,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 )}
 
-                {/* Contenu de la catégorie */}
                 <div className="space-y-6 flex-1">
                   {currentCategoryObj.items.map((setting: any, settingIdx: number) => (
                     <div
@@ -699,25 +881,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           : ""
                       }`}
                     >
-                      {setting.type !== "mobile-appointment-fields" && setting.type !== "day-type-settings" && (
-                        <div className="mb-3 lg:mb-0 lg:mr-6 min-w-[200px]">
-                          <label htmlFor={setting.id} className="text-base font-medium poppins block">
-                            {setting.label}
-                          </label>
-                          {setting.id === "nonWorkedDay" && (
-                            <p className="text-xs text-secondary mt-1 poppins">
-                              Définissez les dates et leur type (férié, non travaillé...)
-                            </p>
-                          )}
-                          {setting.id === "tagPlacement" && (
-                            <p className="text-xs text-secondary mt-1 poppins">
-                              Choisissez comment afficher l'étiquette sur les rendez-vous
-                            </p>
-                          )}
-                        </div>
-                      )}
 
-                      {/* CATEGORIE : DATES NON TRAVAILLÉES */}
                       {setting.type === "custom-non-working-dates" ? (
                         <div className="flex flex-col gap-4 w-full">
                           <div className="flex flex-col gap-2">
@@ -741,8 +905,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 className="border border-default rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-sm bg-transparent shadow-sm hover:shadow-md w-full sm:w-auto min-w-[160px]"
                               >
                                 {setting.dayTypesOptions?.map((dt: any) => (
-                                  <option key={dt.id} value={dt.id}>
-                                    {dt.label}
+                                  <option key={dt.Id} value={dt.Id}>
+                                    {dt.Libelle}
                                   </option>
                                 ))}
                               </select>
@@ -763,22 +927,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   setApiError(null);
                                   setIsAddingDate(true);
                                   const parsedDate = new Date(newNonWorkingDate).getTime();
-                                  const dayTypeObj = setting.dayTypesOptions?.find((dt: any) => String(dt.id) === String(selectedDayTypeId));
                                   
                                   try {
                                     if (setting.addNonWorkingDatesToPlanning) {
                                       const response = await setting.addNonWorkingDatesToPlanning(parsedDate, selectedDayTypeId);
                                       if (response && response.success && response.data) {
-                                        setting.setNonWorkingDates((prev: Record<string, any>) => ({
+                                        setting.setNonWorkingDates((prev: Record<string, {Id: number; TypeJourCode: string }>) => ({
                                           ...prev,
                                           [formattedInputDate]: {
-                                            id: Number(response.data),
-                                            typeId: selectedDayTypeId,
-                                            typeLabel: dayTypeObj?.label,
-                                            bgColor: dayTypeObj?.bgColor,
-                                            textColor: dayTypeObj?.textColor,
-                                            isBold: dayTypeObj?.isBold,
-                                            isItalic: dayTypeObj?.isItalic,
+                                            Id: Number(response.data),
+                                            TypeJourCode: selectedDayTypeId,
                                           }
                                         }));
                                         setNewNonWorkingDate("");
@@ -786,16 +944,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         setApiError(response?.message || "Erreur lors de l'ajout de la date.");
                                       }
                                     } else {
-                                      setting.setNonWorkingDates((prev: Record<string, any>) => ({
+                                      setting.setNonWorkingDates((prev: Record<string, {Id: number; TypeJourCode: string }>) => ({
                                         ...prev,
                                         [formattedInputDate]: {
-                                          id: new Date().getTime(),
-                                          typeId: selectedDayTypeId,
-                                          typeLabel: dayTypeObj?.label,
-                                          bgColor: dayTypeObj?.bgColor,
-                                          textColor: dayTypeObj?.textColor,
-                                          isBold: dayTypeObj?.isBold,
-                                          isItalic: dayTypeObj?.isItalic,
+                                          Id: Number(new Date().getTime()), 
+                                          TypeJourCode: selectedDayTypeId,
                                         }
                                       }));
                                       setNewNonWorkingDate("");
@@ -840,40 +993,64 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                               {Object.entries(setting.nonWorkingDates || {}).map(([dateKey, val]: [string, any]) => {
                                 const itemObj = typeof val === "object" ? val : { id: val };
-                                const dayTypeInfo = setting.dayTypesOptions?.find((dt: any) => String(dt.id) === String(itemObj.typeId)) || itemObj;
+                                
+                                const dayTypeInfo = setting.dayTypesOptions?.find((dt: any) => 
+                                  String(dt.Id || dt.id) === String(itemObj.TypeJourCode || itemObj.typeId)
+                                ) || itemObj;
+                                
+                                const libelle = dayTypeInfo?.Libelle || dayTypeInfo?.label || dayTypeInfo?.typeLabel || "Type inconnu";
+                                const bgCol = dayTypeInfo?.CouleurFond || dayTypeInfo?.bgColor || "#f3f4f6";
+                                const textCol = dayTypeInfo?.CouleurTexte || dayTypeInfo?.textColor || "#374151";
+                                const bold = dayTypeInfo?.isBold;
+                                const italic = dayTypeInfo?.isItalic;
+
                                 const isDeletingThisDate = Boolean(deletingDates[dateKey]);
+                                const dateObj = new Date(dateKey);
 
                                 return (
-                                  <div key={dateKey} className="flex items-center justify-between bg-secondary-bg rounded-xl px-4 py-3 shadow-sm border border-ultra-light hover:shadow-md transition-all duration-200">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-2 h-2 bg-primary rounded-full"></div>
-                                      <span className="text-sm font-medium poppins">{format(new Date(dateKey), "dd/MM/yyyy")}</span>
+                                  <div key={dateKey} className="flex items-center justify-between bg-white/60 rounded-2xl p-3 shadow-sm border border-light hover:shadow-md transition-all duration-200 group">
+                                    <div className="flex items-center gap-4">
                                       
-                                      {dayTypeInfo?.label && (
-                                        <span
-                                          className="px-2.5 py-0.5 rounded-lg text-xs font-medium border border-black/10 poppins"
+                                      <div className="w-12 h-12 rounded-xl border border-light overflow-hidden shrink-0 shadow-sm">
+                                        <div
+                                          className="flex flex-col justify-center items-center h-full w-full relative transition-all"
                                           style={{
-                                            backgroundColor: dayTypeInfo.bgColor || "#f3f4f6",
-                                            color: dayTypeInfo.textColor || "#374151",
-                                            fontWeight: dayTypeInfo.isBold ? "bold" : "normal",
-                                            fontStyle: dayTypeInfo.isItalic ? "italic" : "normal",
+                                            backgroundColor: bgCol,
+                                            color: textCol,
+                                            fontWeight: bold ? "700" : "400",
+                                            fontStyle: italic ? "italic" : "normal",
                                           }}
                                         >
-                                          {dayTypeInfo.label}
+                                          <span className="block text-lg leading-none mt-0.5">{format(dateObj, "dd")}</span>
+                                          <span className="block text-[10px] opacity-80 uppercase tracking-wider">{format(dateObj, "MMM")}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="flex flex-col gap-0.5">
+                                        <span className="text-sm font-medium text-primary poppins">
+                                          {format(dateObj, "dd/MM/yyyy")}
                                         </span>
-                                      )}
+                                        <span className="text-xs text-secondary font-medium flex items-center gap-1.5">
+                                          <span 
+                                            className="w-2 h-2 rounded-full shadow-sm" 
+                                            style={{ backgroundColor: bgCol }}
+                                          />
+                                          {libelle}
+                                        </span>
+                                      </div>
                                     </div>
 
                                     <button
-                                      className="text-red-500 hover:text-white hover:bg-red-500 px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                      className="text-red-400 hover:text-white hover:bg-red-500 w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                       disabled={isDeletingThisDate}
+                                      title="Supprimer cette date"
                                       onClick={async () => {
                                         setDeletingDates(prev => ({ ...prev, [dateKey]: true }));
                                         setApiError(null);
                                         
                                         try {
                                           if (setting.removeNonWorkingDatesFromPlanning) {
-                                            const response = await setting.removeNonWorkingDatesFromPlanning(itemObj.id);
+                                            const response = await setting.removeNonWorkingDatesFromPlanning(itemObj.Id || itemObj.id);
                                             if (response && response.success) {
                                               setting.setNonWorkingDates((prev: any) => {
                                                 const newDates = { ...prev };
@@ -902,16 +1079,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                       }}
                                     >
                                       {isDeletingThisDate ? (
-                                        <svg className="animate-spin w-3 h-3 text-current" fill="none" viewBox="0 0 24 24">
+                                        <svg className="animate-spin w-4 h-4 text-current" fill="none" viewBox="0 0 24 24">
                                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
                                       ) : (
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                       )}
-                                      Supprimer
                                     </button>
                                   </div>
                                 );
@@ -920,15 +1096,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           </div>
                         </div>
                       ) : setting.type === "day-type-settings" ? (
-                        /* CATEGORIE : GESTION DES TYPES DE JOURS */
                         <div className="flex flex-col gap-6 w-full">
-                          {/* Formulaire d'ajout */}
                           <NewDayTypeForm
                             onAdd={setting.onAddDayType}
                             setError={setApiError}
                           />
 
-                          {/* Liste des types de jours existants */}
                           {setting.dayTypes && setting.dayTypes.length > 0 ? (
                             setting.dayTypes.map((dayType: DayType) => (
                               <DayTypeSingleEditor
@@ -946,195 +1119,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           )}
                         </div>
                       ) : setting.type === "mobile-appointment-fields" ? (
-                        /* AFFICHAGE MOBILE */
-                        <div className="w-full">
-                          {setting.isLoading ? (
-                            <Loader size="md" className="min-h-40 rounded-xl border border-light" message="Chargement..." />
-                          ) : (
-                            <div className="rounded-xl">
-                              <div className="space-y-3 md:hidden">
-                                <div className="rounded-xl border border-light bg-secondary p-3 text-xs text-secondary">
-                                  Activez les champs à afficher dans la carte mobile. Les informations secondaires apparaîtront dans le panneau « Voir plus ».
-                                </div>
-
-                                {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
-                                  const primaryChecked = setting.value.primaryFields.includes(option.CodeChamp);
-                                  const secondaryChecked = setting.value.secondaryFields.includes(option.CodeChamp);
-                                  const updateFields = (column: "primaryFields" | "secondaryFields", checked: boolean) => {
-                                    const current = setting.value[column];
-                                    const fields = checked
-                                      ? [...current, option.CodeChamp]
-                                      : current.filter((field: string) => field !== option.CodeChamp);
-                                    setting.onChange({ ...setting.value, [column]: fields });
-                                  };
-                                  return (
-                                    <div key={option.CodeChamp} className="rounded-xl border border-ultra-light bg-secondary-bg p-3">
-                                      <p className="mb-3 text-sm font-semibold text-primary">{option.Libelle}</p>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        {([["primaryFields", "Principale", primaryChecked], ["secondaryFields", "Secondaire", secondaryChecked]] as const).map(([column, label, checked]) => (
-                                          <button
-                                            key={column}
-                                            type="button"
-                                            aria-pressed={checked}
-                                            onClick={() => updateFields(column, !checked)}
-                                            className={`flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 cursor-pointer ${checked ? "border-primary bg-primary text-white" : "border-light bg-secondary text-secondary"}`}
-                                          >
-                                            <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${checked ? "border-white" : "border-secondary"}`} aria-hidden="true">
-                                              {checked ? "✓" : ""}
-                                            </span>
-                                            {label}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-
-                                <div className="rounded-xl border-t-2 border-primary bg-secondary-bg p-3">
-                                  <div className="mb-3 flex items-center gap-3">
-                                    <p className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</p>
-                                    <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
-                                  </div>
-                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <div className="min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
-                                      <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
-                                      <div className="min-h-24">
-                                        <AppointmentCard
-                                          app={previewAppointment}
-                                          items={[previewItem]}
-                                          employees={[previewEmployee]}
-                                          preview
-                                          displayConfig={{ primaryFields: setting.value.primaryFields, secondaryFields: [] } as MobileAppointmentDisplayConfig}
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
-                                      <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
-                                      <div className="min-h-24">
-                                        <AppointmentCard
-                                          app={previewAppointment}
-                                          items={[previewItem]}
-                                          employees={[previewEmployee]}
-                                          preview
-                                          showCard={false}
-                                          displayConfig={{ primaryFields: [], secondaryFields: setting.value.secondaryFields } as MobileAppointmentDisplayConfig}
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <table className="hidden w-full min-w-[580px] table-fixed border-separate border-spacing-y-1 text-sm md:table">
-                                <colgroup>
-                                  <col className="w-[30%]" />
-                                  <col className="w-[35%]" />
-                                  <col className="w-[35%]" />
-                                </colgroup>
-                                <thead className="border-t-4 border-primary">
-                                  <tr className="border-b-2 border-light bg-secondary-bg text-left">
-                                    <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold">Champs</th>
-                                    <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Principale</th>
-                                    <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Secondaire</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
-                                    const primaryChecked = setting.value.primaryFields.includes(option.CodeChamp);
-                                    const secondaryChecked = setting.value.secondaryFields.includes(option.CodeChamp);
-                                    const updateFields = (column: "primaryFields" | "secondaryFields", checked: boolean) => {
-                                      const current = setting.value[column];
-                                      const fields = checked
-                                        ? [...current, option.CodeChamp]
-                                        : current.filter((field: string) => field !== option.CodeChamp);
-                                      setting.onChange({ ...setting.value, [column]: fields });
-                                    };
-                                    return (
-                                      <tr key={option.CodeChamp} className="border-b border-ultra-light">
-                                        <td className="px-3 py-3">{option.Libelle}</td>
-                                        <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
-                                          <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
-                                            <button
-                                              className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${primaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
-                                              type="button"
-                                              aria-pressed={primaryChecked}
-                                              aria-label={`${option.Libelle} dans l'affichage principal`}
-                                              onClick={() => updateFields("primaryFields", !primaryChecked)}
-                                            >
-                                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                                <path d="M5 12l4 4L19 6" />
-                                              </svg>
-                                            </button>
-                                            <span className="whitespace-nowrap">{primaryChecked ? "Affiché" : "Masqué"}</span>
-                                          </div>
-                                        </td>
-                                        <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
-                                          <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
-                                            <button
-                                              className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${secondaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
-                                              type="button"
-                                              aria-pressed={secondaryChecked}
-                                              aria-label={`${option.Libelle} dans l'affichage secondaire`}
-                                              onClick={() => updateFields("secondaryFields", !secondaryChecked)}
-                                            >
-                                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                                <path d="M5 12l4 4L19 6" />
-                                              </svg>
-                                            </button>
-                                            <span className="whitespace-nowrap">{secondaryChecked ? "Masqué" : "Masqué"}</span>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                                <tfoot>
-                                  <tr>
-                                    <td colSpan={3} className="border-t-2 border-light px-3 pt-5">
-                                      <div className="flex items-center gap-3">
-                                        <span className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</span>
-                                        <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
-                                      </div>
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td colSpan={3} className="px-3 pt-3 align-top">
-                                      <div className="grid w-full grid-cols-2 gap-4">
-                                        <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
-                                          <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
-                                          <AppointmentCard
-                                            app={previewAppointment}
-                                            items={[previewItem]}
-                                            employees={[previewEmployee]}
-                                            preview
-                                            displayConfig={{
-                                              primaryFields: setting.value.primaryFields,
-                                              secondaryFields: [],
-                                            } as MobileAppointmentDisplayConfig}
-                                          />
-                                        </div>
-                                        <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
-                                          <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
-                                          <AppointmentCard
-                                            app={previewAppointment}
-                                            items={[previewItem]}
-                                            employees={[previewEmployee]}
-                                            preview
-                                            showCard={false}
-                                            displayConfig={{
-                                              primaryFields: [],
-                                              secondaryFields: setting.value.secondaryFields,
-                                            } as MobileAppointmentDisplayConfig}
-                                          />
-                                        </div>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                </tfoot>
-                              </table>
-                            </div>
-                          )}
-                        </div>
+                        <MobileDisplayEditor 
+                          setting={setting} 
+                          registerSaveAction={setPendingSaveAction} 
+                        />
                       ) : setting.type === "select" ? (
                         <select
                           id={setting.id}
@@ -1165,14 +1153,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
         
-        <div className="flex justify-end pt-3 border-t border-ultra-light shrink-0">
+        {/* FOOTER AVEC SAUVEGARDE CONDITIONNELLE */}
+        <div className="flex justify-end pt-3 border-t border-ultra-light shrink-0 gap-3">
           <button
-            className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer"
+            className={`px-8 py-3 rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer ${
+              pendingSaveAction?.isDirty 
+                ? "bg-secondary-bg border border-light text-primary hover:bg-secondary/10" 
+                : "bg-primary text-white hover:bg-primary-600"
+            }`}
             onClick={onClose}
           >
             Fermer
           </button>
+          
+          {pendingSaveAction?.isDirty && (
+            <button
+              className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer flex items-center justify-center disabled:opacity-50 min-w-[220px]"
+              onClick={async () => {
+                setIsSavingPending(true);
+                setApiError(null);
+                try {
+                  await pendingSaveAction.save();
+                } catch (error: any) {
+                  setApiError(error?.message || "Erreur lors de la sauvegarde.");
+                } finally {
+                  setIsSavingPending(false);
+                }
+              }}
+              disabled={isSavingPending}
+            >
+              {isSavingPending ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Sauvegarde...
+                </>
+              ) : (
+                "Sauvegarder les modifications"
+              )}
+            </button>
+          )}
         </div>
+        
       </div>
     </Modal>
   );

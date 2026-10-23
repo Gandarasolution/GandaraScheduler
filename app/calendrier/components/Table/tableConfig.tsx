@@ -227,7 +227,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
             label: '',
             attributes: [
             { key: 'Image', label: '', sortable: false, width:60, renderer: (value: any, item: GenericDataItem) => imageRendererEmployee(value, item as unknown as User, deps)},
-            { key: 'Code', label: 'Code' },
+            { key: 'Code', label: 'Code', width: 100},
             { key: 'Nom', label: 'Nom' },
             { key: 'Prenom', label: 'Prénom'}, 
             { key: 'Equipe', label: 'Équipe', 

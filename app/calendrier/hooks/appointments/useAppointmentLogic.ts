@@ -27,7 +27,7 @@ interface LogicProps {
     isDisplayWeekend: boolean;
     includeWeekend: boolean;
     respectNonWorkingDays: boolean;
-    nonWorkingDates: Record<string, number>;
+    nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   };
   onUpdate: () => void; // Callback pour forcer le rafraîchissement de l'UI
   setIsSearchOverlayOpen: React.Dispatch<React.SetStateAction<boolean>>;

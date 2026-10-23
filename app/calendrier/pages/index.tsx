@@ -71,6 +71,7 @@ import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS
 import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
 import TopNotification from '../components/ui/TopNotification';
+import { DayTypesProvider } from '../hooks/data/dayTypesContext';
 
 
 /**
@@ -238,7 +239,7 @@ export default function HomePage({
 
     setIsViewDropdownOpen: viewState.setIsViewDropdownOpen
 
-  });
+  });  
 
   const handleCellDoubleClick = useCallback(() => {
     viewState.setIsSearchOverlayOpen(true);
@@ -603,8 +604,6 @@ export default function HomePage({
 
     let isMounted = true;
 
-
-
     const initializeNonWorkingDates = async () => {
       if (!isMounted || hasInitializedNonWorkingDatesRef.current) return;
       hasInitializedNonWorkingDatesRef.current = true;
@@ -871,7 +870,7 @@ export default function HomePage({
       case 'ADD_NON_WORKING_DAY':
         viewState.setNonWorkingDates((prev) => ({
           ...prev,
-          [format(data.date, "yyyy-MM-dd")]: Number(data.id)
+          [format(data.date, "yyyy-MM-dd")]: {Id: Number(data.id), TypeJourCode: data.typeJourCode}
         }));
         break;
       

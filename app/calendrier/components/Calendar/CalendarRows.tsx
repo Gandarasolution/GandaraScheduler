@@ -83,8 +83,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   ////console.log('Rendering CalendarRows with visibleRows:', visibleRows);
   return (
     <>
-      {visibleRows.map((row) => { 
-        if(Number(row.id) === 1121) console.log(row);
+      {visibleRows.map((row) => {
                
         const commonProps = {
           style: {

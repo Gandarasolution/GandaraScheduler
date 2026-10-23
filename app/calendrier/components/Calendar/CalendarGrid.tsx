@@ -41,7 +41,7 @@ interface CalendarGridProps {
   initialEmployeeId: number | null;
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: Record<string, number>;
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   isMobile: boolean;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';

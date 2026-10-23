@@ -33,7 +33,7 @@ export const isHoliday = (date: number): boolean => {
  * @param date Date à tester
  * @returns true si travaillé, false sinon
  */
-export const isWorkedDay = (date: number, nonWorkingDates: Record<string, number>): boolean => {  
+export const isWorkedDay = (date: number, nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>): boolean => {  
   if (!Number.isFinite(date)) return false;
   const dateKey = format(date, 'yyyy-MM-dd');
   return !isHoliday(date) 
@@ -57,7 +57,7 @@ export const isWeekend = (date: number): boolean => {
  * @param HALF_DAY_INTERVALS Intervalles demi-journée
  * @returns Date du prochain repos
  */
-export const getNextRestDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: Record<string, number>): number => {
+export const getNextRestDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>): number => {
   if (!Number.isFinite(date)) return date;
   let next = new Date(date);
   while (isWorkedDay(next.getTime(), nonWorkingDates)) {
@@ -73,7 +73,7 @@ export const getNextRestDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval
  * @param HALF_DAY_INTERVALS Intervalles demi-journée
  * @returns Date du prochain jour travaillé
  */
-export const getNextWorkedDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: Record<string, number>): number => {
+export const getNextWorkedDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>): number => {
   if (!Number.isFinite(date)) return date;
   let next = date;
   let safety = 0;
@@ -95,7 +95,7 @@ export const getNextWorkedDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterv
  * @param HALF_DAY_INTERVALS Intervalles demi-journée
  * @returns Date du jour travaillé précédent
  */
-export const getBeforeWorkedDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: Record<string, number>): number => {
+export const getBeforeWorkedDay = (date: number, HALF_DAY_INTERVALS: HalfDayInterval[], nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>): number => {
   if (!Number.isFinite(date)) return date;
   let previous = date;
   let safety = 0;
@@ -125,7 +125,7 @@ export const getWorkedDayIntervals = (
   HALF_DAY_INTERVALS: HalfDayInterval[],
   includeNonWorkingDays: boolean,
   includeWeekends: boolean,
-  nonWorkingDates: Record<string, number>,
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>,
 ): { start: number; end: number }[] => {
   if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) return [];
   const intervals: { start: number; end: number }[] = [];

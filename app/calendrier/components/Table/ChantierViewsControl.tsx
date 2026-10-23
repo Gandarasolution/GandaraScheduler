@@ -1267,7 +1267,7 @@ const ChantierViewsControl: React.FC<
                     transition-all duration-200 cursor-pointer
                     ${
                       isSelected
-                        ? "ring-1 ring-primary ring-offset-2 scale-105"
+                        ? "ring-1 ring-primary ring-offset-2 scale-105 bg-gray-100 text-gray-800"
                         : "opacity-70 hover:opacity-100 hover:scale-105"
                     }
                   `}
@@ -1505,12 +1505,6 @@ const ChantierViewsControl: React.FC<
                     Privée
                   </button>
                 </div>
-
-                <p className="mt-2 text-xs text-secondary">
-                  {isPrivate
-                    ? "Seuls vous et les utilisateurs autorisés peuvent accéder à cette vue."
-                    : "Tous les utilisateurs autorisés peuvent consulter cette vue."}
-                </p>
               </section>
             </div>
 
@@ -1706,11 +1700,11 @@ const ChantierViewsControl: React.FC<
                                 {index + 1}
                               </span>
 
-                              <span className="min-w-0 flex-1 truncate font-medium text-primary">
+                              <span className="min-w-0 flex-1 truncate text-xs font-medium text-primary">
                                 {column.label}
                               </span>
 
-                              <span className="hidden shrink-0 rounded-md bg-primary-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary sm:inline-block">
+                              <span className="hidden shrink-0 rounded-md bg-primary-bg px-2 py-0.5 text-[10px] text-xs font-semibold uppercase tracking-wide text-secondary sm:inline-block">
                                 {column.categoryLabel}
                               </span>
 
@@ -1761,7 +1755,7 @@ const ChantierViewsControl: React.FC<
                                     )
                                   }
                                   aria-label={`Retirer ${column.label}`}
-                                  className="rounded p-1 text-secondary hover:bg-red-50 hover:text-red-600"
+                                  className="cursor-pointer rounded p-1 text-secondary hover:bg-red-50 hover:text-red-600"
                                 >
                                   <X className="h-4 w-4" />
                                 </button>

@@ -91,7 +91,6 @@ export const useInteraction = ({
             }
           }}
         >
-          <option value="">Aucune équipe</option>
           {teamOptions}
         </select>
       ),

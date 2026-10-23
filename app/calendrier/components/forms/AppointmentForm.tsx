@@ -49,7 +49,7 @@ interface AppointmentFormProps {
   /** Indique si le rendez-vous occupe une journée complète */
   isFullDay: boolean;
   /** Liste des dates non-travaillées (week-ends, fériés) */
-  nonWorkingDates: Record<string, number>;
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   /** Version réduite du formulaire (moins de champs) */
   isReducedVersion?: boolean;
   /** Indique si l'application est utilisée sur un appareil mobile */

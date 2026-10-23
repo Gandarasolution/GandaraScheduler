@@ -1,10 +1,9 @@
 import { UserMenu } from '../index'; 
 import { Appointment, Item, User } from '../../types';
-import { memo, use, useEffect, useState } from 'react';
+import { memo, useEffect, useState, useRef } from 'react';
 import DatePicker from '../ui/DatePicker';
 import { useAuth } from '../../hooks/utils/AuthContext';
 import ChantierViewsControl, { ChantierViewsControlProps } from '../Table/ChantierViewsControl';
-
 
 const SelectedCheck = () => (
   <div
@@ -30,12 +29,11 @@ const SelectedCheck = () => (
   </div>
 );
 
-
 interface CalendarHeaderProps {
   theme: string;
   user: any;
-  viewState: any; // Type retourné par useCalendarView
-  notifications: any; // Type retourné par useNotifications
+  viewState: any; 
+  notifications: any; 
   handleAddModal: (appointment: Appointment) => void;
   onNavigateDate: (date: number) => void;
   chantierViewsControlProps?: ChantierViewsControlProps;
@@ -51,7 +49,6 @@ export const CalendarHeader = memo(({
   chantierViewsControlProps,
 }: CalendarHeaderProps) => {
   
-  // Déstructuration du viewState pour simplifier l'accès dans le JSX
   const {
     viewType, setViewType,
     isExpanded, setIsExpanded,
@@ -62,20 +59,38 @@ export const CalendarHeader = memo(({
     isFilterModalOpen, setIsFilterModalOpen,
     isViewDropdownOpen, setIsViewDropdownOpen,
     viewDropdownRef,
-    calendarConfigHook, // Pour ouvrir la modale de config calendrier
-    
-    // Toggles d'affichage
+    calendarConfigHook, 
     isDisplayWeekend, setIsDisplayWeekend,
     isFullDay, setIsFullDay,
-    
-    // Date
     selectedDate, setSelectedDate
   } = viewState;
 
   const { hasPermission } = useAuth();
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  
+  // Nouveaux états pour le menu déroulant des paramètres
+  const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
+  const settingsDropdownRef = useRef<HTMLDivElement>(null);
+
   const clientLogo = localStorage.getItem('client_logo_url');
   const logoSrc = clientLogo || `/assets/logo-${theme}.svg`;
+
+  // Fermer le dropdown de paramètre quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsDropdownRef.current && !settingsDropdownRef.current.contains(event.target as Node)) {
+        setIsSettingsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const openSetting = (category: string) => {
+    sessionStorage.setItem('activeSettingsCategory', category);
+    setIsSettingsDropdownOpen(false);
+    setIsSettingsOpen(true);
+  };
 
   return (
     <div className="flex flex-col items-center pr-9">
@@ -194,18 +209,97 @@ export const CalendarHeader = memo(({
                 </button>
               )}
 
-              {/* Bouton Paramètres */}
-              <button
-                className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
-                onClick={() => setIsSettingsOpen(true)}
-                title="Paramètres"
-              >
-                <svg id="Glyph" enableBackground="new 0 0 32 32" height="25" viewBox="0 0 32 32" width="25" xmlns="http://www.w3.org/2000/svg" version="1.1" fill='currentColor' xmlnsXlink="http://www.w3.org/1999/xlink" className='bg-icon'>
-                  <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                    <path id="XMLID_273_" d="m27.526 18.036-.526-.304c-.626-.361-1-1.009-1-1.732s.374-1.371 1-1.732l.526-.304c1.436-.83 1.927-2.662 1.098-4.098l-1-1.732c-.827-1.433-2.666-1.925-4.098-1.098l-.526.303c-.626.362-1.375.362-2 0-.626-.362-1-1.009-1-1.732v-.607c0-1.654-1.346-3-3-3h-2c-1.654 0-3 1.346-3 3v.608c0 .723-.374 1.37-1 1.732-.626.361-1.374.362-2 0l-.526-.304c-1.432-.827-3.271-.335-4.099 1.098l-1 1.732c-.829 1.436-.338 3.269 1.098 4.098l.527.304c.626.361 1 1.009 1 1.732s-.374 1.371-1 1.732l-.526.304c-1.436.829-1.927 2.662-1.098 4.098l1 1.732c.828 1.433 2.667 1.925 4.098 1.098l.526-.303c.626-.363 1.374-.361 2 0 .626.362 1 1.009 1 1.732v.607c0 1.654 1.346 3 3 3h2c1.654 0 3-1.346 3-3v-.608c0-.723.374-1.37 1-1.732.625-.361 1.374-.362 2 0l.526.304c1.432.826 3.271.334 4.098-1.098l1-1.732c.829-1.436.338-3.269-1.098-4.098zm-11.526 2.964c-2.757 0-5-2.243-5-5s2.243-5 5-5 5 2.243 5 5-2.243 5-5 5z" />
-                  </g>
-                </svg>
-              </button>
+              {/* Bouton Paramètres (Nouveau système en dropdown) */}
+              <div className="relative" ref={settingsDropdownRef}>
+                <button
+                  className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
+                  onClick={() => setIsSettingsDropdownOpen(!isSettingsDropdownOpen)}
+                  title="Paramètres"
+                >
+                  <svg id="Glyph" enableBackground="new 0 0 32 32" height="25" viewBox="0 0 32 32" width="25" xmlns="http://www.w3.org/2000/svg" version="1.1" fill='currentColor' xmlnsXlink="http://www.w3.org/1999/xlink" className='bg-icon'>
+                    <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                      <path id="XMLID_273_" d="m27.526 18.036-.526-.304c-.626-.361-1-1.009-1-1.732s.374-1.371 1-1.732l.526-.304c1.436-.83 1.927-2.662 1.098-4.098l-1-1.732c-.827-1.433-2.666-1.925-4.098-1.098l-.526.303c-.626.362-1.375.362-2 0-.626-.362-1-1.009-1-1.732v-.607c0-1.654-1.346-3-3-3h-2c-1.654 0-3 1.346-3 3v.608c0 .723-.374 1.37-1 1.732-.626.361-1.374.362-2 0l-.526-.304c-1.432-.827-3.271-.335-4.099 1.098l-1 1.732c-.829 1.436-.338 3.269 1.098 4.098l.527.304c.626.361 1 1.009 1 1.732s-.374 1.371-1 1.732l-.526.304c-1.436.829-1.927 2.662-1.098 4.098l1 1.732c.828 1.433 2.667 1.925 4.098 1.098l.526-.303c.626-.363 1.374-.361 2 0 .626.362 1 1.009 1 1.732v.607c0 1.654 1.346 3 3 3h2c1.654 0 3-1.346 3-3v-.608c0-.723.374-1.37 1-1.732.625-.361 1.374-.362 2 0l.526.304c1.432.826 3.271.334 4.098-1.098l1-1.732c.829-1.436.338-3.269-1.098-4.098zm-11.526 2.964c-2.757 0-5-2.243-5-5s2.243-5 5-5 5 2.243 5 5-2.243 5-5 5z" />
+                    </g>
+                  </svg>
+                </button>
+                
+                {isSettingsDropdownOpen && (
+                  <div
+                    className="
+                      absolute top-full -left-48 mt-2
+                      w-[280px]
+                      bg-secondary-bg
+                      rounded-2xl
+                      shadow-[0_12px_35px_rgba(0,0,0,0.18)]
+                      border border-light
+                      z-50
+                      overflow-hidden
+                      animate-in slide-in-from-top-2 duration-200
+                    "
+                  >
+                    <div className="px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white">
+                      <h3 className="text-sm font-semibold">Paramètres</h3>
+                    </div>
+
+                    <div className="py-2 px-2">
+                      {hasPermission(23) && (
+                        <>
+                          <button
+                            className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
+                            onClick={() => openSetting("Gestion des jours non travaillés")}
+                          >
+                            <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                              </svg>
+                            </div>
+                            <span className="flex-1 text-sm font-medium">Jours non travaillés</span>
+                          </button>
+
+                          <button
+                            className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
+                            onClick={() => openSetting("Affichage mobile des événements")}
+                          >
+                            <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M3 2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm6 11a1 1 0 1 0-2 0 1 1 0 0 0 2 0"/>
+                              </svg>
+                            </div>
+                            <span className="flex-1 text-sm font-medium">Affichage mobile</span>
+                          </button>
+
+                          <button
+                            className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
+                            onClick={() => openSetting("Gestion des types de jours")}
+                          >
+                            <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path fillRule="evenodd" d="M12.5 15a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 1 0v13a.5.5 0 0 1-.5.5M10 8a.5.5 0 0 1-.5.5H3.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L3.707 7.5H9.5a.5.5 0 0 1 .5.5"/>
+                              </svg>
+                            </div>
+                            <span className="flex-1 text-sm font-medium">Types de jours</span>
+                          </button>
+
+                          <div className="mx-2 my-2 h-px bg-primary-100" />
+                        </>
+                      )}
+
+                      <button
+                        className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
+                        onClick={() => openSetting("Affichage des étiquettes")}
+                      >
+                        <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M2 2v4.586l7 7L13.586 9l-7-7H2zM1 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 1 6.586z"/>
+                            <path d="M4.5 5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/>
+                          </svg>
+                        </div>
+                        <span className="flex-1 text-sm font-medium">Placement de l'étiquette</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Menu Sélection de Vue */}
               {(hasPermission(23) || hasPermission(22)) && (
@@ -222,7 +316,7 @@ export const CalendarHeader = memo(({
                     </svg>
                   </button>
 
-                  {/* Dropdown Content */}
+                  {/* Dropdown Content Changer Espace */}
                   {isViewDropdownOpen && (
                     <div
                       className="
@@ -622,7 +716,6 @@ export const CalendarHeader = memo(({
           {viewType === 'chantier-table' && chantierViewsControlProps && (
             <ChantierViewsControl {...chantierViewsControlProps} compact />
           )}
-
 
           {/* Toggle Weekend / Full Day / Filtres */}
           <div className="border border-default rounded-xl flex items-center multi-op">

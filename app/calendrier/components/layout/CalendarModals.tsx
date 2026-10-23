@@ -14,7 +14,7 @@ import etiquetteService from '@/app/service/etiquette.service';
 import eventService from '@/app/service/evenement.service';
 import { useAuth } from '../../hooks/utils/AuthContext';
 import permissionService from '@/app/service/permission.service';
-import { useDayTypes } from '../../hooks/data/useDayType';
+import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -85,7 +85,7 @@ interface CalendarModalsProps {
     // Config Configuration Editing State (from hook)
     setEditingConfig: (config: any) => void;
     setIsCreatingConfig: (val: boolean) => void;
-    addNonWorkingDatesToPlanning: (date: number) => Promise<any>;
+    addNonWorkingDatesToPlanning: (date: number, codeType: string) => Promise<any>;
     removeNonWorkingDatesFromPlanning: (idPlanning: number, date: number) => Promise<any>;
 
     setSelectedItem: (item: Item | null) => void;
@@ -115,8 +115,8 @@ interface CalendarModalsProps {
     setIncludeWeekend: (v: boolean) => void;
     respectNonWorkingDays: boolean;
     setRespectNonWorkingDays: (v: boolean) => void;
-    nonWorkingDates: Record<string, number>;
-    setNonWorkingDates: (dates: Record<string, number>) => void;
+    nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
+    setNonWorkingDates: (dates: Record<string, {Id: number; TypeJourCode: string }>) => void;
     tagPlacement: 'hover' | 'fixed';
     setTagPlacement: (v: 'hover' | 'fixed') => void;
     mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
@@ -147,7 +147,7 @@ export const CalendarModals = memo(({
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
 
-  const useDayTypesList = useDayTypes({});
+  const { DayTypes, fetchDayTypes, addDayType, updateDayType, removeDayType } = useDayTypesContext();
 
  
   const [configImageSelectorContext, setConfigImageSelectorContext] = useState<{
@@ -219,7 +219,7 @@ export const CalendarModals = memo(({
   const settings = useMemo(() => [
     ...(hasPermission(23) ? [
       {
-        category: "Gestion des jours travaillés",
+        category: "Gestion des jours non travaillés",
         items: [
           {
             id: "nonWorkedDay", 
@@ -229,11 +229,7 @@ export const CalendarModals = memo(({
             setNonWorkingDates: config.setNonWorkingDates,
             addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
             removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
-            dayTypesOptions:  [
-              { id: "ferie", label: "Jour Férié", bgColor: "#fee2e2", textColor: "#991b1b", isBold: true, isItalic: false },
-              { id: "nonTravaille", label: "Non travaillé", bgColor: "#f3f4f6", textColor: "#374151", isBold: false, isItalic: true },
-              //{ id: "modulation", label: "Modulation", bgColor: "#e0e7ff", textColor: "#3730a3", isBold: true, isItalic: true },
-            ]
+            dayTypesOptions: DayTypes || [],
           }
         ]
       },
@@ -249,7 +245,8 @@ export const CalendarModals = memo(({
             options: config.mobileAppointmentFieldOptions,
             isLoading: config.mobileAppointmentSettingsLoading
           }
-        ]
+        ],
+        hasUnsavedChanges: true
       },
       {
         category: "Gestion des types de jours",
@@ -258,11 +255,11 @@ export const CalendarModals = memo(({
             id: "dayTypeSettings",
             label: "Styles des types de jours",
             type: "day-type-settings",
-            dayTypes: useDayTypesList.DayTypes || [],
+            dayTypes: DayTypes || [],
 
             fetchDayTypes: async () => {
               try {
-                const response = await useDayTypesList.fetchDayTypes(); 
+                const response = await fetchDayTypes(); 
 
                 return response
               } catch (error: any) {
@@ -273,7 +270,7 @@ export const CalendarModals = memo(({
             // 2. Ajout d'un type de jour
             onAddDayType: async (newType: DayType) => {
               try {
-                const response = await useDayTypesList.addDayType(newType); // Ton handler de création
+                const response = await addDayType(newType); // Ton handler de création
                 return response;
               } catch (error: any) {
                 return { success: false, message: error?.message || "Erreur lors de la création" };
@@ -283,7 +280,7 @@ export const CalendarModals = memo(({
             // 3. Mise à jour d'un type de jour
             onUpdateDayType: async (updatedType: DayType) => {
               try {
-                const response = await useDayTypesList.updateDayType(updatedType); // Ton handler de mise à jour
+                const response = await updateDayType(updatedType); // Ton handler de mise à jour
                 return response;
               } catch (error: any) {
                 return { success: false, message: error?.message || "Erreur lors de la mise à jour" };
@@ -293,7 +290,7 @@ export const CalendarModals = memo(({
             // 4. Suppression d'un type de jour
             onDeleteDayType: async (id: string) => {
               try {
-                const response = await useDayTypesList.removeDayType(id); // Ton handler de suppression
+                const response = await removeDayType(id); // Ton handler de suppression
                 return response;
               } catch (error: any) {
                 return { success: false, message: error?.message || "Erreur lors de la suppression" };
@@ -334,9 +331,9 @@ export const CalendarModals = memo(({
     config.mobileAppointmentSettingsLoading, 
     handlers.addNonWorkingDatesToPlanning, 
     handlers.removeNonWorkingDatesFromPlanning,
-    useDayTypesList.DayTypes,
-
+    DayTypes,
   ]);  
+
 
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;
