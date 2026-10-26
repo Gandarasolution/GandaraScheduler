@@ -350,8 +350,9 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   }
 
 
-  const loadNonWorkingDates = async (): Promise<{ success: boolean; message: string }> => {
-      const result = await calendarConfigService.getNonWorkingDatesByPlanningId();
+
+  const loadNonWorkingDates = async ( years: number[] ): Promise<{ success: boolean; message: string }> => {
+      const result = await calendarConfigService.getNonWorkingDates(years);
       //console.log('Résultat du chargement des jours non travaillés :', result);
       if (result?.success && result.data) {
         const nonWorkingDates = result.data.nonWorkingDates

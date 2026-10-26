@@ -133,7 +133,8 @@ export default function HomePage({
   const hasInitializedPlanningRef = useRef(false);
   const hasInitializedTeamsRef = useRef(false);
   const hasInitializedEmployeesRef = useRef(false);
-  const hasInitializedNonWorkingDatesRef = useRef(false);
+  const loadedYearsRef = useRef(new Map<number, Set<number>>());
+  const loadingYearsRef = useRef(new Map<number, Set<number>>());
   const isFirstRenderRef = useRef(true);
   const [errorPlanning, setErrorPlanning] = useState<string | null>(null);
 
@@ -604,30 +605,19 @@ export default function HomePage({
 
     let isMounted = true;
 
-    const initializeNonWorkingDates = async () => {
-      if (!isMounted || hasInitializedNonWorkingDatesRef.current) return;
-      hasInitializedNonWorkingDatesRef.current = true;
-      const result = await viewState.loadNonWorkingDates();
-      if (!result.success){
-        setLoadCalendar(false);
-        setErrorPlanning(result.message || "Erreur lors du chargement des jours non travaillés. Veuillez réessayer.");
-      }
-    };
-
     const initializePlanning = async () => {
       if (!isMounted || hasInitializedPlanningRef.current) return;
       hasInitializedPlanningRef.current = true;
-      hasInitializedTeamsRef.current = true; // Si on charge le planning, on charge aussi les teams
-      // Sur mobile, le calendrier est personnel : les listes employees, equipes
-      // et poles ne sont pas necessaires pour afficher les rendez-vous.
-      
+      hasInitializedTeamsRef.current = true;
 
       if (!isMobile) await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
 
-      // Chargement des employés selon les permissions
       if (!hasInitializedEmployeesRef.current) {
-        const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : await employeeService.getEmployee(user.IdPersonnel);
-        //console.log('Employees Response:', employeesResponse);
+        const employeesResponse =
+          hasPermission(23) || hasPermission(22)
+            ? await employeeService.getEmployees()
+            : await employeeService.getEmployee(user.IdPersonnel);
+
         if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
           setGlobalEmployees(employeesResponse.data);
         } else {
@@ -637,12 +627,10 @@ export default function HomePage({
           return;
         }
         hasInitializedEmployeesRef.current = true;
-        setEmployeesVersion(prev => prev + 1);
+        setEmployeesVersion((prev) => prev + 1);
       }
 
-
       let rep = await dataLayer.loadTeams();
-      //console.log('Teams Response:', rep);
       if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
         setLoadCalendar(false);
@@ -667,7 +655,6 @@ export default function HomePage({
       }
 
       rep = await dataLayer.loadPoleActivites();
-      //console.log('Pole Activités Response:', rep);
       if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
         setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
         setLoadCalendar(false);
@@ -686,7 +673,10 @@ export default function HomePage({
     const initializePaieTableAndManualEventTable = async () => {
       if (!isMounted || hasInitializedEmployeesRef.current) return;
       hasInitializedEmployeesRef.current = true;
-      const employeesResponse = hasPermission(23) || hasPermission(22) ? await employeeService.getEmployees() : null;
+      const employeesResponse =
+        hasPermission(23) || hasPermission(22)
+          ? await employeeService.getEmployees()
+          : null;
 
       if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
@@ -696,25 +686,25 @@ export default function HomePage({
         setLoadCalendar(false);
         return;
       }
-    }
-    
-    if (!isMobile) {
-      initializeNonWorkingDates();
-    }
-    if (viewState.viewType === 'calendar') {
+    };
+
+    // Suppression de initializeNonWorkingDates() d'ici !
+    if (viewState.viewType === "calendar") {
       initializePlanning();
-    } else if (viewState.viewType === 'employee-table') {
+    } else if (viewState.viewType === "employee-table") {
       initializeEmployeeTable();
-    }
-    else if (viewState.viewType === 'paie-table' || viewState.viewType === 'manual-event-table') {
+    } else if (
+      viewState.viewType === "paie-table" ||
+      viewState.viewType === "manual-event-table"
+    ) {
       if (hasPermission(23) || hasPermission(22)) {
-        //console.log("Initialisation de la table Paie et de la table des événements manuels...");
         initializePaieTableAndManualEventTable();
-      }else {
+      } else {
         setErrorPlanning("Vous n'avez pas les droits nécessaires pour accéder à cette vue.");
         setLoadCalendar(false);
       }
     }
+
     return () => {
       isMounted = false;
     };
@@ -724,6 +714,87 @@ export default function HomePage({
     dataLayer.loadTeams,
     dataLayer.loadAppointmentsInRange,
   ]);
+
+ useEffect(() => {
+  if (
+    isMobile ||
+    !currentPlanningId ||
+    currentPlanningId <= 0 ||
+    viewState.viewType !== "calendar"
+  ) {
+    return;
+  }
+
+  let isMounted = true;
+
+  const updateNonWorkingDates = async () => {
+    const visibleYears = timeline.getVisibleYears();
+
+    if (!visibleYears?.length) return;
+
+    // Séparer les années par planning
+    const planningId = currentPlanningId;
+
+    if (!loadedYearsRef.current.has(planningId)) {
+      loadedYearsRef.current.set(planningId, new Set());
+    }
+
+    if (!loadingYearsRef.current.has(planningId)) {
+      loadingYearsRef.current.set(planningId, new Set());
+    }
+
+    const loadedYears = loadedYearsRef.current.get(planningId)!;
+    const loadingYears = loadingYearsRef.current.get(planningId)!;
+
+    // Ignorer les années déjà chargées OU en cours de chargement
+    const yearsToFetch = visibleYears.filter(
+      (year) =>
+        !loadedYears.has(year) &&
+        !loadingYears.has(year)
+    );
+
+    if (yearsToFetch.length === 0) return;
+
+    // Réserver les années AVANT l'appel asynchrone
+    yearsToFetch.forEach((year) => loadingYears.add(year));
+
+    try {
+      const result = await viewState.loadNonWorkingDates(yearsToFetch);
+
+      // Le résultat peut être enregistré même après le cleanup React
+      if (result?.success) {
+        yearsToFetch.forEach((year) => loadedYears.add(year));
+      } else if (isMounted) {
+        setErrorPlanning(
+          result?.message ||
+            "Erreur lors du chargement des jours non travaillés. Veuillez réessayer."
+        );
+      }
+    } catch (error: unknown) {
+      if (isMounted) {
+        setErrorPlanning(
+          error instanceof Error
+            ? error.message
+            : "Erreur lors du chargement des jours non travaillés."
+        );
+      }
+    } finally {
+      yearsToFetch.forEach((year) => loadingYears.delete(year));
+    }
+  };
+
+  void updateNonWorkingDates();
+
+  return () => {
+    isMounted = false;
+  };
+}, [
+  currentPlanningId,
+  isMobile,
+  timeline.days,
+  viewState.viewType,
+  viewState.loadNonWorkingDates,
+]);
 
   useEffect(() => {
     if (viewState.viewType !== 'calendar') return;
@@ -1258,6 +1329,7 @@ export default function HomePage({
               
               addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
               removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,
+              editNonWorkingDates: calendarConfigService.editNonWorkingDate,
               addImage: dataLayer.addImage,
             }}
             data={{

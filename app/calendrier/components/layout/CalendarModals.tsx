@@ -15,6 +15,7 @@ import eventService from '@/app/service/evenement.service';
 import { useAuth } from '../../hooks/utils/AuthContext';
 import permissionService from '@/app/service/permission.service';
 import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
+import calendarConfigService from '@/app/service/calendarConfig.service';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -87,6 +88,7 @@ interface CalendarModalsProps {
     setIsCreatingConfig: (val: boolean) => void;
     addNonWorkingDatesToPlanning: (date: number, codeType: string) => Promise<any>;
     removeNonWorkingDatesFromPlanning: (idPlanning: number, date: number) => Promise<any>;
+    editNonWorkingDates: (data: {id: number, date: Date, typeJourCode: string}) => Promise<any>;
 
     setSelectedItem: (item: Item | null) => void;
     onLockedError: (message: string) => void;
@@ -220,6 +222,7 @@ export const CalendarModals = memo(({
     ...(hasPermission(23) ? [
       {
         category: "Gestion des jours non travaillés",
+        key: "nonWorkedDays",
         items: [
           {
             id: "nonWorkedDay", 
@@ -229,6 +232,26 @@ export const CalendarModals = memo(({
             setNonWorkingDates: config.setNonWorkingDates,
             addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
             removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
+            updateNonWorkingDate: handlers.editNonWorkingDates,
+            
+            // Récupération des années disponibles via l'API
+            getAvailablesYearForNonWorkingDate: async () => {
+              try {
+                const response = await calendarConfigService.getAvailablesYearForNonWorkingDate();
+                return response; // Attend un tableau de nombres, ex: [2024, 2025, 2026]
+              } catch (error: any) {
+                return [];
+              }
+            },
+
+            fetchNonWorkingDays: async (selectedYear: number) => {
+              try {
+                const response = await calendarConfigService.getNonWorkingDates([selectedYear]);
+                return response;
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors du chargement" };
+              }
+            },
             dayTypesOptions: DayTypes || [],
           }
         ]

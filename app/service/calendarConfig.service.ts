@@ -9,8 +9,12 @@ async function getCalendarConfigsByUserId(userId: number, idPlanning: number) {
   return await getRequest(`/api/planning/vue/user/${userId}?idPlanning=${idPlanning}`, 'getCalendarConfigsByUserId');
 }
 
-async function getNonWorkingDatesByPlanningId() {
-  return await getRequest(`/api/planning/non-working-dates`, 'getNonWorkingDatesByPlanningId');
+async function getNonWorkingDates(years: number[]) {
+  return await getRequest(`/api/planning/non-working-dates?years=${years.join(',')}`, 'getNonWorkingDatesByPlanningId');
+}
+
+async function editNonWorkingDate(data: {id: number, date: Date, typeJourCode: string}) {
+  return await putRequest(`/api/planning/non-working-dates/${data.id}`, { nonWorkingDate: data.date, typeJourCode: data.typeJourCode }, 'editNonWorkingDate');
 }
 
 async function addNonWorkingDatesToPlanning(nonWorkingDate: number, codeType: string) {  
@@ -167,6 +171,10 @@ async function getAvailableColumns(viewType: string, timeoutMs: number = 5000) {
   return await getRequest(`/api/planning/vue/available-columns?${params.toString()}`, 'getAvailableColumns', { timeout: timeoutMs });
 }
 
+async function getAvailablesYearForNonWorkingDate() {
+  return await getRequest(`/api/planning/non-working-dates/available-years`, 'getAvailablesYearForNonWorkingDate');
+}
+
 export default {
   getCalendarConfigsByUserId,
   createCalendarConfig,
@@ -174,7 +182,7 @@ export default {
   deleteCalendarConfig,
   addNonWorkingDatesToPlanning,
   removeNonWorkingDatesFromPlanning,
-  getNonWorkingDatesByPlanningId,
+  getNonWorkingDates,
   lockCalendarConfig,
   getLastVueForUser,
   setLastVueForUser,
@@ -197,4 +205,6 @@ export default {
   removeDayType,
   getDayTypes,
   getAvailableColumns,
+  getAvailablesYearForNonWorkingDate,
+  editNonWorkingDate,
 };

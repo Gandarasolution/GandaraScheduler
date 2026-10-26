@@ -58,7 +58,6 @@ const previewEmployee: User = {
 
 /**
  * Éditeur spécifique pour l'affichage mobile.
- * Gère l'état local et expose l'action de sauvegarde au composant parent (pour le footer).
  */
 const MobileDisplayEditor = ({ 
   setting, 
@@ -77,7 +76,6 @@ const MobileDisplayEditor = ({
     JSON.stringify(localValue.primaryFields) !== JSON.stringify(setting.value.primaryFields) ||
     JSON.stringify(localValue.secondaryFields) !== JSON.stringify(setting.value.secondaryFields);
 
-  // Exposer l'action de sauvegarde et l'état "dirty" au parent (SettingsModal)
   useEffect(() => {
     registerSaveAction({
       isDirty,
@@ -225,7 +223,7 @@ const MobileDisplayEditor = ({
                           <path d="M5 12l4 4L19 6" />
                         </svg>
                       </button>
-                      <span className="whitespace-nowrap">{secondaryChecked ? "Masqué" : "Masqué"}</span>
+                      <span className="whitespace-nowrap">{secondaryChecked ? "Affiché" : "Masqué"}</span>
                     </div>
                   </td>
                 </tr>
@@ -280,7 +278,6 @@ const MobileDisplayEditor = ({
     </div>
   );
 };
-
 
 const NewDayTypeForm = ({
   onAdd,
@@ -769,26 +766,570 @@ const DayTypeSingleEditor = ({
   );
 };
 
+const NonWorkingDaysEditor = ({
+  setting,
+  setError,
+}: {
+  setting: any;
+  setError: (msg: string | null) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [availableYearsState, setAvailableYearsState] = useState<number[]>([]);
+  const [newDate, setNewDate] = useState<string>("");
+  const [selectedDayTypeId, setSelectedDayTypeId] = useState<string>(
+    setting.dayTypesOptions?.[0]?.Id?.toString() || ""
+  );
+  const [isAdding, setIsAdding] = useState(false);
+  const [isLoadingYear, setIsLoadingYear] = useState(false);
+  const [deletingDates, setDeletingDates] = useState<Record<string, boolean>>({});
+  const [dateErrorMessage, setDateErrorMessage] = useState<string | null>(null);
+
+  // État local pour gérer l'édition d'une date existante
+  const [editingDateKey, setEditingDateKey] = useState<string | null>(null);
+  const [editDateValue, setEditDateValue] = useState<string>("");
+  const [editDayTypeId, setEditDayTypeId] = useState<string>("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // Utilisation d'un ref pour conserver les callbacks sans déclencher d'effets indésirables lors des re-rendus
+  const settingRef = useRef(setting);
+  useEffect(() => {
+    settingRef.current = setting;
+  }, [setting]);
+
+  // Chargement initial des années valides via API
+  useEffect(() => {
+    const fetchYears = settingRef.current.getAvailablesYearForNonWorkingDate || settingRef.current.fetchAvailableYears;
+    if (typeof fetchYears === "function") {
+      fetchYears().then((res: any) => {
+        if (Array.isArray(res)) {
+          setAvailableYearsState(res);
+        } else if (res && res.success && Array.isArray(res.data)) {
+          setAvailableYearsState(res.data);
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
+  const availableYears: number[] = useMemo(() => {
+    if (availableYearsState.length > 0) return availableYearsState;
+    if (setting.availableYears && setting.availableYears.length > 0) {
+      return setting.availableYears;
+    }
+    const currentYear = new Date().getFullYear();
+    return [currentYear - 1, currentYear, currentYear + 1];
+  }, [availableYearsState, setting.availableYears]);
+
+  // Chargement des jours non travaillés selon l'année sélectionnée
+  useEffect(() => {
+    const currentSetting = settingRef.current;
+    const fetchDays = currentSetting.fetchNonWorkingDays || currentSetting.fetchNonWorkingDates;
+
+    if (typeof fetchDays === "function") {
+      setIsLoadingYear(true);
+      setError(null);
+
+      fetchDays(selectedYear)
+        .then((res: any) => {
+          if (res && !res.success && res.message) {
+            setError(res.message);
+          }
+          if (res && res.data) {
+            const nonWorkingDates = res.data.nonWorkingDates || [];
+            const recordData = Object.fromEntries(
+              nonWorkingDates.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; TypeJourCode: string; }) => [
+                item.DatePlanningJourNontravaille,
+                { Id: Number(item.IdPlanningJourNontravaille), TypeJourCode: item.TypeJourCode }
+              ])
+            );
+            currentSetting.setNonWorkingDates(recordData);
+          }
+        })
+        .catch((err: any) => {
+          setError(err?.message || "Erreur lors de la récupération des jours non travaillés.");
+        })
+        .finally(() => {
+          setIsLoadingYear(false);
+        });
+    }
+  }, [selectedYear, setError]);
+
+  const filteredDates = useMemo(() => {
+    const dates = setting.nonWorkingDates || {};
+    return Object.entries(dates).filter(([dateKey]) => {
+      const year = new Date(dateKey).getFullYear();
+      return year === Number(selectedYear);
+    });
+  }, [setting.nonWorkingDates, selectedYear]);
+
+  const resetForm = () => {
+    setNewDate("");
+    setDateErrorMessage(null);
+  };
+
+  const handleAddDate = async () => {
+    if (!newDate) return;
+
+    const formattedInputDate = format(new Date(newDate), "yyyy-MM-dd");
+
+    if (setting.nonWorkingDates && setting.nonWorkingDates[formattedInputDate]) {
+      setDateErrorMessage(
+        `La date du ${format(new Date(newDate), "dd/MM/yyyy")} est déjà enregistrée.`
+      );
+      return;
+    }
+
+    setDateErrorMessage(null);
+    setError(null);
+    setIsAdding(true);
+
+    const parsedDate = new Date(newDate).getTime();
+
+    try {
+      if (setting.addNonWorkingDatesToPlanning) {
+        const response = await setting.addNonWorkingDatesToPlanning(
+          parsedDate,
+          selectedDayTypeId
+        );
+        if (response && response.success && response.data) {
+          setting.setNonWorkingDates((prev: any) => {
+            const updated = {
+              ...prev,
+              [formattedInputDate]: {
+                Id: Number(response.data),
+                TypeJourCode: selectedDayTypeId,
+              },
+            };
+
+            // 2. Tri des clés par ordre chronologique croissant
+            const sortedKeys = Object.keys(updated).sort((a, b) => 
+              new Date(a).getTime() - new Date(b).getTime()
+            );
+
+            // 3. Reconstitution de l'objet trié
+            return sortedKeys.reduce((acc: Record<string, any>, key) => {
+              acc[key] = updated[key];
+              return acc;
+            }, {});
+          });
+          setAvailableYearsState((prev) => {
+            const yearToAdd = new Date(newDate).getFullYear();
+            if (!prev.includes(yearToAdd)) {
+              return [...prev, yearToAdd].sort((a, b) => a - b);
+            }
+            return prev;
+          });
+          resetForm();
+          setIsOpen(false);
+        } else {
+          setError(response?.message || "Erreur lors de l'ajout de la date.");
+        }
+      }
+    } catch (error: any) {
+      setError(error?.message || "Erreur réseau lors de l'ajout de la date.");
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleStartEdit = (dateKey: string, val: any) => {
+    const itemObj = typeof val === "object" ? val : { id: val };
+    setEditingDateKey(dateKey);
+    setEditDateValue(dateKey);
+    setEditDayTypeId(String(itemObj.TypeJourCode || itemObj.typeId || setting.dayTypesOptions?.[0]?.Id || ""));
+    setError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDateKey(null);
+    setEditDateValue("");
+    setEditDayTypeId("");
+  };
+
+  const handleSaveEdit = async (originalDateKey: string, originalVal: any) => {
+    if (!editDateValue) return;
+
+    const formattedNewDate = format(new Date(editDateValue), "yyyy-MM-dd");
+    const itemObj = typeof originalVal === "object" ? originalVal : { id: originalVal };
+    const dateId = itemObj.Id || itemObj.id;
+
+    // Vérification si la nouvelle date existe déjà (sauf si c'est la même)
+    if (formattedNewDate !== originalDateKey && setting.nonWorkingDates?.[formattedNewDate]) {
+      setError(`La date du ${format(new Date(editDateValue), "dd/MM/yyyy")} existe déjà.`);
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setError(null);
+
+    try {
+      if (setting.updateNonWorkingDate) {
+        const response = await setting.updateNonWorkingDate({
+          id: dateId,
+          date: new Date(editDateValue),
+          typeJourCode: editDayTypeId,
+        });
+
+        if (!response || !response.success) {
+          setError(response?.message || "Erreur lors de la modification de la date.");
+          setIsSavingEdit(false);
+          return;
+        }
+      }
+
+      // Mise à jour du state local des dates
+      setting.setNonWorkingDates((prev: any) => {
+        const updated = { ...prev };
+        
+        // 1. Supprimer l'ancienne clé
+        delete updated[originalDateKey];
+        
+        // 2. Ajouter la nouvelle clé
+        updated[formattedNewDate] = {
+          Id: dateId,
+          TypeJourCode: editDayTypeId,
+        };
+
+        // 3. Trier les clés dans l'ordre chronologique croissant (YYYY-MM-DD)
+        const sortedKeys = Object.keys(updated).sort((a, b) => 
+          new Date(a).getTime() - new Date(b).getTime()
+        );
+
+        // 4. Reconstruire l'objet avec les clés triées
+        return sortedKeys.reduce((acc: Record<string, any>, key) => {
+          acc[key] = updated[key];
+          return acc;
+        }, {});
+      });
+
+      handleCancelEdit();
+    } catch (error: any) {
+      setError(error?.message || "Erreur lors de la mise à jour de la date.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4 w-full min-w-0">
+      {/* Sélecteur d'année principal */}
+      <div className="flex items-center justify-between gap-4 bg-white/80 p-3 rounded-xl border border-light shadow-sm">
+        <label htmlFor="year-select" className="text-sm font-semibold text-primary shrink-0">
+          Année sélectionnée :
+        </label>
+        <select
+          id="year-select"
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(Number(e.target.value))}
+          disabled={isLoadingYear}
+          className="border border-default rounded-xl px-4 py-2 text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm disabled:opacity-50"
+        >
+          {availableYears.map((year) => (
+            <option key={year} value={year}>
+              {year}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Formulaire adaptable d'ajout */}
+      {!isOpen ? (
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setDateErrorMessage(null);
+            setIsOpen(true);
+          }}
+          className="w-full py-3 px-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+        >
+          <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Ajouter un jour non travaillé
+        </button>
+      ) : (
+        <div className="p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-3 shadow-sm min-w-0">
+          <div className="flex items-center justify-between pb-2 border-b border-primary/20">
+            <h4 className="text-sm font-semibold text-primary flex items-center gap-2 truncate">
+              Nouveau jour non travaillé
+            </h4>
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                setIsOpen(false);
+              }}
+              className="text-secondary hover:text-primary transition-colors p-1 cursor-pointer shrink-0"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2.5 items-center w-full">
+            <input
+              type="date"
+              value={newDate}
+              onChange={(e) => {
+                setNewDate(e.target.value);
+                if (dateErrorMessage) setDateErrorMessage(null);
+              }}
+              className="border border-default rounded-xl px-3 py-2 text-sm bg-white shadow-sm flex-1 min-w-[140px] max-w-full focus:ring-2 focus:ring-primary focus:outline-none"
+            />
+
+            <select
+              value={selectedDayTypeId}
+              onChange={(e) => setSelectedDayTypeId(e.target.value)}
+              className="border border-default rounded-xl px-3 py-2 text-sm bg-white shadow-sm flex-1 min-w-[150px] max-w-full focus:ring-2 focus:ring-primary focus:outline-none"
+            >
+              {setting.dayTypesOptions?.map((dt: any) => (
+                <option key={dt.Id} value={dt.Id}>
+                  {dt.Libelle}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={handleAddDate}
+              disabled={isAdding}
+              className="px-4 py-2 cursor-pointer bg-primary text-white rounded-xl font-medium text-sm shadow-md hover:shadow-lg flex items-center gap-2 shrink-0 flex-1 sm:flex-none min-w-[90px] justify-center disabled:opacity-50"
+            >
+              {isAdding ? (
+                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              )}
+              Ajouter
+            </button>
+          </div>
+
+          {dateErrorMessage && (
+            <p className="text-xs text-red-500 font-medium">{dateErrorMessage}</p>
+          )}
+        </div>
+      )}
+
+      {/* Liste des jours configurés */}
+      <div className="bg-secondary/40 rounded-xl p-3 min-h-[160px] relative">
+        <h4 className="text-sm font-semibold mb-3">
+          Jours configurés pour {selectedYear} ({filteredDates.length})
+        </h4>
+
+        {isLoadingYear ? (
+          <div className="py-8">
+            <Loader size="md" message={`Chargement de l'année ${selectedYear}...`} />
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            {filteredDates.length > 0 ? (
+              filteredDates.map(([dateKey, val]: [string, any]) => {
+                const itemObj = typeof val === "object" ? val : { id: val };
+                const isEditingThisDate = editingDateKey === dateKey;
+
+                if (isEditingThisDate) {
+                  return (
+                    <div key={dateKey} className="flex flex-wrap items-center justify-between bg-primary/10 rounded-xl p-2.5 shadow-sm border border-primary/30 gap-2">
+                      <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                        <input
+                          type="date"
+                          value={editDateValue}
+                          onChange={(e) => setEditDateValue(e.target.value)}
+                          className="border border-default rounded-lg px-2 py-1.5 text-xs bg-white shadow-sm flex-1 min-w-[130px] focus:ring-2 focus:ring-primary focus:outline-none"
+                        />
+                        <select
+                          value={editDayTypeId}
+                          onChange={(e) => setEditDayTypeId(e.target.value)}
+                          className="border border-default rounded-lg px-2 py-1.5 text-xs bg-white shadow-sm flex-1 min-w-[130px] focus:ring-2 focus:ring-primary focus:outline-none"
+                        >
+                          {setting.dayTypesOptions?.map((dt: any) => (
+                            <option key={dt.Id} value={dt.Id}>
+                              {dt.Libelle}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          disabled={isSavingEdit}
+                          onClick={() => handleSaveEdit(dateKey, val)}
+                          title="Valider la modification"
+                          className="text-white bg-primary hover:bg-primary-600 w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+                        >
+                          {isSavingEdit ? (
+                            <svg className="animate-spin w-4 h-4 text-current" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isSavingEdit}
+                          onClick={handleCancelEdit}
+                          title="Annuler"
+                          className="text-secondary hover:text-primary bg-white hover:bg-secondary/20 w-8 h-8 flex items-center justify-center rounded-lg border border-light transition-all cursor-pointer"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const dayTypeInfo =
+                  setting.dayTypesOptions?.find(
+                    (dt: any) =>
+                      String(dt.Id || dt.id) === String(itemObj.TypeJourCode || itemObj.typeId)
+                  ) || itemObj;
+
+                const libelle = dayTypeInfo?.Libelle || "Type inconnu";
+                const bgCol = dayTypeInfo?.CouleurFond || "#f3f4f6";
+                const textCol = dayTypeInfo?.CouleurTexte || "#374151";
+                const isDeletingThisDate = Boolean(deletingDates[dateKey]);
+                const dateObj = new Date(dateKey);
+                const bold = dayTypeInfo?.isBold;
+                const italic = dayTypeInfo?.isItalic;
+
+                return (
+                  <div key={dateKey} className="flex items-center justify-between bg-white/60 rounded-xl p-2.5 shadow-sm border border-light hover:shadow-md transition-all group min-w-0 gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg border border-light overflow-hidden shrink-0 shadow-sm">
+                        <div
+                          className="flex flex-col justify-center items-center h-full w-full"
+                          style={{
+                            backgroundColor: bgCol,
+                            color: textCol,
+                            fontWeight: bold ? "700" : "400",
+                            fontStyle: italic ? "italic" : "normal",
+                          }}
+                        >
+                          <span className="block text-sm leading-none mt-0.5">{format(dateObj, "dd")}</span>
+                          <span className="block text-[9px] opacity-80 uppercase tracking-wider">{format(dateObj, "MMM")}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-medium text-primary truncate">
+                          {format(dateObj, "dd/MM/yyyy")}
+                        </span>
+                        <span className="text-xs text-secondary font-medium flex items-center gap-1.5 truncate">
+                          <span 
+                            className="w-2 h-2 rounded-full shrink-0 shadow-sm" 
+                            style={{ backgroundColor: bgCol }}
+                          />
+                          <span className="truncate">{libelle}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Bouton Éditer */}
+                      <button
+                        type="button"
+                        className="text-secondary hover:text-primary hover:bg-secondary/20 w-8 h-8 flex items-center justify-center rounded-lg transition-all cursor-pointer"
+                        title="Modifier cette date"
+                        onClick={() => handleStartEdit(dateKey, val)}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+
+                      {/* Bouton Supprimer */}
+                      <button
+                        type="button"
+                        className="text-red-400 hover:text-white hover:bg-red-500 w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+                        disabled={isDeletingThisDate}
+                        title="Supprimer cette date"
+                        onClick={async () => {
+                          setDeletingDates(prev => ({ ...prev, [dateKey]: true }));
+                          setError(null);
+                          
+                          try {
+                            if (setting.removeNonWorkingDatesFromPlanning) {
+                              const response = await setting.removeNonWorkingDatesFromPlanning(itemObj.Id || itemObj.id);
+                              if (response && response.success) {
+                                setting.setNonWorkingDates((prev: any) => {
+                                  const newDates = { ...prev };
+                                  delete newDates[dateKey];
+                                  return newDates;
+                                });
+                              } else {
+                                setError(response?.message || "Erreur lors de la suppression.");
+                              }
+                            } else {
+                              setting.setNonWorkingDates((prev: any) => {
+                                const newDates = { ...prev };
+                                delete newDates[dateKey];
+                                return newDates;
+                              });
+                            }
+                          } catch (error: any) {
+                            setError(error?.message || "Erreur lors de la suppression.");
+                          } finally {
+                            setDeletingDates(prev => {
+                              const next = { ...prev };
+                              delete next[dateKey];
+                              return next;
+                            });
+                          }
+                        }}
+                      >
+                        {isDeletingThisDate ? (
+                          <svg className="animate-spin w-4 h-4 text-current" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-xs text-secondary italic">
+                Aucun jour non travaillé pour cette année.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   isSettingsOpen,
   settings,
 }) => {
-  const { DayTypes } = useDayTypesContext();
-
   const [activeCategory, setActiveCategory] = useState<string>(() => {
     return sessionStorage.getItem('activeSettingsCategory') || settings?.[0]?.category || "";
   });
   
-  const [newNonWorkingDate, setNewNonWorkingDate] = useState<string>("");
-  const [selectedDayTypeId, setSelectedDayTypeId] = useState<string>(DayTypes?.[0]?.Id?.toString() || "");
-  const [isAddingDate, setIsAddingDate] = useState<boolean>(false);
-  
-  const [deletingDates, setDeletingDates] = useState<Record<string, boolean>>({});
   const [dateErrorMessage, setDateErrorMessage] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   
-  // États pour gérer la sauvegarde depuis le footer
   const [pendingSaveAction, setPendingSaveAction] = useState<{ isDirty: boolean; save: () => Promise<void> } | null>(null);
   const [isSavingPending, setIsSavingPending] = useState(false);
 
@@ -823,17 +1364,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [isSettingsOpen]);
 
-  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewNonWorkingDate(e.target.value);
-    if (dateErrorMessage) setDateErrorMessage(null);
-  };
-
   return (
     <Modal
       isOpen={isSettingsOpen}
       onClose={onClose}
       title="Paramètres"
-      className="w-[min(95vw,900px)] h-[85vh] max-h-[850px] overflow-hidden flex flex-col"
+      className={`${
+        currentCategoryObj?.key === 'nonWorkedDays' 
+          ? 'w-[min(95vw,500px)]' 
+          : 'w-[min(95vw,900px)]'
+      } h-[85vh] max-h-[850px] overflow-hidden flex flex-col`}
       classNameContent="flex-1 overflow-hidden p-4 flex flex-col min-h-0"
       confirmCloseOnOverlay={currentCategoryObj?.hasUnsavedChanges && pendingSaveAction?.isDirty}
       onSave={pendingSaveAction?.save}
@@ -884,218 +1424,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
 
                       {setting.type === "custom-non-working-dates" ? (
-                        <div className="flex flex-col gap-4 w-full">
-                          <div className="flex flex-col gap-2">
-                            <div className="flex flex-col sm:flex-row gap-3 items-center">
-                              <input
-                                type="date"
-                                id={setting.id}
-                                value={newNonWorkingDate}
-                                onChange={handleDateInputChange}
-                                className={`border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 transition-all duration-200 flex-1 poppins text-sm bg-transparent shadow-sm hover:shadow-md w-full sm:w-auto ${
-                                  dateErrorMessage ? "border-red-500 focus:ring-red-500" : "border-default focus:ring-primary"
-                                }`}
-                              />
-
-                              <select
-                                value={selectedDayTypeId}
-                                onChange={(e) => {
-                                  setSelectedDayTypeId(e.target.value);
-                                  if (dateErrorMessage) setDateErrorMessage(null);
-                                }}
-                                className="border border-default rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-sm bg-transparent shadow-sm hover:shadow-md w-full sm:w-auto min-w-[160px]"
-                              >
-                                {setting.dayTypesOptions?.map((dt: any) => (
-                                  <option key={dt.Id} value={dt.Id}>
-                                    {dt.Libelle}
-                                  </option>
-                                ))}
-                              </select>
-
-                              <button
-                                className="px-6 py-3 cursor-pointer bg-primary text-white rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md hover:shadow-lg flex items-center gap-2 shrink-0 w-full sm:w-auto justify-center"
-                                onClick={async () => {
-                                  if (!newNonWorkingDate) return;
-
-                                  const formattedInputDate = format(new Date(newNonWorkingDate), "yyyy-MM-dd");
-
-                                  if (setting.nonWorkingDates && setting.nonWorkingDates[formattedInputDate]) {
-                                    setDateErrorMessage(`La date du ${format(new Date(newNonWorkingDate), "dd/MM/yyyy")} est déjà enregistrée dans la liste.`);
-                                    return;
-                                  }
-
-                                  setDateErrorMessage(null);
-                                  setApiError(null);
-                                  setIsAddingDate(true);
-                                  const parsedDate = new Date(newNonWorkingDate).getTime();
-                                  
-                                  try {
-                                    if (setting.addNonWorkingDatesToPlanning) {
-                                      const response = await setting.addNonWorkingDatesToPlanning(parsedDate, selectedDayTypeId);
-                                      if (response && response.success && response.data) {
-                                        setting.setNonWorkingDates((prev: Record<string, {Id: number; TypeJourCode: string }>) => ({
-                                          ...prev,
-                                          [formattedInputDate]: {
-                                            Id: Number(response.data),
-                                            TypeJourCode: selectedDayTypeId,
-                                          }
-                                        }));
-                                        setNewNonWorkingDate("");
-                                      } else {
-                                        setApiError(response?.message || "Erreur lors de l'ajout de la date.");
-                                      }
-                                    } else {
-                                      setting.setNonWorkingDates((prev: Record<string, {Id: number; TypeJourCode: string }>) => ({
-                                        ...prev,
-                                        [formattedInputDate]: {
-                                          Id: Number(new Date().getTime()), 
-                                          TypeJourCode: selectedDayTypeId,
-                                        }
-                                      }));
-                                      setNewNonWorkingDate("");
-                                    }
-                                  } catch (error: any) {
-                                    setApiError(error?.message || "Erreur réseau lors de l'ajout de la date.");
-                                  } finally {
-                                    setIsAddingDate(false);
-                                  }
-                                }}
-                                disabled={isAddingDate}
-                              >
-                                {isAddingDate ? (
-                                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                  </svg>
-                                ) : (
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                  </svg>
-                                )}
-                                Ajouter
-                              </button>
-                            </div>
-
-                            {dateErrorMessage && (
-                              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-medium poppins border border-red-200 animate-fadeIn">
-                                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>{dateErrorMessage}</span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="bg-secondary/40 rounded-xl p-4 border border-light min-h-[180px]">
-                            <div className="space-y-2 max-h-60 overflow-y-auto">
-                              <h4 className="text-sm font-semibold mb-3 poppins">
-                                Jours configurés ({Object.keys(setting.nonWorkingDates || {}).length})
-                              </h4>
-
-                              {Object.entries(setting.nonWorkingDates || {}).map(([dateKey, val]: [string, any]) => {
-                                const itemObj = typeof val === "object" ? val : { id: val };
-                                
-                                const dayTypeInfo = setting.dayTypesOptions?.find((dt: any) => 
-                                  String(dt.Id || dt.id) === String(itemObj.TypeJourCode || itemObj.typeId)
-                                ) || itemObj;
-                                
-                                const libelle = dayTypeInfo?.Libelle || dayTypeInfo?.label || dayTypeInfo?.typeLabel || "Type inconnu";
-                                const bgCol = dayTypeInfo?.CouleurFond || dayTypeInfo?.bgColor || "#f3f4f6";
-                                const textCol = dayTypeInfo?.CouleurTexte || dayTypeInfo?.textColor || "#374151";
-                                const bold = dayTypeInfo?.isBold;
-                                const italic = dayTypeInfo?.isItalic;
-
-                                const isDeletingThisDate = Boolean(deletingDates[dateKey]);
-                                const dateObj = new Date(dateKey);
-
-                                return (
-                                  <div key={dateKey} className="flex items-center justify-between bg-white/60 rounded-2xl p-3 shadow-sm border border-light hover:shadow-md transition-all duration-200 group">
-                                    <div className="flex items-center gap-4">
-                                      
-                                      <div className="w-12 h-12 rounded-xl border border-light overflow-hidden shrink-0 shadow-sm">
-                                        <div
-                                          className="flex flex-col justify-center items-center h-full w-full relative transition-all"
-                                          style={{
-                                            backgroundColor: bgCol,
-                                            color: textCol,
-                                            fontWeight: bold ? "700" : "400",
-                                            fontStyle: italic ? "italic" : "normal",
-                                          }}
-                                        >
-                                          <span className="block text-lg leading-none mt-0.5">{format(dateObj, "dd")}</span>
-                                          <span className="block text-[10px] opacity-80 uppercase tracking-wider">{format(dateObj, "MMM")}</span>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="flex flex-col gap-0.5">
-                                        <span className="text-sm font-medium text-primary poppins">
-                                          {format(dateObj, "dd/MM/yyyy")}
-                                        </span>
-                                        <span className="text-xs text-secondary font-medium flex items-center gap-1.5">
-                                          <span 
-                                            className="w-2 h-2 rounded-full shadow-sm" 
-                                            style={{ backgroundColor: bgCol }}
-                                          />
-                                          {libelle}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    <button
-                                      className="text-red-400 hover:text-white hover:bg-red-500 w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                      disabled={isDeletingThisDate}
-                                      title="Supprimer cette date"
-                                      onClick={async () => {
-                                        setDeletingDates(prev => ({ ...prev, [dateKey]: true }));
-                                        setApiError(null);
-                                        
-                                        try {
-                                          if (setting.removeNonWorkingDatesFromPlanning) {
-                                            const response = await setting.removeNonWorkingDatesFromPlanning(itemObj.Id || itemObj.id);
-                                            if (response && response.success) {
-                                              setting.setNonWorkingDates((prev: any) => {
-                                                const newDates = { ...prev };
-                                                delete newDates[dateKey];
-                                                return newDates;
-                                              });
-                                            } else {
-                                              setApiError(response?.message || "Erreur lors de la suppression de la date.");
-                                            }
-                                          } else {
-                                            setting.setNonWorkingDates((prev: any) => {
-                                              const newDates = { ...prev };
-                                              delete newDates[dateKey];
-                                              return newDates;
-                                            });
-                                          }
-                                        } catch (error: any) {
-                                          setApiError(error?.message || "Erreur lors de la suppression de la date.");
-                                        } finally {
-                                          setDeletingDates(prev => {
-                                            const next = { ...prev };
-                                            delete next[dateKey];
-                                            return next;
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      {isDeletingThisDate ? (
-                                        <svg className="animate-spin w-4 h-4 text-current" fill="none" viewBox="0 0 24 24">
-                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                      ) : (
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                      )}
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
+                        <NonWorkingDaysEditor
+                          setting={setting}
+                          setError={setApiError}
+                        />
                       ) : setting.type === "day-type-settings" ? (
                         <div className="flex flex-col gap-6 w-full">
                           <NewDayTypeForm
