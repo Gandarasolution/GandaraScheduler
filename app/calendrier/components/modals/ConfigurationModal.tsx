@@ -332,13 +332,13 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Gestion des configurations" className="px-4 py-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Gestion des configurations" className="px-4 py-4 max-w-5xl w-full">
       <div className={`flex gap-6 poppins w-full mx-auto transition-all duration-300 ${
         (isCreatingConfig || editingConfig) ? 'max-w-6xl flex-row' : 'max-w-2xl flex-col'
       }`}>
         
         {/* Section principale - Liste des configurations */}
-        <div className={`${(isCreatingConfig || editingConfig) ? 'w-1/2' : 'w-full'} transition-all duration-300`}>
+        <div className={`${(isCreatingConfig || editingConfig) ? 'w-1/3' : 'w-full'} transition-all duration-300`}>
           <div className="max-h-[75vh] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent space-y-6">
         
         {/* Configuration actuelle */}
@@ -518,7 +518,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
         {/* Section de droite - Formulaire de création/édition */}
         {(isCreatingConfig || editingConfig) && (
-          <div className="w-1/2 border-l border-ultra-light pl-6">
+          <div className="w-2/3 border-l border-ultra-light pl-6">
             <div className="max-h-[75vh] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent relative">
               <div className="sticky top-0 backdrop-blur-md pb-4 border-b border-ultra-light mb-6 z-20">
                 <h3 className="font-bold text-primary text-xl flex items-center gap-2 pt-2">

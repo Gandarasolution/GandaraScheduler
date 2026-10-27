@@ -202,7 +202,7 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate, i
     const date = selectedDate;        
     const newTimeline = buildWindow(date);
     setDays(newTimeline);
-  }, [isDisplayWeekend, buildWindow, selectedDate]);
+  }, [isDisplayWeekend, buildWindow]);
 
   const getVisibleYears = (): number[] => {
     if (!days || days.length === 0) {
@@ -220,6 +220,11 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate, i
 
     return Array.from(yearsSet);
   };
+
+  useEffect(() => {
+    console.log(days);
+  }, [days]);
+
 
   return {
     days,
