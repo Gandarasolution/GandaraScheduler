@@ -258,6 +258,7 @@ export const CalendarModals = memo(({
       },
       {
         category: "Affichage mobile des événements",
+        key: "mobileAppointmentFields",
         items: [
           {
             id: "mobileAppointmentFields",

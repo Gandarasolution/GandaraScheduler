@@ -240,6 +240,23 @@ export const useAppointmentLogic = ({
     }
   }, [api, appointmentsRef, employees, onLockedError]);
 
+
+
+  const getPriorityForNewAppointment = useCallback((employeeId: number, startDate: number, endDate: number, id: number) => {
+    const overlappingAppointments = appointmentsRef.current.filter(app =>
+      Number(app.IdEmploye) === Number(employeeId) &&
+      app.DebutPlanningEvenement < endDate &&
+      app.FinPlanningEvenement > startDate &&
+      app.IdPlanningEvenement !== id
+    );
+
+    if (overlappingAppointments.length === 0) {
+      return 0;
+    }
+    return Math.max(...overlappingAppointments.map(app => app.PlanningEvenementPriorite ?? 0)) + 1;
+  }, [appointmentsRef]);
+
+
   // --- GESTION DE L'HISTORIQUE (UNDO) ---
 
   /**
@@ -568,7 +585,6 @@ export const useAppointmentLogic = ({
       resizeDirection?: 'left' | 'right';
     },
     saveToHistory: boolean = true,
-    newPriority?: number
   ): Promise<ActionResult> => {
       const {
         id,
@@ -627,21 +643,26 @@ export const useAppointmentLogic = ({
         return { success: false, message: 'Aucun créneau valide pour effectuer cette action.' };
       }
 
+      const newPriority = getPriorityForNewAppointment(newEmployeeId, newStartDate, newEndDate, id);
+
+      console.log(new Date(newStartDate), new Date(newEndDate), 'newPriority:', newPriority);
+      console.log(appointmentsRef.current.filter(app =>
+      Number(app.IdEmploye) === Number(newEmployeeId) &&
+      app.DebutPlanningEvenement < newEndDate &&
+      app.FinPlanningEvenement > newStartDate &&
+      app.IdPlanningEvenement !== id
+    ))
+
+
       const applyLocalMove = () => {
         const createdAppointments: Appointment[] = [];
-
-        if (newPriority !== undefined) {
-          // La mise à jour des bornes réorganise les rendez-vous une seule fois,
-          // avant que la requête de persistance ne soit envoyée.
-          appointment.PlanningEvenementPriorite = newPriority;
-        }
 
         const processIntervals = (startIndex: number, endIndex: number, step: number, mainIndex: number) => {
           const mainDay = days[mainIndex];
           const mainStart = resizeDirection === 'left' ? mainDay.start : newStartDate;
           const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
 
-          // Déjà validé côté API : on applique localement sans rappel API.
+         
           updateAppointmentBounds(
             {
               id: appointment.IdPlanningEvenement,
@@ -665,7 +686,7 @@ export const useAppointmentLogic = ({
                 endDate: day.end,
                 employeeId: newEmployeeId,
                 ressource: ressource,
-                priority: newPriority !== undefined ? newPriority + 1 : (appointment.PlanningEvenementPriorite ?? 0) + 1,
+                priority: newPriority,
               },
               false,
               appointment.AnnotationPlanningEvenement,
@@ -706,7 +727,7 @@ export const useAppointmentLogic = ({
         IdEmploye: newEmployeeId,
         IdPlanningRessource: ressource.IdPlanningRessource,
         AnnotationPlanningEvenement: appointment.AnnotationPlanningEvenement,
-        PlanningEvenementPriorite: newPriority !== undefined ? newPriority : appointment.PlanningEvenementPriorite,
+        PlanningEvenementPriorite: newPriority,
         IdPlanningEtiquette: appointment.Etiquette?.IdPlanningEtiquette,
       };
 
@@ -718,9 +739,21 @@ export const useAppointmentLogic = ({
           onLockedError(resp?.message);
 
           return { success: false, message: resp.message};
-        } else 
-        
-        return { success: true };
+        } else {
+          const data = resp?.data;
+          for (const res of Array.isArray(data) ? data : []) {
+            if (res?.IdPlanningEvenement) {
+              const normalizedRes = {
+                ...res,
+                IdEmploye: Number(res.IdEmploye) // Force la conversion en number
+              };
+              appointmentsRef.current = appointmentsRef.current.map(app => 
+                app.IdPlanningEvenement === res.IdPlanningEvenement ? normalizedRes : app
+              );
+            }
+          }
+          return { success: true };
+        }
       }catch (error) {
         console.error('Erreur réseau updateEvenement', error);
         appointmentsRef.current = previousAppointments;

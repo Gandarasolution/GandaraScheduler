@@ -15,7 +15,6 @@ import {
   GripVertical,
   Loader2,
   Lock,
-  Pencil,
   Plus,
   SlidersHorizontal,
   Sparkles,
@@ -33,6 +32,7 @@ import type {
 import type { CategoryStructure } from "./DataTableFrame";
 import calendarConfigService from "@/app/service/calendarConfig.service";
 import ressourceService from "@/app/service/ressource.service";
+import employeeService from "@/app/service/employee.service";
 
 export type ChantierView = {
   id: string;
@@ -67,7 +67,7 @@ export type ChantierViewsControlProps = {
 type ApiView = Record<string, any>;
 
 type ViewUser = {
-  Id: number;
+  IdPersonnel: number;
   Nom: string;
   Prenom?: string;
 };
@@ -628,7 +628,7 @@ const ChantierViewsControl: React.FC<
     setOptionsLoaded(false);
 
     Promise.all([
-      calendarConfigService.getAllUsersForVue(),
+      employeeService.getAllUsersActif(),
       ressourceService.getFilterOptionsDynamic(
         "chantier-table",
         filterKeys
@@ -643,11 +643,11 @@ const ChantierViewsControl: React.FC<
           Array.isArray(rawUsers)
             ? rawUsers
                 .map((user: any) => ({
-                  Id: Number(user.Id ?? user.IdPersonnel),
+                  IdPersonnel: Number(user.Id ?? user.IdPersonnel),
                   Nom: user.Nom ?? user.name ?? "",
                   Prenom: user.Prenom ?? user.firstName,
                 }))
-                .filter((user: ViewUser) => user.Id > 0)
+                .filter((user: ViewUser) => user.IdPersonnel > 0)
             : []
         );
 
@@ -1175,7 +1175,7 @@ const ChantierViewsControl: React.FC<
       };
 
       return (
-        <div key={key} className="min-w-0 space-y-3 rounded-xl border border-default p-3 bg-primary-bg/50">
+        <div key={category.label + '-group-' + Math.random()} className="min-w-0 space-y-3 rounded-xl border border-default p-3 bg-primary-bg/50">
           <div className="flex items-center justify-between px-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
               {category.label} (Par tranche)
@@ -1222,6 +1222,7 @@ const ChantierViewsControl: React.FC<
 
           {/* Combobox classique pour affiner au cas par cas si besoin */}
           <Combobox
+            multiple={true}
             options={options.map((option) => ({
               value: String(option.value),
               label: String(option.label),
@@ -1243,7 +1244,7 @@ const ChantierViewsControl: React.FC<
 
     if (key === "etat") {
       return (
-        <> 
+        <React.Fragment key={category.label + '-group-' + Math.random()}> 
           <div className="flex items-center justify-between gap-2 px-1 py-0.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
               {category.label}
@@ -1254,7 +1255,7 @@ const ChantierViewsControl: React.FC<
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-4" key={key}>
+          <div className="flex flex-wrap gap-4" key={category.label + '-group-' + Math.random()}>
             {options.map((option) => {
               const isSelected = values.includes(option.value) ?? false;
               return (
@@ -1282,13 +1283,13 @@ const ChantierViewsControl: React.FC<
               );
             })}
           </div>
-        </>
+        </React.Fragment>
         
       );
     }
 
     return (
-      <div key={key} className="min-w-0 space-y-1.5">
+      <div key={category.label + '-group-' + Math.random()} className="min-w-0 space-y-1.5">
         <div className="flex items-center justify-between gap-2 px-1 py-0.5">
           <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
             {category.label}
@@ -1304,6 +1305,7 @@ const ChantierViewsControl: React.FC<
           <Skeleton className="h-10 w-full rounded-xl" />
         ) : (
           <Combobox
+            multiple={true}
             options={options.map((option) => ({
               value: String(option.value),
               label: String(option.label),
@@ -1528,11 +1530,12 @@ const ChantierViewsControl: React.FC<
                   <Skeleton className="h-10 w-full rounded-xl" />
                 ) : (
                   <Combobox
+                    multiple={true}
                     options={availableUsers
-                      .filter((user) => user.Id !== userId)
+                      .filter((user) => user.IdPersonnel !== userId)
                       .map((user) => ({
-                        value: String(user.Id),
-                        label: `${user.Nom} ${user.Prenom ?? ""} (${user.Id})`.trim(),
+                        value: String(user.IdPersonnel),
+                        label: `${user.Nom} ${user.Prenom ?? ""} (${user.IdPersonnel})`.trim(),
                       }))}
                     value={selectedUsers.map(String)}
                     onValueChange={(nextValues) =>

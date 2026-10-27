@@ -221,10 +221,6 @@ export const useTimeline = ({ isDisplayWeekend, selectedDate, setSelectedDate, i
     return Array.from(yearsSet);
   };
 
-  useEffect(() => {
-    console.log(days);
-  }, [days]);
-
 
   return {
     days,

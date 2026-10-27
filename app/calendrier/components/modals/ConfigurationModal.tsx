@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from "react";
 import { CalendarConfig, ImageType, GroupingLevel, User } from "../../types";
 import Modal from "./Modal";
-import { calendarConfigService } from "@/app/service";
+import { calendarConfigService, employeeService } from "@/app/service";
 import { useAuth } from "../../hooks/utils/AuthContext";
 
 // --- Composant Loader Uniformisé ---
@@ -153,8 +153,8 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
       // --- NOUVEAU : Récupérer les utilisateurs dynamiquement ---
       setIsLoadingUsers(true);
       // Remplace "getUsers" par la fonction exacte de ton service si elle est différente
-      if (calendarConfigService.getAllUsersForVue) {
-        calendarConfigService.getAllUsersForVue()
+      if (employeeService.getAllUsersActif) {
+        employeeService.getAllUsersActif()
           .then((res: any) => setAllUsers(res.data || res || []))
           .catch(console.error)
           .finally(() => setIsLoadingUsers(false));
@@ -332,7 +332,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
 
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Gestion des configurations" className="px-4 py-4 max-w-5xl w-full">
+    <Modal isOpen={isOpen} onClose={onClose} title="Gestion des configurations" className={`px-4 py-4 ${isCreatingConfig || editingConfig ? 'max-w-5xl' : 'max-w-xl'} w-full`}>
       <div className={`flex gap-6 poppins w-full mx-auto transition-all duration-300 ${
         (isCreatingConfig || editingConfig) ? 'max-w-6xl flex-row' : 'max-w-2xl flex-col'
       }`}>
@@ -631,7 +631,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                           <div className="divide-y divide-gray-100">
                             {allUsers.map((u: any) => {
                              // Gérer les différentes structures d'objet utilisateur venant de l'API
-                              const uid = Number(u.Id);
+                              const uid = Number(u.IdPersonnel);
                               const isMe = Number(uid) === Number(user.IdPersonnel); // Désactiver la case de l'utilisateur courant pour éviter de se retirer l'accès
                               //console.log(selectedUsers.includes(uid))
                               return (

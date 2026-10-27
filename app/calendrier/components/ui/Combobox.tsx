@@ -1,30 +1,56 @@
+"use client";
+
 import { useState, useRef, useEffect, memo } from 'react';
-
-
 
 export interface ComboboxOption {
   value: string;
   label: string;
 }
 
-interface ComboboxProps {
+type BaseComboboxProps = {
   options: ComboboxOption[];
+  placeholder?: string;
+  disabled?: boolean;
+};
+
+type SingleComboboxProps = BaseComboboxProps & {
+  multiple?: false;
+  value: string;
+  onValueChange: (value: string) => void;
+};
+
+type MultiComboboxProps = BaseComboboxProps & {
+  multiple: true;
   value: string[];
   onValueChange: (value: string[]) => void;
-  placeholder?: string;
-}
+};
 
-export function Combobox({ options, value, onValueChange, placeholder }: ComboboxProps) {
+export type ComboboxProps = SingleComboboxProps | MultiComboboxProps;
+
+export function Combobox(props: ComboboxProps) {
+  const { options, placeholder, disabled, multiple = false } = props;
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOptions = options.filter(opt => value.includes(opt.value));
+  // Normalisation des valeurs sélectionnées sous forme d'un tableau pour simplifier la logique interne
+  const selectedValues = multiple
+    ? (props.value as string[])
+    : props.value
+    ? [props.value as string]
+    : [];
 
-  const filteredOptions = options.filter(option =>
-    option?.label?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    !value.includes(option.value)
-  );
+  const selectedOptions = options.filter(opt => selectedValues.includes(opt.value));
+
+  // En mode 'single', on montre l'option actuellement choisie si la recherche est vide
+  // En mode 'multiple', on filtre les options déjà sélectionnées
+  const filteredOptions = options.filter(option => {
+    const matchesQuery = option?.label?.toLowerCase().includes(searchQuery.toLowerCase());
+    if (multiple) {
+      return matchesQuery && !selectedValues.includes(option.value);
+    }
+    return matchesQuery;
+  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -44,17 +70,27 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
   };
 
   const handleOptionClick = (option: ComboboxOption) => {
-    onValueChange([...value, option.value]);
+    if (multiple) {
+      (props as MultiComboboxProps).onValueChange([...(props.value as string[]), option.value]);
+    } else {
+      (props as SingleComboboxProps).onValueChange(option.value);
+    }
     setSearchQuery('');
     setIsOpen(false);
   };
 
   const handleRemoveOption = (optionValue: string) => {
-    onValueChange(value.filter(v => v !== optionValue));
+    if (multiple) {
+      (props as MultiComboboxProps).onValueChange(
+        (props.value as string[]).filter(v => v !== optionValue)
+      );
+    } else {
+      (props as SingleComboboxProps).onValueChange('');
+    }
   };
 
   const handleInputFocus = () => {
-    setIsOpen(true);
+    if (!disabled) setIsOpen(true);
   };
 
   return (
@@ -71,8 +107,13 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
           value={searchQuery}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
-          placeholder={placeholder}
-          className="w-full rounded-xl border border-default bg-secondary-bg py-2 pl-9 pr-9 text-sm text-primary outline-none transition focus:border-primary"
+          disabled={disabled}
+          placeholder={
+            !multiple && selectedOptions.length > 0
+              ? selectedOptions[0].label
+              : placeholder
+          }
+          className="w-full rounded-xl border border-default bg-secondary-bg py-2.5 pl-9 pr-9 text-sm text-primary outline-none transition focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -82,41 +123,51 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
       </div>
 
       {/* Menu déroulant des options */}
-      {isOpen && filteredOptions.length > 0 && (
+      {isOpen && !disabled && filteredOptions.length > 0 && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-default bg-secondary-bg shadow-lg">
-          {filteredOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => handleOptionClick(option)}
-              className="w-full text-left px-3 py-2 transition-colors cursor-pointer"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
+          {filteredOptions.map((option) => {
+            const isSelected = selectedValues.includes(option.value);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleOptionClick(option)}
+                className={`w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer flex items-center justify-between ${
+                  isSelected ? 'font-semibold text-primary-600' : 'text-primary'
+                }`}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <span>{option.label}</span>
+                {isSelected && (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {isOpen && searchQuery && filteredOptions.length === 0 && value.length < options.length && (
+      {isOpen && !disabled && searchQuery && filteredOptions.length === 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-xl border border-default bg-secondary-bg px-3 py-2 text-xs text-secondary shadow-lg">
           Aucun résultat trouvé
         </div>
       )}
 
-      {/* Éléments sélectionnés affichés sous le select */}
-      {selectedOptions.length > 0 && (
+      {/* Éléments sélectionnés (badges) */}
+      {selectedOptions.length > 0 && multiple && (
         <div className="flex flex-wrap gap-1.5 pt-1">
           {selectedOptions.map((option) => (
             <div
               key={option.value}
               className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium"
-               style={{
+              style={{
                 backgroundColor: 'var(--color-primary-100)',
                 color: 'var(--color-primary-600)',
                 border: 'none'
@@ -126,10 +177,9 @@ export function Combobox({ options, value, onValueChange, placeholder }: Combobo
               <button
                 type="button"
                 onClick={() => handleRemoveOption(option.value)}
+                disabled={disabled}
                 className="rounded-full p-0.5 transition-colors"
-                style={{
-                  color: 'var(--color-primary-600)'
-                }}
+                style={{ color: 'var(--color-primary-600)' }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--color-primary-400)';
                   e.currentTarget.style.color = 'white';

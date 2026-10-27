@@ -3,6 +3,7 @@ import { CategoryStructure } from ".";
 import { Appointment, AutreItem, ChantierItem, Equipe, Item, User } from "../../types";
 import { AppointmentItem } from "../Calendar";
 import { GenericDataItem } from "./DataTableFrame";
+import { AlertCircle, ArrowRightLeft, Check } from "lucide-react";
 
 const getWithSeparator = (num: string, colonne: string): string => {
     if (colonne === 'TM' || colonne === 'HR' || colonne === 'DPF' || colonne === 'RPF' || colonne === 'SH' || colonne === 'SP') {
@@ -22,6 +23,7 @@ export interface TableConfigDeps {
   onTeamChange?: (employee: User, groupId: number | null) => Promise<{ success: boolean }>;
   onTransfer?: (employee: User) => void;
   ressources?: Record<number, Item>;
+  setNotification?: (message: string) => void;
 }
 
 // 1. Renderer pour les images de Chantiers / Paie (Affiche un mini AppointmentItem)
@@ -236,6 +238,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                     item={item as unknown as User}
                     initialTeams={deps.initialTeams || {}}
                     onTeamChange={deps.onTeamChange || (async () => ({ success: true }))}
+                    setNotification={deps.setNotification || (() => {})}
                 />
                 ), 
             },
@@ -258,18 +261,18 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 );
                 }
             },
-            { key: 'actions', label: 'Actions', sortable: false, width: 150,
+            { key: 'actions', label: 'Actions', sortable: false, width: 180,
                 renderer: (_value: any, item: GenericDataItem) => (
                     <div className="flex items-center justify-center w-full h-full">
                         <button
                             type="button"
-                            
                             onClick={(event) => {
                                 event.stopPropagation();
                                 deps.onTransfer?.(item as unknown as User);
                             }}
-                            className="px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500  cursor-pointer"
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors cursor-pointer"
                         >
+                            <ArrowRightLeft className="w-4 h-4" /> 
                             Transférer
                         </button>
                     </div>
@@ -379,48 +382,68 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
 
 
   
-type TeamSelectCellProps = {
-  item: User;
-  initialTeams: Record<number, Equipe>;
-  onTeamChange: (employee: User, groupId: number | null) => Promise<{ success: boolean }>;
-};
+interface TeamSelectCellProps {
+  item: any;
+  initialTeams: Record<number, any>;
+  onTeamChange: (item: any, newGroupId: number | null) => Promise<{ success: boolean }>;
+  setNotification: (message: string) => void;
+}
 
-const TeamSelectCell = ({ item, initialTeams, onTeamChange }: TeamSelectCellProps) => {
-  // On crée un état local qui prend la valeur de départ
-  const [localValue, setLocalValue] = useState(item.Equipe || '');
 
-  // Si jamais la donnée d'origine change depuis le serveur, on met à jour
+const TeamSelectCell = ({ item, initialTeams, onTeamChange, setNotification }: TeamSelectCellProps) => {
+  const initialValue = item.Equipe || '';
+  const [localValue, setLocalValue] = useState<string | number>(initialValue);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isError, setIsError] = useState(false); 
+
+  // Maintien de la synchro avec la donnée serveur
   useEffect(() => {
     setLocalValue(item.Equipe || '');
+    setIsError(false); // Réinitialise l'erreur si la donnée serveur change
   }, [item.Equipe]);
 
+  const hasChanged = localValue.toString() !== initialValue.toString();
+
+  const handleSave = () => {
+    if (!onTeamChange) return;
+    
+    setIsSaving(true);
+    setIsError(false); // On réinitialise l'état d'erreur avant de réessayer
+    
+    const newGroupId = localValue ? Number(localValue) : null;
+
+    onTeamChange(item, newGroupId)
+      .then(response => {
+        if (!response.success) {
+          // En cas d'échec : on déclenche l'erreur, on NE REVERT PAS pour laisser le bouton visible
+          setIsError(true);
+          setNotification("Erreur lors de la mise à jour de l'équipe. Veuillez réessayer.");
+        } else {
+          item.Equipe = newGroupId; // Mise à jour de la valeur dans l'objet item
+        }
+      })
+      .catch(() => {
+        setIsError(true); // On déclenche l'erreur ici aussi
+        setNotification("Erreur lors de la mise à jour de l'équipe. Veuillez réessayer.");
+      })
+      .finally(() => {
+        setIsSaving(false);
+      });
+  };
+
   return (
-    <div className="flex items-center justify-start w-full h-full">
+    <div className="flex items-center justify-start w-full h-full gap-2">
       <select
-        value={localValue} // 👈 Le select écoute l'état local, pas la prop
+        value={localValue}
         onChange={(e) => {
-          const newValue = e.target.value;
-          const newGroupId = newValue ? Number(newValue) : null;
-          
-          // 1. On met à jour l'affichage instantanément
-          setLocalValue(newValue); 
-          
-          // 2. ENSUITE, on appelle ta fonction parent (API, etc.)
-          if (onTeamChange) {
-            onTeamChange(item, newGroupId).then(response => {
-              if (!response.success) {
-                // Si la mise à jour a échoué, on revert l'affichage
-                setLocalValue(item.Equipe || '');
-                alert('Erreur lors de la mise à jour de l’équipe. Veuillez réessayer.');
-              }
-            }).catch(() => {
-              setLocalValue(item.Equipe || '');
-              alert('Erreur lors de la mise à jour de l’équipe. Veuillez réessayer.');
-            });
-          }
+          setLocalValue(e.target.value);
+          setIsError(false); // 👈 On enlève le rouge si l'utilisateur change à nouveau la valeur
         }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full px-2 py-1 text-sm border border-default rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all cursor-pointer"
+        disabled={isSaving}
+        className={`w-full px-2 py-1 text-sm border rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary transition-all cursor-pointer disabled:opacity-50 ${
+          isError ? 'border-red-500 focus:border-red-500' : 'border-default focus:border-primary'
+        }`}
       >
         <option value="">Aucune équipe</option>
         {Object.values(initialTeams).map((team: any) => (
@@ -429,6 +452,32 @@ const TeamSelectCell = ({ item, initialTeams, onTeamChange }: TeamSelectCellProp
           </option>
         ))}
       </select>
+
+      {hasChanged && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSave();
+          }}
+          disabled={isSaving}
+          className={`cursor-pointer p-1 text-white rounded-md disabled:opacity-50 transition-colors flex-shrink-0 ${
+            isError 
+              ? 'bg-red-500 hover:bg-red-600' // 👈 Rouge en cas d'erreur
+              : 'bg-primary hover:bg-secondary' // Couleur normale
+          }`}
+          title={isError ? "Réessayer" : "Appliquer le changement"}
+        >
+          {isSaving ? (
+            <span className="w-4 h-4 block border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : isError ? (
+            <AlertCircle size={20} /> // 👈 Icône qui change si erreur (optionnel, tu peux garder Check)
+          ) : (
+            <Check size={20} />
+          )}
+        </button>
+      )}
     </div>
   );
 };
+
+export default TeamSelectCell;

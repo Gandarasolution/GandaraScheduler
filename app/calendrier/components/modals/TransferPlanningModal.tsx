@@ -1,16 +1,17 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useMemo } from "react";
 import { employeeService, evenementService } from "@/app/service";
 import type { User } from "@/app/calendrier/types";
 import Modal from "./Modal";
 import { Loader } from "../..";
+import Combobox, { type ComboboxOption } from "../ui/Combobox";
 
 type TransferPlanningModalProps = {
   isOpen: boolean;
   sourceEmployee: User | null;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (data: any) => void;
 };
 
 type ApiResponse<T> = {
@@ -52,10 +53,8 @@ export default function TransferPlanningModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Ne rien charger si la modale est fermée
     if (!isOpen) return;
 
-    // Réinitialisation du formulaire à chaque ouverture
     setTargetEmployeeId("");
     setStartDate("");
     setEndDate("");
@@ -73,15 +72,16 @@ export default function TransferPlanningModal({
 
     const loadEmployees = async () => {
       try {
-        const response = await employeeService.getEmployees();
+        const response = await employeeService.getAllUsersActif();
         const data = getResponseData<User[] | { data?: User[]; rows?: User[] }>(response);
         const loadedEmployees = Array.isArray(data)
           ? data
           : data?.data ?? data?.rows ?? [];
 
+
         if (isMounted) {
           setEmployees(loadedEmployees);
-          if (!loadedEmployees.some((emp) => Number(emp.IdPersonnel) === employeeId)) {
+          if (!loadedEmployees.some((emp) => Number(emp.IdPersonnel) === Number(employeeId))) {
             setError("Le personnel sélectionné est introuvable.");
           }
         }
@@ -103,12 +103,21 @@ export default function TransferPlanningModal({
     };
   }, [isOpen, sourceEmployee?.IdPersonnel]);
 
-  // Si la modale n'est pas ouverte, on ne rend rien du tout
-  if (!isOpen) return null;
-
-  const targetEmployees = employees.filter(
-    (employee) => employee.IdPersonnel !== sourceEmployee?.IdPersonnel
+  const targetEmployees = useMemo(
+    () => employees.filter((employee) => employee.IdPersonnel !== sourceEmployee?.IdPersonnel),
+    [employees, sourceEmployee?.IdPersonnel]
   );
+
+  const targetEmployeeOptions: ComboboxOption[] = useMemo(
+    () =>
+      targetEmployees.map((emp) => ({
+        value: String(emp.IdPersonnel),
+        label: `${emp.Nom}`,
+      })),
+    [targetEmployees]
+  );
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -144,7 +153,7 @@ export default function TransferPlanningModal({
         throw new Error(response.message || "Le transfert n'a pas pu être effectué.");
       }
 
-      onSuccess?.();
+      onSuccess?.(response.data);
       onClose();
     } catch (transferError) {
       setError(
@@ -208,24 +217,19 @@ export default function TransferPlanningModal({
 
             {/* Personnel destinataire */}
             <section>
-              <label htmlFor="transfer-target-employee" className="mb-2.5 block text-sm font-semibold text-primary">
+              <label className="mb-2.5 block text-sm font-semibold text-primary">
                 Personnel destinataire <span className="ml-1 text-error">*</span>
               </label>
-              <select
-                id="transfer-target-employee"
+              
+              <Combobox
+                multiple={false}
+                options={targetEmployeeOptions}
                 value={targetEmployeeId}
-                onChange={(event) => setTargetEmployeeId(event.target.value)}
-                required
+                onValueChange={(val: string) => setTargetEmployeeId(val)}
+                placeholder="Sélectionnez un collaborateur"
                 disabled={isSubmitting || targetEmployees.length === 0}
-                className={fieldClassName}
-              >
-                <option value="" disabled>Sélectionnez un collaborateur</option>
-                {targetEmployees.map((employee) => (
-                  <option key={employee.IdPersonnel} value={employee.IdPersonnel}>
-                    {employee.Prenom} {employee.Nom}
-                  </option>
-                ))}
-              </select>
+              />
+
               <p className="mt-2 text-xs text-secondary">
                 Les événements seront affectés au collaborateur sélectionné.
               </p>

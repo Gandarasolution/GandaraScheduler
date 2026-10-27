@@ -615,7 +615,7 @@ export default function HomePage({
       if (!hasInitializedEmployeesRef.current) {
         const employeesResponse =
           hasPermission(23) || hasPermission(22)
-            ? await employeeService.getEmployees()
+            ? await employeeService.getEmployeesPlanning()
             : await employeeService.getEmployee(user.IdPersonnel);
 
         if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
@@ -675,7 +675,7 @@ export default function HomePage({
       hasInitializedEmployeesRef.current = true;
       const employeesResponse =
         hasPermission(23) || hasPermission(22)
-          ? await employeeService.getEmployees()
+          ? await employeeService.getEmployeesPlanning()
           : null;
 
       if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
@@ -813,7 +813,7 @@ export default function HomePage({
       dataLayer.resetPlanningData();
 
       const employeesResponse = hasPermission(23) || hasPermission(22)
-        ? await employeeService.getEmployees()
+        ? await employeeService.getEmployeesPlanning()
         : await employeeService.getEmployee(user.IdPersonnel);
 
         //console.log('Employees Response:', employeesResponse);
@@ -900,7 +900,11 @@ export default function HomePage({
         break;
 
       case 'APPOINTMENT_UPDATED':
-        dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.IdPlanningEvenement) ? { ...appt, ...data, isLocked: false } : appt));        
+        for (const res of Array.isArray(data) ? data : []) {
+          if (res?.IdPlanningEvenement) {
+              dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map(app => Number(app.IdPlanningEvenement) === Number(res.IdPlanningEvenement) ? {...app, ...res, isLocked: false} : app);
+            }
+        }
         break;
 
       case 'APPOINTMENT_AND_RESSOURCE_UPDATED':
@@ -1048,9 +1052,9 @@ export default function HomePage({
           isOpen={transferEmployee !== null}
           sourceEmployee={transferEmployee}
           onClose={() => setTransferEmployee(null)}
-          onSuccess={() => {
+          onSuccess={(data) => {
             setTableRefreshVersion((version) => version + 1);
-            setLockNotification("Le planning a été transféré avec succès.");
+            setLockNotification(`${data.NombreEvenementsTransferes} événements transférés avec succès de ${data.NomPersonnelSource} vers ${data.NomPersonnelCible}.`);
           }}
         />
         <div className="h-screen flex flex-col overflow-hidden bg-page poppins">
@@ -1183,49 +1187,51 @@ export default function HomePage({
                       {viewState.viewType === 'chantier-table' && chantierViewsLoading ? (
                         <Loader message="Chargement de la vue chantier..." />
                       ) : <DataTableFrame
-                        key={viewState.viewType}
-                        categoriesStructure={(() => {
-                          const structure = viewState.viewType === 'chantier-table'
-                            ? chantierStructure
-                            : getTableStructure(viewState.viewType, {
-                            handleOpenEditModal: appointmentLogic.handleOpenEditModal,
-                            onImageClick: interaction.handleOpenImageModal,
-                            initialTeams: dataLayer.initialTeams,
-                            onTeamChange: dataLayer.updateEmployeeGroup,
-                            onTransfer: handleTransferEmployee,
-                            ressources: dataLayer.itemsRef.current,
-                          }) || [];
-                          if (viewState.viewType !== 'chantier-table' || !chantierColumns) return structure;
-                          if (chantierColumns.length === 0) return structure;
-                          const order = new Map(chantierColumns.map((column, index) => [column, index]));
-                          const filteredStructure = structure
-                          .map(category => ({
-                            ...category,
-                            attributes: category.attributes.filter(attribute =>
-                                chantierColumns.includes(`${category.key}.${attribute.key}`)
-                              ).sort((left, right) =>
-                                (order.get(`${category.key}.${left.key}`) ?? Number.MAX_SAFE_INTEGER) -
-                                (order.get(`${category.key}.${right.key}`) ?? Number.MAX_SAFE_INTEGER)
-                              ),
-                            }))
-                            .filter(category => category.attributes.length > 0)
-                            .sort((left, right) => {
-                              const leftOrder = order.get(`${left.key}.${left.attributes[0]?.key}`) ?? Number.MAX_SAFE_INTEGER;
-                              const rightOrder = order.get(`${right.key}.${right.attributes[0]?.key}`) ?? Number.MAX_SAFE_INTEGER;
-                              return leftOrder - rightOrder;
-                            });
-                          return filteredStructure.length > 0 ? filteredStructure : structure;
-                        })()}
-                        realtimeUpdate={lastMercureEvent}
-                        enablePagination={true}
-                        paginatedSearchFunction={handlePaginatedSearch}
-                        refreshKey={dataLayer.appointmentsVersion + tableRefreshVersion}
-                        loadingElement={<Loader message="Chargement des données..." />}
-                        showGroupHeaders={viewState.viewType === 'chantier-table'}
-                        onRowClick={viewState.viewType === 'employee-table' ? undefined : handleTableRowClick}
-                        onRightClick={viewState.viewType === 'employee-table' ? undefined : interaction.handleDataTableContextMenu}
-                        heightCell={60}
-                      />}
+                            key={viewState.viewType}
+                            categoriesStructure={(() => {
+                              const structure = viewState.viewType === 'chantier-table'
+                                ? chantierStructure
+                                : getTableStructure(viewState.viewType, {
+                                handleOpenEditModal: appointmentLogic.handleOpenEditModal,
+                                onImageClick: interaction.handleOpenImageModal,
+                                initialTeams: dataLayer.initialTeams,
+                                onTeamChange: dataLayer.updateEmployeeGroup,
+                                onTransfer: handleTransferEmployee,
+                                ressources: dataLayer.itemsRef.current,
+                                setNotification: setLockNotification,
+                              }) || [];
+                              if (viewState.viewType !== 'chantier-table' || !chantierColumns) return structure;
+                              if (chantierColumns.length === 0) return structure;
+                              const order = new Map(chantierColumns.map((column, index) => [column, index]));
+                              const filteredStructure = structure
+                              .map(category => ({
+                                ...category,
+                                attributes: category.attributes.filter(attribute =>
+                                    chantierColumns.includes(`${category.key}.${attribute.key}`)
+                                  ).sort((left, right) =>
+                                    (order.get(`${category.key}.${left.key}`) ?? Number.MAX_SAFE_INTEGER) -
+                                    (order.get(`${category.key}.${right.key}`) ?? Number.MAX_SAFE_INTEGER)
+                                  ),
+                                }))
+                                .filter(category => category.attributes.length > 0)
+                                .sort((left, right) => {
+                                  const leftOrder = order.get(`${left.key}.${left.attributes[0]?.key}`) ?? Number.MAX_SAFE_INTEGER;
+                                  const rightOrder = order.get(`${right.key}.${right.attributes[0]?.key}`) ?? Number.MAX_SAFE_INTEGER;
+                                  return leftOrder - rightOrder;
+                                });
+                              return filteredStructure.length > 0 ? filteredStructure : structure;
+                            })()}
+                            realtimeUpdate={lastMercureEvent}
+                            enablePagination={true}
+                            paginatedSearchFunction={handlePaginatedSearch}
+                            refreshKey={dataLayer.appointmentsVersion + tableRefreshVersion}
+                            loadingElement={<Loader message="Chargement des données..." />}
+                            showGroupHeaders={viewState.viewType === 'chantier-table'}
+                            onRowClick={viewState.viewType === 'employee-table' ? undefined : handleTableRowClick}
+                            onRightClick={viewState.viewType === 'employee-table' ? undefined : interaction.handleDataTableContextMenu}
+                            heightCell={60}
+                          />
+                      }
                     </Suspense>
                   ) : (
                     <>

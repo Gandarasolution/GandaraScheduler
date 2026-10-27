@@ -61,9 +61,6 @@ async function getVueDetails(id: number) {
   return await getRequest(`/api/planning/vue/${id}`, 'getVueDetails');
 }
 
-async function getAllUsersForVue() {
-  return await getRequest(`/api/planning/vue/users`, 'getAllUsersForVue');
-}
 
 async function getLastChantierView() {
   return await getRequest('/api/planning/chantier/getLastVue', 'getLastChantierView');
@@ -189,7 +186,6 @@ export default {
   getLastPositionForUser,
   setLastPositionForUser,
   getVueDetails,
-  getAllUsersForVue,
   getLastChantierView,
   getChantierViewDetails,
   getChantierViewsByUserId,

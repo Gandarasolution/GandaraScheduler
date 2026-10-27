@@ -103,9 +103,12 @@ const MobileDisplayEditor = ({
     return <Loader size="md" className="min-h-40 rounded-xl border border-light" message="Chargement..." />;
   }
 
+  const optionsCount = setting.options?.length || 0;
+
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="rounded-xl">
+        {/* VERSION MOBILE */}
         <div className="space-y-3 md:hidden">
           <div className="rounded-xl border border-light bg-secondary p-3 text-xs text-secondary">
             Activez les champs à afficher dans la carte mobile. Les informations secondaires apparaîtront dans le panneau « Voir plus ».
@@ -138,62 +141,64 @@ const MobileDisplayEditor = ({
             );
           })}
 
-          <div className="rounded-xl border-t-2 border-primary bg-secondary-bg p-3">
-            <div className="mb-3 flex items-center gap-3">
-              <p className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</p>
+          {/* Preview Mobile */}
+          <div className="rounded-xl border-t-2 border-primary bg-secondary-bg p-3 space-y-3">
+            <div className="flex items-center gap-3">
+              <p className="shrink-0 text-xs font-semibold text-secondary uppercase tracking-wider">Prévisualisation</p>
               <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
-                <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
-                <div className="min-h-24">
-                  <AppointmentCard
-                    app={previewAppointment}
-                    items={[previewItem]}
-                    employees={[previewEmployee]}
-                    preview
-                    displayConfig={{ primaryFields: localValue.primaryFields, secondaryFields: [] } as MobileAppointmentDisplayConfig}
-                  />
-                </div>
+                <p className="mb-2 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
+                <AppointmentCard
+                  app={previewAppointment}
+                  items={[previewItem]}
+                  employees={[previewEmployee]}
+                  preview
+                  displayConfig={{ primaryFields: localValue.primaryFields, secondaryFields: [] } as MobileAppointmentDisplayConfig}
+                />
               </div>
               <div className="min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
-                <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
-                <div className="min-h-24">
-                  <AppointmentCard
-                    app={previewAppointment}
-                    items={[previewItem]}
-                    employees={[previewEmployee]}
-                    preview
-                    showCard={false}
-                    displayConfig={{ primaryFields: [], secondaryFields: localValue.secondaryFields } as MobileAppointmentDisplayConfig}
-                  />
-                </div>
+                <p className="mb-2 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
+                <AppointmentCard
+                  app={previewAppointment}
+                  items={[previewItem]}
+                  employees={[previewEmployee]}
+                  preview
+                  showCard={false}
+                  displayConfig={{ primaryFields: [], secondaryFields: localValue.secondaryFields } as MobileAppointmentDisplayConfig}
+                />
               </div>
             </div>
           </div>
         </div>
 
-        <table className="hidden w-full min-w-[580px] table-fixed border-separate border-spacing-y-1 text-sm md:table">
+        {/* VERSION DESKTOP (Tableau unique incluant la Prévisualisation) */}
+        <table className="hidden w-full table-fixed border-separate border-spacing-y-1 text-sm md:table">
           <colgroup>
+            <col className="w-[28%]" />
+            <col className="w-[21%]" />
+            <col className="w-[21%]" />
             <col className="w-[30%]" />
-            <col className="w-[35%]" />
-            <col className="w-[35%]" />
           </colgroup>
           <thead className="border-t-4 border-primary">
             <tr className="border-b-2 border-light bg-secondary-bg text-left">
               <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold">Champs</th>
               <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Principale</th>
               <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Secondaire</th>
+              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Prévisualisation</th>
             </tr>
           </thead>
           <tbody>
-            {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
+            {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }, index: number) => {
               const primaryChecked = localValue.primaryFields.includes(option.CodeChamp);
               const secondaryChecked = localValue.secondaryFields.includes(option.CodeChamp);
               
               return (
                 <tr key={option.CodeChamp} className="border-b border-ultra-light">
-                  <td className="px-3 py-3">{option.Libelle}</td>
+                  <td className="px-3 py-3 font-medium text-primary">{option.Libelle}</td>
+                  
+                  {/* Colonne Principale */}
                   <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
                     <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
                       <button
@@ -207,9 +212,11 @@ const MobileDisplayEditor = ({
                           <path d="M5 12l4 4L19 6" />
                         </svg>
                       </button>
-                      <span className="whitespace-nowrap">{primaryChecked ? "Affiché" : "Masqué"}</span>
+                      <span className="whitespace-nowrap text-xs">{primaryChecked ? "Affiché" : "Masqué"}</span>
                     </div>
                   </td>
+
+                  {/* Colonne Secondaire */}
                   <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
                     <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
                       <button
@@ -223,61 +230,57 @@ const MobileDisplayEditor = ({
                           <path d="M5 12l4 4L19 6" />
                         </svg>
                       </button>
-                      <span className="whitespace-nowrap">{secondaryChecked ? "Affiché" : "Masqué"}</span>
+                      <span className="whitespace-nowrap text-xs">{secondaryChecked ? "Affiché" : "Masqué"}</span>
                     </div>
                   </td>
+
+                  {/* COLONNE APERÇU (Rendu uniquement sur la première ligne grâce à rowSpan) */}
+                  {index === 0 && (
+                    <td rowSpan={optionsCount} className="border-l-2 border-light p-3 align-top bg-secondary-bg/30">
+                      <div className="sticky top-4 flex flex-col gap-3">
+                        {/* Aperçu Principale */}
+                        <div className="min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
+                          <p className="mb-2 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
+                          <AppointmentCard
+                            app={previewAppointment}
+                            items={[previewItem]}
+                            employees={[previewEmployee]}
+                            preview
+                            displayConfig={{
+                              primaryFields: localValue.primaryFields,
+                              secondaryFields: [],
+                            } as MobileAppointmentDisplayConfig}
+                          />
+                        </div>
+
+                        {/* Aperçu Secondaire */}
+                        <div className="min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
+                          <p className="mb-2 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
+                          <AppointmentCard
+                            app={previewAppointment}
+                            items={[previewItem]}
+                            employees={[previewEmployee]}
+                            preview
+                            showCard={false}
+                            displayConfig={{
+                              primaryFields: [],
+                              secondaryFields: localValue.secondaryFields,
+                            } as MobileAppointmentDisplayConfig}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
           </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={3} className="border-t-2 border-light px-3 pt-5">
-                <div className="flex items-center gap-3">
-                  <span className="shrink-0 text-xs font-semibold text-secondary">Prévisualisation</span>
-                  <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td colSpan={3} className="px-3 pt-3 align-top">
-                <div className="grid w-full grid-cols-2 gap-4">
-                  <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
-                    <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
-                    <AppointmentCard
-                      app={previewAppointment}
-                      items={[previewItem]}
-                      employees={[previewEmployee]}
-                      preview
-                      displayConfig={{
-                        primaryFields: localValue.primaryFields,
-                        secondaryFields: [],
-                      } as MobileAppointmentDisplayConfig}
-                    />
-                  </div>
-                  <div className="min-h-32 min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
-                    <p className="mb-3 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
-                    <AppointmentCard
-                      app={previewAppointment}
-                      items={[previewItem]}
-                      employees={[previewEmployee]}
-                      preview
-                      showCard={false}
-                      displayConfig={{
-                        primaryFields: [],
-                        secondaryFields: localValue.secondaryFields,
-                      } as MobileAppointmentDisplayConfig}
-                    />
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
     </div>
   );
 };
+
 
 const NewDayTypeForm = ({
   onAdd,
@@ -1318,6 +1321,8 @@ const NonWorkingDaysEditor = ({
     </div>
   );
 };
+
+
 const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   isSettingsOpen,
@@ -1372,7 +1377,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       className={`${
         currentCategoryObj?.key === 'nonWorkedDays' 
           ? 'w-[min(95vw,500px)]' 
-          : 'w-[min(95vw,900px)]'
+          : currentCategoryObj?.key === 'mobileAppointmentFields'
+            ? 'w-[min(95vw,1400px)]'
+            : 'w-[min(95vw,900px)]'
       } h-[85vh] max-h-[850px] overflow-hidden flex flex-col`}
       classNameContent="flex-1 overflow-hidden p-4 flex flex-col min-h-0"
       confirmCloseOnOverlay={currentCategoryObj?.hasUnsavedChanges && pendingSaveAction?.isDirty}
