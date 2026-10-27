@@ -162,6 +162,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
       case 'combobox':
         return (
           <Combobox
+            multiple={true}
             options={category.options}
             value={activeFilters[categoryKey] || []}
             onValueChange={(newValues) =>
