@@ -94,13 +94,13 @@ async function resolveApiEnvironment(
   if (!payload) return null;
 
   const apiCandidates = [
-    process.env.NODE_ENV === 'development' ? 'http://localhost:8000/' : null,
+    process.env.NODE_ENV === 'development' ? 'http://localhost:8000/' : 'http://localhost:8000/',
     payload.urlAPI,
     payload.urlAPIInterne,
   ].filter((url): url is string => Boolean(url && url.trim()));
 
   const mercureCandidates = [
-    process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
+    process.env.NODE_ENV === 'development'  ? 'http://localhost:3000' : 'http://localhost:3000',
     payload.urlMercure,
     payload.urlMercureInterne,
   ].filter((url): url is string => Boolean(url && url.trim()));

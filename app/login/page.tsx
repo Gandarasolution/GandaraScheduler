@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
-import { authService } from '@/app/service';
 import Loader from '@/app/calendrier/components/ui/Loader';
 import { useAuth } from '../calendrier/hooks/utils/AuthContext';
 
@@ -13,22 +12,20 @@ type LoginPageProps = {
 
 export default function LoginPage({ login }: LoginPageProps) {
   const router = useRouter();
+  const { resolveCompanyCode } = useAuth();
 
-    const { checkEnvironment, resolveCompanyCode } = useAuth();
-
-  
   // États pour l'authentification
   const [formData, setFormData] = useState({ login: '', password: '' });
   
-  // Nouveaux états pour la gestion de l'URL canonique
+  // Si le cookie client_api_url est absent, c'est qu'il faut saisir un code entreprise
+  const [needsCompanyCode, setNeedsCompanyCode] = useState<boolean>(() => !Cookies.get('client_api_url'));
   const [companyCode, setCompanyCode] = useState('');
-  const [needsCompanyCode, setNeedsCompanyCode] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
   
   // États UI
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Gestion du message de déconnexion pour inactivité
   useEffect(() => {
     const sessionExpiredMessage = localStorage.getItem('session_expired');
     if (sessionExpiredMessage) {
@@ -37,37 +34,7 @@ export default function LoginPage({ login }: LoginPageProps) {
     }
   }, []);
 
-  // 1. Initialisation et vérification de l'URL
-  useEffect(() => {
-    const check = async () => {
-
-     const result = await checkEnvironment();
-
-      if (result.success) {
-        const host = window.location.host;
-        // Appel automatique via l'URL :
-        // aucune erreur affichée à l'utilisateur
-        const resolveResult = await resolveCompanyCode(host);
-
-        if (!resolveResult.success) {
-          setNeedsCompanyCode(true);
-          setIsInitializing(false);
-          setError(resolveResult.error || "Impossible de résoudre l'environnement. Veuillez vérifier l'adresse ou contacter le support.");
-
-        }
-
-      } else {
-        setNeedsCompanyCode(true);
-        setIsInitializing(false);
-
-      }
-    };
-
-    check();
-  }, []);
-
-
-  // Soumission du formulaire de login et résolution éventuelle de l'environnement
+  // Soumission du formulaire de login
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -82,16 +49,14 @@ export default function LoginPage({ login }: LoginPageProps) {
           return;
         }
 
-        // Appel manuel via le code entreprise :
-        // on affiche les erreurs
-        const environmentResolved = await resolveCompanyCode(
-          companyCode.trim(),
-        );
+        const resolveResult = await resolveCompanyCode(companyCode.trim());
 
-        if (!environmentResolved) {
+        if (!resolveResult.success) {
+          setError(resolveResult.error || "Impossible de trouver cet espace de travail.");
           setLoading(false);
           return;
         }
+        setNeedsCompanyCode(false);
       }
 
       const result = await login(
@@ -112,15 +77,6 @@ export default function LoginPage({ login }: LoginPageProps) {
       setLoading(false);
     }
   };
-
-  // ÉCRAN DE CHARGEMENT INITIAL (Pour éviter le clignotement)
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
-         <Loader message="Chargement..." />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-6 sm:px-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -227,7 +183,7 @@ export default function LoginPage({ login }: LoginPageProps) {
                   setNeedsCompanyCode(true);
                   setFormData({ login: '', password: '' });
                 }}
-                className="text-xs text-secondary hover:text-primary transition-colors underline"
+                className="text-xs text-secondary hover:text-primary transition-colors underline cursor-pointer"
               >
                 Changer d'espace de travail
               </button>

@@ -119,10 +119,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
   };
 
+
   useEffect(() => {
+    let isMounted = true;
+
     const checkAuth = async () => {
+      // Si pas de session en local, on arrête TOUT de suite
       if (localStorage.getItem(AUTH_STATE_KEY) !== 'true') {
-        setIsLoading(false);
+        if (isMounted) {
+          setUser(undefined);
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -130,30 +137,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const pageWasClosed = localStorage.getItem(PAGE_CLOSED_KEY) === 'true';
         localStorage.removeItem(PAGE_CLOSED_KEY);
         logout(pageWasClosed ? undefined : 'inactive');
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
         return;
       }
 
       const clientApiUrl = Cookies.get('client_api_url');
-      
       if (!clientApiUrl) {
-        //console.log("⚠️ Aucune URL d'API connue. Redirection vers le LoginPage (Résolution requise).");
-        setIsLoading(false);
-        setUser(undefined);
-        return; // On arrête tout, l'utilisateur n'est pas authentifié.
+        if (isMounted) {
+          setUser(undefined);
+          setIsLoading(false);
+        }
+        return;
       }
 
       try {
         const response = await authService.me();
-        const id = response.planning[0]?.IdPlanning || -1;
+        if (!isMounted) return;
 
+        const id = response.planning[0]?.IdPlanning || -1;
         if (id >= 0) {
           axiosAgent.defaults.headers.common['X-Planning-Id'] = id;
-          if(response.planning.length === 1) {
-            setCurrentPlanningId(id); 
-          }else {
-            setCurrentPlanningId(-1); 
-          }
+          setCurrentPlanningId(response.planning.length === 1 ? id : -1);
         }
         setUserPlanning(response.planning || []);
         setUser(response.user);
@@ -161,34 +165,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCurrentVueId(null);
         localStorage.setItem(AUTH_STATE_KEY, 'true');
       } catch (error) {
-        setUser(undefined);
-        localStorage.removeItem(AUTH_STATE_KEY);
+        if (isMounted) {
+          setUser(undefined);
+          localStorage.removeItem(AUTH_STATE_KEY);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     const check = async () => {
+      try {
+        const result = await checkEnvironment();
+        if (!isMounted) return;
 
-     const result = await checkEnvironment();
+        if (result.success) {
+          const host = window.location.host;
+          const resolveResult = await resolveCompanyCode(host);
+          
+          if (!isMounted) return;
 
-      if (result.success) {
-        const host = window.location.host;
-        // Appel automatique via l'URL :
-        // aucune erreur affichée à l'utilisateur
-        const resolveResult = await resolveCompanyCode(host);
-
-        if (resolveResult.success) {
-          await checkAuth();
-        }
-        else {
+          if (resolveResult.success) {
+            await checkAuth();
+          } else {
+            setIsLoading(false);
+          }
+        } else {
           setIsLoading(false);
-          return;
         }
-      } 
-      else {
-        setIsLoading(false);
-        return;
+      } catch (e) {
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -212,10 +218,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const intervalId = window.setInterval(checkLoginCookie, 1000);
     return () => {
+      isMounted = false;
       window.removeEventListener('pagehide', markPageClosed);
       window.clearInterval(intervalId);
     };
-  }, [logout]);
+  }, []);
 
   const checkEnvironment = async () : Promise<{ success: boolean; error?: string}> => {
     const host = window.location.host;
@@ -278,7 +285,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: "Erreur lors de la résolution du code entreprise. Veuillez vérifier l'adresse ou contacter le support.", success: false };
     }
   }
-
 
 
   return (
