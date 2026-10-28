@@ -191,7 +191,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsLoading(false);
           }
         } else {
-          setIsLoading(false);
+          setUser(undefined);
+          localStorage.removeItem(AUTH_STATE_KEY);
+          if (isMounted)
+            setIsLoading(false);
         }
       } catch (e) {
         if (isMounted) setIsLoading(false);
@@ -227,9 +230,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkEnvironment = async () : Promise<{ success: boolean; error?: string}> => {
     const host = window.location.host;
 
+    if (process.env.NODE_ENV === 'development') return { success: true };
 
     const isCanonical =
-      await authService.SchedulerIsURICannonical('gandara-scheduler.vercel.app');
+      await authService.SchedulerIsURICannonical(host);
 
     if (isCanonical) {
       
@@ -243,7 +247,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const resolveCompanyCode = async (codeEntreprise: string): Promise<{ error?: string; success: boolean }> => {
     
     try {
-      const response = await authService.SchedulerGetAPI('gandara-scheduler.vercel.app');
+      const response = await authService.SchedulerGetAPI(process.env.NODE_ENV === 'development' ? 'gandara-scheduler.vercel.app' : codeEntreprise);
 
       if (!response) {
         return { error: "Impossible de récupérer les informations de l'entreprise. Veuillez vérifier l'adresse ou contacter le support.", success: false };

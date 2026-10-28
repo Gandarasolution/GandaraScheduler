@@ -119,49 +119,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     scrollSpeed: 10,
   });
 
-  // Détection des employés ayant des chevauchements pour alimenter expandedOverlapRows
-  const overlappingEmployeeIds = useMemo(() => {
-    const ids = new Set<number>();
-    const appointmentsByEmployee = new Map<number, Appointment[]>();
+  
 
-    appointments.forEach((appointment) => {
-      const employeeId = Number(appointment.IdEmploye);
-      const employeeAppointments = appointmentsByEmployee.get(employeeId) ?? [];
-      employeeAppointments.push(appointment);
-      appointmentsByEmployee.set(employeeId, employeeAppointments);
-    });
-
-    appointmentsByEmployee.forEach((employeeAppointments, employeeId) => {
-      const sortedAppointments = [...employeeAppointments].sort(
-        (a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement
-      );
-      let latestEnd = 0;
-
-      sortedAppointments.forEach((appointment) => {
-        if (appointment.DebutPlanningEvenement < latestEnd) {
-          ids.add(employeeId);
-        }
-        latestEnd = Math.max(latestEnd, appointment.FinPlanningEvenement);
-      });
-    });
-
-    return ids;
-  }, [appointments]);
-
-  useEffect(() => {
-    setExpandedOverlapRows((previous) => {
-      const next: Record<number, boolean> = {};
-      overlappingEmployeeIds.forEach((employeeId) => {
-        next[employeeId] = previous[employeeId] ?? true;
-      });
-      return next;
-    });
-  }, [overlappingEmployeeIds]);
+ 
 
   const { visibleWindowStart, visibleWindowEnd } = useMemo(() => {
     if (!dayInTimeline.length || !mainScrollRef.current) return { visibleWindowStart: 0, visibleWindowEnd: 0 };
-    const startPx = Math.max(0, mainScrollRef.current.scrollLeft - 400);
-    const endPx = mainScrollRef.current.scrollLeft + mainScrollRef.current.clientWidth + 400;
+    const startPx = Math.max(0, mainScrollRef.current.scrollLeft - 50);
+    const endPx = mainScrollRef.current.scrollLeft + mainScrollRef.current.clientWidth + 50;
     const startIndex = Math.max(0, Math.min(Math.floor(startPx / CELL_WIDTH), dayInTimeline.length - 1));
     const endIndex = Math.max(0, Math.min(Math.ceil(endPx / CELL_WIDTH), dayInTimeline.length - 1));
     
@@ -183,6 +148,34 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     return ids;
   }, [appointmentsInHorizontalWindow, visibleWindowStart, visibleWindowEnd]);
 
+  const overlappingEmployeeIds = useMemo(() => {
+    const ids = new Set<number>();
+    const appointmentsByEmployee = new Map<number, Appointment[]>();
+
+    appointmentsInHorizontalWindow.forEach((appointment) => {
+      const employeeId = Number(appointment.IdEmploye);
+      const employeeAppointments = appointmentsByEmployee.get(employeeId) ?? [];
+      employeeAppointments.push(appointment);
+      appointmentsByEmployee.set(employeeId, employeeAppointments);
+    });
+
+    appointmentsByEmployee.forEach((employeeAppointments, employeeId) => {
+      const sortedAppointments = [...employeeAppointments].sort(
+        (a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement
+      );
+      let latestEnd = 0;
+
+      sortedAppointments.forEach((appointment) => {
+        if (appointment.DebutPlanningEvenement < latestEnd) {
+          ids.add(employeeId);
+        }
+        latestEnd = Math.max(latestEnd, appointment.FinPlanningEvenement);
+      });
+    });
+
+    return ids;
+  }, [appointmentsInHorizontalWindow]);
+
   const filteredEmployees = useMemo(() => {
     if (!calendarConfig) return employees;
     return employees.filter(emp => emp.Actif !== false || visibleEmployeeIdsInWindow.has(emp.IdPersonnel));
@@ -193,6 +186,16 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [calendarConfig?.Group, filteredEmployees, initialTeams, poleActivites]);
 
   const [openItems, setOpenItems] = useState<(string | number)[]>();
+
+   useEffect(() => {
+    setExpandedOverlapRows((previous) => {
+      const next: Record<number, boolean> = {};
+      overlappingEmployeeIds.forEach((employeeId) => {
+        next[employeeId] = previous[employeeId] ?? true;
+      });
+      return next;
+    });
+  }, [overlappingEmployeeIds]);
 
   useEffect(() => {
     setOpenItems(getAllDimensionItemKeys(dimensionItems));
@@ -324,6 +327,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         dimensionItems={dimensionItems}
         employeesByDimension={employeesByDimension}
         flatRows={flatRows}
+        overlappingEmployeeIds={overlappingEmployeeIds} 
         openItems={openItems || []}
         expandedOverlapRows={expandedOverlapRows}
         onToggleItem={toggleItem}

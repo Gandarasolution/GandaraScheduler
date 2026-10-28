@@ -39,6 +39,7 @@ interface EmployeeSidebarProps {
   updateHighlightedEmployeeRow: (employeeId: number) => void;
   handleScrollY: (e: React.UIEvent<HTMLDivElement>) => void;
   columnEmployeeRef: React.RefObject<HTMLDivElement | null>;
+  overlappingEmployeeIds: Set<number>;
 }
 
 const CustomArrow = ({ isOpen, small = false }: { isOpen: boolean; small?: boolean }) => (
@@ -92,6 +93,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   updateHighlightedEmployeeRow,
   handleScrollY,
   columnEmployeeRef,
+  overlappingEmployeeIds,
 }) => {
   const selectOptions: SelectOptionWithImage[] = availableConfigs.map(config => ({
     id: config.IdPlanningVue,
@@ -112,6 +114,8 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
     const employeeRowHeight = employeeRow?.height ?? CELL_HEIGHT;
     const isInactive = employee.Actif === false;
+
+    const hasOverlapInWindow = overlappingEmployeeIds.has(Number(employee.IdPersonnel)); 
 
     return (
       <div
@@ -154,7 +158,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             </span>
           </div>
 
-          {expandedOverlapRows[employee.IdPersonnel] !== undefined && (
+          {hasOverlapInWindow && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
