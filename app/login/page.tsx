@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { authService } from '@/app/service';
 import Loader from '@/app/calendrier/components/ui/Loader';
+import { useAuth } from '../calendrier/hooks/utils/AuthContext';
 
 type LoginPageProps = {
   login: (login: string, password: string) => Promise<{ success: boolean; message?: string }>;
@@ -12,6 +13,9 @@ type LoginPageProps = {
 
 export default function LoginPage({ login }: LoginPageProps) {
   const router = useRouter();
+
+    const { checkEnvironment, resolveCompanyCode } = useAuth();
+
   
   // États pour l'authentification
   const [formData, setFormData] = useState({ login: '', password: '' });
@@ -35,103 +39,33 @@ export default function LoginPage({ login }: LoginPageProps) {
 
   // 1. Initialisation et vérification de l'URL
   useEffect(() => {
-    const checkEnvironment = async () => {
-      const host = window.location.host;
+    const check = async () => {
 
-      const existingApiUrl = Cookies.get('client_api_url');
+     const result = await checkEnvironment();
 
-      const isCanonical =
-        await authService.SchedulerIsURICannonical(host);
-
-      if (isCanonical && !existingApiUrl) {
+      if (result.success) {
+        const host = window.location.host;
         // Appel automatique via l'URL :
         // aucune erreur affichée à l'utilisateur
-        await resolveCompanyCode(host, false);
+        const resolveResult = await resolveCompanyCode(host);
 
-      } else if (!existingApiUrl) {
+        if (!resolveResult.success) {
+          setNeedsCompanyCode(true);
+          setIsInitializing(false);
+          setError(resolveResult.error || "Impossible de résoudre l'environnement. Veuillez vérifier l'adresse ou contacter le support.");
+
+        }
+
+      } else {
         setNeedsCompanyCode(true);
         setIsInitializing(false);
 
-      } else {
-        setNeedsCompanyCode(false);
-        setIsInitializing(false);
       }
     };
 
-    checkEnvironment();
+    check();
   }, []);
 
-  // 2. Appel à l'API Gandara pour récupérer la bonne URL
-  const resolveCompanyCode = async (
-    code: string,
-    showApiError: boolean = false
-  ): Promise<boolean> => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await authService.SchedulerGetAPI(code);
-
-      if (!response) {
-        throw new Error("Code entreprise introuvable.");
-      }
-
-      const resolvedEnvironment = await authService.resolveApiEnvironment(response);
-
-      if (!resolvedEnvironment) {
-        if (showApiError) {
-          setError(
-            "Aucune URL d'API accessible. Vérifiez le réseau ou votre environnement."
-          );
-        }
-
-        return false;
-      }
-
-      Cookies.set('client_api_url', resolvedEnvironment.apiUrl, { expires: 1 / 24 });
-
-      if (resolvedEnvironment.mercureUrl) {
-        Cookies.set(
-          'client_mercure_url',
-          resolvedEnvironment.mercureUrl,
-
-          { expires: 1 / 24 }
-        );
-      } else {
-        Cookies.remove('client_mercure_url');
-      }
-
-      if (resolvedEnvironment.logoClient) {
-        localStorage.setItem(
-          'client_logo_url',
-          resolvedEnvironment.logoClient
-        );
-      } else {
-        localStorage.removeItem('client_logo_url');
-      }
-
-      setNeedsCompanyCode(false);
-
-      return true;
-    } catch (err: any) {
-      if (showApiError) {
-        setError(
-          err.message || "Impossible de résoudre l'environnement."
-        );
-      }
-
-      Cookies.remove('client_api_url');
-      Cookies.remove('client_mercure_url');
-      localStorage.removeItem('client_logo_url');
-
-      setNeedsCompanyCode(true);
-
-      return false;
-    } finally {
-      setLoading(false);
-      setIsInitializing(false);
-    }
-  };
 
   // Soumission du formulaire de login et résolution éventuelle de l'environnement
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -152,7 +86,6 @@ export default function LoginPage({ login }: LoginPageProps) {
         // on affiche les erreurs
         const environmentResolved = await resolveCompanyCode(
           companyCode.trim(),
-          true
         );
 
         if (!environmentResolved) {

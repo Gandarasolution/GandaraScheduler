@@ -67,6 +67,7 @@ export const CalendarHeader = memo(({
 
   const { hasPermission } = useAuth();
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
   
   // Nouveaux états pour le menu déroulant des paramètres
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
@@ -81,6 +82,11 @@ export const CalendarHeader = memo(({
       if (settingsDropdownRef.current && !settingsDropdownRef.current.contains(event.target as Node)) {
         setIsSettingsDropdownOpen(false);
       }
+
+      if (helpButtonRef.current && !helpButtonRef.current.contains(event.target as Node)) {
+        setIsHelpOpen(false);
+      }
+
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -663,6 +669,7 @@ export const CalendarHeader = memo(({
                 className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary-100 transition cursor-pointer"
                 title="Aide et raccourcis clavier"
                 aria-label="Aide et raccourcis clavier"
+                ref={helpButtonRef}
               >
                 <span className="text-xl font-semibold bg-icon leading-none">?</span>
               </button>

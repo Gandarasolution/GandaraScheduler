@@ -28,6 +28,8 @@ interface AuthContextType {
   logout: (reason?: 'inactive') => void;
   hasPermission: (permissionId: number) => boolean;
   setLastVueForUser: (idVue: number) => void;
+  checkEnvironment: () => Promise<{ error?: string; success: boolean }>;
+  resolveCompanyCode: (codeEntreprise: string) => Promise<{ error?: string; success: boolean }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -166,7 +168,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    checkAuth();
+    const check = async () => {
+
+     const result = await checkEnvironment();
+
+      if (result.success) {
+        const host = window.location.host;
+        // Appel automatique via l'URL :
+        // aucune erreur affichée à l'utilisateur
+        const resolveResult = await resolveCompanyCode(host);
+
+        if (resolveResult.success) {
+          await checkAuth();
+        }
+        else {
+          setIsLoading(false);
+        }
+      } 
+      else {
+        setIsLoading(false);
+      }
+    };
+
+    check();
+
 
     const checkLoginCookie = () => {
       if (
@@ -190,11 +215,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [logout]);
 
+  const checkEnvironment = async () : Promise<{ success: boolean; error?: string}> => {
+    const host = window.location.host;
+
+
+    const isCanonical =
+      await authService.SchedulerIsURICannonical(host);
+
+    if (isCanonical) {
+      
+      return { success: true };
+
+    } else {
+      return { success: false };
+    }
+  };
+
+  const resolveCompanyCode = async (codeEntreprise: string): Promise<{ error?: string; success: boolean }> => {
+    
+    try {
+      const response = await authService.SchedulerGetAPI(codeEntreprise);
+
+      if (!response) {
+        return { error: "Impossible de récupérer les informations de l'entreprise. Veuillez vérifier l'adresse ou contacter le support.", success: false };
+      }
+
+      const resolvedEnvironment = await authService.resolveApiEnvironment(response);
+
+      if (!resolvedEnvironment) {
+        return { error: "Aucune URL d'API accessible. Vérifiez le réseau ou votre environnement.", success: false };
+      }
+
+      Cookies.set('client_api_url', resolvedEnvironment.apiUrl, { expires: 1 / 24 });
+
+      if (resolvedEnvironment.mercureUrl) {
+        Cookies.set(
+          'client_mercure_url',
+          resolvedEnvironment.mercureUrl,
+
+          { expires: 1 / 24 }
+        );
+      } else {
+        Cookies.remove('client_mercure_url');
+      }
+
+      if (resolvedEnvironment.logoClient) {
+        localStorage.setItem(
+          'client_logo_url',
+          resolvedEnvironment.logoClient
+        );
+      } else {
+        localStorage.removeItem('client_logo_url');
+      }
+
+      
+
+      return { success: true };
+    }catch (error) {
+      console.error("Erreur lors de la résolution du code entreprise :", error);
+      return { error: "Erreur lors de la résolution du code entreprise. Veuillez vérifier l'adresse ou contacter le support.", success: false };
+    }
+  }
+
+
+
   return (
     <AuthContext.Provider value={{ 
         user, permissions, isAuthenticated, isLoading, login, logout, 
         hasPermission, setUser, UserPlanning, currentPlanningId, 
-        setCurrentPlanningId, currentVueId, setCurrentVueId, setLastVueForUser
+        setCurrentPlanningId, currentVueId, setCurrentVueId, setLastVueForUser, checkEnvironment, resolveCompanyCode
     }}>
       {isLoading ? (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-ultra-light via-white to-primary-lighter">
