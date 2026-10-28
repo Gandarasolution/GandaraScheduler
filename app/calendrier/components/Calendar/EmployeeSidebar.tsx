@@ -31,6 +31,8 @@ interface EmployeeSidebarProps {
   expandedOverlapRows: Record<number, boolean>;
   onToggleItem: (itemId: string | number) => void;
   onCollapseRow: (employeeId: number) => void;
+  onExpandRow: (employeeId: number) => void;
+  onEmployeeContextMenu: (event: React.MouseEvent, employee: User) => void;
   calendarConfig: CalendarConfig | null;
   availableConfigs: CalendarConfig[];
   onCalendarConfigChange: (config: CalendarConfig) => void;
@@ -82,6 +84,8 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   expandedOverlapRows,
   onToggleItem,
   onCollapseRow,
+  onExpandRow,
+  onEmployeeContextMenu,
   calendarConfig,
   availableConfigs,
   onCalendarConfigChange,
@@ -125,6 +129,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
           className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-50 transition-colors duration-150 employee-row-item"
           data-employee-id={employee.IdPersonnel}
           onMouseOver={() => updateHighlightedEmployeeRow(employee.IdPersonnel)}
+          onContextMenu={(event) => onEmployeeContextMenu(event, employee)}
         >
           <div className="relative flex-shrink-0">
             <img
@@ -149,16 +154,21 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             </span>
           </div>
 
-          {expandedOverlapRows[employee.IdPersonnel] && (
+          {expandedOverlapRows[employee.IdPersonnel] !== undefined && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onCollapseRow(employee.IdPersonnel);
+                if (expandedOverlapRows[employee.IdPersonnel]) {
+                  onCollapseRow(employee.IdPersonnel);
+                } else {
+                  onExpandRow(employee.IdPersonnel);
+                }
               }}
-              className="text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
+              className="cursor-pointer text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
               type="button"
+              title={expandedOverlapRows[employee.IdPersonnel] ? 'Réduire les rendez-vous qui se chevauchent' : 'Développer pour afficher tous les rendez-vous qui se chevauchent'}
             >
-              Masquer
+              {expandedOverlapRows[employee.IdPersonnel] ? 'Réduire' : 'Développer'}
             </button>
           )}
         </div>

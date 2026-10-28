@@ -21,6 +21,8 @@ import { CELL_WIDTH, TIMELINE_HEADERGROUPS_CELL_HEIGHT, TIMELINE_HEADERITEMS_CEL
 import FlexibleFrame from '../dnd/FlexibleFrame';
 import { getWeekNumber } from '../../utils/dates';
 import { isHoliday } from '../../utils/dates';
+import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
+
 
 /**
  * Interface définissant les propriétés du composant TimelineFrame
@@ -36,7 +38,7 @@ interface TimelineFrameProps {
     /** Labels pour les colonnes individuelles */
     items: string[];
   };
-  nonworkingDates?: Record<string, number>; // Clé: date au format "yyyy-MM-dd"
+  nonworkingDates?: Record<string, {Id: number; TypeJourCode: string }>; // Clé: date au format "yyyy-MM-dd"
   /** Référence pour le scroll principal */
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   /** Gestionnaire d'événement scroll */
@@ -83,6 +85,8 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   customDayLabels,
   useAutoCells = false
 }) => {
+
+  const { DayTypes } = useDayTypesContext();
 
 
   /**
@@ -236,9 +240,36 @@ const computedHeaders = useMemo(() => {
           // Détection du jour non-travaillé
           const isNonWorking = nonworkingDates && nonworkingDates[dayKey];
 
+          const dayType = DayTypes?.find(dt => dt.Id === nonworkingDates?.[dayKey]?.TypeJourCode);
+
+
+
+
+          let backgroundColor = 'var(--bg-secondary)';
+          let textColor = 'var(--text-primary)';
+          let isItalic = false;
+          let isBold = false;
+
+          if (isToday(day)) {
+            backgroundColor = 'var(--calendar-bg-today)';
+          } else if (holiday) {
+            backgroundColor = `${DayTypes?.find(dt => dt.Id === 'ferie')?.CouleurFond || '#ffe0e0'}`;
+            textColor = `${DayTypes?.find(dt => dt.Id === 'ferie')?.CouleurTexte || 'var(--text-primary)'}`;
+            isItalic = DayTypes?.find(dt => dt.Id === 'ferie')?.isItalic || false;
+            isBold = DayTypes?.find(dt => dt.Id === 'ferie')?.isBold || false;
+          } else if (isWeekend(day)) {
+            backgroundColor = 'var(--calendar-bg-weekend)';
+          } else if (isNonWorking) {
+            backgroundColor = `${dayType?.CouleurFond || '#f9f9f9'}`;
+            textColor = `${dayType?.CouleurTexte || 'var(--text-primary)'}`;
+            isItalic = dayType?.isItalic || false;
+            isBold = dayType?.isBold || false;
+          }
+
+          
+
           return {
             span: 1,
-            // 💡 LA MODIFICATION MAGIQUE : La clé change de nom si le statut du jour change !
             key: `item-${index}-${isNonWorking ? 'nw' : 'w'}`,
             style: {
               maxHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
@@ -249,10 +280,16 @@ const computedHeaders = useMemo(() => {
             render: () => (
               <div
                 className={`
-                  flex flex-col justify-end border-b border-r border-light text-center text-sm font-semibold text-primary p-1 h-full w-full
-                  ${(isToday(day) && 'calendar-today') || (holiday ? 'FERIE' : (isWeekend(day) ? 'calendar-weekend' : (isNonWorking ? 'NON-WORKING' : 'bg-secondary-bg')))}
+                  ${isItalic ? 'italic' : ''}
+                  ${isBold ? 'font-bold' : ''}
+                  flex flex-col justify-end border-b border-r border-light text-center text-sm font-semibold p-1 h-full w-full
                   relative day-cell
                 `}
+                style={{
+                  backgroundColor: backgroundColor,
+                  color: textColor,
+                }}
+
               >
                 {new Date(day).getDay() === 1 && (
                   <span
@@ -266,7 +303,7 @@ const computedHeaders = useMemo(() => {
                   <span className="block font-bold text-lg">
                     {customDayLabels && customDayLabels[index] ? customDayLabels[index].split(' ')[0] : format(day, 'd', { locale: fr })}
                   </span>
-                  <span className="block text-xs text-secondary">
+                  <span className="block text-xs">
                     {customDayLabels && customDayLabels[index]
                       ? customDayLabels[index].split(' ').slice(1).join(' ')
                       : format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() + format(day, 'EEE', { locale: fr }).slice(1).replace('.', '')}

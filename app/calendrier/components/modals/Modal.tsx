@@ -283,7 +283,6 @@ const Modal: React.FC<ModalProps> = ({
                     </ModalContext.Provider>
                 </div>
             </div>
-            {/* Animations (à ajouter dans votre CSS si non présentes) */}
         </div>
     );
 };

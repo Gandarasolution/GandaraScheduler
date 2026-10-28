@@ -268,6 +268,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   realtimeUpdate
 }: DataTableFrameProps<T>) => {
   const DEFAULT_PAGE_SIZE = 20;
+  const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
   
   
   // État pour la largeur du conteneur (pour réagir aux changements de taille de fenêtre)
@@ -320,6 +321,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   const [columnHoveredKey, setColumnHoveredKey] = useState<string | null>(null);
   const [categoriesStructure, setCategoriesStructure] = useState<CategoryStructure[]>(categoriesStructureSource);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [isPaginationLoading, setIsPaginationLoading] = useState(false);
   const [remotePageItems, setRemotePageItems] = useState<T[] | null>(null);
   const [remoteTotalPages, setRemoteTotalPages] = useState(1);
@@ -394,13 +396,42 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     if (Array.isArray(responseData)) {
       pageData = responseData;
     } else if (responseData && typeof responseData === 'object') {
-      const nested = responseData.data ?? responseData.rows ?? responseData.items;
-      pageData = Array.isArray(nested) ? nested : [];
+      const responseObject = responseData as Record<string, unknown>;
+      const nested = responseObject.data
+        ?? responseObject.rows
+        ?? responseObject.items
+        ?? responseObject.projets
+        ?? responseObject.Projets
+        ?? responseObject.ressources
+        ?? responseObject.Ressources
+        ?? responseObject.results
+        ?? responseObject.Results;
+      if (Array.isArray(nested)) {
+        pageData = nested;
+      } else if (nested && typeof nested === 'object') {
+        const nestedObject = nested as Record<string, unknown>;
+        const nestedData = nestedObject.data
+          ?? nestedObject.rows
+          ?? nestedObject.items
+          ?? nestedObject.projets
+          ?? nestedObject.Projets
+          ?? nestedObject.ressources
+          ?? nestedObject.Ressources
+          ?? nestedObject.results
+          ?? nestedObject.Results;
+        pageData = Array.isArray(nestedData) ? nestedData : [];
+      }
     }
 
     const totalFromDataObject =
       !Array.isArray(responseData) && responseData && typeof responseData === 'object'
-        ? Number(responseData.TotalLignes)
+        ? Number(
+            (responseData as Record<string, unknown>).TotalLignes
+              ?? (responseData as Record<string, unknown>).totalLignes
+              ?? (responseData as Record<string, unknown>).total
+              ?? (responseData as Record<string, unknown>).count
+              ?? (responseData as Record<string, unknown>).Total
+          )
         : NaN;
     const totalFromRoot = Number(response?.TotalLignes);
     const totalLines = Number.isFinite(totalFromDataObject)
@@ -415,14 +446,14 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     };
   }, []);
 
-  const fetchPage = useCallback(async (targetPage: number) => {
+  const fetchPage = useCallback(async (targetPage: number, requestedPageSize = pageSize) => {
     if (!enablePagination || !paginatedSearchFunction) {
       return;
     }
 
     setIsPaginationLoading(true);
     try {
-      const callSearch = () => paginatedSearchFunction(DEFAULT_PAGE_SIZE, targetPage, 15000);
+      const callSearch = () => paginatedSearchFunction(requestedPageSize, targetPage, 15000);
       let response: PaginatedSearchResponse<T> | undefined;
 
       response  = await callSearch();
@@ -434,7 +465,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       }
             
       const { pageData, totalLines } = extractPaginatedPayload(response);
-      const totalPages = Math.max(1, Math.ceil(totalLines / DEFAULT_PAGE_SIZE));
+      const totalPages = Math.max(1, Math.ceil(totalLines / requestedPageSize));
 
 
       setRemotePageItems(normalizeItemsWithId(pageData));
@@ -446,7 +477,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     } finally {
       setIsPaginationLoading(false);
     }
-  }, [enablePagination, paginatedSearchFunction, extractPaginatedPayload, normalizeItemsWithId]);
+  }, [enablePagination, paginatedSearchFunction, extractPaginatedPayload, normalizeItemsWithId, pageSize]);
 
   useEffect(() => {
     if (!enablePagination) {
@@ -666,7 +697,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
       return 1;
     }
 
-    return Math.max(1, Math.ceil(sortedItems.length / DEFAULT_PAGE_SIZE));
+    return Math.max(1, Math.ceil(sortedItems.length / pageSize));
   }, [enablePagination, paginatedSearchFunction, sortedItems]);
 
   const displayedItems = useMemo(() => {
@@ -679,9 +710,9 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     }
 
     const safePage = Math.min(currentPage, localTotalPages);
-    const start = (safePage - 1) * DEFAULT_PAGE_SIZE;
-    return sortedItems.slice(start, start + DEFAULT_PAGE_SIZE);
-  }, [enablePagination, paginatedSearchFunction, sortedItems, currentPage, localTotalPages]);
+    const start = (safePage - 1) * pageSize;
+    return sortedItems.slice(start, start + pageSize);
+  }, [enablePagination, paginatedSearchFunction, sortedItems, currentPage, localTotalPages, pageSize]);
 
   useEffect(() => {
     if (!enablePagination || paginatedSearchFunction) {
@@ -984,8 +1015,22 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   
   const effectiveTotalPages = paginatedSearchFunction ? remoteTotalPages : localTotalPages;
   const safeCurrentPage = Math.max(1, Math.min(currentPage, effectiveTotalPages));
-  const visiblePageSquares = [safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1]
-    .filter((pageNum) => pageNum >= 1 && pageNum <= effectiveTotalPages);
+  const visiblePageSquares = useMemo(() => {
+    const maxVisiblePages = 10;
+    if (effectiveTotalPages <= maxVisiblePages) {
+      return Array.from({ length: effectiveTotalPages }, (_, index) => index + 1);
+    }
+
+    const windowStart = Math.max(
+      1,
+      Math.min(
+        safeCurrentPage - Math.floor(maxVisiblePages / 2),
+        effectiveTotalPages - maxVisiblePages + 1
+      )
+    );
+
+    return Array.from({ length: maxVisiblePages }, (_, index) => windowStart + index);
+  }, [effectiveTotalPages, safeCurrentPage]);
 
   const handlePageSquareClick = (targetPage: number) => {
     if (isPaginationLoading || targetPage === currentPage) {
@@ -998,6 +1043,20 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     }
 
     setCurrentPage(targetPage);
+  };
+
+  const handlePageSizeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextPageSize = Number(event.target.value);
+    if (!PAGE_SIZE_OPTIONS.includes(nextPageSize) || nextPageSize === pageSize) {
+      return;
+    }
+
+    setPageSize(nextPageSize);
+    setCurrentPage(1);
+
+    if (paginatedSearchFunction) {
+      fetchPage(1, nextPageSize);
+    }
   };
 
   const showRowSkeletons = (isPaginationLoading && enablePagination) || isRowsLoading;
@@ -1336,8 +1395,50 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
         )}
        
       </FlexibleFrame>
-      {enablePagination && effectiveTotalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 px-7 py-3 ">
+      {enablePagination && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-7 py-3">
+          <label className="flex items-center gap-2 text-sm text-primary">
+            <span>Nombre de lignes par page</span>
+            <select
+              value={pageSize}
+              onChange={handlePageSizeChange}
+              disabled={isPaginationLoading}
+              className="rounded-sm border border-default bg-white px-2 py-1 text-sm"
+              aria-label="Nombre d'enregistrements par page"
+            >
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {effectiveTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-1">
+          <button
+            type="button"
+            className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-ultra-light disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isPaginationLoading || safeCurrentPage === 1}
+            onClick={() => handlePageSquareClick(safeCurrentPage - 1)}
+            aria-label="Page précédente"
+          >
+            &lt;
+          </button>
+          {visiblePageSquares[0] > 1 && (
+            <>
+              <button
+                type="button"
+                className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-ultra-light disabled:opacity-60"
+                disabled={isPaginationLoading}
+                onClick={() => handlePageSquareClick(1)}
+                aria-label="Première page"
+              >
+                1
+              </button>
+              <span className="px-1 text-sm text-primary" aria-hidden="true">…</span>
+            </>
+          )}
           {visiblePageSquares.map((pageNum) => {
             const isCurrent = pageNum === safeCurrentPage;
 
@@ -1345,7 +1446,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
               <button
                 key={`pagination-square-${pageNum}`}
                 type="button"
-                className={`w-7 h-7 rounded-sm border text-xs font-medium transition-colors ${
+                className={`h-7 min-w-7 rounded-sm border px-1 text-xs font-medium transition-colors ${
                   isCurrent
                     ? 'bg-primary text-white border-primary'
                     : 'bg-white text-primary border-default hover:bg-primary-ultra-light'
@@ -1358,6 +1459,31 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
               </button>
             );
           })}
+          {visiblePageSquares[visiblePageSquares.length - 1] < effectiveTotalPages && (
+            <>
+              <span className="px-1 text-sm text-primary" aria-hidden="true">…</span>
+              <button
+                type="button"
+                className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-ultra-light disabled:opacity-60"
+                disabled={isPaginationLoading}
+                onClick={() => handlePageSquareClick(effectiveTotalPages)}
+                aria-label="Dernière page"
+              >
+                {effectiveTotalPages}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-ultra-light disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isPaginationLoading || safeCurrentPage === effectiveTotalPages}
+            onClick={() => handlePageSquareClick(safeCurrentPage + 1)}
+            aria-label="Page suivante"
+          >
+            &gt;
+          </button>
+            </div>
+          )}
         </div>
       )}
     </div>

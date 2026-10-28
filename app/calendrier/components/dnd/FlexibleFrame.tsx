@@ -235,7 +235,7 @@ const FlexibleFrame: React.FC<FlexibleFrameProps> = ({
   // ========== RENDU PRINCIPAL ==========
   const contentArea = (
     <div
-      className={`relative w-full overflow-y-auto rounded-3xl border h-full border-ultra-light ${contentClassName}`}
+      className={`relative w-full overflow-y-auto rounded-3xl border h-full border-ultra-light ${contentClassName} flexibleFrame-content`}
       onScroll={onScroll}
       ref={mainRef}
     >

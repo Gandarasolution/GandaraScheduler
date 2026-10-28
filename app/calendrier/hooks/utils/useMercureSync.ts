@@ -28,7 +28,7 @@ export const useMercureSync = (
 
     // 4. On écoute les messages entrants
     eventSource.onmessage = (event) => {
-      console.log("📡 SIGNAL BRUT REÇU DE MERCURE :", event.data);
+      //console.log("📡 SIGNAL BRUT REÇU DE MERCURE :", event.data);
       try {
         const payload = JSON.parse(event.data);
 
@@ -55,7 +55,7 @@ export const useMercureSync = (
     };
 
     eventSource.onopen = () => {
-        console.log("✅ Connecté à Mercure avec succès ! Le serveur a accepté le cookie.");
+        //console.log("✅ Connecté à Mercure avec succès ! Le serveur a accepté le cookie.");
     };
 
     return () => {

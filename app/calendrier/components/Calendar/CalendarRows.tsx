@@ -13,11 +13,19 @@ import React, { memo } from 'react';
 import { Appointment, Item } from '../../types';
 import EmployeeRow from './EmployeeRow';
 import GroupRow from './GroupRow';
-import { RowWithBoundaries } from '../../hooks';
 
 interface CalendarRowsProps {
   mainScrollRef:React.RefObject<HTMLDivElement>;
-  visibleRows: RowWithBoundaries[];
+  visibleRows:{
+    start: number;
+    end: number;
+    domId: string;
+    type: "group" | "employee";
+    id: string | number;
+    uniqueKey: string;
+    data: any;
+    height: number;
+  }[];
   dayInTimeline: number[];
   todayIndex: number;
   isFullDay: boolean;
@@ -72,11 +80,10 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   tagPlacement,
   onLockedError
 }) => {
-  //console.log('Rendering CalendarRows with visibleRows:', visibleRows);
+  ////console.log('Rendering CalendarRows with visibleRows:', visibleRows);
   return (
     <>
-      {visibleRows.map((row) => { 
-        //console.log(row);
+      {visibleRows.map((row) => {
                
         const commonProps = {
           style: {
@@ -89,8 +96,8 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
           },
         };
         // if (row.data.Nom === 'CABESTANT') {
-        //   console.log(row.data);
-        //   console.log(appointmentsByEmployee);
+        //   //console.log(row.data);
+        //   //console.log(appointmentsByEmployee);
         // }
 
         return row.type === 'group' ? (

@@ -128,7 +128,7 @@ const AppointmentMetadata: React.FC<AppointmentMetadataProps> = ({
   // Positionnement pour tag tooltip
   useEffect(() => {
     if (showTagTooltip && tooltipRef.current && tagIconRef.current && mainScrollRef?.current) {
-          console.log('Calculating tag tooltip position...');
+          //console.log('Calculating tag tooltip position...');
 
       requestAnimationFrame(() => {
         if (!tooltipRef.current || !tagIconRef.current || !mainScrollRef?.current) return;

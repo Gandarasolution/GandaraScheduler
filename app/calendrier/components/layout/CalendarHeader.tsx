@@ -1,16 +1,42 @@
 import { UserMenu } from '../index'; 
 import { Appointment, Item, User } from '../../types';
-import { memo, use, useEffect } from 'react';
+import { memo, useEffect, useState, useRef } from 'react';
 import DatePicker from '../ui/DatePicker';
 import { useAuth } from '../../hooks/utils/AuthContext';
+import ChantierViewsControl, { ChantierViewsControlProps } from '../Table/ChantierViewsControl';
+
+const SelectedCheck = () => (
+  <div
+    className="
+      w-6 h-6
+      shrink-0
+      rounded-full
+      bg-primary
+      flex items-center justify-center
+    "
+  >
+    <svg
+      className="w-3.5 h-3.5 text-white"
+      fill="currentColor"
+      viewBox="0 0 20 20"
+    >
+      <path
+        fillRule="evenodd"
+        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+        clipRule="evenodd"
+      />
+    </svg>
+  </div>
+);
 
 interface CalendarHeaderProps {
   theme: string;
   user: any;
-  viewState: any; // Type retourné par useCalendarView
-  notifications: any; // Type retourné par useNotifications
+  viewState: any; 
+  notifications: any; 
   handleAddModal: (appointment: Appointment) => void;
   onNavigateDate: (date: number) => void;
+  chantierViewsControlProps?: ChantierViewsControlProps;
 }
 
 export const CalendarHeader = memo(({ 
@@ -20,9 +46,9 @@ export const CalendarHeader = memo(({
   notifications, 
   handleAddModal,
   onNavigateDate,
+  chantierViewsControlProps,
 }: CalendarHeaderProps) => {
   
-  // Déstructuration du viewState pour simplifier l'accès dans le JSX
   const {
     viewType, setViewType,
     isExpanded, setIsExpanded,
@@ -33,19 +59,38 @@ export const CalendarHeader = memo(({
     isFilterModalOpen, setIsFilterModalOpen,
     isViewDropdownOpen, setIsViewDropdownOpen,
     viewDropdownRef,
-    calendarConfigHook, // Pour ouvrir la modale de config calendrier
-    
-    // Toggles d'affichage
+    calendarConfigHook, 
     isDisplayWeekend, setIsDisplayWeekend,
     isFullDay, setIsFullDay,
-    
-    // Date
     selectedDate, setSelectedDate
   } = viewState;
 
   const { hasPermission } = useAuth();
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  
+  // Nouveaux états pour le menu déroulant des paramètres
+  const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
+  const settingsDropdownRef = useRef<HTMLDivElement>(null);
+
   const clientLogo = localStorage.getItem('client_logo_url');
   const logoSrc = clientLogo || `/assets/logo-${theme}.svg`;
+
+  // Fermer le dropdown de paramètre quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsDropdownRef.current && !settingsDropdownRef.current.contains(event.target as Node)) {
+        setIsSettingsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const openSetting = (category: string) => {
+    sessionStorage.setItem('activeSettingsCategory', category);
+    setIsSettingsDropdownOpen(false);
+    setIsSettingsOpen(true);
+  };
 
   return (
     <div className="flex flex-col items-center pr-9">
@@ -67,26 +112,29 @@ export const CalendarHeader = memo(({
           <div className="flex items-center justify-between w-full h-[50px]">
             
             {/* Barre de Recherche */}
-            <div className="flex flex-col gap-1">
-              <div className="relative w-72 max-w-full">
-                <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400 bg-icon" aria-hidden="true" fill="none" viewBox="0 0 20 20">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-                  </svg>
+            {viewType !== 'calendar' && (
+              <div className="flex flex-col gap-1">
+                <div className="relative w-72 max-w-full">
+                  <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400 bg-icon" aria-hidden="true" fill="none" viewBox="0 0 20 20">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="search"
+                    id="search"
+                    className="block w-full p-3 pl-8 text-base placeholder:bg-icon bg-icon rounded-xl transition focus:outline-0 poppins text-[14px]"
+                    placeholder="Rechercher"
+                    value={searchInput || ""}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                  />
                 </div>
-                <input
-                  type="search"
-                  id="search"
-                  className="block w-full p-3 pl-8 text-base placeholder:bg-icon bg-icon rounded-xl transition focus:outline-0 poppins text-[14px]"
-                  placeholder="Rechercher"
-                  value={searchInput || ""}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
               </div>
-            </div>
+            )}
 
             {/* Boutons d'Actions (Droite) */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 ml-auto">
+            
               
               {/* Bouton Expansion */}
               <button
@@ -131,18 +179,97 @@ export const CalendarHeader = memo(({
                 </button>
               )}
 
-              {/* Bouton Paramètres */}
-              <button
-                className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
-                onClick={() => setIsSettingsOpen(true)}
-                title="Paramètres"
-              >
-                <svg id="Glyph" enableBackground="new 0 0 32 32" height="25" viewBox="0 0 32 32" width="25" xmlns="http://www.w3.org/2000/svg" version="1.1" fill='currentColor' xmlnsXlink="http://www.w3.org/1999/xlink" className='bg-icon'>
-                  <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
-                    <path id="XMLID_273_" d="m27.526 18.036-.526-.304c-.626-.361-1-1.009-1-1.732s.374-1.371 1-1.732l.526-.304c1.436-.83 1.927-2.662 1.098-4.098l-1-1.732c-.827-1.433-2.666-1.925-4.098-1.098l-.526.303c-.626.362-1.375.362-2 0-.626-.362-1-1.009-1-1.732v-.607c0-1.654-1.346-3-3-3h-2c-1.654 0-3 1.346-3 3v.608c0 .723-.374 1.37-1 1.732-.626.361-1.374.362-2 0l-.526-.304c-1.432-.827-3.271-.335-4.099 1.098l-1 1.732c-.829 1.436-.338 3.269 1.098 4.098l.527.304c.626.361 1 1.009 1 1.732s-.374 1.371-1 1.732l-.526.304c-1.436.829-1.927 2.662-1.098 4.098l1 1.732c.828 1.433 2.667 1.925 4.098 1.098l.526-.303c.626-.363 1.374-.361 2 0 .626.362 1 1.009 1 1.732v.607c0 1.654 1.346 3 3 3h2c1.654 0 3-1.346 3-3v-.608c0-.723.374-1.37 1-1.732.625-.361 1.374-.362 2 0l.526.304c1.432.826 3.271.334 4.098-1.098l1-1.732c.829-1.436.338-3.269-1.098-4.098zm-11.526 2.964c-2.757 0-5-2.243-5-5s2.243-5 5-5 5 2.243 5 5-2.243 5-5 5z" />
-                  </g>
-                </svg>
-              </button>
+              {/* Bouton Paramètres (Nouveau système en dropdown) */}
+              <div className="relative" ref={settingsDropdownRef}>
+                <button
+                  className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
+                  onClick={() => setIsSettingsDropdownOpen(!isSettingsDropdownOpen)}
+                  title="Paramètres"
+                >
+                  <svg id="Glyph" enableBackground="new 0 0 32 32" height="25" viewBox="0 0 32 32" width="25" xmlns="http://www.w3.org/2000/svg" version="1.1" fill='currentColor' xmlnsXlink="http://www.w3.org/1999/xlink" className='bg-icon'>
+                    <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
+                      <path id="XMLID_273_" d="m27.526 18.036-.526-.304c-.626-.361-1-1.009-1-1.732s.374-1.371 1-1.732l.526-.304c1.436-.83 1.927-2.662 1.098-4.098l-1-1.732c-.827-1.433-2.666-1.925-4.098-1.098l-.526.303c-.626.362-1.375.362-2 0-.626-.362-1-1.009-1-1.732v-.607c0-1.654-1.346-3-3-3h-2c-1.654 0-3 1.346-3 3v.608c0 .723-.374 1.37-1 1.732-.626.361-1.374.362-2 0l-.526-.304c-1.432-.827-3.271-.335-4.099 1.098l-1 1.732c-.829 1.436-.338 3.269 1.098 4.098l.527.304c.626.361 1 1.009 1 1.732s-.374 1.371-1 1.732l-.526.304c-1.436.829-1.927 2.662-1.098 4.098l1 1.732c.828 1.433 2.667 1.925 4.098 1.098l.526-.303c.626-.363 1.374-.361 2 0 .626.362 1 1.009 1 1.732v.607c0 1.654 1.346 3 3 3h2c1.654 0 3-1.346 3-3v-.608c0-.723.374-1.37 1-1.732.625-.361 1.374-.362 2 0l.526.304c1.432.826 3.271.334 4.098-1.098l1-1.732c.829-1.436.338-3.269-1.098-4.098zm-11.526 2.964c-2.757 0-5-2.243-5-5s2.243-5 5-5 5 2.243 5 5-2.243 5-5 5z" />
+                    </g>
+                  </svg>
+                </button>
+                
+                {isSettingsDropdownOpen && (
+                  <div
+                    className="
+                      absolute top-full -left-48 mt-2
+                      w-[280px]
+                      bg-secondary-bg
+                      rounded-2xl
+                      shadow-[0_12px_35px_rgba(0,0,0,0.18)]
+                      border border-light
+                      z-50
+                      overflow-hidden
+                      animate-in slide-in-from-top-2 duration-200
+                    "
+                  >
+                    <div className="px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white">
+                      <h3 className="text-sm font-semibold">Paramètres</h3>
+                    </div>
+
+                    <div className="py-2 px-2">
+                      {hasPermission(23) && (
+                        <>
+                          <button
+                            className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
+                            onClick={() => openSetting("Gestion des jours non travaillés")}
+                          >
+                            <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                              </svg>
+                            </div>
+                            <span className="flex-1 text-sm font-medium">Jours non travaillés</span>
+                          </button>
+
+                          <button
+                            className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
+                            onClick={() => openSetting("Affichage mobile des événements")}
+                          >
+                            <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M3 2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm6 11a1 1 0 1 0-2 0 1 1 0 0 0 2 0"/>
+                              </svg>
+                            </div>
+                            <span className="flex-1 text-sm font-medium">Affichage mobile</span>
+                          </button>
+
+                          <button
+                            className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
+                            onClick={() => openSetting("Gestion des types de jours")}
+                          >
+                            <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path fillRule="evenodd" d="M12.5 15a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 1 0v13a.5.5 0 0 1-.5.5M10 8a.5.5 0 0 1-.5.5H3.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L3.707 7.5H9.5a.5.5 0 0 1 .5.5"/>
+                              </svg>
+                            </div>
+                            <span className="flex-1 text-sm font-medium">Types de jours</span>
+                          </button>
+
+                          <div className="mx-2 my-2 h-px bg-primary-100" />
+                        </>
+                      )}
+
+                      <button
+                        className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
+                        onClick={() => openSetting("Affichage des étiquettes")}
+                      >
+                        <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M2 2v4.586l7 7L13.586 9l-7-7H2zM1 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 1 6.586z"/>
+                            <path d="M4.5 5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/>
+                          </svg>
+                        </div>
+                        <span className="flex-1 text-sm font-medium">Placement de l'étiquette</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Menu Sélection de Vue */}
               {(hasPermission(23) || hasPermission(22)) && (
@@ -150,7 +277,7 @@ export const CalendarHeader = memo(({
                   <button
                     className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
                     onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
-                    title="Changer de vue"
+                    title="Changer d’espace"
                   >
                     <svg id="Layer_1" enableBackground="new 0 0 512 512" height="25" viewBox="0 0 512 512" width="25" xmlns="http://www.w3.org/2000/svg" version="1.1" fill='currentColor' xmlnsXlink="http://www.w3.org/1999/xlink" className='bg-icon'>
                       <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
@@ -159,97 +286,337 @@ export const CalendarHeader = memo(({
                     </svg>
                   </button>
 
-                  {/* Dropdown Content */}
+                  {/* Dropdown Content Changer Espace */}
                   {isViewDropdownOpen && (
-                    <div className="absolute top-full -left-30 mt-2 w-56 bg-secondary-bg rounded-2xl shadow-2xl border border-light z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-                      <div className="px-4 py-3 bg-gradient-to-r from-primary to-primary-dark text-white">
-                        <h3 className="text-sm font-semibold">Changer de vue</h3>
-                        <p className="text-xs text-white/80 mt-1">Sélectionnez votre mode d'affichage</p>
+                    <div
+                      className="
+                        absolute top-full -left-30 mt-2
+                        w-64
+                        bg-secondary-bg
+                        rounded-2xl
+                        shadow-[0_12px_35px_rgba(0,0,0,0.18)]
+                        border border-light
+                        z-50
+                        overflow-hidden
+                        animate-in slide-in-from-top-2 duration-200
+                      "
+                    >
+                      {/* HEADER */}
+                      <div
+                        className="
+                          px-4 py-3
+                          bg-gradient-to-r
+                          from-primary
+                          to-primary-dark
+                          text-white
+                        "
+                      >
+                        <h3 className="text-sm font-semibold">
+                          Changer d’espace
+                        </h3>
                       </div>
-                      
-                      <div className="py-2">
-                        {/* Option: Calendrier */}
-                        <button
-                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'calendar' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
-                          onClick={() => { setViewType('calendar'); setIsViewDropdownOpen(false); }}
-                        >
-                          <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'calendar' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium">Planning</div>
-                            <div className="text-xs text-primary mt-0.5">Vue calendrier avec timeline</div>
-                          </div>
-                          {viewType === 'calendar' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
-                        </button>
-                        
-                        <div className="mx-4 my-2 h-px bg-primary-100"></div>
 
-                        {/* Option: Chantier Table */}
+                      {/* OPTIONS */}
+                      <div className="py-2 px-2">
+
+                        {/* PLANNING */}
                         <button
-                          className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'chantier-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
-                          onClick={() => { setViewType('chantier-table'); setIsViewDropdownOpen(false); }}
+                          className={`
+                            w-full
+                            px-3 py-2.5
+                            rounded-xl
+                            text-left
+                            flex items-center gap-3
+                            transition-all duration-150
+                            group
+                            ${
+                              viewType === 'calendar'
+                                ? 'bg-primary-100 text-primary'
+                                : 'text-primary hover:bg-primary-50'
+                            }
+                          `}
+                          onClick={() => {
+                            setViewType('calendar');
+                            setIsViewDropdownOpen(false);
+                          }}
                         >
-                          <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'chantier-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zM1 2v2h4V2H1zm4 3H1v3h4V5zm0 4H1v3h4V9zm0 4H1v2a1 1 0 0 0 1 1h3v-3zm5-8H6v3h4V4zm0 4H6v3h4V8z" /></svg>
+                          <div
+                            className={`
+                              w-9 h-9
+                              shrink-0
+                              flex items-center justify-center
+                              rounded-xl
+                              transition-all duration-150
+                              ${
+                                viewType === 'calendar'
+                                  ? 'bg-primary text-white'
+                                  : 'text-primary group-hover:bg-primary group-hover:!text-white'
+                              }
+                            `}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="18"
+                              height="18"
+                              fill="currentColor"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z" />
+                            </svg>
                           </div>
-                          <div className="flex-1">
-                            <div className="font-medium">Liste des chantiers</div>
-                            <div className="text-xs text-primary mt-0.5">Vue tableau avec filtres</div>
-                          </div>
-                          {viewType === 'chantier-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
+
+                          <span className="flex-1 text-sm font-medium">
+                            Planning
+                          </span>
+
+                          {viewType === 'calendar' && (
+                            <div
+                              className="
+                                w-6 h-6
+                                shrink-0
+                                rounded-full
+                                bg-primary
+                                flex items-center justify-center
+                              "
+                            >
+                              <svg
+                                className="w-3.5 h-3.5 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </div>
+                          )}
                         </button>
 
-                        {/* Option: Paie Table - Seulement pour Admin et Manager */}
+                        <div className="mx-2 my-2 h-px bg-primary-100" />
+
+                        {/* LISTE DES CHANTIERS */}
+                        <button
+                          className={`
+                            w-full
+                            px-3 py-2.5
+                            rounded-xl
+                            text-left
+                            flex items-center gap-3
+                            transition-all duration-150
+                            group
+                            ${
+                              viewType === 'chantier-table'
+                                ? 'bg-primary-100 text-primary'
+                                : 'text-primary hover:bg-primary-50'
+                            }
+                          `}
+                          onClick={() => {
+                            setViewType('chantier-table');
+                            setIsViewDropdownOpen(false);
+                          }}
+                        >
+                          <div
+                            className={`
+                              w-9 h-9
+                              shrink-0
+                              flex items-center justify-center
+                              rounded-xl
+                              transition-all duration-150
+                              ${
+                                viewType === 'chantier-table'
+                                  ? 'bg-primary text-white'
+                                  : 'text-primary group-hover:bg-primary group-hover:!text-white'
+                              }
+                            `}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                              <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zM1 2v2h4V2H1zm4 3H1v3h4V5zm0 4H1v3h4V9zm0 4H1v2a1 1 0 0 0 1 1h3v-3zm5-8H6v3h4V4zm0 4H6v3h4V8z" />
+                            </svg>
+                          </div>
+
+                          <span className="flex-1 text-sm font-medium">
+                            Liste des chantiers
+                          </span>
+
+                          {viewType === 'chantier-table' && (
+                            <SelectedCheck />
+                          )}
+                        </button>
+
+                        {/* RUBRIQUE SOCIALE */}
                         {hasPermission(23) && (
                           <button
-                            className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'paie-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
-                            onClick={() => { setViewType('paie-table'); setIsViewDropdownOpen(false); }}
+                            className={`
+                              w-full
+                              px-3 py-2.5
+                              rounded-xl
+                              text-left
+                              flex items-center gap-3
+                              transition-all duration-150
+                              group
+                              ${
+                                viewType === 'paie-table'
+                                  ? 'bg-primary-100 text-primary'
+                                  : 'text-primary hover:bg-primary-50'
+                              }
+                            `}
+                            onClick={() => {
+                              setViewType('paie-table');
+                              setIsViewDropdownOpen(false);
+                            }}
                           >
-                            <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'paie-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm13-1H2a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM2 5v7h12V5H2z"/><path d="M6 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 8zm0 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5z"/></svg>
+                            <div
+                              className={`
+                                w-9 h-9
+                                shrink-0
+                                flex items-center justify-center
+                                rounded-xl
+                                transition-all duration-150
+                                ${
+                                  viewType === 'paie-table'
+                                    ? 'bg-primary text-white'
+                                    : 'text-primary group-hover:bg-primary group-hover:!text-white'
+                                }
+                              `}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm13-1H2a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM2 5v7h12V5H2z"/><path d="M6 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 8zm0 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5z"/>
+                              </svg>
                             </div>
-                            <div className="flex-1">
-                              <div className="font-medium">Rubrique Sociale</div>
-                              <div className="text-xs text-primary mt-0.5">Gestion des éléments de paie</div>
-                            </div>
-                            {viewType === 'paie-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
+
+                            <span className="flex-1 text-sm font-medium">
+                              Rubrique Sociale
+                            </span>
+
+                            {viewType === 'paie-table' && (
+                              <SelectedCheck />
+                            )}
                           </button>
                         )}
+
+                        {/* ÉVÉNEMENTS MANUELS */}
                         {hasPermission(23) && (
                           <button
-                            className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'manual-event-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
-                            onClick={() => { setViewType('manual-event-table'); setIsViewDropdownOpen(false); }}
+                            className={`
+                              w-full
+                              px-3 py-2.5
+                              rounded-xl
+                              text-left
+                              flex items-center gap-3
+                              transition-all duration-150
+                              group
+                              ${
+                                viewType === 'manual-event-table'
+                                  ? 'bg-primary-100 text-primary'
+                                  : 'text-primary hover:bg-primary-50'
+                              }
+                            `}
+                            onClick={() => {
+                              setViewType('manual-event-table');
+                              setIsViewDropdownOpen(false);
+                            }}
                           >
-                            <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'manual-event-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 011 1v10a1 1 0 01-1 1h-6.586l-3.707 3.707A1 1 0 018 19v-3H4a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v8h4a1 1 0 011 1v1.586L12.586 15H19V6H5zm2 2h10v2H7V8zm0 3h7v2H7v-2z"/></svg>
+                            <div
+                              className={`
+                                w-9 h-9
+                                shrink-0
+                                flex items-center justify-center
+                                rounded-xl
+                                transition-all duration-150
+                                ${
+                                  viewType === 'manual-event-table'
+                                    ? 'bg-primary text-white'
+                                    : 'text-primary group-hover:bg-primary group-hover:!text-white'
+                                }
+                              `}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M4 4h16a1 1 0 011 1v10a1 1 0 01-1 1h-6.586l-3.707 3.707A1 1 0 018 19v-3H4a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v8h4a1 1 0 011 1v1.586L12.586 15H19V6H5zm2 2h10v2H7V8zm0 3h7v2H7v-2z"/>
+                              </svg>
                             </div>
-                            <div className="flex-1">
-                              <div className="font-medium">Événements manuels</div>
-                              <div className="text-xs text-primary mt-0.5">Créer et gérer les rubriques personnalisées</div>
-                            </div>
-                            {viewType === 'manual-event-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}                     
+
+                            <span className="flex-1 text-sm font-medium">
+                              Événements manuels
+                            </span>
+
+                            {viewType === 'manual-event-table' && (
+                              <SelectedCheck />
+                            )}
                           </button>
                         )}
-                        
+
                         {hasPermission(23) && (
-                          <button
-                            className={`w-full px-4 py-3 text-left flex items-center gap-4 transition-all duration-200 group ${viewType === 'employee-table' ? 'bg-primary-100 text-primary shadow-sm' : 'text-primary hover:bg-primary-50 hover:shadow-sm'}`}
-                            onClick={() => { setViewType('employee-table'); setIsViewDropdownOpen(false); }}
-                          >
-                            <div className={`p-2 rounded-xl transition-all duration-200 ${viewType === 'employee-table' ? 'bg-primary text-white' : 'group-hover:bg-primary group-hover:text-white'}`}>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium">Liste des employées</div>
-                              <div className="text-xs text-primary mt-0.5">Gestion des employée</div>
-                            </div>
-                            {viewType === 'employee-table' && <div className="p-1 rounded-full bg-primary"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></div>}
-                          </button>
+                          <>
+                            <div className="mx-2 my-2 h-px bg-primary-100" />
+
+                            {/* EMPLOYÉS */}
+                            <button
+                              className={`
+                                w-full
+                                px-3 py-2.5
+                                rounded-xl
+                                text-left
+                                flex items-center gap-3
+                                transition-all duration-150
+                                group
+                                ${
+                                  viewType === 'employee-table'
+                                    ? 'bg-primary-100 text-primary'
+                                    : 'text-primary hover:bg-primary-50'
+                                }
+                              `}
+                              onClick={() => {
+                                setViewType('employee-table');
+                                setIsViewDropdownOpen(false);
+                              }}
+                            >
+                              <div
+                                className={`
+                                  w-9 h-9
+                                  shrink-0
+                                  flex items-center justify-center
+                                  rounded-xl
+                                  transition-all duration-150
+                                  ${
+                                    viewType === 'employee-table'
+                                      ? 'bg-primary text-white'
+                                      : 'text-primary group-hover:bg-primary group-hover:!text-white'
+                                  }
+                                `}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                                </svg>
+                              </div>
+
+                              <span className="flex-1 text-sm font-medium">
+                                Liste du personnel
+                              </span>
+
+                              {viewType === 'employee-table' && (
+                                <SelectedCheck />
+                              )}
+                            </button>
+                          </>
                         )}
                       </div>
-                      <div className="px-4 py-2 bg-transparent border-t border-light">
-                        <p className="text-xs text-primary text-center">Raccourci : <span className="font-mono bg-transparent px-1 rounded">Ctrl + Q</span></p>
+
+                      {/* FOOTER */}
+                      <div
+                        className="
+                          px-4 py-2.5
+                          border-t border-light
+                          bg-secondary-bg
+                        "
+                      >
+                        <p className="text-[11px] text-primary/70 text-center">
+                          Raccourci :
+                          <span className="ml-1 font-mono text-primary">
+                            Ctrl + Q
+                          </span>
+                        </p>
                       </div>
                     </div>
                   )}
@@ -257,13 +624,27 @@ export const CalendarHeader = memo(({
               )}
 
               {/* Bouton Notifications */}
+              {/* Bouton Notifications */}
               <button
-                className="p-3 rounded-full hover:bg-primary-100 transition relative cursor-pointer"
+                type="button"
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary-100 transition cursor-pointer"
                 onClick={() => setIsNotificationsPanelOpen(!isNotificationsPanelOpen)}
                 title="Notifications"
+                aria-label="Notifications"
               >
-                <div className="relative">
-                  <svg id="Layer_1" enableBackground="new 0 0 100 100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="25" height="25" version="1.1" xmlnsXlink="http://www.w3.org/1999/xlink" fill='currentColor' className='bg-icon'>
+                <div className="relative flex items-center justify-center">
+                  <svg 
+                    id="Layer_1" 
+                    enableBackground="new 0 0 100 100" 
+                    viewBox="0 0 100 100" 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="25" 
+                    height="25" 
+                    version="1.1" 
+                    xmlnsXlink="http://www.w3.org/1999/xlink" 
+                    fill="currentColor" 
+                    className="bg-icon"
+                  >
                     <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
                       <path d="m84.9384384 78.6478882h-69.8768778c-4.2446356 0-6.8042536-4.7139664-4.4792337-8.2760315l4.8991413-7.4587746c2.6900654-4.0955315 4.1233788-8.8885002 4.1233788-13.7884827v-6.9935493c0-14.3977032 10.0250931-26.4705181 23.462925-29.5846062v-3.1142158c-.0000001-3.8393617 3.1142158-6.9322281 6.932228-6.9322281 1.9197464 0 3.6474648.7678463 4.9058571 2.0263696 1.237175 1.2583933 2.026371 2.9861126 2.026371 4.9058585v3.1142168c5.631134 1.2797441 10.622261 4.1380129 14.5683823 8.0839968 5.5030289 5.5031605 8.8945465 13.0966091 8.8945465 21.5006084v6.9935493c0 4.8999825 1.4333115 9.6929512 4.1233749 13.7884827l4.8991394 7.4587746c2.3250198 3.5620651-.2345962 8.2760315-4.4792328 8.2760315z"/>
                       <path d="m50.0000114 97.5h-.0000229c-6.6999817 0-12.1313858-5.4314041-12.1313858-12.1313858v-.4888229h24.2627945v.4888229c0 6.6999817-5.4314041 12.1313858-12.1313858 12.1313858z"/>
@@ -274,6 +655,39 @@ export const CalendarHeader = memo(({
                   )}
                 </div>
               </button>
+
+              {/* Bouton Aide */}
+              <button
+                type="button"
+                onClick={() => setIsHelpOpen((open) => !open)}
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary-100 transition cursor-pointer"
+                title="Aide et raccourcis clavier"
+                aria-label="Aide et raccourcis clavier"
+              >
+                <span className="text-xl font-semibold bg-icon leading-none">?</span>
+              </button>
+              {isHelpOpen && (
+                <div className="absolute right-25 top-16 z-50 w-64 rounded-xl border border-default bg-secondary-bg p-3 shadow-lg">
+                  <h3 className="mb-2 text-sm font-semibold">Raccourcis clavier</h3>
+                  <div className="space-y-1 text-sm">
+                    {[
+                      ['Ctrl + C', 'Copier'],
+                      ['Ctrl + V', 'Coller'],
+                      ['Ctrl + Z', 'Annuler'],
+                      ['Ctrl + F', 'Rechercher'],
+                      ['Ctrl + Q', 'Changer d’espace'],
+                      ['Delete', 'Supprimer'],
+                    ].map(([shortcut, label]) => (
+                      <div key={shortcut} className="flex items-center justify-between gap-3">
+                        <span>{label}</span>
+                        <kbd className="rounded border border-default px-1.5 py-0.5 text-xs">{shortcut}</kbd>
+                      </div>
+                    ))}
+                    <div className="mx-2 my-2 h-px bg-primary-100" />
+                    <span>{'Version 28.10.2026'}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Menu Utilisateur */}
               <div className="p-4 transition relative">
@@ -287,13 +701,13 @@ export const CalendarHeader = memo(({
       {/* BARRE D'OUTILS INFERIEURE (Titres, Filtres, Date) - Visible si Expanded */}
       <div className={`flex items-center justify-between w-full ${!isExpanded ? 'hidden' : 'h-[50px]'}`}>
         <div className={`${viewType === 'calendar' ? 'ml-80' : 'ml-7'}`}>
-          <p className={`text-5xl poppins text-primary ${viewType !== 'calendar' ? 'mt-[30px]' : ''}`} >
+          <p className={`text-5xl poppins text-primary ${viewType !== 'calendar' ? 'mt-[20px]' : ''}`} >
             {
               viewType === 'calendar' ? 'Planning' 
               : viewType === 'chantier-table' ? 'Liste des chantiers' 
               : viewType === 'paie-table' ? 'Rubrique Paie' 
               : viewType === 'manual-event-table' ? 'Rubrique personnalisée' 
-              : 'Liste des employées'
+              : 'Liste du personnel'
             }
           </p>
         </div>
@@ -316,6 +730,9 @@ export const CalendarHeader = memo(({
             )}
           </div>
 
+          {viewType === 'chantier-table' && chantierViewsControlProps && (
+            <ChantierViewsControl {...chantierViewsControlProps} compact />
+          )}
 
           {/* Toggle Weekend / Full Day / Filtres */}
           <div className="border border-default rounded-xl flex items-center multi-op">

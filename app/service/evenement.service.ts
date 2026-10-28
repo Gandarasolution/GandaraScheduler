@@ -133,10 +133,14 @@ async function lockQuickEvenement(id: number | undefined | null) {
     return await postRequest(`/api/event/${id}/lock-quick`, {}, 'quickLockEvenement');
 }
 
-async function getEvenements(startDate: number, endDate: number, employeeId?: number) {
+async function getEvenements(startDate: number, endDate: number, employeeIds?: number[]) {
     const startStr = new Date(startDate).toISOString().split('T')[0];
     const endStr = new Date(endDate).toISOString().split('T')[0];
-    const employeeQuery = employeeId == null ? '' : `?idEmployee=${encodeURIComponent(employeeId)}`;
+    const normalizedEmployeeIds = [...new Set((employeeIds ?? []).map(Number))]
+        .filter(Number.isFinite);
+    const employeeQuery = normalizedEmployeeIds.length > 0
+        ? `?idEmployee=${encodeURIComponent(normalizedEmployeeIds.join(','))}`
+        : '';
 
     const response = await getRequest(`/api/event/${startStr}/${endStr}${employeeQuery}`, 'getEvenements');
     return normalizeEventListResponse(response);
@@ -178,7 +182,7 @@ async function updateEvenementAndRessource(id: string, data: any) {
             CouleurFondPlanningRessource: data?.CouleurFondPlanningRessource ?? data?.Ressource?.CouleurFondPlanningRessource ?? null,
             CouleurBordurePlanningRessource: data?.CouleurBordurePlanningRessource ?? data?.Ressource?.CouleurBordurePlanningRessource ?? null,
             CouleurTextePlanningRessource: data?.CouleurTextePlanningRessource ?? data?.Ressource?.CouleurTextePlanningRessource ?? null,
-            IdImage: data?.IdImage ?? data?.Ressource?.IdImage ?? null,
+            IdPlanningImage: data?.IdPlanningImage ?? data?.Ressource?.IdPlanningImage ?? null,
         },
     };    
     return await putRequest(`/api/event/updateRessourceAndEvent/${id}`, payload, 'updateEvenementAndRessource');
@@ -198,6 +202,15 @@ async function repeatEvenement(repeatData: any) {
     return await postRequest(`/api/event/repeat/${repeatData.IdPlanningEvenement}`, payload, 'repeatEvenement');
 }
 
+async function transferPlanning(data: {
+    sourceEmployeeId: number;
+    targetEmployeeId: number;
+    startDate: string;
+    endDate: string;
+}) {
+    return await postRequest('/api/event/transfer', data, 'transferPlanning');
+}
+
 
 export default {
 
@@ -210,6 +223,7 @@ export default {
     updateEvenementAndRessource,
     divideEvenement,
     repeatEvenement,
+    transferPlanning,
     deleteEvenements,
     unlockEvenement,
     lockQuickEvenement

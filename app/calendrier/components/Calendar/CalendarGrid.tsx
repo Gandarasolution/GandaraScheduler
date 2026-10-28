@@ -37,9 +37,11 @@ interface CalendarGridProps {
   poleActivites: Record<number, PoleActivite>;
   user: User;
   dayInTimeline: number[];
+  selectedDate: number;
+  initialEmployeeId: number | null;
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: Record<string, number>;
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   isMobile: boolean;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
@@ -53,15 +55,17 @@ interface CalendarGridProps {
   onAppointmentDoubleClick: (appointment: Appointment) => void;
   onExternalDragDrop: (item: Item, date: number, intervalName: 'morning' | 'afternoon', employeeId: number, priority: number) => void;
   handleContextMenu: (e: React.MouseEvent, origin: 'cell' | 'appointment', appointment?: Appointment | null, cell?: { employeeId: number; date: number }) => void;
+  handleEmployeeContextMenu: (e: React.MouseEvent, employee: User) => void;
   selectedCell: { employeeId: number; date: number } | null;
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
-  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeId?: number) => Promise<boolean>;
+  onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeIds?: number[]) => Promise<boolean>;
   //reloadToken?: number;
   mouseUpAfterScroll: () => void;
   onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
   onLockedError: (message: string) => void;
+  onCalendarPositionChange: (position: { date?: number; idPersonnel?: number }) => void;
   mobileState: MobileCalendarState;
 }
 
@@ -77,6 +81,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   user,
   nonWorkingDates,
   isMobile,
+  selectedDate,
+  initialEmployeeId,
   isDisplayWeekend,
   tagPlacement = 'hover',
   mobileAppointmentDisplay,
@@ -89,6 +95,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onAppointmentDoubleClick,
   onExternalDragDrop,
   handleContextMenu,
+  handleEmployeeContextMenu,
   selectedCell,
   selectedAppointmentId,
   onSelectCell,
@@ -98,6 +105,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   mouseUpAfterScroll,
   onAddAppointment,
   onLockedError,
+  onCalendarPositionChange,
   mobileState
 }) => {
 
@@ -126,22 +134,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   });
 
  
-  // Scroll horizontally to today on initial render (desktop only)
+  // Scroll horizontally to the selected date on initial render (desktop only)
   useEffect(() => {
     if (isMobile) return;
     if (hasAutoScrolled.current) return;
     const scroller = mainScrollRef.current;
     if (!scroller) return;
 
-    const todayIdx = dayInTimeline.findIndex((d) => {
-      const now = new Date();
-      return new Date(d).setHours(0, 0, 0, 0) === now.setHours(0, 0, 0, 0);
-    });
-    if (todayIdx < 0) return;
+    const selectedDateIdx = dayInTimeline.findIndex((d) => (
+      new Date(d).setHours(0, 0, 0, 0) === new Date(selectedDate).setHours(0, 0, 0, 0)
+    ));
+    if (selectedDateIdx < 0) return;
 
-    scroller.scrollLeft = Math.max(0, todayIdx * CELL_WIDTH);
+    scroller.scrollLeft = Math.max(0, selectedDateIdx * CELL_WIDTH);
     hasAutoScrolled.current = true;
-  }, [dayInTimeline, isMobile, mainScrollRef]);
+  }, [dayInTimeline, isMobile, mainScrollRef, selectedDate]);
     
 
   if (isMobile) {
@@ -186,6 +193,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         onAppointmentDoubleClick={onAppointmentDoubleClick}
         onExternalDragDrop={onExternalDragDrop}
         handleContextMenu={handleContextMenu}
+        handleEmployeeContextMenu={handleEmployeeContextMenu}
         updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
         selectedCell={selectedCell}
         selectedAppointmentId={selectedAppointmentId}
@@ -193,6 +201,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         onSelectAppointment={onSelectAppointment}
         hoverColumnLeft={hoverColumnLeft}
         onLoadAppointmentsInRange={onLoadAppointmentsInRange}
+            initialEmployeeId={initialEmployeeId}
+            onCalendarPositionChange={onCalendarPositionChange}
         //reloadToken={reloadToken}
         mouseUpAfterScroll={mouseUpAfterScroll}
         onLockedError={onLockedError}

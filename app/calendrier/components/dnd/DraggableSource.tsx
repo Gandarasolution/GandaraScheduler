@@ -11,6 +11,7 @@ interface DraggableSourceProps {
   id: number; // ID unique de la source
   item: Item;
   title: string;
+  IdentifiantProjet?: string;
   imageUrl?: string | undefined; // URL de l'image associée à la source, optionnelle
   type: "Projet" | "Paie" | "Rubrique Perso"; // Type de l'élément, pour catégoriser les sources
   codeItem?: string; // Code de l'élément, optionnel
@@ -21,7 +22,7 @@ interface DraggableSourceProps {
  * Composant DraggableSource
  * Utilisé pour rendre un élément draggable depuis une source externe.
  */
-const DraggableSource: React.FC<DraggableSourceProps> = ({ id, item, title, imageUrl = null, type, codeItem, className }) => {
+const DraggableSource: React.FC<DraggableSourceProps> = ({ id, item, title, IdentifiantProjet, imageUrl = null, type, codeItem, className,  }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'external-item',
     item: { id, item, title, sourceType: 'external', imageUrl, typeEvent: type },
@@ -98,42 +99,92 @@ const DraggableSource: React.FC<DraggableSourceProps> = ({ id, item, title, imag
         )}
       </div>
 
-      {/* CODE */}
-      {codeItem && (
-        <div className="shrink-0 flex items-center">
+      {type === "Projet" ? (
+        <div className="flex flex-1 min-w-0 items-center">
+
+          <div className="flex-1 min-w-0">
+
+            {/* CODE + IDENTIFIANT */}
+            <div className="flex items-center gap-2 min-w-0">
+
+              {codeItem && (
+                <span
+                  className="
+                    shrink-0
+                    px-2
+                    text-sm
+                    font-semibold
+                    text-gray-500
+                    whitespace-nowrap
+                  "
+                >
+                  {codeItem}
+                </span>
+              )}
+
+              {codeItem && IdentifiantProjet && (
+                <span className="shrink-0 text-gray-300">
+                  -
+                </span>
+              )}
+
+              {IdentifiantProjet && (
+                <span
+                  className="
+                    min-w-0
+                    text-sm
+                    font-semibold
+                    text-gray-500
+                    whitespace-normal
+                    break-words
+                    leading-5
+                  "
+                  title={IdentifiantProjet}
+                >
+                  {IdentifiantProjet}
+                </span>
+              )}
+            </div>
+
+            {/* LIBELLÉ */}
+            <div className="mt-1 px-2 min-w-0">
+              <span
+                className="
+                  block
+                  min-w-0
+                  text-xs
+                  font-medium
+                  text-gray-400
+                  whitespace-normal
+                  break-words
+                  leading-4
+                "
+                title={title}
+              >
+                {title}
+              </span>
+            </div>
+
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-1 min-w-0 items-center px-2">
           <span
             className="
-              text-xs font-semibold
+              min-w-0
+              text-sm
+              font-semibold
               text-gray-500
-              bg-gray-100
-              px-2 py-0.5
-              rounded-md
-              whitespace-nowrap
+              whitespace-normal
+              break-words
+              leading-5
             "
+            title={title}
           >
-            {codeItem}
+            {title}
           </span>
         </div>
       )}
-
-      {/* LIBELLÉ */}
-      <div className="flex-1 min-w-0">
-        <span
-          className="
-            block
-            w-full
-            text-sm font-medium
-            text-gray-700
-            whitespace-normal
-            break-words
-            leading-5
-          "
-          title={title}
-        >
-          {title}
-        </span>
-      </div>
-
       {/* INDICATEUR DRAG */}
       <div
         className="

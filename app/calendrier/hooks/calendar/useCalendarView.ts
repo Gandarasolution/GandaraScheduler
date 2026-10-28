@@ -6,11 +6,13 @@ import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
 import { axiosAgent } from '@/app/service/axios.service';
 import { calendarConfigService } from '@/app/service';
 import { useAuth } from '../utils/AuthContext';
+import { useDayTypesContext } from '../data/dayTypesContext';
 
 
 export const useCalendarView = (idPlanning: number, user: User, isMobile: boolean) => {
 
-  const { hasPermission } = useAuth(); 
+  const { hasPermission, currentVueId, setCurrentVueId } = useAuth();
+
 
   const defaultMobileAppointmentDisplay: MobileAppointmentDisplayConfig = {
     primaryFields: ['LibellePlanningRessource', 'Type'],
@@ -29,7 +31,6 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
                                                                                       Libelle: string;
                                                                                     }>>([]);
   const [mobileAppointmentSettingsLoading, setMobileAppointmentSettingsLoading] = useState(false);
-
   // --- Préférences persistantes ---
   const getStoredBool = (key: string, def: boolean) => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -50,6 +51,8 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     return 'hover';
   });
   const [mobileAppointmentDisplay, setMobileAppointmentDisplayState] = useState<MobileAppointmentDisplayConfig>(defaultMobileAppointmentDisplay);
+  
+  const { setDayTypes } = useDayTypesContext();
   
   const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -72,17 +75,205 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({ empty: [] });
-  const [selectedDate, setSelectedDate] = useState<number>(new Date().setHours(0,0,0,0));
+  const lastPositionStorageKey = `calendar-last-position-${user?.IdPersonnel ?? 'anonymous'}-${idPlanning}`;
+  const [lastPositionEmployeeId, setLastPositionEmployeeId] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<number>(() => {
+    const today = new Date().setHours(0, 0, 0, 0);
+
+    if (typeof window === 'undefined') return today;
+
+    const storedPosition = window.localStorage.getItem(lastPositionStorageKey);
+    const storedDate = storedPosition
+      ? Number((() => {
+        try {
+          return JSON.parse(storedPosition).date;
+        } catch {
+          return null;
+        }
+      })())
+      : Number(window.localStorage.getItem(`calendar-selected-date-${user?.IdPersonnel ?? 'anonymous'}`));
+    if (!Number.isFinite(storedDate) || storedDate <= 0) return today;
+
+    const parsedDate = new Date(storedDate);
+    return Number.isNaN(parsedDate.getTime())
+      ? today
+      : parsedDate.setHours(0, 0, 0, 0);
+  });
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
-  const [nonWorkingDates, setNonWorkingDates] = useState<Record<string, number>>({});
+  const [nonWorkingDates, setNonWorkingDates] = useState<Record<string, {Id: number; TypeJourCode: string }>>({});
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
   const [searchInput, setSearchInput] = useState<string>('');
   const [dimensionSearchInput, setDimensionsSearchInput] = useState<string>('');
+
+  useEffect(() => {
+    if (!Number.isFinite(selectedDate) || selectedDate <= 0) return;
+    const currentPosition = {
+      date: selectedDate,
+      idPersonnel: lastPositionEmployeeId,
+    };
+    window.localStorage.setItem(lastPositionStorageKey, JSON.stringify(currentPosition));
+  }, [lastPositionEmployeeId, selectedDate, lastPositionStorageKey]);
+
+  const positionLoadedRef = useRef(false);
+  const canSetLastPositionRef = useRef(false);
+  const [lastPositionLoaded, setLastPositionLoaded] = useState(false);
+  const pendingPositionRef = useRef<number| null>(null);
+  const positionSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveLastPosition = useCallback((position: { date: number; idPersonnel: number }) => {
+    if (!canSetLastPositionRef.current) return;
+
+    pendingPositionRef.current = position.date;
+    if (positionSaveTimeoutRef.current) clearTimeout(positionSaveTimeoutRef.current);
+    positionSaveTimeoutRef.current = setTimeout(() => {
+      const pendingPosition = pendingPositionRef.current;
+      if (!pendingPosition) return;
+      void calendarConfigService.setLastPositionForUser(pendingPosition).then((response) => {
+        if (response?.success === false) {
+          console.error('Erreur lors de l’enregistrement de la dernière position du calendrier :', response.message);
+        }
+      }).catch((error) => {
+        console.error('Erreur lors de l’enregistrement de la dernière position du calendrier :', error);
+      });
+    }, 1000); // 1 seconde de délai pour éviter les appels trop fréquents
+  }, []);
+
+  useEffect(() => {
+    if (!idPlanning || idPlanning <= 0 || !user?.IdPersonnel) return;
+
+    let cancelled = false;
+    positionLoadedRef.current = false;
+    canSetLastPositionRef.current = false;
+    setLastPositionLoaded(false);
+
+    const loadLastPosition = async () => {
+      const storedPosition = window.localStorage.getItem(lastPositionStorageKey);
+      if (storedPosition) {
+        try {
+          const localPosition = JSON.parse(storedPosition);
+          const localEmployeeId = Number(localPosition?.idPersonnel);
+          if (Number.isFinite(localEmployeeId) && localEmployeeId > 0) {
+            setLastPositionEmployeeId(localEmployeeId);
+          }
+        } catch {
+          console.error('La dernière position locale du calendrier est invalide.');
+        }
+      }
+
+      try {
+        const response = await calendarConfigService.getLastPositionForUser();
+        if (cancelled) return;
+
+        canSetLastPositionRef.current = response?.data?.canSetLastPosition === true;
+
+        if (response?.success && response.data == null) {
+          const today = new Date().setHours(0, 0, 0, 0);
+          setSelectedDate(today);
+          setLastPositionEmployeeId(null);
+          return;
+        }
+
+        const position = response?.data;
+        const date = Number(position?.date ?? position?.Date ?? position?.DatePosition ?? position?.dernierePosition ?? position?.DernierePosition);
+        const employeeId = Number(position?.idPersonnel ?? position?.IdPersonnel ?? position?.IdEmploye);
+        if (response?.success && Number.isFinite(date) && date > 0) {
+          setSelectedDate(new Date(date).setHours(0, 0, 0, 0));
+          if (Number.isFinite(employeeId) && employeeId > 0) setLastPositionEmployeeId(employeeId);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération de la dernière position du calendrier :', error);
+      } finally {
+        if (!cancelled) {
+          positionLoadedRef.current = true;
+          setLastPositionLoaded(true);
+        }
+      }
+    };
+
+    void loadLastPosition();
+    return () => {
+      cancelled = true;
+      if (positionSaveTimeoutRef.current) clearTimeout(positionSaveTimeoutRef.current);
+    };
+  }, [idPlanning, lastPositionStorageKey, user?.IdPersonnel]);
+
+  const handleCalendarPositionChange = useCallback((position: { date?: number; idPersonnel?: number }) => {
+    const date = position.date ?? selectedDate;
+    const idPersonnel = position.idPersonnel ?? lastPositionEmployeeId;
+    if (
+      !positionLoadedRef.current ||
+      !Number.isFinite(date) ||
+      idPersonnel === null ||
+      !Number.isFinite(idPersonnel) ||
+      idPersonnel <= 0
+    ) return;
+    setSelectedDate(date);
+    setLastPositionEmployeeId(idPersonnel);
+    saveLastPosition({ date, idPersonnel });
+  }, [lastPositionEmployeeId, saveLastPosition, selectedDate]);
+
+  useEffect(() => {
+    if (!positionLoadedRef.current || !Number.isFinite(selectedDate) || !lastPositionEmployeeId) return;
+    saveLastPosition({ date: selectedDate, idPersonnel: lastPositionEmployeeId });
+  }, [lastPositionEmployeeId, saveLastPosition, selectedDate]);
+
+  useEffect(() => () => {
+    if (positionSaveTimeoutRef.current) clearTimeout(positionSaveTimeoutRef.current);
+  }, []);
+
 
 
   // --- Hook de configuration existant ---
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
   const calendarConfigHook = useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig });
+
+  useEffect(() => {
+    if (viewType !== 'calendar' || currentVueId !== 0 || !idPlanning || isMobile) return;
+
+    let cancelled = false;
+    const loadLastPlanningView = async () => {
+      try {
+        axiosAgent.defaults.headers.common['X-Planning-Id'] = idPlanning;
+        const response = await calendarConfigService.getLastVueForUser();
+        if (cancelled) return;
+
+        const payload = response?.data;
+        const rawViews = payload?.Configs ?? payload?.configs ?? payload;
+        const views = Array.isArray(rawViews) ? rawViews : rawViews ? [rawViews] : [];
+        const viewId = Number(
+          views[0]?.IdPlanningVue
+            ?? views[0]?.IdPlanningChantierVue
+            ?? views[0]?.ValeurParametre
+        );
+        if (!Number.isFinite(viewId) || viewId <= 0) {
+          throw new Error(response?.message || "Aucune vue planning n'est disponible.");
+        }
+
+        setCurrentVueId(viewId);
+        axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = viewId;
+      } catch (error) {
+        if (!cancelled) console.error("Impossible de charger la dernière vue du planning.", error);
+      }
+    };
+
+    void loadLastPlanningView();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentVueId, idPlanning, isMobile, setCurrentVueId, viewType]);
+
+  useEffect(() => {
+    if (viewType !== 'calendar' || currentVueId === null || currentVueId <= 0 || isMobile) return;
+    if (currentCalendarConfig?.IdPlanningVue === currentVueId) return;
+
+    void calendarConfigHook.loadConfigs(hasPermission(23) || hasPermission(22));
+  }, [
+    currentCalendarConfig?.IdPlanningVue,
+    currentVueId,
+    hasPermission,
+    isMobile,
+    viewType,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,7 +341,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   const onCalendarConfigChange = (config: CalendarConfig) => {
     calendarConfigService.setLastVueForUser(config.IdPlanningVue || -1)
     .then(() => {
-      console.log(`Last view for user ${user.IdPersonnel} set to ${config.IdPlanningVue}`);
+      //console.log(`Last view for user ${user.IdPersonnel} set to ${config.IdPlanningVue}`);
       axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = config.IdPlanningVue;
       setCurrentCalendarConfig(config);
     }).catch((error) => {
@@ -159,19 +350,30 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   }
 
 
-  const loadNonWorkingDates = async (): Promise<{ success: boolean; message: string }> => {
-      const result = await calendarConfigService.getNonWorkingDatesByPlanningId();
-      console.log('Résultat du chargement des jours non travaillés :', result);
+
+  const loadNonWorkingDates = async ( years: number[] ): Promise<{ success: boolean; message: string }> => {
+      const result = await calendarConfigService.getNonWorkingDates(years);
+      //console.log('Résultat du chargement des jours non travaillés :', result);
       if (result?.success && result.data) {
+        const nonWorkingDates = result.data.nonWorkingDates
         const recordData = Object.fromEntries(
-          result.data.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; }) => [
+          nonWorkingDates.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; TypeJourCode: string; }) => [
               item.DatePlanningJourNontravaille, // La clé (string)
-              Number(item.IdPlanningJourNontravaille) // La valeur (number)
+              { Id: Number(item.IdPlanningJourNontravaille), TypeJourCode: item.TypeJourCode } // La valeur (object)
           ])
         );
 
         // 2. On met à jour le state
         setNonWorkingDates(recordData);
+
+
+        const dayTypes = result.data.typesNonWorkingDates;
+        if (Array.isArray(dayTypes)) {
+          setDayTypes(dayTypes);
+        } else {
+          console.warn('Les types de jours non travaillés ne sont pas au format attendu :', dayTypes);
+        }
+
 
         return { success: true, message: 'Jours non travaillés chargés avec succès' };
       }else {
@@ -265,6 +467,8 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     isSearchOverlayOpen, setIsSearchOverlayOpen,
     activeFilters, setActiveFilters,
     selectedDate, setSelectedDate,
+    lastPositionEmployeeId, setLastPositionEmployeeId, handleCalendarPositionChange,
+    lastPositionLoaded,
     modalInfo, setModalInfo,
     nonWorkingDates, setNonWorkingDates,
     isNotificationsPanelOpen, setIsNotificationsPanelOpen,

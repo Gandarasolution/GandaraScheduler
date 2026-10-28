@@ -1,4 +1,5 @@
 "use client";
+import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import React, { useState, useRef, useEffect, memo } from 'react';
 
 export interface SelectOptionWithImage {
@@ -7,7 +8,9 @@ export interface SelectOptionWithImage {
   value?: string | number;
   image?: string;
   icon?: React.ReactNode;
-  [key: string]: any; // Permet d'avoir d'autres propriétés dynamiques
+  canDelete?: boolean;
+  isEphemeral?: boolean;
+  [key: string]: any;
 }
 
 interface CustomSelectWithImageProps {
@@ -19,16 +22,17 @@ interface CustomSelectWithImageProps {
   disabled?: boolean;
   helperText?: string;
   customArrow?: React.ReactNode;
-  showImages?: boolean; // Afficher les images dans la liste au lieu du texte
-  displayKey?: string; // Nouvelle prop pour choisir la clé d'affichage
-  imageSize?: 'small' | 'medium' | 'large'; // Taille des images
+  showImages?: boolean;
+  displayKey?: string;
+  imageSize?: 'small' | 'medium' | 'large';
   illustrationImage: React.ReactNode; 
+  onAddOption?: () => void;
+  addOptionLabel?: string;
+  onEditOption?: (option: SelectOptionWithImage) => void;
+  onDeleteOption?: (option: SelectOptionWithImage) => void | Promise<void>;
+  deletingOptionId?: string | number | null;
 }
 
-/**
- * Composant Select personnalisé avec support d'images et flèche customisable
- * Alternative au select HTML natif avec plus de flexibilité visuelle
- */
 const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   options,
   value,
@@ -36,17 +40,20 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   placeholder = "Sélectionner une option",
   className = "",
   disabled = false,
-  helperText,
   customArrow,
-  showImages = false, // Par défaut, affiche du texte dans la liste
-  displayKey = "name", // Par défaut, utilise "name"
-  imageSize = "medium", // Taille par défaut
-  illustrationImage
+  showImages = false,
+  displayKey = "name",
+  imageSize = "medium",
+  illustrationImage,
+  onAddOption,
+  addOptionLabel = "Créer une vue",
+  onEditOption,
+  onDeleteOption,
+  deletingOptionId = null 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
 
-  // Fonction pour obtenir le texte à afficher pour une option
   const getDisplayText = (option: SelectOptionWithImage): string => {
     return option[displayKey] || option.name || String(option.id);
   };
@@ -54,16 +61,13 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   const selectedOption = options.find(option => 
     String(option.value) === String(value) || String(option.image) === String(value)
   );
-  
-  // Tailles d'images
+
   const imageSizes = {
     small: 'w-4 h-4',
     medium: 'w-6 h-6',
     large: 'w-8 h-8'
   };
-  
 
-  // Fonction pour rendre une image ou une icône
   const renderImage = (option: SelectOptionWithImage, sizeClass?: string) => {
     const size = sizeClass || imageSizes[imageSize];
     
@@ -77,8 +81,8 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
           src={option.image} 
           alt={getDisplayText(option)}
           className={`${size} object-cover flex-shrink-0`}
+          loading="lazy"
           onError={(e) => {
-            // Fallback en cas d'erreur de chargement d'image
             e.currentTarget.style.display = 'none';
           }}
         />
@@ -88,7 +92,6 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
     return null;
   };
 
-  // Fermer le dropdown quand on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
@@ -100,25 +103,22 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Navigation au clavier
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isOpen) return;
-
-      switch (event.key) {
-        case 'Escape':
-          setIsOpen(false);
-          break;
+      if (event.key === 'Escape') {
+        setIsOpen(false);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, options, onChange]);
+  }, [isOpen]);
 
   const handleToggle = () => {
     if (!disabled) {
-      setIsOpen(!isOpen);    }
+      setIsOpen(!isOpen);
+    }
   };
 
   const handleOptionClick = (option: SelectOptionWithImage) => {
@@ -129,6 +129,20 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
       option
     );
     setIsOpen(false);
+  };
+
+  const handleEditClick = (event: React.MouseEvent, option: SelectOptionWithImage) => {
+    event.stopPropagation();
+    if (onEditOption) {
+      onEditOption(option);
+      setIsOpen(false);
+    }
+  };
+
+  const handleDeleteClick = async (event: React.MouseEvent, option: SelectOptionWithImage) => {
+    event.stopPropagation();
+    if (!onDeleteOption || deletingOptionId !== null) return;
+    await onDeleteOption(option);
   };
 
   const baseClasses = `
@@ -159,8 +173,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
   );
 
   return (
-    <div className={`custom-select-wrapper relative inline-block  ${!showImages ? 'w-full' : ''}`} ref={selectRef}>
-      {/* Bouton principal du select */}
+    <div className={`custom-select-wrapper relative inline-block ${!showImages ? 'w-full' : ''}`} ref={selectRef}>
       <div
         className={baseClasses}
         onClick={handleToggle}
@@ -175,74 +188,119 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <div className="flex items-center justify-between h-full text-primary ">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-                {/* Image ou icône de l'option sélectionnée dans le bouton */}
-                {selectedOption && showImages ? (
-                    <div className="flex items-center gap-2">
-                        {renderImage(selectedOption, "w-8 h-8")}
-                    </div>
-                ) : selectedOption ? (
-                    <div className="flex items-center gap-2">
-                      {illustrationImage}
-                      <span className="truncate font-bold">{getDisplayText(selectedOption)}</span>
-                    </div>
-                ) :(
-                    <span className="truncate text-gray-400">{placeholder}</span>
-                )}
-            </div>
+        <div className="flex items-center justify-between h-full text-primary">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {selectedOption && showImages ? (
+              <div className="flex items-center gap-2">
+                {renderImage(selectedOption, "w-8 h-8")}
+              </div>
+            ) : selectedOption ? (
+              <div className="flex items-center gap-2">
+                {illustrationImage}
+                <span className="truncate font-bold">{getDisplayText(selectedOption)}</span>
+              </div>
+            ) : (
+              <span className="truncate text-gray-400">{placeholder}</span>
+            )}
+          </div>
           
-            {/* Flèche dropdown */}
-            <div className={`flex-shrink-0 ${showImages ? 'ml-4' : 'ml-2'}`}>
-                {customArrow || <DefaultArrow />}
-            </div>
+          <div className={`flex-shrink-0 ${showImages ? 'ml-4' : 'ml-2'}`}>
+            {customArrow || <DefaultArrow />}
+          </div>
         </div>
       </div>
 
-      {/* Dropdown des options */}
       {isOpen && (
-        <div className={`absolute z-50 ${showImages ? 'w-auto' : 'w-full'} mt-1 bg-secondary-bg text-primary rounded-2xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide`}>
+        <div className={`absolute z-50 ${showImages ? 'w-auto' : 'w-full'} mt-1 bg-secondary-bg text-primary rounded-2xl shadow-lg max-h-60 overflow-y-auto scrollbar-hide border border-default`}>
           <ul role="listbox" className="py-1">
-            {options.map((option) => (
-              <li
-                key={option.id}
-                className={`
-                  px-3 py-2 cursor-pointer flex items-center gap-2 transition-colors duration-150 
-                  ${String(option.value || option.id) === String(value) ? 'bg-primary-100 text-primary font-medium' : 'hover:bg-primary-50 hover:text-secondary'}
-                `}
-                onClick={() => handleOptionClick(option)}
-                role="option"
-                aria-selected={String(option.value || option.id) === String(value)}
-                title={showImages ? getDisplayText(option) : undefined} // Tooltip quand on affiche seulement l'image
-              >    
-                {/* Image dans la liste si activée */}
-                {showImages && (option.image || option.icon) && (
-                  <div className="flex-shrink-0">
-                    {renderImage(option, "w-6 h-6")}
+            {options.map((option) => {
+              const isSelected = String(option.value ?? option.id) === String(value);
+              const isDeletingThis = deletingOptionId !== null && String(deletingOptionId) === String(option.id);
+              const canDelete = Boolean(onDeleteOption) && option.canDelete !== false;
+              const canEdit = Boolean(onEditOption) && !option.isEphemeral;
+
+              return (
+                <li
+                  key={option.id}
+                  className={`group flex cursor-pointer items-center justify-between gap-2 px-3 py-2 transition-colors duration-150 ${
+                    isDeletingThis
+                      ? "bg-red-50 text-red-700"
+                      : isSelected
+                        ? "bg-primary-100 font-medium text-primary"
+                        : "hover:bg-primary-50 hover:text-secondary"
+                  }`}
+                  onClick={() => handleOptionClick(option)}
+                  role="option"
+                  aria-selected={isSelected}
+                  title={showImages ? getDisplayText(option) : undefined}
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {(showImages || option.icon) && (
+                      <div className="flex-shrink-0">
+                        {renderImage(option, "w-5 h-5")}
+                      </div>
+                    )}
+                    <span className="truncate">{getDisplayText(option)}</span>
                   </div>
-                )}
-                
-                {/* Texte de l'option */}
-                {!showImages && (
-                  <span className="flex-1 truncate">{getDisplayText(option)}</span>
-                )}
-                
-                {/* Indicateur de sélection */}
-                {String(option.value || option.id) === String(value) && (
-                  <svg
-                    className="w-4 h-4 bg-icon flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Bouton Modifier */}
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleEditClick(e, option)}
+                        title="Modifier cette vue"
+                        aria-label={`Modifier ${getDisplayText(option)}`}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-secondary/70 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+
+                    {/* Bouton Suppression */}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={(e) => void handleDeleteClick(e, option)}
+                        disabled={deletingOptionId !== null}
+                        title="Supprimer cette vue"
+                        aria-label={`Supprimer ${getDisplayText(option)}`}
+                        className={`flex h-7 w-7 items-center justify-center rounded-lg transition-all cursor-pointer ${
+                          isDeletingThis
+                            ? "bg-red-100 text-red-600"
+                            : "text-secondary/70 hover:bg-red-50 hover:text-red-600"
+                        } disabled:cursor-not-allowed`}
+                      >
+                        {isDeletingThis ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-red-600" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+
+            {/* Action pour ajouter une nouvelle vue au bas de la liste */}
+            {onAddOption && (
+              <li className="border-t border-default mt-1 px-1 pt-1">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs font-semibold text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                  onClick={() => {
+                    onAddOption();
+                    setIsOpen(false);
+                  }}
+                >
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Plus className="h-3.5 w-3.5" />
+                  </div>
+                  <span>{addOptionLabel}</span>
+                </button>
               </li>
-            ))}
+            )}
           </ul>
         </div>
       )}

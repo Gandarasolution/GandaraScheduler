@@ -18,7 +18,6 @@ import { format, isSameDay, isWeekend } from 'date-fns';
 import { Appointment, HalfDayInterval, Item } from '../../types';
 import { CELL_WIDTH, CELL_HEIGHT, HOUR_MS, DAY_INTERVALS } from '../../utils/constants';
 import { isHoliday, getNextWorkedDay } from '../../utils/dates';
-import { RowWithBoundaries } from '@/app/calendrier';
 
 interface DragItem {
   id: number;
@@ -35,11 +34,20 @@ interface DragItem {
 
 interface UseCalendarDragDropParams {
   tableRef: RefObject<HTMLDivElement | null>;
-  rowBoundaries: RowWithBoundaries[];
+  rowBoundaries: {
+    start: number;
+    end: number;
+    domId: string;
+    type: "group" | "employee";
+    id: string | number;
+    uniqueKey: string;
+    data: any;
+    height: number;
+  }[];
   dayInTimeline: number[];
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: Record<string, number>;
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   appointments: Appointment[];
   onAppointmentMoved: (data: { id: number; newStartDate: number; newEndDate: number; newEmployeeId: number; idRessource: number; resizeDirection?: 'left' | 'right' }, saveToHistory?: boolean, newPriority?: number) => void;
   onExternalDragDrop: (item: Item, targetDate: number, targetInterval: 'morning' | 'afternoon', targetEmployeeId: number, priority: number) => void;
@@ -64,7 +72,7 @@ export const useCalendarDragDrop = ({
   const [, dropRef] = useDrop(() => ({
     accept: ['appointment', 'external-item'],
     drop: (item: DragItem, monitor) => {
-      console.log('Dropped item:', item);
+      //console.log('Dropped item:', item);
       if (!tableRef.current || rowBoundaries.length === 0 || dayInTimeline.length === 0) return;
       
       const clientOffset = monitor.getClientOffset();
@@ -84,7 +92,7 @@ export const useCalendarDragDrop = ({
 
       const dragOffset = item.dragOffset ?? 0;
       const adjustedX = Math.min(
-        Math.max(relativeX - (relativeX % intervalWidth) - (dragOffset - (dragOffset % intervalWidth)), 0),
+        Math.max(Math.floor((relativeX - dragOffset) / intervalWidth) * intervalWidth, 0),
         totalIntervals * intervalWidth - 1
       );
 
@@ -130,7 +138,7 @@ export const useCalendarDragDrop = ({
         app.FinPlanningEvenement > targetDate
       );
 
-      console.log('Overlapping appointments:', overlappingAppointments);
+      //console.log('Overlapping appointments:', overlappingAppointments);
       
       // Gestion des éléments externes
       if (item.sourceType === 'external') {
@@ -154,7 +162,8 @@ export const useCalendarDragDrop = ({
       
       
 
-      let newPriority: number | undefined = undefined;
+      // Un événement déplacé sans chevauchement doit revenir à la priorité de base.
+      let newPriority: number | undefined = overlappingAppointments.length === 0 ? 0 : undefined;
       
       if (overlappingAppointments.length > 0) {
         // Calculer la position Y relative à la ligne de l'employé
@@ -221,7 +230,15 @@ export const useCalendarDragDrop = ({
           }
         } else {
           if (rdvAtTargetPosition.length > 0) {
-            newPriority = (rdvAtTargetPosition[0].PlanningEvenementPriorite ?? 0) + 1;
+            // Un événement posé par-dessus plusieurs événements doit passer
+            // après la priorité la plus élevée de toute la période.
+            newPriority = overlappingAppointments.reduce(
+              (highestPriority, app) => Math.max(
+                highestPriority,
+                app.PlanningEvenementPriorite ?? 0
+              ),
+              -1
+            ) + 1;
           } else {
             newPriority = targetPriorityIndex;
           }

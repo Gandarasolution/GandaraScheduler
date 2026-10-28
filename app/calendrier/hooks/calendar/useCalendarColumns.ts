@@ -1,81 +1,82 @@
 /**
  * @fileoverview Hook useCalendarColumns - Gestion des colonnes spéciales du calendrier
- * 
- * Calcule les positions des colonnes avec statut particulier:
- * - Jours fériés (holidays)
- * - Week-ends (weekends)
- * - Jours non travaillés personnalisés (nonWorking)
- * 
- * @hook useCalendarColumns
- * @author Gandara Solutions
- * @version 1.0.0
  */
 
 import { useMemo } from 'react';
-import { format, isSameDay, isWeekend } from 'date-fns';
+import { format, isWeekend } from 'date-fns';
 import { isHoliday } from '../../utils/dates';
 import { CELL_WIDTH } from '../../utils/constants';
+import { useDayTypesContext } from '../data/dayTypesContext';
 
 export interface ColumnOverlay {
   left: number;
   key: number;
+  className?: string;
+  CouleurFond?: string;
+  CouleurTexte?: string;
 }
 
 interface UseCalendarColumnsParams {
   dayInTimeline: number[];
-  nonWorkingDates: Record<string, number>;
+  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
 }
 
-interface UseCalendarColumnsResult {
-  holidayColumns: ColumnOverlay[];
-  weekendColumns: ColumnOverlay[];
-  nonWorkingColumns: ColumnOverlay[];
-}
-
-/**
- * Hook pour calculer les colonnes spéciales (jours fériés, week-ends, jours non travaillés)
- * 
- * @param dayInTimeline - Tableau des timestamps des jours affichés
- * @param nonWorkingDates - Tableau des jours non travaillés personnalisés
- * @returns Objets contenant les positions et clés des colonnes spéciales
- */
 export const useCalendarColumns = ({
   dayInTimeline,
   nonWorkingDates,
-}: UseCalendarColumnsParams): UseCalendarColumnsResult => {
+}: UseCalendarColumnsParams): { specialColumns: ColumnOverlay[] } => {
+  
+  // Appel du hook de contexte à la racine du hook (règle de React)
+  const { DayTypes } = useDayTypesContext();
 
-  const { holidayColumns, weekendColumns, nonWorkingColumns } = useMemo(() => {
-    const holidays: ColumnOverlay[] = [];
-    const weekends: ColumnOverlay[] = [];
-    const nonWorking: ColumnOverlay[] = [];
+  const specialColumns = useMemo(() => {
+    const columns: ColumnOverlay[] = [];
 
     dayInTimeline.forEach((day, index) => {
       const left = index * CELL_WIDTH;
+      const formattedDate = format(day, 'yyyy-MM-dd');
+
       const isFerie = isHoliday(day);
       const isWk = isWeekend(day);
-      const isNonWorking = nonWorkingDates[format(day, 'yyyy-MM-dd')] !== undefined;
+      const nonWorkingData = nonWorkingDates[formattedDate];
 
-      // Priorité: férié > week-end > non-working custom
+      // Priorité 1 : Férié
       if (isFerie) {
-        holidays.push({ left, key: day });
-        return; // Pas besoin d'ajouter d'autres surcouches
+        const dayTypeInfo = DayTypes?.find((dt: any) => String(dt.Id) === 'ferie');
+        columns.push({ 
+          left, 
+          key: day, 
+          CouleurFond: dayTypeInfo?.CouleurFond,
+          CouleurTexte: dayTypeInfo?.CouleurTexte,          
+        });
+        return;
       }
 
+      // Priorité 2 : Personnalisé (Non-working)
+      if (nonWorkingData) {
+        const dayTypeInfo = DayTypes?.find((dt: any) => String(dt.Id) === String(nonWorkingData.TypeJourCode));
+        columns.push({ 
+          left, 
+          key: day, 
+          className: 'NON-WORKING',
+          CouleurFond: dayTypeInfo?.CouleurFond,
+          CouleurTexte: dayTypeInfo?.CouleurTexte
+        });
+        return;
+      }
+
+      // Priorité 3 : Week-end classique
       if (isWk) {
-        weekends.push({ left, key: day });
-      }
-
-      if (isNonWorking) {
-        nonWorking.push({ left, key: day });
+        columns.push({ 
+          left, 
+          key: day, 
+          className: 'WEEKEND',
+        });
       }
     });
 
-    return { holidayColumns: holidays, weekendColumns: weekends, nonWorkingColumns: nonWorking };
-  }, [dayInTimeline, nonWorkingDates]);
+    return columns;
+  }, [dayInTimeline, nonWorkingDates, DayTypes]); // Ne pas oublier d'ajouter DayTypes aux dépendances
 
-  return {
-    holidayColumns,
-    weekendColumns,
-    nonWorkingColumns,
-  };
+  return { specialColumns };
 };

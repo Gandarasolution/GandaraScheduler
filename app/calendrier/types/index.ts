@@ -128,6 +128,7 @@ interface BaseItem {
 
 export interface ChantierItem extends BaseItem {
   Type: "Projet";
+  Identifiant: number;
   PoleActivite: string;
   Etat: string;
   ChargeAffaire: string;
@@ -395,4 +396,15 @@ export interface Notification {
   Message: string;
   Timestamp: string;
   IsRead: boolean;
+}
+
+
+export interface DayType {
+  Id: string;
+  Libelle: string;
+  CouleurFond: string;
+  CouleurTexte: string;
+  isBold: boolean;
+  isItalic: boolean;
+  isLocked: boolean;
 }

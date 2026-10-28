@@ -1,19 +1,27 @@
 import { memo, useEffect, useState } from "react";
 import Modal from "./Modal";
-import { FilterCategory, FilterConfigWithActive, ActiveFilters } from "../../utils/searchAndFilterUtils";
+import { FilterCategory, FilterConfig, ActiveFilters, FilterOption } from "../../utils/searchAndFilterUtils";
 import { Combobox } from "../ui/Combobox";
 import ressourceService from "@/app/service/ressource.service";
 
-// Cache pour stocker les options des filtres (évite de recharger pendant 1h)
-const filterOptionsCache: Record<string, { timestamp: number, data: any }> = {};
-const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 heure
+const filterOptionsCache: Record<string, { timestamp: number; data: any }> = {};
+const CACHE_DURATION_MS = 60 * 60 * 1000;
+
+const normalizeFilterOptions = (options: unknown): FilterOption[] =>
+  Array.isArray(options)
+    ? options.map(option =>
+        typeof option === 'string'
+          ? { value: option, label: option }
+          : option as FilterOption
+      )
+    : [];
 
 type FilterModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (filters: ActiveFilters) => void;
-  filterConfig: FilterConfigWithActive;
-  onClearAll: () => void;
+  onSubmit: (filters: ActiveFilters) => boolean | void | Promise<boolean | void>;
+  onApply: (filters: ActiveFilters) => void;
+  keyOfFilter: { [key: string]: { label: string; type: 'checkbox' | 'select' | 'radio' | 'search' | 'combobox' | 'badge'; badgeColors?: Record<string, string> } };
   title?: string;
   viewType?: string;
 };
@@ -22,20 +30,24 @@ const FilterModal: React.FC<FilterModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  filterConfig,
-  onClearAll,
+  onApply,
+  keyOfFilter,
   title,
   viewType
 }) => {
-    
-  // On gère localement la config pour pouvoir la mettre à jour via l'API
-  const [localFilterConfig, setLocalFilterConfig] = useState<FilterConfigWithActive>(filterConfig);
+  const createLocalFilterConfig = (): FilterConfig =>
+    Object.entries(keyOfFilter).reduce((config, [key, filter]) => {
+      config[key] = {
+        ...filter,
+        options: []
+      };
+      return config;
+    }, {} as FilterConfig);
+
+  const [localFilterConfig, setLocalFilterConfig] = useState<FilterConfig>(createLocalFilterConfig);
   const [isLoading, setIsLoading] = useState(false);
-
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>(
-    filterConfig.activeFilters  || {}
-  );
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
 
   const toggleFilter = (categoryKey: string, value: string) => {
     setActiveFilters(prev => ({
@@ -53,13 +65,10 @@ const FilterModal: React.FC<FilterModalProps> = ({
     }));
   };
 
-  const getBadgeClass = (option: string, category: FilterCategory) => {
-    // Si des couleurs personnalisées sont définies pour ce badge
-    if (category.badgeColors && category.badgeColors[option]) {
-      return category.badgeColors[option];
+  const getBadgeClass = (option: FilterOption, category: FilterCategory) => {
+    if (category.badgeColors && category.badgeColors[option.label]) {
+      return category.badgeColors[option.label];
     }
-
-    // Couleur par défaut
     return 'bg-gray-100 text-gray-800';
   };
 
@@ -69,14 +78,14 @@ const FilterModal: React.FC<FilterModalProps> = ({
         return (
           <div className={category.options.length > 4 ? "space-y-1" : "grid grid-cols-2 gap-2"}>
             {category.options.map(option => (
-              <label key={option} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
+              <label key={option.value} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
                 <input
                   type="checkbox"
-                  checked={activeFilters[categoryKey]?.includes(option) ?? false}
-                  onChange={() => toggleFilter(categoryKey, option)}
+                  checked={activeFilters[categoryKey]?.includes(option.value) ?? false}
+                  onChange={() => toggleFilter(categoryKey, option.value)}
                   className="rounded"
                 />
-                <span className="text-sm">{option}</span>
+                <span className="text-sm">{option.label}</span>
               </label>
             ))}
           </div>
@@ -86,13 +95,13 @@ const FilterModal: React.FC<FilterModalProps> = ({
         return (
           <div className="flex flex-wrap gap-4">
             {category.options.map(option => {
-              const isSelected = activeFilters[categoryKey]?.includes(option) ?? false;
+              const isSelected = activeFilters[categoryKey]?.includes(option.value) ?? false;
               const badgeClass = getBadgeClass(option, category);
               return (
                 <button
-                  key={option}
+                  key={option.value}
                   type="button"
-                  onClick={() => toggleFilter(categoryKey, option)}
+                  onClick={() => toggleFilter(categoryKey, option.value)}
                   className={`
                     inline-flex items-center px-3 py-1.5 rounded-3xl text-xs font-medium
                     transition-all duration-200
@@ -103,7 +112,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     }
                   `}
                 >
-                  {option}
+                  {option.label}
                   {isSelected && (
                     <svg className="ml-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -118,13 +127,13 @@ const FilterModal: React.FC<FilterModalProps> = ({
       case 'select':        
         return (
           <select
-            value={activeFilters[categoryKey][0] || ''}
+            value={activeFilters[categoryKey]?.[0] || ''}
             onChange={(e) => setSelectFilter(categoryKey, e.target.value)}
             className="w-full p-2 border border-light rounded focus:outline-none focus:border-primary"
           >
             <option value="">Tous</option>
             {category.options.map(option => (
-              <option key={option} value={option}>{option}</option>
+              <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         );
@@ -133,15 +142,15 @@ const FilterModal: React.FC<FilterModalProps> = ({
         return (
           <div className="space-y-1">
             {category.options.map(option => (
-              <label key={option} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
+              <label key={option.value} className="flex items-center gap-2 cursor-pointer hover:bg-secondary p-2 rounded">
                 <input
                   type="radio"
                   name={categoryKey}
-                  checked={activeFilters[categoryKey]?.includes(option) ?? false}
-                  onChange={() => setSelectFilter(categoryKey, option)}
+                  checked={activeFilters[categoryKey]?.includes(option.value) ?? false}
+                  onChange={() => setSelectFilter(categoryKey, option.value)}
                   className="rounded-full"
                 />
-                <span className="text-sm">{option}</span>
+                <span className="text-sm">{option.label}</span>
               </label>
             ))}
           </div>
@@ -149,6 +158,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
       case 'combobox':
         return (
           <Combobox
+            multiple={true}
             options={category.options}
             value={activeFilters[categoryKey] || []}
             onValueChange={(newValues) =>
@@ -167,34 +177,35 @@ const FilterModal: React.FC<FilterModalProps> = ({
   };
 
   useEffect(() => {
-    setActiveFilters(filterConfig.activeFilters || {});
-  }, [filterConfig.activeFilters]);
+    setLocalFilterConfig(createLocalFilterConfig());
+  }, [keyOfFilter]);
 
-  // Récupérer les options dynamiquement depuis l'API à l'ouverture
   useEffect(() => {
     if (isOpen) {
-      const keys = Object.keys(filterConfig).filter(k => k !== 'activeFilters');
+      const keys = Object.keys(keyOfFilter);
       if (keys.length === 0) return;
 
       const cacheKey = (viewType || '') + '_' + keys.join(',');
       const now = Date.now();
+      const shouldReloadActiveFilters = viewType === 'chantier-table';
 
-      // Vérifier si on a des données en cache valides (moins de 1h)
-      if (filterOptionsCache[cacheKey] && (now - filterOptionsCache[cacheKey].timestamp < CACHE_DURATION_MS)) {
+      if (!shouldReloadActiveFilters &&
+        filterOptionsCache[cacheKey] &&
+        now - filterOptionsCache[cacheKey].timestamp < CACHE_DURATION_MS) {
         const cachedData = filterOptionsCache[cacheKey].data;
         setLocalFilterConfig(prev => {
           const updatedConfig = { ...prev };
           for (const key of Object.keys(cachedData)) {
-            if (updatedConfig[key] && typeof updatedConfig[key] === 'object' && 'options' in updatedConfig[key]!) {
+            if (updatedConfig[key]) {
               updatedConfig[key] = {
                 ...updatedConfig[key],
-                options: cachedData[key]
-              } as FilterCategory;
+                options: normalizeFilterOptions(cachedData[key])
+              };
             }
           }
           return updatedConfig;
         });
-        return; // On ne fait pas l'appel API si on utilise le cache
+        return;
       }
 
       setIsLoading(true);
@@ -202,40 +213,51 @@ const FilterModal: React.FC<FilterModalProps> = ({
       ressourceService.getFilterOptionsDynamic(viewType || '', keys)
         .then(response => {
           if (response?.success && response.data) {
-            // Mettre en cache la réponse
-            filterOptionsCache[cacheKey] = {
-              timestamp: Date.now(),
-              data: response.data
-            };
+            const responseData = response.data;
+            const filterOptions = responseData.filters ?? responseData.Filters ?? responseData;
+            const loadedActiveFilters = responseData.activeFilter ?? responseData.activeFilters ?? responseData.ActiveFilters ?? {};
+
+            if (!shouldReloadActiveFilters) {
+              filterOptionsCache[cacheKey] = {
+                timestamp: Date.now(),
+                data: Object.fromEntries(
+                  Object.entries(filterOptions).map(([key, options]) => [
+                    key,
+                    normalizeFilterOptions(options)
+                  ])
+                )
+              };
+            }
 
             setLocalFilterConfig(prev => {
               const updatedConfig = { ...prev };
-              for (const key of Object.keys(response.data)) {
+              for (const key of Object.keys(filterOptions)) {
                 if (updatedConfig[key] && typeof updatedConfig[key] === 'object' && 'options' in updatedConfig[key]!) {
                   updatedConfig[key] = {
                     ...updatedConfig[key],
-                    options: response.data[key]
+                    options: normalizeFilterOptions(filterOptions[key])
                   } as FilterCategory;
                 }
               }
               return updatedConfig;
             });
+
+            if (loadedActiveFilters && typeof loadedActiveFilters === 'object') {
+              setActiveFilters(loadedActiveFilters);
+            }
           }
         })
         .catch(err => console.error("Erreur lors de la récupération des options de filtres :", err))
         .finally(() => setIsLoading(false));
     }
-  }, [isOpen, filterConfig, viewType]);
+  }, [isOpen, keyOfFilter, viewType]);
 
   return (
     <Modal 
       isOpen={isOpen}
-      onClose={() => {
-        onClose();
-        onSubmit(activeFilters);
-      }} 
+      onClose={onClose}
       title={title} 
-      className="max-w-lg w-full" 
+      className="w-[95vw] max-w-6xl"
       classNameContent="px-4"
     >
       {isLoading ? (
@@ -244,17 +266,16 @@ const FilterModal: React.FC<FilterModalProps> = ({
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-6 poppins text-primary py-4">
-            {/* Rendu dynamique des filtres */}
+          {/* Layout en colonnes CSS pour rendre l'espacement vertical indépendant à gauche et à droite */}
+          <div className="columns-1 lg:columns-2 gap-x-8 poppins text-primary py-4">
             {Object.entries(localFilterConfig)
-              .filter(([key]) => key !== 'activeFilters') // Exclure la propriété activeFilters
+              .filter(([key]) => key !== 'activeFilters')
               .map(([key, category]) => {
-                // Type guard pour assurer que category est bien FilterCategory
                 if (typeof category !== 'object' || !('label' in category)) return null;
                 const filterCategory = category as FilterCategory;
                 
                 return (
-                  <div key={key} className="space-y-3">
+                  <div key={key} className="break-inside-avoid mb-5 space-y-3">
                     <div className="flex items-center justify-between w-full">
                       <h3 className="font-semibold">{filterCategory.label}</h3>
                       <button 
@@ -264,7 +285,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                             [key]: []
                           }));
                         }}
-                        className="mr-3 p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors duration-200  cursor-pointer"
+                        className="mr-3 p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors duration-200 cursor-pointer"
                         title="Réinitialiser ce filtre"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash3-fill" viewBox="0 0 16 16">
@@ -279,21 +300,33 @@ const FilterModal: React.FC<FilterModalProps> = ({
           </div>
           <div className="py-4 flex items-center justify-between">
             <button
-              onClick={onClearAll}
+              onClick={() => {
+                setActiveFilters({});
+              }}
               className="text-primary-500 rounded-lg cursor-pointer hover:bg-gray-100 px-4 py-2"
             >
               Réinitialiser
             </button>
             <button
-              onClick={
-                () => {
-                  onSubmit(activeFilters);
+            disabled={isSubmitting}
+            onClick={async () => {
+              setIsSubmitting(true);
+              try {
+                const submitted = await onSubmit(activeFilters);
+                if (submitted !== false) {
                   onClose();
+                  onApply(activeFilters);
+                }
+              } finally {
+                setIsSubmitting(false);
               }
-            }
-              className="px-4 py-2 cursor-pointer bg-primary text-white rounded hover:bg-primary-600 transition rounded-lg"
+            }}
+            className="px-4 py-2 cursor-pointer bg-primary text-white rounded hover:bg-primary-600 transition rounded-lg disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center gap-2"
             >
-              Appliquer les filtres
+            {isSubmitting && (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            )}
+            {isSubmitting ? 'Enregistrement...' : 'Appliquer les filtres'}
             </button>
           </div>
         </>

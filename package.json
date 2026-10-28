@@ -15,7 +15,7 @@
     "dev:full": "concurrently \"npm run dev\" \"npm run collab:server\""
   },
   "dependencies": {
-    "@tanstack/react-virtual": "^3.13.13",
+    "@tanstack/react-virtual": "^3.14.21",
     "axios": "^1.14.0",
     "date-fns": "^4.1.0",
     "date-holidays": "^3.24.3",

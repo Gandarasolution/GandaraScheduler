@@ -6,14 +6,16 @@ import {
   Modal, 
 } from '@/app/calendrier/components';
 import Loader from '../ui/Loader';
-import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MobileAppointmentField } from '../../types';
-import { ActiveFilters } from '../../utils/searchAndFilterUtils';
+import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MobileAppointmentField, DayType } from '../../types';
+import { ActiveFilters, FilterType } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
 import etiquetteService from '@/app/service/etiquette.service';
 import eventService from '@/app/service/evenement.service';
 import { useAuth } from '../../hooks/utils/AuthContext';
 import permissionService from '@/app/service/permission.service';
+import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
+import calendarConfigService from '@/app/service/calendarConfig.service';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -72,8 +74,8 @@ interface CalendarModalsProps {
     // Settings & Config Handlers
     closeSettings: () => void;
     closeFilterModal: () => void;
-    submitFilters: (filters: ActiveFilters) => void;
-    clearFilters: () => void;
+    submitFilters: (filters: ActiveFilters) => Promise<boolean>;
+    applyFilters: (filters: ActiveFilters) => void;
     
     // Config Calendar
     closeConfigModal: () => void;
@@ -84,8 +86,9 @@ interface CalendarModalsProps {
     // Config Configuration Editing State (from hook)
     setEditingConfig: (config: any) => void;
     setIsCreatingConfig: (val: boolean) => void;
-    addNonWorkingDatesToPlanning: (date: number) => Promise<any>;
+    addNonWorkingDatesToPlanning: (date: number, codeType: string) => Promise<any>;
     removeNonWorkingDatesFromPlanning: (idPlanning: number, date: number) => Promise<any>;
+    editNonWorkingDates: (data: {id: number, date: Date, typeJourCode: string}) => Promise<any>;
 
     setSelectedItem: (item: Item | null) => void;
     onLockedError: (message: string) => void;
@@ -98,7 +101,7 @@ interface CalendarModalsProps {
     employees: User[];
     selectedItem: Item | null;
     selectedEmployee: User | null;
-    filterConfig: any; // Options pour le filtre
+    keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } };
     isUploading: boolean;
     uploadError: string | null;
     
@@ -114,8 +117,8 @@ interface CalendarModalsProps {
     setIncludeWeekend: (v: boolean) => void;
     respectNonWorkingDays: boolean;
     setRespectNonWorkingDays: (v: boolean) => void;
-    nonWorkingDates: Record<string, number>;
-    setNonWorkingDates: (dates: Record<string, number>) => void;
+    nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
+    setNonWorkingDates: (dates: Record<string, {Id: number; TypeJourCode: string }>) => void;
     tagPlacement: 'hover' | 'fixed';
     setTagPlacement: (v: 'hover' | 'fixed') => void;
     mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
@@ -145,6 +148,8 @@ export const CalendarModals = memo(({
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
+
+  const { DayTypes, fetchDayTypes, addDayType, updateDayType, removeDayType } = useDayTypesContext();
 
  
   const [configImageSelectorContext, setConfigImageSelectorContext] = useState<{
@@ -216,33 +221,109 @@ export const CalendarModals = memo(({
   const settings = useMemo(() => [
     ...(hasPermission(23) ? [
       {
-      category: "Gestion des jours travaillés",
-      items: [
-        {
-          id: "nonWorkedDay", 
-          label: "Dates non travaillées personnalisées", 
-          type: "custom-non-working-dates",
-          nonWorkingDates: config.nonWorkingDates,
-          setNonWorkingDates: config.setNonWorkingDates,
-          addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
-          removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
-        }
-      ]
-    },
-    {
-      category: "Affichage mobile des événements",
-      items: [
-        {
-          id: "mobileAppointmentFields",
-          label: null,
-          type: "mobile-appointment-fields",
-          value: config.mobileAppointmentDisplay,
-          onChange: config.setMobileAppointmentDisplay,
-          options: config.mobileAppointmentFieldOptions,
-          isLoading: config.mobileAppointmentSettingsLoading
-        }
-      ]
-    }] : []),
+        category: "Gestion des jours non travaillés",
+        key: "nonWorkedDays",
+        items: [
+          {
+            id: "nonWorkedDay", 
+            label: "Dates non travaillées personnalisées", 
+            type: "custom-non-working-dates",
+            nonWorkingDates: config.nonWorkingDates,
+            setNonWorkingDates: config.setNonWorkingDates,
+            addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
+            removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
+            updateNonWorkingDate: handlers.editNonWorkingDates,
+            
+            // Récupération des années disponibles via l'API
+            getAvailablesYearForNonWorkingDate: async () => {
+              try {
+                const response = await calendarConfigService.getAvailablesYearForNonWorkingDate();
+                return response; // Attend un tableau de nombres, ex: [2024, 2025, 2026]
+              } catch (error: any) {
+                return [];
+              }
+            },
+
+            fetchNonWorkingDays: async (selectedYear: number) => {
+              try {
+                const response = await calendarConfigService.getNonWorkingDates([selectedYear]);
+                return response;
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors du chargement" };
+              }
+            },
+            dayTypesOptions: DayTypes || [],
+          }
+        ]
+      },
+      {
+        category: "Affichage mobile des événements",
+        key: "mobileAppointmentFields",
+        items: [
+          {
+            id: "mobileAppointmentFields",
+            label: null,
+            type: "mobile-appointment-fields",
+            value: config.mobileAppointmentDisplay,
+            onChange: config.setMobileAppointmentDisplay,
+            options: config.mobileAppointmentFieldOptions,
+            isLoading: config.mobileAppointmentSettingsLoading
+          }
+        ],
+        hasUnsavedChanges: true
+      },
+      {
+        category: "Gestion des types de jours",
+        items: [
+          {
+            id: "dayTypeSettings",
+            label: "Styles des types de jours",
+            type: "day-type-settings",
+            dayTypes: DayTypes || [],
+
+            fetchDayTypes: async () => {
+              try {
+                const response = await fetchDayTypes(); 
+
+                return response
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors du chargement des types de jours" };
+              }
+            },
+
+            // 2. Ajout d'un type de jour
+            onAddDayType: async (newType: DayType) => {
+              try {
+                const response = await addDayType(newType); // Ton handler de création
+                return response;
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la création" };
+              }
+            },
+
+            // 3. Mise à jour d'un type de jour
+            onUpdateDayType: async (updatedType: DayType) => {
+              try {
+                const response = await updateDayType(updatedType); // Ton handler de mise à jour
+                return response;
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la mise à jour" };
+              }
+            },
+
+            // 4. Suppression d'un type de jour
+            onDeleteDayType: async (id: string) => {
+              try {
+                const response = await removeDayType(id); // Ton handler de suppression
+                return response;
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la suppression" };
+              }
+            },
+          },
+        ],
+      }  
+    ] : []),
     {
       category: "Affichage des étiquettes",
       items: [
@@ -259,7 +340,24 @@ export const CalendarModals = memo(({
         }
       ]
     }
-  ], [config.includeWeekend, config.respectNonWorkingDays, config.nonWorkingDates, config.setIncludeWeekend, config.setRespectNonWorkingDays, config.setNonWorkingDates, config.tagPlacement, config.setTagPlacement, config.mobileAppointmentDisplay, config.setMobileAppointmentDisplay, config.mobileAppointmentFieldOptions, config.mobileAppointmentSettingsLoading, handlers.addNonWorkingDatesToPlanning, handlers.removeNonWorkingDatesFromPlanning]);  
+  ], [
+    config.includeWeekend, 
+    config.respectNonWorkingDays, 
+    config.nonWorkingDates, 
+    config.setIncludeWeekend, 
+    config.setRespectNonWorkingDays, 
+    config.setNonWorkingDates, 
+    config.tagPlacement, 
+    config.setTagPlacement, 
+    config.mobileAppointmentDisplay, 
+    config.setMobileAppointmentDisplay, 
+    config.mobileAppointmentFieldOptions, 
+    config.mobileAppointmentSettingsLoading, 
+    handlers.addNonWorkingDatesToPlanning, 
+    handlers.removeNonWorkingDatesFromPlanning,
+    DayTypes,
+  ]);  
+
 
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;
@@ -387,7 +485,6 @@ export const CalendarModals = memo(({
           onClose={handlers.closeSettings}
           settings={settings} 
           isSettingsOpen={modalsState.isSettingsOpen}
-          setNotification={config.setNotification}
         />
       )}
       
@@ -433,9 +530,9 @@ export const CalendarModals = memo(({
           title='Filtres avancés'
           isOpen={modalsState.isFilterModalOpen}
           onSubmit={handlers.submitFilters}
+          onApply={handlers.applyFilters}
           onClose={handlers.closeFilterModal}
-          filterConfig={data.filterConfig}
-          onClearAll={handlers.clearFilters}
+          keyOfFilter={data.keyOfFilter}
           viewType={config.viewType}
         />
       )}

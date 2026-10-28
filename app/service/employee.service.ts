@@ -1,7 +1,7 @@
 import { getRequest, putRequest } from "./axios.service";
 
-async function getEmployees() {
-    return await getRequest(`/api/employees`, 'getEmployees');
+async function getEmployeesPlanning() {
+    return await getRequest(`/api/employees/planning`, 'getEmployees');
 }
 
 async function getEmployeesPag(limit: number = 20, pageNum: number = 1, query: string = '', activeFilters: { [key: string]: string[] } = {}, timeoutMs: number = 15000) {
@@ -31,9 +31,15 @@ async function updateEquipeEmployee(id: number, data: any) {
     return await putRequest(`/api/employees/équipe/${id}`, data, 'updateEquipeEmployee');
 }
 
+async function getAllUsersActif() {
+  return await getRequest(`/api/employees`, 'getAllUsersActif');
+}
+
+
 export default {
-    getEmployees,
+    getEmployeesPlanning,
     getEmployee,
     updateEquipeEmployee,
     getEmployeesPag,
+    getAllUsersActif,
 }
