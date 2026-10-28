@@ -511,11 +511,11 @@ export default function HomePage({
             label: 'État', 
             type: 'badge' as FilterType,
             badgeColors: {
-              'En cours': 'bg-green-100 text-green-800',
-              'Planifié': 'bg-blue-100 text-blue-800',
-              'Suspendu': 'bg-yellow-100 text-yellow-800',
-              'Terminé': 'bg-gray-100 text-gray-800',
-              'Annulé': 'bg-red-100 text-red-800'
+              // 'En cours': 'bg-green-100 text-green-800',
+              // 'Planifié': 'bg-blue-100 text-blue-800',
+              // 'Suspendu': 'bg-yellow-100 text-yellow-800',
+              // 'Terminé': 'bg-gray-100 text-gray-800',
+              // 'Annulé': 'bg-red-100 text-red-800'
             }
           }, 
           chargeAffaire: { label: 'Chargé d\'Affaires', type: 'combobox' as FilterType }, 

@@ -134,37 +134,7 @@ export const CalendarHeader = memo(({
 
             {/* Boutons d'Actions (Droite) */}
             <div className="flex items-center gap-3 ml-auto">
-              <div className="relative order-last">
-                <button
-                  type="button"
-                  onClick={() => setIsHelpOpen((open) => !open)}
-                  className="w-9 h-9 rounded-full border border-default flex items-center justify-center hover:bg-primary-100 transition cursor-pointer"
-                  title="Aide et raccourcis clavier"
-                  aria-label="Aide et raccourcis clavier"
-                >
-                  <span className="text-lg font-semibold">?</span>
-                </button>
-                {isHelpOpen && (
-                  <div className="absolute right-0 top-11 z-50 w-64 rounded-xl border border-default bg-secondary-bg p-3 shadow-lg">
-                    <h3 className="mb-2 text-sm font-semibold">Raccourcis clavier</h3>
-                    <div className="space-y-1 text-sm">
-                      {[
-                        ['Ctrl + C', 'Copier'],
-                        ['Ctrl + V', 'Coller'],
-                        ['Ctrl + Z', 'Annuler'],
-                        ['Ctrl + F', 'Rechercher'],
-                        ['Ctrl + Q', 'Changer d’espace'],
-                        ['Delete', 'Supprimer'],
-                      ].map(([shortcut, label]) => (
-                        <div key={shortcut} className="flex items-center justify-between gap-3">
-                          <span>{label}</span>
-                          <kbd className="rounded border border-default px-1.5 py-0.5 text-xs">{shortcut}</kbd>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+            
               
               {/* Bouton Expansion */}
               <button
@@ -654,13 +624,27 @@ export const CalendarHeader = memo(({
               )}
 
               {/* Bouton Notifications */}
+              {/* Bouton Notifications */}
               <button
-                className="p-3 rounded-full hover:bg-primary-100 transition relative cursor-pointer"
+                type="button"
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary-100 transition cursor-pointer"
                 onClick={() => setIsNotificationsPanelOpen(!isNotificationsPanelOpen)}
                 title="Notifications"
+                aria-label="Notifications"
               >
-                <div className="relative">
-                  <svg id="Layer_1" enableBackground="new 0 0 100 100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="25" height="25" version="1.1" xmlnsXlink="http://www.w3.org/1999/xlink" fill='currentColor' className='bg-icon'>
+                <div className="relative flex items-center justify-center">
+                  <svg 
+                    id="Layer_1" 
+                    enableBackground="new 0 0 100 100" 
+                    viewBox="0 0 100 100" 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="25" 
+                    height="25" 
+                    version="1.1" 
+                    xmlnsXlink="http://www.w3.org/1999/xlink" 
+                    fill="currentColor" 
+                    className="bg-icon"
+                  >
                     <g width="100%" height="100%" transform="matrix(1,0,0,1,0,0)">
                       <path d="m84.9384384 78.6478882h-69.8768778c-4.2446356 0-6.8042536-4.7139664-4.4792337-8.2760315l4.8991413-7.4587746c2.6900654-4.0955315 4.1233788-8.8885002 4.1233788-13.7884827v-6.9935493c0-14.3977032 10.0250931-26.4705181 23.462925-29.5846062v-3.1142158c-.0000001-3.8393617 3.1142158-6.9322281 6.932228-6.9322281 1.9197464 0 3.6474648.7678463 4.9058571 2.0263696 1.237175 1.2583933 2.026371 2.9861126 2.026371 4.9058585v3.1142168c5.631134 1.2797441 10.622261 4.1380129 14.5683823 8.0839968 5.5030289 5.5031605 8.8945465 13.0966091 8.8945465 21.5006084v6.9935493c0 4.8999825 1.4333115 9.6929512 4.1233749 13.7884827l4.8991394 7.4587746c2.3250198 3.5620651-.2345962 8.2760315-4.4792328 8.2760315z"/>
                       <path d="m50.0000114 97.5h-.0000229c-6.6999817 0-12.1313858-5.4314041-12.1313858-12.1313858v-.4888229h24.2627945v.4888229c0 6.6999817-5.4314041 12.1313858-12.1313858 12.1313858z"/>
@@ -671,6 +655,39 @@ export const CalendarHeader = memo(({
                   )}
                 </div>
               </button>
+
+              {/* Bouton Aide */}
+              <button
+                type="button"
+                onClick={() => setIsHelpOpen((open) => !open)}
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary-100 transition cursor-pointer"
+                title="Aide et raccourcis clavier"
+                aria-label="Aide et raccourcis clavier"
+              >
+                <span className="text-xl font-semibold bg-icon leading-none">?</span>
+              </button>
+              {isHelpOpen && (
+                <div className="absolute right-25 top-16 z-50 w-64 rounded-xl border border-default bg-secondary-bg p-3 shadow-lg">
+                  <h3 className="mb-2 text-sm font-semibold">Raccourcis clavier</h3>
+                  <div className="space-y-1 text-sm">
+                    {[
+                      ['Ctrl + C', 'Copier'],
+                      ['Ctrl + V', 'Coller'],
+                      ['Ctrl + Z', 'Annuler'],
+                      ['Ctrl + F', 'Rechercher'],
+                      ['Ctrl + Q', 'Changer d’espace'],
+                      ['Delete', 'Supprimer'],
+                    ].map(([shortcut, label]) => (
+                      <div key={shortcut} className="flex items-center justify-between gap-3">
+                        <span>{label}</span>
+                        <kbd className="rounded border border-default px-1.5 py-0.5 text-xs">{shortcut}</kbd>
+                      </div>
+                    ))}
+                    <div className="mx-2 my-2 h-px bg-primary-100" />
+                    <span>{'Version 28.10.2026'}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Menu Utilisateur */}
               <div className="p-4 transition relative">

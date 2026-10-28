@@ -35,7 +35,6 @@ const FilterModal: React.FC<FilterModalProps> = ({
   title,
   viewType
 }) => {
-  // La configuration des filtres est enrichie localement avec les options renvoyées par l'API.
   const createLocalFilterConfig = (): FilterConfig =>
     Object.entries(keyOfFilter).reduce((config, [key, filter]) => {
       config[key] = {
@@ -67,12 +66,9 @@ const FilterModal: React.FC<FilterModalProps> = ({
   };
 
   const getBadgeClass = (option: FilterOption, category: FilterCategory) => {
-    // Si des couleurs personnalisées sont définies pour ce badge
     if (category.badgeColors && category.badgeColors[option.label]) {
       return category.badgeColors[option.label];
     }
-
-    // Couleur par défaut
     return 'bg-gray-100 text-gray-800';
   };
 
@@ -184,7 +180,6 @@ const FilterModal: React.FC<FilterModalProps> = ({
     setLocalFilterConfig(createLocalFilterConfig());
   }, [keyOfFilter]);
 
-  // Récupérer les options dynamiquement depuis l'API à l'ouverture
   useEffect(() => {
     if (isOpen) {
       const keys = Object.keys(keyOfFilter);
@@ -271,17 +266,16 @@ const FilterModal: React.FC<FilterModalProps> = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5 poppins text-primary py-4">
-            {/* Rendu dynamique des filtres */}
+          {/* Layout en colonnes CSS pour rendre l'espacement vertical indépendant à gauche et à droite */}
+          <div className="columns-1 lg:columns-2 gap-x-8 poppins text-primary py-4">
             {Object.entries(localFilterConfig)
-              .filter(([key]) => key !== 'activeFilters') // Exclure la propriété activeFilters
+              .filter(([key]) => key !== 'activeFilters')
               .map(([key, category]) => {
-                // Type guard pour assurer que category est bien FilterCategory
                 if (typeof category !== 'object' || !('label' in category)) return null;
                 const filterCategory = category as FilterCategory;
                 
                 return (
-                  <div key={key} className="space-y-3">
+                  <div key={key} className="break-inside-avoid mb-5 space-y-3">
                     <div className="flex items-center justify-between w-full">
                       <h3 className="font-semibold">{filterCategory.label}</h3>
                       <button 
@@ -291,7 +285,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                             [key]: []
                           }));
                         }}
-                        className="mr-3 p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors duration-200  cursor-pointer"
+                        className="mr-3 p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors duration-200 cursor-pointer"
                         title="Réinitialiser ce filtre"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash3-fill" viewBox="0 0 16 16">
