@@ -36,8 +36,11 @@ async function refreshToken() {
   return await postRequest("/api/token/refresh", {}, "refreshToken");
 }
 
-async function isApiReachable(url: string | null | undefined): Promise<boolean> {
+async function isApiReachable(url: string | null | undefined, timeoutMs = 3000): Promise<boolean> {
   if (!url) return false;
+
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const cleanUrl = url.trim();
@@ -45,33 +48,42 @@ async function isApiReachable(url: string | null | undefined): Promise<boolean> 
       method: 'GET',
       mode: 'cors',
       cache: 'no-store',
+      signal: controller.signal,
     });
 
-    return response instanceof Response;
+    clearTimeout(id);
+
+    return response.status < 500
   } catch (error) {
     console.warn('URL API non accessible:', url, error);
     return false;
+  }finally {
+    clearTimeout(id);
   }
 }
 
-async function isMercureReachable(url: string): Promise<boolean> {
+async function isMercureReachable(url: string, timeoutMs = 3000): Promise<boolean> {
+  const controller = new AbortController();
+
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
-    const controller = new AbortController();
-
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 3000);
-
+  
     const response = await fetch(url, {
       method: 'GET',
       signal: controller.signal,
     });
 
-    clearTimeout(timeout);
+    controller.abort();
+    clearTimeout(id);
 
     return response.status < 500;
-  } catch (error) {
+  } catch (error: any) {
+    clearTimeout(id);
     console.warn(`Mercure inaccessible : ${url}`, error);
+    if (error.name === 'AbortError' && !controller.signal.aborted) {
+      return false; // Vrai timeout de 3s
+    }
     return false;
   }
 }
@@ -85,24 +97,25 @@ async function resolveApiEnvironment(
     process.env.NODE_ENV === 'development' ? 'http://localhost:8000/' : null,
     payload.urlAPI,
     payload.urlAPIInterne,
-  ];
+  ].filter((url): url is string => Boolean(url && url.trim()));
 
   const mercureCandidates = [
     process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
     payload.urlMercure,
     payload.urlMercureInterne,
-  ];
+  ].filter((url): url is string => Boolean(url && url.trim()));
 
   // 1. Recherche de la première API accessible
   let resolvedApiUrl: string | null = null;
 
   for (const candidate of apiCandidates) {
-    const apiUrl = candidate?.trim();
+    const cleanUrl = candidate.trim();
+    
+    // Sécurisation de l'URL pour le test
+    const testUrl = cleanUrl.endsWith('/') ? cleanUrl : `${cleanUrl}/`;
 
-    if (!apiUrl) continue;
-
-    if (await isApiReachable(apiUrl)) {
-      resolvedApiUrl = apiUrl;
+    if (await isApiReachable(testUrl)) {
+      resolvedApiUrl = cleanUrl;
       break;
     }
   }

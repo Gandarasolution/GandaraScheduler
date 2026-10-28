@@ -183,10 +183,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         else {
           setIsLoading(false);
+          return;
         }
       } 
       else {
         setIsLoading(false);
+        return;
       }
     };
 
@@ -220,7 +222,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
     const isCanonical =
-      await authService.SchedulerIsURICannonical(host);
+      await authService.SchedulerIsURICannonical('gandara-scheduler.vercel.app');
 
     if (isCanonical) {
       
@@ -234,7 +236,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const resolveCompanyCode = async (codeEntreprise: string): Promise<{ error?: string; success: boolean }> => {
     
     try {
-      const response = await authService.SchedulerGetAPI(codeEntreprise);
+      const response = await authService.SchedulerGetAPI('gandara-scheduler.vercel.app');
 
       if (!response) {
         return { error: "Impossible de récupérer les informations de l'entreprise. Veuillez vérifier l'adresse ou contacter le support.", success: false };
