@@ -152,37 +152,15 @@ const normalizeFilters = (details: ApiView): ActiveFilters => {
   return result;
 };
 
-const columnCodeToId: Record<string, string> = {
-  Image: "IG.Image",
-  Pole: "IG.PoleActivite",
-  "IG.Pole": "IG.PoleActivite",
-  DateOS: "IG.DateOS",
-  DateFin: "IG.DateFin",
-  Code: "IG.CodePlanningRessource",
-  "IG.Code": "IG.CodePlanningRessource",
-  Identifiant: "IG.Identifiant",
-  Libelle: "IG.LibellePlanningRessource",
-  "IG.Libelle": "IG.LibellePlanningRessource",
-  Etat: "IG.Etat",
-  ChargeAffaire: "IG.ChargeAffaire",
-  ChefChantier: "IG.ChefChantier",
-  TM: "AC.TM",
-  HR: "AC.HR",
-  SH: "AC.SH",
-  DPF: "AC.DPF",
-  RPF: "AC.RPF",
-  AP: "AC.AP",
-  SP: "AC.SP",
-};
 
 const columnIdToApiCode: Record<string, string> = {
   "IG.Image": "IG.Image",
-  "IG.PoleActivite": "IG.Pole",
+  "IG.Pole": "IG.Pole",
   "IG.DateOS": "IG.DateOS",
   "IG.DateFin": "IG.DateFin",
-  "IG.CodePlanningRessource": "IG.Code",
+  "IG.Code": "IG.Code",
   "IG.Identifiant": "IG.Identifiant",
-  "IG.LibellePlanningRessource": "IG.Libelle",
+  "IG.Libelle": "IG.Libelle",
   "IG.Etat": "IG.Etat",
   "IG.ChargeAffaire": "IG.ChargeAffaire",
   "IG.ChefChantier": "IG.ChefChantier",
@@ -196,14 +174,18 @@ const columnIdToApiCode: Record<string, string> = {
 };
 
 const normalizeColumn = (column: any): string | null => {
+  console.log(column, "column");
   const code =
     typeof column === "string"
       ? column
-      : column?.code ?? column?.Code ?? column?.id ?? column?.Id;
+      : column?.code ?? column?.Code ?? column?.id ?? column?.Id ?? column?.PlanningVueColonneCodeColonne;
+
+    console.log(code, "code");
 
   if (!code) return null;
 
-  return columnCodeToId[code] ?? String(code);
+  console.log(columnIdToApiCode[code], "columnCodeToId[code]");
+  return columnIdToApiCode[code] ?? String(code);
 };
 
 const toApiColumnCode = (id: string): string =>
@@ -1114,8 +1096,6 @@ const ChantierViewsControl: React.FC<
 
     const options = filterOptions[key] || [];
     const values = filterDraft[key] || [];
-
-    if (key === "etat"){console.log(options, values);}
 
     const handleFilterChange = (nextValues: string[]) => {
       const normalizedValues =
