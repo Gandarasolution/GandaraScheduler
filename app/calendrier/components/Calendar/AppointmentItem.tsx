@@ -147,7 +147,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       !isLocked &&
       !isReadOnly &&
       !isInactive &&
-      (hasPermission(23) || hasPermission(22)),
+      (hasPermission(214, 23) || hasPermission(214, 22)),
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -309,7 +309,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
     setIsHovered(false);
 
-    if ((!isInactive && hasPermission(23)) || source === 'demo') {
+    if ((!isInactive && hasPermission(214, 23)) || source === 'demo') {
       // En mode démo, aucune API de lock.
       if (source === 'demo') {
         onDoubleClick?.(appointment);
@@ -412,13 +412,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     transition: isDragging ? 'none' : 'box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out, opacity 0.2s ease-in-out transform 0.2s ease-in-out',
     // Z-index basé sur priorité : plus la priorité est élevée, plus le z-index est élevé
     zIndex: isHovered ? 30 : (isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0)))),
-    cursor: (isInactive || isLocked || isReadOnly) ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' && hasPermission(23) ? 'grab' : 'cursor')),
+    cursor: (isInactive || isLocked || isReadOnly) ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' && hasPermission(214, 23) ? 'grab' : 'cursor')),
   }), [source, computedWidth, INTERVAL_WIDTH, isDragging, computedLeft, computedTop, isHovered, appointmentColor, appointmentBorderColor, isGhost, appointment, isInactive, isReadOnly, isResizingLeft, isResizingRight]);
 
   return (
     <div
       key={`${appointment.IdPlanningEvenement}-${appointment.DebutPlanningEvenement}-${appointment.FinPlanningEvenement}-${appointment.AnnotationPlanningEvenement}`}
-      ref={(node) => { if (node && source === 'calendar' && !isInactive && !isLocked && !isReadOnly && hasPermission(23)) drag(node); }}
+      ref={(node) => { if (node && source === 'calendar' && !isInactive && !isLocked && !isReadOnly && hasPermission(214, 23)) drag(node); }}
       onClick={handleAppointmentClick}
       onDoubleClick={handleAppointmentDoubleClick}
       onContextMenu={(e) => {
@@ -464,7 +464,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         
         handleContextMenu && handleContextMenu(e, 'appointment', appointment, cellUnderMouse);
       }}
-      onMouseDown={hasPermission(23) && !isReadOnly ? handleDragStart : undefined}
+      onMouseDown={hasPermission(214, 23) && !isReadOnly ? handleDragStart : undefined}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
@@ -540,10 +540,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         <div
           className="absolute top-0 h-full cursor-ew-resize z-30"
           title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
-          onMouseDown={(e) => !isInactive && !isLocked && !isReadOnly && hasPermission(23) && handleMouseDown(e, 'left')}
+          onMouseDown={(e) => !isInactive && !isLocked && !isReadOnly && hasPermission(214, 23) && handleMouseDown(e, 'left')}
           style={{ 
             borderRadius: '4px 0 0 4px',
-            cursor: isInactive ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',
+            cursor: isInactive ? 'not-allowed' : !hasPermission(214, 23) ? 'default' : 'ew-resize',
             width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px`
           }}
         />
@@ -667,10 +667,10 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               : '-right-1 w-3'
           }`}
           title={isSmallAppointment ? "Redimensionner (côté droit)" : "Redimensionner"}
-          onMouseDown={(e) => !isInactive && !isLocked && !isReadOnly && hasPermission(23) && handleMouseDown(e, 'right')}
+          onMouseDown={(e) => !isInactive && !isLocked && !isReadOnly && hasPermission(214, 23) && handleMouseDown(e, 'right')}
           style={{ 
             borderRadius: '0 4px 4px 0', 
-            cursor: isInactive ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',
+            cursor: isInactive ? 'not-allowed' : !hasPermission(214, 23) ? 'default' : 'ew-resize',
             width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px`
           }}
         />

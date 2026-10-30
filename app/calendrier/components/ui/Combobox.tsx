@@ -113,7 +113,7 @@ export function Combobox(props: ComboboxProps) {
               ? selectedOptions[0].label
               : placeholder
           }
-          className="w-full rounded-xl border border-default bg-secondary-bg py-2.5 pl-9 pr-9 text-sm text-primary outline-none transition focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-xl border border-default bg-primary-bg py-2.5 pl-9 pr-9 text-sm text-primary outline-none transition focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">

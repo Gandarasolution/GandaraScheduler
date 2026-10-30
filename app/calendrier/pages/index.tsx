@@ -275,8 +275,8 @@ export default function HomePage({
   const handleSearchOverlayItemAction = useCallback((item: SearchableItem) => {
     if(isMobile){
        // Vérifier les permissions selon le type d'événement
-          const canCreate = (item.Type === 'Projet' && hasPermission(22)) || 
-                            (item.Type === 'Paie' && hasPermission(23)) 
+          const canCreate = (item.Type === 'Projet' && hasPermission(214, 22)) || 
+                            (item.Type === 'Paie' && hasPermission(214, 23)) 
           
           if (!canCreate) {
             // Afficher une notification d'erreur
@@ -328,8 +328,8 @@ export default function HomePage({
   }, []);
 
   const handleSelectMobileItem = useCallback((item: Item) => {
-    const canCreate = (item.Type === 'Projet' && hasPermission(22)) ||
-      (item.Type === 'Paie' && hasPermission(23));
+    const canCreate = (item.Type === 'Projet' && hasPermission(214, 22)) ||
+      (item.Type === 'Paie' && hasPermission(214, 23));
     if (!canCreate) return;
     setSelectedItem(item);
     setShowSearchModal(false);
@@ -391,11 +391,11 @@ export default function HomePage({
           })()), 
           timeoutMs
         )
-      : viewState.viewType === 'employee-table' && hasPermission(23) 
+      : viewState.viewType === 'employee-table' && hasPermission(214, 23) 
         ? (employeeService.getEmployeesPag as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
-        : viewState.viewType === 'manual-event-table' && hasPermission(23) 
+        : viewState.viewType === 'manual-event-table' && hasPermission(214, 23) 
           ? (ressourceService.getManualEvents as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
-          : viewState.viewType === 'paie-table' && hasPermission(23) 
+          : viewState.viewType === 'paie-table' && hasPermission(214, 23) 
             ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs)
             : undefined;
   }, [chantierViewId, viewState.viewType, viewState.searchInput, viewState.activeFilters]);
@@ -506,7 +506,8 @@ export default function HomePage({
     // Définition des colonnes filtrables selon la vue
     if (viewState.viewType === 'chantier-table') {
         return { 
-          code: { label: 'Code', type: 'combobox' as FilterType }, 
+          chargeAffaire: { label: 'Chargé d\'Affaires', type: 'combobox' as FilterType }, 
+          //code: { label: 'Code', type: 'combobox' as FilterType }, 
           etat: { 
             label: 'État', 
             type: 'badge' as FilterType,
@@ -518,9 +519,8 @@ export default function HomePage({
               // 'Annulé': 'bg-red-100 text-red-800'
             }
           }, 
-          chargeAffaire: { label: 'Chargé d\'Affaires', type: 'combobox' as FilterType }, 
           chefChantier: { label: 'Chef de Chantier', type: 'combobox' as FilterType },
-          libelle: { label: 'Libellé', type: 'combobox' as FilterType },
+          //libelle: { label: 'Libellé', type: 'combobox' as FilterType },
         };
     }
     // Par défaut ou autres vues
@@ -610,11 +610,11 @@ export default function HomePage({
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true;
 
-      if (!isMobile) await viewState.loadConfigs(hasPermission(23) || hasPermission(22));
+      if (!isMobile) await viewState.loadConfigs(hasPermission(214, 23) || hasPermission(214, 22));
 
       if (!hasInitializedEmployeesRef.current) {
         const employeesResponse =
-          hasPermission(23) || hasPermission(22)
+          hasPermission(214, 23) || hasPermission(214, 22)
             ? await employeeService.getEmployeesPlanning()
             : await employeeService.getEmployee(user.IdPersonnel);
 
@@ -674,7 +674,7 @@ export default function HomePage({
       if (!isMounted || hasInitializedEmployeesRef.current) return;
       hasInitializedEmployeesRef.current = true;
       const employeesResponse =
-        hasPermission(23) || hasPermission(22)
+        hasPermission(214, 23) || hasPermission(214, 22)
           ? await employeeService.getEmployeesPlanning()
           : null;
 
@@ -697,7 +697,7 @@ export default function HomePage({
       viewState.viewType === "paie-table" ||
       viewState.viewType === "manual-event-table"
     ) {
-      if (hasPermission(23) || hasPermission(22)) {
+      if (hasPermission(214, 23) || hasPermission(214, 22)) {
         initializePaieTableAndManualEventTable();
       } else {
         setErrorPlanning("Vous n'avez pas les droits nécessaires pour accéder à cette vue.");
@@ -812,7 +812,7 @@ export default function HomePage({
       setGlobalEmployees([]);
       dataLayer.resetPlanningData();
 
-      const employeesResponse = hasPermission(23) || hasPermission(22)
+      const employeesResponse = hasPermission(214, 23) || hasPermission(214, 22)
         ? await employeeService.getEmployeesPlanning()
         : await employeeService.getEmployee(user.IdPersonnel);
 
@@ -1109,7 +1109,7 @@ export default function HomePage({
                     
                       (viewState.isMobile ||
                       viewState.currentCalendarConfig ||
-                      hasPermission(21)) && (
+                      hasPermission(214, 21)) && (
                         <div className="relative flex flex-col h-full w-full">
 
                           {/* Bloque les interactions pendant le chargement */}

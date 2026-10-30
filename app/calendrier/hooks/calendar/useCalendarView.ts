@@ -60,7 +60,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       const savedView = (saved as any) || 'calendar';
       
       // Bloquer l'accès aux vues interdites pour users et viewers
-      if (hasPermission(21) && 
+      if (hasPermission(214, 21) && 
           (savedView === 'paie-table' || savedView === 'manual-event-table')) {
         return 'calendar';
       }
@@ -266,7 +266,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     if (viewType !== 'calendar' || currentVueId === null || currentVueId <= 0 || isMobile) return;
     if (currentCalendarConfig?.IdPlanningVue === currentVueId) return;
 
-    void calendarConfigHook.loadConfigs(hasPermission(23) || hasPermission(22));
+    void calendarConfigHook.loadConfigs(hasPermission(214, 23) || hasPermission(214, 22));
   }, [
     currentCalendarConfig?.IdPlanningVue,
     currentVueId,
@@ -449,7 +449,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     },
     viewType, setViewType: (v: any) => {
         // Bloquer l'accès à paie-table et manual-event-table pour users et viewers
-        if (hasPermission(21) && 
+        if (hasPermission(214, 21) && 
             (v === 'paie-table' || v === 'manual-event-table')) {
           setViewType('calendar');
           setTimeout(() => localStorage.setItem('viewType', 'calendar'), 0);

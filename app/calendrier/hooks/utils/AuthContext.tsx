@@ -19,14 +19,14 @@ interface AuthContextType {
   setUser: React.Dispatch<React.SetStateAction<User | undefined>>;
   currentPlanningId: number;
   setCurrentPlanningId: React.Dispatch<React.SetStateAction<number>>;  
-  permissions: number;
+  droits: { idDroit: number; idDroitNiveau: number; gestionParNiveau: boolean }[];
   currentVueId: number | null;
   setCurrentVueId: React.Dispatch<React.SetStateAction<number | null>>;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (login: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: (reason?: 'inactive') => void;
-  hasPermission: (permissionId: number) => boolean;
+  hasPermission: (idDroit: number, niveauMinimum?: number) => boolean;
   setLastVueForUser: (idVue: number) => void;
   checkEnvironment: () => Promise<{ error?: string; success: boolean }>;
   resolveCompanyCode: (codeEntreprise: string) => Promise<{ error?: string; success: boolean }>;
@@ -42,7 +42,7 @@ const SESSION_EXPIRED_MESSAGE = 'Vous avez été déconnecté à cause de votre 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>();
   const [UserPlanning, setUserPlanning] = useState<PlanningOption[]>([]);
-  const [permissions, setPermissions] = useState<number>(0);
+  const [droits, setDroits] = useState<{ idDroit: number; idDroitNiveau: number; gestionParNiveau: boolean }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const isAuthenticated = !!user;  
   const [currentPlanningId, setCurrentPlanningId] = useState<number>(-1);
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setCurrentVueId(null);
       setUserPlanning(response.planning || []);
       setUser(response.user);
-      setPermissions(response.permissions || 0);
+      setDroits(response.droits || []);
       localStorage.setItem(AUTH_STATE_KEY, 'true');
       localStorage.removeItem(SESSION_EXPIRED_KEY);
       return { success: true };
@@ -95,16 +95,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // On ne supprime pas forcément le cookie 'client_api_url' ici, 
     // pour que le client reste sur son environnement s'il veut juste se reconnecter.
     setUser(undefined);
-    setPermissions(0);
+    setDroits([]);
     setUserPlanning([]);
     setCurrentPlanningId(-1);
     setCurrentVueId(null);
     axiosAgent.defaults.headers.common['X-Planning-Id'] = '';
   }, []);
 
-  const hasPermission = useCallback((permissionId: number) => {
-    return Number(permissions) === Number(permissionId);
-  }, [permissions]);
+  const hasPermission = useCallback((idDroit: number, niveauMinimum: number = 1) => {
+    const droit = droits.find(d =>  Number(d.idDroit) === Number(idDroit));
+    if (!droit) return false;
+
+    return droit.gestionParNiveau
+        ? Number(droit.idDroitNiveau) >= Number(niveauMinimum)
+        : true;
+  }, [droits]);
 
   const setLastVueForUser = async (idVue: number) => {
     setCurrentVueId(idVue);
@@ -161,7 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         setUserPlanning(response.planning || []);
         setUser(response.user);
-        setPermissions(response.permissions || 0);
+        setDroits(response.droits || []);
         setCurrentVueId(null);
         localStorage.setItem(AUTH_STATE_KEY, 'true');
       } catch (error) {
@@ -293,7 +298,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ 
-        user, permissions, isAuthenticated, isLoading, login, logout, 
+        user, droits, isAuthenticated, isLoading, login, logout, 
         hasPermission, setUser, UserPlanning, currentPlanningId, 
         setCurrentPlanningId, currentVueId, setCurrentVueId, setLastVueForUser, checkEnvironment, resolveCompanyCode
     }}>

@@ -33,6 +33,7 @@ import type { CategoryStructure } from "./DataTableFrame";
 import calendarConfigService from "@/app/service/calendarConfig.service";
 import ressourceService from "@/app/service/ressource.service";
 import employeeService from "@/app/service/employee.service";
+import { useAuth } from "../../hooks/utils/AuthContext";
 
 export type ChantierView = {
   id: string;
@@ -300,6 +301,8 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
   onViewsListChange,
   compact = false,
 }) => {
+  const { hasPermission } = useAuth();
+
   const [detailsLoaded, setDetailsLoaded] = useState(false);
   const availableApiColumnsRef = useRef<string[] | null>(null);
 
@@ -776,12 +779,12 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
   );
 
   const leftFilterEntries = useMemo(
-    () => filterEntries.filter((_, index) => index % 2 === 0),
+    () => filterEntries.filter((_, index) => index % 2 !== 0),
     [filterEntries]
   );
 
   const rightFilterEntries = useMemo(
-    () => filterEntries.filter((_, index) => index % 2 !== 0),
+    () => filterEntries.filter((_, index) => index % 2 === 0),
     [filterEntries]
   );
 
@@ -791,10 +794,11 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
         view &&
           !view.isEphemeral &&
           !view.isLocked &&
+          (!view.isPrivate && hasPermission(219)) &&
           Number.isInteger(Number(view.id)) &&
           Number(view.id) > 0
       ),
-    []
+    [hasPermission]
   );
 
   const moveColumn = useCallback((target: string) => {
@@ -1011,27 +1015,6 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
     await deleteView(target);
   }, [viewToDelete, deleteView]);
 
-  const groupCodesByRange = (options: FilterOption[]) => {
-    const groups: Record<string, FilterOption[]> = {};
-
-    for (const option of options) {
-      const num = parseInt(option.value, 10);
-      if (isNaN(num)) {
-        const fallbackKey = "Autres";
-        groups[fallbackKey] = groups[fallbackKey] || [];
-        groups[fallbackKey].push(option);
-        continue;
-      }
-
-      const thousands = Math.floor(num / 1000) * 1000;
-      const groupKey = `${thousands} - ${thousands + 999}`;
-      groups[groupKey] = groups[groupKey] || [];
-      groups[groupKey].push(option);
-    }
-
-    return groups;
-  };
-
   const isEditorLoading = isLoadingOptions || isLoadingDetails;
 
   const renderFilterCard = ([key, category]: (typeof filterEntries)[number]) => {
@@ -1078,117 +1061,13 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
       });
     };
 
-    if (key === "code" || key === "Code") {
-      const groupedCodes = groupCodesByRange(options);
-
-      const toggleGroup = (groupOptions: FilterOption[]) => {
-        const groupValues = groupOptions.map((opt) => String(opt.value));
-        const allSelected = groupValues.every((val) => values.includes(val));
-
-        setFilterDraft((prev) => {
-          const currentValues = prev[key] || [];
-          let nextValues: string[];
-
-          if (allSelected) {
-            nextValues = currentValues.filter((v) => !groupValues.includes(v));
-          } else {
-            nextValues = Array.from(new Set([...currentValues, ...groupValues]));
-          }
-
-          const next = { ...prev };
-          if (nextValues.length > 0) {
-            next[key] = nextValues;
-          } else {
-            delete next[key];
-          }
-          return next;
-        });
-      };
-
+    if (key === "etat") {
       return (
         <div
           key={category.label + "-group-" + key}
-          className="min-w-0 space-y-3 rounded-xl border border-default p-3 bg-primary-bg/50"
+          className="min-w-0 space-y-2 rounded-xl border border-default bg-primary-bg p-3"
         >
-          <div className="flex items-center justify-between px-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
-              {category.label} (Par tranche)
-            </label>
-            {values.length > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">
-                {values.length} sélectionné(s)
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(groupedCodes).map(([groupLabel, groupOptions]) => {
-              const groupValues = groupOptions.map((opt) => String(opt.value));
-              const selectedCountInGroup = groupValues.filter((v) =>
-                values.includes(v)
-              ).length;
-              const isFullySelected =
-                selectedCountInGroup === groupValues.length &&
-                groupValues.length > 0;
-              const isPartiallySelected =
-                selectedCountInGroup > 0 && !isFullySelected;
-
-              return (
-                <button
-                  key={groupLabel}
-                  type="button"
-                  onClick={() => toggleGroup(groupOptions)}
-                  className={`
-                    cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all
-                    ${
-                      isFullySelected
-                        ? "border-primary bg-primary text-white"
-                        : isPartiallySelected
-                        ? "border-primary/50 bg-primary/10 text-primary"
-                        : "border-default bg-secondary-bg/60 text-secondary hover:border-primary/40"
-                    }
-                  `}
-                >
-                  <span>Série {groupLabel}</span>
-                  <span
-                    className={`text-[10px] rounded-full px-1.5 py-0.2 ${
-                      isFullySelected
-                        ? "bg-white/20 text-white"
-                        : "bg-primary/10 text-primary"
-                    }`}
-                  >
-                    {selectedCountInGroup}/{groupOptions.length}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <Combobox
-            multiple={true}
-            options={options.map((option) => ({
-              value: String(option.value),
-              label: String(option.label),
-            }))}
-            value={values.map(String)}
-            onValueChange={(nextValues) => {
-              setFilterDraft((current) => {
-                const next = { ...current };
-                if (nextValues.length > 0) next[key] = nextValues;
-                else delete next[key];
-                return next;
-              });
-            }}
-            placeholder="Rechercher ou ajuster un code précis..."
-          />
-        </div>
-      );
-    }
-
-    if (key === "etat") {
-      return (
-        <React.Fragment key={category.label + "-group-" + key}>
-          <div className="flex items-center justify-between gap-2 px-1 py-0.5">
+          <div className="flex items-center justify-between gap-2 px-0.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
               {category.label}
             </label>
@@ -1198,7 +1077,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-2 pt-1">
             {options.map((option) => {
               const isSelected = values.includes(option.value) ?? false;
               return (
@@ -1207,43 +1086,31 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                   type="button"
                   onClick={() => toggleFilter(key, option.value)}
                   className={`
-                    inline-flex items-center px-3 py-1.5 rounded-3xl text-xs font-medium
-                    transition-all duration-200 cursor-pointer
+                    inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium
+                    transition-all duration-200 cursor-pointer border
                     ${
                       isSelected
-                        ? "ring-1 ring-primary ring-offset-2 scale-105 bg-gray-100 text-gray-800"
-                        : "opacity-70 hover:opacity-100 hover:scale-105"
+                        ? "border-primary bg-primary text-white shadow-sm"
+                        : "border-default bg-secondary-bg/60 text-secondary hover:border-primary/40"
                     }
                   `}
                 >
                   {option.label}
-                  {isSelected && (
-                    <svg
-                      className="ml-1 h-3 w-3"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
+                  {isSelected && <Check className="ml-1.5 h-3 w-3" />}
                 </button>
               );
             })}
           </div>
-        </React.Fragment>
+        </div>
       );
     }
 
     return (
       <div
         key={category.label + "-group-" + key}
-        className="min-w-0 space-y-1.5"
+        className="min-w-0 space-y-2 rounded-xl border border-default bg-primary-bg p-3"
       >
-        <div className="flex items-center justify-between gap-2 px-1 py-0.5">
+        <div className="flex items-center justify-between gap-2 px-0.5">
           <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
             {category.label}
           </label>
@@ -1337,7 +1204,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
               addOptionLabel="Créer une vue"
               onDeleteOption={(option) => {
                 const target = views.find((item) => item.id === String(option.id));
-                if (target && !target.isLocked) {
+                if (target && (!target.isLocked || (!target.isPrivate && hasPermission(219)))) {
                   setViewToDelete(target);
                 }
               }}
@@ -1394,108 +1261,108 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
               <LoadingMessage message="Chargement des données de la vue..." />
             )}
 
-            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
-              <section className="min-w-0 rounded-2xl border border-default bg-secondary-bg/40 p-4 sm:p-5 xl:col-span-5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
-                    Nom de la vue *
-                  </label>
-                  <span className="text-xs text-secondary">
-                    {name.length}/100
-                  </span>
-                </div>
-
-                {isLoadingDetails ? (
-                  <Skeleton className="mt-3 h-11 w-full" />
-                ) : (
-                  <input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Ex. Suivi des chantiers en cours"
-                    maxLength={100}
-                    className="mt-3 w-full rounded-xl border border-default bg-primary-bg px-4 py-3 text-sm text-primary outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                    autoFocus
-                  />
-                )}
-              </section>
-
-              <section className="min-w-0 rounded-2xl border border-default bg-secondary-bg/40 p-4 sm:p-5 xl:col-span-7">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
-                    Visibilité
-                  </span>
-                  <span className="text-xs font-semibold text-primary">
-                    {isPrivate ? "Accès restreint" : "Accès public"}
-                  </span>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsPrivate(false)}
-                    disabled={isLoadingDetails}
-                    className={`cursor-pointer flex items-center justify-center gap-2 rounded-xl border p-3 text-sm ${
-                      !isPrivate
-                        ? "border-primary bg-primary text-white"
-                        : "border-default bg-primary-bg text-secondary"
-                    }`}
-                  >
-                    <GroupIcon className="h-4 w-4" />
-                    Partagée
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsPrivate(true)}
-                    disabled={isLoadingDetails}
-                    className={`cursor-pointer flex items-center justify-center gap-2 rounded-xl border p-3 text-sm ${
-                      isPrivate
-                        ? "border-primary bg-primary text-white"
-                        : "border-default bg-primary-bg text-secondary"
-                    }`}
-                  >
-                    <Lock className="h-4 w-4" />
-                    Privée
-                  </button>
-                </div>
-              </section>
-            </div>
-
-            {isPrivate && (
-              <section className="rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-primary">
-                      Utilisateurs autorisés
-                    </h3>
-                    <p className="text-xs text-secondary">
-                      Sélectionnez les collaborateurs autorisés.
-                    </p>
+            {/* Section alignée : Nom de la vue + Visibilité + Choix du personnel */}
+            <section className="min-w-0 rounded-2xl border border-default bg-secondary-bg/40 p-4 sm:p-5">
+              <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+                {/* 1. Nom de la vue */}
+                <div className={isPrivate ? "lg:col-span-4" : "lg:col-span-6"}>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
+                      Nom de la vue *
+                    </label>
+                    <span className="text-xs text-secondary">
+                      {name.length}/100
+                    </span>
                   </div>
-                  <span className="text-xs font-semibold text-primary">
-                    {selectedUsers.length} sélectionné(s)
-                  </span>
+
+                  {isLoadingDetails ? (
+                    <Skeleton className="mt-2 h-10 w-full" />
+                  ) : (
+                    <input
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Ex. Suivi des chantiers en cours"
+                      maxLength={100}
+                      className="mt-1.5 w-full rounded-xl border border-default bg-primary-bg px-3.5 py-2 text-sm text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                      autoFocus
+                    />
+                  )}
                 </div>
 
-                {isLoadingOptions ? (
-                  <Skeleton className="h-10 w-full rounded-xl" />
-                ) : (
-                  <Combobox
-                    multiple={true}
-                    options={availableUsers
-                      .filter((user) => user.IdPersonnel !== userId)
-                      .map((user) => ({
-                        value: String(user.IdPersonnel),
-                        label: `${user.Nom} ${user.Prenom ?? ""} (${user.IdPersonnel})`.trim(),
-                      }))}
-                    value={selectedUsers.map(String)}
-                    onValueChange={(nextValues) =>
-                      setSelectedUsers(nextValues.map(Number))
-                    }
-                    placeholder="Rechercher un collaborateur..."
-                  />
+                {/* 2. Visibilité */}
+                <div className={isPrivate ? "lg:col-span-3" : "lg:col-span-6"}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
+                      Visibilité
+                    </span>
+                  </div>
+
+                  <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivate(false)}
+                      disabled={isLoadingDetails}
+                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                        !isPrivate
+                          ? "border-primary bg-primary text-white"
+                          : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"
+                      }`}
+                    >
+                      <GroupIcon className="h-3.5 w-3.5" />
+                      Publique
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivate(true)}
+                      disabled={isLoadingDetails}
+                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                        isPrivate
+                          ? "border-primary bg-primary text-white"
+                          : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"
+                      }`}
+                    >
+                      <Lock className="h-3.5 w-3.5" />
+                      Privée
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Utilisateurs autorisés (si vue privée) */}
+                {isPrivate && (
+                  <div className="lg:col-span-5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
+                        Utilisateurs autorisés
+                      </label>
+                      <span className="text-xs font-semibold text-primary">
+                        {selectedUsers.length} sélectionné(s)
+                      </span>
+                    </div>
+
+                    <div className="mt-1.5">
+                      {isLoadingOptions ? (
+                        <Skeleton className="h-10 w-full rounded-xl" />
+                      ) : (
+                        <Combobox
+                          multiple={true}
+                          options={availableUsers
+                            .filter((user) => user.IdPersonnel !== userId)
+                            .map((user) => ({
+                              value: String(user.IdPersonnel),
+                              label: `${user.Nom} ${user.Prenom ?? ""} (${user.IdPersonnel})`.trim(),
+                            }))}
+                          value={selectedUsers.map(String)}
+                          onValueChange={(nextValues) =>
+                            setSelectedUsers(nextValues.map(Number))
+                          }
+                          placeholder="Rechercher un collaborateur..."
+                        />
+                      )}
+                    </div>
+                  </div>
                 )}
-              </section>
-            )}
+              </div>
+            </section>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
               <section className="rounded-2xl border border-default bg-secondary-bg/50 p-4 sm:p-5 lg:col-span-5">

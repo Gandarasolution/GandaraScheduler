@@ -219,7 +219,7 @@ export const CalendarModals = memo(({
   }, [modalsState.isSettingsOpen, config.loadMobileAppointmentSettings]);
 
   const settings = useMemo(() => [
-    ...(hasPermission(23) ? [
+    ...(hasPermission(214, 23) ? [
       {
         category: "Gestion des jours non travaillés",
         key: "nonWorkedDays",

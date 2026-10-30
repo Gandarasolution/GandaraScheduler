@@ -218,7 +218,7 @@ export const CalendarHeader = memo(({
                     </div>
 
                     <div className="py-2 px-2">
-                      {hasPermission(23) && (
+                      {hasPermission(214, 23) && (
                         <>
                           <button
                             className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
@@ -278,7 +278,7 @@ export const CalendarHeader = memo(({
               </div>
 
               {/* Menu Sélection de Vue */}
-              {(hasPermission(23) || hasPermission(22)) && (
+              {(hasPermission(214, 23) || hasPermission(214, 22)) && (
                 <div className="relative" ref={viewDropdownRef}>
                   <button
                     className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
@@ -452,7 +452,7 @@ export const CalendarHeader = memo(({
                         </button>
 
                         {/* RUBRIQUE SOCIALE */}
-                        {hasPermission(23) && (
+                        {hasPermission(214, 23) && (
                           <button
                             className={`
                               w-full
@@ -503,7 +503,7 @@ export const CalendarHeader = memo(({
                         )}
 
                         {/* ÉVÉNEMENTS MANUELS */}
-                        {hasPermission(23) && (
+                        {hasPermission(214, 23) && (
                           <button
                             className={`
                               w-full
@@ -553,7 +553,7 @@ export const CalendarHeader = memo(({
                           </button>
                         )}
 
-                        {hasPermission(23) && (
+                        {hasPermission(214, 23) && (
                           <>
                             <div className="mx-2 my-2 h-px bg-primary-100" />
 
@@ -755,7 +755,7 @@ export const CalendarHeader = memo(({
                   </svg>
                 </button>
                 <button 
-                  className={"transition cursor-pointer btn-header  border-default px-3 py-2" + (!hasPermission(23) ? '' : ' border-r')}
+                  className={"transition cursor-pointer btn-header  border-default px-3 py-2" + (!hasPermission(214, 23) ? '' : ' border-r')}
                   onClick={() => setIsFullDay(!isFullDay)}
                 >
                   {!isFullDay ? (
@@ -774,7 +774,7 @@ export const CalendarHeader = memo(({
                 </button>
               </>
             )}
-            {(hasPermission(23)) && (
+            {(hasPermission(214, 23)) && (
               <>
                 <button 
                   className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
@@ -792,7 +792,7 @@ export const CalendarHeader = memo(({
           </div>
 
           {/* Bouton Ajouter Évènement */}
-          {(hasPermission(23) || hasPermission(22)) && (viewType === 'calendar' || viewType === 'manual-event-table')  && (
+          {(hasPermission(214, 23) || hasPermission(214, 22)) && (viewType === 'calendar' || viewType === 'manual-event-table')  && (
             <button
               className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto bg-primary-500"
               type="button"

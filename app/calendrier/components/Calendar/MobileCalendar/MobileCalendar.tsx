@@ -102,7 +102,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
    useEffect(() => {
     if (selectedEmployee || employees.length === 0) return;
 
-    const defaultEmployee = hasPermission(22) || hasPermission(23)
+    const defaultEmployee = hasPermission(214, 22) || hasPermission(214, 23)
       ? employees[0]
       : employees.find(emp => emp.IdPersonnel === user.IdPersonnel);
 
@@ -125,7 +125,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   }, [onLoadAppointmentsInRange, selectedDate, selectedEmployee]);
   
  const visibleEmployees = useMemo(() => {
-    const baseEmployees = hasPermission(22) || hasPermission(23)
+    const baseEmployees = hasPermission(214, 22) || hasPermission(214, 23)
       ? employees 
       : employees.filter(emp => emp.IdPersonnel === user.IdPersonnel);
     
@@ -343,7 +343,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         >
           
           {/* Employee Selector - visible seulement pour les admins et managers */}
-          {(hasPermission(22) || hasPermission(23)) && employees.length > 0 && (
+          {(hasPermission(214, 22) || hasPermission(214, 23)) && employees.length > 0 && (
             <EmployeeSelector 
               employees={visibleEmployees}
               teams={teams}
@@ -371,7 +371,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         </main>
 
         {/* Floating Action Button - Visible pour les admins et managers */}
-        {(hasPermission(22) || hasPermission(23)) && false && (
+        {(hasPermission(214, 22) || hasPermission(214, 23)) && false && (
           <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none flex justify-center items-end h-32"
             style={{
               backgroundImage: `linear-gradient(to top, var(--bg-secondary), transparent)`
@@ -405,7 +405,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal de recherche d'événement */}
-        {(hasPermission(22) || hasPermission(23)) && showSearchModal && (
+        {(hasPermission(214, 22) || hasPermission(214, 23)) && showSearchModal && (
           <SearchOverlay
             isOpen={showSearchModal}
             onClose={() => {
@@ -474,7 +474,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         )}
 
         {/* Modal d'ajout de rendez-vous */}
-        {(hasPermission(22) || hasPermission(23)) && showAppointmentForm && (
+        {(hasPermission(214, 22) || hasPermission(214, 23)) && showAppointmentForm && (
           <div 
             className="fixed inset-0 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200"
             style={{ backgroundColor: 'var(--bg-overlay)' }}

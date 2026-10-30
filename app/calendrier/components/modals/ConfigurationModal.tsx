@@ -399,7 +399,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         <div>
           <div className="flex items-center justify-between mb-4 gap-3 sticky top-0 backdrop-blur-md py-2 z-10">
             <h3 className="font-semibold text-primary text-lg">Vues disponibles</h3>
-            {hasPermission(23) && (
+            {hasPermission(214, 23) && (
               <button
                 onClick={() => {
                   setEditingConfig(null);
