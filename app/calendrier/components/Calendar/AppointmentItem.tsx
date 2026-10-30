@@ -417,53 +417,52 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
 
   return (
     <div
-      key={`${appointment.IdPlanningEvenement}-${appointment.DebutPlanningEvenement}-${appointment.FinPlanningEvenement}-${appointment.AnnotationPlanningEvenement}`} // Clé unique basée sur les propriétés de l'appointment 
+      key={`${appointment.IdPlanningEvenement}-${appointment.DebutPlanningEvenement}-${appointment.FinPlanningEvenement}-${appointment.AnnotationPlanningEvenement}`}
       ref={(node) => { if (node && source === 'calendar' && !isInactive && !isLocked && !isReadOnly && hasPermission(23)) drag(node); }}
       onClick={handleAppointmentClick}
       onDoubleClick={handleAppointmentDoubleClick}
       onContextMenu={(e) => {
-         if (isReadOnly) {
-           e.preventDefault();
-           e.stopPropagation();
-           return;
-         }
+        if (isReadOnly) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
 
-         // (Logique Context Menu inchangée)
-         const rect = e.currentTarget.getBoundingClientRect();
-         const mouseX = e.clientX - rect.left;
-         const intervalIndex = Math.floor(mouseX / INTERVAL_WIDTH);
-         const totalIntervals = getIntervalCount(startDate, endDate, isFullDay, isDisplayWeekend ?? false);
-         const clampedIntervalIndex = Math.max(0, Math.min(intervalIndex, totalIntervals - 1));
-         
-         const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-         let targetDate = startDate;
-         let currentIntervalCount = 0;
-         
-         while (currentIntervalCount < clampedIntervalIndex) {
-           const targetHour = new Date(targetDate).getHours();
-           let currentIntervalIdx = intervals.findIndex(interval =>
+        const rect = e.currentTarget.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const intervalIndex = Math.floor(mouseX / INTERVAL_WIDTH);
+        const totalIntervals = getIntervalCount(startDate, endDate, isFullDay, isDisplayWeekend ?? false);
+        const clampedIntervalIndex = Math.max(0, Math.min(intervalIndex, totalIntervals - 1));
+        
+        const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+        let targetDate = startDate;
+        let currentIntervalCount = 0;
+        
+        while (currentIntervalCount < clampedIntervalIndex) {
+          const targetHour = new Date(targetDate).getHours();
+          let currentIntervalIdx = intervals.findIndex(interval =>
               targetHour >= interval.startHour && targetHour < interval.endHour
-           );
-           if (currentIntervalIdx === -1) currentIntervalIdx = 0;
-           
-           currentIntervalIdx++;
-           if (currentIntervalIdx >= intervals.length) {
-             targetDate = new Date(targetDate + DAY_MS).setHours(intervals[0]?.startHour ?? 0, 0, 0, 0);
-             while (!isDisplayWeekend && isWeekend(targetDate)) {
-               targetDate += DAY_MS;
-             }
-           } else {
-             targetDate = new Date(targetDate).setHours(intervals[currentIntervalIdx]?.startHour ?? 0, 0, 0, 0);
-           }
-           currentIntervalCount++;
-         }
-         
-         const cellUnderMouse = {
-           employeeId:  Number(appointment.IdEmploye),
-           date: targetDate
-         };
-         
-         handleContextMenu && handleContextMenu(e, 'appointment', appointment, cellUnderMouse);
+          );
+          if (currentIntervalIdx === -1) currentIntervalIdx = 0;
+          
+          currentIntervalIdx++;
+          if (currentIntervalIdx >= intervals.length) {
+            targetDate = new Date(targetDate + DAY_MS).setHours(intervals[0]?.startHour ?? 0, 0, 0, 0);
+            while (!isDisplayWeekend && isWeekend(targetDate)) {
+              targetDate += DAY_MS;
+            }
+          } else {
+            targetDate = new Date(targetDate).setHours(intervals[currentIntervalIdx]?.startHour ?? 0, 0, 0, 0);
+          }
+          currentIntervalCount++;
+        }
+        
+        const cellUnderMouse = {
+          employeeId: Number(appointment.IdEmploye),
+          date: targetDate
+        };
+        
+        handleContextMenu && handleContextMenu(e, 'appointment', appointment, cellUnderMouse);
       }}
       onMouseDown={hasPermission(23) && !isReadOnly ? handleDragStart : undefined}
       onMouseEnter={() => setIsHovered(true)}
@@ -478,15 +477,15 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         ${source === 'calendar' ? 'absolute cursor-grab' : 'block'}
         ${!isGhost && 'hover:shadow-xl'}
         ${className || ''}
-        
-
       `}
-      title={event?.LibellePlanningRessource}
+      title={
+        event?.Type === 'Projet'
+          ? [event.CodePlanningRessource, event.Identifiant, event.LibellePlanningRessource].filter(Boolean).join(' - ')
+          : event?.LibellePlanningRessource
+      }
       style={containerStyle}
     >
-      {/* ZONES D'ARRIÈRE-PLAN POUR LE MODE GHOST 
-          ---------------------------------------
-      */}
+      {/* ZONES D'ARRIÈRE-PLAN POUR LE MODE GHOST */}
       {isGhost && (
           <>
             {ghostSegments.map((segment, index) => {
@@ -539,26 +538,22 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       {/* Handle de redimensionnement à gauche */}
       {source === 'calendar' && !isInactive && !isLocked && !isReadOnly && (
         <div
-          className={`absolute top-0 h-full cursor-ew-resize z-30`}
+          className="absolute top-0 h-full cursor-ew-resize z-30"
           title={isSmallAppointment ? "Redimensionner (côté gauche)" : "Redimensionner"}
           onMouseDown={(e) => !isInactive && !isLocked && !isReadOnly && hasPermission(23) && handleMouseDown(e, 'left')}
           style={{ 
             borderRadius: '4px 0 0 4px',
-            cursor: isInactive  ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',
-            width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px` // 10% de la largeur ou max 12px
+            cursor: isInactive ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',
+            width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px`
           }}
         />
       )}
 
       {/* CONTENU (Tags, Icone, Texte) */}
-      {/* On met z-10 et relative pour être au-dessus des backgrounds */}
-      {/* Masqué si en mode Ghost (chevauchement) */}
       {!isGhost && (
         <div 
           className="relative z-10 flex items-center gap-2 w-full h-full"
-          style={{
-            opacity: isInactive ? 0.5 : 1
-          }}
+          style={{ opacity: isInactive ? 0.5 : 1 }}
         >        
           {event?.Image ? (
             <img
@@ -567,15 +562,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
               className="w-8 h-8 object-cover flex-shrink-0 rounded-full"
               loading="lazy"
             />
-          ): (
-              <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>
+          ) : (
+            <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>
           )}
 
-          <div 
-            className='flex flex-col min-w-0 flex-1'
-          >
+          <div className='flex flex-col min-w-0 flex-1'>
+              {/* Ligne 1 : Code - Identifiant (ou Code seul si Identifiant est undefined/null) */}
               <div className="flex items-center gap-1.5 overflow-hidden">
-                {/* 👇 Icône cadenas affichée si isLocked est vrai */}
                 {isLocked && (
                   <svg 
                     className="w-3.5 h-3.5 flex-shrink-0" 
@@ -588,15 +581,18 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 )}
 
                 <span 
-                  className={`appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-sm`}
+                  className="appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-sm"
                   style={{ 
-                      color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
+                    color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
                   }}
                 >
-                  {event?.LibellePlanningRessource}
+                  {event?.Type === 'Projet'
+                    ? [event.CodePlanningRessource, event.Identifiant].filter(Boolean).join(' - ')
+                    : event?.LibellePlanningRessource}
                 </span>
               </div>
               
+              {/* Ligne 2 : Libellé pour Projet, sinon Chargé d'affaire / EtapeValidation */}
               <div 
                 className="flex items-center gap-2 text-xs truncate"
                 style={{
@@ -604,13 +600,16 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 }}
               >
                 <span 
-                    className="truncate transition-colors duration-200"
-                    style={{ 
+                  className="truncate transition-colors duration-200"
+                  style={{ 
                     color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
-                    }}
+                  }}
                 >
-                    {appointment.isReadOnly ? appointment.EtapeValidation : chargeeAffaire}
+                  {event?.Type === 'Projet'
+                    ? event.LibellePlanningRessource
+                    : (appointment.isReadOnly ? appointment.EtapeValidation : chargeeAffaire)}
                 </span>
+                
                 {((appointment.Etiquette && !isGhost) || appointment.AnnotationPlanningEvenement) && (
                   <div className="absolute right-1 bottom-0.5 z-40">
                     <AppointmentMetadata
@@ -627,7 +626,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                                 fill="none" 
                                 stroke="currentColor" 
                                 strokeWidth="1.5" />
-
                           <path d="m11 10c-.5523 0-1 .4477-1 1s.4477 1 1 1v3c-.5523 0-1.00001.4477-1.00001 1s.44771 1 1.00001 1h2c.5523 0 1-.4477 1-1s-.4477-1-1-1v-4c0-.2652-.1054-.5196-.2929-.7071s-.4419-.2929-.7071-.2929zm0-2c0-.55228.4477-1 1-1s1 .44772 1 1-.4477 1-1 1-1-.44772-1-1z" 
                                 fill="currentColor" />
                         </svg>
@@ -642,7 +640,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 )}
               </div>
               
-              {/* Étiquette fixe en bas à droite (mode 'fixed') */}
+              {/* Étiquette fixe en bas à droite */}
               {appointment.Etiquette?.IdPlanningEtiquette && tagPlacement === 'fixed' && !isGhost && (
                 <div 
                   className="absolute right-6 -bottom-3 z-40 px-1.5 py-0.5 rounded-sm text-xs font-medium shadow-sm transition-all duration-200"
@@ -651,7 +649,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                     color: 'var(--contraste-max)', 
                     maxWidth: '120px',
                     border: `1px solid var(--color-gray-400)`,
-                  
                   }}
                 >
                   <span className="truncate block">{appointment.Etiquette.LibelleLongPlanningEtiquette}</span>
@@ -673,8 +670,8 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
           onMouseDown={(e) => !isInactive && !isLocked && !isReadOnly && hasPermission(23) && handleMouseDown(e, 'right')}
           style={{ 
             borderRadius: '0 4px 4px 0', 
-            cursor: isInactive  ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',
-            width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px` // 10% de la largeur ou max 12px
+            cursor: isInactive ? 'not-allowed' : !hasPermission(23) ? 'default' : 'ew-resize',
+            width: `${Math.min((parseFloat(computedWidth) * 0.1), 12)}px`
           }}
         />
       )}

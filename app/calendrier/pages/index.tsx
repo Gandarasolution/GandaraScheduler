@@ -437,7 +437,7 @@ export default function HomePage({
       else if (rep?.data && (rep.data.IdPlanningVue || rep.data.IdPlanningChantierVue)) {
         const lastViewId = rep.data.IdPlanningVue ?? rep.data.IdPlanningChantierVue;
         selectedView = loadedViews.find((v: any) => String(v.id) === String(lastViewId)) || selectedView;
-        setChantierViewId(String(lastViewId));
+        setChantierViewId(hasFilters ? `ephemeral` : String(lastViewId));
       }else {
         setChantierViewId(selectedView.id ? String(selectedView.id) : null);
       }
@@ -1077,6 +1077,7 @@ export default function HomePage({
                 initialViews: chantierViews,
                 initialViewId: chantierViewId,
                 onViewChange: handleChantierViewChange,
+                onViewsListChange: setChantierViews,
               } satisfies ChantierViewsControlProps : undefined}
             />
           )}

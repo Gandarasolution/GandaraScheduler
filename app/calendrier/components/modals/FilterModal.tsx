@@ -50,14 +50,32 @@ const FilterModal: React.FC<FilterModalProps> = ({
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
 
   const toggleFilter = (categoryKey: string, value: string) => {
-    setActiveFilters(prev => ({
-      ...prev,
-      [categoryKey]: (prev[categoryKey] || []).includes(value)
-        ? (prev[categoryKey] || []).filter(item => item !== value)
-        : [...(prev[categoryKey] || []), value]
-    }));
+    setActiveFilters(prev => {
+      const currentList = prev[categoryKey] || [];
+      const isSelected = currentList.includes(value);
+
+      // 1. Calcul de la nouvelle liste pour la clé cliquée
+      const updatedList = isSelected
+        ? currentList.filter(item => item !== value)
+        : [...currentList, value];
+
+      const next = {
+        ...prev,
+        [categoryKey]: updatedList,
+      };
+
+      // 2. Nettoyage global : conserve uniquement les clés ayant au moins 1 élément
+      return Object.fromEntries(
+        Object.entries(next).filter(([, val]) => Array.isArray(val) && val.length > 0)
+      );
+    });
   };
 
+  useEffect(() => {
+    console.log("Active Filters Updated:", activeFilters);
+  }, [activeFilters]);
+
+  
   const setSelectFilter = (categoryKey: string, value: string) => {
     setActiveFilters(prev => ({
       ...prev,
@@ -162,10 +180,20 @@ const FilterModal: React.FC<FilterModalProps> = ({
             options={category.options}
             value={activeFilters[categoryKey] || []}
             onValueChange={(newValues: string[]) =>
-              setActiveFilters((prev: ActiveFilters): ActiveFilters => ({
-                ...prev,
-                [categoryKey]: newValues
-              }))
+              setActiveFilters((prev: ActiveFilters): ActiveFilters => {
+                // 1. Sécurité : s'assurer que prev est toujours un objet {} et non un tableau []
+                const next = Array.isArray(prev) ? {} : { ...prev };
+
+                // 2. Si le tableau contient des éléments, on enregistre
+                if (Array.isArray(newValues) && newValues.length > 0) {
+                  next[categoryKey] = newValues;
+                } else {
+                  // 3. Sinon, on SUPPRIME la clé pour éviter { chargeAffaire: [] }
+                  delete next[categoryKey];
+                }
+
+                return next;
+              })
             }
             placeholder="Sélectionner..."
           />

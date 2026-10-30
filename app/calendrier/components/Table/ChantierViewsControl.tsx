@@ -61,6 +61,7 @@ export type ChantierViewsControlProps = {
   initialViews: ChantierView[];
   initialViewId: string | null;
   onViewChange: (view: ChantierView | null) => void;
+  onViewsListChange?: (views: ChantierView[]) => void;
   compact?: boolean;
 };
 
@@ -79,24 +80,34 @@ interface GroupIconProps extends React.SVGProps<SVGSVGElement> {
 
 const GroupIcon: React.FC<GroupIconProps> = ({
   size = 24,
-  color = 'currentColor',
+  color = "currentColor",
   ...props
 }) => {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-group preview-icon">
-      <path d="M17 21v-1a2 2 0 00-2-2H9a2 2 0 00-2 2v1"/>
-      <path d="M19 10h1a2 2 0 012 2v1"/>
-      <path d="M5 10H4a2 2 0 00-2 2v1"/>
-      <circle cx="12" cy="11" r="3"/>
-      <circle cx="18" cy="4" r="2"/>
-      <circle cx="6" cy="4" r="2"/>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="lucide lucide-user-group preview-icon"
+      {...props}
+    >
+      <path d="M17 21v-1a2 2 0 00-2-2H9a2 2 0 00-2 2v1" />
+      <path d="M19 10h1a2 2 0 012 2v1" />
+      <path d="M5 10H4a2 2 0 00-2 2v1" />
+      <circle cx="12" cy="11" r="3" />
+      <circle cx="18" cy="4" r="2" />
+      <circle cx="6" cy="4" r="2" />
     </svg>
   );
 };
 
-const cleanFilters = (
-  filters: ActiveFilters = {}
-): ActiveFilters =>
+const cleanFilters = (filters: ActiveFilters = {}): ActiveFilters =>
   Object.fromEntries(
     Object.entries(filters).filter(
       ([, values]) => Array.isArray(values) && values.length > 0
@@ -131,8 +142,7 @@ const normalizeFilters = (details: ApiView): ActiveFilters => {
     const selected = Array.isArray(values)
       ? values
           .filter(
-            (value: any) =>
-              value.Selection === 1 || value.selected
+            (value: any) => value.Selection === 1 || value.selected
           )
           .map((value: any) =>
             String(
@@ -151,7 +161,6 @@ const normalizeFilters = (details: ApiView): ActiveFilters => {
 
   return result;
 };
-
 
 const columnIdToApiCode: Record<string, string> = {
   "IG.Image": "IG.Image",
@@ -174,26 +183,19 @@ const columnIdToApiCode: Record<string, string> = {
 };
 
 const normalizeColumn = (column: any): string | null => {
-  console.log(column, "column");
   const code =
     typeof column === "string"
       ? column
       : column?.code ?? column?.Code ?? column?.id ?? column?.Id ?? column?.PlanningVueColonneCodeColonne;
 
-    console.log(code, "code");
-
   if (!code) return null;
-
-  console.log(columnIdToApiCode[code], "columnCodeToId[code]");
   return columnIdToApiCode[code] ?? String(code);
 };
 
 const toApiColumnCode = (id: string): string =>
   columnIdToApiCode[id] ?? id;
 
-export const normalizeChantierView = (
-  item: ApiView
-): ChantierView => {
+export const normalizeChantierView = (item: ApiView): ChantierView => {
   const planningVue =
     item.planningVue ?? item.PlanningVue ?? item.planningChantierVue ?? item;
 
@@ -205,7 +207,7 @@ export const normalizeChantierView = (
     planningVue.colonnes;
 
   const columns = Array.isArray(rawColumns)
-    ? rawColumns.map(normalizeColumn).filter(Boolean) as string[]
+    ? (rawColumns.map(normalizeColumn).filter(Boolean) as string[])
     : [];
 
   const users =
@@ -242,9 +244,7 @@ export const extractLastChantierViewId = (
   if (!response || response.success === false) return null;
 
   const payload = response.data ?? response;
-  const candidate = Array.isArray(payload)
-    ? payload[0]
-    : payload;
+  const candidate = Array.isArray(payload) ? payload[0] : payload;
 
   if (!candidate || typeof candidate !== "object") return null;
 
@@ -288,9 +288,7 @@ const LoadingMessage = memo(function LoadingMessage({
   );
 });
 
-const ChantierViewsControl: React.FC<
-  ChantierViewsControlProps
-> = ({
+const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
   structure,
   keyOfFilter,
   activeFilters,
@@ -299,17 +297,17 @@ const ChantierViewsControl: React.FC<
   initialViews,
   initialViewId,
   onViewChange,
+  onViewsListChange,
   compact = false,
 }) => {
-  
   const [detailsLoaded, setDetailsLoaded] = useState(false);
-
-  // 1. Stockage en ref des colonnes disponibles renvoyées par l'API
   const availableApiColumnsRef = useRef<string[] | null>(null);
 
-  // Mappage global de la structure reçue en props
   const globalColumnsMap = useMemo(() => {
-    const map = new Map<string, { id: string; apiCode: string; label: string; categoryLabel: string }>();
+    const map = new Map<
+      string,
+      { id: string; apiCode: string; label: string; categoryLabel: string }
+    >();
     structure.forEach((category) => {
       category.attributes.forEach((attribute) => {
         const id = `${category.key}.${attribute.key}`;
@@ -324,16 +322,22 @@ const ChantierViewsControl: React.FC<
     return map;
   }, [structure]);
 
-  // Si l'API nous renvoie une liste spécifique, on ne garde que celles qui existent dans l'API,
-  // sinon on se rabat sur l'ensemble de la structure.
   const allColumns = useMemo(() => {
-    if (availableApiColumnsRef.current && availableApiColumnsRef.current.length > 0) {
+    if (
+      availableApiColumnsRef.current &&
+      availableApiColumnsRef.current.length > 0
+    ) {
       return availableApiColumnsRef.current
         .map((colId) => globalColumnsMap.get(colId))
-        .filter(Boolean) as Array<{ id: string; apiCode: string; label: string; categoryLabel: string }>;
+        .filter(Boolean) as Array<{
+        id: string;
+        apiCode: string;
+        label: string;
+        categoryLabel: string;
+      }>;
     }
     return Array.from(globalColumnsMap.values());
-  }, [globalColumnsMap, detailsLoaded]); // réévalué dès que detailsLoaded bascule à true
+  }, [globalColumnsMap, detailsLoaded]);
 
   const columnsById = useMemo(
     () => new Map(allColumns.map((column) => [column.id, column])),
@@ -357,7 +361,9 @@ const ChantierViewsControl: React.FC<
       initialViews
         .map(
           (view) =>
-            `${view.id}:${view.name}:${view.columns.join(",")}:${JSON.stringify(view.filters)}`
+            `${view.id}:${view.name}:${view.columns.join(",")}:${JSON.stringify(
+              view.filters
+            )}`
         )
         .join("|"),
     [initialViews]
@@ -370,37 +376,32 @@ const ChantierViewsControl: React.FC<
   const [columns, setColumns] = useState<string[]>(defaultColumns);
   const [filterDraft, setFilterDraft] = useState<ActiveFilters>({});
   const [name, setName] = useState("");
-  const [editingView, setEditingView] =
-    useState<ChantierView | null>(null);
+  const [editingView, setEditingView] = useState<ChantierView | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [availableUsers, setAvailableUsers] = useState<ViewUser[]>([]);
-  const [filterOptions, setFilterOptions] =
-    useState<Record<string, FilterOption[]>>({});
+  const [filterOptions, setFilterOptions] = useState<
+    Record<string, FilterOption[]>
+  >({});
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [optionsLoaded, setOptionsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draggedColumn, setDraggedColumn] =
-    useState<string | null>(null);
-  const [dragOverColumn, setDragOverColumn] =
-    useState<string | null>(null);
-  const [activeFilterKey, setActiveFilterKey] =
-    useState<string | null>(null);
-  const [deletingViewId, setDeletingViewId] =
-    useState<string | null>(null);
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [activeFilterKey, setActiveFilterKey] = useState<string | null>(null);
+  const [deletingViewId, setDeletingViewId] = useState<string | null>(null);
 
-  const columnElementsRef = useRef(
-    new Map<string, HTMLDivElement>()
-  );
+  // État pour la suppression avec modale
+  const [viewToDelete, setViewToDelete] = useState<ChantierView | null>(null);
+
+  const columnElementsRef = useRef(new Map<string, HTMLDivElement>());
   const columnRefCallbacks = useRef(
     new Map<string, (element: HTMLDivElement | null) => void>()
   );
-  const previousColumnRectsRef = useRef(
-    new Map<string, DOMRect>()
-  );
+  const previousColumnRectsRef = useRef(new Map<string, DOMRect>());
   const draggedColumnRef = useRef<string | null>(null);
   const activeFiltersRef = useRef(activeFilters);
   const initialViewIdRef = useRef(initialViewId);
@@ -419,9 +420,7 @@ const ChantierViewsControl: React.FC<
       if (!Number.isInteger(id) || id <= 0) return;
 
       try {
-        const response =
-          await calendarConfigService.setLastChantierView(id);
-
+        const response = await calendarConfigService.setLastChantierView(id);
         if (response?.success === false) {
           throw new Error(
             "Impossible d'enregistrer la dernière vue sélectionnée."
@@ -440,9 +439,7 @@ const ChantierViewsControl: React.FC<
   const selectView = useCallback(
     (view: ChantierView) => {
       setSelectedId(view.id);
-      setColumns(
-        view.columns.length ? view.columns : defaultColumns
-      );
+      setColumns(view.columns.length ? view.columns : defaultColumns);
       setError(null);
       onViewChange(view);
       void persistLastChantierView(view);
@@ -464,15 +461,9 @@ const ChantierViewsControl: React.FC<
 
     setSelectedId(initialView.id);
     setColumns(
-      initialView.columns.length
-        ? initialView.columns
-        : defaultColumns
+      initialView.columns.length ? initialView.columns : defaultColumns
     );
-  }, [
-    initialViewsSignature,
-    initialViewId,
-    defaultColumns,
-  ]);
+  }, [initialViewsSignature, initialViewId, defaultColumns]);
 
   const selectedView = useMemo(
     () => views.find((view) => view.id === selectedId),
@@ -497,18 +488,9 @@ const ChantierViewsControl: React.FC<
     if (!fallback) return;
 
     setSelectedId(fallback.id);
-    setColumns(
-      fallback.columns.length ? fallback.columns : defaultColumns
-    );
+    setColumns(fallback.columns.length ? fallback.columns : defaultColumns);
     onViewChange(fallback);
-  }, [
-    selectedView,
-    initialViewId,
-    hasFilters,
-    views,
-    defaultColumns,
-    onViewChange,
-  ]);
+  }, [selectedView, initialViewId, hasFilters, views, defaultColumns, onViewChange]);
 
   const getColumnRef = useCallback((id: string) => {
     const cached = columnRefCallbacks.current.get(id);
@@ -542,8 +524,7 @@ const ChantierViewsControl: React.FC<
       if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
 
       element.style.transition = "none";
-      element.style.transform =
-        `translate(${deltaX}px, ${deltaY}px)`;
+      element.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
 
       void element.offsetHeight;
 
@@ -554,67 +535,46 @@ const ChantierViewsControl: React.FC<
       const handleTransitionEnd = (event: TransitionEvent) => {
         if (event.propertyName !== "transform") return;
         element.style.transition = "";
-        element.removeEventListener(
-          "transitionend",
-          handleTransitionEnd
-        );
+        element.removeEventListener("transitionend", handleTransitionEnd);
       };
 
-      element.addEventListener(
-        "transitionend",
-        handleTransitionEnd
-      );
+      element.addEventListener("transitionend", handleTransitionEnd);
     });
 
     return () => {
       const rects = new Map<string, DOMRect>();
-
       columnElementsRef.current.forEach((element, id) => {
         rects.set(id, element.getBoundingClientRect());
       });
-
       previousColumnRectsRef.current = rects;
     };
   }, [columns]);
 
-  const openEditor = useCallback(
-    (view?: ChantierView) => {
-      
-      const editableView =
-        view && !view.isEphemeral ? view : null;
+  const openEditor = useCallback((view?: ChantierView) => {
+    const editableView = view && !view.isEphemeral ? view : null;
 
-        
-      setEditingView(editableView);
-      setName(
-        view?.name === "Vue éphémère" ? "" : view?.name ?? ""
-      );
-      setIsPrivate(view?.isPrivate ?? false);
-      setSelectedUsers([]);
-      setFilterDraft(view?.filters ?? {});
-      setActiveFilterKey(null);
-      setError(null);
-      setOptionsLoaded(false);
-      setDetailsLoaded(false);
-      setIsEditorOpen(true);
-    },
-    []
-  );
+    setEditingView(editableView);
+    setName(view?.name === "Vue éphémère" ? "" : view?.name ?? "");
+    setIsPrivate(view?.isPrivate ?? false);
+    setSelectedUsers([]);
+    setFilterDraft(view?.filters ?? {});
+    setActiveFilterKey(null);
+    setError(null);
+    setOptionsLoaded(false);
+    setDetailsLoaded(false);
+    setIsEditorOpen(true);
+  }, []);
 
-  // 2. Chargement des utilisateurs et filtres
   useEffect(() => {
     if (!isEditorOpen) return;
 
     let cancelled = false;
-
     setIsLoadingOptions(true);
     setOptionsLoaded(false);
 
     Promise.all([
       employeeService.getAllUsersActif(),
-      ressourceService.getFilterOptionsDynamic(
-        "chantier-table",
-        filterKeys
-      ),
+      ressourceService.getFilterOptionsDynamic("chantier-table", filterKeys),
     ])
       .then(([usersResponse, filtersResponse]) => {
         if (cancelled) return;
@@ -672,9 +632,7 @@ const ChantierViewsControl: React.FC<
       .catch((reason) => {
         if (cancelled) return;
         console.error("Erreur de chargement des options :", reason);
-        setError(
-          "Impossible de charger les utilisateurs ou les filtres."
-        );
+        setError("Impossible de charger les utilisateurs ou les filtres.");
       })
       .finally(() => {
         if (!cancelled) setIsLoadingOptions(false);
@@ -685,9 +643,7 @@ const ChantierViewsControl: React.FC<
     };
   }, [isEditorOpen, filterKeysSignature]);
 
-
-  // 3. Appel de l'API des colonnes disponibles + chargement des détails lors de l'ouverture de la modale
- useEffect(() => {
+  useEffect(() => {
     if (!isEditorOpen) return;
 
     let cancelled = false;
@@ -696,7 +652,6 @@ const ChantierViewsControl: React.FC<
     setIsLoadingDetails(true);
     setDetailsLoaded(false);
 
-    // En mode Création, force l'état `columns` à vide immédiatement
     if (!editingView) {
       setColumns([]);
       setFilterDraft({});
@@ -713,7 +668,6 @@ const ChantierViewsControl: React.FC<
       .then(([viewDetailsResponse, columnsResponse]) => {
         if (cancelled) return;
 
-        // Stockage dans la ref des colonnes disponibles
         if (columnsResponse) {
           const rawApiColumns = columnsResponse?.data ?? columnsResponse;
           if (Array.isArray(rawApiColumns)) {
@@ -723,7 +677,8 @@ const ChantierViewsControl: React.FC<
           }
         }
 
-        const availableIds = availableApiColumnsRef.current ?? Array.from(globalColumnsMap.keys());
+        const availableIds =
+          availableApiColumnsRef.current ?? Array.from(globalColumnsMap.keys());
 
         if (editingView && viewDetailsResponse) {
           if (viewDetailsResponse?.success === false) {
@@ -733,15 +688,14 @@ const ChantierViewsControl: React.FC<
             );
           }
 
-          const payload = viewDetailsResponse?.data ?? viewDetailsResponse;
+          const payload =
+            viewDetailsResponse?.data ?? viewDetailsResponse;
           const details = normalizeChantierView(payload);
 
-          // Filtrage strict : on garde les colonnes enregistrées qui existent dans l'API
           const validSelectedColumns = details.columns.filter((col) =>
             availableIds.includes(col)
           );
 
-          // Ne remplace PAS par `availableIds` si le tableau est vide !
           setColumns(validSelectedColumns);
 
           if (details.name !== "Vue sans nom") {
@@ -769,7 +723,6 @@ const ChantierViewsControl: React.FC<
           setIsPrivate(userIds.length > 0);
           setSelectedUsers(userIds);
         } else {
-          // En mode Création, on s'assure impérativement d'avoir un tableau vide
           setColumns([]);
         }
 
@@ -795,22 +748,13 @@ const ChantierViewsControl: React.FC<
     };
   }, [isEditorOpen, editingView, globalColumnsMap]);
 
-  useEffect(() => {
-    console.log(columns, "columns");
-  }, [columns]);
-
-
-  // Colonnes non encore sélectionnées dans le formulaire
   const availableColumns = useMemo(
     () => allColumns.filter((column) => !columns.includes(column.id)),
     [allColumns, columns]
   );
 
   const availableColumnsByCategory = useMemo(() => {
-    const groups = new Map<
-      string,
-      typeof availableColumns
-    >();
+    const groups = new Map<string, typeof availableColumns>();
 
     for (const column of availableColumns) {
       const existing = groups.get(column.categoryLabel) ?? [];
@@ -845,7 +789,8 @@ const ChantierViewsControl: React.FC<
     (view?: ChantierView | null) =>
       Boolean(
         view &&
-          !view.isEphemeral && !view.isLocked &&
+          !view.isEphemeral &&
+          !view.isLocked &&
           Number.isInteger(Number(view.id)) &&
           Number(view.id) > 0
       ),
@@ -892,9 +837,7 @@ const ChantierViewsControl: React.FC<
     try {
       const payload = {
         planningVue: {
-          IdPlanningVue: editingView
-            ? Number(editingView.id)
-            : 0,
+          IdPlanningVue: editingView ? Number(editingView.id) : 0,
           IdPlanning: planningId,
           TypeVue: "chantier-table",
           LibellePlanningVue: name.trim(),
@@ -921,10 +864,7 @@ const ChantierViewsControl: React.FC<
         );
       }
 
-      const saved = normalizeChantierView(
-        response?.data ?? response
-      );
-
+      const saved = normalizeChantierView(response?.data ?? response);
       const savedId = editingView?.id || saved.id;
 
       if (
@@ -942,21 +882,18 @@ const ChantierViewsControl: React.FC<
         ...saved,
         id: savedId,
         name:
-          saved.name === "Vue sans nom"
-            ? name.trim()
-            : saved.name,
+          saved.name === "Vue sans nom" ? name.trim() : saved.name,
         columns: [...columns],
         filters,
         isPrivate,
       };
 
-      setViews((current) =>
-        editingView
-          ? current.map((view) =>
-              view.id === editingView.id ? next : view
-            )
-          : [...current, next]
-      );
+      const nextViews = editingView
+        ? views.map((view) => (view.id === editingView.id ? next : view))
+        : [...views, next];
+
+      setViews(nextViews);
+      onViewsListChange?.(nextViews);
 
       setIsEditorOpen(false);
       setEditingView(null);
@@ -984,12 +921,15 @@ const ChantierViewsControl: React.FC<
     planningId,
     isPrivate,
     selectedUsers,
+    views,
+    onViewsListChange,
     selectView,
   ]);
 
   const deleteView = useCallback(
     async (target: ChantierView) => {
-      if (!isDeletableView(target) || deletingViewId || target.isLocked) return;
+      if (!isDeletableView(target) || deletingViewId || target.isLocked)
+        return;
 
       setDeletingViewId(target.id);
       setError(null);
@@ -1018,11 +958,9 @@ const ChantierViewsControl: React.FC<
           );
         }
 
-        const remaining = views.filter(
-          (view) => view.id !== target.id
-        );
-
+        const remaining = views.filter((view) => view.id !== target.id);
         setViews(remaining);
+        onViewsListChange?.(remaining);
 
         if (editingView?.id === target.id) {
           setIsEditorOpen(false);
@@ -1031,8 +969,7 @@ const ChantierViewsControl: React.FC<
 
         if (selectedId === target.id) {
           const fallback =
-            remaining.find((view) => !view.isEphemeral) ??
-            remaining[0];
+            remaining.find((view) => !view.isEphemeral) ?? remaining[0];
 
           if (fallback) {
             selectView(fallback);
@@ -1058,6 +995,7 @@ const ChantierViewsControl: React.FC<
       isDeletableView,
       deletingViewId,
       views,
+      onViewsListChange,
       editingView,
       selectedId,
       selectView,
@@ -1065,6 +1003,13 @@ const ChantierViewsControl: React.FC<
       onViewChange,
     ]
   );
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!viewToDelete) return;
+    const target = viewToDelete;
+    setViewToDelete(null);
+    await deleteView(target);
+  }, [viewToDelete, deleteView]);
 
   const groupCodesByRange = (options: FilterOption[]) => {
     const groups: Record<string, FilterOption[]> = {};
@@ -1087,13 +1032,9 @@ const ChantierViewsControl: React.FC<
     return groups;
   };
 
-  const isEditorLoading =
-    isLoadingOptions || isLoadingDetails;
+  const isEditorLoading = isLoadingOptions || isLoadingDetails;
 
-  const renderFilterCard = (
-    [key, category]: (typeof filterEntries)[number]
-  ) => {
-
+  const renderFilterCard = ([key, category]: (typeof filterEntries)[number]) => {
     const options = filterOptions[key] || [];
     const values = filterDraft[key] || [];
 
@@ -1117,12 +1058,24 @@ const ChantierViewsControl: React.FC<
     };
 
     const toggleFilter = (categoryKey: string, value: string) => {
-      setFilterDraft((prev) => ({
-        ...prev,
-        [categoryKey]: (prev[categoryKey] || []).includes(value)
-          ? (prev[categoryKey] || []).filter((item) => item !== value)
-          : [...(prev[categoryKey] || []), value],
-      }));
+      setFilterDraft((prev) => {
+        const currentList = prev[categoryKey] || [];
+        const isSelected = currentList.includes(value);
+
+        const updatedList = isSelected
+          ? currentList.filter((item) => item !== value)
+          : [...currentList, value];
+
+        const next = { ...prev };
+
+        if (updatedList.length > 0) {
+          next[categoryKey] = updatedList;
+        } else {
+          delete next[categoryKey];
+        }
+
+        return next;
+      });
     };
 
     if (key === "code" || key === "Code") {
@@ -1137,10 +1090,8 @@ const ChantierViewsControl: React.FC<
           let nextValues: string[];
 
           if (allSelected) {
-            // Désélectionner tout le groupe
             nextValues = currentValues.filter((v) => !groupValues.includes(v));
           } else {
-            // Ajouter tout le groupe sans doublons
             nextValues = Array.from(new Set([...currentValues, ...groupValues]));
           }
 
@@ -1155,7 +1106,10 @@ const ChantierViewsControl: React.FC<
       };
 
       return (
-        <div key={category.label + '-group-' + Math.random()} className="min-w-0 space-y-3 rounded-xl border border-default p-3 bg-primary-bg/50">
+        <div
+          key={category.label + "-group-" + key}
+          className="min-w-0 space-y-3 rounded-xl border border-default p-3 bg-primary-bg/50"
+        >
           <div className="flex items-center justify-between px-1">
             <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
               {category.label} (Par tranche)
@@ -1167,13 +1121,17 @@ const ChantierViewsControl: React.FC<
             )}
           </div>
 
-          {/* Boutons de sélection rapide par groupe/tranche */}
           <div className="flex flex-wrap gap-2">
             {Object.entries(groupedCodes).map(([groupLabel, groupOptions]) => {
               const groupValues = groupOptions.map((opt) => String(opt.value));
-              const selectedCountInGroup = groupValues.filter((v) => values.includes(v)).length;
-              const isFullySelected = selectedCountInGroup === groupValues.length && groupValues.length > 0;
-              const isPartiallySelected = selectedCountInGroup > 0 && !isFullySelected;
+              const selectedCountInGroup = groupValues.filter((v) =>
+                values.includes(v)
+              ).length;
+              const isFullySelected =
+                selectedCountInGroup === groupValues.length &&
+                groupValues.length > 0;
+              const isPartiallySelected =
+                selectedCountInGroup > 0 && !isFullySelected;
 
               return (
                 <button
@@ -1186,13 +1144,19 @@ const ChantierViewsControl: React.FC<
                       isFullySelected
                         ? "border-primary bg-primary text-white"
                         : isPartiallySelected
-                          ? "border-primary/50 bg-primary/10 text-primary"
-                          : "border-default bg-secondary-bg/60 text-secondary hover:border-primary/40"
+                        ? "border-primary/50 bg-primary/10 text-primary"
+                        : "border-default bg-secondary-bg/60 text-secondary hover:border-primary/40"
                     }
                   `}
                 >
                   <span>Série {groupLabel}</span>
-                  <span className={`text-[10px] rounded-full px-1.5 py-0.2 ${isFullySelected ? "bg-white/20 text-white" : "bg-primary/10 text-primary"}`}>
+                  <span
+                    className={`text-[10px] rounded-full px-1.5 py-0.2 ${
+                      isFullySelected
+                        ? "bg-white/20 text-white"
+                        : "bg-primary/10 text-primary"
+                    }`}
+                  >
                     {selectedCountInGroup}/{groupOptions.length}
                   </span>
                 </button>
@@ -1200,7 +1164,6 @@ const ChantierViewsControl: React.FC<
             })}
           </div>
 
-          {/* Combobox classique pour affiner au cas par cas si besoin */}
           <Combobox
             multiple={true}
             options={options.map((option) => ({
@@ -1224,7 +1187,7 @@ const ChantierViewsControl: React.FC<
 
     if (key === "etat") {
       return (
-        <React.Fragment key={category.label + '-group-' + Math.random()}> 
+        <React.Fragment key={category.label + "-group-" + key}>
           <div className="flex items-center justify-between gap-2 px-1 py-0.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
               {category.label}
@@ -1235,7 +1198,7 @@ const ChantierViewsControl: React.FC<
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-4" key={category.label + '-group-' + Math.random()}>
+          <div className="flex flex-wrap gap-4">
             {options.map((option) => {
               const isSelected = values.includes(option.value) ?? false;
               return (
@@ -1255,8 +1218,16 @@ const ChantierViewsControl: React.FC<
                 >
                   {option.label}
                   {isSelected && (
-                    <svg className="ml-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg
+                      className="ml-1 h-3 w-3"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   )}
                 </button>
@@ -1264,12 +1235,14 @@ const ChantierViewsControl: React.FC<
             })}
           </div>
         </React.Fragment>
-        
       );
     }
 
     return (
-      <div key={category.label + '-group-' + Math.random()} className="min-w-0 space-y-1.5">
+      <div
+        key={category.label + "-group-" + key}
+        className="min-w-0 space-y-1.5"
+      >
         <div className="flex items-center justify-between gap-2 px-1 py-0.5">
           <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
             {category.label}
@@ -1345,7 +1318,7 @@ const ChantierViewsControl: React.FC<
                 ) : view.isPrivate ? (
                   <Lock className="h-3.5 w-3.5 text-primary" />
                 ) : (
-                  <GroupIcon className="text-primary"/>
+                  <GroupIcon className="text-primary" />
                 ),
                 badge: view.isPrivate ? "Privée" : undefined,
                 canDelete: isDeletableView(view),
@@ -1353,9 +1326,7 @@ const ChantierViewsControl: React.FC<
               value={selectedId}
               disabled={isSaving || deletingViewId !== null}
               onChange={(value) => {
-                const view = views.find(
-                  (item) => item.id === String(value)
-                );
+                const view = views.find((item) => item.id === String(value));
                 if (view) selectView(view);
               }}
               onEditOption={(option) => {
@@ -1365,10 +1336,10 @@ const ChantierViewsControl: React.FC<
               onAddOption={() => openEditor()}
               addOptionLabel="Créer une vue"
               onDeleteOption={(option) => {
-                const target = views.find(
-                  (item) => item.id === String(option.id)
-                );
-                if (target && !target.isLocked) void deleteView(target);
+                const target = views.find((item) => item.id === String(option.id));
+                if (target && !target.isLocked) {
+                  setViewToDelete(target);
+                }
               }}
               deletingOptionId={deletingViewId}
               placeholder={
@@ -1376,28 +1347,27 @@ const ChantierViewsControl: React.FC<
                   ? "Sélectionner une vue"
                   : "Aucune vue enregistrée"
               }
-              illustrationImage={
-                (() => {
-                  const view = views.find((item) => item.id === selectedId);
-                  if (!view) return null;
+              illustrationImage={(() => {
+                const view = views.find((item) => item.id === selectedId);
+                if (!view) return null;
 
-                  if (view.isEphemeral) {
-                    return <Sparkles className="h-4 w-4 text-amber-500" />;
-                  }
-                  
-                  if (view.isPrivate) {
-                    return <Lock className="h-3.5 w-3.5 text-primary" />;
-                  }
+                if (view.isEphemeral) {
+                  return <Sparkles className="h-4 w-4 text-amber-500" />;
+                }
 
-                  return <GroupIcon className="text-primary" />;
-                })()
-              }
+                if (view.isPrivate) {
+                  return <Lock className="h-3.5 w-3.5 text-primary" />;
+                }
+
+                return <GroupIcon className="text-primary" />;
+              })()}
               className="rounded-xl border-default bg-secondary-bg px-2 py-1.5"
             />
           </div>
         </div>
       </div>
 
+      {/* Modale d'édition / création de vue */}
       <Modal
         isOpen={isEditorOpen}
         onClose={() => !isSaving && setIsEditorOpen(false)}
@@ -1424,7 +1394,7 @@ const ChantierViewsControl: React.FC<
               <LoadingMessage message="Chargement des données de la vue..." />
             )}
 
-            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">              
+            <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
               <section className="min-w-0 rounded-2xl border border-default bg-secondary-bg/40 p-4 sm:p-5 xl:col-span-5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
@@ -1641,7 +1611,9 @@ const ChantierViewsControl: React.FC<
                               onDragLeave={(event) => {
                                 if (
                                   !(event.relatedTarget instanceof Node) ||
-                                  !event.currentTarget.contains(event.relatedTarget)
+                                  !event.currentTarget.contains(
+                                    event.relatedTarget
+                                  )
                                 ) {
                                   setDragOverColumn(null);
                                 }
@@ -1655,8 +1627,8 @@ const ChantierViewsControl: React.FC<
                                 draggedColumn === id
                                   ? "border-primary bg-primary/10 opacity-50"
                                   : dragOverColumn === id
-                                    ? "border-primary bg-primary/10"
-                                    : "border-default bg-secondary-bg/30"
+                                  ? "border-primary bg-primary/10"
+                                  : "border-default bg-secondary-bg/30"
                               }`}
                             >
                               <button
@@ -1716,7 +1688,8 @@ const ChantierViewsControl: React.FC<
                                   disabled={index === columns.length - 1}
                                   onClick={() =>
                                     setColumns((current) => {
-                                      if (index >= current.length - 1) return current;
+                                      if (index >= current.length - 1)
+                                        return current;
                                       const next = [...current];
                                       [next[index], next[index + 1]] = [
                                         next[index + 1],
@@ -1833,10 +1806,51 @@ const ChantierViewsControl: React.FC<
                 {isSaving
                   ? "Enregistrement..."
                   : isEditorLoading
-                    ? "Chargement..."
-                    : "Enregistrer la vue"}
+                  ? "Chargement..."
+                  : "Enregistrer la vue"}
               </button>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modale de confirmation de suppression */}
+      <Modal
+        isOpen={viewToDelete !== null}
+        onClose={() => setViewToDelete(null)}
+        title="Confirmer la suppression"
+        className="max-w-md"
+      >
+        <div className="space-y-4 px-5 py-4">
+          <p className="text-sm text-secondary">
+            Êtes-vous sûr de vouloir supprimer la vue{" "}
+            <span className="font-semibold text-primary">
+              "{viewToDelete?.name}"
+            </span>{" "}
+            ? Cette action est irréversible.
+          </p>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setViewToDelete(null)}
+              disabled={deletingViewId !== null}
+              className="cursor-pointer rounded-xl border border-default px-4 py-2 text-sm font-medium text-secondary hover:bg-secondary-bg disabled:opacity-50"
+            >
+              Annuler
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void handleConfirmDelete()}
+              disabled={deletingViewId !== null}
+              className="cursor-pointer inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {deletingViewId !== null && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Supprimer
+            </button>
           </div>
         </div>
       </Modal>
