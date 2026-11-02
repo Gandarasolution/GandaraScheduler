@@ -149,7 +149,7 @@ export const CalendarModals = memo(({
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
 
-  const { DayTypes, fetchDayTypes, addDayType, updateDayType, removeDayType } = useDayTypesContext();
+  const { DayTypes, fetchDayTypes, addDayType, updateDayType, removeDayType, onCheckDeleteDayType } = useDayTypesContext();
 
  
   const [configImageSelectorContext, setConfigImageSelectorContext] = useState<{
@@ -251,13 +251,20 @@ export const CalendarModals = memo(({
                 return { success: false, message: error?.message || "Erreur lors de la mise à jour" };
               }
             },
-            onDeleteDayType: async (id: string) => {
+            onDeleteDayType: async (id: string, numberDayCheck: number) => {
               try {
-                return await removeDayType(id);
+                return await removeDayType(id, numberDayCheck);
               } catch (error: any) {
                 return { success: false, message: error?.message || "Erreur lors de la suppression" };
               }
             },
+            onCheckDeleteDayType: async (id: string) => {
+              try {
+                return await onCheckDeleteDayType(id);
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la récupération du nombre de jours affectés" };
+              }
+            }
           },
           {
             id: "nonWorkedDay", 

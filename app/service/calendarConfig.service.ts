@@ -154,8 +154,8 @@ async function addDayType(dayType: DayType) {
   return await postRequest(`/api/planning/day-type`, dayType, 'addDayType');
 }
 
-async function removeDayType(dayTypeId: string) {
-  return await deleteRequest(`/api/planning/day-type/${dayTypeId}`, 'removeDayType', {});
+async function removeDayType(dayTypeId: string, numberDayCheck: number) {
+  return await deleteRequest(`/api/planning/day-type/${dayTypeId}`, 'removeDayType', { numberDayCheck });
 }
 
 async function getDayTypes() {
@@ -170,6 +170,10 @@ async function getAvailableColumns(viewType: string, timeoutMs: number = 5000) {
 
 async function getAvailablesYearForNonWorkingDate() {
   return await getRequest(`/api/planning/non-working-dates/available-years`, 'getAvailablesYearForNonWorkingDate');
+}
+
+async function onCheckDeleteDayType(id: string) {
+  return await getRequest(`/api/planning/day-type/${id}/delete-impact`, 'onCheckDeleteDayType');
 }
 
 export default {
@@ -203,4 +207,5 @@ export default {
   getAvailableColumns,
   getAvailablesYearForNonWorkingDate,
   editNonWorkingDate,
+  onCheckDeleteDayType
 };

@@ -538,6 +538,7 @@ const DayTypeSingleEditor = ({
   isSelected,
   onSelect,
   onUpdate,
+  onCheckDelete,
   onDelete,
   setError,
 }: {
@@ -545,13 +546,29 @@ const DayTypeSingleEditor = ({
   isSelected: boolean;
   onSelect: () => void;
   onUpdate?: (updated: any) => Promise<{ success: boolean; message?: string }>;
-  onDelete?: (id: number | string) => Promise<{ success: boolean; message?: string }>;
+  onCheckDelete?: (id: number | string) => Promise<{ checkRequired: boolean; message?: string }>;
+  onDelete?: (id: number | string, count: number) => Promise<{ success: boolean; message?: string }>;
   setError: (msg: string | null) => void;
 }) => {
   const [localType, setLocalType] = useState(dayType);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCheckingDelete, setIsCheckingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // État de la fenêtre de confirmation
+  const [deleteModalState, setDeleteModalState] = useState<{
+    isOpen: boolean;
+    checkRequired: boolean;
+    message: string;
+    expectedCount: number | null;
+  }>({
+    isOpen: false,
+    checkRequired: false,
+    message: "",
+    expectedCount: null,
+  });
+
+  const [confirmInput, setConfirmInput] = useState<string>("");
 
   useEffect(() => {
     setLocalType(dayType);
@@ -599,13 +616,61 @@ const DayTypeSingleEditor = ({
     }
   };
 
+  // ÉTAPE 1: Clic sur supprimer -> Appel API de vérification
+  const handleInitiateDelete = async () => {
+    setError(null);
+    setConfirmInput("");
+
+    if (!onCheckDelete) {
+      // Si pas de fonction de vérification, comportement classique
+      setDeleteModalState({
+        isOpen: true,
+        checkRequired: false,
+        message: "",
+        expectedCount: null,
+      });
+      return;
+    }
+
+    setIsCheckingDelete(true);
+
+    try {
+      const res = await onCheckDelete(dayType.Id);
+      
+      let parsedCount: number | null = null;
+      if (res.checkRequired && res.message) {
+        // Extraction du nombre depuis le message envoyé par l'API
+        const match = res.message.match(/\d+/);
+        if (match) {
+          parsedCount = parseInt(match[0], 10);
+        }
+      }
+
+      setDeleteModalState({
+        isOpen: true,
+        checkRequired: res.checkRequired,
+        message: res.message || "",
+        expectedCount: parsedCount,
+      });
+    } catch (e: any) {
+      setError(e?.message || "Erreur lors de la vérification de la suppression.");
+    } finally {
+      setIsCheckingDelete(false);
+    }
+  };
+
+  // ÉTAPE 2: Confirmation définitive
   const confirmDelete = async () => {
     if (!onDelete) return;
-    setShowDeleteConfirm(false);
+
+    const countToSend = deleteModalState.checkRequired ? (parseInt(confirmInput, 10) || 0) : 0;
+
+    setDeleteModalState(prev => ({ ...prev, isOpen: false }));
     setIsDeleting(true);
     setError(null);
+
     try {
-      const res = await onDelete(dayType.Id);
+      const res = await onDelete(dayType.Id, countToSend);
       if (res && !res.success) {
         setError(res?.message || "Erreur lors de la suppression.");
       }
@@ -616,11 +681,17 @@ const DayTypeSingleEditor = ({
     }
   };
 
+  const isConfirmDisabled = deleteModalState.checkRequired && (
+    deleteModalState.expectedCount !== null 
+      ? parseInt(confirmInput.trim(), 10) !== deleteModalState.expectedCount
+      : !confirmInput.trim()
+  );
+
   return (
     <div className={`p-3.5 rounded-2xl border transition-all duration-200 flex flex-wrap items-center justify-between gap-3 shadow-sm relative ${isSelected ? 'border-primary bg-primary/10 ' : 'border-light bg-secondary/10 hover:border-primary/30'}`}>
       
       {/* Pop-up confirmation suppression Type de jour */}
-      {showDeleteConfirm && (
+      {deleteModalState.isOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center gap-3 text-red-600">
@@ -629,20 +700,44 @@ const DayTypeSingleEditor = ({
               </svg>
               <h5 className="font-semibold text-sm text-primary poppins">Supprimer le type de jour ?</h5>
             </div>
-            <p className="text-xs text-secondary leading-relaxed poppins">
-              Êtes-vous sûr de vouloir supprimer le type de jour <strong className="text-primary">{dayType.Libelle}</strong> ? Cette action est irréversible.
-            </p>
+
+            {deleteModalState.checkRequired ? (
+              <div className="space-y-3">
+                <p className="text-xs text-secondary leading-relaxed poppins font-medium">
+                  {deleteModalState.message}
+                </p>
+                <div className="space-y-1">
+                  <label htmlFor={`confirmInput-${dayType.Id}`} className="text-[11px] text-secondary font-semibold poppins">
+                    Veuillez saisir le nombre de jour(s) pour confirmer :
+                  </label>
+                  <input
+                    id={`confirmInput-${dayType.Id}`}
+                    type="number"
+                    value={confirmInput}
+                    onChange={(e) => setConfirmInput(e.target.value)}
+                    placeholder={deleteModalState.expectedCount !== null ? `Entrez ${deleteModalState.expectedCount}` : "Nombre de jours"}
+                    className="w-full border border-default rounded-xl px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
+                  />
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-secondary leading-relaxed poppins">
+                Êtes-vous sûr de vouloir supprimer le type de jour <strong className="text-primary">{dayType.Libelle}</strong> ? Cette action est irréversible.
+              </p>
+            )}
+
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 className="px-3.5 py-1.5 rounded-xl border border-light text-xs font-semibold text-secondary hover:bg-secondary/10 transition-colors cursor-pointer poppins"
-                onClick={() => setShowDeleteConfirm(false)}
+                onClick={() => setDeleteModalState(prev => ({ ...prev, isOpen: false }))}
               >
                 Annuler
               </button>
               <button
                 type="button"
-                className="px-3.5 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer poppins"
+                disabled={isConfirmDisabled}
+                className="px-3.5 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer poppins"
                 onClick={confirmDelete}
               >
                 Confirmer la suppression
@@ -797,12 +892,12 @@ const DayTypeSingleEditor = ({
           ) : !dayType.isLocked ? (
             <button
               type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isDeleting}
+              onClick={handleInitiateDelete}
+              disabled={isDeleting || isCheckingDelete}
               title="Supprimer ce type de jour"
               className="cursor-pointer bg-red-500 hover:bg-red-600 text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
             >
-              {isDeleting ? (
+              {isDeleting || isCheckingDelete ? (
                 <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -1405,14 +1500,16 @@ const NonWorkingDaysEditor = ({
               type="button"
               onClick={handleAddDate}
               disabled={isAdding}
-              className="px-3 py-1.5 cursor-pointer bg-primary text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50"
+              className="px-3 py-1.5 cursor-pointer bg-primary text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50 min-w-[70px]"
             >
-              {isAdding ? 
-                <svg className="animate-spin w-3.5 h-3.5 text-inverse" fill="none" viewBox="0 0 24 24">
+              {isAdding ? (
+                <svg className="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg> 
-              : "Valider"}
+                </svg>
+              ) : (
+                "Valider"
+              )}
             </button>
           </div>
 
@@ -1689,6 +1786,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               isSelected={String(dayType.Id) === String(selectedDayTypeId)}
                               onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
                               onUpdate={dayTypeSetting.onUpdateDayType}
+                              onCheckDelete={dayTypeSetting.onCheckDeleteDayType}
                               onDelete={dayTypeSetting.onDeleteDayType}
                               setError={setApiError}
                             />
@@ -1806,4 +1904,4 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   );
 };
 
-export default memo(SettingsModal);
+export default memo(SettingsModal);0

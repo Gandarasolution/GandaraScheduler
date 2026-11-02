@@ -8,8 +8,9 @@ interface DayTypesContextType {
     setDayTypes: React.Dispatch<React.SetStateAction<Array<DayType> | null>>;
     updateDayType: (updatedDayType: DayType) => Promise<{ success: boolean; message?: string }>;
     addDayType: (newDayType: DayType) => Promise<{ success: boolean; message?: string }>;
-    removeDayType: (dayTypeId: string) => Promise<{ success: boolean; message?: string }>;
+    removeDayType: (dayTypeId: string, numberDayCheck: number) => Promise<{ success: boolean; message?: string }>;
     fetchDayTypes: () => Promise<{ success: boolean; message?: string }>;
+    onCheckDeleteDayType: (id: string) => Promise<{ success: boolean; message?: string; checkRequired: boolean }>;
 }
 
 // 2. Créer le contexte avec une valeur par défaut (utile pour l'autocomplétion)
@@ -50,9 +51,9 @@ export const DayTypesProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const removeDayType = async (dayTypeId: string): Promise<{ success: boolean; message?: string }> => {
+    const removeDayType = async (dayTypeId: string, numberDayCheck: number): Promise<{ success: boolean; message?: string }> => {
         try {
-            const response = await calendarConfigService.removeDayType(dayTypeId);
+            const response = await calendarConfigService.removeDayType(dayTypeId, numberDayCheck);
             if (response && response.success) {
                 setDayTypes(response.data);
                 return { success: true };
@@ -80,6 +81,20 @@ export const DayTypesProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const onCheckDeleteDayType = async (id: string): Promise<{ success: boolean; message?: string; checkRequired: boolean }> => {
+        try {
+            const response = await calendarConfigService.onCheckDeleteDayType(id);
+            if (response && response.success) {
+                return { success: true, checkRequired: response.checkRequired, message: response.message };
+            } else {
+                return { success: false, message: response.message || "Failed to check delete day type", checkRequired: false };
+            }
+        } catch (error) {
+            console.error("Error checking delete day type:", error);
+            return { success: false, message: "An error occurred while checking the delete day type" , checkRequired: false };
+        }
+    };
+
     return (
         <DayTypesContext.Provider
             value={{
@@ -89,6 +104,7 @@ export const DayTypesProvider = ({ children }: { children: ReactNode }) => {
                 addDayType,
                 removeDayType,
                 fetchDayTypes,
+                onCheckDeleteDayType
             }}
         >
             {children}
