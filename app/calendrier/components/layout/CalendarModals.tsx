@@ -221,9 +221,44 @@ export const CalendarModals = memo(({
   const settings = useMemo(() => [
     ...(hasPermission(214, 23) ? [
       {
-        category: "Gestion des jours non travaillés",
-        key: "nonWorkedDays",
+        category: "Gestion des jours",
+        key: "daysManagement",
         items: [
+          {
+            id: "dayTypeSettings",
+            label: "Styles des types de jours",
+            type: "day-type-settings",
+            dayTypes: DayTypes || [],
+
+            fetchDayTypes: async () => {
+              try {
+                return await fetchDayTypes();
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors du chargement des types de jours" };
+              }
+            },
+            onAddDayType: async (newType: DayType) => {
+              try {
+                return await addDayType(newType);
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la création" };
+              }
+            },
+            onUpdateDayType: async (updatedType: DayType) => {
+              try {
+                return await updateDayType(updatedType);
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la mise à jour" };
+              }
+            },
+            onDeleteDayType: async (id: string) => {
+              try {
+                return await removeDayType(id);
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors de la suppression" };
+              }
+            },
+          },
           {
             id: "nonWorkedDay", 
             label: "Dates non travaillées personnalisées", 
@@ -234,11 +269,9 @@ export const CalendarModals = memo(({
             removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
             updateNonWorkingDate: handlers.editNonWorkingDates,
             
-            // Récupération des années disponibles via l'API
             getAvailablesYearForNonWorkingDate: async () => {
               try {
-                const response = await calendarConfigService.getAvailablesYearForNonWorkingDate();
-                return response; // Attend un tableau de nombres, ex: [2024, 2025, 2026]
+                return await calendarConfigService.getAvailablesYearForNonWorkingDate();
               } catch (error: any) {
                 return [];
               }
@@ -246,8 +279,7 @@ export const CalendarModals = memo(({
 
             fetchNonWorkingDays: async (selectedYear: number) => {
               try {
-                const response = await calendarConfigService.getNonWorkingDates([selectedYear]);
-                return response;
+                return await calendarConfigService.getNonWorkingDates([selectedYear]);
               } catch (error: any) {
                 return { success: false, message: error?.message || "Erreur lors du chargement" };
               }
@@ -271,58 +303,7 @@ export const CalendarModals = memo(({
           }
         ],
         hasUnsavedChanges: true
-      },
-      {
-        category: "Gestion des types de jours",
-        items: [
-          {
-            id: "dayTypeSettings",
-            label: "Styles des types de jours",
-            type: "day-type-settings",
-            dayTypes: DayTypes || [],
-
-            fetchDayTypes: async () => {
-              try {
-                const response = await fetchDayTypes(); 
-
-                return response
-              } catch (error: any) {
-                return { success: false, message: error?.message || "Erreur lors du chargement des types de jours" };
-              }
-            },
-
-            // 2. Ajout d'un type de jour
-            onAddDayType: async (newType: DayType) => {
-              try {
-                const response = await addDayType(newType); // Ton handler de création
-                return response;
-              } catch (error: any) {
-                return { success: false, message: error?.message || "Erreur lors de la création" };
-              }
-            },
-
-            // 3. Mise à jour d'un type de jour
-            onUpdateDayType: async (updatedType: DayType) => {
-              try {
-                const response = await updateDayType(updatedType); // Ton handler de mise à jour
-                return response;
-              } catch (error: any) {
-                return { success: false, message: error?.message || "Erreur lors de la mise à jour" };
-              }
-            },
-
-            // 4. Suppression d'un type de jour
-            onDeleteDayType: async (id: string) => {
-              try {
-                const response = await removeDayType(id); // Ton handler de suppression
-                return response;
-              } catch (error: any) {
-                return { success: false, message: error?.message || "Erreur lors de la suppression" };
-              }
-            },
-          },
-        ],
-      }  
+      }
     ] : []),
     {
       category: "Affichage des étiquettes",
@@ -356,8 +337,7 @@ export const CalendarModals = memo(({
     handlers.addNonWorkingDatesToPlanning, 
     handlers.removeNonWorkingDatesFromPlanning,
     DayTypes,
-  ]);  
-
+  ]);
 
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
     if (!modalsState.selectedAppointmentForm) return null;

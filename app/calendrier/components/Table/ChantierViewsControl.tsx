@@ -44,6 +44,7 @@ export type ChantierView = {
   columns: string[];
   filters: ActiveFilters;
   isEphemeral?: boolean;
+  users?: number[];
 };
 
 export type ChantierViewsControlProps = {
@@ -217,6 +218,14 @@ export const normalizeChantierView = (item: ApiView): ChantierView => {
     planningVue.utilisateursAutorises ??
     [];
 
+  const userIds = Array.isArray(users)
+    ? users
+        .map((user: any) =>
+          Number(user?.Id ?? user?.IdPersonnel ?? user)
+        )
+        .filter((id: number) => Number.isFinite(id) && id > 0)
+    : [];
+
   const rawId =
     planningVue.IdPlanningChantierVue ??
     planningVue.id ??
@@ -230,12 +239,11 @@ export const normalizeChantierView = (item: ApiView): ChantierView => {
       planningVue.libelle ??
       planningVue.name ??
       "Vue sans nom",
-    isPrivate:
-      (Array.isArray(users) && users.length > 0) ||
-      Boolean(planningVue.isPrivate),
+    isPrivate: userIds.length > 0 || Boolean(planningVue.isPrivate),
     isLocked: Boolean(planningVue.isLocked),
     columns,
     filters: normalizeFilters(planningVue),
+    users: userIds,
   };
 };
 
@@ -789,16 +797,24 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
   );
 
   const isDeletableView = useCallback(
-    (view?: ChantierView | null) =>
-      Boolean(
-        view &&
-          !view.isEphemeral &&
-          !view.isLocked &&
-          (!view.isPrivate && hasPermission(219)) &&
-          Number.isInteger(Number(view.id)) &&
-          Number(view.id) > 0
-      ),
-    [hasPermission]
+    (view?: ChantierView | null) => {
+      if (!view || view.isEphemeral || view.isLocked) return false;
+
+      const viewIdNum = Number(view.id);
+      if (!Number.isInteger(viewIdNum) || viewIdNum <= 0) return false;
+
+      if (view.isPrivate) {
+        const isUserInView =
+          !view.users ||
+          view.users.length === 0 ||
+          (userId !== undefined && view.users.includes(userId));
+
+        return isUserInView || hasPermission(219);
+      }
+
+      return hasPermission(219);
+    },
+    [hasPermission, userId]
   );
 
   const moveColumn = useCallback((target: string) => {
@@ -837,6 +853,9 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
     setError(null);
 
     const filters = cleanFilters(filterDraft);
+    const userList = isPrivate
+      ? Array.from(new Set([userId, ...selectedUsers]))
+      : [];
 
     try {
       const payload = {
@@ -850,9 +869,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
           IdPlanningImage: null,
         },
         filtres: filters,
-        utilisateursAutorises: isPrivate
-          ? Array.from(new Set([userId, ...selectedUsers]))
-          : [],
+        utilisateursAutorises: userList,
       };
 
       const response = editingView
@@ -890,6 +907,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
         columns: [...columns],
         filters,
         isPrivate,
+        users: userList,
       };
 
       const nextViews = editingView
@@ -1204,7 +1222,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
               addOptionLabel="Créer une vue"
               onDeleteOption={(option) => {
                 const target = views.find((item) => item.id === String(option.id));
-                if (target && (!target.isLocked || (!target.isPrivate && hasPermission(219)))) {
+                if (target && isDeletableView(target)) {
                   setViewToDelete(target);
                 }
               }}
