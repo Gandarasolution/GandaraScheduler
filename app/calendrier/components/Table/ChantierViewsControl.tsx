@@ -809,13 +809,34 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
           view.users.length === 0 ||
           (userId !== undefined && view.users.includes(userId));
 
-        return isUserInView || hasPermission(219);
+        return isUserInView;
       }
 
       return hasPermission(219);
     },
     [hasPermission, userId]
   );
+
+  const isEditableView = useCallback(
+    (view?: ChantierView | null) => {
+      if (!view || view.isEphemeral) return false;
+
+      // Si la vue est privée, il faut y avoir accès (ou avoir la permission)
+      if (view.isPrivate) {
+        const isUserInView =
+          !view.users ||
+          view.users.length === 0 ||
+          (userId !== undefined && view.users.includes(userId));
+
+        return isUserInView;
+      }
+
+      // Si la vue est publique, il faut simplement avoir les droits
+      return hasPermission(220);
+    },
+    [hasPermission, userId]
+  );
+
 
   const moveColumn = useCallback((target: string) => {
     const source = draggedColumnRef.current;
@@ -1194,6 +1215,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
           <div className="min-w-[280px]">
             <CustomSelectWithImage
               options={views.map((view) => ({
+                
                 id: view.id,
                 value: view.id,
                 name: view.name,
@@ -1207,6 +1229,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                 ),
                 badge: view.isPrivate ? "Privée" : undefined,
                 canDelete: isDeletableView(view),
+                canEdit: isEditableView(view),
               }))}
               value={selectedId}
               disabled={isSaving || deletingViewId !== null}
@@ -1215,14 +1238,16 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                 if (view) selectView(view);
               }}
               onEditOption={(option) => {
+                if (!option.canEdit) return;
                 const target = views.find((item) => item.id === String(option.id));
                 if (target) openEditor(target);
               }}
-              onAddOption={() => openEditor()}
+              onAddOption={hasPermission(220, 3) ? () => openEditor() : undefined}
               addOptionLabel="Créer une vue"
               onDeleteOption={(option) => {
+                if (!option.canDelete) return;
                 const target = views.find((item) => item.id === String(option.id));
-                if (target && isDeletableView(target)) {
+                if (target) {
                   setViewToDelete(target);
                 }
               }}
@@ -1320,7 +1345,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                       type="button"
                       onClick={() => setIsPrivate(false)}
                       disabled={isLoadingDetails}
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-medium transition-all ${
                         !isPrivate
                           ? "border-primary bg-primary text-white"
                           : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"
@@ -1333,7 +1358,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                       type="button"
                       onClick={() => setIsPrivate(true)}
                       disabled={isLoadingDetails}
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-medium transition-all ${
                         isPrivate
                           ? "border-primary bg-primary text-white"
                           : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"

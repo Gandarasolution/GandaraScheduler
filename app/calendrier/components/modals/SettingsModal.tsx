@@ -551,6 +551,7 @@ const DayTypeSingleEditor = ({
   const [localType, setLocalType] = useState(dayType);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     setLocalType(dayType);
@@ -598,8 +599,9 @@ const DayTypeSingleEditor = ({
     }
   };
 
-  const handleDelete = async () => {
+  const confirmDelete = async () => {
     if (!onDelete) return;
+    setShowDeleteConfirm(false);
     setIsDeleting(true);
     setError(null);
     try {
@@ -615,7 +617,41 @@ const DayTypeSingleEditor = ({
   };
 
   return (
-    <div className={`p-3.5 rounded-2xl border transition-all duration-200 flex flex-wrap items-center justify-between gap-3 shadow-sm ${isSelected ? 'border-primary bg-primary/10 ' : 'border-light bg-secondary/10 hover:border-primary/30'}`}>
+    <div className={`p-3.5 rounded-2xl border transition-all duration-200 flex flex-wrap items-center justify-between gap-3 shadow-sm relative ${isSelected ? 'border-primary bg-primary/10 ' : 'border-light bg-secondary/10 hover:border-primary/30'}`}>
+      
+      {/* Pop-up confirmation suppression Type de jour */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+            <div className="flex items-center gap-3 text-red-600">
+              <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <h5 className="font-semibold text-sm text-primary poppins">Supprimer le type de jour ?</h5>
+            </div>
+            <p className="text-xs text-secondary leading-relaxed poppins">
+              Êtes-vous sûr de vouloir supprimer le type de jour <strong className="text-primary">{dayType.Libelle}</strong> ? Cette action est irréversible.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="px-3.5 py-1.5 rounded-xl border border-light text-xs font-semibold text-secondary hover:bg-secondary/10 transition-colors cursor-pointer poppins"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="px-3.5 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer poppins"
+                onClick={confirmDelete}
+              >
+                Confirmer la suppression
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-3 flex-1 min-w-0 flex-wrap sm:flex-nowrap">
         <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
           <label htmlFor={`dayTypeLabelInput-${dayType.Id}`} className="text-xs text-secondary font-medium poppins">
@@ -761,7 +797,7 @@ const DayTypeSingleEditor = ({
           ) : !dayType.isLocked ? (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting}
               title="Supprimer ce type de jour"
               className="cursor-pointer bg-red-500 hover:bg-red-600 text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
@@ -819,6 +855,13 @@ const NonWorkingDaysEditor = ({
   const [isLoadingYear, setIsLoadingYear] = useState(false);
   const [deletingDates, setDeletingDates] = useState<Record<string, boolean>>({});
   const [dateErrorMessage, setDateErrorMessage] = useState<string | null>(null);
+
+  // Pop-up confirmation suppression Date
+  const [pendingDeleteDate, setPendingDeleteDate] = useState<{
+    dateKey: string;
+    id: number | string;
+    formattedDate: string;
+  } | null>(null);
 
   // État d'activation du panneau droit (vrai si un type est choisi à gauche OU si le filtre est modifié)
   const [hasInteracted, setHasInteracted] = useState<boolean>(Boolean(selectedDayTypeId));
@@ -1122,12 +1165,45 @@ const NonWorkingDaysEditor = ({
     await executeSaveEdit(originalDateKey, originalVal, editDateValue, editTypeIdValue);
   };
 
+  const executeDeleteDate = async (dateKey: string, dateId: number | string) => {
+    setDeletingDates(prev => ({ ...prev, [dateKey]: true }));
+    setError(null);
+    
+    try {
+      if (setting.removeNonWorkingDatesFromPlanning) {
+        const response = await setting.removeNonWorkingDatesFromPlanning(dateId);
+        if (response && response.success) {
+          setting.setNonWorkingDates((prev: any) => {
+            const newDates = { ...prev };
+            delete newDates[dateKey];
+            return newDates;
+          });
+        } else {
+          setError(response?.message || "Erreur lors de la suppression.");
+        }
+      } else {
+        setting.setNonWorkingDates((prev: any) => {
+          const newDates = { ...prev };
+          delete newDates[dateKey];
+          return newDates;
+        });
+      }
+    } catch (error: any) {
+      setError(error?.message || "Erreur lors de la suppression.");
+    } finally {
+      setDeletingDates(prev => {
+        const next = { ...prev };
+        delete next[dateKey];
+        return next;
+      });
+    }
+  };
+
   const getDayTypeColor = (typeCode: string) => {
     const dt = setting.dayTypesOptions?.find((item: any) => String(item.Id) === String(typeCode));
     return normalizeColorForInput(dt?.CouleurFond, "#2563eb");
   };
 
-  // AFFICHAGE DU MESSAGE TANT QU'AUCUNE INTERACTION N'A EU LIEU
   if (!hasInteracted) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-white/40 rounded-2xl border border-dashed border-light min-h-[300px]">
@@ -1152,6 +1228,44 @@ const NonWorkingDaysEditor = ({
         Jours enregistrés
       </h4>
 
+      {/* Pop-up confirmation suppression d'une Date */}
+      {pendingDeleteDate && (
+        <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
+          <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+            <div className="flex items-center gap-3 text-red-600">
+              <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <h5 className="font-semibold text-sm text-primary poppins">Supprimer ce jour ?</h5>
+            </div>
+            <p className="text-xs text-secondary leading-relaxed poppins">
+              Êtes-vous sûr de vouloir supprimer la date du <strong className="text-primary">{pendingDeleteDate.formattedDate}</strong> ?
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="px-3.5 py-1.5 rounded-xl border border-light text-xs font-semibold text-secondary hover:bg-secondary/10 transition-colors cursor-pointer poppins"
+                onClick={() => setPendingDeleteDate(null)}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="px-3.5 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer poppins"
+                onClick={async () => {
+                  const target = pendingDeleteDate;
+                  setPendingDeleteDate(null);
+                  await executeDeleteDate(target.dateKey, target.id);
+                }}
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pop-up confirmation date antérieure */}
       {pendingPastDateAction && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
           <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150">
@@ -1293,7 +1407,12 @@ const NonWorkingDaysEditor = ({
               disabled={isAdding}
               className="px-3 py-1.5 cursor-pointer bg-primary text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50"
             >
-              {isAdding ? "..." : "Valider"}
+              {isAdding ? 
+                <svg className="animate-spin w-3.5 h-3.5 text-inverse" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg> 
+              : "Valider"}
             </button>
           </div>
 
@@ -1372,6 +1491,7 @@ const NonWorkingDaysEditor = ({
                 const isDeletingThisDate = Boolean(deletingDates[dateKey]);
                 const currentTypeColor = getDayTypeColor(itemObj.TypeJourCode);
                 const currentTypeObj = setting.dayTypesOptions?.find((dt: any) => String(dt.Id) === String(itemObj.TypeJourCode));
+                const formattedDateStr = format(dateObj, "dd/MM/yyyy");
 
                 return (
                   <div key={dateKey} className="flex items-center justify-between bg-white rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group">
@@ -1382,7 +1502,7 @@ const NonWorkingDaysEditor = ({
                         title={currentTypeObj?.Libelle || `Type ID: ${itemObj.TypeJourCode}`}
                       />
                       <span className="text-xs font-medium text-primary">
-                        {format(dateObj, "dd/MM/yyyy")}
+                        {formattedDateStr}
                       </span>
                       {currentTypeObj && (
                         <span className="text-[10px] text-secondary/70 bg-secondary-bg px-2 py-0.5 rounded-full border border-ultra-light">
@@ -1397,6 +1517,7 @@ const NonWorkingDaysEditor = ({
                         className="text-secondary hover:text-primary p-1 rounded transition-all cursor-pointer"
                         title="Modifier le jour (date et type)"
                         onClick={() => handleStartEdit(dateKey, val)}
+                        disabled={isDeletingThisDate}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1408,43 +1529,24 @@ const NonWorkingDaysEditor = ({
                         className="text-red-400 hover:text-red-600 p-1 rounded transition-all cursor-pointer disabled:opacity-50"
                         disabled={isDeletingThisDate}
                         title="Supprimer"
-                        onClick={async () => {
-                          setDeletingDates(prev => ({ ...prev, [dateKey]: true }));
-                          setError(null);
-                          
-                          try {
-                            if (setting.removeNonWorkingDatesFromPlanning) {
-                              const response = await setting.removeNonWorkingDatesFromPlanning(itemObj.Id || itemObj.id);
-                              if (response && response.success) {
-                                setting.setNonWorkingDates((prev: any) => {
-                                  const newDates = { ...prev };
-                                  delete newDates[dateKey];
-                                  return newDates;
-                                });
-                              } else {
-                                setError(response?.message || "Erreur lors de la suppression.");
-                              }
-                            } else {
-                              setting.setNonWorkingDates((prev: any) => {
-                                const newDates = { ...prev };
-                                delete newDates[dateKey];
-                                return newDates;
-                              });
-                            }
-                          } catch (error: any) {
-                            setError(error?.message || "Erreur lors de la suppression.");
-                          } finally {
-                            setDeletingDates(prev => {
-                              const next = { ...prev };
-                              delete next[dateKey];
-                              return next;
-                            });
-                          }
+                        onClick={() => {
+                          setPendingDeleteDate({
+                            dateKey,
+                            id: itemObj.Id || itemObj.id,
+                            formattedDate: formattedDateStr,
+                          });
                         }}
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        {isDeletingThisDate ? (
+                          <svg className="animate-spin w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
                       </button>
                     </div>
                   </div>

@@ -11,6 +11,7 @@ export interface SelectOptionWithImage {
   canDelete?: boolean;
   isEphemeral?: boolean;
   [key: string]: any;
+  canEdit?: boolean;
 }
 
 interface CustomSelectWithImageProps {
@@ -217,7 +218,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
               const isSelected = String(option.value ?? option.id) === String(value);
               const isDeletingThis = deletingOptionId !== null && String(deletingOptionId) === String(option.id);
               const canDelete = Boolean(onDeleteOption) && option.canDelete !== false;
-              const canEdit = Boolean(onEditOption) && !option.isEphemeral;
+              const canEdit = Boolean(onEditOption) && !option.isEphemeral && option.canEdit;
 
               return (
                 <li
