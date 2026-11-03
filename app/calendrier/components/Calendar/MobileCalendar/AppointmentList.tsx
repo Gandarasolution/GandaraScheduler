@@ -21,20 +21,37 @@ export const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employ
   const startDate = new Date(app.DebutPlanningEvenement);
   const endDate = new Date(app.FinPlanningEvenement);
   const formatDate = (value: Date) => format(value, 'dd/MM/yyyy HH:mm', { locale: fr });
-  const getFieldValue = (field: MobileAppointmentField): string => {
-    switch (field) {
-      case 'LibellePlanningRessource': return item?.LibellePlanningRessource || 'Rendez-vous';
-      case 'Type': return item?.Type || '';
-      case 'DebutPlanningEvenement': return formatDate(startDate);
-      case 'FinPlanningEvenement': return formatDate(endDate);
-      case 'AnnotationPlanningEvenement': return app.AnnotationPlanningEvenement || '';
-      case 'IdEmploye': return employee ? `${employee.Nom} ${employee.Prenom}`.trim() : '';
-      case 'EtapeValidation': return app.EtapeValidation || '';
-      case 'Etiquette': return app.Etiquette?.LibelleLongPlanningEtiquette || '';
-      case 'ChefChantier': return item?.Type === 'Projet' ? item.ChefChantier || '' : '';
-      case 'ChargeAffaire': return item?.Type === 'Projet' ? item.ChargeAffaire || '' : '';
-    }
+
+  const customResolvers: Partial<Record<MobileAppointmentField, () => string>> = {
+    DebutPlanningEvenement: () => formatDate(startDate),
+    FinPlanningEvenement: () => formatDate(endDate),
+    IdEmploye: () => (employee ? `${employee.Nom} ${employee.Prenom}`.trim() : ''),
+    Etiquette: () => app.Etiquette?.LibelleLongPlanningEtiquette || '',
+    ChefChantier: () => (item?.Type === 'Projet' ? item.ChefChantier || '' : ''),
+    ChargeAffaire: () => (item?.Type === 'Projet' ? item.ChargeAffaire || '' : ''),
   };
+
+  const getFieldValue = (field: MobileAppointmentField): string => {
+
+    // 1. Si le champ nécessite une logique/formatage spécifique
+    if (field in customResolvers) {
+      const t = customResolvers[field]!()
+      console.log(`Custom resolver for field ${field} returned:`, t);
+      return t;
+    }
+
+    // 2. Recherche automatique et générique dans `item` puis dans `app`
+    const value = item?.[field as keyof typeof item] ?? app?.[field as keyof typeof app];
+
+    // 3. Cas par défaut pour LibellePlanningRessource
+    if (field === 'LibellePlanningRessource' && !value) {
+      return 'Rendez-vous';
+    }
+
+    return value != null ? String(value) : '';
+  };
+
+
   const getFields = (fields: MobileAppointmentField[]) => fields
     .map(field => ({ field, value: getFieldValue(field) }))
     .filter(({ value }) => value);

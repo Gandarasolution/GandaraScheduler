@@ -18,6 +18,8 @@ import {
   Plus,
   SlidersHorizontal,
   Sparkles,
+  UserCheck,
+  UserX,
   X,
 } from "lucide-react";
 
@@ -34,6 +36,10 @@ import calendarConfigService from "@/app/service/calendarConfig.service";
 import ressourceService from "@/app/service/ressource.service";
 import employeeService from "@/app/service/employee.service";
 import { useAuth } from "../../hooks/utils/AuthContext";
+
+export type ExtendedFilterOption = FilterOption & {
+  isActif?: boolean;
+};
 
 export type ChantierView = {
   id: string;
@@ -392,7 +398,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [availableUsers, setAvailableUsers] = useState<ViewUser[]>([]);
   const [filterOptions, setFilterOptions] = useState<
-    Record<string, FilterOption[]>
+    Record<string, ExtendedFilterOption[]>
   >({});
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -612,7 +618,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
           filtersResponse?.data ??
           {};
 
-        const normalized: Record<string, FilterOption[]> = {};
+        const normalized: Record<string, ExtendedFilterOption[]> = {};
 
         if (payload && typeof payload === "object") {
           for (const [key, rawOptions] of Object.entries(payload)) {
@@ -620,7 +626,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
               ? rawOptions
                   .map((option: any) =>
                     typeof option === "string"
-                      ? { value: option, label: option }
+                      ? { value: option, label: option, isActif: true }
                       : {
                           value: String(
                             option.value ?? option.Id ?? option.id ?? ""
@@ -630,6 +636,12 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                             option.Nom ??
                             option.name ??
                             String(option.value ?? option.Id ?? ""),
+                          isActif:
+                            option.isActif ??
+                            option.IsActif ??
+                            option.actif ??
+                            option.Actif ??
+                            true,
                         }
                   )
                   .filter((option) => option.value)
@@ -786,16 +798,6 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
     [keyOfFilter]
   );
 
-  const leftFilterEntries = useMemo(
-    () => filterEntries.filter((_, index) => index % 2 !== 0),
-    [filterEntries]
-  );
-
-  const rightFilterEntries = useMemo(
-    () => filterEntries.filter((_, index) => index % 2 === 0),
-    [filterEntries]
-  );
-
   const isDeletableView = useCallback(
     (view?: ChantierView | null) => {
       if (!view || view.isEphemeral || view.isLocked) return false;
@@ -821,7 +823,6 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
     (view?: ChantierView | null) => {
       if (!view || view.isEphemeral) return false;
 
-      // Si la vue est privée, il faut y avoir accès (ou avoir la permission)
       if (view.isPrivate) {
         const isUserInView =
           !view.users ||
@@ -831,12 +832,10 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
         return isUserInView;
       }
 
-      // Si la vue est publique, il faut simplement avoir les droits
       return hasPermission(220);
     },
     [hasPermission, userId]
   );
-
 
   const moveColumn = useCallback((target: string) => {
     const source = draggedColumnRef.current;
@@ -1144,6 +1143,26 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
       );
     }
 
+    const isPersonFilter =
+      key.includes("chargeAffaire") ||
+      key.includes("ChargeAffaire") ||
+      key.includes("chefChantier") ||
+      key.includes("ChefChantier") ;
+
+  
+
+    const comboboxOptions = options.map((option) => ({
+      value: String(option.value),
+      label: isPersonFilter ? String(option.label) + ' ( ' + String(option.value) + ' )' : String(option.label),
+      icon: isPersonFilter ? (
+        option.isActif !== false ? (
+          <UserCheck className="h-4 w-4 shrink-0 text-emerald-500" />
+        ) : (
+          <UserX className="h-4 w-4 shrink-0 text-amber-500/80" />
+        )
+      ) : undefined,
+    }));
+
     return (
       <div
         key={category.label + "-group-" + key}
@@ -1165,10 +1184,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
         ) : (
           <Combobox
             multiple={true}
-            options={options.map((option) => ({
-              value: String(option.value),
-              label: String(option.label),
-            }))}
+            options={comboboxOptions}
             value={values.map(String)}
             onValueChange={handleFilterChange}
             placeholder={`Rechercher ${category.label.toLowerCase()}...`}
@@ -1215,7 +1231,6 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
           <div className="min-w-[280px]">
             <CustomSelectWithImage
               options={views.map((view) => ({
-                
                 id: view.id,
                 value: view.id,
                 name: view.name,
@@ -1286,10 +1301,10 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
             ? "Modifier la vue du tableau"
             : "Créer une vue du tableau"
         }
-        className="w-[98vw] max-w-8xl overflow-hidden"
+        className="w-[98vw] max-w-7xl overflow-hidden"
       >
         <div className="flex max-h-[85vh] flex-col">
-          <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
+          <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
             {error && (
               <div
                 role="alert"
@@ -1304,75 +1319,80 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
               <LoadingMessage message="Chargement des données de la vue..." />
             )}
 
-            {/* Section alignée : Nom de la vue + Visibilité + Choix du personnel */}
-            <section className="min-w-0 rounded-2xl border border-default bg-secondary-bg/40 p-4 sm:p-5">
-              <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
-                {/* 1. Nom de la vue */}
-                <div className={isPrivate ? "lg:col-span-4" : "lg:col-span-6"}>
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
-                      Nom de la vue *
-                    </label>
-                    <span className="text-xs text-secondary">
-                      {name.length}/100
-                    </span>
+            {/* En-tête : Nom & Visibilité dans un cadre (lg:col-span-5) + Utilisateurs autorisés dans l'autre (lg:col-span-7) */}
+            <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
+              {/* Cadre 1 : Nom de la vue + Visibilité */}
+              <section
+                className={`flex flex-col justify-between min-w-0 rounded-2xl border border-default bg-secondary-bg/40 p-4 transition-all lg:col-span-7 `}
+              >
+                <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-12">
+                  {/* Input : Nom de la vue */}
+                  <div className="sm:col-span-7">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
+                        Nom de la vue *
+                      </label>
+                      <span className="text-xs text-secondary">
+                        {name.length}/100
+                      </span>
+                    </div>
+
+                    {isLoadingDetails ? (
+                      <Skeleton className="mt-1.5 h-9 w-full" />
+                    ) : (
+                      <input
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        placeholder="Ex. Suivi des chantiers en cours"
+                        maxLength={100}
+                        className="mt-1.5 w-full rounded-xl border border-default bg-primary-bg px-3 py-2 text-sm text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        autoFocus
+                      />
+                    )}
                   </div>
 
-                  {isLoadingDetails ? (
-                    <Skeleton className="mt-2 h-10 w-full" />
-                  ) : (
-                    <input
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      placeholder="Ex. Suivi des chantiers en cours"
-                      maxLength={100}
-                      className="mt-1.5 w-full rounded-xl border border-default bg-primary-bg px-3.5 py-2 text-sm text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                      autoFocus
-                    />
-                  )}
-                </div>
-
-                {/* 2. Visibilité */}
-                <div className={isPrivate ? "lg:col-span-3" : "lg:col-span-6"}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
+                  {/* Boutons : Visibilité */}
+                  <div className="sm:col-span-5">
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">
                       Visibilité
                     </span>
-                  </div>
 
-                  <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsPrivate(false)}
-                      disabled={isLoadingDetails}
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-medium transition-all ${
-                        !isPrivate
-                          ? "border-primary bg-primary text-white"
-                          : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"
-                      }`}
-                    >
-                      <GroupIcon className="h-3.5 w-3.5" />
-                      Publique
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsPrivate(true)}
-                      disabled={isLoadingDetails}
-                      className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-medium transition-all ${
-                        isPrivate
-                          ? "border-primary bg-primary text-white"
-                          : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"
-                      }`}
-                    >
-                      <Lock className="h-3.5 w-3.5" />
-                      Privée
-                    </button>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsPrivate(false)}
+                        disabled={isLoadingDetails}
+                        className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                          !isPrivate
+                            ? "border-primary bg-primary text-white"
+                            : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"
+                        }`}
+                      >
+                        <GroupIcon className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">Publique</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsPrivate(true)}
+                        disabled={isLoadingDetails}
+                        className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                          isPrivate
+                            ? "border-primary bg-primary text-white"
+                            : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"
+                        }`}
+                      >
+                        <Lock className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">Privée</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
+              </section>
 
-                {/* 3. Utilisateurs autorisés (si vue privée) */}
-                {isPrivate && (
-                  <div className="lg:col-span-5">
+              {/* Cadre 2 : Sélection des utilisateurs autorisés (S'affiche uniquement si privée) */}
+              {isPrivate && (
+                <section className="flex flex-col justify-between min-w-0 rounded-2xl border border-default bg-secondary-bg/40 p-4 lg:col-span-5">
+                  <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
                         Utilisateurs autorisés
@@ -1382,7 +1402,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                       </span>
                     </div>
 
-                    <div className="mt-1.5">
+                    <div className="mt-1">
                       {isLoadingOptions ? (
                         <Skeleton className="h-10 w-full rounded-xl" />
                       ) : (
@@ -1403,18 +1423,19 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                       )}
                     </div>
                   </div>
-                )}
-              </div>
-            </section>
+                </section>
+              )}
+            </div>
 
+            {/* Layout principal : Colonnes (col-span-7) & Filtres (col-span-5) */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-              <section className="rounded-2xl border border-default bg-secondary-bg/50 p-4 sm:p-5 lg:col-span-5">
+              <section className="rounded-2xl border border-default bg-secondary-bg/50 p-4 sm:p-5 lg:col-span-7">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-primary">
                       Colonnes affichées et ordre
                     </h3>
-                    <p className="mt-1 text-xs text-secondary">
+                    <p className="mt-0.5 text-xs text-secondary">
                       Glissez les colonnes ou utilisez les flèches.
                     </p>
                   </div>
@@ -1616,9 +1637,11 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    setColumns((current) =>
-                                      current.filter((item) => item !== id)
-                                    )
+                                    setColumns((current) => {
+                                      return current.filter(
+                                        (item) => item !== id
+                                      );
+                                    })
                                   }
                                   aria-label={`Retirer ${column.label}`}
                                   className="cursor-pointer rounded p-1 text-secondary hover:bg-red-50 hover:text-red-600"
@@ -1641,7 +1664,8 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                 )}
               </section>
 
-              <section className="rounded-2xl border border-default bg-secondary-bg/50 p-4 sm:p-5 lg:col-span-7">
+              {/* Section Filtres : Affichage vertical uniquement */}
+              <section className="rounded-2xl border border-default bg-secondary-bg/50 p-4 sm:p-5 lg:col-span-5">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <SlidersHorizontal className="h-5 w-5 text-primary" />
@@ -1660,19 +1684,14 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                 </div>
 
                 {isLoadingOptions ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {Array.from({ length: 6 }, (_, index) => (
+                  <div className="flex flex-col gap-3">
+                    {Array.from({ length: 4 }, (_, index) => (
                       <Skeleton key={index} className="h-16 w-full" />
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2">
-                    <div className="flex min-w-0 flex-col gap-3">
-                      {leftFilterEntries.map(renderFilterCard)}
-                    </div>
-                    <div className="flex min-w-0 flex-col gap-3">
-                      {rightFilterEntries.map(renderFilterCard)}
-                    </div>
+                  <div className="flex flex-col gap-3">
+                    {filterEntries.map(renderFilterCard)}
                   </div>
                 )}
               </section>

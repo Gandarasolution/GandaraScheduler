@@ -105,7 +105,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hasPermission = useCallback((idDroit: number, niveauMinimum: number = 1) => {
     const droit = droits.find(d =>  Number(d.idDroit) === Number(idDroit));
     if (!droit) return false;
-
     return droit.gestionParNiveau
         ? Number(droit.idDroitNiveau) >= Number(niveauMinimum)
         : true;

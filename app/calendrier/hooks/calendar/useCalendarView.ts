@@ -59,9 +59,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       const saved = window.localStorage.getItem('viewType');
       const savedView = (saved as any) || 'calendar';
       
-      // Bloquer l'accès aux vues interdites pour users et viewers
-      if (hasPermission(214, 21) && 
-          (savedView === 'paie-table' || savedView === 'manual-event-table')) {
+      if (!hasPermission(214, 23) && (savedView === 'paie-table' || savedView === 'manual-event-table')) {
         return 'calendar';
       }
       
@@ -379,7 +377,25 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       }else {
         return { success: false, message: result?.message || 'Erreur lors du chargement des jours non travaillés'};
       }
-    };
+  };
+
+  const handleSaveMobileAppointmentDisplay = async (config: MobileAppointmentDisplayConfig): Promise<{ success: boolean; message?: string }> => {
+    setMobileAppointmentDisplayState(config);
+      
+    if (!mobileDisplayLoadedRef.current || !user?.IdPersonnel) return { success: false, message: 'Impossible de sauvegarder la configuration des rendez-vous mobiles : utilisateur non défini ou configuration non chargée.' };
+
+    const result = await calendarConfigService.saveMobileAppointmentDisplayConfig({
+      idPersonnel: user.IdPersonnel,
+      primaryFields: config.primaryFields,
+      secondaryFields: config.secondaryFields,
+    });
+
+    if (!result?.success) {
+      return { success: false, message: result?.message || 'Erreur lors de la sauvegarde de la configuration des rendez-vous mobiles.' };
+    }
+
+    return { success: true };
+  }
 
 
   // --- Setters avec persistence ---
@@ -438,18 +454,10 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     mobileAppointmentFieldOptions,
     mobileAppointmentSettingsLoading,
     loadMobileAppointmentSettings,
-    setMobileAppointmentDisplay: (value: MobileAppointmentDisplayConfig) => {
-      setMobileAppointmentDisplayState(value);
-      if (!mobileDisplayLoadedRef.current || !user?.IdPersonnel) return;
-      void calendarConfigService.saveMobileAppointmentDisplayConfig({
-        idPersonnel: user.IdPersonnel,
-        primaryFields: value.primaryFields,
-        secondaryFields: value.secondaryFields,
-      });
-    },
+    handleSaveMobileAppointmentDisplay,
     viewType, setViewType: (v: any) => {
         // Bloquer l'accès à paie-table et manual-event-table pour users et viewers
-        if (hasPermission(214, 21) && 
+        if (!hasPermission(214, 23) && 
             (v === 'paie-table' || v === 'manual-event-table')) {
           setViewType('calendar');
           setTimeout(() => localStorage.setItem('viewType', 'calendar'), 0);

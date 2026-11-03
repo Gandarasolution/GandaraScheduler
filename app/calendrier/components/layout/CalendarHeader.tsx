@@ -456,6 +456,7 @@ export const CalendarHeader = memo(({
                               }
                             `}
                             onClick={() => {
+                              console.log('Changing view to paie-table');
                               setViewType('paie-table');
                               setIsViewDropdownOpen(false);
                             }}

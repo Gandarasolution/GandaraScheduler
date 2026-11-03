@@ -122,7 +122,7 @@ interface CalendarModalsProps {
     tagPlacement: 'hover' | 'fixed';
     setTagPlacement: (v: 'hover' | 'fixed') => void;
     mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
-    setMobileAppointmentDisplay: (v: MobileAppointmentDisplayConfig) => void;
+    handleSaveMobileAppointmentDisplay: (value: MobileAppointmentDisplayConfig) => Promise<{ success: boolean; message?: string }>;
     mobileAppointmentFieldOptions: Array<{ CodeChamp: MobileAppointmentField; Libelle: string }>;
     mobileAppointmentSettingsLoading: boolean;
     loadMobileAppointmentSettings: () => Promise<void>;
@@ -229,7 +229,9 @@ export const CalendarModals = memo(({
             label: "Styles des types de jours",
             type: "day-type-settings",
             dayTypes: DayTypes || [],
-
+            canEdit: hasPermission(224),
+            canDelete: hasPermission(224),
+            canAdd: hasPermission(224),
             fetchDayTypes: async () => {
               try {
                 return await fetchDayTypes();
@@ -271,6 +273,9 @@ export const CalendarModals = memo(({
             label: "Dates non travaillées personnalisées", 
             type: "custom-non-working-dates",
             nonWorkingDates: config.nonWorkingDates,
+            canEdit: hasPermission(223),
+            canDelete: hasPermission(223),
+            canAdd: hasPermission(223),
             setNonWorkingDates: config.setNonWorkingDates,
             addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
             removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
@@ -304,7 +309,7 @@ export const CalendarModals = memo(({
             label: null,
             type: "mobile-appointment-fields",
             value: config.mobileAppointmentDisplay,
-            onChange: config.setMobileAppointmentDisplay,
+            onChange: config.handleSaveMobileAppointmentDisplay,
             options: config.mobileAppointmentFieldOptions,
             isLoading: config.mobileAppointmentSettingsLoading
           }
@@ -338,7 +343,7 @@ export const CalendarModals = memo(({
     config.tagPlacement, 
     config.setTagPlacement, 
     config.mobileAppointmentDisplay, 
-    config.setMobileAppointmentDisplay, 
+    config.handleSaveMobileAppointmentDisplay, 
     config.mobileAppointmentFieldOptions, 
     config.mobileAppointmentSettingsLoading, 
     handlers.addNonWorkingDatesToPlanning, 

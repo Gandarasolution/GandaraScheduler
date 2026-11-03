@@ -123,7 +123,6 @@ interface BaseItem {
   Image?: ImageType;
   defaultDescription?: string;
   Etiquettes?: Tag[];
-  Adresse?: string;
 }
 
 export interface ChantierItem extends BaseItem {
@@ -131,6 +130,7 @@ export interface ChantierItem extends BaseItem {
   Identifiant: number;
   PoleActivite: string;
   Etat: string;
+  AdresseChantier: string;
   ChargeAffaire: string;
   ChefChantier: string;
   DateOS: string;

@@ -1,4 +1,4 @@
-import { memo, useState, useMemo, useEffect, useRef } from "react";
+import { memo, useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Modal from "./Modal";
 import Loader from "../ui/Loader";
 import { format, isBefore, startOfDay } from "date-fns";
@@ -47,6 +47,7 @@ const previewItem = {
   Type: "Projet",
   ChefChantier: "Dupont Jean",
   ChargeAffaire: "Durand Marie",
+  AdresseChantier : "123 Rue de l'Industrie, 75000 Paris",
 } as Item;
 
 const previewEmployee: User = {
@@ -58,12 +59,117 @@ const previewEmployee: User = {
   Equipe: null,
 };
 
-const MobileDisplayEditor = ({ 
-  setting, 
-  registerSaveAction 
-}: { 
-  setting: any, 
-  registerSaveAction: (action: { isDirty: boolean; save: () => Promise<void> } | null) => void 
+type FieldCardProps = {
+  fieldCode: MobileAppointmentField;
+  label: string;
+  index: number;
+  totalCount: number;
+  badgeBg: string;
+  badgeTextColor: string;
+  draggedField: MobileAppointmentField | null;
+  dragOverField: MobileAppointmentField | null;
+  onDragStart: (fieldCode: MobileAppointmentField) => void;
+  onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent, fieldCode: MobileAppointmentField) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent, fieldCode: MobileAppointmentField) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRemove: () => void;
+};
+
+const FieldCard = ({
+  fieldCode,
+  label,
+  index,
+  totalCount,
+  badgeBg,
+  badgeTextColor,
+  draggedField,
+  dragOverField,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onMoveUp,
+  onMoveDown,
+  onRemove,
+}: FieldCardProps) => {
+  return (
+    <div
+      onDragOver={(e) => onDragOver(e, fieldCode)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, fieldCode)}
+      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs transition-all ${
+        draggedField === fieldCode
+          ? "border-primary bg-primary/10 opacity-50"
+          : dragOverField === fieldCode
+          ? "border-primary bg-primary/20"
+          : "border-default bg-white shadow-xs"
+      }`}
+    >
+      <div className="flex items-center gap-1.5 min-w-0">
+        <button
+          type="button"
+          draggable
+          onDragStart={() => onDragStart(fieldCode)}
+          onDragEnd={onDragEnd}
+          className="cursor-grab text-secondary hover:text-primary p-0.5 shrink-0"
+          title="Glisser pour réordonner"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+          </svg>
+        </button>
+        <span
+          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-bold ${badgeBg} ${badgeTextColor}`}
+        >
+          {index + 1}
+        </span>
+        <span className="truncate font-medium text-primary">{label}</span>
+      </div>
+
+      <div className="flex items-center gap-0.5 shrink-0">
+        <button
+          type="button"
+          disabled={index === 0}
+          onClick={onMoveUp}
+          className="rounded px-0.5 text-secondary hover:text-primary disabled:opacity-30 cursor-pointer text-[10px]"
+          title="Monter"
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          disabled={index === totalCount - 1}
+          onClick={onMoveDown}
+          className="rounded px-0.5 text-secondary hover:text-primary disabled:opacity-30 cursor-pointer text-[10px]"
+          title="Descendre"
+        >
+          ↓
+        </button>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="rounded p-0.5 text-secondary hover:bg-red-50 hover:text-red-600 cursor-pointer transition-colors"
+          title="Retirer"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const MobileDisplayEditor = ({
+  setting,
+  registerSaveAction,
+}: {
+  setting: any;
+  registerSaveAction: (action: { isDirty: boolean; save: () => Promise<void> } | null) => void;
 }) => {
   const [localValue, setLocalValue] = useState<MobileAppointmentDisplayConfig>(setting.value);
 
@@ -71,202 +177,326 @@ const MobileDisplayEditor = ({
     setLocalValue(setting.value);
   }, [setting.value]);
 
-  const isDirty = 
+  const isDirty =
     JSON.stringify(localValue.primaryFields) !== JSON.stringify(setting.value.primaryFields) ||
     JSON.stringify(localValue.secondaryFields) !== JSON.stringify(setting.value.secondaryFields);
+
+  const handleSave = useCallback(async () => {
+    if (typeof setting.onChange === "function") {
+      await setting.onChange(localValue);
+    }
+  }, [localValue, setting]);
 
   useEffect(() => {
     registerSaveAction({
       isDirty,
-      save: async () => {
-        await setting.onChange(localValue);
-      }
+      save: handleSave,
     });
 
     return () => {
       registerSaveAction(null);
     };
-  }, [isDirty, localValue, setting, registerSaveAction]);
+  }, [isDirty, handleSave, registerSaveAction]);
 
-  const updateFields = (column: "primaryFields" | "secondaryFields", optionCode: string, checked: boolean) => {
-    setLocalValue((prev: any) => {
-      const current = prev[column];
-      const fields = checked
-        ? [...current, optionCode]
-        : current.filter((field: string) => field !== optionCode);
-      return { ...prev, [column]: fields };
+  const [draggedField, setDraggedField] = useState<MobileAppointmentField | null>(null);
+  const [dragOverField, setDragOverField] = useState<MobileAppointmentField | null>(null);
+
+  const optionsMap = useMemo(() => {
+    const map = new Map<MobileAppointmentField, string>();
+    setting.options?.forEach((opt: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
+      map.set(opt.CodeChamp, opt.Libelle);
+    });
+    return map;
+  }, [setting.options]);
+
+  const allOptions = useMemo(() => {
+    return (setting.options || []) as { CodeChamp: MobileAppointmentField; Libelle: string }[];
+  }, [setting.options]);
+
+  const availableOptions = useMemo(() => {
+    return allOptions.filter((opt) => {
+      const inPrimary = localValue.primaryFields.includes(opt.CodeChamp);
+      const inSecondary = localValue.secondaryFields.includes(opt.CodeChamp);
+      return !(inPrimary && inSecondary);
+    });
+  }, [allOptions, localValue]);
+
+  const addField = (targetColumn: "primaryFields" | "secondaryFields", fieldCode: MobileAppointmentField) => {
+    setLocalValue((prev) => {
+      if (prev[targetColumn].includes(fieldCode)) return prev;
+      return {
+        ...prev,
+        [targetColumn]: [...prev[targetColumn], fieldCode],
+      };
     });
   };
 
+  const removeField = (column: "primaryFields" | "secondaryFields", fieldCode: MobileAppointmentField) => {
+    setLocalValue((prev) => ({
+      ...prev,
+      [column]: prev[column].filter((f) => f !== fieldCode),
+    }));
+  };
+
+  const moveFieldOrder = (
+    column: "primaryFields" | "secondaryFields",
+    index: number,
+    direction: "up" | "down"
+  ) => {
+    setLocalValue((prev) => {
+      const list = [...prev[column]];
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= list.length) return prev;
+      [list[index], list[targetIndex]] = [list[targetIndex], list[index]];
+      return { ...prev, [column]: list };
+    });
+  };
+
+  const moveFieldDragDrop = (
+    column: "primaryFields" | "secondaryFields",
+    targetFieldCode: MobileAppointmentField
+  ) => {
+    if (!draggedField || draggedField === targetFieldCode) return;
+
+    setLocalValue((prev) => {
+      const list = [...prev[column]];
+      const fromIndex = list.indexOf(draggedField);
+      const toIndex = list.indexOf(targetFieldCode);
+
+      if (fromIndex === -1 || toIndex === -1) return prev;
+
+      list.splice(fromIndex, 1);
+      list.splice(toIndex, 0, draggedField);
+
+      return { ...prev, [column]: list };
+    });
+  };
+
+  const handleDragOver = (e: React.DragEvent, fieldCode: MobileAppointmentField) => {
+    e.preventDefault();
+    if (draggedField !== fieldCode) {
+      setDragOverField(fieldCode);
+    }
+  };
+
   if (setting.isLoading) {
-    return <Loader size="md" className="min-h-40 rounded-xl border border-light" message="Chargement..." />;
+    return (
+      <div className="flex-1 flex items-center justify-center h-full w-full">
+        <Loader size="lg" message="Chargement..." />
+      </div>
+    );
   }
 
-  const optionsCount = setting.options?.length || 0;
-
   return (
-    <div className="w-full flex flex-col gap-4">
-      <div className="rounded-xl">
-        <div className="space-y-3 md:hidden">
-          <div className="rounded-xl border border-light bg-secondary p-3 text-xs text-secondary">
-            Activez les champs à afficher dans la carte mobile. Les informations secondaires apparaîtront dans le panneau « Voir plus ».
+    <div className="w-full flex flex-col gap-3 poppins">
+      <div className="rounded-xl border border-light bg-secondary/10 px-3 py-1.5 text-[11px] text-secondary leading-normal">
+        Organisez les informations de la carte mobile. Glissez les cartes ou utilisez les flèches pour modifier l'ordre. Un champ ne peut figurer que dans une seule section à la fois.
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
+        {/* COLONNE GAUCHE (7 Cols) */}
+        <div className="lg:col-span-7 flex flex-col gap-3">
+          <div className="rounded-xl border border-default bg-secondary-bg/50 p-2.5">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-secondary">
+                Champs disponibles ({availableOptions.length})
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {availableOptions.map((option) => {
+                const inPrimary = localValue.primaryFields.includes(option.CodeChamp);
+                const inSecondary = localValue.secondaryFields.includes(option.CodeChamp);
+
+                return (
+                  <div
+                    key={option.CodeChamp}
+                    className="flex items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-[11px] text-primary shadow-2xs"
+                  >
+                    <span className="font-medium truncate max-w-[110px]">{option.Libelle}</span>
+                    <div className="flex items-center gap-0.5 ml-0.5 pl-1 border-l border-light">
+                      {!inPrimary && (
+                        <button
+                          type="button"
+                          onClick={() => addField("primaryFields", option.CodeChamp)}
+                          className="cursor-pointer text-[9px] font-semibold text-primary hover:bg-primary/10 px-1 py-0.5 rounded transition-colors"
+                          title="Ajouter en affichage principal"
+                        >
+                          + Princ.
+                        </button>
+                      )}
+
+                      {!inSecondary && (
+                        <button
+                          type="button"
+                          onClick={() => addField("secondaryFields", option.CodeChamp)}
+                          className="cursor-pointer text-[9px] font-semibold text-secondary hover:bg-secondary/10 px-1 py-0.5 rounded transition-colors"
+                          title="Ajouter en affichage secondaire"
+                        >
+                          + Sec.
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {availableOptions.length === 0 && (
+                <p className="py-1 text-center text-[11px] text-secondary italic w-full">
+                  Tous les champs sont configurés.
+                </p>
+              )}
+            </div>
           </div>
 
-          {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
-            const primaryChecked = localValue.primaryFields.includes(option.CodeChamp);
-            const secondaryChecked = localValue.secondaryFields.includes(option.CodeChamp);
-            
-            return (
-              <div key={option.CodeChamp} className="rounded-xl border border-ultra-light bg-secondary-bg p-3">
-                <p className="mb-3 text-sm font-semibold text-primary">{option.Libelle}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {([["primaryFields", "Principale", primaryChecked], ["secondaryFields", "Secondaire", secondaryChecked]] as const).map(([column, label, checked]) => (
-                    <button
-                      key={column}
-                      type="button"
-                      aria-pressed={checked}
-                      onClick={() => updateFields(column, option.CodeChamp, !checked)}
-                      className={`flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 cursor-pointer ${checked ? "border-primary bg-primary text-white" : "border-light bg-secondary text-secondary"}`}
-                    >
-                      <span className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${checked ? "border-white" : "border-secondary"}`} aria-hidden="true">
-                        {checked ? "✓" : ""}
-                      </span>
-                      {label}
-                    </button>
-                  ))}
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Section Champs Principaux */}
+            <div className="rounded-xl border border-default bg-primary-bg p-2.5 flex flex-col min-h-[140px]">
+              <div className="mb-2 flex items-center justify-between pb-1 border-b border-primary/10">
+                <span className="text-[11px] font-bold text-primary uppercase tracking-wide">
+                  Principale ({localValue.primaryFields.length})
+                </span>
+                {localValue.primaryFields.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setLocalValue((prev) => ({ ...prev, primaryFields: [] }))}
+                    className="cursor-pointer text-[10px] text-secondary hover:text-red-600 transition-colors"
+                  >
+                    Vider
+                  </button>
+                )}
               </div>
-            );
-          })}
 
-          <div className="rounded-xl border-t-2 border-primary bg-secondary-bg p-3 space-y-3">
-            <div className="flex items-center gap-3">
-              <p className="shrink-0 text-xs font-semibold text-secondary uppercase tracking-wider">Prévisualisation</p>
-              <div className="h-px flex-1 bg-primary/30" aria-hidden="true" />
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
-                <p className="mb-2 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
-                <AppointmentCard
-                  app={previewAppointment}
-                  items={[previewItem]}
-                  employees={[previewEmployee]}
-                  preview
-                  displayConfig={{ primaryFields: localValue.primaryFields, secondaryFields: [] } as MobileAppointmentDisplayConfig}
-                />
+              <div className="space-y-1 flex-1">
+                {localValue.primaryFields.map((fieldCode, index) => (
+                  <FieldCard
+                    key={fieldCode}
+                    fieldCode={fieldCode}
+                    label={optionsMap.get(fieldCode) || fieldCode}
+                    index={index}
+                    totalCount={localValue.primaryFields.length}
+                    badgeBg="bg-primary/10"
+                    badgeTextColor="text-primary"
+                    draggedField={draggedField}
+                    dragOverField={dragOverField}
+                    onDragStart={setDraggedField}
+                    onDragEnd={() => {
+                      setDraggedField(null);
+                      setDragOverField(null);
+                    }}
+                    onDragOver={handleDragOver}
+                    onDragLeave={() => setDragOverField(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      moveFieldDragDrop("primaryFields", fieldCode);
+                      setDragOverField(null);
+                    }}
+                    onMoveUp={() => moveFieldOrder("primaryFields", index, "up")}
+                    onMoveDown={() => moveFieldOrder("primaryFields", index, "down")}
+                    onRemove={() => removeField("primaryFields", fieldCode)}
+                  />
+                ))}
+
+                {localValue.primaryFields.length === 0 && (
+                  <p className="py-4 text-center text-[10px] text-secondary italic">
+                    Aucun champ principal.
+                  </p>
+                )}
               </div>
-              <div className="min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
-                <p className="mb-2 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
-                <AppointmentCard
-                  app={previewAppointment}
-                  items={[previewItem]}
-                  employees={[previewEmployee]}
-                  preview
-                  showCard={false}
-                  displayConfig={{ primaryFields: [], secondaryFields: localValue.secondaryFields } as MobileAppointmentDisplayConfig}
-                />
+            </div>
+
+            {/* Section Champs Secondaires */}
+            <div className="rounded-xl border border-default bg-secondary-bg/30 p-2.5 flex flex-col min-h-[140px]">
+              <div className="mb-2 flex items-center justify-between pb-1 border-b border-secondary/10">
+                <span className="text-[11px] font-bold text-secondary uppercase tracking-wide">
+                  Secondaire ({localValue.secondaryFields.length})
+                </span>
+                {localValue.secondaryFields.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setLocalValue((prev) => ({ ...prev, secondaryFields: [] }))}
+                    className="cursor-pointer text-[10px] text-secondary hover:text-red-600 transition-colors"
+                  >
+                    Vider
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-1 flex-1">
+                {localValue.secondaryFields.map((fieldCode, index) => (
+                  <FieldCard
+                    key={fieldCode}
+                    fieldCode={fieldCode}
+                    label={optionsMap.get(fieldCode) || fieldCode}
+                    index={index}
+                    totalCount={localValue.secondaryFields.length}
+                    badgeBg="bg-secondary/10"
+                    badgeTextColor="text-secondary"
+                    draggedField={draggedField}
+                    dragOverField={dragOverField}
+                    onDragStart={setDraggedField}
+                    onDragEnd={() => {
+                      setDraggedField(null);
+                      setDragOverField(null);
+                    }}
+                    onDragOver={handleDragOver}
+                    onDragLeave={() => setDragOverField(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      moveFieldDragDrop("secondaryFields", fieldCode);
+                      setDragOverField(null);
+                    }}
+                    onMoveUp={() => moveFieldOrder("secondaryFields", index, "up")}
+                    onMoveDown={() => moveFieldOrder("secondaryFields", index, "down")}
+                    onRemove={() => removeField("secondaryFields", fieldCode)}
+                  />
+                ))}
+
+                {localValue.secondaryFields.length === 0 && (
+                  <p className="py-4 text-center text-[10px] text-secondary italic">
+                    Aucun champ secondaire.
+                  </p>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        <table className="hidden w-full table-fixed border-separate border-spacing-y-1 text-sm md:table">
-          <colgroup>
-            <col className="w-[28%]" />
-            <col className="w-[21%]" />
-            <col className="w-[21%]" />
-            <col className="w-[30%]" />
-          </colgroup>
-          <thead className="border-t-4 border-primary">
-            <tr className="border-b-2 border-light bg-secondary-bg text-left">
-              <th className="sticky top-0 z-10 bg-secondary-bg px-3 py-3 font-semibold">Champs</th>
-              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Principale</th>
-              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Secondaire</th>
-              <th className="sticky top-0 z-10 border-l-2 border-light bg-secondary-bg px-3 py-3 text-center font-semibold">Prévisualisation</th>
-            </tr>
-          </thead>
-          <tbody>
-            {setting.options?.map((option: { CodeChamp: MobileAppointmentField; Libelle: string }, index: number) => {
-              const primaryChecked = localValue.primaryFields.includes(option.CodeChamp);
-              const secondaryChecked = localValue.secondaryFields.includes(option.CodeChamp);
-              
-              return (
-                <tr key={option.CodeChamp} className="border-b border-ultra-light">
-                  <td className="px-3 py-3 font-medium text-primary">{option.Libelle}</td>
-                  
-                  <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
-                    <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
-                      <button
-                        className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${primaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
-                        type="button"
-                        aria-pressed={primaryChecked}
-                        aria-label={`${option.Libelle} dans l'affichage principal`}
-                        onClick={() => updateFields("primaryFields", option.CodeChamp, !primaryChecked)}
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M5 12l4 4L19 6" />
-                        </svg>
-                      </button>
-                      <span className="whitespace-nowrap text-xs">{primaryChecked ? "Affiché" : "Masqué"}</span>
-                    </div>
-                  </td>
+        {/* COLONNE DROITE : Aperçu Dynamique (5 Cols) */}
+        <div className="lg:col-span-5 rounded-xl border border-light bg-secondary-bg/40 p-2.5 sticky top-4 space-y-2.5">
+          <div className="flex items-center gap-2 pb-1 border-b border-ultra-light">
+            <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <h4 className="text-[11px] font-bold text-primary uppercase tracking-wide">Aperçu en direct</h4>
+          </div>
 
-                  <td className="border-l-2 border-light px-3 py-3 text-center align-middle">
-                    <div className="mx-auto grid w-[100px] grid-cols-[28px_1fr] items-center gap-2">
-                      <button
-                        className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${secondaryChecked ? "bg-primary text-white" : "bg-gray-200 text-gray-500"}`}
-                        type="button"
-                        aria-pressed={secondaryChecked}
-                        aria-label={`${option.Libelle} dans l'affichage secondaire`}
-                        onClick={() => updateFields("secondaryFields", option.CodeChamp, !secondaryChecked)}
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M5 12l4 4L19 6" />
-                        </svg>
-                      </button>
-                      <span className="whitespace-nowrap text-xs">{secondaryChecked ? "Affiché" : "Masqué"}</span>
-                    </div>
-                  </td>
+          <div className="space-y-2.5">
+            <div className="min-w-0 rounded-lg border border-dashed border-light bg-primary/5 p-2">
+              <p className="mb-1 text-center text-[10px] font-semibold text-primary">Aperçu (principale)</p>
+              <AppointmentCard
+                app={previewAppointment}
+                items={[previewItem]}
+                employees={[previewEmployee]}
+                preview
+                displayConfig={{ primaryFields: localValue.primaryFields, secondaryFields: [] } as MobileAppointmentDisplayConfig}
+              />
+            </div>
 
-                  {index === 0 && (
-                    <td rowSpan={optionsCount} className="border-l-2 border-light p-3 align-top bg-secondary-bg/30">
-                      <div className="sticky top-4 flex flex-col gap-3">
-                        <div className="min-w-0 rounded-xl border border-dashed border-light bg-primary/5 p-3">
-                          <p className="mb-2 text-center text-xs font-semibold text-primary">Aperçu (principale)</p>
-                          <AppointmentCard
-                            app={previewAppointment}
-                            items={[previewItem]}
-                            employees={[previewEmployee]}
-                            preview
-                            displayConfig={{
-                              primaryFields: localValue.primaryFields,
-                              secondaryFields: [],
-                            } as MobileAppointmentDisplayConfig}
-                          />
-                        </div>
-
-                        <div className="min-w-0 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
-                          <p className="mb-2 text-center text-xs font-semibold text-primary">Aperçu (secondaire)</p>
-                          <AppointmentCard
-                            app={previewAppointment}
-                            items={[previewItem]}
-                            employees={[previewEmployee]}
-                            preview
-                            showCard={false}
-                            displayConfig={{
-                              primaryFields: [],
-                              secondaryFields: localValue.secondaryFields,
-                            } as MobileAppointmentDisplayConfig}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+            <div className="min-w-0 rounded-lg border border-dashed border-light bg-secondary/30 p-2">
+              <p className="mb-1 text-center text-[10px] font-semibold text-primary">Aperçu (secondaire)</p>
+              <AppointmentCard
+                app={previewAppointment}
+                items={[previewItem]}
+                employees={[previewEmployee]}
+                preview
+                showCard={false}
+                displayConfig={{ primaryFields: [], secondaryFields: localValue.secondaryFields } as MobileAppointmentDisplayConfig}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -541,6 +771,8 @@ const DayTypeSingleEditor = ({
   onCheckDelete,
   onDelete,
   setError,
+  canDelete,
+  canEdit,
 }: {
   dayType: DayType;
   isSelected: boolean;
@@ -549,13 +781,14 @@ const DayTypeSingleEditor = ({
   onCheckDelete?: (id: number | string) => Promise<{ checkRequired: boolean; message?: string }>;
   onDelete?: (id: number | string, count: number) => Promise<{ success: boolean; message?: string }>;
   setError: (msg: string | null) => void;
+  canDelete: boolean;
+  canEdit: boolean;
 }) => {
   const [localType, setLocalType] = useState(dayType);
   const [isSaving, setIsSaving] = useState(false);
   const [isCheckingDelete, setIsCheckingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // État de la fenêtre de confirmation
   const [deleteModalState, setDeleteModalState] = useState<{
     isOpen: boolean;
     checkRequired: boolean;
@@ -597,7 +830,7 @@ const DayTypeSingleEditor = ({
   };
 
   const handleSave = async () => {
-    if (!onUpdate) return;
+    if (!onUpdate || !canEdit) return;
     setIsSaving(true);
     setError(null);
     try {
@@ -616,13 +849,12 @@ const DayTypeSingleEditor = ({
     }
   };
 
-  // ÉTAPE 1: Clic sur supprimer -> Appel API de vérification
   const handleInitiateDelete = async () => {
+    if (!canDelete) return;
     setError(null);
     setConfirmInput("");
 
     if (!onCheckDelete) {
-      // Si pas de fonction de vérification, comportement classique
       setDeleteModalState({
         isOpen: true,
         checkRequired: false,
@@ -639,7 +871,6 @@ const DayTypeSingleEditor = ({
       
       let parsedCount: number | null = null;
       if (res.checkRequired && res.message) {
-        // Extraction du nombre depuis le message envoyé par l'API
         const match = res.message.match(/\d+/);
         if (match) {
           parsedCount = parseInt(match[0], 10);
@@ -659,9 +890,8 @@ const DayTypeSingleEditor = ({
     }
   };
 
-  // ÉTAPE 2: Confirmation définitive
   const confirmDelete = async () => {
-    if (!onDelete) return;
+    if (!onDelete || !canDelete) return;
 
     const countToSend = deleteModalState.checkRequired ? (parseInt(confirmInput, 10) || 0) : 0;
 
@@ -689,8 +919,6 @@ const DayTypeSingleEditor = ({
 
   return (
     <div className={`p-3.5 rounded-2xl border transition-all duration-200 flex flex-wrap items-center justify-between gap-3 shadow-sm relative ${isSelected ? 'border-primary bg-primary/10 ' : 'border-light bg-secondary/10 hover:border-primary/30'}`}>
-      
-      {/* Pop-up confirmation suppression Type de jour */}
       {deleteModalState.isOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
@@ -759,7 +987,7 @@ const DayTypeSingleEditor = ({
             onChange={(e) => handleLabelChange(e.target.value)}
             placeholder="Ex: Jour Férié..."
             className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-white shadow-sm hover:shadow-md w-full"
-            disabled={dayType.isLocked}
+            disabled={dayType.isLocked || !canEdit}
           />
         </div>
 
@@ -778,6 +1006,7 @@ const DayTypeSingleEditor = ({
               value={normalizeColorForInput(localType.CouleurFond)}
               onChange={(e) => handleColorChange("CouleurFond", e.target.value)}
               className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+              disabled={!canEdit}
             />
             <input
               type="text"
@@ -785,6 +1014,7 @@ const DayTypeSingleEditor = ({
               onChange={(e) => handleColorChange("CouleurFond", e.target.value)}
               placeholder="#1E40AF"
               className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -804,6 +1034,7 @@ const DayTypeSingleEditor = ({
               value={normalizeColorForInput(localType.CouleurTexte, '#FFFFFF')}
               onChange={(e) => handleColorChange("CouleurTexte", e.target.value)}
               className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+              disabled={!canEdit}
             />
             <input
               type="text"
@@ -811,6 +1042,7 @@ const DayTypeSingleEditor = ({
               onChange={(e) => handleColorChange("CouleurTexte", e.target.value)}
               placeholder="#FFFFFF"
               className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -822,11 +1054,13 @@ const DayTypeSingleEditor = ({
               type="button"
               onClick={() => handleToggle("isBold")}
               title="Gras"
-              className={`h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
+              className={`${!canEdit ? 'opacity-50 cursor-not-allowed' : ''} h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
                 localType.isBold
                   ? "bg-primary text-white border-primary shadow-sm"
                   : "bg-white text-primary border-light hover:bg-secondary/10"
-              }`}
+              }
+              `}
+              disabled={!canEdit}
             >
               B
             </button>
@@ -834,11 +1068,12 @@ const DayTypeSingleEditor = ({
               type="button"
               onClick={() => handleToggle("isItalic")}
               title="Italique"
-              className={`h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
+              className={` ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''} h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
                 localType.isItalic
                   ? "bg-primary text-white border-primary shadow-sm"
                   : "bg-white text-primary border-light hover:bg-secondary/10"
               }`}
+              disabled={!canEdit}
             >
               I
             </button>
@@ -870,7 +1105,7 @@ const DayTypeSingleEditor = ({
         </span>
         
         <div className="flex items-center gap-2 h-full">
-          {isDirty ? (
+          {isDirty && canEdit ? (
             <button
               type="button"
               onClick={handleSave}
@@ -889,7 +1124,7 @@ const DayTypeSingleEditor = ({
                 </svg>
               )}
             </button>
-          ) : !dayType.isLocked ? (
+          ) : !dayType.isLocked || canDelete ? (
             <button
               type="button"
               onClick={handleInitiateDelete}
@@ -935,11 +1170,17 @@ const NonWorkingDaysEditor = ({
   selectedDayTypeId,
   setSelectedDayTypeId,
   setError,
+  canEdit,
+  canDelete,
+  canAdd,
 }: {
   setting: any;
   selectedDayTypeId: string | null;
   setSelectedDayTypeId: (id: string | null) => void;
   setError: (msg: string | null) => void;
+  canEdit: boolean;
+  canDelete: boolean;
+  canAdd: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -951,35 +1192,30 @@ const NonWorkingDaysEditor = ({
   const [deletingDates, setDeletingDates] = useState<Record<string, boolean>>({});
   const [dateErrorMessage, setDateErrorMessage] = useState<string | null>(null);
 
-  // Pop-up confirmation suppression Date
   const [pendingDeleteDate, setPendingDeleteDate] = useState<{
     dateKey: string;
     id: number | string;
     formattedDate: string;
   } | null>(null);
 
-  // État d'activation du panneau droit (vrai si un type est choisi à gauche OU si le filtre est modifié)
   const [hasInteracted, setHasInteracted] = useState<boolean>(Boolean(selectedDayTypeId));
-
-  // Filtre par type de jour (défaut 'all')
   const [filterType, setFilterType] = useState<string>(selectedDayTypeId || "all");
 
-  // Synchronisation lors de la sélection via "Voir les jours"
   useEffect(() => {
     if (selectedDayTypeId) {
       setHasInteracted(true);
       setFilterType(selectedDayTypeId);
-      setNewTypeId(selectedDayTypeId);
+      if (selectedDayTypeId !== "all") {
+        setNewTypeId(selectedDayTypeId);
+      }
     }
   }, [selectedDayTypeId]);
 
-  // Édition
   const [editingDateKey, setEditingDateKey] = useState<string | null>(null);
   const [editDateValue, setEditDateValue] = useState<string>("");
   const [editTypeIdValue, setEditTypeIdValue] = useState<string>("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  // Pop-up confirmation date antérieure
   const [pendingPastDateAction, setPendingPastDateAction] = useState<{
     type: "add" | "edit";
     dateStr: string;
@@ -1048,7 +1284,6 @@ const NonWorkingDaysEditor = ({
     }
   }, [selectedYear, setError]);
 
-  // Jours filtrés
   const filteredDates = useMemo(() => {
     const dates = setting.nonWorkingDates || {};
     return Object.entries(dates).filter(([dateKey, val]: [string, any]) => {
@@ -1067,18 +1302,8 @@ const NonWorkingDaysEditor = ({
     setDateErrorMessage(null);
   };
 
-  const handleFilterTypeChange = (newType: string) => {
-    setHasInteracted(true);
-    setFilterType(newType);
-    if (newType !== "all") {
-      setNewTypeId(newType);
-    }
-    if (selectedDayTypeId && String(selectedDayTypeId) !== String(newType)) {
-      setSelectedDayTypeId(null);
-    }
-  };
-
   const executeAddDate = async (dateStr: string, typeId: string) => {
+    if (!canAdd) return;
     const formattedInputDate = format(new Date(dateStr), "yyyy-MM-dd");
 
     setDateErrorMessage(null);
@@ -1133,12 +1358,14 @@ const NonWorkingDaysEditor = ({
   };
 
   const handleAddDate = async () => {
+    if (!canAdd) return;
+
     if (!newDate) {
       setDateErrorMessage("Veuillez choisir une date.");
       return;
     }
 
-    const selectedTypeForAdd = newTypeId || selectedDayTypeId || setting.dayTypesOptions?.[0]?.Id;
+    const selectedTypeForAdd = newTypeId || (selectedDayTypeId !== "all" ? selectedDayTypeId : null) || setting.dayTypesOptions?.[0]?.Id;
 
     if (!selectedTypeForAdd) {
       setDateErrorMessage("Veuillez choisir un type de jour.");
@@ -1170,10 +1397,12 @@ const NonWorkingDaysEditor = ({
   };
 
   const handleStartEdit = (dateKey: string, currentVal: any) => {
+    if (!canEdit) return;
+
     const itemObj = typeof currentVal === "object" ? currentVal : { TypeJourCode: currentVal };
     setEditingDateKey(dateKey);
     setEditDateValue(dateKey);
-    setEditTypeIdValue(String(itemObj.TypeJourCode || selectedDayTypeId || setting.dayTypesOptions?.[0]?.Id || ""));
+    setEditTypeIdValue(String(itemObj.TypeJourCode || (selectedDayTypeId !== "all" ? selectedDayTypeId : null) || setting.dayTypesOptions?.[0]?.Id || ""));
     setError(null);
   };
 
@@ -1184,6 +1413,8 @@ const NonWorkingDaysEditor = ({
   };
 
   const executeSaveEdit = async (originalDateKey: string, originalVal: any, newDateValueStr: string, newTypeIdStr: string) => {
+    if (!canEdit) return;
+
     const formattedNewDate = format(new Date(newDateValueStr), "yyyy-MM-dd");
     const itemObj = typeof originalVal === "object" ? originalVal : { id: originalVal };
     const dateId = itemObj.Id || itemObj.id;
@@ -1234,7 +1465,7 @@ const NonWorkingDaysEditor = ({
   };
 
   const handleSaveEdit = async (originalDateKey: string, originalVal: any) => {
-    if (!editDateValue || !editTypeIdValue) return;
+    if (!editDateValue || !editTypeIdValue || !canEdit) return;
 
     const formattedNewDate = format(new Date(editDateValue), "yyyy-MM-dd");
 
@@ -1261,6 +1492,8 @@ const NonWorkingDaysEditor = ({
   };
 
   const executeDeleteDate = async (dateKey: string, dateId: number | string) => {
+    if (!canDelete) return;
+
     setDeletingDates(prev => ({ ...prev, [dateKey]: true }));
     setError(null);
     
@@ -1323,7 +1556,6 @@ const NonWorkingDaysEditor = ({
         Jours enregistrés
       </h4>
 
-      {/* Pop-up confirmation suppression d'une Date */}
       {pendingDeleteDate && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
           <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
@@ -1360,7 +1592,6 @@ const NonWorkingDaysEditor = ({
         </div>
       )}
 
-      {/* Pop-up confirmation date antérieure */}
       {pendingPastDateAction && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
           <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150">
@@ -1403,24 +1634,7 @@ const NonWorkingDaysEditor = ({
 
       {/* Barre de Filtres */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-light shadow-sm">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <span className="text-xs font-semibold text-secondary whitespace-nowrap">Filtrer par type :</span>
-          <select
-            id="filter-type-select"
-            value={filterType}
-            onChange={(e) => handleFilterTypeChange(e.target.value)}
-            className="border border-default rounded-xl px-2.5 py-1.5 text-xs bg-white font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm flex-1 truncate"
-          >
-            <option value="all">Tous les types</option>
-            {setting.dayTypesOptions?.map((dt: any) => (
-              <option key={dt.Id} value={dt.Id}>
-                {dt.Libelle}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
           <span className="text-xs font-semibold text-secondary whitespace-nowrap">Année :</span>
           <select
             id="year-select"
@@ -1438,86 +1652,88 @@ const NonWorkingDaysEditor = ({
         </div>
       </div>
 
-      {!isOpen ? (
-        <button
-          type="button"
-          onClick={() => {
-            setError(null);
-            setDateErrorMessage(null);
-            setIsOpen(true);
-          }}
-          className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
-        >
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Ajouter une date
-        </button>
-      ) : (
-        <div className="p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-2.5 shadow-sm shrink-0">
-          <div className="flex items-center justify-between pb-1 border-b border-primary/20">
-            <h5 className="text-xs font-semibold text-primary">
-              Nouveau jour
-            </h5>
-            <button
-              type="button"
-              onClick={() => {
-                resetForm();
-                setIsOpen(false);
-              }}
-              className="text-secondary hover:text-primary transition-colors p-0.5 cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <input
-              type="date"
-              value={newDate}
-              onChange={(e) => {
-                setNewDate(e.target.value);
-                if (dateErrorMessage) setDateErrorMessage(null);
-              }}
-              className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-white shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
-            />
-
-            <select
-              value={newTypeId || selectedDayTypeId || setting.dayTypesOptions?.[0]?.Id || ""}
-              onChange={(e) => setNewTypeId(e.target.value)}
-              className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-white shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
-            >
-              {setting.dayTypesOptions?.map((dt: any) => (
-                <option key={dt.Id} value={dt.Id}>
-                  {dt.Libelle}
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={handleAddDate}
-              disabled={isAdding}
-              className="px-3 py-1.5 cursor-pointer bg-primary text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50 min-w-[70px]"
-            >
-              {isAdding ? (
-                <svg className="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      {canAdd &&
+        (!isOpen ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setDateErrorMessage(null);
+              setIsOpen(true);
+            }}
+            className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Ajouter une date
+          </button>
+        ) : (
+          <div className="p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-2.5 shadow-sm shrink-0">
+            <div className="flex items-center justify-between pb-1 border-b border-primary/20">
+              <h5 className="text-xs font-semibold text-primary">
+                Nouveau jour
+              </h5>
+              <button
+                type="button"
+                onClick={() => {
+                  resetForm();
+                  setIsOpen(false);
+                }}
+                className="text-secondary hover:text-primary transition-colors p-0.5 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              ) : (
-                "Valider"
-              )}
-            </button>
-          </div>
+              </button>
+            </div>
 
-          {dateErrorMessage && (
-            <p className="text-[11px] text-red-500 font-medium">{dateErrorMessage}</p>
-          )}
-        </div>
-      )}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <input
+                type="date"
+                value={newDate}
+                onChange={(e) => {
+                  setNewDate(e.target.value);
+                  if (dateErrorMessage) setDateErrorMessage(null);
+                }}
+                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-white shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
+              />
+
+              <select
+                value={newTypeId || (selectedDayTypeId !== "all" ? selectedDayTypeId : null) || setting.dayTypesOptions?.[0]?.Id || ""}
+                onChange={(e) => setNewTypeId(e.target.value)}
+                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-white shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
+              >
+                {setting.dayTypesOptions?.map((dt: any) => (
+                  <option key={dt.Id} value={dt.Id}>
+                    {dt.Libelle}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={handleAddDate}
+                disabled={isAdding}
+                className="px-3 py-1.5 cursor-pointer bg-primary text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50 min-w-[70px]"
+              >
+                {isAdding ? (
+                  <svg className="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  "Valider"
+                )}
+              </button>
+            </div>
+
+            {dateErrorMessage && (
+              <p className="text-[11px] text-red-500 font-medium">{dateErrorMessage}</p>
+            )}
+          </div>
+        ))
+      }
 
       {/* Liste des jours */}
       <div className="bg-white/60 rounded-xl p-3 min-h-[160px] relative flex-1 min-h-0 border border-light overflow-y-auto">
@@ -1609,42 +1825,46 @@ const NonWorkingDaysEditor = ({
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        className="text-secondary hover:text-primary p-1 rounded transition-all cursor-pointer"
-                        title="Modifier le jour (date et type)"
-                        onClick={() => handleStartEdit(dateKey, val)}
-                        disabled={isDeletingThisDate}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="text-red-400 hover:text-red-600 p-1 rounded transition-all cursor-pointer disabled:opacity-50"
-                        disabled={isDeletingThisDate}
-                        title="Supprimer"
-                        onClick={() => {
-                          setPendingDeleteDate({
-                            dateKey,
-                            id: itemObj.Id || itemObj.id,
-                            formattedDate: formattedDateStr,
-                          });
-                        }}
-                      >
-                        {isDeletingThisDate ? (
-                          <svg className="animate-spin w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                        ) : (
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className={"text-secondary hover:text-primary p-1 rounded transition-all cursor-pointer" + (isDeletingThisDate || !canEdit ? " disabled" : "")}
+                          title="Modifier le jour (date et type)"
+                          onClick={() => handleStartEdit(dateKey, val)}
+                          disabled={isDeletingThisDate || !canEdit}
+                        >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
-                        )}
-                      </button>
+                        </button>
+                      )}
+
+                      {canDelete && (
+                        <button
+                          type="button"
+                          className={"text-red-400 hover:text-red-600 p-1 rounded transition-all cursor-pointer disabled:opacity-50" + (isDeletingThisDate || !canDelete ? " disabled" : "")}
+                          disabled={isDeletingThisDate || !canDelete}
+                          title="Supprimer"
+                          onClick={() => {
+                            setPendingDeleteDate({
+                              dateKey,
+                              id: itemObj.Id || itemObj.id,
+                              formattedDate: formattedDateStr,
+                            });
+                          }}
+                        >
+                          {isDeletingThisDate ? (
+                            <svg className="animate-spin w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1716,6 +1936,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     return daysCat?.items?.find((item: any) => item.type === "day-type-settings");
   }, [settings]);
 
+  const handleFooterSave = async () => {
+    if (!pendingSaveAction?.save) return;
+    setIsSavingPending(true);
+    setApiError(null);
+    try {
+      await pendingSaveAction.save();
+      // Optionnel : fermer la modale après une sauvegarde réussie
+      // onClose(); 
+      setIsSavingPending(false);
+    } catch (error: any) {
+      setApiError(error?.message || "Erreur lors de la sauvegarde.");
+    } finally {
+      
+    }
+  };
+
+
+  useEffect(() => {
+    console.log(isSavingPending);
+  }, [isSavingPending]);
+
+
   return (
     <Modal
       isOpen={isSettingsOpen}
@@ -1730,7 +1972,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       } h-[85vh] max-h-[850px] overflow-hidden flex flex-col`}
       classNameContent="flex-1 overflow-hidden p-4 flex flex-col min-h-0"
       confirmCloseOnOverlay={currentCategoryObj?.hasUnsavedChanges && pendingSaveAction?.isDirty}
-      onSave={pendingSaveAction?.save}
+      onSave={handleFooterSave}
     >
       <div className="flex flex-col h-full min-h-0 poppins gap-4">
         <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -1771,13 +2013,49 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       <h4 className="text-sm font-semibold text-primary pb-2 border-b border-ultra-light">
                         Types de jours
                       </h4>
-
-                      <NewDayTypeForm
-                        onAdd={dayTypeSetting?.onAddDayType}
-                        setError={setApiError}
-                      />
+                      {dayTypeSetting.canAdd &&
+                        <NewDayTypeForm
+                          onAdd={dayTypeSetting?.onAddDayType}
+                          setError={setApiError}
+                        />
+                      }
 
                       <div className="space-y-3">
+                        <div
+                          className={`p-3.5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 shadow-sm cursor-pointer ${
+                            selectedDayTypeId === "all"
+                              ? "border-primary bg-primary/10"
+                              : "border-light bg-secondary/10 hover:border-primary/30"
+                          }`}
+                          onClick={() => setSelectedDayTypeId("all")}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                              </svg>
+                            </div>
+                            <span className="text-xs font-semibold text-primary poppins">Tous les types</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDayTypeId("all");
+                            }}
+                            className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
+                              selectedDayTypeId === "all"
+                                ? "bg-primary text-white ring-2 ring-primary/20"
+                                : "bg-white border border-light hover:bg-primary/5 text-primary"
+                            }`}
+                          >
+                            <span>Voir les jours</span>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </div>
+
                         {dayTypeSetting?.dayTypes && dayTypeSetting.dayTypes.length > 0 ? (
                           dayTypeSetting.dayTypes.map((dayType: DayType) => (
                             <DayTypeSingleEditor
@@ -1789,6 +2067,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               onCheckDelete={dayTypeSetting.onCheckDeleteDayType}
                               onDelete={dayTypeSetting.onDeleteDayType}
                               setError={setApiError}
+                              canEdit={dayTypeSetting?.canEdit}
+                              canDelete={dayTypeSetting?.canDelete}
                             />
                           ))
                         ) : (
@@ -1807,6 +2087,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           selectedDayTypeId={selectedDayTypeId}
                           setSelectedDayTypeId={setSelectedDayTypeId}
                           setError={setApiError}
+                          canAdd={nonWorkingSetting?.canAdd}
+                          canEdit={nonWorkingSetting?.canEdit}
+                          canDelete={nonWorkingSetting?.canDelete}
                         />
                       ) : (
                         <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-white/40 rounded-xl border border-dashed border-light min-h-[250px]">
@@ -1825,7 +2108,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {currentCategoryObj.items.map((setting: any, settingIdx: number) => (
                       <div
                         key={setting.id}
-                        className={`flex flex-col lg:flex-row lg:items-center justify-between py-2 ${
+                        className={`flex flex-col lg:flex-row lg:items-center justify-between py-2 h-full ${
                           settingIdx !== currentCategoryObj.items.length - 1
                             ? "border-b border-ultra-light pb-4"
                             : ""
@@ -1869,33 +2152,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         
         <div className="flex justify-end pt-3 border-t border-ultra-light shrink-0 gap-3">
           <button
+            type="button"
             className={`px-8 py-3 rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer ${
               pendingSaveAction?.isDirty 
                 ? "bg-secondary-bg border border-light text-primary hover:bg-secondary/10" 
                 : "bg-primary text-white hover:bg-primary-600"
             }`}
             onClick={onClose}
+            disabled={isSavingPending}
           >
             Fermer
           </button>
           
-          {pendingSaveAction?.isDirty && (
+          {/* Modifié : le bouton reste affiché tant qu'une sauvegarde est en cours */}
+          {(pendingSaveAction?.isDirty || isSavingPending) && (
             <button
-              className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer flex items-center justify-center disabled:opacity-50 min-w-[220px]"
-              onClick={async () => {
-                setIsSavingPending(true);
-                setApiError(null);
-                try {
-                  await pendingSaveAction.save();
-                } catch (error: any) {
-                  setApiError(error?.message || "Erreur lors de la sauvegarde.");
-                } finally {
-                  setIsSavingPending(false);
-                }
-              }}
+              type="button"
+              className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 min-w-[220px]"
+              onClick={handleFooterSave}
               disabled={isSavingPending}
             >
-              {isSavingPending ? "Sauvegarde..." : "Sauvegarder les modifications"}
+              {isSavingPending ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Enregistrement...</span>
+                </>
+              ) : (
+                <span>Sauvegarder les modifications</span>
+              )}
             </button>
           )}
         </div>
@@ -1904,4 +2191,4 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   );
 };
 
-export default memo(SettingsModal);0
+export default memo(SettingsModal);

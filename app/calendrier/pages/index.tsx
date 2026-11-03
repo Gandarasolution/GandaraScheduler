@@ -1035,7 +1035,10 @@ export default function HomePage({
 
   // 2. On branche la radio !
   useMercureSync(currentPlanningId, handleMercureEvent, setLockNotification);
-  
+
+  useEffect(() => {
+    console.log('viewType:', viewState.viewType);
+  }, [viewState.viewType]);
 
   // --- RENDU VISUEL ---
 
@@ -1365,7 +1368,7 @@ export default function HomePage({
               tagPlacement: viewState.tagPlacement,
               setTagPlacement: viewState.setTagPlacement,
               mobileAppointmentDisplay: viewState.mobileAppointmentDisplay,
-              setMobileAppointmentDisplay: viewState.setMobileAppointmentDisplay,
+              handleSaveMobileAppointmentDisplay: viewState.handleSaveMobileAppointmentDisplay,
               mobileAppointmentFieldOptions: viewState.mobileAppointmentFieldOptions,
               mobileAppointmentSettingsLoading: viewState.mobileAppointmentSettingsLoading,
               loadMobileAppointmentSettings: viewState.loadMobileAppointmentSettings,

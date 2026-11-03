@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, memo } from 'react';
 export interface ComboboxOption {
   value: string;
   label: string;
+  icon?: React.ReactNode;
 }
 
 type BaseComboboxProps = {
@@ -93,6 +94,8 @@ export function Combobox(props: ComboboxProps) {
     if (!disabled) setIsOpen(true);
   };
 
+  console.log(options)
+
   return (
     <div ref={containerRef} className="relative space-y-2">
       {/* Champ de recherche */}
@@ -143,6 +146,7 @@ export function Combobox(props: ComboboxProps) {
                 }}
               >
                 <span>{option.label}</span>
+                <div className={`w-5 h-5 flex items-center justify-center`}>{option.icon}</div>
                 {isSelected && (
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
