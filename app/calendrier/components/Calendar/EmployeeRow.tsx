@@ -27,7 +27,7 @@ interface EmployeeRowProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   isOverlapExpanded: boolean;
-  onSetExpansion: (id: number, expanded: boolean) => void;
+  onGroupExpansionChange: (id: number, expanded: boolean) => void;
   collapseTrigger?: number;
   mainScrollRef: React.RefObject<HTMLDivElement>;
   onLockedError: (message: string) => void;
@@ -54,7 +54,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   onSelectCell,
   onSelectAppointment,
   isOverlapExpanded,
-  onSetExpansion,
+  onGroupExpansionChange,
   collapseTrigger,
   mainScrollRef,
   onLockedError
@@ -170,19 +170,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       return next;
     });
   }, [overlappingGroups]);
-
-  useEffect(() => {
-    if (!isOverlapExpanded) return;
-
-    setExpandedGroups((previous) => {
-      const next = { ...previous };
-      overlappingGroups.forEach((group) => {
-        if (group.apps.length < 2) return;
-        next[group.key] = true;
-      });
-      return next;
-    });
-  }, [isOverlapExpanded, overlappingGroups]);
 
   useEffect(() => {
     const validKeys = new Set(overlappingGroups.map(g => g.key));
@@ -372,7 +359,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   setExpandedGroups((prev) => ({ ...prev, [group.key]: true }));
-                  onSetExpansion(employee.IdPersonnel, true);
+                  onGroupExpansionChange(employee.IdPersonnel, true);
                 }}
               >
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
@@ -391,7 +378,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   setExpandedGroups((prev) => ({ ...prev, [group.key]: false }));
-                  onSetExpansion(employee.IdPersonnel, false);
                 }}
               >
                 Réduire
@@ -419,8 +405,8 @@ export default memo(EmployeeRow, (prev, next) => {
       prev.isOverlapExpanded !== next.isOverlapExpanded ||
       prev.visibleWindowStart !== next.visibleWindowStart ||
       prev.visibleWindowEnd !== next.visibleWindowEnd ||
-      prev.collapseTrigger !== next.collapseTrigger || 
-      prev.onSetExpansion !== next.onSetExpansion
+      prev.collapseTrigger !== next.collapseTrigger ||
+      prev.onGroupExpansionChange !== next.onGroupExpansionChange
   ) {
     return false;
   }

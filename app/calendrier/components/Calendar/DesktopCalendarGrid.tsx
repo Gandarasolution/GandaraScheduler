@@ -302,8 +302,12 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     setExpandedOverlapRows(prev => ({ ...prev, [employeeId]: true }));
   }, []);
 
-  const handleSetRowExpansion = useCallback((employeeId: number, expanded: boolean) => {
-    setExpandedOverlapRows((prev) => ({ ...prev, [employeeId]: expanded }));
+  const handleGroupExpansionChange = useCallback((employeeId: number, expanded: boolean) => {
+    if (!expanded) return;
+    setExpandedOverlapRows(prev => {
+      if (prev[employeeId] === true) return prev;
+      return { ...prev, [employeeId]: true };
+    });
   }, []);
 
   useEffect(() => { setTodayTs(Date.now()); }, []);
@@ -405,7 +409,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
             onSelectCell={onSelectCell}
             onSelectAppointment={onSelectAppointment}
             expandedOverlapRows={expandedOverlapRows}
-            handleSetRowExpansion={handleSetRowExpansion}
+            handleGroupExpansionChange={handleGroupExpansionChange}
             tagPlacement={tagPlacement}
             collapseTriggers={collapseTriggers}
             mainScrollRef={mainScrollRef as React.RefObject<HTMLDivElement>}

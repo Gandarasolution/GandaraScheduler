@@ -77,7 +77,6 @@ export const useCalendarVirtualization = ({
               ? baseHeight
               : Math.min(baseHeight, ROW_HEIGHT);
               
-            if (Number(employee.IdPersonnel) === 1121) console.log(expandedOverlapRows);
             rows.push({
               type: 'employee',
               id: employee.IdPersonnel,

@@ -44,7 +44,7 @@ interface CalendarRowsProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   expandedOverlapRows: Record<number, boolean>;
-  handleSetRowExpansion: (employeeId: number, expanded: boolean) => void;
+  handleGroupExpansionChange: (employeeId: number, expanded: boolean) => void;
   collapseTriggers: Record<number, number>;
   tagPlacement: 'hover' | 'fixed';
   onLockedError: (message: string) => void;
@@ -75,7 +75,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   onSelectCell,
   onSelectAppointment,
   expandedOverlapRows,
-  handleSetRowExpansion,
+  handleGroupExpansionChange,
   collapseTriggers,
   tagPlacement,
   onLockedError
@@ -132,7 +132,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             onSelectCell={onSelectCell}
             onSelectAppointment={onSelectAppointment}
             isOverlapExpanded={!!expandedOverlapRows[row.id as number]}
-            onSetExpansion={handleSetRowExpansion}
+            onGroupExpansionChange={handleGroupExpansionChange}
             collapseTrigger={collapseTriggers[row.id as number]}
             tagPlacement={tagPlacement}
             onLockedError={onLockedError}
