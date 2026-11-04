@@ -127,7 +127,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
  const visibleEmployees = useMemo(() => {
     const baseEmployees = hasPermission(214, 22) || hasPermission(214, 23)
       ? employees 
-      : employees.filter(emp => emp.IdPersonnel === user.IdPersonnel);
+      : employees.filter(emp => Number(emp.IdPersonnel) === Number(user.IdPersonnel));
     
     // Filtrer les employés inactifs qui n'ont pas de rdv dans le mois visible
     return baseEmployees.filter(emp => {
@@ -138,7 +138,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
       
       // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
       const hasMonthlyAppointments = appointments.some(app => 
-        app.IdEmploye === emp.IdPersonnel
+        Number(app.IdEmploye) === Number(emp.IdPersonnel)
       );
       
       return hasMonthlyAppointments;

@@ -66,12 +66,14 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     return results.map(result => result.item);
   }, [debouncedSearch, fuse, employees]);
 
+  
+
   // Grouper les employés par équipe
   const groupedEmployees = useMemo(() => {
     const groups: Record<string, User[]> = {};
     
     searchResults.forEach(emp => {
-      const equipeKey = typeof emp.Equipe === 'number' ? emp.Equipe : undefined;
+      const equipeKey = Number(emp.Equipe);
       const groupName = (equipeKey !== undefined ? teams[equipeKey]?.Nom : undefined) || 'Sans équipe';
       if (!groups[groupName]) {
         groups[groupName] = [];
@@ -81,6 +83,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     
     return groups;
   }, [searchResults]);
+
 
   // Filtrer les employés récents qui sont dans la liste actuelle
   const validRecentEmployees = useMemo(() => {

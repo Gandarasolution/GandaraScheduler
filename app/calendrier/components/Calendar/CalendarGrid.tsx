@@ -109,7 +109,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   mobileState
 }) => {
 
-  
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
   const [hoverColumnLeft, setHoverColumnLeft] = useState<number | null>(null);
   const hasAutoScrolled = useRef(false);

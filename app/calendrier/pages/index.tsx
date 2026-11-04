@@ -610,8 +610,6 @@ export default function HomePage({
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true;
 
-      if (!isMobile) await viewState.loadConfigs(hasPermission(214, 23) || hasPermission(214, 22));
-
       if (!hasInitializedEmployeesRef.current) {
         const employeesResponse =
           hasPermission(214, 23) || hasPermission(214, 22)

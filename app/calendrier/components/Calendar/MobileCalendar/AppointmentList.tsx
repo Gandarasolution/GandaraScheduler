@@ -36,7 +36,6 @@ export const AppointmentCard: React.FC<{ app: Appointment, items: Item[], employ
     // 1. Si le champ nécessite une logique/formatage spécifique
     if (field in customResolvers) {
       const t = customResolvers[field]!()
-      console.log(`Custom resolver for field ${field} returned:`, t);
       return t;
     }
 

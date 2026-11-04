@@ -1,5 +1,5 @@
 import { memo, useState, useMemo, useEffect, useRef, useCallback } from "react";
-import Modal from "./Modal";
+import Modal, { useModalContext } from "./Modal";
 import Loader from "../ui/Loader";
 import { format, isBefore, startOfDay } from "date-fns";
 import { Appointment, DayType, Item, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from "../../types";
@@ -68,7 +68,7 @@ type FieldCardProps = {
   badgeTextColor: string;
   draggedField: MobileAppointmentField | null;
   dragOverField: MobileAppointmentField | null;
-  onDragStart: (fieldCode: MobileAppointmentField) => void;
+  onDragStart: (e: React.DragEvent, fieldCode: MobileAppointmentField) => void;
   onDragEnd: () => void;
   onDragOver: (e: React.DragEvent, fieldCode: MobileAppointmentField) => void;
   onDragLeave: () => void;
@@ -98,36 +98,35 @@ const FieldCard = ({
 }: FieldCardProps) => {
   return (
     <div
+      draggable
+      onDragStart={(e) => onDragStart(e, fieldCode)}
+      onDragEnd={onDragEnd}
       onDragOver={(e) => onDragOver(e, fieldCode)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, fieldCode)}
-      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs transition-all ${
+      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm transition-all ${
         draggedField === fieldCode
           ? "border-primary bg-primary/10 opacity-50"
           : dragOverField === fieldCode
-          ? "border-primary bg-primary/20"
+          ? "border-primary bg-primary/30 ring-2 ring-primary/20"
           : "border-default bg-white shadow-xs"
       }`}
     >
       <div className="flex items-center gap-1.5 min-w-0">
-        <button
-          type="button"
-          draggable
-          onDragStart={() => onDragStart(fieldCode)}
-          onDragEnd={onDragEnd}
-          className="cursor-grab text-secondary hover:text-primary p-0.5 shrink-0"
+        <div
+          className="cursor-grab active:cursor-grabbing text-secondary hover:text-primary p-0.5 shrink-0"
           title="Glisser pour réordonner"
         >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
           </svg>
-        </button>
+        </div>
         <span
           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-bold ${badgeBg} ${badgeTextColor}`}
         >
           {index + 1}
         </span>
-        <span className="truncate font-medium text-primary">{label}</span>
+        <span className="truncate font-medium text-primary select-none">{label}</span>
       </div>
 
       <div className="flex items-center gap-0.5 shrink-0">
@@ -135,7 +134,7 @@ const FieldCard = ({
           type="button"
           disabled={index === 0}
           onClick={onMoveUp}
-          className="rounded px-0.5 text-secondary hover:text-primary disabled:opacity-30 cursor-pointer text-[10px]"
+          className="rounded px-0.5 text-secondary hover:text-primary disabled:opacity-30 cursor-pointer text-sm"
           title="Monter"
         >
           ↑
@@ -144,7 +143,7 @@ const FieldCard = ({
           type="button"
           disabled={index === totalCount - 1}
           onClick={onMoveDown}
-          className="rounded px-0.5 text-secondary hover:text-primary disabled:opacity-30 cursor-pointer text-[10px]"
+          className="rounded px-0.5 text-secondary hover:text-primary disabled:opacity-30 cursor-pointer text-sm"
           title="Descendre"
         >
           ↓
@@ -198,8 +197,16 @@ const MobileDisplayEditor = ({
     };
   }, [isDirty, handleSave, registerSaveAction]);
 
-  const [draggedField, setDraggedField] = useState<MobileAppointmentField | null>(null);
-  const [dragOverField, setDragOverField] = useState<MobileAppointmentField | null>(null);
+  // Modifié : On stocke l'origine et la cible sous forme d'objet { column, fieldCode }
+  const [draggedItem, setDraggedItem] = useState<{
+    column: "primaryFields" | "secondaryFields";
+    fieldCode: MobileAppointmentField;
+  } | null>(null);
+
+  const [dragOverItem, setDragOverItem] = useState<{
+    column: "primaryFields" | "secondaryFields";
+    fieldCode: MobileAppointmentField;
+  } | null>(null);
 
   const optionsMap = useMemo(() => {
     const map = new Map<MobileAppointmentField, string>();
@@ -252,30 +259,54 @@ const MobileDisplayEditor = ({
     });
   };
 
+  // Traitement du Drag & Drop intra-colonne
   const moveFieldDragDrop = (
-    column: "primaryFields" | "secondaryFields",
+    targetColumn: "primaryFields" | "secondaryFields",
     targetFieldCode: MobileAppointmentField
   ) => {
-    if (!draggedField || draggedField === targetFieldCode) return;
+    if (!draggedItem) return;
 
-    setLocalValue((prev) => {
-      const list = [...prev[column]];
-      const fromIndex = list.indexOf(draggedField);
-      const toIndex = list.indexOf(targetFieldCode);
+    // Si on réordonne dans la même colonne
+    if (draggedItem.column === targetColumn) {
+      if (draggedItem.fieldCode === targetFieldCode) return;
 
-      if (fromIndex === -1 || toIndex === -1) return prev;
+      setLocalValue((prev) => {
+        const list = [...prev[targetColumn]];
+        const fromIndex = list.indexOf(draggedItem.fieldCode);
+        const toIndex = list.indexOf(targetFieldCode);
 
-      list.splice(fromIndex, 1);
-      list.splice(toIndex, 0, draggedField);
+        if (fromIndex === -1 || toIndex === -1) return prev;
 
-      return { ...prev, [column]: list };
-    });
+        list.splice(fromIndex, 1);
+        list.splice(toIndex, 0, draggedItem.fieldCode);
+
+        return { ...prev, [targetColumn]: list };
+      });
+    }
   };
 
-  const handleDragOver = (e: React.DragEvent, fieldCode: MobileAppointmentField) => {
+  const handleDragStart = (
+    e: React.DragEvent,
+    column: "primaryFields" | "secondaryFields",
+    fieldCode: MobileAppointmentField
+  ) => {
+    setDraggedItem({ column, fieldCode });
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", fieldCode);
+  };
+
+  const handleDragOver = (
+    e: React.DragEvent,
+    column: "primaryFields" | "secondaryFields",
+    fieldCode: MobileAppointmentField
+  ) => {
     e.preventDefault();
-    if (draggedField !== fieldCode) {
-      setDragOverField(fieldCode);
+    e.dataTransfer.dropEffect = "move";
+
+    if (!draggedItem) return;
+
+    if (draggedItem.column === column && draggedItem.fieldCode !== fieldCode) {
+      setDragOverItem({ column, fieldCode });
     }
   };
 
@@ -290,12 +321,13 @@ const MobileDisplayEditor = ({
   return (
     <div className="w-full flex flex-col gap-3 poppins">
       <div className="rounded-xl border border-light bg-secondary/10 px-3 py-1.5 text-[11px] text-secondary leading-normal">
-        Organisez les informations de la carte mobile. Glissez les cartes ou utilisez les flèches pour modifier l'ordre. Un champ ne peut figurer que dans une seule section à la fois.
+        Organisez les informations de la carte mobile. Glissez les cartes ou utilisez les flèches pour modifier l'ordre.
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
-        {/* COLONNE GAUCHE (7 Cols) */}
+        {/* COLONNE GAUCHE */}
         <div className="lg:col-span-7 flex flex-col gap-3">
+          {/* Section Champs disponibles */}
           <div className="rounded-xl border border-default bg-secondary-bg/50 p-2.5">
             <div className="mb-1.5 flex items-center justify-between">
               <span className="text-[11px] font-semibold text-secondary">
@@ -311,10 +343,11 @@ const MobileDisplayEditor = ({
                 return (
                   <div
                     key={option.CodeChamp}
-                    className="flex items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-[11px] text-primary shadow-2xs"
+                    className="flex items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs"
                   >
-                    <span className="font-medium truncate max-w-[110px]">{option.Libelle}</span>
+                    <span className="font-medium truncate">{option.Libelle}</span>
                     <div className="flex items-center gap-0.5 ml-0.5 pl-1 border-l border-light">
+                      {/* S'affiche uniquement si non présent dans principale */}
                       {!inPrimary && (
                         <button
                           type="button"
@@ -326,6 +359,7 @@ const MobileDisplayEditor = ({
                         </button>
                       )}
 
+                      {/* S'affiche uniquement si non présent dans secondaire */}
                       {!inSecondary && (
                         <button
                           type="button"
@@ -340,13 +374,7 @@ const MobileDisplayEditor = ({
                   </div>
                 );
               })}
-
-              {availableOptions.length === 0 && (
-                <p className="py-1 text-center text-[11px] text-secondary italic w-full">
-                  Tous les champs sont configurés.
-                </p>
-              )}
-            </div>
+            </div>    
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -370,26 +398,27 @@ const MobileDisplayEditor = ({
               <div className="space-y-1 flex-1">
                 {localValue.primaryFields.map((fieldCode, index) => (
                   <FieldCard
-                    key={fieldCode}
+                    key={`primary-${fieldCode}`}
                     fieldCode={fieldCode}
                     label={optionsMap.get(fieldCode) || fieldCode}
                     index={index}
                     totalCount={localValue.primaryFields.length}
                     badgeBg="bg-primary/10"
                     badgeTextColor="text-primary"
-                    draggedField={draggedField}
-                    dragOverField={dragOverField}
-                    onDragStart={setDraggedField}
+                    draggedField={draggedItem?.column === "primaryFields" ? draggedItem.fieldCode : null}
+                    dragOverField={dragOverItem?.column === "primaryFields" ? dragOverItem.fieldCode : null}
+                    onDragStart={(e) => handleDragStart(e, "primaryFields", fieldCode)}
                     onDragEnd={() => {
-                      setDraggedField(null);
-                      setDragOverField(null);
+                      setDraggedItem(null);
+                      setDragOverItem(null);
                     }}
-                    onDragOver={handleDragOver}
-                    onDragLeave={() => setDragOverField(null)}
+                    onDragOver={(e) => handleDragOver(e, "primaryFields", fieldCode)}
+                    onDragLeave={() => setDragOverItem(null)}
                     onDrop={(e) => {
                       e.preventDefault();
                       moveFieldDragDrop("primaryFields", fieldCode);
-                      setDragOverField(null);
+                      setDragOverItem(null);
+                      setDraggedItem(null);
                     }}
                     onMoveUp={() => moveFieldOrder("primaryFields", index, "up")}
                     onMoveDown={() => moveFieldOrder("primaryFields", index, "down")}
@@ -425,26 +454,27 @@ const MobileDisplayEditor = ({
               <div className="space-y-1 flex-1">
                 {localValue.secondaryFields.map((fieldCode, index) => (
                   <FieldCard
-                    key={fieldCode}
+                    key={`secondary-${fieldCode}`}
                     fieldCode={fieldCode}
                     label={optionsMap.get(fieldCode) || fieldCode}
                     index={index}
                     totalCount={localValue.secondaryFields.length}
                     badgeBg="bg-secondary/10"
                     badgeTextColor="text-secondary"
-                    draggedField={draggedField}
-                    dragOverField={dragOverField}
-                    onDragStart={setDraggedField}
+                    draggedField={draggedItem?.column === "secondaryFields" ? draggedItem.fieldCode : null}
+                    dragOverField={dragOverItem?.column === "secondaryFields" ? dragOverItem.fieldCode : null}
+                    onDragStart={(e) => handleDragStart(e, "secondaryFields", fieldCode)}
                     onDragEnd={() => {
-                      setDraggedField(null);
-                      setDragOverField(null);
+                      setDraggedItem(null);
+                      setDragOverItem(null);
                     }}
-                    onDragOver={handleDragOver}
-                    onDragLeave={() => setDragOverField(null)}
+                    onDragOver={(e) => handleDragOver(e, "secondaryFields", fieldCode)}
+                    onDragLeave={() => setDragOverItem(null)}
                     onDrop={(e) => {
                       e.preventDefault();
                       moveFieldDragDrop("secondaryFields", fieldCode);
-                      setDragOverField(null);
+                      setDragOverItem(null);
+                      setDraggedItem(null);
                     }}
                     onMoveUp={() => moveFieldOrder("secondaryFields", index, "up")}
                     onMoveDown={() => moveFieldOrder("secondaryFields", index, "down")}
@@ -462,7 +492,7 @@ const MobileDisplayEditor = ({
           </div>
         </div>
 
-        {/* COLONNE DROITE : Aperçu Dynamique (5 Cols) */}
+        {/* COLONNE DROITE : Aperçu */}
         <div className="lg:col-span-5 rounded-xl border border-light bg-secondary-bg/40 p-2.5 sticky top-4 space-y-2.5">
           <div className="flex items-center gap-2 pb-1 border-b border-ultra-light">
             <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1881,6 +1911,242 @@ const NonWorkingDaysEditor = ({
   );
 };
 
+
+const  SettingsModalContent: React.FC<{
+  onClose: () => void;
+  settings: any;
+  currentCategoryObj: any;
+  apiError: string | null;
+  setApiError: (err: string | null) => void;
+  selectedDayTypeId: string | null;
+  setSelectedDayTypeId: (id: string | null) => void;
+  pendingSaveAction: { isDirty: boolean; save: () => Promise<void> } | null;
+  setPendingSaveAction: React.Dispatch<React.SetStateAction<{ isDirty: boolean; save: () => Promise<void> } | null>>;
+  handleFooterSave: () => Promise<void>;
+  isSavingPending: boolean;
+}> = ({
+  onClose,
+  settings,
+  currentCategoryObj,
+  apiError,
+  setApiError,
+  selectedDayTypeId,
+  setSelectedDayTypeId,
+  pendingSaveAction,
+  setPendingSaveAction,
+  handleFooterSave,
+  isSavingPending,
+}) => {
+  // Récupération de la méthode de fermeture sécurisée avec sauvegarde depuis la Modal
+  const { handleCloseWithSave } = useModalContext();
+
+  return (
+    <div className="flex flex-col h-full min-h-0 poppins gap-4">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        <div className="bg-secondary-bg border border-light rounded-2xl py-6 px-5 shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
+          {currentCategoryObj && (
+            <div className="flex flex-col h-full min-h-0">
+              <div className="flex items-center bg-secondary-bg gap-3 pb-4 mb-4 border-b border-ultra-light shrink-0">
+                <div className="w-1.5 h-6 bg-primary rounded-full"></div>
+                <h3 className="text-lg font-medium text-primary poppins">
+                  {currentCategoryObj.category}
+                </h3>
+              </div>
+
+              {apiError && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start justify-between gap-3 text-red-700 text-sm poppins shadow-sm shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{apiError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setApiError(null)}
+                    className="text-red-400 hover:text-red-600 transition-colors cursor-pointer p-0.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              {currentCategoryObj.key === "daysManagement" ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
+                  {/* PANNEAU GAUCHE */}
+                  <div className="lg:col-span-7 flex flex-col gap-4 min-h-0 overflow-y-auto pr-2">
+                    <h4 className="text-sm font-semibold text-primary pb-2 border-b border-ultra-light">
+                      Types de jours
+                    </h4>
+                    {currentCategoryObj.items?.find((item: any) => item.type === "day-type-settings")?.canAdd && (
+                      <NewDayTypeForm
+                        onAdd={currentCategoryObj.items?.find((item: any) => item.type === "day-type-settings")?.onAddDayType}
+                        setError={setApiError}
+                      />
+                    )}
+
+                    <div className="space-y-3">
+                      <div
+                        className={`p-3.5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 shadow-sm cursor-pointer ${
+                          selectedDayTypeId === "all"
+                            ? "border-primary bg-primary/10"
+                            : "border-light bg-secondary/10 hover:border-primary/30"
+                        }`}
+                        onClick={() => setSelectedDayTypeId("all")}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                            </svg>
+                          </div>
+                          <span className="text-xs font-semibold text-primary poppins">Tous les types</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDayTypeId("all");
+                          }}
+                          className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
+                            selectedDayTypeId === "all"
+                              ? "bg-primary text-white ring-2 ring-primary/20"
+                              : "bg-white border border-light hover:bg-primary/5 text-primary"
+                          }`}
+                        >
+                          <span>Voir les jours</span>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {currentCategoryObj.items?.find((item: any) => item.type === "day-type-settings")?.dayTypes?.map((dayType: DayType) => {
+                        const dayTypeSetting = currentCategoryObj.items?.find((item: any) => item.type === "day-type-settings");
+                        return (
+                          <DayTypeSingleEditor
+                            key={dayType.Id}
+                            dayType={dayType}
+                            isSelected={String(dayType.Id) === String(selectedDayTypeId)}
+                            onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
+                            onUpdate={dayTypeSetting?.onUpdateDayType}
+                            onCheckDelete={dayTypeSetting?.onCheckDeleteDayType}
+                            onDelete={dayTypeSetting?.onDeleteDayType}
+                            setError={setApiError}
+                            canEdit={dayTypeSetting?.canEdit}
+                            canDelete={dayTypeSetting?.canDelete}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* PANNEAU DROIT */}
+                  <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-ultra-light pt-6 lg:pt-0 lg:pl-6 flex flex-col min-h-0 overflow-y-auto">
+                    {currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates") ? (
+                      <NonWorkingDaysEditor
+                        setting={currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates")}
+                        selectedDayTypeId={selectedDayTypeId}
+                        setSelectedDayTypeId={setSelectedDayTypeId}
+                        setError={setApiError}
+                        canAdd={currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates")?.canAdd}
+                        canEdit={currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates")?.canEdit}
+                        canDelete={currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates")?.canDelete}
+                      />
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-white/40 rounded-xl border border-dashed border-light min-h-[250px]">
+                        <p className="text-sm font-medium text-secondary poppins">Aucune donnée de configuration</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6 flex-1">
+                  {currentCategoryObj.items.map((setting: any, settingIdx: number) => (
+                    <div
+                      key={setting.id}
+                      className={`flex flex-col lg:flex-row lg:items-center justify-between py-2  ${
+                        settingIdx !== currentCategoryObj.items.length - 1 ? "border-b border-ultra-light pb-4" : ""
+                        }
+                        ${setting.type === "mobile-appointment-fields" ? "h-full" : ""}`
+                      }
+                    >
+                      {setting.type === "mobile-appointment-fields" ? (
+                        <MobileDisplayEditor setting={setting} registerSaveAction={setPendingSaveAction} />
+                      ) : setting.type === "select" ? (
+                        <select
+                          id={setting.id}
+                          className="border border-default rounded-xl px-4 py-3 text-sm bg-transparent shadow-sm"
+                          value={setting.value}
+                          onChange={(e) => setting.onChange(e.target.value)}
+                        >
+                          {setting.options?.map((option: any) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={setting.id}
+                          type={setting.type}
+                          className="border border-default rounded-xl px-4 py-3 text-sm bg-transparent shadow-sm w-48"
+                          value={setting.value}
+                          onChange={(e) => setting.onChange(e.target.value)}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div className="flex justify-end pt-3 border-t border-ultra-light shrink-0 gap-3">
+        <button
+          type="button"
+          className={`px-8 py-3 rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer ${
+            pendingSaveAction?.isDirty
+              ? "bg-secondary-bg border border-light text-primary hover:bg-secondary/10"
+              : "bg-primary text-white hover:bg-primary-600"
+          }`}
+          onClick={handleCloseWithSave}
+          disabled={isSavingPending}
+        >
+          Fermer
+        </button>
+
+        {(pendingSaveAction?.isDirty || isSavingPending) && (
+          <button
+            type="button"
+            className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 min-w-[220px]"
+            onClick={handleFooterSave}
+            disabled={isSavingPending}
+          >
+            {isSavingPending ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Enregistrement...</span>
+              </>
+            ) : (
+              <span>Sauvegarder les modifications</span>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
 const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   isSettingsOpen,
@@ -1889,7 +2155,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>(() => {
     return sessionStorage.getItem('activeSettingsCategory') || settings?.[0]?.category || "";
   });
-  
+
   const [selectedDayTypeId, setSelectedDayTypeId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [pendingSaveAction, setPendingSaveAction] = useState<{ isDirty: boolean; save: () => Promise<void> } | null>(null);
@@ -1926,37 +2192,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [isSettingsOpen, settings]);
 
-  const nonWorkingSetting = useMemo(() => {
-    const daysCat = settings.find((cat: any) => cat.key === "daysManagement");
-    return daysCat?.items?.find((item: any) => item.type === "custom-non-working-dates");
-  }, [settings]);
-
-  const dayTypeSetting = useMemo(() => {
-    const daysCat = settings.find((cat: any) => cat.key === "daysManagement");
-    return daysCat?.items?.find((item: any) => item.type === "day-type-settings");
-  }, [settings]);
-
   const handleFooterSave = async () => {
     if (!pendingSaveAction?.save) return;
     setIsSavingPending(true);
     setApiError(null);
     try {
       await pendingSaveAction.save();
-      // Optionnel : fermer la modale après une sauvegarde réussie
-      // onClose(); 
       setIsSavingPending(false);
     } catch (error: any) {
       setApiError(error?.message || "Erreur lors de la sauvegarde.");
-    } finally {
-      
+      setIsSavingPending(false);
     }
   };
-
-
-  useEffect(() => {
-    console.log(isSavingPending);
-  }, [isSavingPending]);
-
 
   return (
     <Modal
@@ -1974,219 +2221,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       confirmCloseOnOverlay={currentCategoryObj?.hasUnsavedChanges && pendingSaveAction?.isDirty}
       onSave={handleFooterSave}
     >
-      <div className="flex flex-col h-full min-h-0 poppins gap-4">
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          <div className="bg-secondary-bg border border-light rounded-2xl py-6 px-5 shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
-            {currentCategoryObj && (
-              <div className="flex flex-col h-full min-h-0">
-                <div className="flex items-center bg-secondary-bg gap-3 pb-4 mb-4 border-b border-ultra-light shrink-0">
-                  <div className="w-1.5 h-6 bg-primary rounded-full"></div>
-                  <h3 className="text-lg font-medium text-primary poppins">
-                    {currentCategoryObj.category}
-                  </h3>
-                </div>
-
-                {apiError && (
-                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start justify-between gap-3 text-red-700 text-sm poppins shadow-sm shrink-0">
-                    <div className="flex items-center gap-2.5">
-                      <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>{apiError}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setApiError(null)}
-                      className="text-red-400 hover:text-red-600 transition-colors cursor-pointer p-0.5"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-
-                {currentCategoryObj.key === "daysManagement" ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
-                    {/* PANNEAU GAUCHE - TYPES DE JOURS */}
-                    <div className="lg:col-span-7 flex flex-col gap-4 min-h-0 overflow-y-auto pr-2">
-                      <h4 className="text-sm font-semibold text-primary pb-2 border-b border-ultra-light">
-                        Types de jours
-                      </h4>
-                      {dayTypeSetting.canAdd &&
-                        <NewDayTypeForm
-                          onAdd={dayTypeSetting?.onAddDayType}
-                          setError={setApiError}
-                        />
-                      }
-
-                      <div className="space-y-3">
-                        <div
-                          className={`p-3.5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 shadow-sm cursor-pointer ${
-                            selectedDayTypeId === "all"
-                              ? "border-primary bg-primary/10"
-                              : "border-light bg-secondary/10 hover:border-primary/30"
-                          }`}
-                          onClick={() => setSelectedDayTypeId("all")}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                              </svg>
-                            </div>
-                            <span className="text-xs font-semibold text-primary poppins">Tous les types</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedDayTypeId("all");
-                            }}
-                            className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
-                              selectedDayTypeId === "all"
-                                ? "bg-primary text-white ring-2 ring-primary/20"
-                                : "bg-white border border-light hover:bg-primary/5 text-primary"
-                            }`}
-                          >
-                            <span>Voir les jours</span>
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
-                        </div>
-
-                        {dayTypeSetting?.dayTypes && dayTypeSetting.dayTypes.length > 0 ? (
-                          dayTypeSetting.dayTypes.map((dayType: DayType) => (
-                            <DayTypeSingleEditor
-                              key={dayType.Id}
-                              dayType={dayType}
-                              isSelected={String(dayType.Id) === String(selectedDayTypeId)}
-                              onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
-                              onUpdate={dayTypeSetting.onUpdateDayType}
-                              onCheckDelete={dayTypeSetting.onCheckDeleteDayType}
-                              onDelete={dayTypeSetting.onDeleteDayType}
-                              setError={setApiError}
-                              canEdit={dayTypeSetting?.canEdit}
-                              canDelete={dayTypeSetting?.canDelete}
-                            />
-                          ))
-                        ) : (
-                          <p className="text-sm text-secondary italic poppins">
-                            Aucun type de jour disponible.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* PANNEAU DROIT - ÉDITION ET GESTION DES JOURS */}
-                    <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-ultra-light pt-6 lg:pt-0 lg:pl-6 flex flex-col min-h-0 overflow-y-auto">
-                      {nonWorkingSetting ? (
-                        <NonWorkingDaysEditor
-                          setting={nonWorkingSetting}
-                          selectedDayTypeId={selectedDayTypeId}
-                          setSelectedDayTypeId={setSelectedDayTypeId}
-                          setError={setApiError}
-                          canAdd={nonWorkingSetting?.canAdd}
-                          canEdit={nonWorkingSetting?.canEdit}
-                          canDelete={nonWorkingSetting?.canDelete}
-                        />
-                      ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-white/40 rounded-xl border border-dashed border-light min-h-[250px]">
-                          <svg className="w-12 h-12 text-secondary/40 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <p className="text-sm font-medium text-secondary poppins">
-                            Aucune donnée de configuration
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6 flex-1">
-                    {currentCategoryObj.items.map((setting: any, settingIdx: number) => (
-                      <div
-                        key={setting.id}
-                        className={`flex flex-col lg:flex-row lg:items-center justify-between py-2 h-full ${
-                          settingIdx !== currentCategoryObj.items.length - 1
-                            ? "border-b border-ultra-light pb-4"
-                            : ""
-                        }`}
-                      >
-                        {setting.type === "mobile-appointment-fields" ? (
-                          <MobileDisplayEditor 
-                            setting={setting} 
-                            registerSaveAction={setPendingSaveAction} 
-                          />
-                        ) : setting.type === "select" ? (
-                          <select
-                            id={setting.id}
-                            className="border border-default rounded-xl px-4 py-3 text-sm bg-transparent shadow-sm"
-                            value={setting.value}
-                            onChange={e => setting.onChange(e.target.value)}
-                          >
-                            {setting.options?.map((option: any) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            id={setting.id}
-                            type={setting.type}
-                            className="border border-default rounded-xl px-4 py-3 text-sm bg-transparent shadow-sm w-48"
-                            value={setting.value}
-                            onChange={e => setting.onChange(e.target.value)}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="flex justify-end pt-3 border-t border-ultra-light shrink-0 gap-3">
-          <button
-            type="button"
-            className={`px-8 py-3 rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer ${
-              pendingSaveAction?.isDirty 
-                ? "bg-secondary-bg border border-light text-primary hover:bg-secondary/10" 
-                : "bg-primary text-white hover:bg-primary-600"
-            }`}
-            onClick={onClose}
-            disabled={isSavingPending}
-          >
-            Fermer
-          </button>
-          
-          {/* Modifié : le bouton reste affiché tant qu'une sauvegarde est en cours */}
-          {(pendingSaveAction?.isDirty || isSavingPending) && (
-            <button
-              type="button"
-              className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 min-w-[220px]"
-              onClick={handleFooterSave}
-              disabled={isSavingPending}
-            >
-              {isSavingPending ? (
-                <>
-                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>Enregistrement...</span>
-                </>
-              ) : (
-                <span>Sauvegarder les modifications</span>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
+      <SettingsModalContent
+        onClose={onClose}
+        settings={settings}
+        currentCategoryObj={currentCategoryObj}
+        apiError={apiError}
+        setApiError={setApiError}
+        selectedDayTypeId={selectedDayTypeId}
+        setSelectedDayTypeId={setSelectedDayTypeId}
+        pendingSaveAction={pendingSaveAction}
+        setPendingSaveAction={setPendingSaveAction}
+        handleFooterSave={handleFooterSave}
+        isSavingPending={isSavingPending}
+      />
     </Modal>
   );
 };
