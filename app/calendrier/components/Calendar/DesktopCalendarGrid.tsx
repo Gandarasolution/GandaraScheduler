@@ -303,10 +303,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, []);
 
   const handleGroupExpansionChange = useCallback((employeeId: number, expanded: boolean) => {
-    if (!expanded) return;
     setExpandedOverlapRows(prev => {
-      if (prev[employeeId] === true) return prev;
-      return { ...prev, [employeeId]: true };
+      if (prev[employeeId] === expanded) return prev;
+      return { ...prev, [employeeId]: expanded };
     });
   }, []);
 
