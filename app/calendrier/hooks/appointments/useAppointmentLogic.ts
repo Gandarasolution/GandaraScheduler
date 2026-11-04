@@ -585,6 +585,7 @@ export const useAppointmentLogic = ({
       resizeDirection?: 'left' | 'right';
     },
     saveToHistory: boolean = true,
+    requestedPriority?: number,
   ): Promise<ActionResult> => {
       const {
         id,
@@ -612,7 +613,15 @@ export const useAppointmentLogic = ({
       }
 
 
-      if(appointment.DebutPlanningEvenement === newStartDate && appointment.FinPlanningEvenement === newEndDate && appointment.IdEmploye === newEmployeeId) {
+      const hasSameBounds =
+        appointment.DebutPlanningEvenement === newStartDate &&
+        appointment.FinPlanningEvenement === newEndDate &&
+        Number(appointment.IdEmploye) === Number(newEmployeeId);
+      const hasSamePriority =
+        requestedPriority === undefined ||
+        (appointment.PlanningEvenementPriorite ?? 0) === requestedPriority;
+
+      if (hasSameBounds && hasSamePriority) {
         api?.unlockEvenement(appointment.IdPlanningEvenement).catch((err) => {
           console.error('Erreur lors du déverrouillage du rendez-vous:', err);
         });
@@ -643,16 +652,7 @@ export const useAppointmentLogic = ({
         return { success: false, message: 'Aucun créneau valide pour effectuer cette action.' };
       }
 
-      const newPriority = getPriorityForNewAppointment(newEmployeeId, newStartDate, newEndDate, id);
-
-      console.log(new Date(newStartDate), new Date(newEndDate), 'newPriority:', newPriority);
-      console.log(appointmentsRef.current.filter(app =>
-      Number(app.IdEmploye) === Number(newEmployeeId) &&
-      app.DebutPlanningEvenement < newEndDate &&
-      app.FinPlanningEvenement > newStartDate &&
-      app.IdPlanningEvenement !== id
-    ))
-
+      const newPriority = requestedPriority ?? getPriorityForNewAppointment(newEmployeeId, newStartDate, newEndDate, id);
 
       const applyLocalMove = () => {
         const createdAppointments: Appointment[] = [];

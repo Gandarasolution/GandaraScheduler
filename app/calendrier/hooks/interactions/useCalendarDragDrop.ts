@@ -90,9 +90,15 @@ export const useCalendarDragDrop = ({
       const totalIntervals = dayInTimeline.length * intervalsPerDay;
       if (totalIntervals <= 0) return;
 
-      const dragOffset = item.dragOffset ?? 0;
+      const dragOffset = Math.max(0, item.dragOffset ?? 0);
+      const cursorIntervalIndex = Math.floor(relativeX / intervalWidth);
+      const appointmentStartX = relativeX - dragOffset;
+      const appointmentStartIntervalIndex = Math.floor(appointmentStartX / intervalWidth);
       const adjustedX = Math.min(
-        Math.max(Math.floor((relativeX - dragOffset) / intervalWidth) * intervalWidth, 0),
+        Math.max(
+          Math.max(cursorIntervalIndex, appointmentStartIntervalIndex) * intervalWidth,
+          0
+        ),
         totalIntervals * intervalWidth - 1
       );
 
