@@ -135,8 +135,8 @@ async function getMobileAppointmentDisplayConfigSettings() {
 
 async function saveMobileAppointmentDisplayConfig(data: {
   idPersonnel: number;
-  primaryFields: string[];
-  secondaryFields: string[];
+  primaryFields: Array<{ CodeChamp: string; Ligne: number; Position: number }>;
+  secondaryFields: Array<{ CodeChamp: string; Ligne: number; Position: number }>;
 }) {
   return await postRequest('/api/planning/mobile/save', data, 'saveMobileAppointmentDisplayConfig');
 }

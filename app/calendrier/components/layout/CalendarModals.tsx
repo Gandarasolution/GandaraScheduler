@@ -6,7 +6,7 @@ import {
   Modal, 
 } from '@/app/calendrier/components';
 import Loader from '../ui/Loader';
-import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, MobileAppointmentField, DayType } from '../../types';
+import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, DayType } from '../../types';
 import { ActiveFilters, FilterType } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
@@ -123,9 +123,9 @@ interface CalendarModalsProps {
     setTagPlacement: (v: 'hover' | 'fixed') => void;
     mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
     handleSaveMobileAppointmentDisplay: (value: MobileAppointmentDisplayConfig) => Promise<{ success: boolean; message?: string }>;
-    mobileAppointmentFieldOptions: Array<{ CodeChamp: MobileAppointmentField; Libelle: string }>;
+    mobileAppointmentFieldOptions: Array<{ Code: string; Libelle: string; CaractereSpecial: boolean; Id: number }>;
     mobileAppointmentSettingsLoading: boolean;
-    loadMobileAppointmentSettings: () => Promise<void>;
+    loadMobileAppointmentSettings: () => Promise<{ success: boolean; message?: string }>;
 
     setNotification: (notifications: any) => void;
     
@@ -212,11 +212,7 @@ export const CalendarModals = memo(({
     }
   }, [modalsState.repeatData, modalsState.extendData]);
 
-  useEffect(() => {
-    if (modalsState.isSettingsOpen) {
-      void config.loadMobileAppointmentSettings();
-    }
-  }, [modalsState.isSettingsOpen, config.loadMobileAppointmentSettings]);
+
 
   const settings = useMemo(() => [
     ...(hasPermission(214, 23) ? [
@@ -311,7 +307,15 @@ export const CalendarModals = memo(({
             value: config.mobileAppointmentDisplay,
             onChange: config.handleSaveMobileAppointmentDisplay,
             options: config.mobileAppointmentFieldOptions,
-            isLoading: config.mobileAppointmentSettingsLoading
+            isLoading: config.mobileAppointmentSettingsLoading,
+            mobileAppointmentFieldOptions: config.mobileAppointmentFieldOptions,
+            fetchFieldOptions: async () => {
+              try {
+                return await config.loadMobileAppointmentSettings();
+              } catch (error: any) {
+                return { success: false, message: error?.message || "Erreur lors du chargement des options" };
+              }
+            }
           }
         ],
         hasUnsavedChanges: true

@@ -2,8 +2,8 @@ import { memo, useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Modal, { useModalContext } from "./Modal";
 import Loader from "../ui/Loader";
 import { format, isBefore, startOfDay } from "date-fns";
-import { Appointment, DayType, Item, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from "../../types";
-import { AppointmentCard } from "../Calendar/MobileCalendar/AppointmentList";
+import { Appointment, DayType, Item, MobileAppointmentDisplayConfig, User } from "../../types";
+import { AppointmentCard, DragOverTarget, MobileAppointmentFieldOption } from "../Calendar/MobileCalendar/AppointmentList";
 
 type SettingsModalProps = {
   onClose: () => void;
@@ -59,109 +59,34 @@ const previewEmployee: User = {
   Equipe: null,
 };
 
-type FieldCardProps = {
-  fieldCode: MobileAppointmentField;
-  label: string;
-  index: number;
-  totalCount: number;
-  badgeBg: string;
-  badgeTextColor: string;
-  draggedField: MobileAppointmentField | null;
-  dragOverField: MobileAppointmentField | null;
-  onDragStart: (e: React.DragEvent, fieldCode: MobileAppointmentField) => void;
-  onDragEnd: () => void;
-  onDragOver: (e: React.DragEvent, fieldCode: MobileAppointmentField) => void;
-  onDragLeave: () => void;
-  onDrop: (e: React.DragEvent, fieldCode: MobileAppointmentField) => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  onRemove: () => void;
+type FieldColumn = "primaryFields" | "secondaryFields";
+type FieldRows = Record<FieldColumn, string[][]>;
+const MAX_SECONDARY_FIELDS = 2;
+const MAX_FIELDS_PER_PRIMARY_ROW = 3;
+
+const getFieldRows = (value: MobileAppointmentDisplayConfig): FieldRows => {
+  const primaryFields = value.primaryFieldRows?.length
+    ? value.primaryFieldRows.map((row) => row.slice(0, MAX_FIELDS_PER_PRIMARY_ROW)).slice(0, 5)
+    : value.primaryFields.map((field) => [field]);
+    
+  const secondarySourceRows = value.secondaryFieldRows?.length
+    ? value.secondaryFieldRows
+    : value.secondaryFields.map((field) => [field])
+
+  // Limite uniquement au nombre de champs max par LIGNE.
+  const secondaryFields = secondarySourceRows
+    .slice(0, 5)
+    .map(row => row.slice(0, MAX_SECONDARY_FIELDS));
+
+  return {
+    primaryFields,
+    secondaryFields,
+  };
 };
 
-const FieldCard = ({
-  fieldCode,
-  label,
-  index,
-  totalCount,
-  badgeBg,
-  badgeTextColor,
-  draggedField,
-  dragOverField,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  onMoveUp,
-  onMoveDown,
-  onRemove,
-}: FieldCardProps) => {
-  return (
-    <div
-      draggable
-      onDragStart={(e) => onDragStart(e, fieldCode)}
-      onDragEnd={onDragEnd}
-      onDragOver={(e) => onDragOver(e, fieldCode)}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, fieldCode)}
-      className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm transition-all ${
-        draggedField === fieldCode
-          ? "border-primary bg-primary/10 opacity-50"
-          : dragOverField === fieldCode
-          ? "border-primary bg-primary/30 ring-2 ring-primary/20"
-          : "border-default bg-white shadow-xs"
-      }`}
-    >
-      <div className="flex items-center gap-1.5 min-w-0">
-        <div
-          className="cursor-grab active:cursor-grabbing text-secondary hover:text-primary p-0.5 shrink-0"
-          title="Glisser pour réordonner"
-        >
-          <svg className="w-3 h-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-          </svg>
-        </div>
-        <span
-          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-bold ${badgeBg} ${badgeTextColor}`}
-        >
-          {index + 1}
-        </span>
-        <span className="truncate font-medium text-primary select-none">{label}</span>
-      </div>
+const flattenFieldRows = (rows: string[][]) => rows.flat();
 
-      <div className="flex items-center gap-0.5 shrink-0">
-        <button
-          type="button"
-          disabled={index === 0}
-          onClick={onMoveUp}
-          className="rounded px-0.5 text-secondary hover:text-primary disabled:opacity-30 cursor-pointer text-sm"
-          title="Monter"
-        >
-          ↑
-        </button>
-        <button
-          type="button"
-          disabled={index === totalCount - 1}
-          onClick={onMoveDown}
-          className="rounded px-0.5 text-secondary hover:text-primary disabled:opacity-30 cursor-pointer text-sm"
-          title="Descendre"
-        >
-          ↓
-        </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="rounded p-0.5 text-secondary hover:bg-red-50 hover:text-red-600 cursor-pointer transition-colors"
-          title="Retirer"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-};
+
 
 const MobileDisplayEditor = ({
   setting,
@@ -170,10 +95,57 @@ const MobileDisplayEditor = ({
   setting: any;
   registerSaveAction: (action: { isDirty: boolean; save: () => Promise<void> } | null) => void;
 }) => {
-  const [localValue, setLocalValue] = useState<MobileAppointmentDisplayConfig>(setting.value);
+  const initialFieldRows = getFieldRows(setting.value);
+  const [localValue, setLocalValue] = useState<MobileAppointmentDisplayConfig>({
+    ...setting.value,
+    primaryFields: flattenFieldRows(initialFieldRows.primaryFields),
+    secondaryFields: flattenFieldRows(initialFieldRows.secondaryFields),
+    primaryFieldRows: initialFieldRows.primaryFields,
+    secondaryFieldRows: initialFieldRows.secondaryFields,
+  });
+
+  const [draggedItem, setDraggedItem] = useState<{
+    column: "primaryFields" | "secondaryFields" | "available";
+    fieldCode: string;
+  } | null>(null);
+
+  const [dragOverInfo, setDragOverInfo] = useState<DragOverTarget>(null);
+
+  // --- NOUVEAU : États pour gérer le chargement des options ---
+  const [isLoadingOptions, setIsLoadingOptions] = useState(typeof setting.fetchFieldOptions === 'function');
+  const [optionsError, setOptionsError] = useState<string | null>(null);
+  const hasFetchedOptions = useRef(false);
+
+  // Appel de fetchFieldOptions au montage du composant
+  useEffect(() => {
+    if (typeof setting.fetchFieldOptions === 'function' && !hasFetchedOptions.current) {
+      hasFetchedOptions.current = true;
+      setIsLoadingOptions(true);
+      
+      setting.fetchFieldOptions()
+        .then((res: any) => {
+          if (res && !res.success && res.message) {
+            setOptionsError(res.message);
+          }
+        })
+        .catch((err: any) => {
+          setOptionsError(err?.message || "Erreur lors du chargement des champs disponibles.");
+        })
+        .finally(() => {
+          setIsLoadingOptions(false);
+        });
+    }
+  }, [setting]);
 
   useEffect(() => {
-    setLocalValue(setting.value);
+    const fieldRows = getFieldRows(setting.value);
+    setLocalValue({
+      ...setting.value,
+      primaryFields: flattenFieldRows(fieldRows.primaryFields),
+      secondaryFields: flattenFieldRows(fieldRows.secondaryFields),
+      primaryFieldRows: fieldRows.primaryFields,
+      secondaryFieldRows: fieldRows.secondaryFields,
+    });
   }, [setting.value]);
 
   const isDirty =
@@ -187,342 +159,277 @@ const MobileDisplayEditor = ({
   }, [localValue, setting]);
 
   useEffect(() => {
-    registerSaveAction({
-      isDirty,
-      save: handleSave,
-    });
-
-    return () => {
-      registerSaveAction(null);
-    };
+    registerSaveAction({ isDirty, save: handleSave });
+    return () => registerSaveAction(null);
   }, [isDirty, handleSave, registerSaveAction]);
 
-  // Modifié : On stocke l'origine et la cible sous forme d'objet { column, fieldCode }
-  const [draggedItem, setDraggedItem] = useState<{
-    column: "primaryFields" | "secondaryFields";
-    fieldCode: MobileAppointmentField;
-  } | null>(null);
-
-  const [dragOverItem, setDragOverItem] = useState<{
-    column: "primaryFields" | "secondaryFields";
-    fieldCode: MobileAppointmentField;
-  } | null>(null);
-
   const optionsMap = useMemo(() => {
-    const map = new Map<MobileAppointmentField, string>();
-    setting.options?.forEach((opt: { CodeChamp: MobileAppointmentField; Libelle: string }) => {
-      map.set(opt.CodeChamp, opt.Libelle);
+    const map = new Map<string, { libelle: string; caractereSpecial: boolean; id: number }>();
+    setting.options?.forEach((opt: MobileAppointmentFieldOption) => {
+      map.set(opt.Code, { libelle: opt.Libelle, caractereSpecial: opt.CaractereSpecial, id: opt.Id });
     });
     return map;
   }, [setting.options]);
 
-  const allOptions = useMemo(() => {
-    return (setting.options || []) as { CodeChamp: MobileAppointmentField; Libelle: string }[];
-  }, [setting.options]);
-
   const availableOptions = useMemo(() => {
+    const allOptions = (setting.options || []) as MobileAppointmentFieldOption[];
     return allOptions.filter((opt) => {
-      const inPrimary = localValue.primaryFields.includes(opt.CodeChamp);
-      const inSecondary = localValue.secondaryFields.includes(opt.CodeChamp);
+      const inPrimary = localValue.primaryFields.includes(opt.Code);
+      const inSecondary = localValue.secondaryFields.includes(opt.Code);
       return !(inPrimary && inSecondary);
     });
-  }, [allOptions, localValue]);
+  }, [setting.options, localValue]);
 
-  const addField = (targetColumn: "primaryFields" | "secondaryFields", fieldCode: MobileAppointmentField) => {
+  const removeField = (column: "primaryFields" | "secondaryFields", fieldCode: string) => {
     setLocalValue((prev) => {
-      if (prev[targetColumn].includes(fieldCode)) return prev;
+      const rows = getFieldRows(prev)[column]
+        .map((row) => row.filter((field) => field !== fieldCode))
+        .filter((row) => row.length > 0);
       return {
         ...prev,
-        [targetColumn]: [...prev[targetColumn], fieldCode],
+        [column]: flattenFieldRows(rows),
+        [`${column === "primaryFields" ? "primary" : "secondary"}FieldRows`]: rows,
       };
     });
   };
 
-  const removeField = (column: "primaryFields" | "secondaryFields", fieldCode: MobileAppointmentField) => {
-    setLocalValue((prev) => ({
-      ...prev,
-      [column]: prev[column].filter((f) => f !== fieldCode),
-    }));
-  };
-
-  const moveFieldOrder = (
-    column: "primaryFields" | "secondaryFields",
-    index: number,
-    direction: "up" | "down"
-  ) => {
+  const addRow = (column: FieldColumn) => {
     setLocalValue((prev) => {
-      const list = [...prev[column]];
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= list.length) return prev;
-      [list[index], list[targetIndex]] = [list[targetIndex], list[index]];
-      return { ...prev, [column]: list };
+      const rows = getFieldRows(prev)[column];
+      if (rows.length >= 5) return prev;
+      return {
+        ...prev,
+        [`${column === "primaryFields" ? "primary" : "secondary"}FieldRows`]: [...rows, []],
+      };
     });
   };
 
-  // Traitement du Drag & Drop intra-colonne
-  const moveFieldDragDrop = (
-    targetColumn: "primaryFields" | "secondaryFields",
-    targetFieldCode: MobileAppointmentField
-  ) => {
-    if (!draggedItem) return;
-
-    // Si on réordonne dans la même colonne
-    if (draggedItem.column === targetColumn) {
-      if (draggedItem.fieldCode === targetFieldCode) return;
-
-      setLocalValue((prev) => {
-        const list = [...prev[targetColumn]];
-        const fromIndex = list.indexOf(draggedItem.fieldCode);
-        const toIndex = list.indexOf(targetFieldCode);
-
-        if (fromIndex === -1 || toIndex === -1) return prev;
-
-        list.splice(fromIndex, 1);
-        list.splice(toIndex, 0, draggedItem.fieldCode);
-
-        return { ...prev, [targetColumn]: list };
-      });
-    }
+  const removeRow = (column: FieldColumn, rowIndex: number) => {
+    setLocalValue((prev) => {
+      const rows = getFieldRows(prev)[column].filter((_, idx) => idx !== rowIndex);
+      return {
+        ...prev,
+        [column]: flattenFieldRows(rows),
+        [`${column === "primaryFields" ? "primary" : "secondary"}FieldRows`]: rows,
+      };
+    });
   };
 
-  const handleDragStart = (
-    e: React.DragEvent,
+  const handlePreviewDrop = (
+    event: React.DragEvent<HTMLDivElement>,
     column: "primaryFields" | "secondaryFields",
-    fieldCode: MobileAppointmentField
+    targetRowIndex?: number,
+    targetFieldCode?: string
   ) => {
-    setDraggedItem({ column, fieldCode });
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", fieldCode);
-  };
+    event.preventDefault();
+    const fieldCode = (event.dataTransfer.getData("text/plain") || draggedItem?.fieldCode) as string;
+    
+    if (!fieldCode) return;
 
-  const handleDragOver = (
-    e: React.DragEvent,
-    column: "primaryFields" | "secondaryFields",
-    fieldCode: MobileAppointmentField
-  ) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-
-    if (!draggedItem) return;
-
-    if (draggedItem.column === column && draggedItem.fieldCode !== fieldCode) {
-      setDragOverItem({ column, fieldCode });
+    if (fieldCode === targetFieldCode && draggedItem?.column === column) {
+      setDraggedItem(null);
+      setDragOverInfo(null);
+      return;
     }
+
+    setLocalValue((prev) => {
+      let primaryRows = getFieldRows(prev).primaryFields;
+      let secondaryRows = getFieldRows(prev).secondaryFields;
+
+      // On le retire TOUJOURS de sa colonne de destination pour éviter les doublons au sein d'une même section.
+      if (column === "primaryFields") {
+        primaryRows = primaryRows.map((row) => row.filter((f) => f !== fieldCode));
+      } else {
+        secondaryRows = secondaryRows.map((row) => row.filter((f) => f !== fieldCode));
+      }
+
+      // CORRECTION : Nous avons supprimé la logique qui retirait le champ de "l'autre" colonne (sourceColumn).
+      // Cela permet de copier un champ du Principal vers Secondaire (ou inversement) sans qu'il disparaisse.
+
+      let targetRows = column === "primaryFields" ? primaryRows : secondaryRows;
+      
+      const rowIndex = targetRowIndex ?? (targetRows.length > 0 ? targetRows.length - 1 : 0);
+
+      if (!targetRows[rowIndex]) {
+        targetRows[rowIndex] = [];
+      }
+
+      const currentRow = targetRows[rowIndex];
+
+      if (column === "secondaryFields" && currentRow.length >= MAX_SECONDARY_FIELDS) {
+        return prev;
+      }
+      if (column === "primaryFields" && currentRow.length >= MAX_FIELDS_PER_PRIMARY_ROW) {
+        return prev;
+      }
+
+      if (targetFieldCode) {
+        const insertIndex = currentRow.indexOf(targetFieldCode);
+        if (insertIndex !== -1) {
+          currentRow.splice(insertIndex, 0, fieldCode);
+        } else {
+          currentRow.push(fieldCode);
+        }
+      } else {
+        currentRow.push(fieldCode);
+      }
+
+      primaryRows = primaryRows.filter((row, idx) => row.length > 0 || idx === 0);
+      secondaryRows = secondaryRows.filter((row, idx) => row.length > 0 || idx === 0);
+
+      return {
+        ...prev,
+        primaryFields: flattenFieldRows(primaryRows),
+        primaryFieldRows: primaryRows,
+        secondaryFields: flattenFieldRows(secondaryRows),
+        secondaryFieldRows: secondaryRows,
+      };
+    });
+
+    setDraggedItem(null);
+    setDragOverInfo(null);
   };
 
-  if (setting.isLoading) {
+  // --- NOUVEAU : Affichage du Loader tant que isLoadingOptions est true ---
+  if (isLoadingOptions) {
     return (
-      <div className="flex-1 flex items-center justify-center h-full w-full">
-        <Loader size="lg" message="Chargement..." />
+      <div className="w-full flex items-center justify-center min-h-[300px] bg-secondary-bg/40 rounded-xl border border-dashed border-light">
+        <Loader size="md" message="Chargement des champs..." />
       </div>
     );
   }
 
   return (
     <div className="w-full flex flex-col gap-3 poppins">
+      
+      {/* Affichage d'une éventuelle erreur au chargement des options */}
+      {optionsError && (
+        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl border border-red-200">
+          {optionsError}
+        </div>
+      )}
+
       <div className="rounded-xl border border-light bg-secondary/10 px-3 py-1.5 text-[11px] text-secondary leading-normal">
-        Organisez les informations de la carte mobile. Glissez les cartes ou utilisez les flèches pour modifier l'ordre.
+        Organisez les informations de la carte mobile. Glissez un champ directement sur la carte pour l'insérer à l'endroit désigné par la barre verticale.
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
-        {/* COLONNE GAUCHE */}
-        <div className="lg:col-span-7 flex flex-col gap-3">
-          {/* Section Champs disponibles */}
-          <div className="rounded-xl border border-default bg-secondary-bg/50 p-2.5">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-secondary">
-                Champs disponibles ({availableOptions.length})
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              {availableOptions.map((option) => {
-                const inPrimary = localValue.primaryFields.includes(option.CodeChamp);
-                const inSecondary = localValue.secondaryFields.includes(option.CodeChamp);
-
-                return (
-                  <div
-                    key={option.CodeChamp}
-                    className="flex items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs"
-                  >
-                    <span className="font-medium truncate">{option.Libelle}</span>
-                    <div className="flex items-center gap-0.5 ml-0.5 pl-1 border-l border-light">
-                      {/* S'affiche uniquement si non présent dans principale */}
-                      {!inPrimary && (
-                        <button
-                          type="button"
-                          onClick={() => addField("primaryFields", option.CodeChamp)}
-                          className="cursor-pointer text-[9px] font-semibold text-primary hover:bg-primary/10 px-1 py-0.5 rounded transition-colors"
-                          title="Ajouter en affichage principal"
-                        >
-                          + Princ.
-                        </button>
-                      )}
-
-                      {/* S'affiche uniquement si non présent dans secondaire */}
-                      {!inSecondary && (
-                        <button
-                          type="button"
-                          onClick={() => addField("secondaryFields", option.CodeChamp)}
-                          className="cursor-pointer text-[9px] font-semibold text-secondary hover:bg-secondary/10 px-1 py-0.5 rounded transition-colors"
-                          title="Ajouter en affichage secondaire"
-                        >
-                          + Sec.
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>    
+      <div className="flex flex-col gap-3">
+        {/* SECTION CHAMPS DISPONIBLES */}
+        <div className="rounded-xl border border-default bg-secondary-bg/50 p-2.5">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-secondary">
+              Champs disponibles ({availableOptions.length})
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Section Champs Principaux */}
-            <div className="rounded-xl border border-default bg-primary-bg p-2.5 flex flex-col min-h-[140px]">
-              <div className="mb-2 flex items-center justify-between pb-1 border-b border-primary/10">
-                <span className="text-[11px] font-bold text-primary uppercase tracking-wide">
-                  Principale ({localValue.primaryFields.length})
-                </span>
-                {localValue.primaryFields.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setLocalValue((prev) => ({ ...prev, primaryFields: [] }))}
-                    className="cursor-pointer text-[10px] text-secondary hover:text-red-600 transition-colors"
-                  >
-                    Vider
-                  </button>
-                )}
+          <div className="flex flex-wrap gap-1.5">
+            {availableOptions.map((option) => (
+              <div
+                key={option.Code}
+                draggable
+                onDragStart={(event) => {
+                  event.stopPropagation();
+                  setDraggedItem({ column: "available", fieldCode: option.Code });
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", option.Code);
+                }}
+                className="flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors"
+              >
+                <span className="font-medium truncate">{option.Libelle}</span>
               </div>
-
-              <div className="space-y-1 flex-1">
-                {localValue.primaryFields.map((fieldCode, index) => (
-                  <FieldCard
-                    key={`primary-${fieldCode}`}
-                    fieldCode={fieldCode}
-                    label={optionsMap.get(fieldCode) || fieldCode}
-                    index={index}
-                    totalCount={localValue.primaryFields.length}
-                    badgeBg="bg-primary/10"
-                    badgeTextColor="text-primary"
-                    draggedField={draggedItem?.column === "primaryFields" ? draggedItem.fieldCode : null}
-                    dragOverField={dragOverItem?.column === "primaryFields" ? dragOverItem.fieldCode : null}
-                    onDragStart={(e) => handleDragStart(e, "primaryFields", fieldCode)}
-                    onDragEnd={() => {
-                      setDraggedItem(null);
-                      setDragOverItem(null);
-                    }}
-                    onDragOver={(e) => handleDragOver(e, "primaryFields", fieldCode)}
-                    onDragLeave={() => setDragOverItem(null)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      moveFieldDragDrop("primaryFields", fieldCode);
-                      setDragOverItem(null);
-                      setDraggedItem(null);
-                    }}
-                    onMoveUp={() => moveFieldOrder("primaryFields", index, "up")}
-                    onMoveDown={() => moveFieldOrder("primaryFields", index, "down")}
-                    onRemove={() => removeField("primaryFields", fieldCode)}
-                  />
-                ))}
-
-                {localValue.primaryFields.length === 0 && (
-                  <p className="py-4 text-center text-[10px] text-secondary italic">
-                    Aucun champ principal.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Section Champs Secondaires */}
-            <div className="rounded-xl border border-default bg-secondary-bg/30 p-2.5 flex flex-col min-h-[140px]">
-              <div className="mb-2 flex items-center justify-between pb-1 border-b border-secondary/10">
-                <span className="text-[11px] font-bold text-secondary uppercase tracking-wide">
-                  Secondaire ({localValue.secondaryFields.length})
-                </span>
-                {localValue.secondaryFields.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setLocalValue((prev) => ({ ...prev, secondaryFields: [] }))}
-                    className="cursor-pointer text-[10px] text-secondary hover:text-red-600 transition-colors"
-                  >
-                    Vider
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-1 flex-1">
-                {localValue.secondaryFields.map((fieldCode, index) => (
-                  <FieldCard
-                    key={`secondary-${fieldCode}`}
-                    fieldCode={fieldCode}
-                    label={optionsMap.get(fieldCode) || fieldCode}
-                    index={index}
-                    totalCount={localValue.secondaryFields.length}
-                    badgeBg="bg-secondary/10"
-                    badgeTextColor="text-secondary"
-                    draggedField={draggedItem?.column === "secondaryFields" ? draggedItem.fieldCode : null}
-                    dragOverField={dragOverItem?.column === "secondaryFields" ? dragOverItem.fieldCode : null}
-                    onDragStart={(e) => handleDragStart(e, "secondaryFields", fieldCode)}
-                    onDragEnd={() => {
-                      setDraggedItem(null);
-                      setDragOverItem(null);
-                    }}
-                    onDragOver={(e) => handleDragOver(e, "secondaryFields", fieldCode)}
-                    onDragLeave={() => setDragOverItem(null)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      moveFieldDragDrop("secondaryFields", fieldCode);
-                      setDragOverItem(null);
-                      setDraggedItem(null);
-                    }}
-                    onMoveUp={() => moveFieldOrder("secondaryFields", index, "up")}
-                    onMoveDown={() => moveFieldOrder("secondaryFields", index, "down")}
-                    onRemove={() => removeField("secondaryFields", fieldCode)}
-                  />
-                ))}
-
-                {localValue.secondaryFields.length === 0 && (
-                  <p className="py-4 text-center text-[10px] text-secondary italic">
-                    Aucun champ secondaire.
-                  </p>
-                )}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* COLONNE DROITE : Aperçu */}
-        <div className="lg:col-span-5 rounded-xl border border-light bg-secondary-bg/40 p-2.5 sticky top-4 space-y-2.5">
-          <div className="flex items-center gap-2 pb-1 border-b border-ultra-light">
-            <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* SECTION APERÇU CÔTE À CÔTE */}
+        <div className="rounded-xl border border-light bg-secondary-bg/40 p-3 space-y-3">
+          <div className="flex items-center gap-2 pb-1.5 border-b border-ultra-light">
+            <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
-            <h4 className="text-[11px] font-bold text-primary uppercase tracking-wide">Aperçu en direct</h4>
+            <h4 className="text-xs font-bold text-primary uppercase tracking-wide">Aperçu en direct</h4>
           </div>
 
-          <div className="space-y-2.5">
-            <div className="min-w-0 rounded-lg border border-dashed border-light bg-primary/5 p-2">
-              <p className="mb-1 text-center text-[10px] font-semibold text-primary">Aperçu (principale)</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* CÔTÉ GAUCHE : APERÇU PRINCIPALE */}
+            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-light bg-primary/5 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-primary">Aperçu (principale)</span>
+                <button
+                  type="button"
+                  onClick={() => addRow("primaryFields")}
+                  className="cursor-pointer px-2 py-0.5 rounded border border-dashed border-primary/40 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                >
+                  + Ligne
+                </button>
+              </div>
+
               <AppointmentCard
                 app={previewAppointment}
                 items={[previewItem]}
                 employees={[previewEmployee]}
+                mobileAppointmentFieldOptions={setting.options || []}
                 preview
-                displayConfig={{ primaryFields: localValue.primaryFields, secondaryFields: [] } as MobileAppointmentDisplayConfig}
+                dragOverInfo={dragOverInfo}
+                onFieldDragStart={(e, column, fieldCode) => {
+                  setDraggedItem({ column, fieldCode });
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", fieldCode);
+                }}
+                onPreviewDragOver={(_, column, rowIndex, fieldCode) => {
+                  setDragOverInfo({ column, rowIndex, fieldCode });
+                }}
+                onPreviewDragLeave={() => setDragOverInfo(null)}
+                onPreviewDrop={handlePreviewDrop}
+                onRemoveField={removeField}
+                onRemoveRow={(column, rowIndex) => removeRow(column, rowIndex)}
+                displayConfig={{
+                  primaryFields: flattenFieldRows(localValue.primaryFieldRows || []),
+                  secondaryFields: [],
+                  primaryFieldRows: localValue.primaryFieldRows,
+                }}
               />
             </div>
 
-            <div className="min-w-0 rounded-lg border border-dashed border-light bg-secondary/30 p-2">
-              <p className="mb-1 text-center text-[10px] font-semibold text-primary">Aperçu (secondaire)</p>
+            {/* CÔTÉ DROIT : APERÇU SECONDAIRE */}
+            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-light bg-secondary/30 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-primary">Aperçu (secondaire)</span>
+                <button
+                  type="button"
+                  onClick={() => addRow("secondaryFields")}
+                  className="cursor-pointer px-2 py-0.5 rounded border border-dashed border-secondary/40 text-[10px] font-medium text-secondary hover:bg-secondary/10 transition-colors"
+                >
+                  + Ligne
+                </button>
+              </div>
+
               <AppointmentCard
                 app={previewAppointment}
                 items={[previewItem]}
                 employees={[previewEmployee]}
+                mobileAppointmentFieldOptions={setting.options || []}
                 preview
                 showCard={false}
-                displayConfig={{ primaryFields: [], secondaryFields: localValue.secondaryFields } as MobileAppointmentDisplayConfig}
+                dragOverInfo={dragOverInfo}
+                onFieldDragStart={(e, column, fieldCode) => {
+                  setDraggedItem({ column, fieldCode });
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", fieldCode);
+                }}
+                onPreviewDragOver={(_, column, rowIndex, fieldCode) => {
+                  setDragOverInfo({ column, rowIndex, fieldCode });
+                }}
+                onPreviewDragLeave={() => setDragOverInfo(null)}
+                onPreviewDrop={handlePreviewDrop}
+                onRemoveField={removeField}
+                onRemoveRow={(column, rowIndex) => removeRow(column, rowIndex)}
+                displayConfig={{
+                  primaryFields: [],
+                  secondaryFields: flattenFieldRows(localValue.secondaryFieldRows || []),
+                  secondaryFieldRows: localValue.secondaryFieldRows,
+                }}
               />
             </div>
           </div>
@@ -531,6 +438,7 @@ const MobileDisplayEditor = ({
     </div>
   );
 };
+
 
 const NewDayTypeForm = ({
   onAdd,
@@ -2067,10 +1975,10 @@ const  SettingsModalContent: React.FC<{
                   {currentCategoryObj.items.map((setting: any, settingIdx: number) => (
                     <div
                       key={setting.id}
-                      className={`flex flex-col lg:flex-row lg:items-center justify-between py-2  ${
+                      className={`flex flex-col lg:flex-row  justify-between py-2  ${
                         settingIdx !== currentCategoryObj.items.length - 1 ? "border-b border-ultra-light pb-4" : ""
                         }
-                        ${setting.type === "mobile-appointment-fields" ? "h-full" : ""}`
+                        ${setting.type === "mobile-appointment-fields" ? "h-full" : "lg:items-center"}`
                       }
                     >
                       {setting.type === "mobile-appointment-fields" ? (

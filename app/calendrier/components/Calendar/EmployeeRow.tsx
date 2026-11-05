@@ -26,9 +26,9 @@ interface EmployeeRowProps {
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
-  isOverlapExpanded: boolean;
-  onGroupExpansionChange: (id: number, expanded: boolean) => void;
+  onOverlapExpansionChange: (employeeId: number, expanded: boolean) => void;
   collapseTrigger?: number;
+  expandTrigger?: number;
   mainScrollRef: React.RefObject<HTMLDivElement>;
   onLockedError: (message: string) => void;
 }
@@ -53,9 +53,9 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   selectedAppointmentId,
   onSelectCell,
   onSelectAppointment,
-  isOverlapExpanded,
-  onGroupExpansionChange,
+  onOverlapExpansionChange,
   collapseTrigger,
+  expandTrigger,
   mainScrollRef,
   onLockedError
 }) => {
@@ -154,23 +154,27 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     return groups.map(({ key, apps }) => ({ key, apps }));
   }, [positionedAppointments]);
 
+  const initializedGroupsRef = useRef<Set<number>>(new Set());
+
   useEffect(() => {
-    if (!overlappingGroups.length) return;
+    if (expandTrigger === undefined) return;
 
     setExpandedGroups((previous) => {
       const next = { ...previous };
       overlappingGroups.forEach((group) => {
-        next[group.key] = isOverlapExpanded;
+        next[group.key] = true;
       });
       return next;
     });
-  }, [isOverlapExpanded, overlappingGroups]);
-
-  const initializedGroupsRef = useRef<Set<number>>(new Set());
+  }, [expandTrigger, overlappingGroups]);
 
   useEffect(() => {
     setExpandedGroups((previous) => {
       const next = { ...previous };
+
+      // Once the sidebar has explicitly collapsed this row, do not let the
+      // virtualizer's recalculation reopen its overlap groups.
+      if (collapseTrigger !== undefined && collapseTrigger > 0) return next;
 
       overlappingGroups.forEach((group) => {
         if (group.apps.length < 2) return;
@@ -184,6 +188,15 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       return next;
     });
   }, [overlappingGroups]);
+
+  useEffect(() => {
+    if (!overlappingGroups.some((group) => group.apps.length > 1)) return;
+
+    const hasExpandedGroup = overlappingGroups.some(
+      (group) => group.apps.length > 1 && expandedGroups[group.key] === true
+    );
+    onOverlapExpansionChange(employee.IdPersonnel, hasExpandedGroup);
+  }, [employee.IdPersonnel, expandedGroups, onOverlapExpansionChange, overlappingGroups]);
 
   useEffect(() => {
     const validKeys = new Set(overlappingGroups.map(g => g.key));
@@ -370,7 +383,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   setExpandedGroups((prev) => ({ ...prev, [group.key]: true }));
-                  onGroupExpansionChange(employee.IdPersonnel, true);
                 }}
               >
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
@@ -389,7 +401,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   setExpandedGroups((prev) => ({ ...prev, [group.key]: false }));
-                  onGroupExpansionChange(employee.IdPersonnel, false);
                 }}
               >
                 Réduire
@@ -414,11 +425,10 @@ export default memo(EmployeeRow, (prev, next) => {
       prev.isDisplayWeekend !== next.isDisplayWeekend ||
       prev.tagPlacement !== next.tagPlacement ||
       prev.todayIndex !== next.todayIndex ||
-      prev.isOverlapExpanded !== next.isOverlapExpanded ||
       prev.visibleWindowStart !== next.visibleWindowStart ||
       prev.visibleWindowEnd !== next.visibleWindowEnd ||
       prev.collapseTrigger !== next.collapseTrigger ||
-      prev.onGroupExpansionChange !== next.onGroupExpansionChange
+      prev.expandTrigger !== next.expandTrigger
   ) {
     return false;
   }

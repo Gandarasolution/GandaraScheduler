@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CalendarConfig, MobileAppointmentDisplayConfig, MobileAppointmentField, User } from '../../types'; // Assumed type
+import { CalendarConfig, MobileAppointmentDisplayConfig, User } from '../../types'; // Assumed type
 import { ActiveFilters } from '@/app/calendrier/utils/searchAndFilterUtils'; // Assumed type
 import { useCalendarConfig } from '@/app/calendrier'; // Le hook existant
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
@@ -25,10 +25,47 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       'Etiquette',
     ],
   };
+
+  
+  const normalizeMobileConfig = (config: any): MobileAppointmentDisplayConfig => {
+    const readColumn = (column: 'primaryFields' | 'secondaryFields') => {
+      const value = Array.isArray(config?.[column]) ? config[column] : [];
+      if (value.length > 0 && typeof value[0] === 'object') {
+        return value
+          .slice()
+          .sort((a: any, b: any) => (a.Ligne - b.Ligne) || (a.Position - b.Position))
+          .map((field: any) => field.CodeChamp)
+          .filter(Boolean) as string[];
+      }
+      return value as string[];
+    };
+    const readRows = (column: 'primaryFields' | 'secondaryFields') => {
+      const value = Array.isArray(config?.[column]) ? config[column] : [];
+      if (!value.length || typeof value[0] !== 'object') return value.map((field: string) => [field]);
+      const rows = new Map<number, Array<{ field: string; position: number }>>();
+      value.forEach((field: any) => {
+        if (!field.CodeChamp || !field.Ligne) return;
+        const row = rows.get(field.Ligne) || [];
+        row.push({ field: field.CodeChamp, position: field.Position || row.length + 1 });
+        rows.set(field.Ligne, row);
+      });
+      return [...rows.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([, row]) => row.sort((a, b) => a.position - b.position).map(({ field }) => field));
+    };
+    return {
+      primaryFields: readColumn('primaryFields'),
+      secondaryFields: readColumn('secondaryFields'),
+      primaryFieldRows: readRows('primaryFields'),
+      secondaryFieldRows: readRows('secondaryFields'),
+    };
+  };
   const mobileDisplayLoadedRef = useRef(false);
   const [mobileAppointmentFieldOptions, setMobileAppointmentFieldOptions] = useState<Array<{
-                                                                                      CodeChamp: MobileAppointmentField;
+                                                                                      Id: number;
                                                                                       Libelle: string;
+                                                                                      Code: string;
+                                                                                      CaractereSpecial: boolean;
                                                                                     }>>([]);
   const [mobileAppointmentSettingsLoading, setMobileAppointmentSettingsLoading] = useState(false);
   // --- Préférences persistantes ---
@@ -283,12 +320,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
 
       const config = result?.data;
       if (result?.success && config) {
-        const primaryFields = Array.isArray(config.primaryFields) ? config.primaryFields : [];
-        const secondaryFields = Array.isArray(config.secondaryFields) ? config.secondaryFields : [];
-        setMobileAppointmentDisplayState({
-          primaryFields: primaryFields as MobileAppointmentField[],
-          secondaryFields: secondaryFields as MobileAppointmentField[],
-        });
+        setMobileAppointmentDisplayState(normalizeMobileConfig(config));
       } else {
         setMobileAppointmentDisplayState(defaultMobileAppointmentDisplay);
       }
@@ -301,34 +333,35 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     };
   }, [user?.IdPersonnel, currentCalendarConfig?.IdPlanningVue, isMobile]);
 
-  const loadMobileAppointmentSettings = useCallback(async () => {
-    if (!user?.IdPersonnel) return;
+  const loadMobileAppointmentSettings = useCallback(async () : Promise<{ success: boolean; message?: string }> => {
+    if (!user?.IdPersonnel) return { success: false, message: 'Impossible de charger les paramètres des rendez-vous mobiles : utilisateur non défini.' };
     setMobileAppointmentSettingsLoading(true);
     try {
       const result = await calendarConfigService.getMobileAppointmentDisplayConfigSettings();
-      if (result?.success === false || !result.data) return;
+      if (result?.success === false || !result.data) return { success: false, message: result?.message || 'Erreur lors du chargement des paramètres des rendez-vous mobiles.' };
 
       const fields = Array.isArray(result.data) ? result.data : result.data.fields;
       if (Array.isArray(fields)) {
         setMobileAppointmentFieldOptions(fields.map((field: any) => ({
-          CodeChamp: field.CodeChamp ?? field.value,
           Libelle: field.Libelle ?? field.label,
-        })).filter((field: { CodeChamp?: string; Libelle?: string }) => field.CodeChamp && field.Libelle));
+          Id: field.Id ?? field.id,
+          Code: field.Code ?? field.code,
+          CaractereSpecial: field.CaractereSpecial ?? field.specialCharacter ?? false,
+        })).filter((field: { Code?: string; Libelle?: string; CaractereSpecial?: boolean; Id?: number }) => field.Code && field.Libelle && typeof field.CaractereSpecial === 'boolean' && typeof field.Id === 'number'));
       }
 
       if (!isMobile) {
         const config = result.data.config ?? result.data.displayConfig ?? result.data;
         if (Array.isArray(config.primaryFields) && Array.isArray(config.secondaryFields)) {
-          setMobileAppointmentDisplayState({
-            primaryFields: config.primaryFields as MobileAppointmentField[],
-            secondaryFields: config.secondaryFields as MobileAppointmentField[],
-          });
+          setMobileAppointmentDisplayState(normalizeMobileConfig(config));
           mobileDisplayLoadedRef.current = true;
         }
       }
     } finally {
       setMobileAppointmentSettingsLoading(false);
     }
+
+    return { success: true };
   }, [user?.IdPersonnel, isMobile]);
 
 
@@ -384,10 +417,17 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       
     if (!mobileDisplayLoadedRef.current || !user?.IdPersonnel) return { success: false, message: 'Impossible de sauvegarder la configuration des rendez-vous mobiles : utilisateur non défini ou configuration non chargée.' };
 
+    const toPlacements = (rows: string[][]) => rows.flatMap((row, rowIndex) =>
+      row.slice(0, 3).map((CodeChamp, position) => ({
+        CodeChamp,
+        Ligne: rowIndex + 1,
+        Position: position + 1,
+      })),
+    );
     const result = await calendarConfigService.saveMobileAppointmentDisplayConfig({
       idPersonnel: user.IdPersonnel,
-      primaryFields: config.primaryFields,
-      secondaryFields: config.secondaryFields,
+      primaryFields: toPlacements(config.primaryFieldRows || config.primaryFields.map((field) => [field])),
+      secondaryFields: toPlacements(config.secondaryFieldRows || config.secondaryFields.map((field) => [field])),
     });
 
     if (!result?.success) {

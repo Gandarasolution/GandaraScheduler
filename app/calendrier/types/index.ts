@@ -196,26 +196,12 @@ export interface Appointment{
   isLocked: boolean; // Indique si le rendez-vous est verrouillé (non modifiable)
 }
 
-/**
- * Champs disponibles dans la carte d'un rendez-vous sur mobile.
- * Les valeurs sont volontairement stables afin de pouvoir être utilisées
- * directement par le futur endpoint de configuration.
- */
-export type MobileAppointmentField =
-  | 'LibellePlanningRessource'
-  | 'Type'
-  | 'DebutPlanningEvenement'
-  | 'FinPlanningEvenement'
-  | 'AnnotationPlanningEvenement'
-  | 'IdEmploye'
-  | 'EtapeValidation'
-  | 'Etiquette'
-  | 'ChefChantier'
-  | 'ChargeAffaire';
 
 export interface MobileAppointmentDisplayConfig {
-  primaryFields: MobileAppointmentField[];
-  secondaryFields: MobileAppointmentField[];
+  primaryFields: string[];
+  secondaryFields: string[];
+  primaryFieldRows?: string[][];
+  secondaryFieldRows?: string[][];
 }
 
 

@@ -43,9 +43,9 @@ interface CalendarRowsProps {
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
-  expandedOverlapRows: Record<number, boolean>;
-  handleGroupExpansionChange: (employeeId: number, expanded: boolean) => void;
+  onOverlapExpansionChange: (employeeId: number, expanded: boolean) => void;
   collapseTriggers: Record<number, number>;
+  expandTriggers: Record<number, number>;
   tagPlacement: 'hover' | 'fixed';
   onLockedError: (message: string) => void;
 }
@@ -74,9 +74,9 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   selectedAppointmentId,
   onSelectCell,
   onSelectAppointment,
-  expandedOverlapRows,
-  handleGroupExpansionChange,
+  onOverlapExpansionChange,
   collapseTriggers,
+  expandTriggers,
   tagPlacement,
   onLockedError
 }) => {
@@ -131,9 +131,9 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             selectedAppointmentId={selectedAppointmentId}
             onSelectCell={onSelectCell}
             onSelectAppointment={onSelectAppointment}
-            isOverlapExpanded={!!expandedOverlapRows[row.id as number]}
-            onGroupExpansionChange={handleGroupExpansionChange}
+            onOverlapExpansionChange={onOverlapExpansionChange}
             collapseTrigger={collapseTriggers[row.id as number]}
+            expandTrigger={expandTriggers[row.id as number]}
             tagPlacement={tagPlacement}
             onLockedError={onLockedError}
           />
