@@ -49,6 +49,8 @@ export interface FormHeaderProps {
   icon?: string
   /** Callback pour ouvrir la modal d'image */
   onIconClick?: () => void;
+  /** Autorise la modification de l'image */
+  canEditImage?: boolean;
   /** Configuration des couleurs */
   colors: ColorConfig;
   /** Callback pour changement de couleur */
@@ -98,6 +100,7 @@ const normalizeColorForInput = (color: string | undefined, fallback: string = '#
 export const FormHeader: React.FC<FormHeaderProps> = ({
   icon,
   onIconClick,
+  canEditImage = true,
   colors,
   onColorChange,
   resourceFields,
@@ -158,7 +161,7 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
           <div 
             className="relative group"
             onClick={() => {
-              if (isMobile && onIconClick) onIconClick();
+              if (canEditImage && isMobile && onIconClick) onIconClick();
             }}
           >
             {icon ? (
@@ -180,18 +183,20 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
                 </svg>
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                if (!isMobile && onIconClick) onIconClick();
-              }}
-              className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
-              title="Modifier l'image"
-            >
-              <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L10.5 8.207l-3-3L12.146.146zM11.207 9L8 5.793 1.146 12.646a.5.5 0 0 0-.146.354v2.5a.5.5 0 0 0 .5.5h2.5a.5.5 0 0 0 .354-.146L11.207 9zM4 15.5a.5.5 0 0 1-.5-.5v-2.293l8.5-8.5L14.293 6.5 5.793 15H4z"/>
-              </svg>
-            </button>
+            {canEditImage && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isMobile && onIconClick) onIconClick();
+                }}
+                className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
+                title="Modifier l'image"
+              >
+                <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L10.5 8.207l-3-3L12.146.146zM11.207 9L8 5.793 1.146 12.646a.5.5 0 0 0-.146.354v2.5a.5.5 0 0 0 .5.5h2.5a.5.5 0 0 0 .354-.146L11.207 9zM4 15.5a.5.5 0 0 1-.5-.5v-2.293l8.5-8.5L14.293 6.5 5.793 15H4z"/>
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Sélecteurs de couleur */}

@@ -81,31 +81,20 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   hoverColumnLeft, isDisplayWeekend, tagPlacement = 'hover', onLockedError, onCalendarPositionChange, mouseUpAfterScroll
 }) => {
 
+  const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
+  const [expandedOverlapCounts, setExpandedOverlapCounts] = useState<Record<number, number>>({});
+
   const employeeHeights = useMemo(() => {
     return employees.map(employee => {
-      const employeeAppointments = appointments.filter(app => Number(app.IdEmploye) === Number(employee.IdPersonnel));
-      let maxOverallOverlap = 0;
-      if (employeeAppointments.length > 0) {
-        const sortedApps = [...employeeAppointments].sort((a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement);
-        const activeSlots: { endDate: number }[] = [];
-        sortedApps.forEach(app => {
-          for (let i = activeSlots.length - 1; i >= 0; i--) {
-            if (activeSlots[i].endDate <= app.DebutPlanningEvenement) activeSlots.splice(i, 1);
-          }
-          activeSlots.push({ endDate: app.FinPlanningEvenement });
-          maxOverallOverlap = Math.max(maxOverallOverlap, activeSlots.length);
-        });
-      }
-      
-      const calculatedHeight = maxOverallOverlap > 1 
-        ? (maxOverallOverlap * (CELL_HEIGHT + 6)) + (tagPlacement === 'fixed' ? 24 : 16)
-        : CELL_HEIGHT + 16;
+      const maxExpandedOverlap = expandedOverlapCounts[employee.IdPersonnel] ?? 0;
+      const calculatedHeight = maxExpandedOverlap > 1
+        ? (maxExpandedOverlap * (CELL_HEIGHT + 6)) + 6
+        : CELL_HEIGHT + 15;
 
       return { employeeId: employee.IdPersonnel, height: calculatedHeight, dayKey: undefined };
     });
-  }, [employees, appointments, tagPlacement]);
+  }, [employees, expandedOverlapCounts]);
 
-  const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [collapseTriggers, setCollapseTriggers] = useState<Record<number, number>>({});
   const [expandTriggers, setExpandTriggers] = useState<Record<number, number>>({});
   const initialEmployeeScrolledRef = useRef<number | null>(null);
@@ -237,6 +226,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     const row = flatRows[virtualRow.index];
     return {
       ...row,
+      index: virtualRow.index,
       start: virtualRow.start,
       end: virtualRow.start + virtualRow.size,
       domId: row.type === 'employee' ? getRowId('employee', row.id as number) : getRowId('group', row.id as string)
@@ -308,6 +298,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   const handleCollapseRow = useCallback((employeeId: number) => {
     setExpandedOverlapRows(prev => ({ ...prev, [employeeId]: false }));
+    setExpandedOverlapCounts(prev => ({ ...prev, [employeeId]: 0 }));
     setCollapseTriggers(prev => ({ ...prev, [employeeId]: (prev[employeeId] || 0) + 1 }));
   }, []);
 
@@ -316,8 +307,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     setExpandTriggers(prev => ({ ...prev, [employeeId]: (prev[employeeId] || 0) + 1 }));
   }, []);
 
-  const handleOverlapExpansionChange = useCallback((employeeId: number, expanded: boolean) => {
+  const handleOverlapExpansionChange = useCallback((employeeId: number, expandedOverlapCount: number) => {
+    setExpandedOverlapCounts((previous) => {
+      if (previous[employeeId] === expandedOverlapCount) return previous;
+      return { ...previous, [employeeId]: expandedOverlapCount };
+    });
+
     setExpandedOverlapRows((previous) => {
+      const expanded = expandedOverlapCount > 0;
       if (previous[employeeId] === expanded) return previous;
       return { ...previous, [employeeId]: expanded };
     });
@@ -393,7 +390,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
                 left: col.left, 
                 width: CELL_WIDTH,
                 backgroundColor: col.CouleurFond, // S'appliquera si défini via le contexte, sinon transparent/géré par CSS
-                color: col.CouleurTexte
+                color: col.CouleurTexte,
+                zIndex: 5,
+                opacity: 0.95,
+                borderRight:'1px solid var(--border-100)'
               }} 
             />
           ))}

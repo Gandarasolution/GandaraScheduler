@@ -28,36 +28,57 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
 
   
   const normalizeMobileConfig = (config: any): MobileAppointmentDisplayConfig => {
-    const readColumn = (column: 'primaryFields' | 'secondaryFields') => {
-      const value = Array.isArray(config?.[column]) ? config[column] : [];
-      if (value.length > 0 && typeof value[0] === 'object') {
-        return value
-          .slice()
-          .sort((a: any, b: any) => (a.Ligne - b.Ligne) || (a.Position - b.Position))
-          .map((field: any) => field.CodeChamp)
-          .filter(Boolean) as string[];
-      }
-      return value as string[];
+    const readField = (field: any) => {
+      if (typeof field === 'string') return { code: field, special: false };
+      if (!field || typeof field !== 'object') return null;
+      const code = field.CodeChamp ?? field.code ?? field.Code ?? field.field;
+      if (typeof code !== 'string' || !code) return null;
+      return {
+        code,
+        special: field.CaractereSpecial === true || field.estCaractereSpecial === true,
+      };
     };
+    const readFieldList = (value: any): Array<{ code: string; special: boolean }> => {
+      if (!Array.isArray(value)) return [];
+      return value
+        .flatMap((field) => Array.isArray(field) ? readFieldList(field) : [readField(field)])
+        .filter((field): field is { code: string; special: boolean } => field !== null);
+    };
+
+    const readColumn = (column: 'primaryFields' | 'secondaryFields') => {
+      return readFieldList(config?.[column]).map(({ code }) => code);
+    };
+
     const readRows = (column: 'primaryFields' | 'secondaryFields') => {
       const value = Array.isArray(config?.[column]) ? config[column] : [];
-      if (!value.length || typeof value[0] !== 'object') return value.map((field: string) => [field]);
+      if (!value.length) return [];
+      if (Array.isArray(value[0])) {
+        return value.map((row: any[]) => readFieldList(row).map(({ code }) => code));
+      }
+      if (typeof value[0] !== 'object') return value.map((field: string) => [field]);
       const rows = new Map<number, Array<{ field: string; position: number }>>();
       value.forEach((field: any) => {
-        if (!field.CodeChamp || !field.Ligne) return;
-        const row = rows.get(field.Ligne) || [];
-        row.push({ field: field.CodeChamp, position: field.Position || row.length + 1 });
-        rows.set(field.Ligne, row);
+        const parsed = readField(field);
+        if (!parsed) return;
+        const line = Number(field.Ligne ?? field.line);
+        const position = Number(field.Position ?? field.position);
+        const rowIndex = Number.isFinite(line) && line > 0 ? line : 1;
+        const row = rows.get(rowIndex) || [];
+        row.push({ field: parsed.code, position: Number.isFinite(position) ? position : row.length + 1 });
+        rows.set(rowIndex, row);
       });
       return [...rows.entries()]
         .sort(([a], [b]) => a - b)
         .map(([, row]) => row.sort((a, b) => a.position - b.position).map(({ field }) => field));
     };
+
+    const allFields = [...readFieldList(config?.primaryFields), ...readFieldList(config?.secondaryFields)];
     return {
       primaryFields: readColumn('primaryFields'),
       secondaryFields: readColumn('secondaryFields'),
       primaryFieldRows: readRows('primaryFields'),
       secondaryFieldRows: readRows('secondaryFields'),
+      specialFields: [...new Set(allFields.filter(({ special }) => special).map(({ code }) => code))],
     };
   };
   const mobileDisplayLoadedRef = useRef(false);
@@ -115,7 +136,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   const [selectedDate, setSelectedDate] = useState<number>(() => {
     const today = new Date().setHours(0, 0, 0, 0);
 
-    if (typeof window === 'undefined') return today;
+    if (isMobile || typeof window === 'undefined') return today;
 
     const storedPosition = window.localStorage.getItem(lastPositionStorageKey);
     const storedDate = storedPosition
@@ -156,7 +177,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   const positionSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const saveLastPosition = useCallback((position: { date: number; idPersonnel: number }) => {
-    if (!canSetLastPositionRef.current) return;
+    if (isMobile || !canSetLastPositionRef.current) return;
 
     pendingPositionRef.current = position.date;
     if (positionSaveTimeoutRef.current) clearTimeout(positionSaveTimeoutRef.current);
@@ -171,7 +192,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
         console.error('Erreur lors de l’enregistrement de la dernière position du calendrier :', error);
       });
     }, 1000); // 1 seconde de délai pour éviter les appels trop fréquents
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
     if (!idPlanning || idPlanning <= 0 || !user?.IdPersonnel) return;
@@ -182,6 +203,14 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     setLastPositionLoaded(false);
 
     const loadLastPosition = async () => {
+      if (isMobile) {
+        setSelectedDate(new Date().setHours(0, 0, 0, 0));
+        setLastPositionEmployeeId(null);
+        positionLoadedRef.current = true;
+        setLastPositionLoaded(true);
+        return;
+      }
+
       const storedPosition = window.localStorage.getItem(lastPositionStorageKey);
       if (storedPosition) {
         try {
@@ -230,7 +259,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       cancelled = true;
       if (positionSaveTimeoutRef.current) clearTimeout(positionSaveTimeoutRef.current);
     };
-  }, [idPlanning, lastPositionStorageKey, user?.IdPersonnel]);
+  }, [idPlanning, isMobile, lastPositionStorageKey, user?.IdPersonnel]);
 
   const handleCalendarPositionChange = useCallback((position: { date?: number; idPersonnel?: number }) => {
     const date = position.date ?? selectedDate;

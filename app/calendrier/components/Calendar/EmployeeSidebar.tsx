@@ -19,6 +19,7 @@ import {
   MARGIN_BETWEEN_TEAMS,
   CELL_HEIGHT,
   EMPLOYEE_GROUP_HEADER_PADDING_Y,
+  TIMELINE_HEADERGROUPS_CELL_HEIGHT,
 } from '../../utils/constants';
 import { getDimensionItemKey, HierarchicalGroupItem } from '../../utils/filters';
 import { FlatRow } from '../../hooks';
@@ -61,7 +62,7 @@ const CustomArrow = ({ isOpen, small = false }: { isOpen: boolean; small?: boole
 );
 
 const GroupIcon = () => (
-  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary-50">
+  <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl bg-primary-50">
     <svg
       version="1.1"
       xmlns="http://www.w3.org/2000/svg"
@@ -101,7 +102,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     value: config.IdPlanningVue,
   }));
 
-  const stickyTop = TIMELINE_HEADERITEMS_CELL_HEIGHT + CONTAINER_PADDING;
+  const stickyTop = TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
 
   const renderEmployee = (
     employee: User,
@@ -152,7 +153,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
           <div className="flex flex-col flex-1 min-w-0">
             <span
-              className={`poppins text-[16px] font-inherit group-hover:font-semibold truncate ${isInactive ? 'text-gray-400' : ''}`}
+              className={`poppins text-[14px] font-inherit group-hover:font-semibold truncate ${isInactive ? 'text-gray-400' : ''}`}
             >
               {employee.Nom + ' ' + employee.Prenom}
             </span>
@@ -168,7 +169,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   onExpandRow(employee.IdPersonnel);
                 }
               }}
-              className="cursor-pointer text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
+              className="cursor-pointer w-[75px] text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
               type="button"
               title={expandedOverlapRows[employee.IdPersonnel] ? 'Réduire les rendez-vous qui se chevauchent' : 'Développer pour afficher tous les rendez-vous qui se chevauchent'}
             >
@@ -238,7 +239,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
   return (
     <div
-      className="min-w-80 max-w-80 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
+      className="min-w-85 max-w-85 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
       style={{ scrollbarGutter: 'stable' }}
       onScroll={handleScrollY}
       ref={columnEmployeeRef}
@@ -247,7 +248,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
       <div
         className="sticky top-0 z-40 flex bg-page justify-center flex-shrink-0"
         style={{
-          height: TIMELINE_HEADERITEMS_CELL_HEIGHT + CONTAINER_PADDING
+          height: TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING
         }}
       >
         {calendarConfig && (
@@ -333,13 +334,13 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
               <button
                 className={`relative flex justify-between items-center px-4 ${
                   isOpen
-                    ? 'rounded-t-4xl -ml-px border-default border-t border-r border-l w-[284px]'
+                    ? 'rounded-t-4xl -ml-px border-default border-t border-r border-l w-[304px]'
                     : 'rounded-4xl w-full'
                 } focus:outline-none cursor-pointer bg-primary-bg`}
                 style={{
                   paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y,
                   paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y,
-                  height: CELL_HEIGHT,
+                  height: TIMELINE_HEADERITEMS_CELL_HEIGHT,
                 }}
                 onClick={() => onToggleItem(item.id)}
                 type="button"
@@ -369,7 +370,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   Il devient uniquement une terminaison visuelle légère.
                 */}
                 <div
-                  className="sticky w-[284px] h-9"
+                  className="sticky w-[304px] h-7"
                   style={{
                     bottom: 0,
                     zIndex: 30 - index,

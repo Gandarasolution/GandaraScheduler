@@ -1295,6 +1295,19 @@ export default function HomePage({
               // Images
               closeImageModal: interaction.handleCloseImageModal,
               handleImageSelect: (newImage) => {
+                const selectedType = appointmentLogic.selectedItem?.Type;
+                const canEditSelectedResourceImage =
+                  selectedType === 'Projet'
+                    ? hasPermission(214, 22)
+                    : selectedType === 'Paie' || selectedType === 'Rubrique Perso'
+                      ? hasPermission(214, 23)
+                      : true;
+
+                if (!canEditSelectedResourceImage) {
+                  interaction.handleCloseImageModal();
+                  return;
+                }
+
                 // Logique de décision basée sur la vue active
                 if (viewState.viewType === 'employee-table') {
                     const id = appointmentLogic.selectedEmployee?.IdPersonnel || null;

@@ -458,6 +458,7 @@ export const CalendarModals = memo(({
             isFullDay={config.isFullDay}
             nonWorkingDates={config.nonWorkingDates}
             onSave={handlers.saveAppointment}
+            isExpand={resourceEditMode === 'editAppointment'}
             onClose={() => handlers.closeModal()}
             handleOpenImageModal={handlers.openImageModalForEvent}
             onDirtyChange={setIsFormDirty}

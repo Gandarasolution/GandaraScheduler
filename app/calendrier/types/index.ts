@@ -202,6 +202,7 @@ export interface MobileAppointmentDisplayConfig {
   secondaryFields: string[];
   primaryFieldRows?: string[][];
   secondaryFieldRows?: string[][];
+  specialFields?: string[];
 }
 
 

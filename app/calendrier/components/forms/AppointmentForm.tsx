@@ -29,6 +29,7 @@ import TagsManager from './TagsManager';
 import { FormPreview, EmployeeSelector, AnnotationsField, ExpandButton, ActionButtons, Employee } from './FormComponents';
 import { useModalContext } from '@/app/calendrier/components/modals/Modal';
 import ressourceService from '@/app/service/ressource.service';
+import { useAuth } from '@/app/calendrier/hooks/utils/AuthContext';
 /**
  * Interface définissant les propriétés du composant AppointmentForm
  * @interface AppointmentFormProps
@@ -85,6 +86,7 @@ interface AppointmentFormProps {
   onFetchPermissions?: () => Promise<any>;
   onSetPermissions?: (data: { IdPersonnel: number, IdDroit: number }[]) => Promise<any>;
   loadingFallback?: React.ReactNode;
+  isExpand?: boolean;
 }
 
 
@@ -143,10 +145,12 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   onFetchPermissions,
   onLockedError,
   loadingFallback,
+  isExpand = false,
   onSetPermissions
 }) => {
 
   const { handleCloseWithSave, registerSaveHandler } = useModalContext();
+  const { hasPermission } = useAuth();
 
   // Variables dérivées pour améliorer la lisibilité
   const isCreatingResource = resourceEditMode === 'createRessource';
@@ -170,6 +174,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [formStartDate, setFormStartDate] = useState(() => new Date(appointment.DebutPlanningEvenement));
   const [formEndDate, setFormEndDate] = useState(() => new Date(appointment.FinPlanningEvenement));
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
+  const canEditImage = formDataItemType?.Type === 'Projet'
+    ? hasPermission(225)
+    : (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso')
+      ? hasPermission(226)
+      : false;
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);
 
@@ -414,7 +423,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   /**
    * État pour contrôler l'expansion du panel d'options avancées
    */
-  const [isExpanded, setIsExpanded] = useState(!isReducedVersion || hasPermissionsPanel);
+  const [isExpanded, setIsExpanded] = useState(isExpand || !isReducedVersion || hasPermissionsPanel);
 
 
   useEffect(() => {
@@ -781,7 +790,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
           {/* FormHeader - Icône + Couleurs + Ressource */}
           <FormHeader
             icon={formDataItemType?.Image?.image || undefined}
-            onIconClick={() => handleOpenImageModal(formDataItemType?.IdPlanningRessource)}
+            onIconClick={canEditImage
+              ? () => handleOpenImageModal(formDataItemType?.IdPlanningRessource)
+              : undefined}
+            canEditImage={canEditImage}
             colors={colors}
             onColorChange={handleColorChange}
             resourceFields={resourceFields}

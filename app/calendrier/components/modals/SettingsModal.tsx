@@ -39,16 +39,18 @@ const previewAppointment: Appointment = {
 
 const previewItem = {
   IdPlanningRessource: 1,
-  LibellePlanningRessource: "Maintenance chaudière",
-  CouleurFondPlanningRessource: "#2563eb",
-  CouleurBordurePlanningRessource: "#1d4ed8",
-  CouleurTextePlanningRessource: "#ffffff",
-  CodePlanningRessource: "MAINT-001",
+  LibellePlanningRessource: "Construction de deux immeubles regroupant 41 logements : 19 en accession et 22 en location",
+  CouleurFondPlanningRessource: "#d92e25",
+  CouleurBordurePlanningRessource: "#841c17",
+  CouleurTextePlanningRessource: "#2f0a08",
+  CodePlanningRessource: "16894",
   Type: "Projet",
-  ChefChantier: "Dupont Jean",
-  ChargeAffaire: "Durand Marie",
-  AdresseChantier : "123 Rue de l'Industrie, 75000 Paris",
-} as Item;
+  ChefChantier: "MONNOT Romain",
+  ChargeAffaire: "DECREUSE Vivien",
+  AdresseChantier : "Rue Jean Wyrsch 25000 BESANCON",
+  Identifiant: '41 lgt wyrsch',
+  PoleActivite: "TRAVAUX CVC2",
+} as unknown as Item;
 
 const previewEmployee: User = {
   IdPersonnel: 1,
@@ -63,10 +65,31 @@ type FieldColumn = "primaryFields" | "secondaryFields";
 type FieldRows = Record<FieldColumn, string[][]>;
 const MAX_SECONDARY_FIELDS = 2;
 const MAX_FIELDS_PER_PRIMARY_ROW = 3;
+const MAX_TITLE_FIELDS = 2;
+const MAX_PRIMARY_ROWS = 5;
 
-const getFieldRows = (value: MobileAppointmentDisplayConfig): FieldRows => {
+const isSpecialField = (field: string, options: MobileAppointmentFieldOption[]) =>
+  options.find((option) => option.Code === field)?.CaractereSpecial === true;
+
+const countRegularFields = (row: string[], options: MobileAppointmentFieldOption[]) =>
+  row.filter((field) => !isSpecialField(field, options)).length;
+
+const getFieldRows = (
+  value: MobileAppointmentDisplayConfig,
+  options: MobileAppointmentFieldOption[] = []
+): FieldRows => {
   const primaryFields = value.primaryFieldRows?.length
-    ? value.primaryFieldRows.map((row) => row.slice(0, MAX_FIELDS_PER_PRIMARY_ROW)).slice(0, 5)
+    ? value.primaryFieldRows
+      .slice(0, MAX_PRIMARY_ROWS)
+      .map((row, index) => {
+        const maxRegularFields = index === 0 ? MAX_TITLE_FIELDS : MAX_FIELDS_PER_PRIMARY_ROW;
+        let regularFields = 0;
+        return row.filter((field) => {
+          if (isSpecialField(field, options)) return true;
+          regularFields += 1;
+          return regularFields <= maxRegularFields;
+        });
+      })
     : value.primaryFields.map((field) => [field]);
     
   const secondarySourceRows = value.secondaryFieldRows?.length
@@ -95,7 +118,7 @@ const MobileDisplayEditor = ({
   setting: any;
   registerSaveAction: (action: { isDirty: boolean; save: () => Promise<void> } | null) => void;
 }) => {
-  const initialFieldRows = getFieldRows(setting.value);
+  const initialFieldRows = getFieldRows(setting.value, setting.options || []);
   const [localValue, setLocalValue] = useState<MobileAppointmentDisplayConfig>({
     ...setting.value,
     primaryFields: flattenFieldRows(initialFieldRows.primaryFields),
@@ -138,7 +161,7 @@ const MobileDisplayEditor = ({
   }, [setting]);
 
   useEffect(() => {
-    const fieldRows = getFieldRows(setting.value);
+    const fieldRows = getFieldRows(setting.value, setting.options || []);
     setLocalValue({
       ...setting.value,
       primaryFields: flattenFieldRows(fieldRows.primaryFields),
@@ -182,7 +205,7 @@ const MobileDisplayEditor = ({
 
   const removeField = (column: "primaryFields" | "secondaryFields", fieldCode: string) => {
     setLocalValue((prev) => {
-      const rows = getFieldRows(prev)[column]
+      const rows = getFieldRows(prev, setting.options || [])[column]
         .map((row) => row.filter((field) => field !== fieldCode))
         .filter((row) => row.length > 0);
       return {
@@ -195,8 +218,8 @@ const MobileDisplayEditor = ({
 
   const addRow = (column: FieldColumn) => {
     setLocalValue((prev) => {
-      const rows = getFieldRows(prev)[column];
-      if (rows.length >= 5) return prev;
+      const rows = getFieldRows(prev, setting.options || [])[column];
+      if (rows.length >= (column === "primaryFields" ? MAX_PRIMARY_ROWS : 5)) return prev;
       return {
         ...prev,
         [`${column === "primaryFields" ? "primary" : "secondary"}FieldRows`]: [...rows, []],
@@ -206,7 +229,7 @@ const MobileDisplayEditor = ({
 
   const removeRow = (column: FieldColumn, rowIndex: number) => {
     setLocalValue((prev) => {
-      const rows = getFieldRows(prev)[column].filter((_, idx) => idx !== rowIndex);
+      const rows = getFieldRows(prev, setting.options || [])[column].filter((_, idx) => idx !== rowIndex);
       return {
         ...prev,
         [column]: flattenFieldRows(rows),
@@ -233,8 +256,8 @@ const MobileDisplayEditor = ({
     }
 
     setLocalValue((prev) => {
-      let primaryRows = getFieldRows(prev).primaryFields;
-      let secondaryRows = getFieldRows(prev).secondaryFields;
+      let primaryRows = getFieldRows(prev, setting.options || []).primaryFields;
+      let secondaryRows = getFieldRows(prev, setting.options || []).secondaryFields;
 
       // On le retire TOUJOURS de sa colonne de destination pour éviter les doublons au sein d'une même section.
       if (column === "primaryFields") {
@@ -256,10 +279,13 @@ const MobileDisplayEditor = ({
 
       const currentRow = targetRows[rowIndex];
 
-      if (column === "secondaryFields" && currentRow.length >= MAX_SECONDARY_FIELDS) {
-        return prev;
-      }
-      if (column === "primaryFields" && currentRow.length >= MAX_FIELDS_PER_PRIMARY_ROW) {
+      const maxFields = column === "primaryFields" && rowIndex === 0
+        ? MAX_TITLE_FIELDS
+        : column === "primaryFields"
+          ? MAX_FIELDS_PER_PRIMARY_ROW
+          : MAX_SECONDARY_FIELDS;
+      if (countRegularFields(currentRow, setting.options || []) >= maxFields &&
+        !isSpecialField(fieldCode, setting.options || [])) {
         return prev;
       }
 
@@ -313,7 +339,7 @@ const MobileDisplayEditor = ({
         Organisez les informations de la carte mobile. Glissez un champ directement sur la carte pour l'insérer à l'endroit désigné par la barre verticale.
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 h-full">
         {/* SECTION CHAMPS DISPONIBLES */}
         <div className="rounded-xl border border-default bg-secondary-bg/50 p-2.5">
           <div className="mb-1.5 flex items-center justify-between">
@@ -342,7 +368,7 @@ const MobileDisplayEditor = ({
         </div>
 
         {/* SECTION APERÇU CÔTE À CÔTE */}
-        <div className="rounded-xl border border-light bg-secondary-bg/40 p-3 space-y-3">
+        <div className="rounded-xl border border-light bg-secondary-bg/40 p-3 space-y-3 h-full">
           <div className="flex items-center gap-2 pb-1.5 border-b border-ultra-light">
             <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -377,8 +403,8 @@ const MobileDisplayEditor = ({
                   e.dataTransfer.effectAllowed = "move";
                   e.dataTransfer.setData("text/plain", fieldCode);
                 }}
-                onPreviewDragOver={(_, column, rowIndex, fieldCode) => {
-                  setDragOverInfo({ column, rowIndex, fieldCode });
+                        onPreviewDragOver={(_, column, rowIndex, fieldCode, blocked) => {
+                          setDragOverInfo({ column, rowIndex, fieldCode, blocked });
                 }}
                 onPreviewDragLeave={() => setDragOverInfo(null)}
                 onPreviewDrop={handlePreviewDrop}
@@ -418,8 +444,8 @@ const MobileDisplayEditor = ({
                   e.dataTransfer.effectAllowed = "move";
                   e.dataTransfer.setData("text/plain", fieldCode);
                 }}
-                onPreviewDragOver={(_, column, rowIndex, fieldCode) => {
-                  setDragOverInfo({ column, rowIndex, fieldCode });
+                onPreviewDragOver={(_, column, rowIndex, fieldCode, blocked) => {
+                  setDragOverInfo({ column, rowIndex, fieldCode, blocked });
                 }}
                 onPreviewDragLeave={() => setDragOverInfo(null)}
                 onPreviewDrop={handlePreviewDrop}

@@ -46,20 +46,19 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   const fuse = useMemo(() => {
     return new Fuse(employees, {
       keys: [
-        { name: 'name', weight: 2 },
-        { name: 'firstName', weight: 2 },
-        { name: 'code', weight: 1 },
-        { name: 'group.name', weight: 0.5 },
+        { name: 'Nom', weight: 2 },
+        { name: 'Prenom', weight: 2 },
+        { name: 'Code', weight: 1 },
       ],
       threshold: 0.4,
       includeScore: true,
-      minMatchCharLength: 2,
+      minMatchCharLength: 1,
     });
   }, [employees]);
 
   // Recherche intelligente avec Fuse.js
   const searchResults = useMemo(() => {
-    if (!debouncedSearch || debouncedSearch.length < 2) {
+    if (!debouncedSearch) {
       return employees;
     }
     const results = fuse.search(debouncedSearch);
@@ -82,7 +81,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     });
     
     return groups;
-  }, [searchResults]);
+  }, [searchResults, teams]);
 
 
   // Filtrer les employés récents qui sont dans la liste actuelle
@@ -218,8 +217,19 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
           
           {/* Liste des employés */}
           <div className="overflow-y-auto max-h-72 no-scrollbar space-y-3">
+            {debouncedSearch ? (
+              searchResults.map((employee) => (
+                <EmployeeItem
+                  key={employee.IdPersonnel}
+                  employee={employee}
+                  isSelected={selectedEmployee?.IdPersonnel === employee.IdPersonnel}
+                  onSelect={handleSelect}
+                />
+              ))
+            ) : (
+              <>
             {/* Section Employés Récents */}
-            {validRecentEmployees.length > 0 && !search && (
+            {validRecentEmployees.length > 0 && (
               <EmployeeGroup
                 title="Récents"
                 icon={<Clock size={14} style={{ color: 'var(--color-primary-500)' }} />}
@@ -245,6 +255,8 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                 onSelect={handleSelect}
               />
             ))}
+              </>
+            )}
             
             {/* Message si aucun résultat */}
             {searchResults.length === 0 && (

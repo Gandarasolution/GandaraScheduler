@@ -36,7 +36,7 @@ async function refreshToken() {
   return await postRequest("/api/token/refresh", {}, "refreshToken");
 }
 
-async function isApiReachable(url: string | null | undefined, timeoutMs = 3000): Promise<boolean> {
+async function isApiReachable(url: string | null | undefined, timeoutMs = 10000): Promise<boolean> {
   if (!url) return false;
 
   const controller = new AbortController();

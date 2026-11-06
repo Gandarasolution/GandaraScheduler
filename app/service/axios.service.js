@@ -90,8 +90,21 @@ function handleError(serviceName, err) {
         console.log("ERROR while calling SERVICE " + serviceName + ": " + JSON.stringify(err.response));
         // on retourne un objet qui a la même structure qu'une réponse normale sans erreur.
         // mais avec un champ data contenant le message d'erreur renvoyé par l'API
+        const responseData = err.response.data;
         return {
-            data: err.response.data
+            data: responseData && typeof responseData === 'object'
+                ? {
+                    ...responseData,
+                    ...(err.response.status >= 500 && !responseData.message
+                        ? { message: 'Une erreur interne est survenue sur le serveur.' }
+                        : {}),
+                }
+                : {
+                    error: 1,
+                    message: err.response.status >= 500
+                        ? 'Une erreur interne est survenue sur le serveur.'
+                        : responseData,
+                },
         };
     }
     else if (err.request) {

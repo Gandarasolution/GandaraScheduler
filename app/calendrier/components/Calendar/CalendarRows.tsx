@@ -19,6 +19,7 @@ interface CalendarRowsProps {
   visibleRows:{
     start: number;
     end: number;
+    index: number;
     domId: string;
     type: "group" | "employee";
     id: string | number;
@@ -43,7 +44,7 @@ interface CalendarRowsProps {
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
-  onOverlapExpansionChange: (employeeId: number, expanded: boolean) => void;
+  onOverlapExpansionChange: (employeeId: number, expandedOverlapCount: number) => void;
   collapseTriggers: Record<number, number>;
   expandTriggers: Record<number, number>;
   tagPlacement: 'hover' | 'fixed';
@@ -95,10 +96,8 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             right: 0,
           },
         };
-        // if (row.data.Nom === 'CABESTANT') {
-        //   //console.log(row.data);
-        //   //console.log(appointmentsByEmployee);
-        // }
+        const rowBackgroundColor = row.index % 2 === 0 ? 'rgba(163, 163, 163, 0.12)' : 'transparent';
+       
 
         return row.type === 'group' ? (
           <GroupRow
@@ -108,6 +107,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             dayInTimeline={dayInTimeline}
             todayIndex={todayIndex}
             isFullDay={isFullDay}
+            rowBackgroundColor={rowBackgroundColor}
           />
         ) : (
           <EmployeeRow
@@ -136,6 +136,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             expandTrigger={expandTriggers[row.id as number]}
             tagPlacement={tagPlacement}
             onLockedError={onLockedError}
+            rowBackgroundColor={rowBackgroundColor}
           />
         );
       })}

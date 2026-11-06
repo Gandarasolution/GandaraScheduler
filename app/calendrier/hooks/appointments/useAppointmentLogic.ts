@@ -105,7 +105,28 @@ export const useAppointmentLogic = ({
   });
 
   const isApiSuccess = useCallback((resp: any) => {
-    return !!resp && (resp.success || typeof resp.error === 'undefined');
+    if (!resp || resp.success === false) return false;
+
+    if (typeof resp.error !== 'undefined') {
+      return !resp.error;
+    }
+
+    if (typeof resp.data?.error !== 'undefined') {
+      return !resp.data.error;
+    }
+
+    return resp.success === true || typeof resp.error === 'undefined';
+  }, []);
+
+  const getApiErrorMessage = useCallback((resp: any) => {
+    const message = resp?.message
+      ?? resp?.data?.message
+      ?? resp?.data?.data
+      ?? (typeof resp?.data === 'string' ? resp.data : undefined);
+
+    return typeof message === 'string' && message.trim()
+      ? message
+      : 'Le serveur a refusé la sauvegarde.';
   }, []);
 
   const addMissingResourcesToCache = useCallback((resources: Item[]) => {
@@ -829,8 +850,7 @@ export const useAppointmentLogic = ({
             });
 
         if (!isApiSuccess(apiResp)) {
-          const apiMessage = apiResp?.message || 'Le serveur a refusé la sauvegarde.';
-          return { success: false, message: apiMessage };
+          return { success: false, message: getApiErrorMessage(apiResp) };
         }
 
         const apiResources = Array.isArray(apiResp?.data?.ressources) ? apiResp.data.ressources : [];
@@ -960,9 +980,25 @@ export const useAppointmentLogic = ({
         return { success: true };
       } catch (error) {
         console.error('Erreur réseau handleSaveAppointment', error);
-        return { success: false, message: 'Impossible de sauvegarder l\'événement sur le serveur.' };
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        const serverMessage = (error as {
+          response?: { data?: { message?: unknown } };
+          message?: unknown;
+        })?.response?.data?.message
+          ?? (error as { message?: unknown })?.message;
+
+        if (typeof serverMessage === 'string' && serverMessage.trim()) {
+          return { success: false, message: serverMessage };
+        }
+
+        return {
+          success: false,
+          message: status && status >= 500
+            ? 'Une erreur interne est survenue sur le serveur.'
+            : 'Impossible de sauvegarder l\'événement sur le serveur.',
+        };
       }
-  }, [appointmentsRef, eventsRef, timelineState, createAppointment, saveAppointmentState, onUpdate, api, isApiSuccess, updateAppointmentBounds, reorganizePriorities, addMissingResourcesToCache]);
+  }, [appointmentsRef, eventsRef, timelineState, createAppointment, saveAppointmentState, onUpdate, api, isApiSuccess, getApiErrorMessage, updateAppointmentBounds, reorganizePriorities, addMissingResourcesToCache]);
 
   
   // --- ACTIONS UTILISATEUR (Delete, Divide, Repeat, Extend) ---

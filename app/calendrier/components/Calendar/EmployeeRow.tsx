@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Appointment, Item, User } from '../../types';
 import { CELL_WIDTH, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
@@ -26,11 +26,12 @@ interface EmployeeRowProps {
   selectedAppointmentId: number | undefined;
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
-  onOverlapExpansionChange: (employeeId: number, expanded: boolean) => void;
+  onOverlapExpansionChange: (employeeId: number, expandedOverlapCount: number) => void;
   collapseTrigger?: number;
   expandTrigger?: number;
   mainScrollRef: React.RefObject<HTMLDivElement>;
   onLockedError: (message: string) => void;
+  rowBackgroundColor?: string;
 }
 
 const EmployeeRow: React.FC<EmployeeRowProps> = ({
@@ -57,7 +58,8 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   collapseTrigger,
   expandTrigger,
   mainScrollRef,
-  onLockedError
+  onLockedError,
+  rowBackgroundColor = 'transparent'
 }) => {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
 
@@ -87,49 +89,26 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
   const timelineStart = useMemo(() => dayInTimeline[0] || 0, [dayInTimeline]);
   
-  const positionedAppointments = useMemo(() => {
-    const filterred = appointments
-      .filter((app) => {
-        if (Number(app?.IdEmploye) !== Number(employee.IdPersonnel)) return false;
-        return app.FinPlanningEvenement > visibleWindowStart && app.DebutPlanningEvenement < visibleWindowEnd;
-      });
-
-    return filterred.map((app, index) => {
-      const start = app.DebutPlanningEvenement;
-      const end = app.FinPlanningEvenement;
-
-      const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
-      const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
-      const topPx = 
-        ((app.PlanningEvenementPriorite ?? 0) * CELL_HEIGHT) 
-        + (2 * (app.PlanningEvenementPriorite ?? 0)) 
-        + (
-            (tagPlacement === 'fixed' && index > 0) 
-            && Number(app.PlanningEvenementPriorite ?? 0) > 0 
-            && filterred[index - 1]?.Etiquette?.IdPlanningEtiquette ? 18 : 0
-        );
-      
-      return { ...app, left, width, topPx } as Appointment & {
-        left: number;
-        width: number;
-        topPx: number;
-      };
-    });
-  }, [appointments, employee.IdPersonnel, timelineStart, isDisplayWeekend, visibleWindowEnd, visibleWindowStart, isFullDay, tagPlacement]);
+  
 
   const overlappingGroups = useMemo(() => {
-    if (!positionedAppointments.length) return [] as { key: number; apps: (typeof positionedAppointments) }[];
+    const visibleAppointments = appointments.filter((app) => {
+      if (Number(app?.IdEmploye) !== Number(employee.IdPersonnel)) return false;
+      return app.FinPlanningEvenement > visibleWindowStart && app.DebutPlanningEvenement < visibleWindowEnd;
+    });
 
-    const deduplicatedAppointments = positionedAppointments.reduce((acc, app) => {
+    if (!visibleAppointments.length) return [] as { key: number; apps: (typeof appointments)[number][] }[];
+
+    const deduplicatedAppointments = visibleAppointments.reduce((acc, app) => {
       const existingIndex = acc.findIndex(a => a.IdPlanningEvenement === app.IdPlanningEvenement);
       if (existingIndex === -1) {
         acc.push(app);
       }
       return acc;
-    }, [] as typeof positionedAppointments);
+    }, [] as (typeof appointments)[number][]);
 
     const sorted = [...deduplicatedAppointments].sort((a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement);
-    const groups: Array<{ key: number; apps: (typeof positionedAppointments)[number][]; end: number }> = [];
+    const groups: Array<{ key: number; apps: (typeof appointments)[number][]; end: number }> = [];
 
     for (const app of sorted) {
       const lastGroup = groups[groups.length - 1];
@@ -152,9 +131,42 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     }
 
     return groups.map(({ key, apps }) => ({ key, apps }));
-  }, [positionedAppointments]);
+  }, [appointments, employee.IdPersonnel, visibleWindowEnd, visibleWindowStart]);
 
-  const initializedGroupsRef = useRef<Set<number>>(new Set());
+  const positionedAppointments = useMemo(() => {
+    return overlappingGroups.map((group) => ({
+      ...group,
+      apps: group.apps.map((app, index) => {
+        const isExpanded = expandedGroups[group.key] === true;
+        const start = app.DebutPlanningEvenement;
+        const end = app.FinPlanningEvenement;
+        const previousApp = index > 0 ? group.apps[index - 1] : undefined;
+
+        
+        const left = calculateLeftPx(start, timelineStart, isFullDay, isDisplayWeekend ?? false);
+        const width = calculateWidthPx(start, end, isFullDay, isDisplayWeekend ?? false);
+
+        const beforeHasTag = previousApp && Number((app.PlanningEvenementPriorite ?? 0)) > 0 && tagPlacement === 'fixed' && !!previousApp.Etiquette?.IdPlanningEtiquette;
+        const widthDiff = previousApp ? Math.abs(width - calculateWidthPx(previousApp.DebutPlanningEvenement, previousApp.FinPlanningEvenement, isFullDay, isDisplayWeekend ?? false)) : Infinity;
+        const isSimilarSize = widthDiff <= CELL_WIDTH; 
+        const shouldOffsetForTag = beforeHasTag && isSimilarSize;  
+
+        const topPx =
+          isExpanded ?
+            ((app.PlanningEvenementPriorite ?? 0) * CELL_HEIGHT) +
+            (CELL_HEIGHT / 5) +
+            (2 * (app.PlanningEvenementPriorite ?? 0)) +
+            (
+              shouldOffsetForTag && isExpanded
+                ? 18
+                : 0
+            )
+          : CELL_HEIGHT / 5;
+
+        return { ...app, left, width, topPx };
+      }),
+    }));
+  }, [overlappingGroups, timelineStart, isFullDay, isDisplayWeekend, tagPlacement, expandedGroups]);
 
   useEffect(() => {
     if (expandTrigger === undefined) return;
@@ -166,36 +178,32 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
       });
       return next;
     });
-  }, [expandTrigger, overlappingGroups]);
+  }, [expandTrigger]);
 
   useEffect(() => {
-    setExpandedGroups((previous) => {
-      const next = { ...previous };
+    const maxExpandedOverlap = overlappingGroups.reduce((maxOverlap, group) => {
+      if (group.apps.length <= 1 || expandedGroups[group.key] !== true) return maxOverlap;
 
-      // Once the sidebar has explicitly collapsed this row, do not let the
-      // virtualizer's recalculation reopen its overlap groups.
-      if (collapseTrigger !== undefined && collapseTrigger > 0) return next;
+      const activeEndDates: number[] = [];
+      let groupMaxOverlap = 0;
+      const sortedApps = [...group.apps].sort(
+        (a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement
+      );
 
-      overlappingGroups.forEach((group) => {
-        if (group.apps.length < 2) return;
-
-        if (!initializedGroupsRef.current.has(group.key) && next[group.key] === undefined) {
-          next[group.key] = true;
-          initializedGroupsRef.current.add(group.key);
+      sortedApps.forEach((app) => {
+        for (let index = activeEndDates.length - 1; index >= 0; index--) {
+          if (activeEndDates[index] <= app.DebutPlanningEvenement) {
+            activeEndDates.splice(index, 1);
+          }
         }
+
+        activeEndDates.push(app.FinPlanningEvenement);
+        groupMaxOverlap = Math.max(groupMaxOverlap, activeEndDates.length);
       });
 
-      return next;
-    });
-  }, [overlappingGroups]);
-
-  useEffect(() => {
-    if (!overlappingGroups.some((group) => group.apps.length > 1)) return;
-
-    const hasExpandedGroup = overlappingGroups.some(
-      (group) => group.apps.length > 1 && expandedGroups[group.key] === true
-    );
-    onOverlapExpansionChange(employee.IdPersonnel, hasExpandedGroup);
+      return Math.max(maxOverlap, groupMaxOverlap);
+    }, 0);
+    onOverlapExpansionChange(employee.IdPersonnel, maxExpandedOverlap);
   }, [employee.IdPersonnel, expandedGroups, onOverlapExpansionChange, overlappingGroups]);
 
   useEffect(() => {
@@ -267,7 +275,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         ...style,
         height: rowHeight,
         width: rowWidth,
-        backgroundColor: 'transparent',
+        backgroundColor: rowBackgroundColor,
         backgroundImage: `repeating-linear-gradient(
           to right,
           transparent 0px,
@@ -295,7 +303,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           }}
         />
       )}
-      {overlappingGroups.map((group) => {
+      {positionedAppointments.map((group) => {
         const isExpanded = expandedGroups[group.key] === true;
         const appsToRender = group.apps;
         const baseTopPx = group.apps[0]?.topPx || 0; 
@@ -311,11 +319,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
               const ressource = events[Number(app.IdPlanningRessource)];
               if (!ressource) return null;
   
-              const beforeApp = index > 0 ? group.apps[index - 1] : null;
-              const beforeHasTag = beforeApp && Number((app.PlanningEvenementPriorite ?? 0)) > 0 && tagPlacement === 'fixed' && !!beforeApp.Etiquette?.IdPlanningEtiquette;
-              const widthDiff = beforeApp ? Math.abs(app.width - beforeApp.width) : Infinity;
-              const isSimilarSize = widthDiff <= CELL_WIDTH; 
-              const shouldOffsetForTag = beforeHasTag && isSimilarSize;               
+          
 
               const ghostIntervals: { start: number; end: number }[] = priority0Apps
                 .map(baseApp => ({
@@ -327,9 +331,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 && ghostIntervals.length > 0;
 
               const isGhost = !isExpanded && hasBaseOverlap;
-              const forcedTopPx = hasBaseOverlap
-                ? (isExpanded ? (shouldOffsetForTag ? app.topPx + 18 : app.topPx) : baseTopPx)
-                : 0;
+   
                 
               return (
                 <AppointmentItem
@@ -345,7 +347,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
                   chargeeAffaire={(ressource && ressource.Type === 'Projet' ? ressource.ChargeAffaire : '') || ''}
                   absoluteLeft={app.left}
                   absoluteWidth={app.width}
-                  absoluteTop={forcedTopPx} 
+                  absoluteTop={app.topPx} 
                   mainScrollRef={mainScrollRef}
                   isGhost={isGhost} 
                   ghostInterval={ghostIntervals.length > 0 ? ghostIntervals : undefined}
@@ -393,7 +395,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
             {isExpanded && group.apps.length > 1 && group.apps[0] && (
               <button
                 type="button"
-                className="absolute z-30 text-[11px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition cursor-pointer"
+                className="absolute z-30 cursor-pointer text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
                 style={{
                   left: (group.apps[0]?.left + group.apps[0]?.width) - 36,
                   top: group.apps[0]?.topPx - 12,

@@ -16,6 +16,7 @@ export type DragOverTarget = {
   column: "primaryFields" | "secondaryFields";
   rowIndex: number;
   fieldCode?: string;
+  blocked?: boolean;
 } | null;
 
 export interface MobileAppointmentFieldOption {
@@ -27,6 +28,7 @@ export interface MobileAppointmentFieldOption {
 
 const MAX_SECONDARY_FIELDS = 2;
 const MAX_FIELDS_PER_PRIMARY_ROW = 3;
+const MAX_TITLE_FIELDS = 2;
 const STANDARD_FIELD_CODES = new Set([
   "LibellePlanningRessource",
   "Type",
@@ -50,7 +52,7 @@ interface AppointmentCardProps {
   showCard?: boolean;
   dragOverInfo?: DragOverTarget;
   onPreviewDrop?: (event: React.DragEvent<HTMLDivElement>, column: "primaryFields" | "secondaryFields", rowIndex?: number, fieldCode?: string) => void;
-  onPreviewDragOver?: (event: React.DragEvent<HTMLDivElement>, column: "primaryFields" | "secondaryFields", rowIndex: number, fieldCode?: string) => void;
+  onPreviewDragOver?: (event: React.DragEvent<HTMLDivElement>, column: "primaryFields" | "secondaryFields", rowIndex: number, fieldCode?: string, blocked?: boolean) => void;
   onPreviewDragLeave?: () => void;
   onRemoveField?: (column: "primaryFields" | "secondaryFields", fieldCode: string) => void;
   onRemoveRow?: (column: "primaryFields" | "secondaryFields", rowIndex: number) => void;
@@ -78,6 +80,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
   const touchStartY = useRef<number | null>(null);
 
   const item = items.find(i => i.IdPlanningRessource === app.IdPlanningRessource);
+  const isProjectAppointment = item?.Type === 'Projet';
   const employee = employees.find(e => e.IdPersonnel === app.IdEmploye);
   const startDate = new Date(app.DebutPlanningEvenement);
   const endDate = new Date(app.FinPlanningEvenement);
@@ -92,7 +95,11 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     ChargeAffaire: () => (item?.Type === 'Projet' ? item.ChargeAffaire || '' : ''),
   };
 
+  const isConfiguredSpecialField = (field: string) =>
+    displayConfig.specialFields?.includes(field) === true;
+
   const getFieldValue = (field: string): string => {
+    if (isConfiguredSpecialField(field)) return field;
     if (field in customResolvers) {
       return customResolvers[field]!();
     }
@@ -150,26 +157,49 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
   const primaryRows = displayConfig.primaryFieldRows?.length
     ? displayConfig.primaryFieldRows
     : [displayConfig.primaryFields];
+
   const rawSecondaryRows = displayConfig.secondaryFieldRows?.length
     ? displayConfig.secondaryFieldRows
     : [displayConfig.secondaryFields];
-    
-  // CORRECTION ICI : on ne filtre plus les champs secondaires si le champ est déjà dans primaryRows
-  const secondaryRows = rawSecondaryRows;
-  
-  const primaryFields = primaryRows.flatMap(getFields);
-  const secondaryFields = secondaryRows.flatMap(getFields);
-  const titleField = primaryFields[0];
-  const isPrimaryTitleRowFull = primaryRows[0]?.length >= MAX_FIELDS_PER_PRIMARY_ROW;
-  const canRenderCard = showCard;
+
+  const displayedPrimaryRows = isProjectAppointment
+    ? primaryRows
+    : [['LibellePlanningRessource']];
+  const displayedSecondaryRows = isProjectAppointment ? rawSecondaryRows : [];
 
   const getFieldOption = (field: string) => mobileAppointmentFieldOptions
     .find((option) => option.Code === field);
-  const isSpecialField = (field: string) => mobileAppointmentFieldOptions
-    .find((option) => option.Code === field)
-    ?.CaractereSpecial === true;
+    
+  const isSpecialField = (field: string) =>
+    isConfiguredSpecialField(field) || mobileAppointmentFieldOptions
+      .find((option) => option.Code === field)
+      ?.CaractereSpecial === true;
+    
+  // CORRECTION ICI : on ne filtre plus les champs secondaires si le champ est déjà dans primaryRows
+  const secondaryRows = displayedSecondaryRows;
+  
+  const primaryFields = displayedPrimaryRows.flatMap(getFields);
+  const secondaryFields = secondaryRows.flatMap(getFields);
+  const titleRow = getFields(displayedPrimaryRows[0] || []).filter(({ field }, index, fields) =>
+    isSpecialField(field) || fields.slice(0, index).filter(({ field: previousField }) => !isSpecialField(previousField)).length < MAX_TITLE_FIELDS
+  );
+  const titleField = titleRow[0] || primaryFields[0];
+  const canRenderCard = showCard;
 
-  console.log(displayConfig, 'displayConfig');
+  
+  const countRegularFields = (fields: string[]) => fields.filter((field) => !isSpecialField(field)).length;
+  const getRowLimit = (column: "primaryFields" | "secondaryFields", rowIndex: number) => {
+    if (column === "secondaryFields") return MAX_SECONDARY_FIELDS;
+    return rowIndex === 0 ? MAX_TITLE_FIELDS : MAX_FIELDS_PER_PRIMARY_ROW;
+  };
+  const isRowFull = (
+    column: "primaryFields" | "secondaryFields",
+    rowIndex: number,
+    fields: string[],
+    draggedField?: string
+  ) =>
+    countRegularFields(fields) >= getRowLimit(column, rowIndex) &&
+    !isSpecialField(draggedField || '');
 
   const getFieldIcon = (field: string) => {
     const iconProps = { size: 16, strokeWidth: 1.8 };
@@ -252,7 +282,18 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     >
       {canRenderCard && (
         <div 
-          className={`${preview ? 'rounded-xl p-3 mb-0' : 'rounded-3xl p-5 mb-4'} border flex items-start group transition-all duration-300`}
+          className={`${preview ? 'rounded-xl p-3 mb-0' : 'rounded-3xl p-5 mb-4'} border flex items-start group transition-all duration-300 ${!preview ? 'cursor-pointer' : ''}`}
+          onClick={() => {
+            if (!preview && isProjectAppointment) setIsSecondaryOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (!preview && isProjectAppointment && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault();
+              setIsSecondaryOpen(true);
+            }
+          }}
+          role={!preview && isProjectAppointment ? 'button' : undefined}
+          tabIndex={!preview && isProjectAppointment ? 0 : undefined}
           style={{
             backgroundColor: 'var(--bg-card)',
             boxShadow: 'var(--shadow-sm)',
@@ -266,16 +307,27 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
           <div className="flex-1 min-w-0">
             <h3
               className={`${preview ? 'text-sm' : 'text-base'} font-semibold mb-1 transition-colors truncate rounded ${
-                isPrimaryTitleRowFull ? 'cursor-not-allowed' : 'cursor-copy'
+                isRowFull("primaryFields", 0, displayedPrimaryRows[0] || []) ? 'cursor-not-allowed' : 'cursor-copy'
               } ${
                 preview && dragOverInfo?.column === 'primaryFields' && dragOverInfo?.rowIndex === 0 && !dragOverInfo?.fieldCode
-                  ? 'ring-1 ring-dashed ring-primary bg-primary/5'
+                  ? dragOverInfo.blocked
+                    ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
+                    : 'ring-1 ring-dashed ring-primary bg-primary/5'
                   : ''
               }`}
               onDragOver={(e) => {
                 if (!preview) return;
-                if (isPrimaryTitleRowFull) {
+                const blocked = isRowFull(
+                  "primaryFields",
+                  0,
+                  displayedPrimaryRows[0] || [],
+                  e.dataTransfer.getData("text/plain")
+                );
+                if (blocked) {
                   e.dataTransfer.dropEffect = 'none';
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onPreviewDragOver?.(e, "primaryFields", 0, titleField?.field, true);
                   return;
                 }
                 e.preventDefault();
@@ -294,46 +346,66 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 onPreviewDrop?.(e, "primaryFields", 0, titleField?.field);
               }}
             >
-              {titleField?.value ? (
-                renderFieldWithDropZone("primaryFields", 0, titleField.field, <span>{titleField.value}</span>)
-              ) : (
-                <span className="italic text-gray-400">Rendez-vous</span>
-              )}
+              <span className="inline-flex items-center gap-0.5">
+                {titleField?.value ? (
+                  renderFieldWithDropZone("primaryFields", 0, titleField.field, <span>{titleField.value}</span>)
+                ) : (
+                  <span className="italic text-gray-400">Rendez-vous</span>
+                )}
+                {titleRow.slice(1).map(({ field, value }) =>
+                  renderFieldWithDropZone(
+                    "primaryFields",
+                    0,
+                    field,
+                    <span key={field} className={isSpecialField(field) ? 'ml-0' : 'ml-1'}>{value}</span>
+                  )
+                )}
+              </span>
             </h3>
 
             <div className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-              {primaryRows.map((row, rowIndex) => {
-                const fields = getFields(row).filter(({ field }) => field !== titleField?.field);
+              {displayedPrimaryRows.slice(1, 5).map((row, rowIndex) => {
+                const actualRowIndex = rowIndex + 1;
+                const fields = getFields(row);
                 return (
                   <div 
-                    key={`primary-row-${rowIndex}`}
-                    className={`flex items-center gap-1.5 flex-wrap min-h-[20px] rounded p-0.5 ${
-                      fields.length >= MAX_FIELDS_PER_PRIMARY_ROW ? 'cursor-not-allowed' : 'cursor-copy'
+                    key={`primary-row-${actualRowIndex}`}
+                    className={`flex items-center gap-1 flex-wrap min-h-[20px] rounded p-0.5 ${
+                      isRowFull("primaryFields", actualRowIndex, row) ? 'cursor-not-allowed' : 'cursor-copy'
                     } ${
-                      preview && dragOverInfo?.column === 'primaryFields' && dragOverInfo?.rowIndex === rowIndex && !dragOverInfo?.fieldCode 
-                        ? 'ring-1 ring-dashed ring-primary bg-primary/5' 
+                      preview && dragOverInfo?.column === 'primaryFields' && dragOverInfo?.rowIndex === actualRowIndex && !dragOverInfo?.fieldCode
+                        ? dragOverInfo.blocked
+                          ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
+                          : 'ring-1 ring-dashed ring-primary bg-primary/5'
                         : ''
                     }`}
                     onDragOver={(e) => {
                       if (!preview) return;
+                      const blocked = isRowFull(
+                        "primaryFields",
+                        actualRowIndex,
+                        row,
+                        e.dataTransfer.getData("text/plain")
+                      );
+                      e.dataTransfer.dropEffect = blocked ? 'none' : 'move';
                       e.preventDefault();
-                      onPreviewDragOver?.(e, "primaryFields", rowIndex);
+                      onPreviewDragOver?.(e, "primaryFields", actualRowIndex, undefined, blocked);
                     }}
                     onDrop={(e) => {
                       if (!preview) return;
                       e.preventDefault();
-                      onPreviewDrop?.(e, "primaryFields", rowIndex);
+                      onPreviewDrop?.(e, "primaryFields", actualRowIndex);
                     }}
                   >
                     {fields.map(({ field, value }) => (
                       <React.Fragment key={field}>
-                        {renderFieldWithDropZone("primaryFields", rowIndex, field, <span>{value}</span>)}
+                        {renderFieldWithDropZone("primaryFields", actualRowIndex, field, <span>{value}</span>)}
                       </React.Fragment>
                     ))}
                     {preview && (
                       <button
                         type="button"
-                        onClick={() => onRemoveRow?.("primaryFields", rowIndex)}
+                        onClick={() => onRemoveRow?.("primaryFields", actualRowIndex)}
                         className="cursor-pointer ml-auto shrink-0 rounded p-0.5 text-secondary hover:bg-red-50 hover:text-red-600"
                         title="Supprimer la ligne"
                         aria-label="Supprimer la ligne principale"
@@ -354,22 +426,61 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
           <div className={preview ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3" : "relative max-h-[68vh] w-full overflow-hidden rounded-t-[2rem] bg-secondary-bg p-5 shadow-2xl"}>
             <div className="flex shrink-0 items-center justify-between mb-2">
               <h2 className={`${preview ? 'text-sm' : 'text-[18px]'} font-semibold text-primary`}>Détails du rendez-vous</h2>
+              {!preview && (
+                <button
+                  type="button"
+                  onClick={() => setIsSecondaryOpen(false)}
+                  className="rounded-full p-2 text-secondary hover:bg-primary/10"
+                  aria-label="Fermer les détails du rendez-vous"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
-            <div className={`${preview ? 'gap-1' : 'max-h-[calc(68vh-92px)] overflow-y-auto pb-4'} flex flex-col`}>
+            <div
+              className={`${preview ? 'gap-1' : 'max-h-[calc(68vh-92px)] overflow-y-auto pb-4'} flex flex-col`}
+              onTouchStart={!preview ? (event) => {
+                touchStartY.current = event.touches[0]?.clientY ?? null;
+                setDrawerOffset(0);
+              } : undefined}
+              onTouchMove={!preview ? (event) => {
+                if (touchStartY.current === null) return;
+                const offset = (event.touches[0]?.clientY ?? touchStartY.current) - touchStartY.current;
+                if (offset > 0) setDrawerOffset(offset);
+              } : undefined}
+              onTouchEnd={!preview ? () => {
+                if (drawerOffset > 100) setIsSecondaryOpen(false);
+                setDrawerOffset(0);
+                touchStartY.current = null;
+              } : undefined}
+              style={!preview ? {
+                transform: `translateY(${drawerOffset}px)`,
+                transition: drawerOffset === 0 ? 'transform 200ms ease-out' : 'none',
+              } : undefined}
+            >
               {secondaryRows.map((row, rowIndex) => (
                 <div 
                   key={`secondary-row-${rowIndex}`} 
-                  className={`min-h-[56px] py-2 flex items-start gap-3 border-b border-ultra-light last:border-b-0 ${
-                    row.length >= MAX_SECONDARY_FIELDS ? 'cursor-not-allowed' : 'cursor-copy'
+                  className={`min-h-[56px] py-2 flex items-start gap-1 border-b border-ultra-light last:border-b-0 ${
+                    isRowFull("secondaryFields", rowIndex, row) ? 'cursor-not-allowed' : 'cursor-copy'
                   } ${
-                    preview && dragOverInfo?.column === 'secondaryFields' && dragOverInfo?.rowIndex === rowIndex && !dragOverInfo?.fieldCode 
-                      ? 'ring-1 ring-dashed ring-primary bg-primary/5' 
+                    preview && dragOverInfo?.column === 'secondaryFields' && dragOverInfo?.rowIndex === rowIndex && !dragOverInfo?.fieldCode
+                      ? dragOverInfo.blocked
+                        ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
+                        : 'ring-1 ring-dashed ring-primary bg-primary/5'
                       : ''
                   }`}
                   onDragOver={(e) => {
                     if (!preview) return;
+                    const blocked = isRowFull(
+                      "secondaryFields",
+                      rowIndex,
+                      row,
+                      e.dataTransfer.getData("text/plain")
+                    );
+                    e.dataTransfer.dropEffect = blocked ? 'none' : 'move';
                     e.preventDefault();
-                    onPreviewDragOver?.(e, "secondaryFields", rowIndex);
+                    onPreviewDragOver?.(e, "secondaryFields", rowIndex, undefined, blocked);
                   }}
                   onDrop={(e) => {
                     if (!preview) return;
@@ -382,11 +493,11 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                       "secondaryFields",
                       rowIndex,
                       field,
-                      <div key={field} className={`flex min-w-0 flex-1 items-start gap-1 ${isSpecialField(field) && fieldIndex > 0 ? '-ml-3' : ''}`}>
+                      <div key={field} className={`flex min-w-0 items-start ${isSpecialField(field) ? 'gap-0' : 'gap-1'}`}>
                         {!isSpecialField(field) && (
                           <span className="mt-0.5 shrink-0 text-secondary">{getFieldIcon(field)}</span>
                         )}
-                        <div className={`min-w-0 ${isSpecialField(field) ? 'pt-4' : ''}`}>
+                        <div className="min-w-0">
                           {!isSpecialField(field) && (
                             <span className="block text-[11px] font-semibold uppercase leading-4 tracking-wide text-primary/60">
                               {getFieldOption(field)?.Libelle || field}
@@ -401,7 +512,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                     <button
                       type="button"
                       onClick={() => onRemoveRow?.("secondaryFields", rowIndex)}
-                      className="ml-auto shrink-0 rounded p-0.5 text-secondary hover:bg-red-50 hover:text-red-600"
+                      className="cursor-pointer ml-auto shrink-0 rounded p-0.5 text-secondary hover:bg-red-50 hover:text-red-600"
                       title="Supprimer la ligne"
                       aria-label="Supprimer la ligne secondaire"
                     >

@@ -559,11 +559,11 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
             <img
               src={event.Image.image}
               draggable={false}
-              className="w-8 h-8 object-cover flex-shrink-0 rounded-full"
+              className="w-6 h-6 object-cover flex-shrink-0 rounded-full"
               loading="lazy"
             />
           ) : (
-            <div className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"></div>
+            <div className="w-6 h-6 flex items-center justify-center rounded-full flex-shrink-0"></div>
           )}
 
           <div className='flex flex-col min-w-0 flex-1'>
@@ -581,7 +581,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 )}
 
                 <span 
-                  className="appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-sm"
+                  className="appointment-text flex-grow font-semibold truncate max-w-full transition-colors duration-200 text-xs"
                   style={{ 
                     color: ((isHovered && source === 'calendar') || isResizingLeft || isResizingRight) ? appointmentColor : appointmentTextColor || '#FFFFFF'
                   }}

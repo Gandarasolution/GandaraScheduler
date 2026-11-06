@@ -8,6 +8,7 @@ interface GroupRowProps {
   style?: React.CSSProperties;
   todayIndex: number;
   isFullDay: boolean;
+  rowBackgroundColor?: string;
 }
 
 const GroupRow: React.FC<GroupRowProps> = ({
@@ -16,6 +17,7 @@ const GroupRow: React.FC<GroupRowProps> = ({
   style,
   todayIndex,
   isFullDay,
+  rowBackgroundColor = 'transparent',
 }) => {
   const rowWidth = dayInTimeline.length * CELL_WIDTH;
   const STEP_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
@@ -30,7 +32,7 @@ const GroupRow: React.FC<GroupRowProps> = ({
       style={{
         ...style,
         width: rowWidth,
-        backgroundColor: 'transparent',
+        backgroundColor: rowBackgroundColor,
         backgroundImage: `repeating-linear-gradient(
           to right,
           transparent 0px,

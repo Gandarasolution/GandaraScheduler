@@ -25,9 +25,9 @@ export const DAY_MS = 86400000;
 export const CELL_WIDTH = 45;
 
 /** Hauteur d'une cellule dans la grille (en pixels) */
-export const CELL_HEIGHT = 40;
+export const CELL_HEIGHT = 35;
 
-export const ROW_HEIGHT = CELL_HEIGHT + 25;
+export const ROW_HEIGHT = CELL_HEIGHT + 15;
 
 /** Marge entre les groupes d'employés (en pixels) */
 export const MARGIN_BETWEEN_TEAMS = 20;
@@ -52,6 +52,7 @@ export const TIMELINE_HEADERITEMS_CELL_HEIGHT = 50;
 
 /**Hauteur des cellules mois */
 export const TIMELINE_HEADERGROUPS_CELL_HEIGHT = 40;
+
 
 /**Padding container pour la timeline/tableau des chantiers/rubrique sociale/liste employé */
 export const CONTAINER_PADDING = 16;
