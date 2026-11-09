@@ -30,6 +30,8 @@ interface EmployeeSidebarProps {
   flatRows: FlatRow[];
   openItems: (string | number)[];
   expandedOverlapRows: Record<number, boolean>;
+  hiddenOverlapCounts: Record<number, number>;
+  overlapDisplayMode: 'button' | 'count';
   onToggleItem: (itemId: string | number) => void;
   onCollapseRow: (employeeId: number) => void;
   onExpandRow: (employeeId: number) => void;
@@ -84,6 +86,8 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   flatRows,
   openItems,
   expandedOverlapRows,
+  hiddenOverlapCounts,
+  overlapDisplayMode,
   onToggleItem,
   onCollapseRow,
   onExpandRow,
@@ -169,11 +173,18 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   onExpandRow(employee.IdPersonnel);
                 }
               }}
-              className="cursor-pointer w-[75px] text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition"
+              className={`cursor-pointer ${overlapDisplayMode === 'count' ? '' : 'min-w-[75px]'} text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition`}
               type="button"
               title={expandedOverlapRows[employee.IdPersonnel] ? 'Réduire les rendez-vous qui se chevauchent' : 'Développer pour afficher tous les rendez-vous qui se chevauchent'}
             >
-              {expandedOverlapRows[employee.IdPersonnel] ? 'Réduire' : 'Développer'}
+              {overlapDisplayMode === 'count'
+                ? expandedOverlapRows[employee.IdPersonnel]
+                  ? 'Réduire'
+                  : <>
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
+                      +{`${hiddenOverlapCounts[employee.IdPersonnel] ?? 0}`}
+                    </>
+                : expandedOverlapRows[employee.IdPersonnel] ? 'Réduire' : 'Développer'}
             </button>
           )}
         </div>

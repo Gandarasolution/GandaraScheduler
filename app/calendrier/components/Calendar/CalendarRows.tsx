@@ -45,6 +45,7 @@ interface CalendarRowsProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   onOverlapExpansionChange: (employeeId: number, expandedOverlapCount: number) => void;
+  onHiddenOverlapCountChange: (employeeId: number, hiddenOverlapCount: number) => void;
   collapseTriggers: Record<number, number>;
   expandTriggers: Record<number, number>;
   tagPlacement: 'hover' | 'fixed';
@@ -76,6 +77,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   onSelectCell,
   onSelectAppointment,
   onOverlapExpansionChange,
+  onHiddenOverlapCountChange,
   collapseTriggers,
   expandTriggers,
   tagPlacement,
@@ -96,7 +98,6 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             right: 0,
           },
         };
-        const rowBackgroundColor = row.index % 2 === 0 ? 'rgba(163, 163, 163, 0.12)' : 'transparent';
        
 
         return row.type === 'group' ? (
@@ -107,7 +108,6 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             dayInTimeline={dayInTimeline}
             todayIndex={todayIndex}
             isFullDay={isFullDay}
-            rowBackgroundColor={rowBackgroundColor}
           />
         ) : (
           <EmployeeRow
@@ -132,11 +132,11 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
             onSelectCell={onSelectCell}
             onSelectAppointment={onSelectAppointment}
             onOverlapExpansionChange={onOverlapExpansionChange}
+            onHiddenOverlapCountChange={onHiddenOverlapCountChange}
             collapseTrigger={collapseTriggers[row.id as number]}
             expandTrigger={expandTriggers[row.id as number]}
             tagPlacement={tagPlacement}
             onLockedError={onLockedError}
-            rowBackgroundColor={rowBackgroundColor}
           />
         );
       })}

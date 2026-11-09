@@ -30,7 +30,7 @@ export const CELL_HEIGHT = 35;
 export const ROW_HEIGHT = CELL_HEIGHT + 15;
 
 /** Marge entre les groupes d'employés (en pixels) */
-export const MARGIN_BETWEEN_TEAMS = 20;
+export const MARGIN_BETWEEN_TEAMS = 8;
 
 /** Padding vertical du header de groupe (en pixels) */
 export const EMPLOYEE_GROUP_HEADER_PADDING_Y = 8;

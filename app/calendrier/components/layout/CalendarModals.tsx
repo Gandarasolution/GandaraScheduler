@@ -16,6 +16,8 @@ import { useAuth } from '../../hooks/utils/AuthContext';
 import permissionService from '@/app/service/permission.service';
 import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
 import calendarConfigService from '@/app/service/calendarConfig.service';
+import displaySettingsService, { DisplaySettingsUpdate } from '@/app/service/displaySettings.service';
+import { DisplaySettings } from '../../utils/displaySettings';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -121,6 +123,8 @@ interface CalendarModalsProps {
     setNonWorkingDates: (dates: Record<string, {Id: number; TypeJourCode: string }>) => void;
     tagPlacement: 'hover' | 'fixed';
     setTagPlacement: (v: 'hover' | 'fixed') => void;
+    overlapDisplayMode: 'button' | 'count';
+    setOverlapDisplayMode: (v: 'button' | 'count') => void;
     mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
     handleSaveMobileAppointmentDisplay: (value: MobileAppointmentDisplayConfig) => Promise<{ success: boolean; message?: string }>;
     mobileAppointmentFieldOptions: Array<{ Code: string; Libelle: string; CaractereSpecial: boolean; Id: number }>;
@@ -148,8 +152,61 @@ export const CalendarModals = memo(({
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [isSubmittingModalAction, setIsSubmittingModalAction] = useState(false);
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings | null>(null);
 
   const { DayTypes, fetchDayTypes, addDayType, updateDayType, removeDayType, onCheckDeleteDayType } = useDayTypesContext();
+
+  const loadDisplaySettings = async () => {
+    const result = await displaySettingsService.getDisplaySettings();
+    if (!result?.success || !result.data) {
+      return { success: false, message: result?.message || 'Erreur lors du chargement des options d’affichage.' };
+    }
+    setDisplaySettings(result.data);
+    return { success: true };
+  };
+
+  const saveDisplaySettings = async (value: DisplaySettings) => {
+    if (!displaySettings) {
+      return { success: false, message: 'Les options d’affichage ne sont pas chargées.' };
+    }
+
+    const changedValues: Partial<DisplaySettings> = {};
+    if (value.CouleurBordureParDefaut !== displaySettings.CouleurBordureParDefaut) {
+      changedValues.CouleurBordureParDefaut = value.CouleurBordureParDefaut;
+    }
+    if (value.CouleurFondParDefaut !== displaySettings.CouleurFondParDefaut) {
+      changedValues.CouleurFondParDefaut = value.CouleurFondParDefaut;
+    }
+    if (value.CouleurTexteParDefaut !== displaySettings.CouleurTexteParDefaut) {
+      changedValues.CouleurTexteParDefaut = value.CouleurTexteParDefaut;
+    }
+    if (JSON.stringify(value.ImageParDefaut) !== JSON.stringify(displaySettings.ImageParDefaut)) {
+      changedValues.ImageParDefaut = value.ImageParDefaut;
+    }
+
+    if (Object.keys(changedValues).length === 0) return { success: true };
+
+    const updatePayload: DisplaySettingsUpdate = {
+      ...(changedValues.CouleurBordureParDefaut !== undefined
+        ? { CouleurBordureParDefaut: changedValues.CouleurBordureParDefaut }
+        : {}),
+      ...(changedValues.CouleurFondParDefaut !== undefined
+        ? { CouleurFondParDefaut: changedValues.CouleurFondParDefaut }
+        : {}),
+      ...(changedValues.CouleurTexteParDefaut !== undefined
+        ? { CouleurTexteParDefaut: changedValues.CouleurTexteParDefaut }
+        : {}),
+      ...(changedValues.ImageParDefaut
+        ? { ImageParDefaut: String(changedValues.ImageParDefaut.id) }
+        : {}),
+    };
+    const result = await displaySettingsService.updateDisplaySettings(updatePayload);
+    if (!result?.success) {
+      return { success: false, message: result?.message || 'Erreur lors de la sauvegarde des options d’affichage.' };
+    }
+    setDisplaySettings(value);
+    return { success: true };
+  };
 
  
   const [configImageSelectorContext, setConfigImageSelectorContext] = useState<{
@@ -322,8 +379,19 @@ export const CalendarModals = memo(({
       }
     ] : []),
     {
-      category: "Affichage des étiquettes",
+      category: "Options d’affichage",
+      key: "displaySettings",
       items: [
+        ...(hasPermission(227) ? [{
+          id: "defaultDisplaySettings",
+          label: "Paramètres par défaut",
+          type: "default-display-settings",
+          value: displaySettings,
+          fetchDisplaySettings: loadDisplaySettings,
+          onChange: saveDisplaySettings,
+          onSelectImage: (onSelect: (image: ImageType) => void, actualImage?: ImageType) =>
+            openImageModalForConfig(actualImage, onSelect),
+        }] : []),
         {
           id: "tagPlacement",
           label: "Placement de l'étiquette",
@@ -333,6 +401,18 @@ export const CalendarModals = memo(({
           options: [
             { value: 'hover', label: 'Au clic sur une icône' },
             { value: 'fixed', label: 'Toujours visible (bord inférieur)' }
+          ]
+        }
+        ,
+        {
+          id: "overlapDisplayMode",
+          label: "Affichage des chevauchements dans la sidebar",
+          type: "select",
+          value: config.overlapDisplayMode,
+          onChange: config.setOverlapDisplayMode,
+          options: [
+            { value: 'button', label: 'Bouton Développer / Réduire' },
+            { value: 'count', label: 'Nombre d’événements masqués' }
           ]
         }
       ]
@@ -346,6 +426,9 @@ export const CalendarModals = memo(({
     config.setNonWorkingDates, 
     config.tagPlacement, 
     config.setTagPlacement, 
+    config.overlapDisplayMode,
+    config.setOverlapDisplayMode,
+    displaySettings,
     config.mobileAppointmentDisplay, 
     config.handleSaveMobileAppointmentDisplay, 
     config.mobileAppointmentFieldOptions, 

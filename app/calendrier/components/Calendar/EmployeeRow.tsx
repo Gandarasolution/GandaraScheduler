@@ -27,6 +27,7 @@ interface EmployeeRowProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   onOverlapExpansionChange: (employeeId: number, expandedOverlapCount: number) => void;
+  onHiddenOverlapCountChange: (employeeId: number, hiddenOverlapCount: number) => void;
   collapseTrigger?: number;
   expandTrigger?: number;
   mainScrollRef: React.RefObject<HTMLDivElement>;
@@ -55,6 +56,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   onSelectCell,
   onSelectAppointment,
   onOverlapExpansionChange,
+  onHiddenOverlapCountChange,
   collapseTrigger,
   expandTrigger,
   mainScrollRef,
@@ -132,6 +134,14 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
     return groups.map(({ key, apps }) => ({ key, apps }));
   }, [appointments, employee.IdPersonnel, visibleWindowEnd, visibleWindowStart]);
+
+  useEffect(() => {
+    const hiddenOverlapCount = overlappingGroups.reduce(
+      (total, group) => total + Math.max(0, group.apps.length - 1),
+      0
+    );
+    onHiddenOverlapCountChange(employee.IdPersonnel, hiddenOverlapCount);
+  }, [employee.IdPersonnel, onHiddenOverlapCountChange, overlappingGroups]);
 
   const positionedAppointments = useMemo(() => {
     return overlappingGroups.map((group) => ({
@@ -282,7 +292,9 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           transparent ${STEP_WIDTH - 1}px,
           var(--border-100) ${STEP_WIDTH - 1}px,
           var(--border-100) ${STEP_WIDTH}px
-        )`
+        )`,
+        borderBottom: '0.5px solid var(--border-100)',
+        zIndex: 6,
       }}
     >
       {selectionOverlay && (

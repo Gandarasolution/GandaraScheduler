@@ -17,6 +17,8 @@ export type DragOverTarget = {
   rowIndex: number;
   fieldCode?: string;
   blocked?: boolean;
+  insertRow?: boolean;
+  surface?: "fieldNames" | "values";
 } | null;
 
 export interface MobileAppointmentFieldOption {
@@ -28,7 +30,8 @@ export interface MobileAppointmentFieldOption {
 
 const MAX_SECONDARY_FIELDS = 2;
 const MAX_FIELDS_PER_PRIMARY_ROW = 3;
-const MAX_TITLE_FIELDS = 2;
+const MAX_TITLE_FIELDS = 3;
+const MAX_ROWS = 5;
 const STANDARD_FIELD_CODES = new Set([
   "LibellePlanningRessource",
   "Type",
@@ -50,13 +53,18 @@ interface AppointmentCardProps {
   mobileAppointmentFieldOptions?: MobileAppointmentFieldOption[];
   preview?: boolean;
   showCard?: boolean;
+  showFieldNamesCard?: boolean;
+  fieldNamesColumn?: "primaryFields" | "secondaryFields";
+  dragSurface?: "fieldNames" | "values";
+  draggedFieldCode?: string;
   dragOverInfo?: DragOverTarget;
-  onPreviewDrop?: (event: React.DragEvent<HTMLDivElement>, column: "primaryFields" | "secondaryFields", rowIndex?: number, fieldCode?: string) => void;
-  onPreviewDragOver?: (event: React.DragEvent<HTMLDivElement>, column: "primaryFields" | "secondaryFields", rowIndex: number, fieldCode?: string, blocked?: boolean) => void;
+  onPreviewDrop?: (event: React.DragEvent<HTMLDivElement>, column: "primaryFields" | "secondaryFields", rowIndex?: number, fieldCode?: string, insertRow?: boolean) => void;
+  onPreviewDragOver?: (event: React.DragEvent<HTMLDivElement>, column: "primaryFields" | "secondaryFields", rowIndex: number, fieldCode?: string, blocked?: boolean, insertRow?: boolean, surface?: "fieldNames" | "values") => void;
   onPreviewDragLeave?: () => void;
   onRemoveField?: (column: "primaryFields" | "secondaryFields", fieldCode: string) => void;
   onRemoveRow?: (column: "primaryFields" | "secondaryFields", rowIndex: number) => void;
   onFieldDragStart?: (event: React.DragEvent, column: "primaryFields" | "secondaryFields", fieldCode: string) => void;
+  highlightedFieldCode?: string;
 }
 
 export const AppointmentCard: React.FC<AppointmentCardProps> = ({
@@ -67,6 +75,10 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
   mobileAppointmentFieldOptions = [],
   preview = false,
   showCard = true,
+  showFieldNamesCard = false,
+  fieldNamesColumn = "primaryFields",
+  dragSurface = "values",
+  draggedFieldCode,
   dragOverInfo = null,
   onPreviewDrop,
   onPreviewDragOver,
@@ -74,10 +86,13 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
   onRemoveField,
   onRemoveRow,
   onFieldDragStart,
+  highlightedFieldCode,
 }) => {
   const [isSecondaryOpen, setIsSecondaryOpen] = useState(false);
   const [drawerOffset, setDrawerOffset] = useState(0);
   const touchStartY = useRef<number | null>(null);
+  const activeDragOverInfo = dragOverInfo?.surface === dragSurface ? dragOverInfo : null;
+  const fieldNamesDragOverInfo = dragOverInfo?.surface === "fieldNames" ? dragOverInfo : null;
 
   const item = items.find(i => i.IdPlanningRessource === app.IdPlanningRessource);
   const isProjectAppointment = item?.Type === 'Projet';
@@ -87,12 +102,62 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
   const formatDate = (value: Date) => format(value, 'dd/MM/yyyy HH:mm', { locale: fr });
 
   const customResolvers: Partial<Record<string, () => string>> = {
+    Type: () => (isProjectAppointment ? 'Chantier' : (item?.Type || '')),
     DebutPlanningEvenement: () => formatDate(startDate),
     FinPlanningEvenement: () => formatDate(endDate),
     IdEmploye: () => (employee ? `${employee.Nom} ${employee.Prenom}`.trim() : ''),
     Etiquette: () => app.Etiquette?.LibelleLongPlanningEtiquette || '',
     ChefChantier: () => (item?.Type === 'Projet' ? item.ChefChantier || '' : ''),
     ChargeAffaire: () => (item?.Type === 'Projet' ? item.ChargeAffaire || '' : ''),
+  };
+
+  const renderRowInsertionZone = (
+    column: "primaryFields" | "secondaryFields",
+    rowIndex: number,
+    rowCount: number,
+    surface: "fieldNames" | "values" = dragSurface
+  ) => {
+    if (!preview) return null;
+
+    const blocked = rowCount >= MAX_ROWS;
+    const surfaceDragOverInfo = dragOverInfo?.surface === surface ? dragOverInfo : null;
+    const isTarget = surfaceDragOverInfo?.column === column &&
+      surfaceDragOverInfo?.rowIndex === rowIndex &&
+      surfaceDragOverInfo?.insertRow;
+
+    return (
+      <div
+        key={`${column}-insert-row-${rowIndex}`}
+        className={`h-3 -my-1 flex items-center rounded transition-colors ${
+          isTarget
+            ? blocked
+              ? 'bg-red-100'
+              : 'bg-primary/10'
+            : ''
+        }`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = blocked ? 'none' : 'move';
+          onPreviewDragOver?.(e, column, rowIndex, undefined, blocked, true, surface);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onPreviewDragLeave?.();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!blocked) onPreviewDrop?.(e, column, rowIndex, undefined, true);
+        }}
+        aria-label={blocked ? 'Nombre maximum de lignes atteint' : 'Insérer une ligne'}
+      >
+        {isTarget && (
+          <span className={`h-0.5 w-full rounded ${blocked ? 'bg-red-500' : 'bg-primary'}`} />
+        )}
+      </div>
+    );
   };
 
   const isConfiguredSpecialField = (field: string) =>
@@ -169,6 +234,11 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
 
   const getFieldOption = (field: string) => mobileAppointmentFieldOptions
     .find((option) => option.Code === field);
+
+  const getFieldLabel = (field: string) => {
+    if (field === 'AdresseChantier') return 'Adresse du chantier';
+    return getFieldOption(field)?.Libelle || field;
+  };
     
   const isSpecialField = (field: string) =>
     isConfiguredSpecialField(field) || mobileAppointmentFieldOptions
@@ -181,13 +251,191 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
   const primaryFields = displayedPrimaryRows.flatMap(getFields);
   const secondaryFields = secondaryRows.flatMap(getFields);
   const titleRow = getFields(displayedPrimaryRows[0] || []).filter(({ field }, index, fields) =>
-    isSpecialField(field) || fields.slice(0, index).filter(({ field: previousField }) => !isSpecialField(previousField)).length < MAX_TITLE_FIELDS
+    fields.slice(0, index).length < MAX_TITLE_FIELDS
   );
   const titleField = titleRow[0] || primaryFields[0];
   const canRenderCard = showCard;
+  const fieldNameRows = fieldNamesColumn === "primaryFields"
+    ? displayedPrimaryRows
+    : secondaryRows;
+
+  const renderFieldNamesCard = () => {
+    if (!showFieldNamesCard) return null;
+
+    const isPrimary = fieldNamesColumn === "primaryFields";
+    const nameRows = fieldNameRows.map((row) => row.filter((field) => getFieldLabel(field)));
+
+    return (
+      <div
+        className={`${preview ? 'rounded-xl p-3 mb-0' : 'rounded-3xl p-5 mb-4'} border mb-5 flex items-start group transition-all duration-300`}
+        style={{
+          backgroundColor: 'var(--bg-card)',
+          borderColor: 'var(--border-light)',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      >
+        {isPrimary && (
+          <div
+            className="w-1.5 h-12 rounded-full mr-4 mt-1 shrink-0"
+            style={{ backgroundColor: item?.CouleurFondPlanningRessource || 'var(--color-primary-500)' }}
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          {isPrimary ? (
+            <>
+              <h3 className={`${preview ? 'text-sm overflow-visible' : 'text-base truncate'} font-semibold mb-1`} style={{ color: 'var(--text-primary)' }}>
+                <span className="inline-flex items-center gap-1 flex-wrap">
+                  {(nameRows[0] || []).map((field, index) => (
+                    <React.Fragment key={field}>
+                      {index > 0 && <span aria-hidden="true">·</span>}
+                      {renderFieldWithDropZone(
+                        "primaryFields",
+                        0,
+                        field,
+                        <span>{getFieldLabel(field)}</span>,
+                        "fieldNames"
+                      )}
+                    </React.Fragment>
+                  ))}
+                </span>
+              </h3>
+              <div className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                {nameRows.slice(1, 5).map((row, rowIndex) => (
+                  <React.Fragment key={`field-names-primary-row-${rowIndex}`}>
+                    {renderRowInsertionZone("primaryFields", rowIndex + 1, nameRows.length, "fieldNames")}
+                  <div
+                    className={`relative flex min-w-0 items-center gap-1 flex-wrap min-h-[20px] rounded p-0.5 pr-6 ${
+                      isBlockedRowTarget("primaryFields", rowIndex + 1, "fieldNames") ? 'pb-4' : ''
+                    } ${
+                      fieldNamesDragOverInfo?.column === "primaryFields" &&
+                      fieldNamesDragOverInfo?.rowIndex === rowIndex + 1 &&
+                      !fieldNamesDragOverInfo?.fieldCode &&
+                      !fieldNamesDragOverInfo?.insertRow
+                        ? fieldNamesDragOverInfo?.blocked
+                          ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
+                          : 'ring-1 ring-dashed ring-primary bg-primary/5'
+                        : ''
+                    }`}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      const blocked = isRowFull(
+                        "primaryFields",
+                        rowIndex + 1,
+                        row,
+                        draggedFieldCode || event.dataTransfer.getData("text/plain")
+                      );
+                      event.dataTransfer.dropEffect = blocked ? "none" : "move";
+                      onPreviewDragOver?.(event, "primaryFields", rowIndex + 1, undefined, blocked, false, "fieldNames");
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const blocked = isRowFull(
+                        "primaryFields",
+                        rowIndex + 1,
+                        row,
+                        draggedFieldCode || event.dataTransfer.getData("text/plain")
+                      );
+                      if (!blocked) onPreviewDrop?.(event, "primaryFields", rowIndex + 1);
+                    }}
+                  >
+                    {row.map((field, fieldIndex) => (
+                      <React.Fragment key={field}>
+                        {fieldIndex > 0 && <span aria-hidden="true">·</span>}
+                        {renderFieldWithDropZone(
+                          "primaryFields",
+                          rowIndex + 1,
+                          field,
+                          <span className="font-medium">{getFieldLabel(field)}</span>,
+                          "fieldNames"
+                        )}
+                      </React.Fragment>
+                    ))}
+                    {renderBlockedRowMessage("primaryFields", rowIndex + 1, "fieldNames")}
+                  </div>
+                  </React.Fragment>
+                ))}
+                {renderRowInsertionZone("primaryFields", nameRows.length, nameRows.length, "fieldNames")}
+              </div>
+            </>
+          ) : (
+            <>
+            <h2 className={`${preview ? 'text-sm' : 'text-[18px]'} font-semibold text-primary mb-2`}>
+              Détails du rendez-vous
+            </h2>
+            <div className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+              {nameRows.map((row, rowIndex) => (
+                <React.Fragment key={`field-names-secondary-row-${rowIndex}`}>
+                {renderRowInsertionZone("secondaryFields", rowIndex, nameRows.length, "fieldNames")}
+                <div
+                  className={`relative min-w-0 min-h-[56px] py-2 pr-6 flex items-start gap-1 border-b border-ultra-light last:border-b-0 ${
+                    isBlockedRowTarget("secondaryFields", rowIndex, "fieldNames") ? 'pb-7' : ''
+                  } ${
+                    fieldNamesDragOverInfo?.column === "secondaryFields" &&
+                    fieldNamesDragOverInfo?.rowIndex === rowIndex &&
+                    !fieldNamesDragOverInfo?.fieldCode &&
+                    !fieldNamesDragOverInfo?.insertRow
+                      ? fieldNamesDragOverInfo?.blocked
+                        ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
+                        : 'ring-1 ring-dashed ring-primary bg-primary/5'
+                      : ''
+                  }`}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    const blocked = isRowFull(
+                      "secondaryFields",
+                      rowIndex,
+                      row,
+                      draggedFieldCode || event.dataTransfer.getData("text/plain")
+                    );
+                    event.dataTransfer.dropEffect = blocked ? "none" : "move";
+                    onPreviewDragOver?.(event, "secondaryFields", rowIndex, undefined, blocked, false, "fieldNames");
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const blocked = isRowFull(
+                      "secondaryFields",
+                      rowIndex,
+                      row,
+                      draggedFieldCode || event.dataTransfer.getData("text/plain")
+                    );
+                    if (!blocked) onPreviewDrop?.(event, "secondaryFields", rowIndex);
+                  }}
+                >
+                  {row.map((field, fieldIndex) => (
+                    <React.Fragment key={field}>
+                      {fieldIndex > 0 && <span aria-hidden="true">·</span>}
+                      {renderFieldWithDropZone(
+                        "secondaryFields",
+                        rowIndex,
+                        field,
+                        <span className="flex min-w-0 items-start gap-1">
+                        {!isSpecialField(field) && (
+                          <span className="mt-0.5 shrink-0 text-secondary">
+                            {getFieldIcon(field)}
+                          </span>
+                        )}
+                        <span className="font-medium">{getFieldLabel(field)}</span>
+                        </span>,
+                        "fieldNames"
+                      )}
+                    </React.Fragment>
+                  ))}
+                  {renderBlockedRowMessage("secondaryFields", rowIndex, "fieldNames")}
+                </div>
+                </React.Fragment>
+              ))}
+              {renderRowInsertionZone("secondaryFields", nameRows.length, nameRows.length, "fieldNames")}
+            </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   
-  const countRegularFields = (fields: string[]) => fields.filter((field) => !isSpecialField(field)).length;
+  const countFields = (fields: string[], excludedField?: string) =>
+    fields.filter((field) => field !== excludedField).length;
   const getRowLimit = (column: "primaryFields" | "secondaryFields", rowIndex: number) => {
     if (column === "secondaryFields") return MAX_SECONDARY_FIELDS;
     return rowIndex === 0 ? MAX_TITLE_FIELDS : MAX_FIELDS_PER_PRIMARY_ROW;
@@ -198,8 +446,40 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     fields: string[],
     draggedField?: string
   ) =>
-    countRegularFields(fields) >= getRowLimit(column, rowIndex) &&
-    !isSpecialField(draggedField || '');
+    countFields(fields, draggedField) >= getRowLimit(column, rowIndex);
+
+  const isBlockedRowTarget = (
+    column: "primaryFields" | "secondaryFields",
+    rowIndex: number,
+    surface: "fieldNames" | "values" = dragSurface
+  ) =>
+    preview &&
+    dragOverInfo?.surface === surface &&
+    dragOverInfo.column === column &&
+    dragOverInfo.rowIndex === rowIndex &&
+    dragOverInfo.blocked === true;
+
+  const renderBlockedRowMessage = (
+    column: "primaryFields" | "secondaryFields",
+    rowIndex: number,
+    surface: "fieldNames" | "values" = dragSurface
+  ) => {
+    if (
+      !preview ||
+      dragOverInfo?.surface !== surface ||
+      dragOverInfo.column !== column ||
+      dragOverInfo.rowIndex !== rowIndex ||
+      !isBlockedRowTarget(column, rowIndex, surface)
+    ) {
+      return null;
+    }
+
+    return (
+      <span className="pointer-events-none absolute bottom-0 left-1 right-6 text-[11px] font-medium leading-4 text-red-600" role="status">
+        Ligne pleine : impossible d&apos;ajouter un élément
+      </span>
+    );
+  };
 
   const getFieldIcon = (field: string) => {
     const iconProps = { size: 16, strokeWidth: 1.8 };
@@ -220,11 +500,21 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     column: "primaryFields" | "secondaryFields",
     rowIndex: number,
     fieldCode: string,
-    content: React.ReactNode
+    content: React.ReactNode,
+    surface: "fieldNames" | "values" = dragSurface
   ) => {
     if (!preview) return content;
 
-    const isTarget = dragOverInfo?.column === column && dragOverInfo?.rowIndex === rowIndex && dragOverInfo?.fieldCode === fieldCode;
+    const isTarget = dragOverInfo?.surface === surface &&
+      dragOverInfo?.column === column &&
+      dragOverInfo?.rowIndex === rowIndex &&
+      dragOverInfo?.fieldCode === fieldCode;
+    const draggedCode = draggedFieldCode;
+    const rowFields = column === "primaryFields"
+      ? displayedPrimaryRows[rowIndex] || []
+      : secondaryRows[rowIndex] || [];
+    const blocked = isRowFull(column, rowIndex, rowFields, draggedCode);
+    const isHighlighted = highlightedFieldCode === fieldCode;
 
     return (
       <div
@@ -237,7 +527,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onPreviewDragOver?.(e, column, rowIndex, fieldCode);
+          onPreviewDragOver?.(e, column, rowIndex, fieldCode, blocked, false, surface);
         }}
         onDragLeave={(e) => {
           e.preventDefault();
@@ -247,9 +537,11 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onPreviewDrop?.(e, column, rowIndex, fieldCode);
+          if (!blocked) onPreviewDrop?.(e, column, rowIndex, fieldCode, false);
         }}
-        className="relative group/field inline-flex items-center cursor-grab active:cursor-grabbing"
+        className={`overflow-visible relative group/field inline-flex w-fit min-w-0 max-w-full items-center cursor-grab active:cursor-grabbing ${
+          isHighlighted ? 'ring-2 ring-primary ring-offset-1 rounded' : ''
+        }`}
       >
         {isTarget && (
           <span className="absolute -left-1 top-0 bottom-0 w-1 bg-primary rounded-full z-20 animate-pulse" />
@@ -263,7 +555,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
             e.stopPropagation();
             onRemoveField?.(column, fieldCode);
           }}
-          className="cursor-pointer ml-1 opacity-0 group-hover/field:opacity-100 p-0.5 text-red-500 hover:bg-red-50 rounded transition-opacity cursor-pointer"
+          className="cursor-pointer ml-1 shrink-0 opacity-0 group-hover/field:opacity-100 p-0.5 text-red-500 hover:bg-red-50 rounded transition-opacity"
           title="Retirer ce champ"
         >
           <X size={12} />
@@ -280,6 +572,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
       onDragOver={preview ? (e) => e.stopPropagation() : undefined}
       onDrop={preview ? (e) => e.stopPropagation() : undefined}
     >
+      {renderFieldNamesCard()}
       {canRenderCard && (
         <div 
           className={`${preview ? 'rounded-xl p-3 mb-0' : 'rounded-3xl p-5 mb-4'} border flex items-start group transition-all duration-300 ${!preview ? 'cursor-pointer' : ''}`}
@@ -306,11 +599,13 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
           />
           <div className="flex-1 min-w-0">
             <h3
-              className={`${preview ? 'text-sm' : 'text-base'} font-semibold mb-1 transition-colors truncate rounded ${
-                isRowFull("primaryFields", 0, displayedPrimaryRows[0] || []) ? 'cursor-not-allowed' : 'cursor-copy'
+              className={`${preview ? 'text-sm overflow-visible' : 'text-base truncate'} relative font-semibold mb-1 transition-colors rounded ${
+                isBlockedRowTarget("primaryFields", 0) ? 'pb-4' : ''
               } ${
-                preview && dragOverInfo?.column === 'primaryFields' && dragOverInfo?.rowIndex === 0 && !dragOverInfo?.fieldCode
-                  ? dragOverInfo.blocked
+                isRowFull("primaryFields", 0, displayedPrimaryRows[0] || [], draggedFieldCode) ? 'cursor-not-allowed' : 'cursor-copy'
+              } ${
+                preview && activeDragOverInfo?.column === 'primaryFields' && activeDragOverInfo?.rowIndex === 0 && !activeDragOverInfo?.fieldCode
+                  ? activeDragOverInfo?.blocked
                     ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
                     : 'ring-1 ring-dashed ring-primary bg-primary/5'
                   : ''
@@ -321,18 +616,18 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                   "primaryFields",
                   0,
                   displayedPrimaryRows[0] || [],
-                  e.dataTransfer.getData("text/plain")
+                  draggedFieldCode || e.dataTransfer.getData("text/plain")
                 );
                 if (blocked) {
                   e.dataTransfer.dropEffect = 'none';
                   e.preventDefault();
                   e.stopPropagation();
-                  onPreviewDragOver?.(e, "primaryFields", 0, titleField?.field, true);
+                  onPreviewDragOver?.(e, "primaryFields", 0, titleField?.field, true, false, dragSurface);
                   return;
                 }
                 e.preventDefault();
                 e.stopPropagation();
-                onPreviewDragOver?.(e, "primaryFields", 0, titleField?.field);
+                onPreviewDragOver?.(e, "primaryFields", 0, titleField?.field, undefined, false, dragSurface);
               }}
               onDragLeave={(e) => {
                 if (!preview) return;
@@ -361,6 +656,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                   )
                 )}
               </span>
+              {renderBlockedRowMessage("primaryFields", 0)}
             </h3>
 
             <div className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
@@ -368,54 +664,66 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 const actualRowIndex = rowIndex + 1;
                 const fields = getFields(row);
                 return (
-                  <div 
-                    key={`primary-row-${actualRowIndex}`}
-                    className={`flex items-center gap-1 flex-wrap min-h-[20px] rounded p-0.5 ${
-                      isRowFull("primaryFields", actualRowIndex, row) ? 'cursor-not-allowed' : 'cursor-copy'
-                    } ${
-                      preview && dragOverInfo?.column === 'primaryFields' && dragOverInfo?.rowIndex === actualRowIndex && !dragOverInfo?.fieldCode
-                        ? dragOverInfo.blocked
-                          ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
-                          : 'ring-1 ring-dashed ring-primary bg-primary/5'
-                        : ''
-                    }`}
-                    onDragOver={(e) => {
-                      if (!preview) return;
-                      const blocked = isRowFull(
-                        "primaryFields",
-                        actualRowIndex,
-                        row,
-                        e.dataTransfer.getData("text/plain")
-                      );
-                      e.dataTransfer.dropEffect = blocked ? 'none' : 'move';
-                      e.preventDefault();
-                      onPreviewDragOver?.(e, "primaryFields", actualRowIndex, undefined, blocked);
-                    }}
-                    onDrop={(e) => {
-                      if (!preview) return;
-                      e.preventDefault();
-                      onPreviewDrop?.(e, "primaryFields", actualRowIndex);
-                    }}
-                  >
-                    {fields.map(({ field, value }) => (
-                      <React.Fragment key={field}>
-                        {renderFieldWithDropZone("primaryFields", actualRowIndex, field, <span>{value}</span>)}
-                      </React.Fragment>
-                    ))}
-                    {preview && (
-                      <button
-                        type="button"
-                        onClick={() => onRemoveRow?.("primaryFields", actualRowIndex)}
-                        className="cursor-pointer ml-auto shrink-0 rounded p-0.5 text-secondary hover:bg-red-50 hover:text-red-600"
-                        title="Supprimer la ligne"
-                        aria-label="Supprimer la ligne principale"
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
+                  <React.Fragment key={`primary-row-${actualRowIndex}`}>
+                    {renderRowInsertionZone("primaryFields", actualRowIndex, displayedPrimaryRows.length)}
+                    <div
+                      className={`relative flex min-w-0 items-center gap-1 flex-wrap min-h-[20px] rounded p-0.5 pr-6 ${
+                        isBlockedRowTarget("primaryFields", actualRowIndex) ? 'pb-4' : ''
+                      } ${
+                        isRowFull("primaryFields", actualRowIndex, row, draggedFieldCode) ? 'cursor-not-allowed' : 'cursor-copy'
+                      } ${
+                        preview && activeDragOverInfo?.column === 'primaryFields' && activeDragOverInfo?.rowIndex === actualRowIndex && !activeDragOverInfo?.fieldCode && !activeDragOverInfo?.insertRow
+                          ? activeDragOverInfo?.blocked
+                            ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
+                            : 'ring-1 ring-dashed ring-primary bg-primary/5'
+                          : ''
+                      }`}
+                      onDragOver={(e) => {
+                        if (!preview) return;
+                        const blocked = isRowFull(
+                          "primaryFields",
+                          actualRowIndex,
+                          row,
+                          draggedFieldCode || e.dataTransfer.getData("text/plain")
+                        );
+                        e.dataTransfer.dropEffect = blocked ? 'none' : 'move';
+                        e.preventDefault();
+                        onPreviewDragOver?.(e, "primaryFields", actualRowIndex, undefined, blocked, false, dragSurface);
+                      }}
+                      onDrop={(e) => {
+                        if (!preview) return;
+                        e.preventDefault();
+                        const blocked = isRowFull(
+                          "primaryFields",
+                          actualRowIndex,
+                          row,
+                          draggedFieldCode || e.dataTransfer.getData("text/plain")
+                        );
+                        if (!blocked) onPreviewDrop?.(e, "primaryFields", actualRowIndex);
+                      }}
+                    >
+                      {fields.map(({ field, value }) => (
+                        <React.Fragment key={field}>
+                          {renderFieldWithDropZone("primaryFields", actualRowIndex, field, <span className="max-w-full break-words">{value}</span>)}
+                        </React.Fragment>
+                      ))}
+                      {renderBlockedRowMessage("primaryFields", actualRowIndex)}
+                      {preview && (
+                        <button
+                          type="button"
+                          onClick={() => onRemoveRow?.("primaryFields", actualRowIndex)}
+                          className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-secondary hover:bg-red-50 hover:text-red-600"
+                          title="Supprimer la ligne"
+                          aria-label="Supprimer la ligne principale"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </React.Fragment>
                 );
               })}
+              {renderRowInsertionZone("primaryFields", displayedPrimaryRows.length, displayedPrimaryRows.length)}
             </div>
           </div>
         </div>
@@ -459,13 +767,16 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
               } : undefined}
             >
               {secondaryRows.map((row, rowIndex) => (
+                <React.Fragment key={`secondary-row-${rowIndex}`}>
+                {renderRowInsertionZone("secondaryFields", rowIndex, secondaryRows.length)}
                 <div 
-                  key={`secondary-row-${rowIndex}`} 
-                  className={`min-h-[56px] py-2 flex items-start gap-1 border-b border-ultra-light last:border-b-0 ${
-                    isRowFull("secondaryFields", rowIndex, row) ? 'cursor-not-allowed' : 'cursor-copy'
+                  className={`relative min-w-0 min-h-[56px] py-2 pr-6 flex items-start gap-1 border-b border-ultra-light last:border-b-0 ${
+                    isBlockedRowTarget("secondaryFields", rowIndex) ? 'pb-7' : ''
                   } ${
-                    preview && dragOverInfo?.column === 'secondaryFields' && dragOverInfo?.rowIndex === rowIndex && !dragOverInfo?.fieldCode
-                      ? dragOverInfo.blocked
+                    isRowFull("secondaryFields", rowIndex, row, draggedFieldCode) ? 'cursor-not-allowed' : 'cursor-copy'
+                  } ${
+                    preview && activeDragOverInfo?.column === 'secondaryFields' && activeDragOverInfo?.rowIndex === rowIndex && !activeDragOverInfo?.fieldCode && !activeDragOverInfo?.insertRow
+                      ? activeDragOverInfo?.blocked
                         ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
                         : 'ring-1 ring-dashed ring-primary bg-primary/5'
                       : ''
@@ -476,16 +787,22 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                       "secondaryFields",
                       rowIndex,
                       row,
-                      e.dataTransfer.getData("text/plain")
+                      draggedFieldCode || e.dataTransfer.getData("text/plain")
                     );
                     e.dataTransfer.dropEffect = blocked ? 'none' : 'move';
                     e.preventDefault();
-                    onPreviewDragOver?.(e, "secondaryFields", rowIndex, undefined, blocked);
+                    onPreviewDragOver?.(e, "secondaryFields", rowIndex, undefined, blocked, false, dragSurface);
                   }}
                   onDrop={(e) => {
                     if (!preview) return;
                     e.preventDefault();
-                    onPreviewDrop?.(e, "secondaryFields", rowIndex);
+                    const blocked = isRowFull(
+                      "secondaryFields",
+                      rowIndex,
+                      row,
+                      draggedFieldCode || e.dataTransfer.getData("text/plain")
+                    );
+                    if (!blocked) onPreviewDrop?.(e, "secondaryFields", rowIndex);
                   }}
                 >
                   {getFields(row).map(({ field, value }, fieldIndex) =>
@@ -493,26 +810,27 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                       "secondaryFields",
                       rowIndex,
                       field,
-                      <div key={field} className={`flex min-w-0 items-start ${isSpecialField(field) ? 'gap-0' : 'gap-1'}`}>
+                      <span key={field} className={`inline-flex min-w-0 max-w-full items-start ${isSpecialField(field) ? 'gap-0' : 'gap-1'}`}>
                         {!isSpecialField(field) && (
                           <span className="mt-0.5 shrink-0 text-secondary">{getFieldIcon(field)}</span>
                         )}
-                        <div className="min-w-0">
+                        <span className="min-w-0">
                           {!isSpecialField(field) && (
                             <span className="block text-[11px] font-semibold uppercase leading-4 tracking-wide text-primary/60">
-                              {getFieldOption(field)?.Libelle || field}
+                              {getFieldLabel(field)}
                             </span>
                           )}
-                          <span className={`${preview ? 'text-xs' : 'text-sm'} ${isSpecialField(field) ? '' : 'mt-0.5'} block leading-5 text-primary`}>{value}</span>
-                        </div>
-                      </div>
+                          <span className={`${preview ? 'text-xs' : 'text-sm'} ${isSpecialField(field) ? '' : 'mt-0.5'} block max-w-full break-words leading-5 text-primary`}>{value}</span>
+                        </span>
+                      </span>
                     )
                   )}
+                  {renderBlockedRowMessage("secondaryFields", rowIndex)}
                   {preview && (
                     <button
                       type="button"
                       onClick={() => onRemoveRow?.("secondaryFields", rowIndex)}
-                      className="cursor-pointer ml-auto shrink-0 rounded p-0.5 text-secondary hover:bg-red-50 hover:text-red-600"
+                      className="cursor-pointer absolute right-1 top-2 rounded p-0.5 text-secondary hover:bg-red-50 hover:text-red-600"
                       title="Supprimer la ligne"
                       aria-label="Supprimer la ligne secondaire"
                     >
@@ -520,7 +838,9 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                     </button>
                   )}
                 </div>
+                </React.Fragment>
               ))}
+              {renderRowInsertionZone("secondaryFields", secondaryRows.length, secondaryRows.length)}
             </div>
           </div>
         </div>

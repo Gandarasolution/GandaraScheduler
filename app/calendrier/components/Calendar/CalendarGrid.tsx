@@ -45,6 +45,7 @@ interface CalendarGridProps {
   isMobile: boolean;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
+  overlapDisplayMode?: 'button' | 'count';
   mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   calendarConfig: CalendarConfig | null;
@@ -85,6 +86,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   initialEmployeeId,
   isDisplayWeekend,
   tagPlacement = 'hover',
+  overlapDisplayMode = 'button',
   mobileAppointmentDisplay,
   mainScrollRef,
   calendarConfig,
@@ -181,6 +183,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         nonWorkingDates={nonWorkingDates}
         isDisplayWeekend={isDisplayWeekend}
         tagPlacement={tagPlacement}
+        overlapDisplayMode={overlapDisplayMode}
         mainScrollRef={mainScrollRef}
         handleScrollY={handleScrollY}
         columnEmployeeRef={columnEmployeeRef}

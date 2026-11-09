@@ -868,6 +868,10 @@ input[type="date"] { font-variant-numeric: tabular-nums; }
 @utility calendar-non-working { background-color: var(--calendar-bg-non-working) !important; }
 
 
+@utility ring-primary { --tw-ring-color: var(--color-primary-500) !important; }
+
+
+
 
 @layer base {
   input[type="date"]::-webkit-calendar-picker-indicator {

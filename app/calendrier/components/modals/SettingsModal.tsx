@@ -2,7 +2,8 @@ import { memo, useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Modal, { useModalContext } from "./Modal";
 import Loader from "../ui/Loader";
 import { format, isBefore, startOfDay } from "date-fns";
-import { Appointment, DayType, Item, MobileAppointmentDisplayConfig, User } from "../../types";
+import { Appointment, DayType, ImageType, Item, MobileAppointmentDisplayConfig, User } from "../../types";
+import { DisplaySettings } from "../../utils/displaySettings";
 import { AppointmentCard, DragOverTarget, MobileAppointmentFieldOption } from "../Calendar/MobileCalendar/AppointmentList";
 
 type SettingsModalProps = {
@@ -65,14 +66,14 @@ type FieldColumn = "primaryFields" | "secondaryFields";
 type FieldRows = Record<FieldColumn, string[][]>;
 const MAX_SECONDARY_FIELDS = 2;
 const MAX_FIELDS_PER_PRIMARY_ROW = 3;
-const MAX_TITLE_FIELDS = 2;
+const MAX_TITLE_FIELDS = 3;
 const MAX_PRIMARY_ROWS = 5;
 
 const isSpecialField = (field: string, options: MobileAppointmentFieldOption[]) =>
   options.find((option) => option.Code === field)?.CaractereSpecial === true;
 
-const countRegularFields = (row: string[], options: MobileAppointmentFieldOption[]) =>
-  row.filter((field) => !isSpecialField(field, options)).length;
+const countRegularFields = (row: string[], options: MobileAppointmentFieldOption[], excludedField?: string) =>
+  row.filter((field) => field !== excludedField).length;
 
 const getFieldRows = (
   value: MobileAppointmentDisplayConfig,
@@ -82,13 +83,8 @@ const getFieldRows = (
     ? value.primaryFieldRows
       .slice(0, MAX_PRIMARY_ROWS)
       .map((row, index) => {
-        const maxRegularFields = index === 0 ? MAX_TITLE_FIELDS : MAX_FIELDS_PER_PRIMARY_ROW;
-        let regularFields = 0;
-        return row.filter((field) => {
-          if (isSpecialField(field, options)) return true;
-          regularFields += 1;
-          return regularFields <= maxRegularFields;
-        });
+        const maxFields = index === 0 ? MAX_TITLE_FIELDS : MAX_FIELDS_PER_PRIMARY_ROW;
+        return row.slice(0, maxFields);
       })
     : value.primaryFields.map((field) => [field]);
     
@@ -108,6 +104,133 @@ const getFieldRows = (
 };
 
 const flattenFieldRows = (rows: string[][]) => rows.flat();
+
+const DefaultDisplaySettingsEditor = ({
+  setting,
+  registerSaveAction,
+}: {
+  setting: {
+    value: DisplaySettings | null;
+    fetchDisplaySettings: () => Promise<{ success: boolean; message?: string }>;
+    onChange: (value: DisplaySettings) => Promise<{ success: boolean; message?: string }>;
+    onSelectImage: (onSelect: (image: ImageType) => void, actualImage?: ImageType) => void;
+  };
+  registerSaveAction: (action: { isDirty: boolean; save: () => Promise<void> } | null) => void;
+}) => {
+  const [localValue, setLocalValue] = useState<DisplaySettings | null>(setting.value);
+  const [isLoading, setIsLoading] = useState(!setting.value);
+  const [error, setError] = useState<string | null>(null);
+  const syncedValueRef = useRef<string | null>(
+    setting.value ? JSON.stringify(setting.value) : null
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    if (!setting.value) {
+      setIsLoading(true);
+      setting.fetchDisplaySettings()
+        .then((result) => {
+          if (mounted && !result.success) setError(result.message || "Erreur lors du chargement.");
+        })
+        .catch((err: any) => {
+          if (mounted) setError(err?.message || "Erreur lors du chargement.");
+        })
+        .finally(() => {
+          if (mounted) setIsLoading(false);
+        });
+    }
+    return () => { mounted = false; };
+  }, [setting.value, setting.fetchDisplaySettings]);
+
+  useEffect(() => {
+    if (!setting.value) return;
+
+    const serializedValue = JSON.stringify(setting.value);
+    if (serializedValue !== syncedValueRef.current) {
+      syncedValueRef.current = serializedValue;
+      setLocalValue(setting.value);
+    }
+  }, [setting.value]);
+
+  const isDirty = !!localValue && JSON.stringify(localValue) !== JSON.stringify(setting.value);
+  const save = useCallback(async () => {
+    if (!localValue) return;
+    const result = await setting.onChange(localValue);
+    if (!result.success) throw new Error(result.message || "Erreur lors de la sauvegarde.");
+  }, [localValue, setting]);
+
+  useEffect(() => {
+    registerSaveAction({ isDirty, save });
+    return () => registerSaveAction(null);
+  }, [isDirty, save, registerSaveAction]);
+
+  const updateColor = (key: keyof Pick<DisplaySettings, "CouleurBordureParDefaut" | "CouleurFondParDefaut" | "CouleurTexteParDefaut">, value: string) => {
+    setLocalValue((previous) => previous ? { ...previous, [key]: value } : previous);
+  };
+
+  if (isLoading) return <Loader message="Chargement des options d’affichage..." />;
+  if (!localValue) return <p className="text-sm text-red-600">{error || "Options d’affichage indisponibles."}</p>;
+
+  const image = localValue.ImageParDefaut;
+  const selectedImage: ImageType | undefined = image
+    ? { id: Number(image.id), image: image.url }
+    : undefined;
+
+  return (
+    <div className="space-y-5 w-full">
+      <div>
+        <h4 className="text-sm font-semibold text-primary">Valeurs par défaut</h4>
+        <p className="text-xs text-secondary mt-1">Ces valeurs sont utilisées lors de la création d’une nouvelle ressource.</p>
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {([
+          ["CouleurFondParDefaut", "Couleur de fond"],
+          ["CouleurBordureParDefaut", "Couleur de bordure"],
+          ["CouleurTexteParDefaut", "Couleur de texte"],
+        ] as const).map(([key, label]) => (
+          <label key={key} className="flex flex-col gap-2 text-sm text-primary">
+            {label}
+            <div className="flex items-center gap-2 border border-default rounded-xl p-2">
+              <input
+                type="color"
+                value={normalizeColorForInput(localValue[key])}
+                onChange={(event) => updateColor(key, event.target.value)}
+                className="h-8 w-10 cursor-pointer"
+              />
+              <input
+                type="text"
+                value={localValue[key]}
+                onChange={(event) => updateColor(key, event.target.value)}
+                className="min-w-0 flex-1 bg-transparent font-mono text-xs uppercase focus:outline-none"
+              />
+            </div>
+          </label>
+        ))}
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="w-16 h-16 rounded-xl border border-default overflow-hidden bg-secondary-bg flex items-center justify-center">
+          {image ? <img src={image.url} alt="Image par défaut" className="w-full h-full object-contain" /> : <span className="text-xs text-secondary">Aucune</span>}
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-primary">Image par défaut</span>
+          <button
+            type="button"
+            className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-medium cursor-pointer"
+            onClick={() => setting.onSelectImage((selected) => {
+              setLocalValue((previous) => previous ? {
+                ...previous,
+                ImageParDefaut: { id: selected.id, url: selected.image },
+              } : previous);
+            }, selectedImage)}
+          >
+            Choisir une image
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 
 
@@ -133,6 +256,7 @@ const MobileDisplayEditor = ({
   } | null>(null);
 
   const [dragOverInfo, setDragOverInfo] = useState<DragOverTarget>(null);
+  const [highlightedFieldCode, setHighlightedFieldCode] = useState<string | null>(null);
 
   // --- NOUVEAU : États pour gérer le chargement des options ---
   const [isLoadingOptions, setIsLoadingOptions] = useState(typeof setting.fetchFieldOptions === 'function');
@@ -242,7 +366,8 @@ const MobileDisplayEditor = ({
     event: React.DragEvent<HTMLDivElement>,
     column: "primaryFields" | "secondaryFields",
     targetRowIndex?: number,
-    targetFieldCode?: string
+    targetFieldCode?: string,
+    insertRow = false
   ) => {
     event.preventDefault();
     const fieldCode = (event.dataTransfer.getData("text/plain") || draggedItem?.fieldCode) as string;
@@ -266,12 +391,25 @@ const MobileDisplayEditor = ({
         secondaryRows = secondaryRows.map((row) => row.filter((f) => f !== fieldCode));
       }
 
-      // CORRECTION : Nous avons supprimé la logique qui retirait le champ de "l'autre" colonne (sourceColumn).
-      // Cela permet de copier un champ du Principal vers Secondaire (ou inversement) sans qu'il disparaisse.
+      // Un déplacement entre deux lignes de la même section doit retirer le champ de sa ligne d'origine.
+      // Un déplacement entre les sections conserve volontairement le champ dans la section source.
+      if (draggedItem?.column === column) {
+        if (column === "primaryFields") {
+          primaryRows = primaryRows.map((row) => row.filter((f) => f !== fieldCode));
+        } else {
+          secondaryRows = secondaryRows.map((row) => row.filter((f) => f !== fieldCode));
+        }
+      }
 
       let targetRows = column === "primaryFields" ? primaryRows : secondaryRows;
       
       const rowIndex = targetRowIndex ?? (targetRows.length > 0 ? targetRows.length - 1 : 0);
+
+      if (insertRow) {
+        const maxRows = column === "primaryFields" ? MAX_PRIMARY_ROWS : 5;
+        if (targetRows.length >= maxRows) return prev;
+        targetRows.splice(Math.max(0, Math.min(rowIndex, targetRows.length)), 0, []);
+      }
 
       if (!targetRows[rowIndex]) {
         targetRows[rowIndex] = [];
@@ -284,8 +422,7 @@ const MobileDisplayEditor = ({
         : column === "primaryFields"
           ? MAX_FIELDS_PER_PRIMARY_ROW
           : MAX_SECONDARY_FIELDS;
-      if (countRegularFields(currentRow, setting.options || []) >= maxFields &&
-        !isSpecialField(fieldCode, setting.options || [])) {
+      if (countRegularFields(currentRow, setting.options || [], fieldCode) >= maxFields) {
         return prev;
       }
 
@@ -300,8 +437,9 @@ const MobileDisplayEditor = ({
         currentRow.push(fieldCode);
       }
 
-      primaryRows = primaryRows.filter((row, idx) => row.length > 0 || idx === 0);
-      secondaryRows = secondaryRows.filter((row, idx) => row.length > 0 || idx === 0);
+      // Une ligne vide ne doit jamais rester dans la configuration après un déplacement.
+      primaryRows = primaryRows.filter((row) => row.length > 0);
+      secondaryRows = secondaryRows.filter((row) => row.length > 0);
 
       return {
         ...prev,
@@ -359,7 +497,11 @@ const MobileDisplayEditor = ({
                   event.dataTransfer.effectAllowed = "move";
                   event.dataTransfer.setData("text/plain", option.Code);
                 }}
-                className="flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors"
+                onMouseEnter={() => setHighlightedFieldCode(option.Code)}
+                onMouseLeave={() => setHighlightedFieldCode(null)}
+                className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
+                  highlightedFieldCode === option.Code ? 'ring-2 ring-primary ring-offset-1' : ''
+                }`}
               >
                 <span className="font-medium truncate">{option.Libelle}</span>
               </div>
@@ -397,14 +539,18 @@ const MobileDisplayEditor = ({
                 employees={[previewEmployee]}
                 mobileAppointmentFieldOptions={setting.options || []}
                 preview
+                showFieldNamesCard
+                fieldNamesColumn="primaryFields"
+                draggedFieldCode={draggedItem?.fieldCode}
                 dragOverInfo={dragOverInfo}
+                highlightedFieldCode={highlightedFieldCode || undefined}
                 onFieldDragStart={(e, column, fieldCode) => {
                   setDraggedItem({ column, fieldCode });
                   e.dataTransfer.effectAllowed = "move";
                   e.dataTransfer.setData("text/plain", fieldCode);
                 }}
-                        onPreviewDragOver={(_, column, rowIndex, fieldCode, blocked) => {
-                          setDragOverInfo({ column, rowIndex, fieldCode, blocked });
+                        onPreviewDragOver={(_, column, rowIndex, fieldCode, blocked, insertRow, surface) => {
+                                  setDragOverInfo({ column, rowIndex, fieldCode, blocked, insertRow, surface });
                 }}
                 onPreviewDragLeave={() => setDragOverInfo(null)}
                 onPreviewDrop={handlePreviewDrop}
@@ -415,6 +561,7 @@ const MobileDisplayEditor = ({
                   secondaryFields: [],
                   primaryFieldRows: localValue.primaryFieldRows,
                 }}
+                dragSurface="values"
               />
             </div>
 
@@ -438,14 +585,16 @@ const MobileDisplayEditor = ({
                 mobileAppointmentFieldOptions={setting.options || []}
                 preview
                 showCard={false}
+                draggedFieldCode={draggedItem?.fieldCode}
                 dragOverInfo={dragOverInfo}
+                highlightedFieldCode={highlightedFieldCode || undefined}
                 onFieldDragStart={(e, column, fieldCode) => {
                   setDraggedItem({ column, fieldCode });
                   e.dataTransfer.effectAllowed = "move";
                   e.dataTransfer.setData("text/plain", fieldCode);
                 }}
-                onPreviewDragOver={(_, column, rowIndex, fieldCode, blocked) => {
-                  setDragOverInfo({ column, rowIndex, fieldCode, blocked });
+                onPreviewDragOver={(_, column, rowIndex, fieldCode, blocked, insertRow, surface) => {
+                  setDragOverInfo({ column, rowIndex, fieldCode, blocked, insertRow, surface });
                 }}
                 onPreviewDragLeave={() => setDragOverInfo(null)}
                 onPreviewDrop={handlePreviewDrop}
@@ -456,6 +605,7 @@ const MobileDisplayEditor = ({
                   secondaryFields: flattenFieldRows(localValue.secondaryFieldRows || []),
                   secondaryFieldRows: localValue.secondaryFieldRows,
                 }}
+                dragSurface="values"
               />
             </div>
           </div>
@@ -2007,21 +2157,28 @@ const  SettingsModalContent: React.FC<{
                         ${setting.type === "mobile-appointment-fields" ? "h-full" : "lg:items-center"}`
                       }
                     >
-                      {setting.type === "mobile-appointment-fields" ? (
+                      {setting.type === "default-display-settings" ? (
+                        <DefaultDisplaySettingsEditor setting={setting} registerSaveAction={setPendingSaveAction} />
+                      ) : setting.type === "mobile-appointment-fields" ? (
                         <MobileDisplayEditor setting={setting} registerSaveAction={setPendingSaveAction} />
                       ) : setting.type === "select" ? (
-                        <select
-                          id={setting.id}
-                          className="border border-default rounded-xl px-4 py-3 text-sm bg-transparent shadow-sm"
-                          value={setting.value}
-                          onChange={(e) => setting.onChange(e.target.value)}
-                        >
-                          {setting.options?.map((option: any) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex flex-col gap-2">
+                          <label htmlFor={setting.id} className="text-sm font-medium text-primary">
+                            {setting.label}
+                          </label>
+                          <select
+                            id={setting.id}
+                            className="border border-default rounded-xl px-4 py-3 text-sm bg-transparent shadow-sm"
+                            value={setting.value}
+                            onChange={(e) => setting.onChange(e.target.value)}
+                          >
+                            {setting.options?.map((option: any) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       ) : (
                         <input
                           id={setting.id}

@@ -1149,6 +1149,7 @@ export default function HomePage({
                               isMobile={viewState.isMobile}
                               nonWorkingDates={viewState.nonWorkingDates}
                               tagPlacement={viewState.tagPlacement}
+                              overlapDisplayMode={viewState.overlapDisplayMode}
                               mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
                               HALF_DAY_INTERVALS={viewState.constants.intervals}
 
@@ -1378,6 +1379,8 @@ export default function HomePage({
               setNonWorkingDates: viewState.setNonWorkingDates,
               tagPlacement: viewState.tagPlacement,
               setTagPlacement: viewState.setTagPlacement,
+              overlapDisplayMode: viewState.overlapDisplayMode,
+              setOverlapDisplayMode: viewState.setOverlapDisplayMode,
               mobileAppointmentDisplay: viewState.mobileAppointmentDisplay,
               handleSaveMobileAppointmentDisplay: viewState.handleSaveMobileAppointmentDisplay,
               mobileAppointmentFieldOptions: viewState.mobileAppointmentFieldOptions,

@@ -40,6 +40,7 @@ interface DesktopCalendarGridProps {
   nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
+  overlapDisplayMode?: 'button' | 'count';
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
   handleScrollY: (e: React.UIEvent<HTMLDivElement>) => void;
   columnEmployeeRef: React.RefObject<HTMLDivElement | null>;
@@ -78,11 +79,12 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   selectedCell, initialEmployeeId, selectedAppointmentId, onSelectCell, onSelectAppointment, calendarConfig,
   onCalendarConfigChange, availableConfigs, mainScrollRef, handleScrollY, columnEmployeeRef, tableRef, initialTeams,
   poleActivites, onLoadAppointmentsInRange, updateHighlightedEmployeeRow, handleMouseOver, handleMouseOut,
-  hoverColumnLeft, isDisplayWeekend, tagPlacement = 'hover', onLockedError, onCalendarPositionChange, mouseUpAfterScroll
+  hoverColumnLeft, isDisplayWeekend, tagPlacement = 'hover', overlapDisplayMode = 'button', onLockedError, onCalendarPositionChange, mouseUpAfterScroll
 }) => {
 
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [expandedOverlapCounts, setExpandedOverlapCounts] = useState<Record<number, number>>({});
+  const [hiddenOverlapCounts, setHiddenOverlapCounts] = useState<Record<number, number>>({});
 
   const employeeHeights = useMemo(() => {
     return employees.map(employee => {
@@ -176,8 +178,9 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, [calendarConfig?.Group, filteredEmployees, initialTeams, poleActivites]);
 
   const [openItems, setOpenItems] = useState<(string | number)[]>();
+  const knownDimensionKeysRef = useRef<Set<string | number>>(new Set());
 
-   useEffect(() => {
+  useEffect(() => {
     setExpandedOverlapRows((previous) => {
       const next: Record<number, boolean> = {};
       overlappingEmployeeIds.forEach((employeeId) => {
@@ -191,15 +194,24 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     const dimensionKeys = getAllDimensionItemKeys(dimensionItems);
 
     setOpenItems((previous) => {
-      if (!previous) return dimensionKeys;
+      if (!previous) {
+        knownDimensionKeysRef.current = new Set(dimensionKeys);
+        return dimensionKeys;
+      }
 
       const currentKeys = new Set(previous);
-      const validKeys = new Set(dimensionKeys);
+      dimensionKeys.forEach((key) => {
+        if (!knownDimensionKeysRef.current.has(key)) {
+          currentKeys.add(key);
+        }
+      });
 
-      return [
-        ...previous.filter((key) => validKeys.has(key)),
-        ...dimensionKeys.filter((key) => !currentKeys.has(key)),
-      ];
+      knownDimensionKeysRef.current = new Set([
+        ...knownDimensionKeysRef.current,
+        ...dimensionKeys,
+      ]);
+
+      return [...currentKeys];
     });
   }, [dimensionItems]);
 
@@ -320,6 +332,13 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     });
   }, []);
 
+  const handleHiddenOverlapCountChange = useCallback((employeeId: number, hiddenOverlapCount: number) => {
+    setHiddenOverlapCounts((previous) => {
+      if (previous[employeeId] === hiddenOverlapCount) return previous;
+      return { ...previous, [employeeId]: hiddenOverlapCount };
+    });
+  }, []);
+
   useEffect(() => { setTodayTs(Date.now()); }, []);
 
   useEffect(() => {
@@ -344,6 +363,8 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         overlappingEmployeeIds={overlappingEmployeeIds} 
         openItems={openItems || []}
         expandedOverlapRows={expandedOverlapRows}
+        hiddenOverlapCounts={hiddenOverlapCounts}
+        overlapDisplayMode={overlapDisplayMode}
         onToggleItem={toggleItem}
         onCollapseRow={handleCollapseRow}
         onExpandRow={handleExpandRow}
@@ -399,7 +420,10 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           ))}
           
           {hoverColumnLeft !== null && (
-            <div className="pointer-events-none absolute top-0 bottom-0 bg-cell-hover z-10" style={{ left: hoverColumnLeft, width: CELL_WIDTH, marginLeft: -0 }} />
+            <div
+              className="pointer-events-none absolute top-0 bottom-0 bg-cell-hover"
+              style={{ left: hoverColumnLeft, width: CELL_WIDTH, marginLeft: -0, zIndex: 5 }}
+            />
           )}
 
           <CalendarRows 
@@ -422,6 +446,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
             onSelectCell={onSelectCell}
             onSelectAppointment={onSelectAppointment}
             onOverlapExpansionChange={handleOverlapExpansionChange}
+            onHiddenOverlapCountChange={handleHiddenOverlapCountChange}
             tagPlacement={tagPlacement}
             collapseTriggers={collapseTriggers}
             expandTriggers={expandTriggers}

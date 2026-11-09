@@ -39,7 +39,9 @@ const GroupRow: React.FC<GroupRowProps> = ({
           transparent ${STEP_WIDTH - 1}px, /* L'espace vide prend presque toute la largeur */
           var(--border-100) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
           var(--border-100) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
-        )`
+        )`,
+        borderBottom: '0.5px solid var(--border-100)',
+        zIndex: 6,
       }}
     >
       {todayIndex >= 0 && (

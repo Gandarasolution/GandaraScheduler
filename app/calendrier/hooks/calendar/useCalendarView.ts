@@ -108,6 +108,12 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     }
     return 'hover';
   });
+  const [overlapDisplayMode, setOverlapDisplayMode] = useState<'button' | 'count'>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return (localStorage.getItem('overlapDisplayMode') as 'button' | 'count') || 'button';
+    }
+    return 'button';
+  });
   const [mobileAppointmentDisplay, setMobileAppointmentDisplayState] = useState<MobileAppointmentDisplayConfig>(defaultMobileAppointmentDisplay);
   
   const { setDayTypes } = useDayTypesContext();
@@ -518,6 +524,10 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     tagPlacement, setTagPlacement: (v: 'hover' | 'fixed') => {
       setTagPlacement(v);
       setTimeout(() => localStorage.setItem('tagPlacement', v), 0);
+    },
+    overlapDisplayMode, setOverlapDisplayMode: (v: 'button' | 'count') => {
+      setOverlapDisplayMode(v);
+      setTimeout(() => localStorage.setItem('overlapDisplayMode', v), 0);
     },
     mobileAppointmentDisplay,
     mobileAppointmentFieldOptions,
