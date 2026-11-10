@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
-import Loader from '@/app/calendrier/components/ui/Loader';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../calendrier/hooks/utils/AuthContext';
 
 type LoginPageProps = {
@@ -16,6 +16,7 @@ export default function LoginPage({ login }: LoginPageProps) {
 
   // États pour l'authentification
   const [formData, setFormData] = useState({ login: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   
   // Si le cookie client_api_url est absent, c'est qu'il faut saisir un code entreprise
   const [needsCompanyCode, setNeedsCompanyCode] = useState<boolean>(() => !Cookies.get('client_api_url'));
@@ -143,16 +144,30 @@ export default function LoginPage({ login }: LoginPageProps) {
               <label htmlFor="password" className="block text-sm font-medium text-primary mb-2 poppins">
                 Mot de passe
               </label>
-              <input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-                placeholder="••••••••"
-                className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
-                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-              />
+              <div className="relative w-full">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  placeholder="••••••••"
+                  className="w-full min-h-12 pl-4 pr-12 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
+                  style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none p-1"
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <button
@@ -177,9 +192,9 @@ export default function LoginPage({ login }: LoginPageProps) {
               <button 
                 type="button" 
                 onClick={() => {
-                  Cookies.remove('client_api_url');
-                  Cookies.remove('client_mercure_url');
-                  Cookies.remove('client_logo_url');
+                  Cookies.remove('client_api_url', { path: '/' });
+                  Cookies.remove('client_mercure_url', { path: '/' });
+                  localStorage.removeItem('client_logo_url');
                   setNeedsCompanyCode(true);
                   setFormData({ login: '', password: '' });
                 }}

@@ -25,7 +25,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (login: string, password: string) => Promise<{ success: boolean; message?: string }>;
-  logout: (reason?: 'inactive') => void;
+  logout: (reason?: 'inactive' | 'expired') => void;
   hasPermission: (idDroit: number, niveauMinimum?: number) => boolean;
   setLastVueForUser: (idVue: number) => void;
   checkEnvironment: () => Promise<{ error?: string; success: boolean }>;
@@ -38,6 +38,7 @@ const SESSION_EXPIRED_KEY = 'session_expired';
 const PAGE_CLOSED_KEY = 'page_closed';
 const LOGIN_COOKIE_NAME = 'is_logged_in';
 const SESSION_EXPIRED_MESSAGE = 'Vous avez été déconnecté à cause de votre inactivité.';
+const SESSION_EXPIRED_AUTH_MESSAGE = 'Votre session a expiré, veuillez vous reconnecter.';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User>();
@@ -88,10 +89,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { success: false, message: response?.data || response?.message || 'Identifiants incorrects' };
   };
 
-  const logout = useCallback((reason?: 'inactive') => {
+  const logout = useCallback((reason?: 'inactive' | 'expired') => {
     localStorage.removeItem(AUTH_STATE_KEY);
-    if (reason === 'inactive') {
-      localStorage.setItem(SESSION_EXPIRED_KEY, SESSION_EXPIRED_MESSAGE);
+    if (reason) {
+      localStorage.setItem(
+        SESSION_EXPIRED_KEY,
+        reason === 'expired' ? SESSION_EXPIRED_AUTH_MESSAGE : SESSION_EXPIRED_MESSAGE,
+      );
     }
 
     Cookies.remove(LOGIN_COOKIE_NAME, {
@@ -269,14 +273,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: "Aucune URL d'API accessible. Vérifiez le réseau ou votre environnement.", success: false };
       }
 
-      Cookies.set('client_api_url', resolvedEnvironment.apiUrl, { expires: 1 / 24 });
+      Cookies.set('client_api_url', resolvedEnvironment.apiUrl, {
+        expires: 1 / 24,
+        path: '/',
+        sameSite: 'lax',
+        secure: window.location.protocol === 'https:',
+      });
 
       if (resolvedEnvironment.mercureUrl) {
         Cookies.set(
           'client_mercure_url',
           resolvedEnvironment.mercureUrl,
 
-          { expires: 1 / 24 }
+          {
+            expires: 1 / 24,
+            path: '/',
+            sameSite: 'lax',
+            secure: window.location.protocol === 'https:',
+          }
         );
       } else {
         Cookies.remove('client_mercure_url');

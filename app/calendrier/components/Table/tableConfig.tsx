@@ -152,6 +152,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                             <span className="poppins break-words">{value}</span>
                         </div>
                     )},
+                    { key: 'ChargeAffaire',  label: 'Chargé d\'Affaires', type:'string', /*width:140 */ },
                     { key: 'Etat', label: 'État', type:'string', width:140,
                     renderer:(value: string) => {
                         const statusColors: Record<string, string> = {
@@ -167,7 +168,6 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                         );
                     },
                     },
-                    { key: 'ChargeAffaire',  label: 'Chargé d\'Affaires', type:'string', /*width:140 */ },
                     { key: 'ChefChantier',  label: 'Chef de Chantier', type:'string', /*width:140 */ },
                 ]
             },

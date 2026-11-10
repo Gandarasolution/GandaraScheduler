@@ -367,7 +367,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
   );
 
   const filterKeys = useMemo(
-    () => Object.keys(keyOfFilter).sort(),
+    () => Object.keys(keyOfFilter),
     [keyOfFilter]
   );
 
@@ -624,26 +624,33 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
           for (const [key, rawOptions] of Object.entries(payload)) {
             normalized[key] = Array.isArray(rawOptions)
               ? rawOptions
-                  .map((option: any) =>
-                    typeof option === "string"
-                      ? { value: option, label: option, isActif: true }
-                      : {
-                          value: String(
-                            option.value ?? option.Id ?? option.id ?? ""
-                          ),
-                          label:
-                            option.label ??
-                            option.Nom ??
-                            option.name ??
-                            String(option.value ?? option.Id ?? ""),
-                          isActif:
-                            option.isActif ??
-                            option.IsActif ??
-                            option.actif ??
-                            option.Actif ??
-                            true,
-                        }
-                  )
+                  .map((option: any) => {
+                    if (typeof option === "string") {
+                      return { value: option, label: option, isActif: true };
+                    }
+
+                    const rawIsActif =
+                      option.isActif ??
+                      option.IsActif ??
+                      option.actif ??
+                      option.Actif ??
+                      true;
+
+                    return {
+                      value: String(
+                        option.value ?? option.Id ?? option.id ?? ""
+                      ),
+                      label:
+                        option.label ??
+                        option.Nom ??
+                        option.name ??
+                        String(option.value ?? option.Id ?? ""),
+                      isActif:
+                        rawIsActif !== false &&
+                        rawIsActif !== "false" &&
+                        rawIsActif !== 0,
+                    };
+                  })
                   .filter((option) => option.value)
               : [];
           }
@@ -1154,6 +1161,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
     const comboboxOptions = options.map((option) => ({
       value: String(option.value),
       label: isPersonFilter ? String(option.label) + ' ( ' + String(option.value) + ' )' : String(option.label),
+      isActif: option.isActif !== false,
       icon: isPersonFilter ? (
         option.isActif !== false ? (
           <UserCheck className="h-4 w-4 shrink-0 text-emerald-500" />
@@ -1188,6 +1196,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
             value={values.map(String)}
             onValueChange={handleFilterChange}
             placeholder={`Rechercher ${category.label.toLowerCase()}...`}
+            showInactiveToggle={isPersonFilter}
           />
         )}
 

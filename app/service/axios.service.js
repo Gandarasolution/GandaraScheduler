@@ -50,13 +50,15 @@ axiosAgent.interceptors.request.use((config) => {
 axiosAgent.interceptors.response.use(
     // 1. Si la réponse est un succès (2XX), on la laisse passer normalement
     (response) => {
-        const expiresAt = response.data?.token_expires_at;
+        const expiresAt =
+            response.data?.token_expires_at ??
+            response.data?.data?.token_expires_at;
         if (expiresAt) {
         Cookies.set('is_logged_in', 'true', {
             expires: new Date(Number(expiresAt) * 1000),
             path: '/',
             sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production',
+            secure: typeof window !== 'undefined' && window.location.protocol === 'https:',
         });
         }
 

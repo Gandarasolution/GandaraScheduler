@@ -169,7 +169,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       : parsedDate.setHours(0, 0, 0, 0);
   });
   const [modalInfo, setModalInfo] = useState<{ message: string, color: string } | null>(null);
-  const [nonWorkingDates, setNonWorkingDates] = useState<Record<string, {Id: number; TypeJourCode: string }>>({});
+  
   const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
   const [searchInput, setSearchInput] = useState<string>('');
   const [dimensionSearchInput, setDimensionsSearchInput] = useState<string>('');
@@ -424,36 +424,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
 
 
 
-  const loadNonWorkingDates = async ( years: number[] ): Promise<{ success: boolean; message: string }> => {
-      const result = await calendarConfigService.getNonWorkingDates(years);
-      //console.log('Résultat du chargement des jours non travaillés :', result);
-      if (result?.success && result.data) {
-        const nonWorkingDates = result.data.nonWorkingDates
-        const recordData = Object.fromEntries(
-          nonWorkingDates.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; TypeJourCode: string; }) => [
-              item.DatePlanningJourNontravaille, // La clé (string)
-              { Id: Number(item.IdPlanningJourNontravaille), TypeJourCode: item.TypeJourCode } // La valeur (object)
-          ])
-        );
-
-        // 2. On met à jour le state
-        setNonWorkingDates(recordData);
-
-
-        const dayTypes = result.data.typesNonWorkingDates;
-        if (Array.isArray(dayTypes)) {
-          setDayTypes(dayTypes);
-        } else {
-          console.warn('Les types de jours non travaillés ne sont pas au format attendu :', dayTypes);
-        }
-
-
-        return { success: true, message: 'Jours non travaillés chargés avec succès' };
-      }else {
-        return { success: false, message: result?.message || 'Erreur lors du chargement des jours non travaillés'};
-      }
-  };
-
+  
   const handleSaveMobileAppointmentDisplay = async (config: MobileAppointmentDisplayConfig): Promise<{ success: boolean; message?: string }> => {
     setMobileAppointmentDisplayState(config);
       
@@ -564,7 +535,6 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     lastPositionEmployeeId, setLastPositionEmployeeId, handleCalendarPositionChange,
     lastPositionLoaded,
     modalInfo, setModalInfo,
-    nonWorkingDates, setNonWorkingDates,
     isNotificationsPanelOpen, setIsNotificationsPanelOpen,
     searchInput, setSearchInput,
     dimensionSearchInput, setDimensionsSearchInput,
@@ -578,7 +548,6 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
 
 
     loadConfigs: calendarConfigHook.loadConfigs,
-    loadNonWorkingDates,
 
     // Helpers pour constants
     constants: {

@@ -164,14 +164,14 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
         const topPx =
           isExpanded ?
             ((app.PlanningEvenementPriorite ?? 0) * CELL_HEIGHT) +
-            (CELL_HEIGHT / 5) +
+            (CELL_HEIGHT / 14) +
             (2 * (app.PlanningEvenementPriorite ?? 0)) +
             (
               shouldOffsetForTag && isExpanded
                 ? 18
                 : 0
             )
-          : CELL_HEIGHT / 5;
+          : CELL_HEIGHT / 14;
 
         return { ...app, left, width, topPx };
       }),

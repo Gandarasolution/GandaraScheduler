@@ -71,7 +71,7 @@ import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS
 import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
 import TopNotification from '../components/ui/TopNotification';
-import { DayTypesProvider } from '../hooks/data/dayTypesContext';
+import { DayTypesProvider, useDayTypesContext } from '../hooks/data/dayTypesContext';
 
 
 /**
@@ -95,6 +95,7 @@ export default function HomePage({
 }) {
 
   const { hasPermission, currentPlanningId, logout } = useAuth();
+  const {nonWorkingDates, loadNonWorkingDates, setNonWorkingDates} = useDayTypesContext();
   
   const user = useCurrentUser();
   
@@ -178,8 +179,8 @@ export default function HomePage({
     isDisplayWeekend: viewState.isDisplayWeekend,
     includeWeekend: viewState.includeWeekend,
     respectNonWorkingDays: viewState.respectNonWorkingDays,
-    nonWorkingDates: viewState.nonWorkingDates
-  }), [viewState.isFullDay, viewState.isDisplayWeekend, viewState.includeWeekend, viewState.respectNonWorkingDays, viewState.nonWorkingDates]);
+    nonWorkingDates: nonWorkingDates
+  }), [viewState.isFullDay, viewState.isDisplayWeekend, viewState.includeWeekend, viewState.respectNonWorkingDays, nonWorkingDates]);
 
   const appointmentLogic = useAppointmentLogic({
     employees: globalEmployees,
@@ -506,8 +507,6 @@ export default function HomePage({
     // Définition des colonnes filtrables selon la vue
     if (viewState.viewType === 'chantier-table') {
         return { 
-          chargeAffaire: { label: 'Chargé d\'Affaires', type: 'combobox' as FilterType }, 
-          //code: { label: 'Code', type: 'combobox' as FilterType }, 
           etat: { 
             label: 'État', 
             type: 'badge' as FilterType,
@@ -518,7 +517,8 @@ export default function HomePage({
               // 'Terminé': 'bg-gray-100 text-gray-800',
               // 'Annulé': 'bg-red-100 text-red-800'
             }
-          }, 
+          },
+          chargeAffaire: { label: 'Chargé d\'Affaires', type: 'combobox' as FilterType },
           chefChantier: { label: 'Chef de Chantier', type: 'combobox' as FilterType },
           //libelle: { label: 'Libellé', type: 'combobox' as FilterType },
         };
@@ -757,7 +757,7 @@ export default function HomePage({
     yearsToFetch.forEach((year) => loadingYears.add(year));
 
     try {
-      const result = await viewState.loadNonWorkingDates(yearsToFetch);
+      const result = await loadNonWorkingDates(yearsToFetch);
 
       // Le résultat peut être enregistré même après le cleanup React
       if (result?.success) {
@@ -791,7 +791,7 @@ export default function HomePage({
   isMobile,
   timeline.days,
   viewState.viewType,
-  viewState.loadNonWorkingDates,
+  loadNonWorkingDates,
 ]);
 
   useEffect(() => {
@@ -878,7 +878,7 @@ export default function HomePage({
   useEffect(() => {
     const handleExpiration = () => {
       setLockNotification("Votre session a expiré, veuillez vous reconnecter.");
-      logout();
+      logout('expired');
     };
 
     window.addEventListener('auth:expired', handleExpiration);
@@ -941,14 +941,14 @@ export default function HomePage({
         break;
       
       case 'ADD_NON_WORKING_DAY':
-        viewState.setNonWorkingDates((prev) => ({
+        setNonWorkingDates((prev) => ({
           ...prev,
           [format(data.date, "yyyy-MM-dd")]: {Id: Number(data.id), TypeJourCode: data.typeJourCode}
         }));
         break;
       
       case 'DELETE_NON_WORKING_DAY':
-        viewState.setNonWorkingDates((prev) => {
+        setNonWorkingDates((prev) => {
           const updated = { ...prev };
           delete updated[data.date];
           return updated;
@@ -1147,7 +1147,7 @@ export default function HomePage({
                               isDisplayWeekend={viewState.isDisplayWeekend}
                               isFullDay={viewState.isFullDay}
                               isMobile={viewState.isMobile}
-                              nonWorkingDates={viewState.nonWorkingDates}
+                              nonWorkingDates={nonWorkingDates}
                               tagPlacement={viewState.tagPlacement}
                               overlapDisplayMode={viewState.overlapDisplayMode}
                               mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
@@ -1375,8 +1375,6 @@ export default function HomePage({
               setIncludeWeekend: viewState.setIncludeWeekend,
               respectNonWorkingDays: viewState.respectNonWorkingDays,
               setRespectNonWorkingDays: viewState.setRespectNonWorkingDays,
-              nonWorkingDates: viewState.nonWorkingDates,
-              setNonWorkingDates: viewState.setNonWorkingDates,
               tagPlacement: viewState.tagPlacement,
               setTagPlacement: viewState.setTagPlacement,
               overlapDisplayMode: viewState.overlapDisplayMode,

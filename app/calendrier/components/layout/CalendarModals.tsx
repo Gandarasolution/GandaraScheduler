@@ -119,8 +119,6 @@ interface CalendarModalsProps {
     setIncludeWeekend: (v: boolean) => void;
     respectNonWorkingDays: boolean;
     setRespectNonWorkingDays: (v: boolean) => void;
-    nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
-    setNonWorkingDates: (dates: Record<string, {Id: number; TypeJourCode: string }>) => void;
     tagPlacement: 'hover' | 'fixed';
     setTagPlacement: (v: 'hover' | 'fixed') => void;
     overlapDisplayMode: 'button' | 'count';
@@ -154,7 +152,7 @@ export const CalendarModals = memo(({
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings | null>(null);
 
-  const { DayTypes, fetchDayTypes, addDayType, updateDayType, removeDayType, onCheckDeleteDayType } = useDayTypesContext();
+  const { DayTypes, fetchDayTypes, addDayType, updateDayType, removeDayType, onCheckDeleteDayType, nonWorkingDates, setNonWorkingDates } = useDayTypesContext();
 
   const loadDisplaySettings = async () => {
     const result = await displaySettingsService.getDisplaySettings();
@@ -325,11 +323,11 @@ export const CalendarModals = memo(({
             id: "nonWorkedDay", 
             label: "Dates non travaillées personnalisées", 
             type: "custom-non-working-dates",
-            nonWorkingDates: config.nonWorkingDates,
+            nonWorkingDates: nonWorkingDates,
             canEdit: hasPermission(223),
             canDelete: hasPermission(223),
             canAdd: hasPermission(223),
-            setNonWorkingDates: config.setNonWorkingDates,
+            setNonWorkingDates: setNonWorkingDates,
             addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
             removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
             updateNonWorkingDate: handlers.editNonWorkingDates,
@@ -420,10 +418,10 @@ export const CalendarModals = memo(({
   ], [
     config.includeWeekend, 
     config.respectNonWorkingDays, 
-    config.nonWorkingDates, 
+    nonWorkingDates, 
     config.setIncludeWeekend, 
     config.setRespectNonWorkingDays, 
-    config.setNonWorkingDates, 
+    setNonWorkingDates, 
     config.tagPlacement, 
     config.setTagPlacement, 
     config.overlapDisplayMode,
@@ -539,7 +537,7 @@ export const CalendarModals = memo(({
             employees={data.employees}
             HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
             isFullDay={config.isFullDay}
-            nonWorkingDates={config.nonWorkingDates}
+            nonWorkingDates={nonWorkingDates}
             onSave={handlers.saveAppointment}
             isExpand={resourceEditMode === 'editAppointment'}
             onClose={() => handlers.closeModal()}

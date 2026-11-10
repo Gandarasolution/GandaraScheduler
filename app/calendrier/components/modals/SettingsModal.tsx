@@ -2024,6 +2024,7 @@ const  SettingsModalContent: React.FC<{
   // Récupération de la méthode de fermeture sécurisée avec sauvegarde depuis la Modal
   const { handleCloseWithSave } = useModalContext();
 
+
   return (
     <div className="flex flex-col h-full min-h-0 poppins gap-4">
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -2117,7 +2118,15 @@ const  SettingsModalContent: React.FC<{
                             onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
                             onUpdate={dayTypeSetting?.onUpdateDayType}
                             onCheckDelete={dayTypeSetting?.onCheckDeleteDayType}
-                            onDelete={dayTypeSetting?.onDeleteDayType}
+                            onDelete={async (id: string | number, count: number) => {
+                              const result = await dayTypeSetting?.onDeleteDayType?.(id, count)
+                              
+                              if (result?.success) {
+                                setSelectedDayTypeId("all");  
+                              }
+
+                              return result;
+                            }}
                             setError={setApiError}
                             canEdit={dayTypeSetting?.canEdit}
                             canDelete={dayTypeSetting?.canDelete}

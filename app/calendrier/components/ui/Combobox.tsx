@@ -6,12 +6,14 @@ export interface ComboboxOption {
   value: string;
   label: string;
   icon?: React.ReactNode;
+  isActif?: boolean;
 }
 
 type BaseComboboxProps = {
   options: ComboboxOption[];
   placeholder?: string;
   disabled?: boolean;
+  showInactiveToggle?: boolean;
 };
 
 type SingleComboboxProps = BaseComboboxProps & {
@@ -29,9 +31,16 @@ type MultiComboboxProps = BaseComboboxProps & {
 export type ComboboxProps = SingleComboboxProps | MultiComboboxProps;
 
 export function Combobox(props: ComboboxProps) {
-  const { options, placeholder, disabled, multiple = false } = props;
+  const {
+    options,
+    placeholder,
+    disabled,
+    multiple = false,
+    showInactiveToggle = false,
+  } = props;
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Normalisation des valeurs sélectionnées sous forme d'un tableau pour simplifier la logique interne
@@ -45,7 +54,11 @@ export function Combobox(props: ComboboxProps) {
 
   // En mode 'single', on montre l'option actuellement choisie si la recherche est vide
   // En mode 'multiple', on filtre les options déjà sélectionnées
+  const inactiveOptions = options.filter(option => option.isActif === false);
   const filteredOptions = options.filter(option => {
+    if (showInactiveToggle && option.isActif === false && !showInactive) {
+      return false;
+    }
     const matchesQuery = option?.label?.toLowerCase().includes(searchQuery.toLowerCase());
     if (multiple) {
       return matchesQuery && !selectedValues.includes(option.value);
@@ -94,7 +107,6 @@ export function Combobox(props: ComboboxProps) {
     if (!disabled) setIsOpen(true);
   };
 
-  console.log(options)
 
   return (
     <div ref={containerRef} className="relative space-y-2">
@@ -126,7 +138,7 @@ export function Combobox(props: ComboboxProps) {
       </div>
 
       {/* Menu déroulant des options */}
-      {isOpen && !disabled && filteredOptions.length > 0 && (
+      {isOpen && !disabled && (filteredOptions.length > 0 || (showInactiveToggle && inactiveOptions.length > 0)) && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-default bg-secondary-bg shadow-lg">
           {filteredOptions.map((option) => {
             const isSelected = selectedValues.includes(option.value);
@@ -137,6 +149,7 @@ export function Combobox(props: ComboboxProps) {
                 onClick={() => handleOptionClick(option)}
                 className={`w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer flex items-center justify-between ${
                   isSelected ? 'font-semibold text-primary-600' : 'text-primary'
+                } ${option.isActif === false ? 'italic' : ''
                 }`}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
@@ -155,10 +168,19 @@ export function Combobox(props: ComboboxProps) {
               </button>
             );
           })}
+          {showInactiveToggle && inactiveOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowInactive((current) => !current)}
+              className="w-full border-t border-default px-3 py-2 text-left text-xs font-medium text-secondary transition-colors hover:bg-primary-50 hover:text-primary"
+            >
+              {showInactive ? 'Masquer les inactifs' : 'Afficher les inactifs'}
+            </button>
+          )}
         </div>
       )}
 
-      {isOpen && !disabled && searchQuery && filteredOptions.length === 0 && (
+      {isOpen && !disabled && searchQuery && filteredOptions.length === 0 && inactiveOptions.length === 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-xl border border-default bg-secondary-bg px-3 py-2 text-xs text-secondary shadow-lg">
           Aucun résultat trouvé
         </div>
@@ -170,7 +192,9 @@ export function Combobox(props: ComboboxProps) {
           {selectedOptions.map((option) => (
             <div
               key={option.value}
-              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium"
+              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium ${
+                option.isActif === false ? 'italic' : ''
+              }`}
               style={{
                 backgroundColor: 'var(--color-primary-100)',
                 color: 'var(--color-primary-600)',

@@ -11,6 +11,9 @@ interface DayTypesContextType {
     removeDayType: (dayTypeId: string, numberDayCheck: number) => Promise<{ success: boolean; message?: string }>;
     fetchDayTypes: () => Promise<{ success: boolean; message?: string }>;
     onCheckDeleteDayType: (id: string) => Promise<{ success: boolean; message?: string; checkRequired: boolean }>;
+    nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
+    loadNonWorkingDates: (years: number[]) => Promise<{ success: boolean; message: string }>;
+    setNonWorkingDates: React.Dispatch<React.SetStateAction<Record<string, {Id: number; TypeJourCode: string }>>>;
 }
 
 // 2. Créer le contexte avec une valeur par défaut (utile pour l'autocomplétion)
@@ -20,6 +23,7 @@ const DayTypesContext = createContext<DayTypesContextType | undefined>(undefined
 export const DayTypesProvider = ({ children }: { children: ReactNode }) => {
     // On déplace l'état et les fonctions ici
     const [DayTypes, setDayTypes] = useState<Array<DayType> | null>(null);
+    const [nonWorkingDates, setNonWorkingDates] = useState<Record<string, {Id: number; TypeJourCode: string }>>({});
 
     const updateDayType = async (updatedDayType: DayType): Promise<{ success: boolean; message?: string }> => {
         try {
@@ -55,6 +59,16 @@ export const DayTypesProvider = ({ children }: { children: ReactNode }) => {
         try {
             const response = await calendarConfigService.removeDayType(dayTypeId, numberDayCheck);
             if (response && response.success) {
+                setNonWorkingDates(current => {
+                    const updatedDates = { ...current };
+                    // Supprimer toutes les entrées correspondant au dayTypeId
+                    for (const date in updatedDates) {
+                        if (updatedDates[date].TypeJourCode === dayTypeId) {
+                            delete updatedDates[date];
+                        }
+                    }
+                    return updatedDates;
+                });
                 setDayTypes(response.data);
                 return { success: true };
             } else {
@@ -95,6 +109,37 @@ export const DayTypesProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const loadNonWorkingDates = async ( years: number[] ): Promise<{ success: boolean; message: string }> => {
+          const result = await calendarConfigService.getNonWorkingDates(years);
+          //console.log('Résultat du chargement des jours non travaillés :', result);
+          if (result?.success && result.data) {
+            const nonWorkingDates = result.data.nonWorkingDates
+            const recordData = Object.fromEntries(
+              nonWorkingDates.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; TypeJourCode: string; }) => [
+                  item.DatePlanningJourNontravaille, // La clé (string)
+                  { Id: Number(item.IdPlanningJourNontravaille), TypeJourCode: item.TypeJourCode } // La valeur (object)
+              ])
+            );
+    
+            // 2. On met à jour le state
+            setNonWorkingDates(recordData);
+    
+    
+            const dayTypes = result.data.typesNonWorkingDates;
+            if (Array.isArray(dayTypes)) {
+              setDayTypes(dayTypes);
+            } else {
+              console.warn('Les types de jours non travaillés ne sont pas au format attendu :', dayTypes);
+            }
+    
+    
+            return { success: true, message: 'Jours non travaillés chargés avec succès' };
+          }else {
+            return { success: false, message: result?.message || 'Erreur lors du chargement des jours non travaillés'};
+          }
+      };
+    
+
     return (
         <DayTypesContext.Provider
             value={{
@@ -104,7 +149,10 @@ export const DayTypesProvider = ({ children }: { children: ReactNode }) => {
                 addDayType,
                 removeDayType,
                 fetchDayTypes,
-                onCheckDeleteDayType
+                onCheckDeleteDayType,
+                nonWorkingDates,
+                loadNonWorkingDates,
+                setNonWorkingDates
             }}
         >
             {children}
