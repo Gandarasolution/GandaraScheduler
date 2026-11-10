@@ -293,7 +293,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
           var(--border-100) ${STEP_WIDTH - 1}px,
           var(--border-100) ${STEP_WIDTH}px
         )`,
-        borderBottom: '0.5px solid var(--border-100)',
+        boxShadow: 'inset 0 -0.5px 0 0 var(--border-100)', 
         zIndex: 6,
       }}
     >

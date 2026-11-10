@@ -32,19 +32,6 @@ const MAX_SECONDARY_FIELDS = 2;
 const MAX_FIELDS_PER_PRIMARY_ROW = 3;
 const MAX_TITLE_FIELDS = 3;
 const MAX_ROWS = 5;
-const STANDARD_FIELD_CODES = new Set([
-  "LibellePlanningRessource",
-  "Type",
-  "DebutPlanningEvenement",
-  "FinPlanningEvenement",
-  "AnnotationPlanningEvenement",
-  "IdEmploye",
-  "EtapeValidation",
-  "Etiquette",
-  "ChefChantier",
-  "ChargeAffaire",
-]);
-
 interface AppointmentCardProps {
   app: Appointment;
   items: Item[];
@@ -209,15 +196,12 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     if (field === 'LibellePlanningRessource' && !value) {
       return 'Rendez-vous';
     }
-    if ((value === undefined || value === null || value === "") && !STANDARD_FIELD_CODES.has(field)) {
-      return field;
-    }
     return value != null ? String(value) : '';
   };
 
   const getFields = (fields: string[]) => fields
     .map(field => ({ field, value: getFieldValue(field) }))
-    .filter(({ value }) => value);
+    .filter(({ value }) => value.trim().length > 0);
 
   const primaryRows = displayConfig.primaryFieldRows?.length
     ? displayConfig.primaryFieldRows
@@ -227,17 +211,23 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     ? displayConfig.secondaryFieldRows
     : [displayConfig.secondaryFields];
 
-  const displayedPrimaryRows = isProjectAppointment
+  const configuredPrimaryRows = isProjectAppointment
     ? primaryRows
     : [['LibellePlanningRessource']];
-  const displayedSecondaryRows = isProjectAppointment ? rawSecondaryRows : [];
+  const configuredSecondaryRows = isProjectAppointment ? rawSecondaryRows : [];
+  const displayedPrimaryRows = configuredPrimaryRows.filter((row) =>
+    preview || getFields(row).length > 0
+  );
+  const displayedSecondaryRows = configuredSecondaryRows.filter((row) =>
+    preview || getFields(row).length > 0
+  );
 
   const getFieldOption = (field: string) => mobileAppointmentFieldOptions
     .find((option) => option.Code === field);
 
   const getFieldLabel = (field: string) => {
     if (field === 'AdresseChantier') return 'Adresse du chantier';
-    return getFieldOption(field)?.Libelle || field;
+    return displayConfig.fieldLabels?.[field] || getFieldOption(field)?.Libelle || field;
   };
     
   const isSpecialField = (field: string) =>
@@ -367,7 +357,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 <React.Fragment key={`field-names-secondary-row-${rowIndex}`}>
                 {renderRowInsertionZone("secondaryFields", rowIndex, nameRows.length, "fieldNames")}
                 <div
-                  className={`relative min-w-0 min-h-[56px] py-2 pr-6 flex items-start gap-1 border-b border-ultra-light last:border-b-0 ${
+                  className={`relative min-w-0 min-h-[56px] py-2 pr-6 flex items-start gap-3 border-b border-ultra-light last:border-b-0 ${
                     isBlockedRowTarget("secondaryFields", rowIndex, "fieldNames") ? 'pb-7' : ''
                   } ${
                     fieldNamesDragOverInfo?.column === "secondaryFields" &&
@@ -815,7 +805,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                           <span className="mt-0.5 shrink-0 text-secondary">{getFieldIcon(field)}</span>
                         )}
                         <span className="min-w-0">
-                          {!isSpecialField(field) && (
+                          {(!isSpecialField(field) || displayConfig.fieldLabels?.[field]) && (
                             <span className="block text-[11px] font-semibold uppercase leading-4 tracking-wide text-primary/60">
                               {getFieldLabel(field)}
                             </span>

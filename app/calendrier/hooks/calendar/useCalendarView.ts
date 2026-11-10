@@ -36,13 +36,14 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
       return {
         code,
         special: field.CaractereSpecial === true || field.estCaractereSpecial === true,
+        libelle: field?.libelle ?? field.Libelle ?? field.label,
       };
     };
-    const readFieldList = (value: any): Array<{ code: string; special: boolean }> => {
+    const readFieldList = (value: any): Array<{ code: string; special: boolean; libelle: string }> => {
       if (!Array.isArray(value)) return [];
       return value
         .flatMap((field) => Array.isArray(field) ? readFieldList(field) : [readField(field)])
-        .filter((field): field is { code: string; special: boolean } => field !== null);
+        .filter((field): field is { code: string; special: boolean; libelle: string } => field !== null);
     };
 
     const readColumn = (column: 'primaryFields' | 'secondaryFields') => {
@@ -73,12 +74,18 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     };
 
     const allFields = [...readFieldList(config?.primaryFields), ...readFieldList(config?.secondaryFields)];
+    const fieldLabels = Object.fromEntries(
+      allFields
+        .filter(({ libelle }) => typeof libelle === 'string' && libelle.trim())
+        .map(({ code, libelle }) => [code, libelle!.trim()])
+    );
     return {
       primaryFields: readColumn('primaryFields'),
       secondaryFields: readColumn('secondaryFields'),
       primaryFieldRows: readRows('primaryFields'),
       secondaryFieldRows: readRows('secondaryFields'),
       specialFields: [...new Set(allFields.filter(({ special }) => special).map(({ code }) => code))],
+      fieldLabels,
     };
   };
   const mobileDisplayLoadedRef = useRef(false);

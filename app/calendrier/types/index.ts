@@ -203,6 +203,8 @@ export interface MobileAppointmentDisplayConfig {
   primaryFieldRows?: string[][];
   secondaryFieldRows?: string[][];
   specialFields?: string[];
+  /** Libellés renvoyés avec la configuration, indexés par code de champ. */
+  fieldLabels?: Record<string, string>;
 }
 
 

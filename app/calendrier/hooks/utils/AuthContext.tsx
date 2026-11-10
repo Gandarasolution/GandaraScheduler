@@ -48,6 +48,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentPlanningId, setCurrentPlanningId] = useState<number>(-1);
   const [currentVueId, setCurrentVueId] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (currentPlanningId > 0) {
+      axiosAgent.defaults.headers.common['X-Planning-Id'] = currentPlanningId;
+    }
+  }, [currentPlanningId]);
+
   const login = async (login: string, password: string): Promise<{ success: boolean; message?: string }> => {
     // Note : À ce stade, le composant LoginPage aura DÉJÀ renseigné le cookie 'client_api_url' 
     // et mis à jour l'axiosAgent, donc l'appel authService.login partira vers le bon serveur !

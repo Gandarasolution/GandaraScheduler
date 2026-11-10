@@ -91,7 +91,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       const maxExpandedOverlap = expandedOverlapCounts[employee.IdPersonnel] ?? 0;
       const calculatedHeight = maxExpandedOverlap > 1
         ? (maxExpandedOverlap * (CELL_HEIGHT + 6)) + 6
-        : CELL_HEIGHT + 15;
+        : CELL_HEIGHT + 6;
 
       return { employeeId: employee.IdPersonnel, height: calculatedHeight, dayKey: undefined };
     });

@@ -40,7 +40,7 @@ const GroupRow: React.FC<GroupRowProps> = ({
           var(--border-100) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
           var(--border-100) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
         )`,
-        borderBottom: '0.5px solid var(--border-100)',
+        boxShadow: 'inset 0 -0.5px 0 0 var(--border-100)', 
         zIndex: 6,
       }}
     >

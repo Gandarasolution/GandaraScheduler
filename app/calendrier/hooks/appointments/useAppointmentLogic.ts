@@ -7,6 +7,7 @@ import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
 import ressourceService from '@/app/service/ressource.service';
 import { useAuth } from '../utils/AuthContext';
 import imageService from '@/app/service/image.service';
+import displaySettingsService from '@/app/service/displaySettings.service';
 
 // Type pour les données de répétition
 export type RepeatData = {
@@ -1454,26 +1455,52 @@ export const useAppointmentLogic = ({
   }, [selectedCell, timelineState, appointmentsRef, onUpdate, api, isApiSuccess, addMissingResourcesToCache]);
 
   // Handler pour ouvrir la modal d'édition
-  const handleOpenEditModal = useCallback((appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setSelectedItem(eventsRef.current[Number(appointment.IdPlanningRessource)] || 
-      {
-        IdPlanningRessource: -1,
-        CodePlanningRessource: '',
-        LibellePlanningRessource: '',
-        CouleurFondPlanningRessource: '#1E40AF',
-        CouleurBordurePlanningRessource: '#1E40AF',
-        CouleurTextePlanningRessource: '#FFFFFF',
-        Actif: true,
-        Etiquettes: [],
-        Type: 'Rubrique Perso',
-        verrou: false,
-        category: '',
-        isManual: true  // Ressource manuelle par défaut lors de la création
+  const handleOpenEditModal = useCallback(async (appointment: Appointment) => {
+    const isCreatingResource = appointment.IdPlanningEvenement === -1;
+    const defaultItem: Item = {
+      IdPlanningRessource: -1,
+      CodePlanningRessource: '',
+      LibellePlanningRessource: '',
+      CouleurFondPlanningRessource: '#1E40AF',
+      CouleurBordurePlanningRessource: '#1E40AF',
+      CouleurTextePlanningRessource: '#FFFFFF',
+      Actif: true,
+      Etiquettes: [],
+      Type: 'Rubrique Perso',
+      Verrou: false,
+      Category: ''
+    };
+    let item = eventsRef.current[Number(appointment.IdPlanningRessource)] || defaultItem;
+
+    if (isCreatingResource) {
+      try {
+        const result = await displaySettingsService.getDisplaySettings();
+        if (result?.success === false) {
+          throw new Error(result.message || 'Impossible de récupérer les paramètres d’affichage.');
+        }
+
+        const settings = result?.data;
+        const defaultImage = settings?.ImageParDefaut;
+        const imageId = defaultImage ? Number(defaultImage.id) : NaN;
+
+        item = {
+          ...item,
+          CouleurFondPlanningRessource: settings?.CouleurFondParDefaut || item.CouleurFondPlanningRessource,
+          CouleurBordurePlanningRessource: settings?.CouleurBordureParDefaut || item.CouleurBordurePlanningRessource,
+          CouleurTextePlanningRessource: settings?.CouleurTexteParDefaut || item.CouleurTextePlanningRessource,
+          ...(defaultImage && Number.isFinite(imageId)
+            ? { Image: { id: imageId, image: defaultImage.url } }
+            : {}),
+        };
+      } catch (error) {
+        console.error('Erreur lors de la récupération des paramètres d’affichage par défaut', error);
       }
-    );
+    }
+
+    setSelectedAppointment(appointment);
+    setSelectedItem(item);
     setIsModalOpen(true);
-  }, []);
+  }, [eventsRef]);
 
   const handleAddManualRessource = useCallback( async (dimension: AutreItem): Promise<{ success: boolean, message?: string }> => {
     // Marquer les Items de type 'Rubrique Perso' comme manuels
