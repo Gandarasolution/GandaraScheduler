@@ -66,7 +66,8 @@ type FieldColumn = "primaryFields" | "secondaryFields";
 type FieldRows = Record<FieldColumn, string[][]>;
 const MAX_SECONDARY_FIELDS = 2;
 const MAX_FIELDS_PER_PRIMARY_ROW = 3;
-const MAX_TITLE_FIELDS = 3;
+const MAX_TITLE_REGULAR_FIELDS = 2;
+const MAX_TITLE_SPECIAL_FIELDS = 1;
 const MAX_PRIMARY_ROWS = 5;
 
 const isSpecialField = (field: string, options: MobileAppointmentFieldOption[]) =>
@@ -74,6 +75,25 @@ const isSpecialField = (field: string, options: MobileAppointmentFieldOption[]) 
 
 const countRegularFields = (row: string[], options: MobileAppointmentFieldOption[], excludedField?: string) =>
   row.filter((field) => field !== excludedField).length;
+
+const isTitleRowFull = (
+  row: string[],
+  options: MobileAppointmentFieldOption[],
+  draggedField?: string
+) => {
+  const currentFields = row.filter((field) => field !== draggedField);
+  const specialCount = currentFields.filter((field) => isSpecialField(field, options)).length;
+  const regularCount = currentFields.length - specialCount;
+
+  if (!draggedField) {
+    return regularCount >= MAX_TITLE_REGULAR_FIELDS &&
+      specialCount >= MAX_TITLE_SPECIAL_FIELDS;
+  }
+
+  return isSpecialField(draggedField, options)
+    ? specialCount >= MAX_TITLE_SPECIAL_FIELDS
+    : regularCount >= MAX_TITLE_REGULAR_FIELDS;
+};
 
 const getFieldRows = (
   value: MobileAppointmentDisplayConfig,
@@ -83,8 +103,20 @@ const getFieldRows = (
     ? value.primaryFieldRows
       .slice(0, MAX_PRIMARY_ROWS)
       .map((row, index) => {
-        const maxFields = index === 0 ? MAX_TITLE_FIELDS : MAX_FIELDS_PER_PRIMARY_ROW;
-        return row.slice(0, maxFields);
+        if (index !== 0) return row.slice(0, MAX_FIELDS_PER_PRIMARY_ROW);
+
+        let regularCount = 0;
+        let specialCount = 0;
+        return row.filter((field) => {
+          if (isSpecialField(field, options)) {
+            if (specialCount >= MAX_TITLE_SPECIAL_FIELDS) return false;
+            specialCount += 1;
+          } else {
+            if (regularCount >= MAX_TITLE_REGULAR_FIELDS) return false;
+            regularCount += 1;
+          }
+          return true;
+        });
       })
     : value.primaryFields.map((field) => [field]);
     
@@ -310,22 +342,29 @@ const MobileDisplayEditor = ({
     return () => registerSaveAction(null);
   }, [isDirty, handleSave, registerSaveAction]);
 
-  const optionsMap = useMemo(() => {
-    const map = new Map<string, { libelle: string; caractereSpecial: boolean; id: number }>();
-    setting.options?.forEach((opt: MobileAppointmentFieldOption) => {
-      map.set(opt.Code, { libelle: opt.Libelle, caractereSpecial: opt.CaractereSpecial, id: opt.Id });
-    });
-    return map;
-  }, [setting.options]);
-
-  const availableOptions = useMemo(() => {
+  const { normalAvailableOptions, specialAvailableOptions, totalAvailableCount } = useMemo(() => {
     const allOptions = (setting.options || []) as MobileAppointmentFieldOption[];
-    return allOptions.filter((opt) => {
+
+    // 1. Filtrer les options non attribuées
+    const unassigned = allOptions.filter((opt) => {
       const inPrimary = localValue.primaryFields.includes(opt.Code);
       const inSecondary = localValue.secondaryFields.includes(opt.Code);
-      return !(inPrimary && inSecondary);
+      return !(inPrimary && inSecondary); // Remarque : || garantit qu'il n'est ni dans l'un ni dans l'autre
     });
+
+
+    // 2. Séparer selon CaractereSpecial
+    const normal = unassigned.filter((opt) => !opt.CaractereSpecial);
+    const special = unassigned.filter((opt) => opt.CaractereSpecial);
+
+    return {
+      normalAvailableOptions: normal,
+      specialAvailableOptions: special,
+      totalAvailableCount: unassigned.length,
+    };
   }, [setting.options, localValue]);
+
+
 
   const removeField = (column: "primaryFields" | "secondaryFields", fieldCode: string) => {
     setLocalValue((prev) => {
@@ -417,12 +456,13 @@ const MobileDisplayEditor = ({
 
       const currentRow = targetRows[rowIndex];
 
-      const maxFields = column === "primaryFields" && rowIndex === 0
-        ? MAX_TITLE_FIELDS
+      const options = setting.options || [];
+      const rowIsFull = column === "primaryFields" && rowIndex === 0
+        ? isTitleRowFull(currentRow, options, fieldCode)
         : column === "primaryFields"
-          ? MAX_FIELDS_PER_PRIMARY_ROW
-          : MAX_SECONDARY_FIELDS;
-      if (countRegularFields(currentRow, setting.options || [], fieldCode) >= maxFields) {
+          ? countRegularFields(currentRow, options, fieldCode) >= MAX_FIELDS_PER_PRIMARY_ROW
+          : countRegularFields(currentRow, options, fieldCode) >= MAX_SECONDARY_FIELDS;
+      if (rowIsFull) {
         return prev;
       }
 
@@ -473,57 +513,93 @@ const MobileDisplayEditor = ({
         </div>
       )}
 
-      <div className="rounded-xl border border-light bg-secondary/10 px-3 py-1.5 text-[11px] text-secondary leading-normal">
-        Organisez les informations de la carte mobile. Glissez un champ directement sur la carte pour l'insérer à l'endroit désigné par la barre verticale.
-      </div>
-
       <div className="flex flex-col gap-3 h-full">
         {/* SECTION CHAMPS DISPONIBLES */}
-        <div className="rounded-xl border border-default bg-secondary-bg/50 p-2.5">
-          <div className="mb-1.5 flex items-center justify-between">
+        <div className="rounded-xl border border-default bg-secondary-bg/50 p-2.5 space-y-3">
+          {/* En-tête avec compteur global */}
+          <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-secondary">
-              Champs disponibles ({availableOptions.length})
+              Champs disponibles ({totalAvailableCount})
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-1.5">
-            {availableOptions.map((option) => (
-              <div
-                key={option.Code}
-                draggable
-                onDragStart={(event) => {
-                  event.stopPropagation();
-                  setDraggedItem({ column: "available", fieldCode: option.Code });
-                  event.dataTransfer.effectAllowed = "move";
-                  event.dataTransfer.setData("text/plain", option.Code);
-                }}
-                onMouseEnter={() => setHighlightedFieldCode(option.Code)}
-                onMouseLeave={() => setHighlightedFieldCode(null)}
-                className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
-                  highlightedFieldCode === option.Code ? 'ring-2 ring-primary ring-offset-1' : ''
-                }`}
-              >
-                <span className="font-medium truncate">{option.Libelle}</span>
-              </div>
-            ))}
+          {/* SECTION 1 : Champs standards */}
+          <div>
+            <span className="text-[10px] font-medium text-secondary uppercase tracking-wider block mb-1">
+              Champs standards ({normalAvailableOptions.length})
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {normalAvailableOptions.map((option) => (
+                <div
+                  key={option.Code}
+                  draggable
+                  onDragStart={(event) => {
+                    event.stopPropagation();
+                    setDraggedItem({ column: "available", fieldCode: option.Code });
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", option.Code);
+                  }}
+                  onMouseEnter={() => setHighlightedFieldCode(option.Code)}
+                  onMouseLeave={() => setHighlightedFieldCode(null)}
+                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
+                    highlightedFieldCode === option.Code ? 'ring-2 ring-primary ring-offset-1' : ''
+                  }`}
+                >
+                  <span className="font-medium truncate">{option.Libelle}</span>
+                </div>
+              ))}
+              {normalAvailableOptions.length === 0 && (
+                <span className="text-[11px] text-secondary/60 italic">Aucun champ standard</span>
+              )}
+            </div>
+          </div>
+
+          {/* SECTION 2 : Caractères spéciaux */}
+          <div>
+            <span className="text-[10px] font-medium text-secondary uppercase tracking-wider block mb-1">
+              Caractères / Séparateurs ({specialAvailableOptions.length})
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {specialAvailableOptions.map((option) => (
+                <div
+                  key={option.Code}
+                  draggable
+                  onDragStart={(event) => {
+                    event.stopPropagation();
+                    setDraggedItem({ column: "available", fieldCode: option.Code });
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", option.Code);
+                  }}
+                  onMouseEnter={() => setHighlightedFieldCode(option.Code)}
+                  onMouseLeave={() => setHighlightedFieldCode(null)}
+                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
+                    highlightedFieldCode === option.Code ? 'ring-2 ring-primary ring-offset-1' : ''
+                  }`}
+                >
+                  <span className="font-medium truncate">{option.Libelle}</span>
+                </div>
+              ))}
+              {specialAvailableOptions.length === 0 && (
+                <span className="text-[11px] text-secondary/60 italic">Aucun caractère spécial</span>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-2 text-[11px] text-secondary">
+            Organisez les informations de la carte mobile. Glissez un champ directement sur la carte pour l'insérer à l'endroit désigné par la barre verticale.
           </div>
         </div>
 
         {/* SECTION APERÇU CÔTE À CÔTE */}
-        <div className="rounded-xl border border-light bg-secondary-bg/40 p-3 space-y-3 h-full">
+        <div className="rounded-xlbg-secondary-bg/40 space-y-3 h-full">
           <div className="flex items-center gap-2 pb-1.5 border-b border-ultra-light">
-            <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <h4 className="text-xs font-bold text-primary uppercase tracking-wide">Aperçu en direct</h4>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* CÔTÉ GAUCHE : APERÇU PRINCIPALE */}
             <div className="flex flex-col gap-2 rounded-xl border border-dashed border-light bg-primary/5 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-primary">Aperçu (principale)</span>
+                <span className="text-[11px] font-semibold text-primary">Concepteur d’affichage</span>
                 <button
                   type="button"
                   onClick={() => addRow("primaryFields")}
@@ -532,6 +608,7 @@ const MobileDisplayEditor = ({
                   + Ligne
                 </button>
               </div>
+
 
               <AppointmentCard
                 app={previewAppointment}
@@ -2028,15 +2105,9 @@ const  SettingsModalContent: React.FC<{
   return (
     <div className="flex flex-col h-full min-h-0 poppins gap-4">
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <div className="bg-secondary-bg border border-light rounded-2xl py-6 px-5 shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
+        <div className="bg-secondary-bg px-5 shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
           {currentCategoryObj && (
             <div className="flex flex-col h-full min-h-0">
-              <div className="flex items-center bg-secondary-bg gap-3 pb-4 mb-4 border-b border-ultra-light shrink-0">
-                <div className="w-1.5 h-6 bg-primary rounded-full"></div>
-                <h3 className="text-lg font-medium text-primary poppins">
-                  {currentCategoryObj.category}
-                </h3>
-              </div>
 
               {apiError && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start justify-between gap-3 text-red-700 text-sm poppins shadow-sm shrink-0">
@@ -2160,7 +2231,7 @@ const  SettingsModalContent: React.FC<{
                   {currentCategoryObj.items.map((setting: any, settingIdx: number) => (
                     <div
                       key={setting.id}
-                      className={`flex flex-col lg:flex-row  justify-between py-2  ${
+                      className={`flex flex-col lg:flex-row  justify-between  ${
                         settingIdx !== currentCategoryObj.items.length - 1 ? "border-b border-ultra-light pb-4" : ""
                         }
                         ${setting.type === "mobile-appointment-fields" ? "h-full" : "lg:items-center"}`
@@ -2264,7 +2335,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const hasFetchedRef = useRef(false);
 
   const currentCategoryObj = useMemo(() => {
-    return settings.find((cat: any) => cat.category === activeCategory) || settings[0];
+    return settings.find((cat: any) => cat.key === activeCategory) || settings[0];
   }, [settings, activeCategory]);
 
   useEffect(() => {
@@ -2309,14 +2380,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     <Modal
       isOpen={isSettingsOpen}
       onClose={onClose}
-      title="Paramètres"
+      title={currentCategoryObj?.category || "Paramètres"}
       className={`${
         currentCategoryObj?.key === 'daysManagement' 
           ? 'w-[min(98vw,1500px)]' 
           : currentCategoryObj?.key === 'mobileAppointmentFields'
             ? 'w-[min(95vw,1400px)]'
             : 'w-[min(95vw,900px)]'
-      } h-[85vh] max-h-[850px] overflow-hidden flex flex-col`}
+      } h-[90vh] max-h-[950px] overflow-hidden flex flex-col`}
       classNameContent="flex-1 overflow-hidden p-4 flex flex-col min-h-0"
       confirmCloseOnOverlay={currentCategoryObj?.hasUnsavedChanges && pendingSaveAction?.isDirty}
       onSave={handleFooterSave}

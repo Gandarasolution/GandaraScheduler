@@ -222,7 +222,7 @@ export const CalendarHeader = memo(({
                         <>
                           <button
                             className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
-                            onClick={() => openSetting("Gestion des jours")}
+                            onClick={() => openSetting("daysManagement")}
                           >
                             <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
                               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
@@ -234,7 +234,7 @@ export const CalendarHeader = memo(({
 
                           <button
                             className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
-                            onClick={() => openSetting("Affichage mobile des événements")}
+                            onClick={() => openSetting("mobileAppointmentFields")}
                           >
                             <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
                               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
@@ -249,7 +249,7 @@ export const CalendarHeader = memo(({
 
                       <button
                         className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
-                        onClick={() => openSetting("Options d’affichage")}
+                        onClick={() => openSetting("displaySettings")}
                       >
                         <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
                           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">

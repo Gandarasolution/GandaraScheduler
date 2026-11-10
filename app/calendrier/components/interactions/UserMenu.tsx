@@ -8,7 +8,7 @@ interface UserMenuProps {
 }
 
 export default function UserMenu({ user }: UserMenuProps) {
-  const { setCurrentPlanningId, logout } = useAuth();
+  const { setCurrentPlanningId, logout, UserPlanning } = useAuth();
 
 
   return (
@@ -32,23 +32,25 @@ export default function UserMenu({ user }: UserMenuProps) {
           <div className="p-3 border-b border-light">
             <p className="text-sm font-medium text-primary poppins">{user.Nom} {user.Prenom}</p>
           </div>
-            <button
-              onClick={() => setCurrentPlanningId(-1)}
-              className="w-full px-3 py-2 text-left text-sm text-primary hover:bg-primary-50 transition-colors flex items-center gap-2 poppins cursor-pointer"
-            >
-              <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-                
-                <line x1="8" y1="14" x2="16" y2="14"></line>
-                <polyline points="14 12 16 14 14 16"></polyline>
-                <line x1="16" y1="18" x2="8" y2="18"></line>
-                <polyline points="10 16 8 18 10 20"></polyline>
-              </svg>
-              Changer de planning
-            </button>
+            {UserPlanning.length > 1 && (
+              <button
+                onClick={() => setCurrentPlanningId(-1)}
+                className="w-full px-3 py-2 text-left text-sm text-primary hover:bg-primary-50 transition-colors flex items-center gap-2 poppins cursor-pointer"
+              >
+                <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  
+                  <line x1="8" y1="14" x2="16" y2="14"></line>
+                  <polyline points="14 12 16 14 14 16"></polyline>
+                  <line x1="16" y1="18" x2="8" y2="18"></line>
+                  <polyline points="10 16 8 18 10 20"></polyline>
+                </svg>
+                Changer de planning
+              </button>
+            )}
             <button
               onClick={() => logout()}
               className="w-full px-3 py-2 text-left text-sm text-color-error hover:bg-error-light transition-colors flex items-center gap-2 poppins cursor-pointer"
