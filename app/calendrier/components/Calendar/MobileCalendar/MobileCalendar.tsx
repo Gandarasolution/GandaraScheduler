@@ -277,8 +277,8 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
           </div>
           
           {/* Actions */}
-          <div className="flex items-center gap-4 relative">
-            {/* Notifications */}
+          {/* <div className="flex items-center gap-4 relative">
+            
             <button 
               onClick={(e) => {
                 e.stopPropagation();
@@ -310,7 +310,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
               )}
             </button>
             
-            {/* More Options */}
             <button 
               className="transition-colors"
               style={{ color: 'var(--text-tertiary)' }}
@@ -324,7 +323,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
               <MoreHorizontal size={20} />
             </button>
             
-            {/* Panneau de notifications */}
             {showNotifications && (
               <NotificationsPanel 
                 notifications={notifications}
@@ -333,7 +331,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 variant="mobile"
               />
             )}
-          </div>
+          </div> */}
         </header>
 
         {/* Scrollable Content Area */}

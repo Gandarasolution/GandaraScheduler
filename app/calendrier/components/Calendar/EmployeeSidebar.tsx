@@ -9,7 +9,7 @@
  * - Indicateurs d'état (intérim, inactif)
  */
 
-import React, { memo } from 'react';
+import React, { CSSProperties, memo } from 'react';
 import { User, CalendarConfig } from '../../types';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
 import {
@@ -28,6 +28,8 @@ interface EmployeeSidebarProps {
   dimensionItems: HierarchicalGroupItem[];
   employeesByDimension: Record<string | number, User[]>;
   flatRows: FlatRow[];
+  visibleRows?: any[]; // Reçu du DesktopCalendarGrid
+  totalContentHeight?: number; // Reçu du DesktopCalendarGrid
   openItems: (string | number)[];
   expandedOverlapRows: Record<number, boolean>;
   hiddenOverlapCounts: Record<number, number>;
@@ -100,6 +102,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   columnEmployeeRef,
   overlappingEmployeeIds,
 }) => {
+  
   const selectOptions: SelectOptionWithImage[] = availableConfigs.map(config => ({
     id: config.IdPlanningVue,
     name: config.LibellePlanningVue,
@@ -128,7 +131,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     return (
       <div
         key={`${reactKeyPrefix}-employee-${employee.IdPersonnel}`}
-        className="flex cursor-pointer bg-primary-bg"
+        className="flex cursor-pointer bg-primary-bg border-l border-r border-default"
         style={{
           height: employeeRowHeight,
           alignItems: 'center',
@@ -253,7 +256,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
   return (
     <div
-      className="min-w-85 max-w-85 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide"
+      className="min-w-85 max-w-85 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide h-full"
       style={{ scrollbarGutter: 'stable' }}
       onScroll={handleScrollY}
       ref={columnEmployeeRef}
@@ -312,45 +315,38 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
         if (itemEmployees.length === 0) return null;
 
-        const style = isOpen
-          ? {
-              marginBottom: MARGIN_BETWEEN_TEAMS,
-              borderLeftWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
-              borderRightWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
-            }
-          : {
-              marginBottom: MARGIN_BETWEEN_TEAMS,
-              borderWidth: EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
-              width: '100%',
-            };
+        const containerStyle: CSSProperties = {
+          marginBottom: MARGIN_BETWEEN_TEAMS,
+          width: isOpen ? '304px' : '100%',
+          position: 'relative',
+          zIndex: 30 - index
+        };
 
         return (
           <div
             key={String(item.id)}
-            className="rounded-4xl border-default bg-primary-bg text-primary overflow-visible"
-            style={style}
+            className="text-primary flex flex-col"
+            style={containerStyle}
           >
             {/* Header niveau 1 */}
             <div
               className="sticky w-full"
               style={{
                 top: stickyTop,
-                zIndex: 30 - index
+                zIndex: 10
               }}
             >
-              {isOpen && (
-                <>
-                  <div className="absolute top-0 -left-1 w-8 h-7 bg-page" />
-                  <div className="absolute top-0 -right-1 w-7 h-7 bg-page" />
-                </>
-              )}
+              {/* Masques de fond pour la zone sticky */}
+              <div className="absolute top-0 -left-[1px] w-8 h-8 bg-page" />
+              <div className="absolute top-0 -right-[1px] w-8 h-8 bg-page" />
 
               <button
-                className={`relative flex justify-between items-center px-4 ${
+                // Ajout de "overflow-hidden" ici pour que le bouton rogne ses propres bords dans l'arrondi 4xl
+                className={`relative z-10 flex justify-between items-center px-4 bg-primary-bg focus:outline-none cursor-pointer ${
                   isOpen
-                    ? 'rounded-t-4xl -ml-px border-default border-t border-r border-l w-[304px]'
-                    : 'rounded-4xl w-full'
-                } focus:outline-none cursor-pointer bg-primary-bg`}
+                    ? 'rounded-t-4xl border-t border-r border-l border-default w-full'
+                    : 'rounded-4xl border border-default w-full'
+                }`}
                 style={{
                   paddingTop: EMPLOYEE_GROUP_HEADER_PADDING_Y,
                   paddingBottom: EMPLOYEE_GROUP_HEADER_PADDING_Y,
@@ -365,37 +361,29 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                     {item.name}
                   </span>
                 </div>
-
                 <CustomArrow isOpen={isOpen} />
               </button>
             </div>
 
+            {/* Contenu et Footer */}
             {isOpen && (
               <>
-                {hasChildren
-                  ? item.children!.map(child => renderLevel2Group(child, index))
-                  : itemEmployees.map(employee =>
-                      renderEmployee(employee, String(item.id), 0)
-                    )}
+                {/* 3. Contenu */}
+                
 
-                {/*
-                  On conserve la hauteur historique du footer pour ne pas modifier
-                  la géométrie de la sidebar, mais on retire le gros bloc plein.
-                  Il devient uniquement une terminaison visuelle légère.
-                */}
-                <div
-                  className="sticky w-[304px] h-7"
-                  style={{
-                    bottom: 0,
-                    zIndex: 30 - index,
-                    marginLeft: -1,
-                    marginBottom: -EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
-                  }}
-                >
-                  <div className="absolute bottom-0 left-0 w-6 h-7 bg-page" />
-                  <div className="absolute bottom-0 right-0 w-6 h-7 bg-page" />
-                  <div className="relative w-full h-full bg-primary-bg border-b border-l border-r border-default rounded-b-4xl" />
-                </div>
+                  {hasChildren
+                    ? item.children!.map(child => renderLevel2Group(child, index))
+                    : itemEmployees.map(employee =>
+                        renderEmployee(employee, String(item.id), 0)
+                      )}
+               
+                
+                {/* 4. Footer */}
+                <div className="relative z-20 w-full h-5 bg-primary-bg border-b border-l border-r border-default rounded-b-4xl overflow-hidden" />
+                
+                {/* Masques extérieurs placés juste en dessous pour cacher les excédents sur les côtés */}
+                <div className="absolute bottom-0 -left-[1px] w-6 h-5 bg-page z-10 pointer-events-none" />
+                <div className="absolute bottom-0 -right-[1px] w-6 h-5 bg-page z-10 pointer-events-none" />         
               </>
             )}
           </div>

@@ -35,8 +35,6 @@ export const MARGIN_BETWEEN_TEAMS = 8;
 /** Padding vertical du header de groupe (en pixels) */
 export const EMPLOYEE_GROUP_HEADER_PADDING_Y = 8;
 
-/** Padding bas du contenu de groupe (en pixels) */
-export const EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM = 8;
 
 /** Hauteur du contenu du header (texte/icone) */
 export const EMPLOYEE_GROUP_HEADER_CONTENT_HEIGHT = 24;
@@ -44,8 +42,6 @@ export const EMPLOYEE_GROUP_HEADER_CONTENT_HEIGHT = 24;
 /** Taille bordure (en pixels) pour le container de chaque groupe */
 export const EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE = 1;
 
-/** Hauteur totale du header de groupe */
-export const EMPLOYEE_GROUP_HEADER_HEIGHT = EMPLOYEE_GROUP_HEADER_CONTENT_HEIGHT + (EMPLOYEE_GROUP_HEADER_PADDING_Y * 2);
 
 /**Hauteur cellules jour */
 export const TIMELINE_HEADERITEMS_CELL_HEIGHT = 50;

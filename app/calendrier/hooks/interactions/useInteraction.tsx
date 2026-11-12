@@ -80,7 +80,7 @@ export const useInteraction = ({
       control: (
         <select
           value={employee.Equipe ?? ''}
-          className="max-w-40 rounded-lg border border-default bg-secondary-bg px-2 py-1 text-sm"
+          className="min-w-50 rounded-lg border border-default bg-secondary-bg px-2 py-1 text-sm"
           onClick={(event) => event.stopPropagation()}
           onChange={async (event) => {
             const value = event.target.value;

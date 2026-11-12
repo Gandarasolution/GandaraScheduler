@@ -2,10 +2,9 @@ import { useMemo } from 'react';
 import { 
   CELL_HEIGHT, 
   ROW_HEIGHT, 
-  EMPLOYEE_GROUP_HEADER_HEIGHT, 
   MARGIN_BETWEEN_TEAMS, 
   EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
-  EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM
+  TIMELINE_HEADERITEMS_CELL_HEIGHT,
 } from '../../utils/constants';
 import { getDimensionItemKey, HierarchicalGroupItem } from '../../utils/filters';
 
@@ -41,16 +40,16 @@ export const useCalendarVirtualization = ({
       parentIdx?: number,
       level: number = 1
     ) => {
-      let inactiveRowHeight = EMPLOYEE_GROUP_HEADER_HEIGHT;
+      let inactiveRowHeight = TIMELINE_HEADERITEMS_CELL_HEIGHT;
       
       if (idx > 0 && !isChild) {
         const prevSiblingIdx = isChild && parentIdx !== undefined ? parentIdx : idx - 1;
         const prevItem = dimensionItems[prevSiblingIdx];
         const isPrevOpen = openItems.includes(getDimensionItemKey(prevItem.id));
         
-        inactiveRowHeight += MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2;
+        inactiveRowHeight += MARGIN_BETWEEN_TEAMS;
         if (isPrevOpen) {
-          inactiveRowHeight += EMPLOYEE_GROUP_CONTENT_PADDING_BOTTOM + 27;
+          inactiveRowHeight +=  20;
         }
       }
     
@@ -100,7 +99,7 @@ export const useCalendarVirtualization = ({
           id: 'unassigned' + i,
           uniqueKey: 'group-unassigned' + i,
           data: { name: 'Non assignés' },
-          height: EMPLOYEE_GROUP_HEADER_HEIGHT + MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2
+          height: TIMELINE_HEADERITEMS_CELL_HEIGHT + MARGIN_BETWEEN_TEAMS + EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE * 2
         });
       }
     }
