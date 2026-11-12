@@ -1360,7 +1360,6 @@ const NonWorkingDaysEditor = ({
   setting,
   selectedDayTypeId,
   setSelectedDayTypeId,
-  setError,
   canEdit,
   canDelete,
   canAdd,
@@ -1368,7 +1367,7 @@ const NonWorkingDaysEditor = ({
   setting: any;
   selectedDayTypeId: string | null;
   setSelectedDayTypeId: (id: string | null) => void;
-  setError: (msg: string | null) => void;
+  
   canEdit: boolean;
   canDelete: boolean;
   canAdd: boolean;
@@ -1382,6 +1381,9 @@ const NonWorkingDaysEditor = ({
   const [isLoadingYear, setIsLoadingYear] = useState(false);
   const [deletingDates, setDeletingDates] = useState<Record<string, boolean>>({});
   const [dateErrorMessage, setDateErrorMessage] = useState<string | null>(null);
+
+  const [error, setError] = useState<string | null>(null);
+
 
   const [pendingDeleteDate, setPendingDeleteDate] = useState<{
     dateKey: string;
@@ -1567,7 +1569,7 @@ const NonWorkingDaysEditor = ({
 
     if (setting.nonWorkingDates && setting.nonWorkingDates[formattedInputDate]) {
       setDateErrorMessage(
-        `La date du ${format(new Date(newDate), "dd/MM/yyyy")} est déjà enregistrée.`
+        `Un jour non travaillé existe déjà à cette date (${setting.dayTypesOptions.find((t: any) => t.Id === setting.nonWorkingDates[formattedInputDate].TypeJourCode)?.Libelle || "Inconnu"}).`
       );
       return;
     }
@@ -1661,7 +1663,7 @@ const NonWorkingDaysEditor = ({
     const formattedNewDate = format(new Date(editDateValue), "yyyy-MM-dd");
 
     if (formattedNewDate !== originalDateKey && setting.nonWorkingDates?.[formattedNewDate]) {
-      setError(`La date du ${format(new Date(editDateValue), "dd/MM/yyyy")} existe déjà.`);
+      setError(`Un jour non travaillé existe déjà à cette date (${setting.dayTypesOptions.find((t: any) => t.Id === setting.nonWorkingDates[formattedNewDate].TypeJourCode)?.Libelle || "Inconnu"}).`);
       return;
     }
 
@@ -1921,6 +1923,9 @@ const NonWorkingDaysEditor = ({
 
             {dateErrorMessage && (
               <p className="text-[11px] text-red-500 font-medium">{dateErrorMessage}</p>
+            )}
+            {error && (
+              <p className="text-[11px] text-red-500 font-medium">{error}</p>
             )}
           </div>
         ))
@@ -2214,7 +2219,6 @@ const  SettingsModalContent: React.FC<{
                         setting={currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates")}
                         selectedDayTypeId={selectedDayTypeId}
                         setSelectedDayTypeId={setSelectedDayTypeId}
-                        setError={setApiError}
                         canAdd={currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates")?.canAdd}
                         canEdit={currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates")?.canEdit}
                         canDelete={currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates")?.canDelete}

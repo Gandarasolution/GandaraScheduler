@@ -106,6 +106,9 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     value: config.IdPlanningVue,
   }));
 
+  console.log(availableConfigs)
+
+
   const stickyTop = TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
 
   const renderEmployee = (

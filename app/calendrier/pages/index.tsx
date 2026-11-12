@@ -72,6 +72,7 @@ import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
 import TopNotification from '../components/ui/TopNotification';
 import { DayTypesProvider, useDayTypesContext } from '../hooks/data/dayTypesContext';
+import { axiosAgent } from '@/app/service/axios.service';
 
 
 /**
@@ -94,7 +95,7 @@ export default function HomePage({
     isMobile: boolean;
 }) {
 
-  const { hasPermission, currentPlanningId, logout } = useAuth();
+  const { hasPermission, currentPlanningId, logout, currentVueId , setCurrentVueId} = useAuth();
   const {nonWorkingDates, loadNonWorkingDates, setNonWorkingDates} = useDayTypesContext();
   
   const user = useCurrentUser();
@@ -605,10 +606,60 @@ export default function HomePage({
 
     let isMounted = true;
 
+    const ensurePlanningViewHeader = async () => {
+      axiosAgent.defaults.headers.common['X-Planning-Id'] = currentPlanningId;
+
+      // Si on n'est pas en vue calendrier, sur mobile, ou que la vue est déjà chargée
+      const hasValidVueId = currentVueId !== null && currentVueId > 0;
+      if (hasValidVueId || viewState.viewType !== 'calendar' || isMobile) {
+        if (hasValidVueId) {
+          axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = currentVueId;
+        }
+        return true;
+      }
+
+      try {
+        const response = await calendarConfigService.getLastVueForUser();
+        if (!isMounted) return false;
+
+        const payload = response?.data;
+        const rawViews = payload?.Configs ?? payload?.configs ?? payload;
+        const views = Array.isArray(rawViews) ? rawViews : rawViews ? [rawViews] : [];
+        const viewId = Number(
+          views[0]?.IdPlanningVue ??
+          views[0]?.IdPlanningChantierVue ??
+          views[0]?.ValeurParametre
+        );
+
+        if (!Number.isFinite(viewId) || viewId <= 0) {
+          throw new Error(response?.message || "Aucune vue planning n'est disponible.");
+        }
+
+        // Mise à jour synchrone du header AVANT tout autre appel API
+        axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = viewId;
+        setCurrentVueId(viewId);
+        return true;
+      } catch (error) {
+        if (isMounted) {
+          console.error("Impossible de charger la dernière vue du planning.", error);
+          setErrorPlanning("Impossible de charger la configuration de la vue du planning.");
+          setLoadCalendar(false);
+        }
+        return false;
+      }
+    };
+
     const initializePlanning = async () => {
       if (!isMounted || hasInitializedPlanningRef.current) return;
       hasInitializedPlanningRef.current = true;
       hasInitializedTeamsRef.current = true;
+
+      const isHeaderReady = await ensurePlanningViewHeader();
+      if (!isHeaderReady || !isMounted) {
+        hasInitializedPlanningRef.current = false; // Permet de réessayer si annulé/échoué
+        hasInitializedTeamsRef.current = false;
+        return;
+      }
 
       if (!hasInitializedEmployeesRef.current) {
         const employeesResponse =
@@ -1492,4 +1543,8 @@ export default function HomePage({
       </DndProvider>
     </NoSSR>
   );
+}
+
+function setCurrentVueId(viewId: number) {
+  throw new Error('Function not implemented.');
 }

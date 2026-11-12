@@ -82,6 +82,7 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
     }
   }, [isCreatingConfig, editingConfig, closeConfigModal, user.IdPersonnel]);
 
+
   const deleteConfig = useCallback(async (configId: number): Promise<{success: boolean, message?: string} | void> => {
     try {
       const response = await calendarConfigService.deleteCalendarConfig(configId);

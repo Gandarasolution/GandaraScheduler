@@ -28,11 +28,13 @@ export interface MobileAppointmentFieldOption {
   CaractereSpecial: boolean;
 }
 
-const MAX_SECONDARY_FIELDS = 4;
+const MAX_SECONDARY_FIELDS = 2;
 const MAX_FIELDS_PER_PRIMARY_ROW = 3;
 const MAX_TITLE_REGULAR_FIELDS = 2;
 const MAX_TITLE_SPECIAL_FIELDS = 1;
 const MAX_ROWS = 5;
+
+
 interface AppointmentCardProps {
   app: Appointment;
   items: Item[];
@@ -97,9 +99,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
     ChargeAffaire: () => (item?.Type === 'Projet' ? item.ChargeAffaire || '' : ''),
   };
 
-  const MAX_ROWS = 5;
-  const MAX_SECONDARY_FIELDS = 4;
-
   const renderRowInsertionZone = (
     column: "primaryFields" | "secondaryFields",
     rowIndex: number,
@@ -118,7 +117,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
       <div
         key={`${column}-insert-row-${rowIndex}`}
         className={`h-3 -my-1 flex items-center rounded transition-colors ${
-          isTarget ? (blocked ? 'bg-red-100/60' : 'bg-emerald-100/60') : ''
+          isTarget ? (blocked ? 'bg-red-100/60' : 'bg-primary-100/60') : ''
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -139,7 +138,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         aria-label={blocked ? 'Nombre maximum de lignes atteint' : 'Insérer une ligne'}
       >
         {isTarget && (
-          <span className={`h-0.5 w-full rounded ${blocked ? 'bg-red-500' : 'bg-emerald-500'}`} />
+          <span className={`h-0.5 w-full rounded ${blocked ? 'bg-red-500' : 'bg-primary-500'}`} />
         )}
       </div>
     );
@@ -345,24 +344,20 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
   ) => {
     if (!preview) return content;
 
-    const isTarget = dragOverInfo?.surface === surface &&
-      dragOverInfo?.column === column &&
-      dragOverInfo?.rowIndex === rowIndex &&
-      dragOverInfo?.fieldCode === fieldCode;
-    const draggedCode = draggedFieldCode;
     const rowFields = column === "primaryFields"
       ? displayedPrimaryRows[rowIndex] || []
       : secondaryRows[rowIndex] || [];
-    const blocked = isRowFull(column, rowIndex, rowFields, draggedCode);
-    const isHighlighted = highlightedFieldCode === fieldCode;
+    const blocked = isRowFull(column, rowIndex, rowFields, draggedFieldCode);
     const isLastField = rowFields[rowFields.length - 1] === fieldCode;
-    
-    const isAppendTarget = dragOverInfo?.surface === surface &&
+
+    // Déterminer quel est le champ qui suit immédiatement celui-ci
+    const currentIndex = rowFields.indexOf(fieldCode);
+    const nextFieldCode = currentIndex + 1 < rowFields.length ? rowFields[currentIndex + 1] : undefined;
+
+    const isTargetBefore = dragOverInfo?.surface === surface &&
       dragOverInfo?.column === column &&
       dragOverInfo?.rowIndex === rowIndex &&
-      !dragOverInfo?.fieldCode &&
-      !dragOverInfo?.insertRow &&
-      isLastField;
+      dragOverInfo?.fieldCode === fieldCode;
 
     return (
       <div
@@ -375,7 +370,15 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onPreviewDragOver?.(e, column, rowIndex, fieldCode, blocked, false, surface);
+          
+          const rect = e.currentTarget.getBoundingClientRect();
+          const offsetX = e.clientX - rect.left;
+          const isBefore = offsetX < rect.width / 2;
+          
+          // Si on est sur la moitié gauche, on s'insère AVANT ce champ.
+          // Si on est sur la moitié droite, on s'insère AVANT le champ SUIVANT (ou à la fin si c'est le dernier).
+          const targetFieldCode = isBefore ? fieldCode : nextFieldCode;
+          onPreviewDragOver?.(e, column, rowIndex, targetFieldCode, blocked, false, surface);
         }}
         onDragLeave={(e) => {
           e.preventDefault();
@@ -385,14 +388,21 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (!blocked) onPreviewDrop?.(e, column, rowIndex, fieldCode, false);
+          
+          const rect = e.currentTarget.getBoundingClientRect();
+          const offsetX = e.clientX - rect.left;
+          const isBefore = offsetX < rect.width / 2;
+          const targetFieldCode = isBefore ? fieldCode : nextFieldCode;
+          
+          if (!blocked) onPreviewDrop?.(e, column, rowIndex, targetFieldCode, false);
         }}
-        className={`overflow-visible relative group/field inline-flex w-fit min-w-0 max-w-full items-center cursor-grab active:cursor-grabbing p-1 transition-all ${
-          isTarget || isHighlighted
-            ? 'border-2 border-primary-500 bg-primary-50/40 rounded-md shadow-sm'
-            : 'border border-transparent'
-        }`}
+        className={`overflow-visible relative group/field inline-flex w-fit min-w-0 max-w-full items-center cursor-grab active:cursor-grabbing p-1 transition-all border border-transparent`}
       >
+        {/* Trait avant le champ */}
+        {isTargetBefore && !blocked && (
+          <span className={`absolute -left-1.5 inset-y-0 w-1 bg-primary-500 rounded-full shadow-md z-30 animate-pulse`} />
+        )}
+
         {content}
 
         <button
@@ -407,15 +417,17 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
           <X size={12} />
         </button>
 
+        {/* Espace vide après le champ */}
         <div
-          className={`relative min-h-[20px] flex items-center justify-center w-1.5 ${
+          className={`relative min-h-[20px] flex items-center justify-center w-3 ${
             isLastField ? 'flex-1' : 'shrink-0'
           } transition-all`}
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();
             e.dataTransfer.dropEffect = blocked ? 'none' : 'move';
-            onPreviewDragOver?.(e, column, rowIndex, undefined, blocked, false, surface);
+            // Survoler l'espace vide équivaut à vouloir insérer avant le prochain champ
+            onPreviewDragOver?.(e, column, rowIndex, nextFieldCode, blocked, false, surface);
           }}
           onDragLeave={(e) => {
             e.preventDefault();
@@ -425,12 +437,17 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
           onDrop={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (!blocked) onPreviewDrop?.(e, column, rowIndex, undefined, false);
+            if (!blocked) onPreviewDrop?.(e, column, rowIndex, nextFieldCode, false);
           }}
           aria-label={blocked ? 'Ligne pleine' : 'Déposer après ce champ'}
         >
-          {isAppendTarget && !blocked && (
-            <span className="absolute inset-y-[10%] left-1/2 -translate-x-1/2 rounded-full w-[2px] bg-emerald-500 shadow-sm" />
+          {/* L'indicateur de fin de ligne ne s'affiche QUE si on est à la fin du TOUT DERNIER champ */}
+          {dragOverInfo?.surface === surface &&
+           dragOverInfo?.column === column &&
+           dragOverInfo?.rowIndex === rowIndex &&
+           !dragOverInfo?.fieldCode && 
+           !dragOverInfo?.insertRow && !blocked && isLastField && (
+            <span className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 bg-primary-500 rounded-full shadow-md z-30 animate-pulse" />
           )}
         </div>
       </div>
@@ -461,7 +478,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         <div className="flex-1 min-w-0">
           {isPrimary ? (
             <>
-              {/* Ligne 0 (Titre) */}
               <h3 
                 className={`relative ${preview ? 'text-sm overflow-visible' : 'text-base truncate'} font-semibold mb-1 transition-colors rounded ${
                   isBlockedRowTarget("primaryFields", 0, "fieldNames") ? 'pb-4 border-b-2 border-red-500 bg-red-50/30' : ''
@@ -469,21 +485,29 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 style={{ color: 'var(--text-primary)' }}
                 onDragOver={(e) => {
                   if (!preview) return;
+                  const rowFields = nameRows[0] || [];
                   const blocked = isRowFull(
                     "primaryFields",
                     0,
-                    nameRows[0] || [],
+                    rowFields,
                     draggedFieldCode || e.dataTransfer.getData("text/plain")
                   );
+
+                  // Détermine si on est plutôt vers la fin de la ligne pour insérer à la fin
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const isNearEnd = (e.clientX - rect.left) > (rect.width / 2);
+
                   if (blocked) {
                     e.dataTransfer.dropEffect = 'none';
                     e.preventDefault();
                     e.stopPropagation();
-                    onPreviewDragOver?.(e, "primaryFields", 0, nameRows[0]?.[0], true, false, "fieldNames");
+                    onPreviewDragOver?.(e, "primaryFields", 0, isNearEnd ? undefined : rowFields[0], true, false, "fieldNames");
                     return;
                   }
+
                   e.preventDefault();
                   e.stopPropagation();
+                  // Si on survole la seconde moitié du bloc titre, on passe undefined mais avec l'indice de fin ou on gère le ciblage de fin
                   onPreviewDragOver?.(e, "primaryFields", 0, undefined, false, false, "fieldNames");
                 }}
                 onDragLeave={(e) => {
@@ -495,25 +519,32 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                   if (!preview) return;
                   e.preventDefault();
                   e.stopPropagation();
+                  const rowFields = nameRows[0] || [];
                   const blocked = isRowFull(
                     "primaryFields",
                     0,
-                    nameRows[0] || [],
+                    rowFields,
                     draggedFieldCode || e.dataTransfer.getData("text/plain")
                   );
-                  if (!blocked) onPreviewDrop?.(e, "primaryFields", 0, nameRows[0]?.[0]);
+                  if (!blocked) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const isNearEnd = (e.clientX - rect.left) > (rect.width / 2);
+                    
+                    onPreviewDrop?.(e, "primaryFields", 0, isNearEnd ? undefined : rowFields[0]);
+                  }
                 }}
               >
                 <span className="inline-flex items-center gap-1 flex-wrap w-full pointer-events-none">
                   {(nameRows[0] || []).map((field, index) => (
                     <React.Fragment key={field}>
-                      
                       <span className="pointer-events-auto">
                         {renderFieldWithDropZone(
                           "primaryFields",
                           0,
                           field,
-                          <span>{getFieldLabel(field)}</span>,
+                          <span className={`${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-50/40 rounded-md shadow-sm ' : ''} p-1`}>
+                            {getFieldLabel(field)}
+                          </span>,
                           "fieldNames"
                         )}
                       </span>
@@ -523,7 +554,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 {renderBlockedRowMessage("primaryFields", 0, "fieldNames")}
               </h3>
               
-              {/* Lignes 1 à N zone principale avec support des lignes vides */}
               <div className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
                 {nameRows.slice(1, 5).map((row, rowIndex) => {
                   const actualRowIndex = rowIndex + 1;
@@ -545,7 +575,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                               ? 'bg-primary/5'
                               : isEmptyRow
                                 ? isRowTarget 
-                                  ? 'border-2 border-dashed border-emerald-500 bg-emerald-50/60' 
+                                  ? 'border-2 border-dashed border-primary-500 bg-primary-50/60' 
                                   : 'border-2 border-dashed border-gray-200 bg-gray-50/40'
                                 : ''
                         }`}
@@ -574,17 +604,17 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                         }}
                       >
                         {isEmptyRow ? (
-                          <span className={`text-[11px] italic pointer-events-none select-none ${isRowTarget ? 'text-emerald-700 font-semibold' : 'text-gray-400'}`}>
+                          <span className={`text-[11px] italic pointer-events-none select-none ${isRowTarget ? 'text-primary-700 font-semibold' : 'text-gray-400'}`}>
                             {isRowTarget ? 'Déposer le champ ici' : 'Ligne vide — Déposez un champ ici'}
                           </span>
                         ) : (
-                          row.map((field, fieldIndex) => (
+                          row.map((field) => (
                             <React.Fragment key={field}>
                               {renderFieldWithDropZone(
                                 "primaryFields",
                                 actualRowIndex,
                                 field,
-                                <span className="font-medium">{getFieldLabel(field)}</span>,
+                                <span className={`p-1 ${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-50/40 rounded-md shadow-sm ' : ''} font-medium`}>{getFieldLabel(field)}</span>,
                                 "fieldNames"
                               )}
                             </React.Fragment>
@@ -593,7 +623,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
 
                         {renderBlockedRowMessage("primaryFields", actualRowIndex, "fieldNames")}
 
-                        {/* Croix de suppression de ligne */}
                         {preview && (
                           <button
                             type="button"
@@ -635,7 +664,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                             ? 'pb-4 border-b-2 border-red-500 bg-red-50/30' 
                             : isEmptyRow
                               ? isRowTarget 
-                                ? 'border-2 border-dashed border-emerald-500 bg-emerald-50/60 rounded' 
+                                ? 'border-2 border-dashed border-primary-500 bg-primary-50/60 rounded' 
                                 : 'border-2 border-dashed border-gray-200 bg-gray-50/40 rounded'
                               : ''
                         }`}
@@ -665,7 +694,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                       >
                         <div className="flex-1 flex items-center gap-1 flex-wrap min-w-0">
                           {isEmptyRow ? (
-                            <span className={`text-[11px] italic pointer-events-none select-none ${isRowTarget ? 'text-emerald-700 font-semibold' : 'text-gray-400'}`}>
+                            <span className={`text-[11px] italic pointer-events-none select-none ${isRowTarget ? 'text-primary-700 font-semibold' : 'text-gray-400'}`}>
                               {isRowTarget ? 'Déposer le champ ici' : 'Ligne vide — Déposez un champ ici'}
                             </span>
                           ) : (
@@ -682,7 +711,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                                         {getFieldIcon(field)}
                                       </span>
                                     )}
-                                    <span className="font-medium">{getFieldLabel(field)}</span>
+                                    <span className={`p-1 ${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-50/40 rounded-md shadow-sm ' : ''} font-medium`}>{getFieldLabel(field)}</span>
                                   </span>,
                                   "fieldNames"
                                 )}
@@ -693,7 +722,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
 
                         {renderBlockedRowMessage("secondaryFields", rowIndex, "fieldNames")}
 
-                        {/* Croix de suppression de ligne */}
                         {preview && (
                           <button
                             type="button"
@@ -726,7 +754,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
       onDragOver={preview ? (e) => e.stopPropagation() : undefined}
       onDrop={preview ? (e) => e.stopPropagation() : undefined}
     >
-      {/* Panneau d'avertissement ORANGE PERMANENT quand la limite max de lignes est atteinte */}
       {preview && isMaxRowsReached && (
         <div className="mb-4 flex items-center gap-3 rounded-xl bg-orange-50 p-3.5 text-sm font-medium text-orange-800 border border-orange-200 shadow-sm">
           <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />
@@ -744,7 +771,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         </h4>
       )}
 
-      {/* CARTE D'APERÇU STATIQUE (Vrais ChampsPrincipaux) */}
       {canRenderCard && (
         <div 
           className={`${preview ? 'rounded-xl p-3 mb-0' : 'rounded-3xl p-5 mb-4'} border flex items-start group transition-all duration-300 ${!preview ? 'cursor-pointer' : ''}`}
@@ -800,7 +826,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
         </div>
       )}
 
-      {/* ZONE SECONDAIRE */}
       {(isSecondaryOpen || (preview && !showCard)) && (
         <div className={preview ? "w-full" : "fixed inset-0 z-[60] flex items-end"}>
           <div className={preview ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3" : "relative max-h-[68vh] w-full overflow-hidden rounded-t-[2rem] bg-secondary-bg p-5 shadow-2xl"}>
@@ -850,7 +875,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                       preview && dragOverInfo?.surface === dragSurface && dragOverInfo?.column === 'secondaryFields' && dragOverInfo?.rowIndex === rowIndex && !dragOverInfo?.fieldCode && !dragOverInfo?.insertRow
                         ? dragOverInfo?.blocked
                           ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
-                          : 'ring-1 ring-dashed ring-emerald-500 bg-emerald-50/40 text-emerald-700'
+                          : 'ring-1 ring-dashed ring-primary-500 bg-primary-50/40 text-primary-700'
                         : ''
                     }`}
                     onDragOver={(e) => {
@@ -882,7 +907,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                         "secondaryFields",
                         rowIndex,
                         field,
-                        <span key={field} className={`inline-flex min-w-0 max-w-full items-start ${isSpecialField(field) ? 'gap-0' : 'gap-1'}`}>
+                        <span key={field} className={`p-1 inline-flex min-w-0 max-w-full items-start ${isSpecialField(field) ? 'gap-0' : 'gap-1'} ${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-50/40 rounded-md shadow-sm ' : ''}`}>
                           {!isSpecialField(field) && (
                             <span className="mt-0.5 shrink-0 text-secondary">{getFieldIcon(field)}</span>
                           )}
@@ -894,7 +919,8 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                             )}
                             <span className={`${preview ? 'text-xs' : 'text-sm'} ${isSpecialField(field) ? '' : 'mt-0.5'} block max-w-full break-words leading-5 text-primary`}>{value}</span>
                           </span>
-                        </span>
+                        </span>,
+                        dragSurface
                       )
                     )}
                     {renderBlockedRowMessage("secondaryFields", rowIndex)}

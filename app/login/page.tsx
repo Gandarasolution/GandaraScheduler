@@ -90,7 +90,7 @@ export default function LoginPage({ login }: LoginPageProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2 poppins">Gandara Planning</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2 poppins uppercase">Gandara Planning</h1>
           <p className="text-secondary poppins text-sm sm:text-base">
             {needsCompanyCode ? "Trouvez votre espace de travail" : "Connectez-vous à votre espace"}
           </p>

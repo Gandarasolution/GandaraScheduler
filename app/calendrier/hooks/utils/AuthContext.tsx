@@ -56,8 +56,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [currentPlanningId]);
 
   useEffect(() => {
-    console.log(UserPlanning);
-  }, [UserPlanning]);
+    console.log(currentVueId);
+  }, [currentVueId]);
 
   const login = async (login: string, password: string): Promise<{ success: boolean; message?: string }> => {
     // Note : À ce stade, le composant LoginPage aura DÉJÀ renseigné le cookie 'client_api_url' 

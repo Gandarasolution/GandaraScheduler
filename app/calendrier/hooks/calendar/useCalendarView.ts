@@ -123,7 +123,6 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   });
   const [mobileAppointmentDisplay, setMobileAppointmentDisplayState] = useState<MobileAppointmentDisplayConfig>(defaultMobileAppointmentDisplay);
   
-  const { setDayTypes } = useDayTypesContext();
   
   const [viewType, setViewType] = useState<'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table'>(() => {        
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -304,40 +303,7 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
   const calendarConfigHook = useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig });
 
-  useEffect(() => {
-    if (viewType !== 'calendar' || currentVueId !== 0 || !idPlanning || isMobile) return;
-
-    let cancelled = false;
-    const loadLastPlanningView = async () => {
-      try {
-        axiosAgent.defaults.headers.common['X-Planning-Id'] = idPlanning;
-        const response = await calendarConfigService.getLastVueForUser();
-        if (cancelled) return;
-
-        const payload = response?.data;
-        const rawViews = payload?.Configs ?? payload?.configs ?? payload;
-        const views = Array.isArray(rawViews) ? rawViews : rawViews ? [rawViews] : [];
-        const viewId = Number(
-          views[0]?.IdPlanningVue
-            ?? views[0]?.IdPlanningChantierVue
-            ?? views[0]?.ValeurParametre
-        );
-        if (!Number.isFinite(viewId) || viewId <= 0) {
-          throw new Error(response?.message || "Aucune vue planning n'est disponible.");
-        }
-
-        setCurrentVueId(viewId);
-        axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = viewId;
-      } catch (error) {
-        if (!cancelled) console.error("Impossible de charger la dernière vue du planning.", error);
-      }
-    };
-
-    void loadLastPlanningView();
-    return () => {
-      cancelled = true;
-    };
-  }, [currentVueId, idPlanning, isMobile, setCurrentVueId, viewType]);
+  
 
   useEffect(() => {
     if (viewType !== 'calendar' || currentVueId === null || currentVueId <= 0 || isMobile) return;
@@ -416,12 +382,13 @@ export const useCalendarView = (idPlanning: number, user: User, isMobile: boolea
     .then(() => {
       //console.log(`Last view for user ${user.IdPersonnel} set to ${config.IdPlanningVue}`);
       axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = config.IdPlanningVue;
+
       setCurrentCalendarConfig(config);
+      setCurrentVueId(config.IdPlanningVue || 0);
     }).catch((error) => {
       console.error('Error setting last view for user:', error);
     }); 
   }
-
 
 
   
