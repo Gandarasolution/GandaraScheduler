@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/demo/:path*",
-      "destination": "https://demo.palissot.fr/:path*"
+      "destination": "https://demo.palissot.fr/demo/:path*"
     }
   ]
 }
