@@ -2,8 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/api/:path*",
+      "source": "/demo/:path*",
       "destination": "https://demo.palissot.fr/:path*"
     }
+    {}
   ]
 }

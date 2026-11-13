@@ -1,12 +1,12 @@
 import { getRequest, patchRequest } from "./axios.service";
 
 async function getNotificationsByUserId() {
-  return await getRequest(`/api/notifications`, 'getNotificationsByUserId');
+  return await getRequest(`/demo/notifications`, 'getNotificationsByUserId');
 }
 
 async function markNotificationAsRead(notificationIds: string[]) {
   return await patchRequest(
-    `/api/notifications/read`,
+    `/demo/notifications/read`,
     {notificationIds},
     'markNotificationAsRead'
   );

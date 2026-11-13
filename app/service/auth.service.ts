@@ -21,19 +21,19 @@ type ResolvedClientEnvironment = {
 };
 
 async function login(payload: LoginPayload) {
-  return await postRequest("/api/login", payload, "login");
+  return await postRequest("/demo/login", payload, "login");
 }
 
 async function me() {
-  return await getRequest("/api/me", "me");
+  return await getRequest("/demo/me", "me");
 }
 
 async function logout() {
-  return await postRequest("/api/logout", {}, "logout");
+  return await postRequest("/demo/logout", {}, "logout");
 }
 
 async function refreshToken() {
-  return await postRequest("/api/token/refresh", {}, "refreshToken");
+  return await postRequest("/demo/token/refresh", {}, "refreshToken");
 }
 
 async function isApiReachable(url: string | null | undefined, timeoutMs = 10000): Promise<boolean> {

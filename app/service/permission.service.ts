@@ -2,12 +2,12 @@ import { getRequest, putRequest } from "./axios.service";
 
 
 async function getPermissions(){
-  return await getRequest('/api/permissions', 'getPermissions');
+  return await getRequest('/demo/permissions', 'getPermissions');
 }
 
 
 async function setPermissions(data: { IdPersonnel: number, IdDroit: number }[]) {
-  return await putRequest('/api/permissions/', data, 'setPermissions');
+  return await putRequest('/demo/permissions/', data, 'setPermissions');
 }
 
 

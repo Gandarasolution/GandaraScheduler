@@ -4,7 +4,7 @@ type ActiveFilters = Record<string, string[]>;
 
 
 async function getRessourceById(ressourceId: number, timeoutMs: number = 5000) {
-  return await getRequest(`/api/ressources/${ressourceId}`, 'getRessourceById', { timeout: timeoutMs });
+  return await getRequest(`/demo/ressources/${ressourceId}`, 'getRessourceById', { timeout: timeoutMs });
 }
 
 async function searchRessources(query: string = '', types: string[] = [], limit: number = 20, timeoutMs: number = 5000) {
@@ -17,7 +17,7 @@ async function searchRessources(query: string = '', types: string[] = [], limit:
   
 
   return await getRequest(
-    `/api/ressources/search?${params.toString()}`,
+    `/demo/ressources/search?${params.toString()}`,
     'searchRessources',
     { timeout: timeoutMs }
   );
@@ -34,12 +34,12 @@ async function getFilterOptionsDynamic(types: string, keys: string[]) {
   if (keys.length > 0) {
     params.set('keys', keys.join(','));
   }
-  return await getRequest(`/api/filters-options?${params.toString()}`, 'getFilterOptionsDynamic');
+  return await getRequest(`/demo/filters-options?${params.toString()}`, 'getFilterOptionsDynamic');
 }
 
 async function saveFilterOptions(viewType: string, activeFilters: ActiveFilters) {
   return await postRequest(
-    '/api/filters-options',
+    '/demo/filters-options',
     { viewType, activeFilters },
     'saveFilterOptions'
   );
@@ -58,7 +58,7 @@ async function getRessourcesProjet(limit: number = 20, pageNum: number = 1, quer
   });
 
   return await getRequest(
-    `/api/ressources/projets?${params.toString()}`,
+    `/demo/ressources/projets?${params.toString()}`,
     'getRessourcesProjet',
     { timeout: timeoutMs }
   );
@@ -77,7 +77,7 @@ async function getManualEvents(limit: number = 20, pageNum: number = 1, query: s
   }
 
   return await getRequest(
-    `/api/ressources/manual-events?${params.toString()}`,
+    `/demo/ressources/manual-events?${params.toString()}`,
     'getManualEvents',
     { timeout: timeoutMs }
   );
@@ -99,7 +99,7 @@ async function getRubriquePaie(limit: number = 20, pageNum: number = 1, query: s
   //console.log(activeFilters);
 
   return await getRequest(
-    `/api/ressources/rubrique-paie?${params.toString()}`,
+    `/demo/ressources/rubrique-paie?${params.toString()}`,
     'getRubriquePaie',
     { timeout: timeoutMs }
   );
@@ -110,19 +110,19 @@ async function verifyUniqueCode(code: string) {
   const params = new URLSearchParams();
   params.set('code', code);
   const response = await getRequest(
-    `/api/ressources/verify-code?${params.toString()}`,
+    `/demo/ressources/verify-code?${params.toString()}`,
     'verifyUniqueCode'
   );
   return response
 }
 
 async function addRessourceManual(ressourceData: any) {
-  return await postRequest('/api/ressources/manual-events/create', ressourceData, 'addRessourceManual');
+  return await postRequest('/demo/ressources/manual-events/create', ressourceData, 'addRessourceManual');
 }
 
 async function editRessource(ressourceId: number, ressourceData: any) {
 
-  return await putRequest(`/api/ressources/${ressourceId}`, ressourceData, 'editRessource');
+  return await putRequest(`/demo/ressources/${ressourceId}`, ressourceData, 'editRessource');
 }
 
 

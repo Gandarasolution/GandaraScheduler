@@ -6,76 +6,76 @@ async function getCalendarConfigsByUserId(userId: number, idPlanning: number) {
       console.error('idPlanning is required to fetch calendar configurations.');
       return null;
     }
-  return await getRequest(`/api/planning/vue/user/${userId}?idPlanning=${idPlanning}`, 'getCalendarConfigsByUserId');
+  return await getRequest(`/demo/planning/vue/user/${userId}?idPlanning=${idPlanning}`, 'getCalendarConfigsByUserId');
 }
 
 async function getNonWorkingDates(years: number[]) {
-  return await getRequest(`/api/planning/non-working-dates?years=${years.join(',')}`, 'getNonWorkingDatesByPlanningId');
+  return await getRequest(`/demo/planning/non-working-dates?years=${years.join(',')}`, 'getNonWorkingDatesByPlanningId');
 }
 
 async function editNonWorkingDate(data: {id: number, date: Date, typeJourCode: string}) {
-  return await putRequest(`/api/planning/non-working-dates/${data.id}`, { nonWorkingDate: data.date, typeJourCode: data.typeJourCode }, 'editNonWorkingDate');
+  return await putRequest(`/demo/planning/non-working-dates/${data.id}`, { nonWorkingDate: data.date, typeJourCode: data.typeJourCode }, 'editNonWorkingDate');
 }
 
 async function addNonWorkingDatesToPlanning(nonWorkingDate: number, codeType: string) {  
-  return await postRequest(`/api/planning/non-working-dates`, { nonWorkingDate, typeJourCode: codeType }, 'addNonWorkingDatesToPlanning');
+  return await postRequest(`/demo/planning/non-working-dates`, { nonWorkingDate, typeJourCode: codeType }, 'addNonWorkingDatesToPlanning');
 }
 
 async function removeNonWorkingDatesFromPlanning(idDate: number) {
-  return await deleteRequest(`/api/planning/${idDate}/non-working-dates`, 'removeNonWorkingDatesFromPlanning');
+  return await deleteRequest(`/demo/planning/${idDate}/non-working-dates`, 'removeNonWorkingDatesFromPlanning');
 }
 
 async function createCalendarConfig(data: any) {
-  return await postRequest('/api/planning/vue', data, 'createCalendarConfig');
+  return await postRequest('/demo/planning/vue', data, 'createCalendarConfig');
 }
 
 async function updateCalendarConfig(id: number, data: any) {
-  return await putRequest(`/api/planning/vue/${id}`, data, 'updateCalendarConfig');
+  return await putRequest(`/demo/planning/vue/${id}`, data, 'updateCalendarConfig');
 }
 
 async function deleteCalendarConfig(id: number) {
-  return await deleteRequest(`/api/planning/vue/${id}`, 'deleteCalendarConfig', {});
+  return await deleteRequest(`/demo/planning/vue/${id}`, 'deleteCalendarConfig', {});
 }
 
 async function lockCalendarConfig(id: number) {
-  return await postRequest(`/api/planning/vue/${id}/lock`, {}, 'lockCalendarConfig');
+  return await postRequest(`/demo/planning/vue/${id}/lock`, {}, 'lockCalendarConfig');
 }
 
 async function getLastVueForUser() {
-  return await getRequest(`/api/planning/getLastVue`, 'getLastVueForUser');
+  return await getRequest(`/demo/planning/getLastVue`, 'getLastVueForUser');
 }
 
 async function setLastVueForUser(idVue: number) {
-  return await postRequest(`/api/planning/setLastVue`, { idVue }, 'setLastVueForUser');
+  return await postRequest(`/demo/planning/setLastVue`, { idVue }, 'setLastVueForUser');
 }
 
 async function getLastPositionForUser() {
-  return await getRequest(`/api/planning/getLastPosition`, 'getLastPositionForUser');
+  return await getRequest(`/demo/planning/getLastPosition`, 'getLastPositionForUser');
 }
 
 async function setLastPositionForUser(date: number) {
-  return await postRequest(`/api/planning/setLastPosition`, { date }, 'setLastPositionForUser');
+  return await postRequest(`/demo/planning/setLastPosition`, { date }, 'setLastPositionForUser');
 }
 
 async function getVueDetails(id: number) {
-  return await getRequest(`/api/planning/vue/${id}`, 'getVueDetails');
+  return await getRequest(`/demo/planning/vue/${id}`, 'getVueDetails');
 }
 
 
 async function getLastChantierView() {
-  return await getRequest('/api/planning/chantier/getLastVue', 'getLastChantierView');
+  return await getRequest('/demo/planning/chantier/getLastVue', 'getLastChantierView');
 }
 
 async function setLastChantierView(idVue: number) {
-  return await postRequest('/api/planning/chantier/setLastVue', { idVue }, 'setLastChantierView');
+  return await postRequest('/demo/planning/chantier/setLastVue', { idVue }, 'setLastChantierView');
 }
 
 async function getChantierViewDetails(id: number, viewType: string) {
-  return await getRequest(`/api/planning/chantier/vue/${id}?viewType=${viewType}`, 'getChantierViewDetails');
+  return await getRequest(`/demo/planning/chantier/vue/${id}?viewType=${viewType}`, 'getChantierViewDetails');
 }
 
 async function getChantierViewsByUserId(userId: number) {
-  return await getRequest(`/api/planning/chantier/vue/user/${userId}`, 'getChantierViewsByUserId');
+  return await getRequest(`/demo/planning/chantier/vue/user/${userId}`, 'getChantierViewsByUserId');
 }
 
 async function createChantierView(data: {
@@ -93,7 +93,7 @@ async function createChantierView(data: {
     ChantierColonnes: planningVue.ChantierColonnes ?? planningVue.columns ?? [],
   };
 
-  return await postRequest('/api/planning/chantier/vue', {
+  return await postRequest('/demo/planning/chantier/vue', {
       planningVue: chantierPlanningVue,
       utilisateursAutorises: data.utilisateursAutorises,
     }, 'createChantierView');
@@ -115,7 +115,7 @@ async function updateChantierView(id: number, data: {
   };
 
   return await putRequest(
-    '/api/planning/chantier/vue/' + id,
+    '/demo/planning/chantier/vue/' + id,
     {
       planningVue: chantierPlanningVue,
       utilisateursAutorises: data.utilisateursAutorises,
@@ -125,11 +125,11 @@ async function updateChantierView(id: number, data: {
 }
 
 async function getMobileAppointmentDisplayConfig() {
-  return await getRequest(`/api/planning/mobile/display`, 'getMobileAppointmentDisplayConfig');
+  return await getRequest(`/demo/planning/mobile/display`, 'getMobileAppointmentDisplayConfig');
 }
 
 async function getMobileAppointmentDisplayConfigSettings() {
-  return await getRequest(`/api/planning/mobile/settings`, 'getMobileAppointmentDisplayConfigSettings');
+  return await getRequest(`/demo/planning/mobile/settings`, 'getMobileAppointmentDisplayConfigSettings');
 }
 
 
@@ -138,42 +138,42 @@ async function saveMobileAppointmentDisplayConfig(data: {
   primaryFields: Array<{ CodeChamp: string; Ligne: number; Position: number }>;
   secondaryFields: Array<{ CodeChamp: string; Ligne: number; Position: number }>;
 }) {
-  return await postRequest('/api/planning/mobile/save', data, 'saveMobileAppointmentDisplayConfig');
+  return await postRequest('/demo/planning/mobile/save', data, 'saveMobileAppointmentDisplayConfig');
 }
 
 async function deleteChantierVue(id: number) {
-  return await deleteRequest(`/api/planning/chantier/vue/${id}`, 'deleteChantierVue', {});
+  return await deleteRequest(`/demo/planning/chantier/vue/${id}`, 'deleteChantierVue', {});
 }
 
 
 async function updateDayType(dayType: DayType) {
-  return await putRequest(`/api/planning/day-type/${dayType.Id}`, dayType, 'updateDayType');
+  return await putRequest(`/demo/planning/day-type/${dayType.Id}`, dayType, 'updateDayType');
 }
 
 async function addDayType(dayType: DayType) {
-  return await postRequest(`/api/planning/day-type`, dayType, 'addDayType');
+  return await postRequest(`/demo/planning/day-type`, dayType, 'addDayType');
 }
 
 async function removeDayType(dayTypeId: string, numberDayCheck: number) {
-  return await deleteRequest(`/api/planning/day-type/${dayTypeId}`, 'removeDayType', { numberDayCheck });
+  return await deleteRequest(`/demo/planning/day-type/${dayTypeId}`, 'removeDayType', { numberDayCheck });
 }
 
 async function getDayTypes() {
-  return await getRequest(`/api/planning/day-type`, 'getDayTypes');
+  return await getRequest(`/demo/planning/day-type`, 'getDayTypes');
 }
 
 async function getAvailableColumns(viewType: string, timeoutMs: number = 5000) {
   const params = new URLSearchParams();
   params.set('viewType', viewType);
-  return await getRequest(`/api/planning/vue/available-columns?${params.toString()}`, 'getAvailableColumns', { timeout: timeoutMs });
+  return await getRequest(`/demo/planning/vue/available-columns?${params.toString()}`, 'getAvailableColumns', { timeout: timeoutMs });
 }
 
 async function getAvailablesYearForNonWorkingDate() {
-  return await getRequest(`/api/planning/non-working-dates/available-years`, 'getAvailablesYearForNonWorkingDate');
+  return await getRequest(`/demo/planning/non-working-dates/available-years`, 'getAvailablesYearForNonWorkingDate');
 }
 
 async function onCheckDeleteDayType(id: string) {
-  return await getRequest(`/api/planning/day-type/${id}/delete-impact`, 'onCheckDeleteDayType');
+  return await getRequest(`/demo/planning/day-type/${id}/delete-impact`, 'onCheckDeleteDayType');
 }
 
 export default {

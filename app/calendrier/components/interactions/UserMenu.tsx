@@ -18,7 +18,7 @@ export default function UserMenu({ user }: UserMenuProps) {
         <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold cursor-pointer poppins">
           {user.Image ? (
             <img
-              src={user.Image || `https://ui-avatars.com/api/?name=${user.Nom}+${user.Prenom}&background=009580&color=fff`}
+              src={user.Image || `https://ui-avatars.com/demo/?name=${user.Nom}+${user.Prenom}&background=009580&color=fff`}
               alt="Avatar"
               className="h-10 w-10 rounded-full object-cover"
             />

@@ -125,12 +125,12 @@ function toApiEventPayload(data: any) {
 
 async function unlockEvenement(id: number | undefined | null) {
     if (id === null || id === undefined) return Promise.resolve();
-    return await postRequest(`/api/event/${id}/unlock`, {}, 'unlockEvenement');
+    return await postRequest(`/demo/event/${id}/unlock`, {}, 'unlockEvenement');
 }
 
 async function lockQuickEvenement(id: number | undefined | null) {
     if (id === null || id === undefined) return Promise.resolve();
-    return await postRequest(`/api/event/${id}/lock-quick`, {}, 'quickLockEvenement');
+    return await postRequest(`/demo/event/${id}/lock-quick`, {}, 'quickLockEvenement');
 }
 
 async function getEvenements(startDate: number, endDate: number, employeeIds?: number[]) {
@@ -142,37 +142,37 @@ async function getEvenements(startDate: number, endDate: number, employeeIds?: n
         ? `?idEmployee=${encodeURIComponent(normalizedEmployeeIds.join(','))}`
         : '';
 
-    const response = await getRequest(`/api/event/${startStr}/${endStr}${employeeQuery}`, 'getEvenements');
+    const response = await getRequest(`/demo/event/${startStr}/${endStr}${employeeQuery}`, 'getEvenements');
     return normalizeEventListResponse(response);
 }
 
 async function getEvenement(id: number) {
-    const response = await getRequest(`/api/event/${id}`, 'getEvenement');
+    const response = await getRequest(`/demo/event/${id}`, 'getEvenement');
     return normalizeSingleEventResponse(response);
 }
 
 async function getEvenementByUser(id: string, type: 'SALARIE' | 'INTERIM') {
-    const response = await getRequest(`/api/event?employee=${id}&type=${type}`, 'getEvenementByUser');
+    const response = await getRequest(`/demo/event?employee=${id}&type=${type}`, 'getEvenementByUser');
     return normalizeEventListResponse(response);
 }
 
 
 async function createEvenement(data: any) {
-    const response = await postRequest(`/api/event`, toApiEventPayload(data), 'createEvenement');
+    const response = await postRequest(`/demo/event`, toApiEventPayload(data), 'createEvenement');
     return normalizeSingleEventResponse(response);
 }
 
 
 async function updateEvenement(id: string, data: any) {
-    return await putRequest(`/api/event/${id}`, toApiEventPayload(data), 'updateEvenement');
+    return await putRequest(`/demo/event/${id}`, toApiEventPayload(data), 'updateEvenement');
 }
 
 async function deleteEvenement(id: string) {
-    return await deleteRequest(`/api/event/${id}`, 'deleteEvenement', {});
+    return await deleteRequest(`/demo/event/${id}`, 'deleteEvenement', {});
 }
 
 async function deleteEvenements(ids: string[]) {
-    return await deleteRequest(`/api/event`, 'deleteEvenements', { ids });
+    return await deleteRequest(`/demo/event`, 'deleteEvenements', { ids });
 }
 
 async function updateEvenementAndRessource(id: string, data: any) {
@@ -185,21 +185,21 @@ async function updateEvenementAndRessource(id: string, data: any) {
             IdPlanningImage: data?.IdPlanningImage ?? data?.Ressource?.IdPlanningImage ?? null,
         },
     };    
-    return await putRequest(`/api/event/updateRessourceAndEvent/${id}`, payload, 'updateEvenementAndRessource');
+    return await putRequest(`/demo/event/updateRessourceAndEvent/${id}`, payload, 'updateEvenementAndRessource');
 }
 
 async function divideEvenement(id: string, data: any) {
     const payload = {
         ...toApiEventPayload(data),
     };
-    return await putRequest(`/api/event/divide/${id}`, payload, 'divideEvenement');
+    return await putRequest(`/demo/event/divide/${id}`, payload, 'divideEvenement');
 }
 
 async function repeatEvenement(repeatData: any) {
     const payload = {
        ...toApiEventPayload(repeatData)
     };    
-    return await postRequest(`/api/event/repeat/${repeatData.IdPlanningEvenement}`, payload, 'repeatEvenement');
+    return await postRequest(`/demo/event/repeat/${repeatData.IdPlanningEvenement}`, payload, 'repeatEvenement');
 }
 
 async function transferPlanning(data: {
@@ -208,7 +208,7 @@ async function transferPlanning(data: {
     startDate: string;
     endDate: string;
 }) {
-    return await postRequest('/api/event/transfer', data, 'transferPlanning');
+    return await postRequest('/demo/event/transfer', data, 'transferPlanning');
 }
 
 

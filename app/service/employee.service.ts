@@ -1,7 +1,7 @@
 import { getRequest, putRequest } from "./axios.service";
 
 async function getEmployeesPlanning() {
-    return await getRequest(`/api/employees/planning`, 'getEmployees');
+    return await getRequest(`/demo/employees/planning`, 'getEmployees');
 }
 
 async function getEmployeesPag(limit: number = 20, pageNum: number = 1, query: string = '', activeFilters: { [key: string]: string[] } = {}, timeoutMs: number = 15000) {
@@ -17,22 +17,22 @@ async function getEmployeesPag(limit: number = 20, pageNum: number = 1, query: s
     }
 
     return await getRequest(
-        `/api/employees/search?${params.toString()}`,
+        `/demo/employees/search?${params.toString()}`,
         'getEmployees',
         { timeout: timeoutMs }
     );
 }
 
 async function getEmployee(id: number) {
-    return await getRequest(`/api/employees/${id}`, 'getEmployee');
+    return await getRequest(`/demo/employees/${id}`, 'getEmployee');
 }
 
 async function updateEquipeEmployee(id: number, data: any) {
-    return await putRequest(`/api/employees/équipe/${id}`, data, 'updateEquipeEmployee');
+    return await putRequest(`/demo/employees/équipe/${id}`, data, 'updateEquipeEmployee');
 }
 
 async function getAllUsersActif() {
-  return await getRequest(`/api/employees`, 'getAllUsersActif');
+  return await getRequest(`/demo/employees`, 'getAllUsersActif');
 }
 
 

@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'ui-avatars.com',
-        pathname: '/api/**',
+        pathname: '/demo/**',
       },
       // Ajoutez ici vos autres domaines d'images
     ],

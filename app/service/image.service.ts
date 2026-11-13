@@ -1,7 +1,7 @@
 import { getRequest, postRequest } from "./axios.service";
 
 async function getImage(id: number) {
-  return await getRequest(`/api/images/${id}`, 'getImage');
+  return await getRequest(`/demo/images/${id}`, 'getImage');
 }
 
 async function getImagesPaginated(page: number, limit: number) {
@@ -9,11 +9,11 @@ async function getImagesPaginated(page: number, limit: number) {
   params.set('pageNum', String(page));
   params.set('limit', String(limit));
   const queryParams = `?${params.toString()}`;
-  return await getRequest(`/api/images${queryParams}`, 'getImagesPaginated');
+  return await getRequest(`/demo/images${queryParams}`, 'getImagesPaginated');
 }
 
 async function uploadImage(image: string) {
-  return await postRequest('/api/images/upload', { image }, 'uploadImage');
+  return await postRequest('/demo/images/upload', { image }, 'uploadImage');
 }
 
 export default {

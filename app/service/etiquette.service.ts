@@ -1,7 +1,7 @@
 import { getRequest, postRequest, deleteRequest } from "./axios.service";
 
 function getEtiquettes(idRessource: number) {
-    return getRequest(`/api/etiquettes/${idRessource}`)
+    return getRequest(`/demo/etiquettes/${idRessource}`)
 }
 
 function createEtiquette(data: any) {
@@ -11,11 +11,11 @@ function createEtiquette(data: any) {
         LibelleCourtPlanningEtiquette: data.LibelleCourtPlanningEtiquette ?? null,
         LibelleLongPlanningEtiquette: data.LibelleLongPlanningEtiquette ?? "BPE"
     }    
-    return postRequest('/api/etiquettes', payload);
+    return postRequest('/demo/etiquettes', payload);
 }
 
 function deleteEtiquette(idEtiquette: number) {
-    return deleteRequest(`/api/etiquettes/${idEtiquette}`, {});
+    return deleteRequest(`/demo/etiquettes/${idEtiquette}`, {});
 }
 
 export default {

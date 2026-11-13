@@ -18,11 +18,11 @@ export type DisplaySettingsUpdate = {
 };
 
 async function getDisplaySettings() {
-  return await getRequest('/api/planning/display-settings', 'getDisplaySettings');
+  return await getRequest('/demo/planning/display-settings', 'getDisplaySettings');
 }
 
 async function updateDisplaySettings(data: DisplaySettingsUpdate) {
-  return await putRequest('/api/planning/display-settings', data, 'updateDisplaySettings');
+  return await putRequest('/demo/planning/display-settings', data, 'updateDisplaySettings');
 }
 
 export default {
