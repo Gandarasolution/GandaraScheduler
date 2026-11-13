@@ -5,6 +5,5 @@
       "source": "/demo/:path*",
       "destination": "https://demo.palissot.fr/:path*"
     }
-    {}
   ]
 }
