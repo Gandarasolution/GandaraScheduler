@@ -126,6 +126,10 @@ async function editRessource(ressourceId: number, ressourceData: any) {
 }
 
 
+async function appliedEvenementDefaultSettings() {
+    return await putRequest('/demo/ressources/application/display-settings', 'appliedEvenementDefaultSettings');
+}
+
 export default {
   searchRessources,
   getRessourcesProjet,
@@ -136,4 +140,5 @@ export default {
   addRessourceManual,
   editRessource,
   saveFilterOptions,
+  appliedEvenementDefaultSettings
 };

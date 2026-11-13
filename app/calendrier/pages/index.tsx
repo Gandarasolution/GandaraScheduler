@@ -1342,7 +1342,7 @@ export default function HomePage({
               setExtendData: appointmentLogic.setExtendData,
               handleExtend: appointmentLogic.handleExtend,
 
-              applyDisplaySettingsToAllEvents:(v) => {return Promise.resolve({ success: true })},
+              applyDisplaySettingsToAllEvents: appointmentLogic.applyDisplaySettingsToAllEvents,
 
               // Images
               closeImageModal: interaction.handleCloseImageModal,

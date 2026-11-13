@@ -3,7 +3,7 @@ import Modal, { useModalContext } from "./Modal";
 import Loader from "../ui/Loader";
 import { format, isBefore, startOfDay } from "date-fns";
 import { Appointment, DayType, ImageType, Item, MobileAppointmentDisplayConfig, User } from "../../types";
-import { DisplaySettings } from "../../utils/displaySettings";
+import { DisplaySettings } from "@/app/service/displaySettings.service";
 import { AppointmentCard, DragOverTarget, MobileAppointmentFieldOption } from "../Calendar/MobileCalendar/AppointmentList";
 
 type SettingsModalProps = {
@@ -156,14 +156,15 @@ const DefaultDisplaySettingsEditor = ({
   );
   const [isLoading, setIsLoading] = useState(!setting.value);
   const [isApplying, setIsApplying] = useState(false);
-  const [applySuccess, setApplySuccess] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     if (!setting.value) {
       setIsLoading(true);
-      setting.fetchDisplaySettings()
+      setting
+        .fetchDisplaySettings()
         .then((result) => {
           if (mounted && !result.success) setError(result.message || "Erreur lors du chargement.");
         })
@@ -214,20 +215,14 @@ const DefaultDisplaySettingsEditor = ({
     setLocalValue((previous) => (previous ? { ...previous, [key]: value } : previous));
   };
 
-  const handleApplyToAllEvents = async () => {
+  const handleConfirmApplyToAllEvents = async () => {
     if (!localValue || !setting.onApplyToAllEvents) return;
 
-    const confirmed = window.confirm(
-      "Voulez-vous vraiment appliquer ces paramètres d'affichage à tous les événements existants ?"
-    );
-    if (!confirmed) return;
-
+    setIsConfirmOpen(false);
     setIsApplying(true);
     setError(null);
-    setApplySuccess(false);
 
     try {
-      // Sauvegarde d'abord les valeurs par défaut si elles ont été modifiées
       if (isDirty) {
         await save();
       }
@@ -235,10 +230,7 @@ const DefaultDisplaySettingsEditor = ({
       if (!result.success) {
         setError(result.message || "Erreur lors de l'application à tous les événements.");
       } else {
-        // Garantit que l'état local est considéré comme enregistré en base (masque le bouton du footer)
         setSavedSnapshot(JSON.stringify(localValue));
-        setApplySuccess(true);
-        setTimeout(() => setApplySuccess(false), 3000);
       }
     } catch (err: any) {
       setError(err?.message || "Erreur lors de l'application à tous les événements.");
@@ -267,11 +259,6 @@ const DefaultDisplaySettingsEditor = ({
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {applySuccess && (
-        <p className="text-sm text-green-600">
-          Les paramètres ont bien été appliqués à tous les événements.
-        </p>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {([
@@ -331,15 +318,59 @@ const DefaultDisplaySettingsEditor = ({
           </div>
         </div>
 
-        <button
-          type="button"
-          disabled={isApplying}
-          onClick={handleApplyToAllEvents}
-          className="px-4 py-2 rounded-xl border border-default text-primary hover:bg-secondary-bg text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {isApplying ? "Application en cours..." : "Appliquer à tous les événements"}
-        </button>
+        {setting.onApplyToAllEvents && (
+          <button
+            type="button"
+            disabled={isApplying}
+            onClick={() => setIsConfirmOpen(true)}
+            className="px-4 py-2 rounded-xl border border-default text-primary hover:bg-secondary-bg text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isApplying ? "Application en cours..." : "Appliquer à tous les événements"}
+          </button>
+        )}
       </div>
+
+      {/* Modale de confirmation */}
+      {isConfirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setIsConfirmOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-modal-title"
+            className="w-full max-w-sm rounded-2xl border border-default bg-white dark:bg-neutral-900 p-5 shadow-xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-1.5">
+              <h3 id="confirm-modal-title" className="text-base font-semibold text-primary">
+                Confirmation
+              </h3>
+              <p className="text-xs text-secondary leading-relaxed">
+                Voulez-vous vraiment appliquer ces paramètres d&apos;affichage à tous les événements existants ?
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl border border-default text-primary hover:bg-secondary-bg text-xs font-medium cursor-pointer transition-colors"
+              >
+                Non
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmApplyToAllEvents}
+                className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity"
+              >
+                Oui
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

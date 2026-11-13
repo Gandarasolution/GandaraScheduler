@@ -91,19 +91,14 @@ export const useCalendarDragDrop = ({
       if (totalIntervals <= 0) return;
 
       const dragOffset = Math.max(0, item.dragOffset ?? 0);
-      const cursorIntervalIndex = Math.floor(relativeX / intervalWidth);
       const appointmentStartX = relativeX - dragOffset;
-      const appointmentStartIntervalIndex = Math.floor(appointmentStartX / intervalWidth);
-      const adjustedX = Math.min(
-        Math.max(
-          Math.max(cursorIntervalIndex, appointmentStartIntervalIndex) * intervalWidth,
-          0
-        ),
-        totalIntervals * intervalWidth - 1
-      );
+
+      // On utilise Math.round pour "aimanter" (snap) sur la cellule la plus proche
+      // plutôt que de basculer à la cellule précédente au moindre pixel dépassé
+      const rawIntervalIndex = Math.round(appointmentStartX / intervalWidth);
 
       const intervalIndex = Math.min(
-        Math.max(Math.floor(adjustedX / intervalWidth), 0),
+        Math.max(rawIntervalIndex, 0),
         totalIntervals - 1
       );
 

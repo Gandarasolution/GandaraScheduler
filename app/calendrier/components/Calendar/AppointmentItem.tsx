@@ -513,22 +513,35 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                     />
                   )}
                   {/* Zone visible (non chevauchement) */}
-                  {segment.widthNoGhost > 0 && (
-                    <div 
-                      className="absolute top-0 bottom-0"
-                      style={{
+                  {segment.widthNoGhost > 0 && (() => {
+                    const baseBorder = `2px solid ${appointmentBorderColor}`;
+                    const hasLeftBorder = segment.widthGhost === 0 && isFirst;
+
+                    return (
+                      <div
+                        className="absolute top-0 bottom-0"
+                        style={{
                           left: `${leftOffset + segment.widthGhost}px`,
                           width: `${segment.widthNoGhost}px`,
-                          backgroundColor: isHovered && source === 'calendar'? 'white' : appointmentColor,
-                          border: `2px solid ${appointmentBorderColor}`,
-                          borderLeft: segment.widthGhost > 0 ? 'none' : (isFirst ? undefined : 'none'),
-                          borderRight: isLast ? undefined : 'none',
-                          borderRadius: isLast && segment.widthGhost === 0 && isFirst ? '0.75rem' : (isLast ? '0 0.75rem 0.75rem 0' : (isFirst && segment.widthGhost === 0 ? '0.75rem 0 0 0.75rem' : '0')),
+                          backgroundColor: isHovered && source === 'calendar' ? 'white' : appointmentColor,
+                          borderTop: baseBorder,
+                          borderBottom: baseBorder,
+                          borderLeft: hasLeftBorder ? baseBorder : 'none',
+                          borderRight: isLast ? baseBorder : 'none',
+                          borderRadius:
+                            isLast && hasLeftBorder
+                              ? '0.75rem'
+                              : isLast
+                                ? '0 0.75rem 0.75rem 0'
+                                : hasLeftBorder
+                                  ? '0.75rem 0 0 0.75rem'
+                                  : '0',
                           opacity: isInactive ? 0.5 : 1,
-                          zIndex: 1
-                      }}
-                    />
-                  )}
+                          zIndex: 1,
+                        }}
+                      />
+                    );
+                  })()}
                 </React.Fragment>
               );
             })}

@@ -17,7 +17,7 @@ import permissionService from '@/app/service/permission.service';
 import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
 import calendarConfigService from '@/app/service/calendarConfig.service';
 import displaySettingsService, { DisplaySettingsUpdate } from '@/app/service/displaySettings.service';
-import { DisplaySettings } from '../../utils/displaySettings';
+import { DisplaySettings } from '@/app/service/displaySettings.service';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -403,8 +403,7 @@ export const CalendarModals = memo(({
             { value: 'hover', label: 'Au clic sur une icône' },
             { value: 'fixed', label: 'Toujours visible (bord inférieur)' }
           ]
-        }
-        ,
+        },
         {
           id: "overlapDisplayMode",
           label: "Affichage des chevauchements dans la sidebar",

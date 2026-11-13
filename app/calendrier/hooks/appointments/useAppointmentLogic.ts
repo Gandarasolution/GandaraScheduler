@@ -7,7 +7,7 @@ import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
 import ressourceService from '@/app/service/ressource.service';
 import { useAuth } from '../utils/AuthContext';
 import imageService from '@/app/service/image.service';
-import displaySettingsService from '@/app/service/displaySettings.service';
+import displaySettingsService, { DisplaySettings } from '@/app/service/displaySettings.service';
 
 // Type pour les données de répétition
 export type RepeatData = {
@@ -1674,6 +1674,44 @@ export const useAppointmentLogic = ({
   }, []);
 
 
+
+  const applyDisplaySettingsToAllEvents = useCallback(async ( value: DisplaySettings ): Promise<{ success: boolean; message?: string }> => {
+    
+      const { CouleurFondParDefaut, CouleurBordureParDefaut, CouleurTexteParDefaut, ImageParDefaut } = value;
+      const imageId = ImageParDefaut ? Number(ImageParDefaut.id) : NaN;
+
+
+      ressourceService.appliedEvenementDefaultSettings()
+        .then((resp => {
+          if (!isApiSuccess(resp)) {
+            console.error('Erreur lors de l\'application des paramètres par défaut aux événements', resp?.message);
+          }
+        }))
+        .catch((err) => {
+          console.error('Erreur réseau lors de l\'application des paramètres par défaut aux événements', err);
+          return { success: false, message: 'Erreur réseau lors de l\'application des paramètres par défaut aux événements' };
+        });
+
+
+      Object.keys(eventsRef.current).forEach(key => {
+        const event = eventsRef.current[Number(key)];
+        if (event) {
+          eventsRef.current[Number(key)] = {
+            ...event,
+            CouleurFondPlanningRessource: CouleurFondParDefaut || event.CouleurFondPlanningRessource,
+            CouleurBordurePlanningRessource: CouleurBordureParDefaut || event.CouleurBordurePlanningRessource,
+            CouleurTextePlanningRessource: CouleurTexteParDefaut || event.CouleurTextePlanningRessource,
+            ...(ImageParDefaut && Number.isFinite(imageId) && { ImagePlanningRessource: imageId })
+          };
+        }
+      });
+
+      onUpdate();
+      return { success: true };
+
+  }, []);
+
+
   
 
 
@@ -1699,6 +1737,7 @@ export const useAppointmentLogic = ({
     handleEditRessource,
     handleDeleteManualRessource,
     handleDeactivateDimension,
+    applyDisplaySettingsToAllEvents,
 
     // Actions Spécifiques
     handleDeleteAppointmentConfirm,
@@ -1715,12 +1754,3 @@ export const useAppointmentLogic = ({
 
   };
 };
-
-
-async function base64ToFile(base64String: string, filename: string): Promise<File> {
-  const res = await fetch(base64String);
-  const blob = await res.blob();
-  
-  // On retourne un vrai objet File, prêt à être mis dans un FormData
-  return new File([blob], filename, { type: blob.type });
-}
