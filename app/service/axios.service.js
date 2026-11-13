@@ -32,11 +32,13 @@ export const axiosAgent = axios.create({
 })
 
 axiosAgent.interceptors.request.use((config) => {
-  const clientApiUrl = '' || Cookies.get('client_api_url');
+  const clientApiUrl = '' //|| Cookies.get('client_api_url');
 
-  if (clientApiUrl) {
-    config.baseURL = clientApiUrl;
-  }
+//   if (clientApiUrl) {
+//     config.baseURL = clientApiUrl;
+//   }
+
+    config.baseURL = clientApiUrl
 
   // Si la donnée est un FormData (donc un envoi de fichier)
   if (config.data instanceof FormData) {
