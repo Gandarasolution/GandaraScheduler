@@ -96,6 +96,8 @@ interface CalendarModalsProps {
     onLockedError: (message: string) => void;
 
     addImage: (base64: string) => Promise<{ success: boolean; id?: number; message?: string }>;
+
+    applyDisplaySettingsToAllEvents: (value: DisplaySettings) => Promise<{ success: boolean; message?: string }>;
   };
   data: {
     appointments: Appointment[];
@@ -389,6 +391,7 @@ export const CalendarModals = memo(({
           onChange: saveDisplaySettings,
           onSelectImage: (onSelect: (image: ImageType) => void, actualImage?: ImageType) =>
             openImageModalForConfig(actualImage, onSelect),
+          onApplyToAllEvents: handlers.applyDisplaySettingsToAllEvents
         }] : []),
         {
           id: "tagPlacement",

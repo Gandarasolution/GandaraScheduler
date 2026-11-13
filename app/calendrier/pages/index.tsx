@@ -1341,7 +1341,9 @@ export default function HomePage({
               handleRepeat: appointmentLogic.handleRepeat,
               setExtendData: appointmentLogic.setExtendData,
               handleExtend: appointmentLogic.handleExtend,
-              
+
+              applyDisplaySettingsToAllEvents:(v) => {return Promise.resolve({ success: true })},
+
               // Images
               closeImageModal: interaction.handleCloseImageModal,
               handleImageSelect: (newImage) => {

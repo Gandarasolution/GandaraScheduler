@@ -146,15 +146,18 @@ const DefaultDisplaySettingsEditor = ({
     fetchDisplaySettings: () => Promise<{ success: boolean; message?: string }>;
     onChange: (value: DisplaySettings) => Promise<{ success: boolean; message?: string }>;
     onSelectImage: (onSelect: (image: ImageType) => void, actualImage?: ImageType) => void;
+    onApplyToAllEvents?: (value: DisplaySettings) => Promise<{ success: boolean; message?: string }>;
   };
   registerSaveAction: (action: { isDirty: boolean; save: () => Promise<void> } | null) => void;
 }) => {
   const [localValue, setLocalValue] = useState<DisplaySettings | null>(setting.value);
-  const [isLoading, setIsLoading] = useState(!setting.value);
-  const [error, setError] = useState<string | null>(null);
-  const syncedValueRef = useRef<string | null>(
+  const [savedSnapshot, setSavedSnapshot] = useState<string | null>(
     setting.value ? JSON.stringify(setting.value) : null
   );
+  const [isLoading, setIsLoading] = useState(!setting.value);
+  const [isApplying, setIsApplying] = useState(false);
+  const [applySuccess, setApplySuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -171,24 +174,29 @@ const DefaultDisplaySettingsEditor = ({
           if (mounted) setIsLoading(false);
         });
     }
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [setting.value, setting.fetchDisplaySettings]);
 
   useEffect(() => {
     if (!setting.value) return;
-
-    const serializedValue = JSON.stringify(setting.value);
-    if (serializedValue !== syncedValueRef.current) {
-      syncedValueRef.current = serializedValue;
+    const serialized = JSON.stringify(setting.value);
+    if (serialized !== savedSnapshot) {
+      setSavedSnapshot(serialized);
       setLocalValue(setting.value);
     }
-  }, [setting.value]);
+  }, [setting.value, savedSnapshot]);
 
-  const isDirty = !!localValue && JSON.stringify(localValue) !== JSON.stringify(setting.value);
+  const isDirty = !!localValue && JSON.stringify(localValue) !== savedSnapshot;
+
   const save = useCallback(async () => {
     if (!localValue) return;
     const result = await setting.onChange(localValue);
-    if (!result.success) throw new Error(result.message || "Erreur lors de la sauvegarde.");
+    if (!result.success) {
+      throw new Error(result.message || "Erreur lors de la sauvegarde.");
+    }
+    setSavedSnapshot(JSON.stringify(localValue));
   }, [localValue, setting]);
 
   useEffect(() => {
@@ -196,12 +204,53 @@ const DefaultDisplaySettingsEditor = ({
     return () => registerSaveAction(null);
   }, [isDirty, save, registerSaveAction]);
 
-  const updateColor = (key: keyof Pick<DisplaySettings, "CouleurBordureParDefaut" | "CouleurFondParDefaut" | "CouleurTexteParDefaut">, value: string) => {
-    setLocalValue((previous) => previous ? { ...previous, [key]: value } : previous);
+  const updateColor = (
+    key: keyof Pick<
+      DisplaySettings,
+      "CouleurBordureParDefaut" | "CouleurFondParDefaut" | "CouleurTexteParDefaut"
+    >,
+    value: string
+  ) => {
+    setLocalValue((previous) => (previous ? { ...previous, [key]: value } : previous));
+  };
+
+  const handleApplyToAllEvents = async () => {
+    if (!localValue || !setting.onApplyToAllEvents) return;
+
+    const confirmed = window.confirm(
+      "Voulez-vous vraiment appliquer ces paramètres d'affichage à tous les événements existants ?"
+    );
+    if (!confirmed) return;
+
+    setIsApplying(true);
+    setError(null);
+    setApplySuccess(false);
+
+    try {
+      // Sauvegarde d'abord les valeurs par défaut si elles ont été modifiées
+      if (isDirty) {
+        await save();
+      }
+      const result = await setting.onApplyToAllEvents(localValue);
+      if (!result.success) {
+        setError(result.message || "Erreur lors de l'application à tous les événements.");
+      } else {
+        // Garantit que l'état local est considéré comme enregistré en base (masque le bouton du footer)
+        setSavedSnapshot(JSON.stringify(localValue));
+        setApplySuccess(true);
+        setTimeout(() => setApplySuccess(false), 3000);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Erreur lors de l'application à tous les événements.");
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   if (isLoading) return <Loader message="Chargement des options d’affichage..." />;
-  if (!localValue) return <p className="text-sm text-red-600">{error || "Options d’affichage indisponibles."}</p>;
+  if (!localValue) {
+    return <p className="text-sm text-red-600">{error || "Options d’affichage indisponibles."}</p>;
+  }
 
   const image = localValue.ImageParDefaut;
   const selectedImage: ImageType | undefined = image
@@ -212,9 +261,18 @@ const DefaultDisplaySettingsEditor = ({
     <div className="space-y-5 w-full">
       <div>
         <h4 className="text-sm font-semibold text-primary">Valeurs par défaut</h4>
-        <p className="text-xs text-secondary mt-1">Ces valeurs sont utilisées lors de la création d’une nouvelle ressource.</p>
+        <p className="text-xs text-secondary mt-1">
+          Ces valeurs sont utilisées lors de la création d’une nouvelle ressource.
+        </p>
       </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
+      {applySuccess && (
+        <p className="text-sm text-green-600">
+          Les paramètres ont bien été appliqués à tous les événements.
+        </p>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {([
           ["CouleurFondParDefaut", "Couleur de fond"],
@@ -240,25 +298,47 @@ const DefaultDisplaySettingsEditor = ({
           </label>
         ))}
       </div>
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-xl border border-default overflow-hidden bg-secondary-bg flex items-center justify-center">
-          {image ? <img src={image.url} alt="Image par défaut" className="w-full h-full object-contain" /> : <span className="text-xs text-secondary">Aucune</span>}
+
+      <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-xl border border-default overflow-hidden bg-secondary-bg flex items-center justify-center">
+            {image ? (
+              <img src={image.url} alt="Image par défaut" className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-xs text-secondary">Aucune</span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-sm text-primary">Image par défaut</span>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-medium cursor-pointer"
+              onClick={() =>
+                setting.onSelectImage((selected) => {
+                  setLocalValue((previous) =>
+                    previous
+                      ? {
+                          ...previous,
+                          ImageParDefaut: { id: selected.id, url: selected.image },
+                        }
+                      : previous
+                  );
+                }, selectedImage)
+              }
+            >
+              Choisir une image
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-sm text-primary">Image par défaut</span>
-          <button
-            type="button"
-            className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-medium cursor-pointer"
-            onClick={() => setting.onSelectImage((selected) => {
-              setLocalValue((previous) => previous ? {
-                ...previous,
-                ImageParDefaut: { id: selected.id, url: selected.image },
-              } : previous);
-            }, selectedImage)}
-          >
-            Choisir une image
-          </button>
-        </div>
+
+        <button
+          type="button"
+          disabled={isApplying}
+          onClick={handleApplyToAllEvents}
+          className="px-4 py-2 rounded-xl border border-default text-primary hover:bg-secondary-bg text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {isApplying ? "Application en cours..." : "Appliquer à tous les événements"}
+        </button>
       </div>
     </div>
   );
