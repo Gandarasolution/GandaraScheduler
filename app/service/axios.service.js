@@ -32,7 +32,7 @@ export const axiosAgent = axios.create({
 })
 
 axiosAgent.interceptors.request.use((config) => {
-  const clientApiUrl = Cookies.get('client_api_url');
+  const clientApiUrl = '' || Cookies.get('client_api_url');
 
   if (clientApiUrl) {
     config.baseURL = clientApiUrl;
