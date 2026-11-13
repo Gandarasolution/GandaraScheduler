@@ -86,7 +86,7 @@ interface GroupIconProps extends React.SVGProps<SVGSVGElement> {
   color?: string;
 }
 
-const GroupIcon: React.FC<GroupIconProps> = ({
+export const GroupIcon: React.FC<GroupIconProps> = ({
   size = 24,
   color = "currentColor",
   ...props

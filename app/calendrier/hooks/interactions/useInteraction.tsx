@@ -216,30 +216,31 @@ export const useInteraction = ({
   // --- GESTION CLAVIER GLOBAL ---
 
   const handleGlobalKeyboard = useCallback((e: KeyboardEvent) => {
+    console.log(e.key);
       if (e.ctrlKey) {
           switch(e.key.toLocaleLowerCase()) {
               case 'c' : 
-                if(viewType === 'planning') { 
-                  if (selectedAppointment) {
-                       copyAppointment(selectedAppointment);
+                if(viewType === 'calendar') {         
+                  if (selectedAppointment) {               
+                    copyAppointment(selectedAppointment);
                   }
                 }
-                  break;
+                break;
               case 'v':
-                if(viewType === 'planning') { 
+                if(viewType === 'calendar') { 
                   if (selectedCell) {
                     pasteAppointment(selectedCell);
                   }
                 }
-                  break;
+                break;
               case 'z':
-                if(viewType === 'planning') { 
+                if(viewType === 'calendar') { 
                   e.preventDefault();
                   undoAction();
                 }
                   break;
               case 'f':
-                if(viewType === 'planning') {  
+                if(viewType === 'calendar') {  
                   e.preventDefault();
                   // Fermer les autres interfaces si ouvertes
                   setContextMenu(null);
@@ -247,14 +248,17 @@ export const useInteraction = ({
                   openSearch();
                 }
                   break;
-
-              case 'q':
-                  e.preventDefault();
-                  setIsViewDropdownOpen(prev => !prev);
-                  break;
           }
       } else if ((e.key === 'Delete' || e.key === 'rubout') && selectedAppointment) {
           deleteAction(selectedAppointment);
+      }
+      else if (e.key === '+') {
+          if(viewType === 'calendar') {  
+            e.preventDefault();
+            setContextMenu(null);
+            setIsImageSelectorOpen(false);
+            openSearch();
+          }
       }
   }, [selectedAppointment, selectedCell, copyAppointment, pasteAppointment, undoAction, deleteAction, openSearch, setIsViewDropdownOpen]);
 

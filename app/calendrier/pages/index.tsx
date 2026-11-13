@@ -913,7 +913,6 @@ export default function HomePage({
       if (e.defaultPrevented) return;
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
-
       interaction.handleGlobalKeyboard(e);
       if (viewState.viewType === 'calendar') {        
         timeline.handleKeyboardScroll(e);
@@ -928,7 +927,6 @@ export default function HomePage({
 
   useEffect(() => {
     const handleExpiration = () => {
-      setLockNotification("Votre session a expiré, veuillez vous reconnecter.");
       logout('expired');
     };
 

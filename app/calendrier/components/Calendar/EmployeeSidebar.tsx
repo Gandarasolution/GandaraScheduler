@@ -23,6 +23,7 @@ import {
 } from '../../utils/constants';
 import { getDimensionItemKey, HierarchicalGroupItem } from '../../utils/filters';
 import { FlatRow } from '../../hooks';
+import { GroupIcon } from '../Table/ChantierViewsControl';
 
 interface EmployeeSidebarProps {
   dimensionItems: HierarchicalGroupItem[];
@@ -65,22 +66,6 @@ const CustomArrow = ({ isOpen, small = false }: { isOpen: boolean; small?: boole
   </div>
 );
 
-const GroupIcon = () => (
-  <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl bg-primary-50">
-    <svg
-      version="1.1"
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 510 510"
-    >
-      <path
-        d="M459,114.75H357v-51l-51-51H204l-51,51v51H51c-28.05,0-51,22.95-51,51v280.5c0,28.05,22.95,51,51,51h408c28.05,0,51-22.95,51-51v-280.5C510,137.7,487.05,114.75,459,114.75z M204,63.75h102v51H204V63.75z M216.75,408l-89.25-89.25l35.7-35.7l53.55,53.55L349.35,204l35.7,35.7L216.75,408z"
-        fill="#00957f"
-      />
-    </svg>
-  </div>
-);
 
 const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   dimensionItems,
@@ -108,9 +93,6 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     name: config.LibellePlanningVue,
     value: config.IdPlanningVue,
   }));
-
-  console.log(availableConfigs)
-
 
   const stickyTop = TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
 
@@ -356,7 +338,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                 type="button"
               >
                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <GroupIcon />
+                  <GroupIcon className="h-5 w-5 shrink-0" />
                   <span className="poppins font-bold truncate block">
                     {item.name}
                   </span>

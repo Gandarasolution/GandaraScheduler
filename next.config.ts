@@ -6,10 +6,10 @@ const nextConfig: NextConfig = {
   // Optimisations de build
   compiler: {
     // Supprimer les //console.log en production
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
+    
   },
+
+  allowedDevOrigins: ['172.16.25.104'],
   
   // Optimisations d'images
   images: {

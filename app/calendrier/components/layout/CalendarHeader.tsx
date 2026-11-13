@@ -605,12 +605,6 @@ export const CalendarHeader = memo(({
                           bg-secondary-bg
                         "
                       >
-                        <p className="text-[11px] text-primary/70 text-center">
-                          Raccourci :
-                          <span className="ml-1 font-mono text-primary">
-                            Ctrl + Q
-                          </span>
-                        </p>
                       </div>
                     </div>
                   )}
@@ -670,8 +664,7 @@ export const CalendarHeader = memo(({
                       ['Ctrl + V', 'Coller'],
                       ['Ctrl + Z', 'Annuler'],
                       ['Ctrl + F', 'Rechercher'],
-                      ['Ctrl + Q', 'Changer d’espace'],
-                      ['Delete', 'Supprimer'],
+                      ['Suppr', 'Supprimer'],
                     ].map(([shortcut, label]) => (
                       <div key={shortcut} className="flex items-center justify-between gap-3">
                         <span>{label}</span>
@@ -679,7 +672,7 @@ export const CalendarHeader = memo(({
                       </div>
                     ))}
                     <div className="mx-2 my-2 h-px bg-primary-100" />
-                    <span>{'Version 10.11.2026'}</span>
+                    <span>{'Version 12.11.2026'}</span>
                   </div>
                 </div>
               )}
