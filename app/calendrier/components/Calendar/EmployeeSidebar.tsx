@@ -9,7 +9,7 @@
  * - Indicateurs d'état (intérim, inactif)
  */
 
-import React, { CSSProperties, memo } from 'react';
+import React, { CSSProperties, memo, useEffect, useRef, useState } from 'react';
 import { User, CalendarConfig } from '../../types';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
 import {
@@ -87,6 +87,37 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   columnEmployeeRef,
   overlappingEmployeeIds,
 }) => {
+
+  const [hoveredTooltipEmployeeId, setHoveredTooltipEmployeeId] = useState<number | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnterEmployee = (employeeId: number) => {
+    // Annule un éventuel timer précédent par sécurité
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+    }
+
+    tooltipTimeoutRef.current = setTimeout(() => {
+      setHoveredTooltipEmployeeId(employeeId);
+    }, 500);
+  };
+
+  const handleMouseLeaveEmployee = () => {
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = null;
+    }
+    setHoveredTooltipEmployeeId(null);
+  };
+
+  // Nettoyage du timer si le composant est démonté
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, []);
   
   const selectOptions: SelectOptionWithImage[] = availableConfigs.map(config => ({
     id: config.IdPlanningVue,
@@ -99,7 +130,8 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   const renderEmployee = (
     employee: User,
     reactKeyPrefix: string,
-    indentLevel: 0 | 1 = 0
+    indentLevel: 0 | 1 = 0,
+    item : HierarchicalGroupItem | null = null
   ) => {
     const employeeRow = flatRows.find(
       row => row.type === 'employee' && Number(row.id) === Number(employee.IdPersonnel)
@@ -107,13 +139,13 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
     const employeeRowHeight = employeeRow?.height ?? CELL_HEIGHT;
     const isInactive = employee.Actif === false;
-
-    const hasOverlapInWindow = overlappingEmployeeIds.has(Number(employee.IdPersonnel)); 
+    const hasOverlapInWindow = overlappingEmployeeIds.has(Number(employee.IdPersonnel));
+    const isTooltipVisible = hoveredTooltipEmployeeId === Number(employee.IdPersonnel);
 
     return (
       <div
         key={`${reactKeyPrefix}-employee-${employee.IdPersonnel}`}
-        className="flex cursor-pointer bg-primary-bg border-l border-r border-default"
+        className="relative flex cursor-pointer bg-primary-bg border-l border-r border-default"
         style={{
           height: employeeRowHeight,
           alignItems: 'center',
@@ -121,7 +153,22 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
           paddingLeft: indentLevel === 1 ? 32 : 16,
           paddingRight: 12,
         }}
+        onMouseEnter={() => handleMouseEnterEmployee(Number(employee.IdPersonnel))}
+        onMouseLeave={handleMouseLeaveEmployee}
       >
+        {isTooltipVisible && (
+          <div
+            role="tooltip"
+            className="absolute bottom-full left-4 mb-2 z-50 px-3 py-1.5 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none whitespace-nowrap"
+          >
+            <div>{employee.Nom} {employee.Prenom} - {employee.IdPersonnel}</div>
+            <div>{item?.name}</div>
+            
+            {/* Flèche positionnée juste sous le tooltip (sans -mt-1) */}
+            <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900" />
+          </div>
+        )}
+
         <div
           className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-50 transition-colors duration-150 employee-row-item"
           data-employee-id={employee.IdPersonnel}
@@ -356,7 +403,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   {hasChildren
                     ? item.children!.map(child => renderLevel2Group(child, index))
                     : itemEmployees.map(employee =>
-                        renderEmployee(employee, String(item.id), 0)
+                        renderEmployee(employee, String(item.id), 0, item)
                       )}
                
                 

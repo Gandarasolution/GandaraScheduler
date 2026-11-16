@@ -195,13 +195,12 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   
   return (
     <div 
-      className="h-full flex items-center justify-center p-4 sm:p-8"
+      className="h-full flex items-center justify-center p-0 sm:p-8"
       onClick={handleCloseMenus}
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
-      {/* Mobile Mockup Container */}
       <div 
-        className="w-full max-w-[400px] h-full rounded-[3rem] sm:border-[8px] sm:shadow-2xl overflow-hidden relative flex flex-col"
+        className="w-full sm:max-w-[400px] h-full rounded-none sm:rounded-[3rem] sm:border-[8px] sm:shadow-2xl overflow-hidden relative flex flex-col"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           borderColor: 'var(--bg-secondary)'
@@ -331,7 +330,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 variant="mobile"
               />
             )}
-          </div> */}
+          </div> */}k
         </header>
 
         {/* Scrollable Content Area */}

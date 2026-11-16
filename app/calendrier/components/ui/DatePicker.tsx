@@ -12,6 +12,7 @@ export interface DatePickerProps {
   placeholder?: string;
   className?: string;
   inputClassName?: string;
+  datePickerClassName?: string;
   showIcon?: boolean;
   openOnFocus?: boolean;
   disabled?: boolean;
@@ -32,6 +33,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   showIcon = true,
   openOnFocus = true,
   disabled = false,
+  datePickerClassName = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -112,7 +114,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 mt-2 rounded-lg shadow-lg overflow-hidden" style={{ backgroundColor: 'var(--bg-card)' }}>
+        <div className={`absolute z-50 mt-2 rounded-lg shadow-lg overflow-hidden ${datePickerClassName}`} style={{ backgroundColor: 'var(--bg-card)' }}>
           <DayPicker
             mode="single"
             selected={toDate(value)}

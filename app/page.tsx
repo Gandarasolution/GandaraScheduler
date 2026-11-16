@@ -19,7 +19,10 @@ export default function Home() {
 
   const { setTheme } = useTheme(user);
   
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return Math.min(window.innerWidth, window.innerHeight) < 640;
+  });
 
 
   // Fonction pour changer le thème
@@ -57,12 +60,15 @@ export default function Home() {
   // --- Detection Mobile ---
   useEffect(() => {
     const handleResize = () => {
-      const isTrue = window.innerWidth < 640;
-      setIsMobile(isTrue);
+      setIsMobile(Math.min(window.innerWidth, window.innerHeight) < 640);
     };
-    handleResize();
+
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
   
   // ==============================================================

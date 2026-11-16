@@ -114,6 +114,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
   const [hoverColumnLeft, setHoverColumnLeft] = useState<number | null>(null);
   const hasAutoScrolled = useRef(false);
+  const [isMobileLandscape, setIsMobileLandscape] = useState(false);
+
   
 
 
@@ -152,8 +154,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   }, [dayInTimeline, isMobile, mainScrollRef, selectedDate]);
     
 
-  if (isMobile) {
-    return (
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
+    const updateOrientation = () => setIsMobileLandscape(mediaQuery.matches);
+
+    updateOrientation();
+    mediaQuery.addEventListener('change', updateOrientation);
+    return () => mediaQuery.removeEventListener('change', updateOrientation);
+  }, []);
+
+
+
+  if (isMobile || isMobileLandscape) {
+  return (
+    <>
       <MobileCalendar
         employees={employees}
         teams={initialTeams}
@@ -164,8 +179,37 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         mobileAppointmentDisplay={mobileAppointmentDisplay}
         mobileState={mobileState}
       />
-    );
-  }
+
+      {isMobileLandscape && (
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 text-center select-none"
+          style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mb-4 animate-bounce"
+            style={{ color: 'var(--color-primary-500)' }}
+          >
+            <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+            <path d="M12 18h.01" />
+          </svg>
+          <h2 className="text-lg font-bold mb-2">Mode portrait uniquement</h2>
+          <p className="text-sm max-w-xs" style={{ color: 'var(--text-secondary)' }}>
+            Veuillez pivoter votre téléphone à la verticale pour utiliser le calendrier.
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
 
   return (
       <DesktopCalendarGrid 

@@ -23,6 +23,7 @@ import {
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Appointment } from '../../../types';
+import DatePicker from '../../ui/DatePicker';
 
 interface CalendarGridProps {
   currentDate: Date;
@@ -84,17 +85,13 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
           >
             {format(currentDate, 'MMMM yyyy', { locale: fr })}
           </span>
-          <input
-            type="date"
-            id="start"
-            name="trip-start"
-            value={format(selectedDate, 'yyyy-MM-dd')}
-            onChange={(e) => onDateSelect(new Date(e.target.value))}
-            className="transition-all duration-200 ease-in-out rounded-lg px-2 py-1 w-[35px]"
-            style={{
-              color: 'var(--text-primary)',
-              borderColor: 'var(--border-light)'
-            }}
+          <DatePicker
+            value={selectedDate.getTime()}
+            onChange={(date) => onDateSelect(new Date(date))}
+            format="dd/MM/yyyy"
+            className="w-[35px] transition-all duration-200 ease-in-out rounded-lg px-2 py-1"
+            datePickerClassName="-right-5"
+            
           />
         </div>
         {/* En-têtes des jours */}

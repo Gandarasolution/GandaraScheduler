@@ -827,56 +827,115 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
       )}
 
       {(isSecondaryOpen || (preview && !showCard)) && (
-        <div className={preview ? "w-full" : "fixed inset-0 z-[60] flex items-end"}>
-          <div className={preview ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3" : "relative max-h-[68vh] w-full overflow-hidden rounded-t-[2rem] bg-secondary-bg p-5 shadow-2xl"}>
-            <div className="flex shrink-0 items-center justify-between mb-2">
-              <h2 className={`${preview ? 'text-sm' : 'text-[18px]'} font-semibold text-primary`}>Détails du rendez-vous</h2>
-              {!preview && (
-                <button
-                  type="button"
-                  onClick={() => setIsSecondaryOpen(false)}
-                  className="rounded-full p-2 text-secondary hover:bg-primary/10"
-                  aria-label="Fermer les détails du rendez-vous"
-                >
-                  <X size={18} />
-                </button>
-              )}
-            </div>
+        <div
+          className={
+            preview
+              ? "w-full"
+              : "fixed inset-0 z-[60] flex items-end bg-black/40 backdrop-blur-[1px] animate-in fade-in duration-200"
+          }
+          onClick={!preview ? () => setIsSecondaryOpen(false) : undefined}
+        >
+          <div
+            className={
+              preview
+                ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3"
+                : "relative max-h-[68vh] w-full overflow-hidden rounded-t-[2rem] bg-secondary-bg px-5 pb-5 pt-3 shadow-2xl"
+            }
+            onClick={!preview ? (e) => e.stopPropagation() : undefined}
+            style={
+              !preview
+                ? {
+                    transform: `translateY(${drawerOffset}px)`,
+                    transition: drawerOffset === 0 ? "transform 200ms ease-out" : "none",
+                  }
+                : undefined
+            }
+          >
+            {/* Zone poignée + en-tête glissable pour fermer */}
             <div
-              className={`${preview ? 'gap-1' : 'max-h-[calc(68vh-92px)] overflow-y-auto pb-4'} flex flex-col`}
-              onTouchStart={!preview ? (event) => {
-                touchStartY.current = event.touches[0]?.clientY ?? null;
-                setDrawerOffset(0);
-              } : undefined}
-              onTouchMove={!preview ? (event) => {
-                if (touchStartY.current === null) return;
-                const offset = (event.touches[0]?.clientY ?? touchStartY.current) - touchStartY.current;
-                if (offset > 0) setDrawerOffset(offset);
-              } : undefined}
-              onTouchEnd={!preview ? () => {
-                if (drawerOffset > 100) setIsSecondaryOpen(false);
-                setDrawerOffset(0);
-                touchStartY.current = null;
-              } : undefined}
-              style={!preview ? {
-                transform: `translateY(${drawerOffset}px)`,
-                transition: drawerOffset === 0 ? 'transform 200ms ease-out' : 'none',
-              } : undefined}
+              className={!preview ? "touch-none select-none cursor-grab active:cursor-grabbing" : undefined}
+              onTouchStart={
+                !preview
+                  ? (event) => {
+                      touchStartY.current = event.touches[0]?.clientY ?? null;
+                      setDrawerOffset(0);
+                    }
+                  : undefined
+              }
+              onTouchMove={
+                !preview
+                  ? (event) => {
+                      if (touchStartY.current === null) return;
+                      const offset = (event.touches[0]?.clientY ?? touchStartY.current) - touchStartY.current;
+                      if (offset > 0) setDrawerOffset(offset);
+                    }
+                  : undefined
+              }
+              onTouchEnd={
+                !preview
+                  ? () => {
+                      if (drawerOffset > 80) {
+                        setIsSecondaryOpen(false);
+                      }
+                      setDrawerOffset(0);
+                      touchStartY.current = null;
+                    }
+                  : undefined
+              }
+            >
+              {/* Barre visuelle (handle) en mode mobile */}
+              {!preview && (
+                <div className="flex justify-center pb-3 pt-1">
+                  <span
+                    className="h-1.5 w-12 rounded-full opacity-40"
+                    style={{ backgroundColor: "var(--text-tertiary)" }}
+                    aria-hidden="true"
+                  />
+                </div>
+              )}
+
+              <div className="flex shrink-0 items-center justify-between mb-2">
+                <h2 className={`${preview ? "text-sm" : "text-[18px]"} font-semibold text-primary`}>
+                  Détails du rendez-vous
+                </h2>
+                {!preview && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSecondaryOpen(false)}
+                    className="rounded-full p-2 text-secondary hover:bg-primary/10"
+                    aria-label="Fermer les détails du rendez-vous"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Contenu scrollable */}
+            <div
+              className={`${preview ? "gap-1" : "max-h-[calc(68vh-105px)] overflow-y-auto pb-4"} flex flex-col`}
             >
               {secondaryRows.map((row, rowIndex) => (
                 <React.Fragment key={`secondary-row-${rowIndex}`}>
                   {renderRowInsertionZone("secondaryFields", rowIndex, secondaryRows.length)}
-                  <div 
+                  <div
                     className={`relative min-w-0 min-h-[56px] py-2 pr-6 flex items-start gap-1 border-b border-ultra-light last:border-b-0 ${
-                      isBlockedRowTarget("secondaryFields", rowIndex) ? 'pb-7' : ''
+                      isBlockedRowTarget("secondaryFields", rowIndex) ? "pb-7" : ""
                     } ${
-                      isRowFull("secondaryFields", rowIndex, row, draggedFieldCode) ? 'cursor-not-allowed' : 'cursor-copy'
+                      isRowFull("secondaryFields", rowIndex, row, draggedFieldCode)
+                        ? "cursor-not-allowed"
+                        : "cursor-copy"
                     } ${
-                      preview && dragOverInfo?.surface === dragSurface && dragOverInfo?.column === 'secondaryFields' && dragOverInfo?.rowIndex === rowIndex && !dragOverInfo?.fieldCode && !dragOverInfo?.insertRow
+                      preview &&
+                      dragOverInfo?.surface === dragSurface &&
+                      dragOverInfo?.column === "secondaryFields" &&
+                      dragOverInfo?.rowIndex === rowIndex &&
+                      !dragOverInfo?.fieldCode &&
+                      !dragOverInfo?.insertRow
                         ? dragOverInfo?.blocked
-                          ? 'ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600'
-                          : 'ring-1 ring-dashed ring-primary-500 bg-primary-50/40 text-primary-700'
-                        : ''
+                          ? "ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600"
+                          : "ring-1 ring-dashed ring-primary-500 bg-primary-50/40 text-primary-700"
+                        : ""
                     }`}
                     onDragOver={(e) => {
                       if (!preview) return;
@@ -886,7 +945,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                         row,
                         draggedFieldCode || e.dataTransfer.getData("text/plain")
                       );
-                      e.dataTransfer.dropEffect = blocked ? 'none' : 'move';
+                      e.dataTransfer.dropEffect = blocked ? "none" : "move";
                       e.preventDefault();
                       onPreviewDragOver?.(e, "secondaryFields", rowIndex, undefined, blocked, false, dragSurface);
                     }}
@@ -907,7 +966,16 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                         "secondaryFields",
                         rowIndex,
                         field,
-                        <span key={field} className={`p-1 inline-flex min-w-0 max-w-full items-start ${isSpecialField(field) ? 'gap-0' : 'gap-1'} ${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-50/40 rounded-md shadow-sm ' : ''}`}>
+                        <span
+                          key={field}
+                          className={`p-1 inline-flex min-w-0 max-w-full items-start ${
+                            isSpecialField(field) ? "gap-0" : "gap-1"
+                          } ${
+                            highlightedFieldCode === field
+                              ? "border border-primary-500 bg-primary-50/40 rounded-md shadow-sm "
+                              : ""
+                          }`}
+                        >
                           {!isSpecialField(field) && (
                             <span className="mt-0.5 shrink-0 text-secondary">{getFieldIcon(field)}</span>
                           )}
@@ -917,7 +985,13 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                                 {getFieldLabel(field)}
                               </span>
                             )}
-                            <span className={`${preview ? 'text-xs' : 'text-sm'} ${isSpecialField(field) ? '' : 'mt-0.5'} block max-w-full break-words leading-5 text-primary`}>{value}</span>
+                            <span
+                              className={`${preview ? "text-xs" : "text-sm"} ${
+                                isSpecialField(field) ? "" : "mt-0.5"
+                              } block max-w-full break-words leading-5 text-primary`}
+                            >
+                              {value}
+                            </span>
                           </span>
                         </span>,
                         dragSurface

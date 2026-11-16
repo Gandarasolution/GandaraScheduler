@@ -708,6 +708,16 @@ input[type="date"] { font-variant-numeric: tabular-nums; }
   overscroll-behavior-y: contain;
 }
 
+.portrait-only-overlay {
+  display: none;
+}
+
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  .portrait-only-overlay {
+    display: flex;
+  }
+}
+
 
 /* ================================================== */
 /* 4. CLASSES UTILITAIRES (Syntaxe Tailwind v4)      */
