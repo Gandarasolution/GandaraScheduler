@@ -216,7 +216,6 @@ export const useInteraction = ({
   // --- GESTION CLAVIER GLOBAL ---
 
   const handleGlobalKeyboard = useCallback((e: KeyboardEvent) => {
-    console.log(e.key);
       if (e.ctrlKey) {
           switch(e.key.toLocaleLowerCase()) {
               case 'c' : 

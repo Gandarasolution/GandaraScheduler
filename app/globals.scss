@@ -732,7 +732,7 @@ input[type="date"] { font-variant-numeric: tabular-nums; }
 // ══════════════════════════════════════════════════════════════════════════
 // BACKGROUNDS (Couleurs de marque)
 // ══════════════════════════════════════════════════════════════════════════
-@utility bg-primary-50 { background-color: var(--color-primary-50) !important; }
+@utility bg-primary-50  { background-color: var(--color-primary-50) !important; }
 @utility bg-primary-100 { background-color: var(--color-primary-100) !important; }
 @utility bg-primary-200 { background-color: var(--color-primary-200) !important; }
 @utility bg-primary-300 { background-color: var(--color-primary-300) !important; }

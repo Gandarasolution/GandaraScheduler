@@ -10,23 +10,33 @@ import SelectionScreen from './login/SelectionScreen';
 import { axiosAgent } from '@/app/service/axios.service';
 import { DayTypesProvider } from './calendrier/hooks/data/dayTypesContext';
 
+export type DeviceType = 'mobile' | 'tablet' | 'desktop';
+
+const getDeviceType = (): DeviceType => {
+  if (typeof window === 'undefined') return 'desktop';
+
+  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+  const smallSide = Math.min(window.innerWidth, window.innerHeight);
+
+  if (isTouchDevice && smallSide < 640) return 'mobile';
+  if (isTouchDevice && smallSide < 1200) return 'tablet';
+  return 'desktop';
+};
+
 export default function Home() {
   const {
     user, login, isAuthenticated, setUser, 
     UserPlanning, currentPlanningId, setCurrentPlanningId,
-    currentVueId, setCurrentVueId
+    currentVueId, setCurrentVueId,
+    hasPermission
   } = useAuth();
 
   const { setTheme } = useTheme(user);
-  
-  const checkIsMobileOrTablet = () => {
-    if (typeof window === 'undefined') return false;
-    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
-    const isSmallSide = Math.min(window.innerWidth, window.innerHeight) < 1200;
-    return isTouchDevice && isSmallSide;
-  };
 
-const [isMobile, setIsMobile] = useState<boolean>(checkIsMobileOrTablet);
+  const [deviceType, setDeviceType] = useState<DeviceType>(getDeviceType);
+
+  const isMobile = deviceType === 'mobile';
+  const isTablet = deviceType === 'tablet';
 
   // Fonction pour changer le thème
   const handleThemeChange = useCallback((newTheme: ThemeType) => {
@@ -38,12 +48,12 @@ const [isMobile, setIsMobile] = useState<boolean>(checkIsMobileOrTablet);
     }
     
     const finalTheme = newTheme === 'dark' ? 'light' : newTheme;
-    
+  
     setUser(prevUser => prevUser ? ({
       ...prevUser,
       theme: finalTheme
     }) : prevUser);
-    
+  
     setTheme(finalTheme);
   }, [setTheme, setUser]);
   
@@ -60,10 +70,10 @@ const [isMobile, setIsMobile] = useState<boolean>(checkIsMobileOrTablet);
     }
   }, [user, setTheme]);
 
-  // --- Detection Mobile ---
+  // --- Détection Smartphone / Tablette / Desktop ---
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(checkIsMobileOrTablet());
+      setDeviceType(getDeviceType());
     };
 
     window.addEventListener('resize', handleResize);
@@ -127,7 +137,7 @@ const [isMobile, setIsMobile] = useState<boolean>(checkIsMobileOrTablet);
           }}
         >
           <DayTypesProvider>
-            <Calendrier isMobile={isMobile} />
+            <Calendrier isMobile={isMobile} isTablet={isTablet} />
           </DayTypesProvider>
         </ErrorBoundary>
       );
@@ -136,35 +146,36 @@ const [isMobile, setIsMobile] = useState<boolean>(checkIsMobileOrTablet);
     return null;
   };
 
-  
   return (
     <>
-      {/* Overlay de blocage en mode paysage sur smartphone (actif sur Login, Sélection et Calendrier) */}
-      <div
-        className="portrait-only-overlay fixed inset-0 z-[10000] flex-col items-center justify-center p-6 text-center select-none"
-        style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="48"
-          height="48"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mb-4 animate-bounce"
-          style={{ color: 'var(--color-primary-500)' }}
+      {/* Overlay de blocage en mode paysage (uniquement sur smartphone, pas sur tablette) */}
+      {isMobile || (isTablet && !hasPermission(229)) && (
+        <div
+          className="portrait-only-overlay fixed inset-0 z-[10000] flex-col items-center justify-center p-6 text-center select-none"
+          style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
         >
-          <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
-          <path d="M12 18h.01" />
-        </svg>
-        <h2 className="text-lg font-bold mb-2">Mode portrait uniquement</h2>
-        <p className="text-sm max-w-xs" style={{ color: 'var(--text-secondary)' }}>
-          Veuillez pivoter votre appareil à la verticale pour utiliser l'application.
-        </p>
-      </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mb-4 animate-bounce"
+            style={{ color: 'var(--color-primary-500)' }}
+          >
+            <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+            <path d="M12 18h.01" />
+          </svg>
+          <h2 className="text-lg font-bold mb-2">Mode portrait uniquement</h2>
+          <p className="text-sm max-w-xs" style={{ color: 'var(--text-secondary)' }}>
+            Veuillez pivoter votre téléphone à la verticale pour utiliser l'application.
+          </p>
+        </div>
+      )}
 
       {renderStep()}
     </>

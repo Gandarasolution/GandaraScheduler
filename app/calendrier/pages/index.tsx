@@ -6,7 +6,7 @@
  * 2. Il connecte ces hooks aux composants UI (Header, Grid, Modals).
  * 3. Il ne contient AUCUNE logique métier complexe (tout est délégué).
  * * @author Gandara Solutions
- * @version 2.0.1 (Refactored & Typed)
+ * @version 2.1.0 (Responsive Mobile/Tablet/Desktop Matrix)
  */
 
 "use client";
@@ -21,14 +21,14 @@ import { endOfMonth, format, startOfMonth } from "date-fns";
 // --- COMPOSANTS UI (Eager loading pour éviter le flash) ---
 import { 
   ThemeSelector, 
-  RightClickComponent,
-  NotificationsPanel,
-  AlertModal,
-  SearchOverlay,
-  CalendarHeader,
-  CalendarModals,
-  TransferPlanningModal,
-  DraggableSource,
+  RightClickComponent, 
+  NotificationsPanel, 
+  AlertModal, 
+  SearchOverlay, 
+  CalendarHeader, 
+  CalendarModals, 
+  TransferPlanningModal, 
+  DraggableSource, 
   Loader,
 } from '@/app/calendrier/components';
 import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOverlay';
@@ -47,10 +47,10 @@ const DataTableFrame = lazy(() => import('@/app/calendrier/components').then(mod
 // --- CUSTOM HOOKS ---
 import { 
   useCalendarView, 
-  useTimeline,
-  useDataLayer,
-  useAppointmentLogic,
-  useInteraction,
+  useTimeline, 
+  useDataLayer, 
+  useAppointmentLogic, 
+  useInteraction, 
   useNotifications
  } from "@/app/calendrier/hooks";
 import type { MobileCalendarState } from '../components/Calendar/MobileCalendar/MobileCalendar';
@@ -64,7 +64,7 @@ import ressourceService from '@/app/service/ressource.service';
 import calendarConfigService from '@/app/service/calendarConfig.service';
 
 // --- UTILITAIRES ---
-import { createSearchAndFilterUtils, FilterType, ActiveFilters } from "../utils/searchAndFilterUtils"; // Ajout pour les filtres
+import { createSearchAndFilterUtils, FilterType, ActiveFilters } from "../utils/searchAndFilterUtils";
 import { Appointment, User, Item } from '../types';
 import type { Notification } from '../types';
 import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
@@ -91,12 +91,14 @@ function NoSSR({ children }: { children: React.ReactNode }) {
  */
 export default function HomePage({
     isMobile,
+    isTablet
 }: {
     isMobile: boolean;
+    isTablet: boolean;
 }) {
 
-  const { hasPermission, currentPlanningId, logout, currentVueId , setCurrentVueId} = useAuth();
-  const {nonWorkingDates, loadNonWorkingDates, setNonWorkingDates} = useDayTypesContext();
+  const { hasPermission, currentPlanningId, logout, currentVueId, setCurrentVueId } = useAuth();
+  const { nonWorkingDates, loadNonWorkingDates, setNonWorkingDates } = useDayTypesContext();
   
   const user = useCurrentUser();
   
@@ -118,7 +120,42 @@ export default function HomePage({
 
   const [transferEmployee, setTransferEmployee] = useState<User | null>(null);
   
-    
+  // Détection de l'orientation (portrait vs paysage)
+  const [isPortrait, setIsPortrait] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerHeight > window.innerWidth;
+  });
+
+  useEffect(() => {
+    const updateOrientation = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
+
+    updateOrientation();
+    window.addEventListener('resize', updateOrientation);
+    window.addEventListener('orientationchange', updateOrientation);
+    return () => {
+      window.removeEventListener('resize', updateOrientation);
+      window.removeEventListener('orientationchange', updateOrientation);
+    };
+  }, []);
+
+  const hasDesktopPermission = useMemo(() => {
+    return Boolean(hasPermission(229));
+  }, [hasPermission]);
+
+  // Matrice d'affichage :
+  // - Téléphone (isMobile)               -> mode mobile
+  // - Tablette portrait                  -> mode mobile
+  // - Tablette paysage                   -> desktop si perm 229, sinon mobile
+  // - Desktop                            -> desktop si perm 229, sinon mobile
+  const effectiveIsMobile = useMemo(() => {
+    if (isMobile) return true;
+    if (isTablet) {
+      return isPortrait ? true : !hasDesktopPermission;
+    }
+    return !hasDesktopPermission;
+  }, [isMobile, isTablet, isPortrait, hasDesktopPermission]);
 
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
@@ -144,16 +181,27 @@ export default function HomePage({
   const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
 
   // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
-  const viewState = useCalendarView(currentPlanningId, user, isMobile);
+  const viewState = useCalendarView(currentPlanningId, user, effectiveIsMobile);
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
     globalEmployees: globalEmployees,
     setGlobalEmployees, 
     setNotification: setLockNotification,
-    isMobile,
+    isMobile: effectiveIsMobile,
     onError: setLockNotification
   });
+
+  // Réinitialise l'initialisation du planning lors d'un basculement mobile <-> desktop (ex: rotation tablette)
+  const prevEffectiveIsMobileRef = useRef(effectiveIsMobile);
+  useEffect(() => {
+    if (prevEffectiveIsMobileRef.current !== effectiveIsMobile) {
+      prevEffectiveIsMobileRef.current = effectiveIsMobile;
+      hasInitializedPlanningRef.current = false;
+      hasInitializedTeamsRef.current = false;
+      setLoadCalendar(true);
+    }
+  }, [effectiveIsMobile]);
 
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
@@ -275,26 +323,26 @@ export default function HomePage({
   
 
   const handleSearchOverlayItemAction = useCallback((item: SearchableItem) => {
-    if(isMobile){
-       // Vérifier les permissions selon le type d'événement
-          const canCreate = (item.Type === 'Projet' && hasPermission(214, 22)) || 
-                            (item.Type === 'Paie' && hasPermission(214, 23)) 
-          
-          if (!canCreate) {
-            // Afficher une notification d'erreur
-            return;
-          }
-          
-          setSelectedItem(item as unknown as Item);
-          setShowSearchModal(false);
-          setShowAppointmentForm(true);
+    if (effectiveIsMobile) {
+      // Vérifier les permissions selon le type d'événement
+      const canCreate = (item.Type === 'Projet' && hasPermission(214, 22)) || 
+                        (item.Type === 'Paie' && hasPermission(214, 23));
+      
+      if (!canCreate) {
+        return;
+      }
+      
+      setSelectedItem(item as unknown as Item);
+      setShowSearchModal(false);
+      setShowAppointmentForm(true);
+      return;
     }
     if (!appointmentLogic.selectedCell) {
       return;
     }
     
     appointmentLogic.handleSearchItemAction(item as unknown as Item);
-  }, [appointmentLogic.selectedCell, appointmentLogic.handleSearchItemAction, dataLayer.itemsRef]);
+  }, [appointmentLogic.selectedCell, appointmentLogic.handleSearchItemAction, effectiveIsMobile, hasPermission]);
 
   const searchOverlayItems = useCallback(async (query: string): Promise<{ success: boolean; data: SearchableItem[]; message?: string }> => {
     const trimmedQuery = query.trim();
@@ -309,11 +357,9 @@ export default function HomePage({
 
     const data = (response.data as Item[])
       .filter((item) => {
-
         if ('Actif' in item) {
           return item.Actif !== false && item.Actif !== null;
         }
-
         return true;
       })
       .map((item) => ({
@@ -398,7 +444,7 @@ export default function HomePage({
         : viewState.viewType === 'manual-event-table' && hasPermission(214, 23) 
           ? (ressourceService.getManualEvents as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
           : viewState.viewType === 'paie-table' && hasPermission(214, 23) 
-            ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs)
+            ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
             : undefined;
   }, [chantierViewId, viewState.viewType, viewState.searchInput, viewState.activeFilters]);
 
@@ -427,7 +473,6 @@ export default function HomePage({
       let selectedView = loadedViews[0];
       
 
-
       const rep = await calendarConfigService.getLastChantierView();
 
       if (rep?.success === false) {
@@ -440,10 +485,9 @@ export default function HomePage({
         const lastViewId = rep.data.IdPlanningVue ?? rep.data.IdPlanningChantierVue;
         selectedView = loadedViews.find((v: any) => String(v.id) === String(lastViewId)) || selectedView;
         setChantierViewId(hasFilters ? `ephemeral` : String(lastViewId));
-      }else {
+      } else {
         setChantierViewId(selectedView.id ? String(selectedView.id) : null);
       }
-
 
 
       const initialView = hasFilters
@@ -456,7 +500,6 @@ export default function HomePage({
           filters: appliedFilters ?? activeFiltersRef.current,
         }
         : selectedView;
-
 
 
       setChantierViews(hasFilters ? [initialView, ...loadedViews] : loadedViews);
@@ -511,17 +554,10 @@ export default function HomePage({
           etat: { 
             label: 'État', 
             type: 'badge' as FilterType,
-            badgeColors: {
-              // 'En cours': 'bg-green-100 text-green-800',
-              // 'Planifié': 'bg-blue-100 text-blue-800',
-              // 'Suspendu': 'bg-yellow-100 text-yellow-800',
-              // 'Terminé': 'bg-gray-100 text-gray-800',
-              // 'Annulé': 'bg-red-100 text-red-800'
-            }
+            badgeColors: {}
           },
           chargeAffaire: { label: 'Chargé d\'Affaires', type: 'combobox' as FilterType },
           chefChantier: { label: 'Chef de Chantier', type: 'combobox' as FilterType },
-          //libelle: { label: 'Libellé', type: 'combobox' as FilterType },
         };
     }
     // Par défaut ou autres vues
@@ -544,13 +580,9 @@ export default function HomePage({
   }, [loadChantierViews]);
 
   const handleChantierViewChange = useCallback((view: ChantierView | null) => {
-
-
     setChantierColumns(view?.columns || null);
 
-
     const actualView = chantierViews.find(v => String(v.id) === String(chantierViewId));
-
 
     setChantierViews(prevViews => {
       const updatedViews = prevViews.map(v => {
@@ -562,17 +594,11 @@ export default function HomePage({
       return updatedViews;
     });
 
-    console.log("handleChantierViewChange - actualView:", actualView);
-
     !actualView?.isEphemeral && setChantierViewId(view?.id ? String(view.id) : null);
 
-  
     setTableRefreshVersion(version => version + 1);
   }, [chantierViewId, chantierViews]);
 
-
-
-  //console.log("Filter Config:", filterConfig);
 
   const filteredCalendarAppointments = useMemo(() => {
     if (viewState.viewType !== 'calendar') {
@@ -609,9 +635,9 @@ export default function HomePage({
     const ensurePlanningViewHeader = async () => {
       axiosAgent.defaults.headers.common['X-Planning-Id'] = currentPlanningId;
 
-      // Si on n'est pas en vue calendrier, sur mobile, ou que la vue est déjà chargée
+      // Si on n'est pas en vue calendrier, en mode mobile effectif, ou que la vue est déjà chargée
       const hasValidVueId = currentVueId !== null && currentVueId > 0;
-      if (hasValidVueId || viewState.viewType !== 'calendar' || isMobile) {
+      if (hasValidVueId || viewState.viewType !== 'calendar' || effectiveIsMobile) {
         if (hasValidVueId) {
           axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = currentVueId;
         }
@@ -656,7 +682,7 @@ export default function HomePage({
 
       const isHeaderReady = await ensurePlanningViewHeader();
       if (!isHeaderReady || !isMounted) {
-        hasInitializedPlanningRef.current = false; // Permet de réessayer si annulé/échoué
+        hasInitializedPlanningRef.current = false;
         hasInitializedTeamsRef.current = false;
         return;
       }
@@ -686,7 +712,7 @@ export default function HomePage({
         return;
       }
 
-      if (isMobile) {
+      if (effectiveIsMobile) {
         const monthStart = new Date(viewState.selectedDate);
         monthStart.setDate(1);
         monthStart.setHours(0, 0, 0, 0);
@@ -737,7 +763,6 @@ export default function HomePage({
       }
     };
 
-    // Suppression de initializeNonWorkingDates() d'ici !
     if (viewState.viewType === "calendar") {
       initializePlanning();
     } else if (viewState.viewType === "employee-table") {
@@ -762,88 +787,85 @@ export default function HomePage({
     currentPlanningId,
     dataLayer.loadTeams,
     dataLayer.loadAppointmentsInRange,
+    effectiveIsMobile
   ]);
 
- useEffect(() => {
-  if (
-    isMobile ||
-    !currentPlanningId ||
-    currentPlanningId <= 0 ||
-    viewState.viewType !== "calendar"
-  ) {
-    return;
-  }
-
-  let isMounted = true;
-
-  const updateNonWorkingDates = async () => {
-    const visibleYears = timeline.getVisibleYears();
-
-    if (!visibleYears?.length) return;
-
-    // Séparer les années par planning
-    const planningId = currentPlanningId;
-
-    if (!loadedYearsRef.current.has(planningId)) {
-      loadedYearsRef.current.set(planningId, new Set());
+  useEffect(() => {
+    if (
+      effectiveIsMobile ||
+      !currentPlanningId ||
+      currentPlanningId <= 0 ||
+      viewState.viewType !== "calendar"
+    ) {
+      return;
     }
 
-    if (!loadingYearsRef.current.has(planningId)) {
-      loadingYearsRef.current.set(planningId, new Set());
-    }
+    let isMounted = true;
 
-    const loadedYears = loadedYearsRef.current.get(planningId)!;
-    const loadingYears = loadingYearsRef.current.get(planningId)!;
+    const updateNonWorkingDates = async () => {
+      const visibleYears = timeline.getVisibleYears();
 
-    // Ignorer les années déjà chargées OU en cours de chargement
-    const yearsToFetch = visibleYears.filter(
-      (year) =>
-        !loadedYears.has(year) &&
-        !loadingYears.has(year)
-    );
+      if (!visibleYears?.length) return;
 
-    if (yearsToFetch.length === 0) return;
+      const planningId = currentPlanningId;
 
-    // Réserver les années AVANT l'appel asynchrone
-    yearsToFetch.forEach((year) => loadingYears.add(year));
-
-    try {
-      const result = await loadNonWorkingDates(yearsToFetch);
-
-      // Le résultat peut être enregistré même après le cleanup React
-      if (result?.success) {
-        yearsToFetch.forEach((year) => loadedYears.add(year));
-      } else if (isMounted) {
-        setErrorPlanning(
-          result?.message ||
-            "Erreur lors du chargement des jours non travaillés. Veuillez réessayer."
-        );
+      if (!loadedYearsRef.current.has(planningId)) {
+        loadedYearsRef.current.set(planningId, new Set());
       }
-    } catch (error: unknown) {
-      if (isMounted) {
-        setErrorPlanning(
-          error instanceof Error
-            ? error.message
-            : "Erreur lors du chargement des jours non travaillés."
-        );
+
+      if (!loadingYearsRef.current.has(planningId)) {
+        loadingYearsRef.current.set(planningId, new Set());
       }
-    } finally {
-      yearsToFetch.forEach((year) => loadingYears.delete(year));
-    }
-  };
 
-  void updateNonWorkingDates();
+      const loadedYears = loadedYearsRef.current.get(planningId)!;
+      const loadingYears = loadingYearsRef.current.get(planningId)!;
 
-  return () => {
-    isMounted = false;
-  };
-}, [
-  currentPlanningId,
-  isMobile,
-  timeline.days,
-  viewState.viewType,
-  loadNonWorkingDates,
-]);
+      const yearsToFetch = visibleYears.filter(
+        (year) =>
+          !loadedYears.has(year) &&
+          !loadingYears.has(year)
+      );
+
+      if (yearsToFetch.length === 0) return;
+
+      yearsToFetch.forEach((year) => loadingYears.add(year));
+
+      try {
+        const result = await loadNonWorkingDates(yearsToFetch);
+
+        if (result?.success) {
+          yearsToFetch.forEach((year) => loadedYears.add(year));
+        } else if (isMounted) {
+          setErrorPlanning(
+            result?.message ||
+              "Erreur lors du chargement des jours non travaillés. Veuillez réessayer."
+          );
+        }
+      } catch (error: unknown) {
+        if (isMounted) {
+          setErrorPlanning(
+            error instanceof Error
+              ? error.message
+              : "Erreur lors du chargement des jours non travaillés."
+          );
+        }
+      } finally {
+        yearsToFetch.forEach((year) => loadingYears.delete(year));
+      }
+    };
+
+    void updateNonWorkingDates();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    currentPlanningId,
+    effectiveIsMobile,
+    timeline.days,
+    viewState.viewType,
+    loadNonWorkingDates,
+  ]);
 
   useEffect(() => {
     if (viewState.viewType !== 'calendar') return;
@@ -865,7 +887,6 @@ export default function HomePage({
         ? await employeeService.getEmployeesPlanning()
         : await employeeService.getEmployee(user.IdPersonnel);
 
-        //console.log('Employees Response:', employeesResponse);
       if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
         setEmployeesVersion(prev => prev + 1);
@@ -936,11 +957,9 @@ export default function HomePage({
 
   // 1. La fonction qui va réagir aux messages Mercure
   const handleMercureEvent = useCallback((action: string, data: any) => {
-    //console.log("📥 Action reçue en direct :", action, data);
-    //console.log("Données actuelles avant mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     switch (action) {
       case 'APPOINTMENT_CREATED':
-        if(globalEmployees.some(emp => emp.IdPersonnel === data.appointments.IdPersonnel)) {
+        if (globalEmployees.some(emp => emp.IdPersonnel === data.appointments.IdPersonnel)) {
           dataLayer.addMissingResourcesToCache(data.ressources);
           dataLayer.appointmentsRef.current.push(...data.appointments);
         }
@@ -961,7 +980,7 @@ export default function HomePage({
           CouleurBordurePlanningRessource: data.ressources.CouleurBordurePlanningRessource,
           CouleurTextePlanningRessource: data.ressources.CouleurTextePlanningRessource,
           Image: data.ressources.IdPlanningImage,
-        }
+        };
         dataLayer.appointmentsRef.current = dataLayer.appointmentsRef.current.map((appt) => (Number(appt.IdPlanningEvenement) === Number(data.appointment.IdPlanningEvenement) ? { ...appt, ...data.appointment, isLocked: false } : appt));
         break;
 
@@ -1076,16 +1095,11 @@ export default function HomePage({
         console.warn("Action Mercure inconnue :", action);      
     }
     setLastMercureEvent({ action, data });
-    //console.log("Données après mise à jour :", dataLayer.appointmentsRef.current, dataLayer.itemsRef.current);
     dataLayer.refreshData(); 
   }, []);
 
   // 2. On branche la radio !
   useMercureSync(currentPlanningId, handleMercureEvent, setLockNotification);
-
-  useEffect(() => {
-    console.log('viewType:', viewState.viewType);
-  }, [viewState.viewType]);
 
   // --- RENDU VISUEL ---
 
@@ -1110,7 +1124,7 @@ export default function HomePage({
         <div className="h-screen flex flex-col overflow-hidden bg-page poppins">
     
           {/* HEADER : Navigation et Contrôles */}
-          {!viewState.isMobile && (
+          {!effectiveIsMobile && (
             <CalendarHeader 
               theme={theme}
               user={user}
@@ -1135,7 +1149,7 @@ export default function HomePage({
           {/* CORPS PRINCIPAL : Grille ou Tableaux */}
           <div className="flex-1 flex min-h-0 box-border ">
 
-            <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!viewState.isMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
+            <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!effectiveIsMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
               <div className={`flex-grow rounded-lg w-full h-full pb-4 `}>
                 
                 {viewState.viewType === 'calendar' && loadCalendar && (
@@ -1156,7 +1170,7 @@ export default function HomePage({
                         </div>
                       </div>
                     ) : (
-                      (viewState.isMobile ||
+                      (effectiveIsMobile ||
                       viewState.currentCalendarConfig ||
                       hasPermission(214, 21)) && (
                         <div className="relative flex flex-col h-full w-full">
@@ -1194,7 +1208,7 @@ export default function HomePage({
                               /* Configuration */
                               isDisplayWeekend={viewState.isDisplayWeekend}
                               isFullDay={viewState.isFullDay}
-                              isMobile={viewState.isMobile}
+                              isMobile={effectiveIsMobile}
                               nonWorkingDates={nonWorkingDates}
                               tagPlacement={viewState.tagPlacement}
                               overlapDisplayMode={viewState.overlapDisplayMode}
@@ -1297,17 +1311,13 @@ export default function HomePage({
          
 
           {/* --- COMPOSANTS FLOTTANTS & MODALES --- */}
-          
-          {/* {!viewState.isMobile && (
-            <ThemeSelector position='bottom-right' onThemeChange={onThemeChange} />
-          )} */}
 
           <RightClickComponent
             open={!!interaction.contextMenu}
             coordinates={interaction.contextMenu}
             rightClickItem={interaction.contextMenu?.item || []}
             onClose={interaction.closeContextMenu} 
-            clipBoardAppointment={appointmentLogic.clipboardAppointment} // Le clipboard est interne au hook, on peut le retirer d'ici si le composant ne l'utilise pas pour l'affichage
+            clipBoardAppointment={appointmentLogic.clipboardAppointment}
           />
 
           {/* Gestion centralisée de toutes les modales */}
@@ -1366,7 +1376,6 @@ export default function HomePage({
                     dataLayer.updateEmployeeImage(id, newImage);
                 } else {
                   const id = appointmentLogic.selectedItem?.IdPlanningRessource || null;
-                  //console.log("Selected Item ID:", id, "New Image:", newImage);
                     if (id === null) return;                    
                     appointmentLogic.setSelectedItem(prev => {
                         if (prev) {
@@ -1410,7 +1419,6 @@ export default function HomePage({
               employees: globalEmployees,
               selectedItem: appointmentLogic.selectedItem,
               selectedEmployee: appointmentLogic.selectedEmployee,
-              // Correction : Passer la config de filtre calculée
               keyOfFilter: keyOfFilter,
               isUploading: interaction.isUploading,
               uploadError: interaction.uploadError,
@@ -1453,7 +1461,7 @@ export default function HomePage({
             alertState={appointmentLogic.alertState}
             confirmLabel="Confirmer"
             cancelLabel="Annuler"
-            onClose={() =>  appointmentLogic.alertState.onCancel()}
+            onClose={() => appointmentLogic.alertState.onCancel()}
             fetchToLockAppointment={appointmentLogic.alertState.fetchToLockAppointment}
           />
 
@@ -1464,7 +1472,7 @@ export default function HomePage({
             onItemAction={handleSearchOverlayItemAction}
             placeholder="Rechercher un événement..."
             emptyStateConfig={{
-              noInput: isMobile 
+              noInput: effectiveIsMobile 
               ? {
                   icon: (
                     <svg className="w-16 h-16 mx-auto mb-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1475,7 +1483,7 @@ export default function HomePage({
                   description: "Tapez pour rechercher un chantier, paie ou congé"
                 }
               : { title: "Rechercher un événement", description: "Tapez pour rechercher parmi les chantiers, absences et autres événements" },
-              noResults: isMobile 
+              noResults: effectiveIsMobile 
                 ? {
                   icon: (
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="w-16 h-16 mx-auto mb-4 text-gray-400" viewBox="0 0 16 16">
@@ -1489,7 +1497,7 @@ export default function HomePage({
                 : { title: "Aucun résultat", description: "Aucun événement ne correspond à votre recherche" }
             }}
             renderItem={(event: any, index: number) => {
-              if (isMobile){
+              if (effectiveIsMobile) {
                 const itemData = event as any as Item;
                 const isChantier = itemData.Type === 'Projet';
                 const chantierData = isChantier ? itemData as any : null;
