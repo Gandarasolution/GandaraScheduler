@@ -136,7 +136,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 key: 'IG',
                 label: 'Informations Générales', 
                 attributes: [
-                    { key: 'Image', label: '', sortable: false , width:60, renderer: (value, item) => imageRendererChantierAndPaie(value, item, deps)},
+                    { key: 'Image', label: '', sortable: false , width:50, renderer: (value, item) => imageRendererChantierAndPaie(value, item, deps)},
                     { key: 'Pole',   label: 'Pôle', type:'string', /*width:120 */},
                     { key: 'DateOS', label: 'Date OS', type:'date', width:100 },
                     { key: 'DateFin', label: 'Date Fin', type:'date', width:100 },

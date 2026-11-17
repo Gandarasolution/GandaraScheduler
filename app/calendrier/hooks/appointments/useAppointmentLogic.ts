@@ -1677,38 +1677,37 @@ export const useAppointmentLogic = ({
 
   const applyDisplaySettingsToAllEvents = useCallback(async ( value: DisplaySettings ): Promise<{ success: boolean; message?: string }> => {
     
-      const { CouleurFondParDefaut, CouleurBordureParDefaut, CouleurTexteParDefaut, ImageParDefaut } = value;
-      const imageId = ImageParDefaut ? Number(ImageParDefaut.id) : NaN;
-
-
-      ressourceService.appliedEvenementDefaultSettings()
-        .then((resp => {
-          if (!isApiSuccess(resp)) {
-            console.error('Erreur lors de l\'application des paramètres par défaut aux événements', resp?.message);
-          }
-        }))
+      const result = await ressourceService.appliedEvenementDefaultSettings(Object.keys(eventsRef.current))
         .catch((err) => {
           console.error('Erreur réseau lors de l\'application des paramètres par défaut aux événements', err);
           return { success: false, message: 'Erreur réseau lors de l\'application des paramètres par défaut aux événements' };
         });
 
-
-      Object.keys(eventsRef.current).forEach(key => {
-        const event = eventsRef.current[Number(key)];
-        if (event) {
-          eventsRef.current[Number(key)] = {
-            ...event,
-            CouleurFondPlanningRessource: CouleurFondParDefaut || event.CouleurFondPlanningRessource,
-            CouleurBordurePlanningRessource: CouleurBordureParDefaut || event.CouleurBordurePlanningRessource,
-            CouleurTextePlanningRessource: CouleurTexteParDefaut || event.CouleurTextePlanningRessource,
-            ...(ImageParDefaut && Number.isFinite(imageId) && { ImagePlanningRessource: imageId })
-          };
+      
+      if (!isApiSuccess(result)) {
+        console.error('Erreur lors de l\'application des paramètres par défaut aux événements', result?.message);
+        return { success: false, message: result?.message || 'Erreur lors de l\'application des paramètres par défaut aux événements' };
+      }
+      else {
+        const data = result?.data;
+        if (Array.isArray(data)) {
+          data.forEach((eventUpdate: any) => {
+            const eventId = Number(eventUpdate.IdPlanningRessource);
+            console.log('Mise à jour de l\'événement avec ID:', eventId, 'avec les nouvelles valeurs:', eventUpdate);
+            if (eventsRef.current[eventId]) {
+              eventsRef.current[eventId] = {
+                ...eventsRef.current[eventId],
+                CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
+                CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
+                CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
+                Image: eventUpdate.Image,
+              };
+            }
+          });
         }
-      });
-
-      onUpdate();
-      return { success: true };
-
+        onUpdate();
+        return { success: true };
+      }
   }, []);
 
 

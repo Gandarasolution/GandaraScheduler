@@ -126,8 +126,9 @@ async function editRessource(ressourceId: number, ressourceData: any) {
 }
 
 
-async function appliedEvenementDefaultSettings() {
-    return await putRequest('/demo/ressources/application/display-settings', 'appliedEvenementDefaultSettings');
+
+async function appliedEvenementDefaultSettings(visibleEvents: any[]) {
+    return await putRequest('/demo/ressources/application/display-settings', { visibleEvents }, 'appliedEvenementDefaultSettings');
 }
 
 export default {

@@ -672,7 +672,7 @@ export const CalendarHeader = memo(({
                       </div>
                     ))}
                     <div className="mx-2 my-2 h-px bg-primary-100" />
-                    <span>{'Version 12.11.2026'}</span>
+                    <span>{'Version 17.11.2026'}</span>
                   </div>
                 </div>
               )}
