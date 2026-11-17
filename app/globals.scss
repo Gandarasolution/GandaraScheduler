@@ -712,9 +712,15 @@ input[type="date"] { font-variant-numeric: tabular-nums; }
   display: none;
 }
 
-@media screen and (orientation: landscape) and (max-height: 500px) {
+@media screen and (orientation: landscape) and (max-height: 1200) {
   .portrait-only-overlay {
     display: flex;
+  }
+}
+
+@media screen and (min-width: 768px) and (max-width: 1200px) and (pointer: coarse) {
+  html {
+    font-size: 18px;
   }
 }
 

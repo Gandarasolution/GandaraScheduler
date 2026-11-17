@@ -1134,32 +1134,6 @@ export default function HomePage({
 
           {/* CORPS PRINCIPAL : Grille ou Tableaux */}
           <div className="flex-1 flex min-h-0 box-border ">
-            {/* Overlay de blocage en mode paysage sur smartphone */}
-            <div
-              className="portrait-only-overlay fixed inset-0 z-[10000] flex-col items-center justify-center p-6 text-center select-none"
-              style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="48"
-                height="48"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="mb-4 animate-bounce"
-                style={{ color: 'var(--color-primary-500)' }}
-              >
-                <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
-                <path d="M12 18h.01" />
-              </svg>
-              <h2 className="text-lg font-bold mb-2">Mode portrait uniquement</h2>
-              <p className="text-sm max-w-xs" style={{ color: 'var(--text-secondary)' }}>
-                Veuillez pivoter votre téléphone à la verticale pour utiliser le calendrier.
-              </p>
-            </div>
 
             <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!viewState.isMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
               <div className={`flex-grow rounded-lg w-full h-full pb-4 `}>

@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     
   },
 
-  allowedDevOrigins: ['172.16.25.104', 'localhost', '*.palissot.fr'],
+  allowedDevOrigins: ['172.16.25.133', 'localhost', '*.palissot.fr'],
   
   // Optimisations d'images
   images: {

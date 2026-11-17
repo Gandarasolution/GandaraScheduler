@@ -81,19 +81,52 @@ export default function LoginPage({ login }: LoginPageProps) {
     }
   };
 
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleViewportResize = () => {
+      const active = document.activeElement;
+      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+        active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
+    viewport.addEventListener('resize', handleViewportResize);
+    return () => viewport.removeEventListener('resize', handleViewportResize);
+  }, []);
+
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    const target = e.currentTarget;
+    // Double sécurité si visualViewport n'est pas déclenché (ex: clavier déjà ouvert)
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+    });
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-6 sm:px-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <div className="p-6 sm:p-8 rounded-2xl shadow-md w-full max-w-md border border-light transition-all duration-300" style={{ backgroundColor: 'var(--bg-card)' }}>
-        
+    <div
+      className="h-dvh flex flex-col justify-start overflow-y-auto overscroll-contain px-4 pt-6 pb-[14vh] sm:px-6"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
+      <div
+        className="my-auto mx-auto p-6 sm:p-8 rounded-2xl shadow-md w-full max-w-md border border-light transition-all duration-300"
+        style={{ backgroundColor: 'var(--bg-card)' }}
+      >
         {/* Logo et Titre */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-3 sm:mb-8">
           {clientLogo && (
-            <img src={clientLogo} alt="Logo" className="mx-auto mb-4 w-60 h-24 object-contain mb-10" />
+            <img
+              src={clientLogo}
+              alt="Logo"
+              className="mx-auto w-44 h-14 sm:w-60 sm:h-24 object-contain mb-4 sm:mb-8"
+            />
           )}
-          <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2 poppins uppercase">Gandara Planning</h1>
-          <p className="text-secondary poppins text-sm sm:text-base">
-            {needsCompanyCode ? "Trouvez votre espace de travail" : "Connectez-vous à votre espace"}
-          </p>
+          <h1 className="text-xl sm:text-3xl font-bold text-primary mb-1 sm:mb-2 poppins uppercase">
+            Gandara Planning
+          </h1>
         </div>
 
         {/* Message d'erreur global */}
@@ -112,8 +145,10 @@ export default function LoginPage({ login }: LoginPageProps) {
               <input
                 id="companyCode"
                 type="text"
+                autoComplete="organization"
                 value={companyCode}
                 onChange={(e) => setCompanyCode(e.target.value)}
+                onFocus={handleInputFocus}
                 required
                 placeholder="Ex: gandara-dev"
                 className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
@@ -124,6 +159,7 @@ export default function LoginPage({ login }: LoginPageProps) {
               </p>
             </div>
           )}
+
           <div>
             <label htmlFor="login" className="block text-sm font-medium text-primary mb-2 poppins">
               Identifiant
@@ -131,8 +167,10 @@ export default function LoginPage({ login }: LoginPageProps) {
             <input
               id="login"
               type="text"
+              autoComplete="username"
               value={formData.login}
               onChange={(e) => setFormData({ ...formData, login: e.target.value })}
+              onFocus={handleInputFocus}
               required
               placeholder="Votre identifiant"
               className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
@@ -148,8 +186,10 @@ export default function LoginPage({ login }: LoginPageProps) {
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onFocus={handleInputFocus}
                 required
                 placeholder="••••••••"
                 className="w-full min-h-12 pl-4 pr-12 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
@@ -187,24 +227,6 @@ export default function LoginPage({ login }: LoginPageProps) {
               'Se connecter'
             )}
           </button>
-          
-          {/* {needsCompanyCode && (
-            <div className="text-center mt-4">
-              <button 
-                type="button" 
-                onClick={() => {
-                  Cookies.remove('client_api_url', { path: '/' });
-                  Cookies.remove('client_mercure_url', { path: '/' });
-                  localStorage.removeItem('client_logo_url');
-                  setNeedsCompanyCode(true);
-                  setFormData({ login: '', password: '' });
-                }}
-                className="text-xs text-secondary hover:text-primary transition-colors underline cursor-pointer"
-              >
-                Changer d'espace de travail
-              </button>
-            </div>
-          )} */}
         </form>
       </div>
     </div>

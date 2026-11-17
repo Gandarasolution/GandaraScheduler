@@ -1,11 +1,11 @@
 /**
- * @fileoverview Composant principal de la grille calendrier mobile
+ * @fileoverview Composant principal de la grille calendrier mobile & tablette
  * 
- * Point d'entrée de la vue mobile avec gestion des rendez-vous,
+ * Point d'entrée de la vue mobile/tablette avec gestion des rendez-vous,
  * navigation par swipe, notifications et formulaire d'ajout.
  * 
  * @author Gandara Solutions
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -18,13 +18,10 @@ import type { Notification } from '../../../types';
 import { AppointmentForm } from '@/app/calendrier/components';
 
 // Composants
-
-import { NotificationsPanel, EmployeeSelector, MobileCalendarGrid, AppointmentList} from '@/app/calendrier/index';
+import { NotificationsPanel, EmployeeSelector, MobileCalendarGrid, AppointmentList } from '@/app/calendrier/index';
 import SearchOverlay from '../../modals/SearchOverlay';
 import { endOfDay, endOfMonth, startOfDay, startOfMonth } from 'date-fns';
 import { useAuth } from '@/app/calendrier/hooks/utils/AuthContext';
-
-// Lazy loading des composants lourds
 
 // ===== TYPES =====
 
@@ -70,8 +67,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   mobileAppointmentDisplay,
   mobileState
 }) => {
-
-
   const { hasPermission } = useAuth();
 
   const {
@@ -89,7 +84,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(user || null);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
 
-
   const monthDisplay = useRef(selectedDate.getMonth());
   const yearDisplay = useRef(selectedDate.getFullYear());
   const selectedEmployeeRef = useRef<User | null>(selectedEmployee);
@@ -99,7 +93,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     setShowNotifications(false);
   };
 
-   useEffect(() => {
+  useEffect(() => {
     if (selectedEmployee || employees.length === 0) return;
 
     const defaultEmployee = hasPermission(214, 22) || hasPermission(214, 23)
@@ -109,11 +103,15 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     if (defaultEmployee) {
       setSelectedEmployee(defaultEmployee);
     }
-  }, [employees, selectedEmployee, user.IdPersonnel]);
+  }, [employees, selectedEmployee, user.IdPersonnel, hasPermission]);
 
   useEffect(() => {
     if (!onLoadAppointmentsInRange || !selectedEmployee) return;
-    if (selectedEmployeeRef.current === selectedEmployee && monthDisplay.current === selectedDate.getMonth() && yearDisplay.current === selectedDate.getFullYear()) {
+    if (
+      selectedEmployeeRef.current === selectedEmployee &&
+      monthDisplay.current === selectedDate.getMonth() &&
+      yearDisplay.current === selectedDate.getFullYear()
+    ) {
       return; 
     }
     selectedEmployeeRef.current = selectedEmployee;
@@ -124,60 +122,48 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     void onLoadAppointmentsInRange(monthStart, monthEnd, [selectedEmployee.IdPersonnel]);
   }, [onLoadAppointmentsInRange, selectedDate, selectedEmployee]);
   
- const visibleEmployees = useMemo(() => {
+  const visibleEmployees = useMemo(() => {
     const baseEmployees = hasPermission(214, 22) || hasPermission(214, 23)
       ? employees 
       : employees.filter(emp => Number(emp.IdPersonnel) === Number(user.IdPersonnel));
     
-    // Filtrer les employés inactifs qui n'ont pas de rdv dans le mois visible
     return baseEmployees.filter(emp => {
-      // Si l'employé est actif (ou actif non défini = actif par défaut), le garder
       if (emp.Actif !== false) {
         return true;
       }
-      
-      // Si l'employé est inactif, vérifier s'il a des rdv dans le mois visible
       const hasMonthlyAppointments = appointments.some(app => 
         Number(app.IdEmploye) === Number(emp.IdPersonnel)
       );
-      
       return hasMonthlyAppointments;
     });
   }, [employees, user.IdPersonnel, appointments, hasPermission]);
 
-
   useEffect(() => {
-
-    // Fallback synchrone
     const selectedDayStart = startOfDay(selectedDate).getTime();
     const selectedDayEnd = endOfDay(selectedDate).getTime();
-    
-    
     
     const filtered = appointments.filter(app => 
       app.DebutPlanningEvenement <= selectedDayEnd && app.FinPlanningEvenement > selectedDayStart
     );
     
     setSelectedDayAppointments(filtered);
-    return;
-    
-    }, [appointments, selectedDate]);
+  }, [appointments, selectedDate]);
 
   const createEmptyAppointment = useCallback((id?: number): Appointment => {
-      const employee = selectedEmployee;
-      if (!employee) throw new Error('No employee available for appointment creation');
-      const start = new Date(selectedDate).setHours(8, 0, 0, 0);
-      return {
-        IdPlanningEvenement: id ?? -1,
-        AnnotationPlanningEvenement: '',
-        DebutPlanningEvenement: start,
-        FinPlanningEvenement: new Date(selectedDate).setHours(17, 0, 0, 0),
-        IdEmploye: employee.IdPersonnel,
-        IdPlanningRessource: 0,
-        PlanningEvenementPriorite: 0,
-        isLocked: false,
-      };
-    }, [selectedEmployee, selectedDate]);
+    const employee = selectedEmployee;
+    if (!employee) throw new Error('No employee available for appointment creation');
+    const start = new Date(selectedDate).setHours(8, 0, 0, 0);
+    return {
+      IdPlanningEvenement: id ?? -1,
+      AnnotationPlanningEvenement: '',
+      DebutPlanningEvenement: start,
+      FinPlanningEvenement: new Date(selectedDate).setHours(17, 0, 0, 0),
+      IdEmploye: employee.IdPersonnel,
+      IdPlanningRessource: 0,
+      PlanningEvenementPriorite: 0,
+      isLocked: false,
+    };
+  }, [selectedEmployee, selectedDate]);
   
   const createEmptyItem = useCallback(() => selectedItem || ({
     IdPlanningRessource: 0,
@@ -189,27 +175,23 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
     CodePlanningRessource: '',
   } as Item), [selectedItem]);
 
-  
-  
-  // ----- RENDU =====
-  
+  // ----- RENDU -----
   return (
     <div 
-      className="h-full flex items-center justify-center p-0 sm:p-8"
+      className="h-full w-full flex justify-center p-0"
       onClick={handleCloseMenus}
-      style={{ backgroundColor: 'var(--bg-primary)' }}
+      style={{ backgroundColor: 'var(--bg-secondary)' }}
     >
       <div 
-        className="w-full sm:max-w-[400px] h-full rounded-none sm:rounded-[3rem] sm:border-[8px] sm:shadow-2xl overflow-hidden relative flex flex-col"
+        className="w-full h-full overflow-hidden relative flex flex-col"
         style={{
           backgroundColor: 'var(--bg-secondary)',
-          borderColor: 'var(--bg-secondary)'
         }}
       >
         
         {/* Header */}
         <header 
-          className="pt-8 px-6 pb-2 flex items-center justify-between z-10 relative"
+          className="pt-6 md:pt-8 px-6 sm:px-6 md:px-8 pb-2 flex items-center justify-between z-10 relative w-full max-w-4xl mx-auto"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           {/* User Menu */}
@@ -220,7 +202,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 setShowLogout(!showLogout);
                 setShowNotifications(false);
               }}
-              className="flex items-center gap-2 rounded-full pr-3 pl-1 py-1 transition-colors"
+              className="flex items-center gap-2.5 rounded-full pr-3 pl-1 py-1 transition-colors"
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
               }}
@@ -229,26 +211,20 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
               }}
             >
               <div 
-                className="relative w-8 h-8 rounded-full overflow-hidden"
+                className="relative w-8 h-8 md:w-9 md:h-9 rounded-full overflow-hidden"
                 style={{ borderWidth: '1px', borderColor: 'var(--border-light)' }}
               >
                 <img
                   src={user.Image || `https://placehold.co/32x32/cccccc/333333?text=${user.Nom.charAt(0)}`}
                   alt="Avatar"
-                  className="w-8 h-8 object-cover"
+                  className="w-full h-full object-cover"
                 />
               </div>
-              <span 
-                className="text-sm font-semibold hidden sm:inline-block"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                {user.Nom} {user.Prenom}
-              </span>
             </button>
             
             {showLogout && (
               <div 
-                className="absolute top-full left-0 mt-2 rounded-xl py-1 w-40 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50" 
+                className="absolute top-full left-0 mt-2 rounded-xl py-1 w-44 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50" 
                 onClick={(e) => e.stopPropagation()}
                 style={{
                   backgroundColor: 'var(--bg-card)',
@@ -259,7 +235,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
               >
                 <button 
                   onClick={() => logout()}
-                  className="w-full text-left px-4 py-2 text-sm flex items-center transition-colors"
+                  className="w-full text-left px-4 py-2.5 text-sm flex items-center transition-colors"
                   style={{ color: 'var(--color-error)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--color-error-light)';
@@ -268,138 +244,48 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <LogOut size={14} className="mr-2" />
+                  <LogOut size={15} className="mr-2" />
                   Se déconnecter
                 </button>
               </div>
             )}
           </div>
-          
-          {/* Actions */}
-          {/* <div className="flex items-center gap-4 relative">
-            
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowNotifications(!showNotifications);
-                setShowLogout(false);
-              }}
-              className="transition-colors relative"
-              style={{ color: 'var(--text-tertiary)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-primary-500)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-tertiary)';
-              }}
-            >
-              <Bell size={20} />
-              {unreadCount > 0 && (
-                <span 
-                  className="absolute -top-1 -right-1 w-4 h-4 text-[8px] font-bold rounded-full flex items-center justify-center"
-                  style={{
-                    backgroundColor: 'var(--color-error)',
-                    color: 'var(--text-inverse)',
-                    borderWidth: '2px',
-                    borderColor: 'var(--bg-secondary)'
-                  }}
-                >
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-            
-            <button 
-              className="transition-colors"
-              style={{ color: 'var(--text-tertiary)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-primary-500)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-tertiary)';
-              }}
-            >
-              <MoreHorizontal size={20} />
-            </button>
-            
-            {showNotifications && (
-              <NotificationsPanel 
-                notifications={notifications}
-                onClose={() => setShowNotifications(false)}
-                onMarkAsRead={markAsRead}
-                variant="mobile"
-              />
-            )}
-          </div> */}k
         </header>
 
         {/* Scrollable Content Area */}
         <main 
-          className="flex-1 overflow-y-auto no-scrollbar"
+          className="flex-1 overflow-y-auto no-scrollbar w-full"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
-          
-          {/* Employee Selector - visible seulement pour les admins et managers */}
-          {(hasPermission(214, 22) || hasPermission(214, 23)) && employees.length > 0 && (
-            <EmployeeSelector 
-              employees={visibleEmployees}
-              teams={teams}
-              selectedEmployee={selectedEmployee}
-              onSelect={setSelectedEmployee}
+          <div className="w-full max-w-4xl mx-auto md:px-2">
+            {/* Employee Selector - visible seulement pour les admins et managers */}
+            {(hasPermission(214, 22) || hasPermission(214, 23)) && employees.length > 0 && (
+              <EmployeeSelector 
+                employees={visibleEmployees}
+                teams={teams}
+                selectedEmployee={selectedEmployee}
+                onSelect={setSelectedEmployee}
+              />
+            )}
+
+            {/* Calendar */}
+            <MobileCalendarGrid 
+              currentDate={selectedDate}
+              selectedDate={selectedDate}
+              appointments={appointments}
+              onDateSelect={setSelectedDate}
             />
-          )}
 
-          {/* Calendar */}
-          <MobileCalendarGrid 
-            currentDate={selectedDate}
-            selectedDate={selectedDate}
-            appointments={appointments}
-            onDateSelect={setSelectedDate}
-          />
-
-          {/* Appointments Detail */}
-          <AppointmentList 
-            appointments={selectedDayAppointments}
-            selectedDate={selectedDate}
-            items={items}
-            employees={employees}
-            displayConfig={mobileAppointmentDisplay}
-          />
-        </main>
-
-        {/* Floating Action Button - Visible pour les admins et managers */}
-        {(hasPermission(214, 22) || hasPermission(214, 23)) && false && (
-          <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none flex justify-center items-end h-32"
-            style={{
-              backgroundImage: `linear-gradient(to top, var(--bg-secondary), transparent)`
-            }}
-          >
-            <div 
-              className="pointer-events-auto flex items-center justify-center px-8 w-full rounded-full p-2 mb-2"
-              style={{
-                //backgroundColor: 'var(--bg-secondary)',
-                //boxShadow: 'var(--shadow-md)'
-              }}
-            >
-              <button 
-                onClick={handleOpenAddAppointment}
-                className="w-14 h-14 rounded-full text-white flex items-center justify-center transform  transition-transform active:scale-95"
-                style={{
-                  backgroundColor: 'var(--color-primary-500)',
-                  boxShadow: 'var(--shadow-lg)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1.5rem) scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1.5rem) scale(1)';
-                }}
-              >
-                <Plus size={28} />
-              </button>
-            </div>
+            {/* Appointments Detail */}
+            <AppointmentList 
+              appointments={selectedDayAppointments}
+              selectedDate={selectedDate}
+              items={items}
+              employees={employees}
+              displayConfig={mobileAppointmentDisplay}
+            />
           </div>
-        )}
+        </main>
 
         {/* Modal de recherche d'événement */}
         {(hasPermission(214, 22) || hasPermission(214, 23)) && showSearchModal && (
@@ -473,7 +359,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         {/* Modal d'ajout de rendez-vous */}
         {(hasPermission(214, 22) || hasPermission(214, 23)) && showAppointmentForm && (
           <div 
-            className="fixed inset-0 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center animate-in fade-in duration-200"
+            className="fixed inset-0 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-6 animate-in fade-in duration-200"
             style={{ backgroundColor: 'var(--bg-overlay)' }}
             onClick={() => {
               setShowAppointmentForm(false);
@@ -481,7 +367,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             }}
           >
             <div 
-              className="rounded-t-[2.5rem] sm:rounded-3xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300"
+              className="rounded-t-[2.5rem] md:rounded-3xl w-full md:max-w-2xl max-h-[85vh] md:max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
               onClick={(e) => e.stopPropagation()}
               style={{
                 backgroundColor: 'var(--bg-card)',
@@ -500,7 +386,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                   className="text-xl font-bold"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  {selectedItem ? 'Nouveau rendez-vous' : 'Nouveau rendez-vous'}
+                  Nouveau rendez-vous
                 </h2>
                 <button 
                   onClick={() => {

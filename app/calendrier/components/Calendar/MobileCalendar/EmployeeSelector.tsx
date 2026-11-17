@@ -124,7 +124,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   }, [wrapperRef]);
 
   return (
-    <div className="px-6 mb-6 relative z-5" ref={wrapperRef}>
+    <div className="px-6 mb-3 relative z-5" ref={wrapperRef}>
       {/* Bouton de sélection */}
       <div 
         className="rounded-2xl border p-1 flex items-center cursor-pointer transition-shadow"

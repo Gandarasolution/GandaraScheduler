@@ -19,11 +19,14 @@ export default function Home() {
 
   const { setTheme } = useTheme(user);
   
-  const [isMobile, setIsMobile] = useState<boolean>(() => {
+  const checkIsMobileOrTablet = () => {
     if (typeof window === 'undefined') return false;
-    return Math.min(window.innerWidth, window.innerHeight) < 640;
-  });
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+    const isSmallSide = Math.min(window.innerWidth, window.innerHeight) < 1200;
+    return isTouchDevice && isSmallSide;
+  };
 
+const [isMobile, setIsMobile] = useState<boolean>(checkIsMobileOrTablet);
 
   // Fonction pour changer le thème
   const handleThemeChange = useCallback((newTheme: ThemeType) => {
@@ -60,7 +63,7 @@ export default function Home() {
   // --- Detection Mobile ---
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(Math.min(window.innerWidth, window.innerHeight) < 640);
+      setIsMobile(checkIsMobileOrTablet());
     };
 
     window.addEventListener('resize', handleResize);
@@ -81,53 +84,89 @@ export default function Home() {
     }
   }, [currentPlanningId, currentVueId, setCurrentVueId]);
 
-
   // ==============================================================
   // RENDU DU WORKFLOW (Étape par étape)
   // ==============================================================
+  const renderStep = () => {
+    // ÉTAPE 0 : Non connecté
+    if (!isAuthenticated || !user) return <LoginPage login={login} />;
+
+    // ÉTAPE 1 : Choix du Planning (S'il y en a plusieurs)
+    if (UserPlanning.length > 1 && currentPlanningId === -1) {
+      return (
+        <SelectionScreen 
+          title="Espaces de travail"
+          subtitle="Sélectionnez le planning auquel vous souhaitez accéder"
+          options={UserPlanning.map(p => ({ id: p.IdPlanning, name: p.NomPlanning }))}
+          onSelect={(id) => setCurrentPlanningId(id)} 
+        />
+      );
+    }
+
+    // ÉTAPE 2 : Initialisation du calendrier
+    if (currentPlanningId !== -1 && currentVueId === null) {
+      return (
+        <SelectionScreen
+          title="Chargement..."
+          subtitle="Ouverture du planning"
+          options={[]}
+          onSelect={() => {}}
+          isLoading={true}
+        />
+      );
+    }
+
+    // ÉTAPE 3 : Affichage du Calendrier
+    if (currentPlanningId !== -1 && currentVueId !== null) {
+      return (
+        <ErrorBoundary
+          maxRetries={3}
+          retryDelay={2000}
+          onError={(error, errorInfo) => {
+            console.error('[Error Boundary]', error, errorInfo);
+          }}
+        >
+          <DayTypesProvider>
+            <Calendrier isMobile={isMobile} />
+          </DayTypesProvider>
+        </ErrorBoundary>
+      );
+    }
+
+    return null;
+  };
+
   
-  // ÉTAPE 0 : Non connecté
-  if (!isAuthenticated || !user) return <LoginPage login={login} />;
-
-  // ÉTAPE 1 : Choix du Planning (S'il y en a plusieurs)
-  if (UserPlanning.length > 1 && currentPlanningId === -1) {
-    return (
-      <SelectionScreen 
-        title="Espaces de travail"
-        subtitle="Sélectionnez le planning auquel vous souhaitez accéder"
-        options={UserPlanning.map(p => ({ id: p.IdPlanning, name: p.NomPlanning }))}
-        onSelect={(id) => setCurrentPlanningId(id)} 
-      />
-    );
-  }
-
-  // ÉTAPE 2 : Initialisation du calendrier
-  if (currentPlanningId !== -1 && currentVueId === null) {
-    return (
-      <SelectionScreen
-        title="Chargement..."
-        subtitle="Ouverture du planning"
-        options={[]}
-        onSelect={() => {}}
-        isLoading={true}
-      />
-    );
-  }
-
-  // ÉTAPE 3 : Affichage du Calendrier
-  if (currentPlanningId !== -1 && currentVueId !== null) {
-    return (
-      <ErrorBoundary
-        maxRetries={3}
-        retryDelay={2000}
-        onError={(error, errorInfo) => {
-          console.error('[Error Boundary]', error, errorInfo);
-        }}
+  return (
+    <>
+      {/* Overlay de blocage en mode paysage sur smartphone (actif sur Login, Sélection et Calendrier) */}
+      <div
+        className="portrait-only-overlay fixed inset-0 z-[10000] flex-col items-center justify-center p-6 text-center select-none"
+        style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
       >
-        <DayTypesProvider>
-          <Calendrier isMobile={isMobile} />
-        </DayTypesProvider>
-      </ErrorBoundary>
-    );
-  }
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mb-4 animate-bounce"
+          style={{ color: 'var(--color-primary-500)' }}
+        >
+          <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+          <path d="M12 18h.01" />
+        </svg>
+        <h2 className="text-lg font-bold mb-2">Mode portrait uniquement</h2>
+        <p className="text-sm max-w-xs" style={{ color: 'var(--text-secondary)' }}>
+          Veuillez pivoter votre appareil à la verticale pour utiliser l'application.
+        </p>
+      </div>
+
+      {renderStep()}
+    </>
+  );
 }

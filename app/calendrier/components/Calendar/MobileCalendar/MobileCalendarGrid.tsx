@@ -72,13 +72,13 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
   return (
     <div className="flex flex-col px-6 pb-6 h-auto transition-all duration-300">
       <div 
-        className="rounded-[2.5rem] px-6 pb-6 pt-2 relative transition-all duration-300 ease-in-out"
+        className="rounded-[2.5rem] px-6 pb-6 relative transition-all duration-300 ease-in-out"
         style={{
           backgroundColor: 'var(--bg-card)',
           boxShadow: 'var(--shadow-md)'
         }}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between">
           <span 
             className="text-sm font-medium capitalize transition-all duration-300 ease-in-out"
             style={{ color: 'var(--text-secondary)' }}
@@ -95,7 +95,7 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
           />
         </div>
         {/* En-têtes des jours */}
-        <div className="grid grid-cols-7 mb-4">
+        <div className="grid grid-cols-7 mb-2">
           {weekDays.map((day, index) => (
             <div 
               key={index} 
@@ -108,7 +108,7 @@ export const MobileCalendarGrid: React.FC<CalendarGridProps> = ({
         </div>
 
         {/* Grille des jours */}
-        <div className="grid grid-cols-7 gap-y-4 gap-x-1 transition-all duration-300 ease-in-out">
+        <div className="grid grid-cols-7 gap-y-1 gap-x-1 transition-all duration-300 ease-in-out">
           {days.map((day, index) => {
             const isSelected = isSameDay(day, selectedDate);
             const isCurrentMonth = isSameMonth(day, monthStart);
