@@ -20,7 +20,6 @@ import { endOfMonth, format, startOfMonth } from "date-fns";
 
 // --- COMPOSANTS UI (Eager loading pour éviter le flash) ---
 import { 
-  ThemeSelector, 
   RightClickComponent, 
   NotificationsPanel, 
   AlertModal, 
@@ -96,30 +95,8 @@ export default function HomePage({
     isMobile: boolean;
     isTablet: boolean;
 }) {
-
   const { hasPermission, currentPlanningId, logout, currentVueId, setCurrentVueId } = useAuth();
-  const { nonWorkingDates, loadNonWorkingDates, setNonWorkingDates } = useDayTypesContext();
-  
-  const user = useCurrentUser();
-  
-  const [loadCalendar, setLoadCalendar] = useState(true); 
-  const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
-  const [lockNotification, setLockNotification] = useState<string | null>(null);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
 
-
-  const [tableRefreshVersion, setTableRefreshVersion] = useState(0);
-  const [chantierColumns, setChantierColumns] = useState<string[] | null>(null);
-  const [chantierViewId, setChantierViewId] = useState<string | null>(null);
-  const [chantierViews, setChantierViews] = useState<ChantierView[]>([]);
-  const [chantierViewsLoading, setChantierViewsLoading] = useState(false);
-  const activeFiltersRef = useRef<ActiveFilters>({});
-
-
-  const [transferEmployee, setTransferEmployee] = useState<User | null>(null);
-  
   // Détection de l'orientation (portrait vs paysage)
   const [isPortrait, setIsPortrait] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -157,6 +134,91 @@ export default function HomePage({
     return !hasDesktopPermission;
   }, [isMobile, isTablet, isPortrait, hasDesktopPermission]);
 
+  const { nonWorkingDates, loadNonWorkingDates, setNonWorkingDates } = useDayTypesContext();
+  
+  const user = useCurrentUser();
+
+  const { 
+    isDisplayWeekend,
+    setIsDisplayWeekend,
+    includeWeekend,
+    setIncludeWeekend,
+    isExpanded,
+    setIsExpanded,
+    isFullDay,
+    setIsFullDay,
+    respectNonWorkingDays,
+    setRespectNonWorkingDays,
+    tagPlacement,
+    setTagPlacement,
+    overlapDisplayMode,
+    setOverlapDisplayMode,
+    getParametres,
+
+    mobileAppointmentDisplay,
+    mobileAppointmentFieldOptions,
+    mobileAppointmentSettingsLoading,
+    loadMobileAppointmentSettings,
+    handleSaveMobileAppointmentDisplay,
+
+    viewType,
+    setViewType,
+    isViewDropdownOpen,
+    setIsViewDropdownOpen,
+    viewDropdownRef,
+
+    isSettingsOpen,
+    setIsSettingsOpen,
+    isFilterModalOpen,
+    setIsFilterModalOpen,
+    isSearchOverlayOpen,
+    setIsSearchOverlayOpen,
+    activeFilters,
+    setActiveFilters,
+    selectedDate,
+    setSelectedDate,
+    lastPositionEmployeeId,
+    setLastPositionEmployeeId,
+    handleCalendarPositionChange,
+    lastPositionLoaded,
+    modalInfo,
+    setModalInfo,
+    isNotificationsPanelOpen,
+    setIsNotificationsPanelOpen,
+    searchInput,
+    setSearchInput,
+    dimensionSearchInput,
+    setDimensionsSearchInput,
+
+    calendarConfigHook,
+    currentCalendarConfig,
+    onCalendarConfigChange,
+    availableConfigs,
+    setAvailableConfigs,
+    loadConfigs,
+    constants,
+} = useCalendarView();
+  
+  const [loadCalendar, setLoadCalendar] = useState(true); 
+  const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
+  const [lockNotification, setLockNotification] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+
+
+  const [tableRefreshVersion, setTableRefreshVersion] = useState(0);
+  const [chantierColumns, setChantierColumns] = useState<string[] | null>(null);
+  const [chantierViewId, setChantierViewId] = useState<string | null>(null);
+  const [chantierViews, setChantierViews] = useState<ChantierView[]>([]);
+  const [chantierViewsLoading, setChantierViewsLoading] = useState(false);
+  const activeFiltersRef = useRef<ActiveFilters>({});
+
+
+  const [transferEmployee, setTransferEmployee] = useState<User | null>(null);
+  
+  
+
   // 1. SERVICES GLOBAUX
   const { theme, setTheme } = useTheme();
   const notifications = useNotifications(setLockNotification);
@@ -180,8 +242,6 @@ export default function HomePage({
   // Refs de données dynamiques (chargées via API)
   const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
 
-  // 2. ÉTAT DE LA VUE (Préférences, Modales, Filtres)
-  const viewState = useCalendarView(currentPlanningId, user, effectiveIsMobile);
 
   // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
   const dataLayer = useDataLayer({ 
@@ -206,30 +266,30 @@ export default function HomePage({
 
   // 4. LOGIQUE TEMPORELLE (Scroll, Dates)
   const timeline = useTimeline({
-    isDisplayWeekend: viewState.isDisplayWeekend,
-    selectedDate: viewState.selectedDate,
-    setSelectedDate: viewState.setSelectedDate,
+    isDisplayWeekend: isDisplayWeekend,
+    selectedDate: selectedDate,
+    setSelectedDate: setSelectedDate,
     isLoading: dataLayer.isLoading,
     setIsLoading: dataLayer.setIsLoading,
   });
 
   const lastPositionNavigationRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!viewState.lastPositionLoaded || currentPlanningId <= 0) return;
-    const navigationKey = `${currentPlanningId}-${viewState.lastPositionLoaded}`;
+    if (!lastPositionLoaded || currentPlanningId <= 0) return;
+    const navigationKey = `${currentPlanningId}-${lastPositionLoaded}`;
     if (lastPositionNavigationRef.current === navigationKey) return;
     lastPositionNavigationRef.current = navigationKey;
-    timeline.goToDate(viewState.selectedDate);
-  }, [currentPlanningId, timeline.goToDate, viewState.lastPositionLoaded]);
+    timeline.goToDate(selectedDate);
+  }, [currentPlanningId, timeline.goToDate, lastPositionLoaded]);
 
   // 5. LOGIQUE MÉTIER (CRUD, Règles de gestion, Historique)
   const timelineState = useMemo(() => ({
-    isFullDay: viewState.isFullDay, 
-    isDisplayWeekend: viewState.isDisplayWeekend,
-    includeWeekend: viewState.includeWeekend,
-    respectNonWorkingDays: viewState.respectNonWorkingDays,
+    isFullDay: isFullDay, 
+    isDisplayWeekend: isDisplayWeekend,
+    includeWeekend: includeWeekend,
+    respectNonWorkingDays: respectNonWorkingDays,
     nonWorkingDates: nonWorkingDates
-  }), [viewState.isFullDay, viewState.isDisplayWeekend, viewState.includeWeekend, viewState.respectNonWorkingDays, nonWorkingDates]);
+  }), [isFullDay, isDisplayWeekend, includeWeekend, respectNonWorkingDays, nonWorkingDates]);
 
   const appointmentLogic = useAppointmentLogic({
     employees: globalEmployees,
@@ -237,8 +297,8 @@ export default function HomePage({
     eventsRef: dataLayer.itemsRef,
     timelineState,
     onUpdate: dataLayer.refreshData, // Callback pour rafraichir l'UI après modification des Refs
-    setIsSearchOverlayOpen: viewState.setIsSearchOverlayOpen,
-    setDimensionsSearchInput: viewState.setDimensionsSearchInput,
+    setIsSearchOverlayOpen: setIsSearchOverlayOpen,
+    setDimensionsSearchInput: setDimensionsSearchInput,
     onLockedError: setLockNotification,
     api: {
       updateEvenementAndRessource: evenementService.updateEvenementAndRessource,
@@ -270,7 +330,7 @@ export default function HomePage({
     undoAction: appointmentLogic.undoLastAction,
     canUndo: appointmentLogic.canUndo,
     deleteAction: appointmentLogic.handleDeleteAppointmentConfirm,
-    openSearch: () => viewState.setIsSearchOverlayOpen(true),
+    openSearch: () => setIsSearchOverlayOpen(true),
     handleOpenEditModal: appointmentLogic.handleOpenEditModal,
     handleRepeat: () => appointmentLogic.setRepeatData({
       numberCount: 1,       // "Tous les 1..."
@@ -282,22 +342,22 @@ export default function HomePage({
     handleDivide: (appointment) => appointmentLogic.handleDivideConfirm(appointment),
     
     // Constantes pour calculs d'interaction
-    isFullDay: viewState.isFullDay,
-    DAY_INTERVALS: viewState.constants.intervals,
-    HALF_DAY_INTERVALS: viewState.constants.intervals,
-    viewType: viewState.viewType,
+    isFullDay: isFullDay,
+    DAY_INTERVALS: constants.intervals,
+    HALF_DAY_INTERVALS: constants.intervals,
+    viewType: viewType,
     addImage: dataLayer.addImage,
 
-    setIsViewDropdownOpen: viewState.setIsViewDropdownOpen
+    setIsViewDropdownOpen: setIsViewDropdownOpen
 
   });  
 
   const handleCellDoubleClick = useCallback(() => {
-    viewState.setIsSearchOverlayOpen(true);
-  }, [viewState.setIsSearchOverlayOpen]);
+    setIsSearchOverlayOpen(true);
+  }, [setIsSearchOverlayOpen]);
 
   const handleTableRowClick = useCallback((item: any) => {
-    if (viewState.viewType === 'employee-table') return;
+    if (viewType === 'employee-table') return;
 
     const resourceId = Number(item.IdPlanningRessource);
     if (!Number.isFinite(resourceId)) return;
@@ -317,7 +377,7 @@ export default function HomePage({
       IdEmploye: Number(item.IdEmploye) || 0,
       isLocked: false,
     });
-  }, [appointmentLogic.handleOpenEditModal, dataLayer.itemsRef, viewState.viewType]);
+  }, [appointmentLogic.handleOpenEditModal, dataLayer.itemsRef, viewType]);
 
 
   
@@ -404,8 +464,8 @@ export default function HomePage({
 
   
   const mobileState: MobileCalendarState = {
-    selectedDate: new Date(viewState.selectedDate),
-    setSelectedDate: (date) => viewState.setSelectedDate(date.getTime()),
+    selectedDate: new Date(selectedDate),
+    setSelectedDate: (date) => setSelectedDate(date.getTime()),
     notifications: notifications.notifications as Notification[],
     selectedItem: selectedItem,
     setSelectedItem: setSelectedItem,
@@ -424,13 +484,13 @@ export default function HomePage({
 
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
-    return viewState.viewType === 'chantier-table' 
+    return viewType === 'chantier-table' 
       ? ressourceService.getRessourcesProjet(
           limit, 
           pageNum, 
-          viewState.searchInput, 
-          viewState.viewType, 
-          viewState.activeFilters, 
+          searchInput, 
+          viewType, 
+          activeFilters, 
           Number((() => {
             const view = chantierViews.find(
               (v) => String(v.id) === String(chantierViewId)
@@ -439,21 +499,21 @@ export default function HomePage({
           })()), 
           timeoutMs
         )
-      : viewState.viewType === 'employee-table' && hasPermission(214, 23) 
-        ? (employeeService.getEmployeesPag as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
-        : viewState.viewType === 'manual-event-table' && hasPermission(214, 23) 
-          ? (ressourceService.getManualEvents as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
-          : viewState.viewType === 'paie-table' && hasPermission(214, 23) 
-            ? (ressourceService.getRubriquePaie as any)(limit, pageNum, viewState.searchInput, viewState.activeFilters, timeoutMs) 
+      : viewType === 'employee-table' && hasPermission(214, 23) 
+        ? (employeeService.getEmployeesPag as any)(limit, pageNum, searchInput, activeFilters, timeoutMs) 
+        : viewType === 'manual-event-table' && hasPermission(214, 23) 
+          ? (ressourceService.getManualEvents as any)(limit, pageNum, searchInput, activeFilters, timeoutMs) 
+          : viewType === 'paie-table' && hasPermission(214, 23) 
+            ? (ressourceService.getRubriquePaie as any)(limit, pageNum, searchInput, activeFilters, timeoutMs) 
             : undefined;
-  }, [chantierViewId, viewState.viewType, viewState.searchInput, viewState.activeFilters]);
+  }, [chantierViewId, viewType, searchInput, activeFilters]);
 
   const handleTransferEmployee = useCallback((employee: User) => {
     setTransferEmployee(employee);
   }, []);
 
   const loadChantierViews = useCallback(async (appliedFilters?: ActiveFilters) => {
-    if (viewState.viewType !== 'chantier-table' || !user?.IdPersonnel || currentPlanningId <= 0) return;
+    if (viewType !== 'chantier-table' || !user?.IdPersonnel || currentPlanningId <= 0) return;
 
     setChantierViewsLoading(true);
     try {
@@ -507,9 +567,9 @@ export default function HomePage({
     
 
       if (appliedFilters) {
-        viewState.setActiveFilters(hasFilters ? appliedFilters : {});
+        setActiveFilters(hasFilters ? appliedFilters : {});
       } else if (!hasFilters) {
-        viewState.setActiveFilters(selectedView.filters);
+        setActiveFilters(selectedView.filters);
       }
     } catch (error) {
       console.error('Impossible de charger les vues chantier.', error);
@@ -517,12 +577,12 @@ export default function HomePage({
     } finally {
       setChantierViewsLoading(false);
     }
-  }, [currentPlanningId, user?.IdPersonnel, viewState.setActiveFilters, viewState.viewType]);
+  }, [currentPlanningId, user?.IdPersonnel, setActiveFilters, viewType]);
 
   
   const saveChantierFilters = useCallback(async (filters: ActiveFilters): Promise<boolean> => {
     try {
-      const response = await ressourceService.saveFilterOptions(viewState.viewType, filters);
+      const response = await ressourceService.saveFilterOptions(viewType, filters);
       if (response?.success === false) {
         console.error('Impossible de sauvegarder les filtres utilisateur.', response.message);
         return false;
@@ -533,23 +593,23 @@ export default function HomePage({
       console.error('Impossible de sauvegarder les filtres utilisateur.', error);
       return false;
     }
-  }, [loadChantierViews, viewState.viewType]);
+  }, [loadChantierViews, viewType]);
 
   const applyChantierFilters = useCallback((filters: ActiveFilters) => {
     activeFiltersRef.current = filters;
-    viewState.setActiveFilters(filters);
-  }, [viewState.setActiveFilters]);
+    setActiveFilters(filters);
+  }, [setActiveFilters]);
 
   useEffect(() => {
-    activeFiltersRef.current = viewState.activeFilters;
-  }, [viewState.activeFilters]);
+    activeFiltersRef.current = activeFilters;
+  }, [activeFilters]);
 
   // --- FILTRES ---
   const searchUtils = useMemo(() => createSearchAndFilterUtils(), []);
   
   const keyOfFilter = useMemo((): { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } } => {
     // Définition des colonnes filtrables selon la vue
-    if (viewState.viewType === 'chantier-table') {
+    if (viewType === 'chantier-table') {
         return { 
           etat: { 
             label: 'État', 
@@ -564,7 +624,7 @@ export default function HomePage({
     return { 
         code: { label: 'Code', type: 'combobox' as FilterType },
     };
-  }, [viewState.viewType]);
+  }, [viewType]);
 
   const chantierStructure = useMemo(() => getTableStructure('chantier-table', {
     handleOpenEditModal: appointmentLogic.handleOpenEditModal,
@@ -601,19 +661,19 @@ export default function HomePage({
 
 
   const filteredCalendarAppointments = useMemo(() => {
-    if (viewState.viewType !== 'calendar') {
+    if (viewType !== 'calendar') {
       return dataLayer.appointmentsRef.current;
     }
 
     return searchUtils.searchAppointments(
       dataLayer.appointmentsRef.current,
       Object.values(dataLayer.itemsRef.current),
-      viewState.searchInput
+      searchInput
     );
   }, [
     searchUtils,
-    viewState.viewType,
-    viewState.searchInput,
+    viewType,
+    searchInput,
     dataLayer.appointmentsVersion,
   ]);
         
@@ -637,7 +697,7 @@ export default function HomePage({
 
       // Si on n'est pas en vue calendrier, en mode mobile effectif, ou que la vue est déjà chargée
       const hasValidVueId = currentVueId !== null && currentVueId > 0;
-      if (hasValidVueId || viewState.viewType !== 'calendar' || effectiveIsMobile) {
+      if (hasValidVueId || viewType !== 'calendar' || effectiveIsMobile) {
         if (hasValidVueId) {
           axiosAgent.defaults.headers.common['X-PlanningVue-Id'] = currentVueId;
         }
@@ -713,7 +773,7 @@ export default function HomePage({
       }
 
       if (effectiveIsMobile) {
-        const monthStart = new Date(viewState.selectedDate);
+        const monthStart = new Date(selectedDate);
         monthStart.setDate(1);
         monthStart.setHours(0, 0, 0, 0);
         const monthEnd = new Date(monthStart);
@@ -735,6 +795,8 @@ export default function HomePage({
         setLoadCalendar(false);
         return;
       }
+
+      await getParametres();
 
       setLoadCalendar(false);
     };
@@ -763,13 +825,13 @@ export default function HomePage({
       }
     };
 
-    if (viewState.viewType === "calendar") {
+    if (viewType === "calendar") {
       initializePlanning();
-    } else if (viewState.viewType === "employee-table") {
+    } else if (viewType === "employee-table") {
       initializeEmployeeTable();
     } else if (
-      viewState.viewType === "paie-table" ||
-      viewState.viewType === "manual-event-table"
+      viewType === "paie-table" ||
+      viewType === "manual-event-table"
     ) {
       if (hasPermission(214, 23) || hasPermission(214, 22)) {
         initializePaieTableAndManualEventTable();
@@ -783,7 +845,7 @@ export default function HomePage({
       isMounted = false;
     };
   }, [
-    viewState.viewType,
+    viewType,
     currentPlanningId,
     dataLayer.loadTeams,
     dataLayer.loadAppointmentsInRange,
@@ -795,7 +857,7 @@ export default function HomePage({
       effectiveIsMobile ||
       !currentPlanningId ||
       currentPlanningId <= 0 ||
-      viewState.viewType !== "calendar"
+      viewType !== "calendar"
     ) {
       return;
     }
@@ -863,13 +925,13 @@ export default function HomePage({
     currentPlanningId,
     effectiveIsMobile,
     timeline.days,
-    viewState.viewType,
+    viewType,
     loadNonWorkingDates,
   ]);
 
   useEffect(() => {
-    if (viewState.viewType !== 'calendar') return;
-    if (!viewState.currentCalendarConfig) return;
+    if (viewType !== 'calendar') return;
+    if (!currentCalendarConfig) return;
     if (!hasInitializedPlanningRef.current) return;
 
     if (isFirstRenderRef.current) {
@@ -916,8 +978,8 @@ export default function HomePage({
 
     void reloadPlanningDataForCurrentView();
   }, [
-    viewState.viewType,
-    viewState.currentCalendarConfig?.IdPlanningVue,
+    viewType,
+    currentCalendarConfig?.IdPlanningVue,
     hasPermission,
     user.IdPersonnel,
     setGlobalEmployees,
@@ -935,7 +997,7 @@ export default function HomePage({
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
       interaction.handleGlobalKeyboard(e);
-      if (viewState.viewType === 'calendar') {        
+      if (viewType === 'calendar') {        
         timeline.handleKeyboardScroll(e);
       }
     };
@@ -944,7 +1006,7 @@ export default function HomePage({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [interaction, timeline, viewState.viewType]);
+  }, [interaction, timeline, viewType]);
 
   useEffect(() => {
     const handleExpiration = () => {
@@ -1031,15 +1093,15 @@ export default function HomePage({
         break;
       
       case 'CONFIG_LOCKED':
-        viewState.setAvailableConfigs((prev) => prev.map((config) => (Number(config.IdPlanningVue) === Number(data.IdPlanningVue) ? { ...config, isLocked: true } : config)));
+        setAvailableConfigs((prev) => prev.map((config) => (Number(config.IdPlanningVue) === Number(data.IdPlanningVue) ? { ...config, isLocked: true } : config)));
         break;
 
       case 'ADD_VUE':
-        viewState.setAvailableConfigs((prev) => [...prev, data.vue]);
+        setAvailableConfigs((prev) => [...prev, data.vue]);
         break;
 
       case 'DELETE_VUE':
-        viewState.setAvailableConfigs((prev) => prev.filter((config) => Number(config.IdPlanningVue) !== Number(data.IdPlanningVue)));
+        setAvailableConfigs((prev) => prev.filter((config) => Number(config.IdPlanningVue) !== Number(data.IdPlanningVue)));
         break;
 
       case 'CREATE_CHANTIER_VUE': {
@@ -1128,14 +1190,13 @@ export default function HomePage({
             <CalendarHeader 
               theme={theme}
               user={user}
-              viewState={viewState}
               notifications={notifications}
               handleAddModal={appointmentLogic.handleOpenEditModal}
               onNavigateDate={timeline.goToDate}
-              chantierViewsControlProps={viewState.viewType === 'chantier-table' && !chantierViewsLoading ? {
+              chantierViewsControlProps={viewType === 'chantier-table' && !chantierViewsLoading ? {
                 structure: chantierStructure,
                 keyOfFilter,
-                activeFilters: viewState.activeFilters,
+                activeFilters: activeFilters,
                 userId: user?.IdPersonnel,
                 planningId: currentPlanningId,
                 initialViews: chantierViews,
@@ -1152,14 +1213,14 @@ export default function HomePage({
             <div className={`flex flex-grow rounded-2xl w-full border-gray-200 ${!effectiveIsMobile ? 'mt-8' : ''}`} tabIndex={0} style={{ outline: "none" }}>
               <div className={`flex-grow rounded-lg w-full h-full pb-4 `}>
                 
-                {viewState.viewType === 'calendar' && loadCalendar && (
+                {viewType === 'calendar' && loadCalendar && (
                   <div className="fixed inset-0 bg-white/80 z-[9999] flex items-center justify-center">
                     <Loader message="Chargement du calendrier..." className="h-full" />
                   </div>
                 )}
                 
                 <>
-                  {viewState.viewType === 'calendar' && !loadCalendar ? (
+                  {viewType === 'calendar' && !loadCalendar ? (
                     /* VUE PLANNING */
                     errorPlanning ? (
                       <div className="flex items-center justify-center h-full">
@@ -1171,7 +1232,7 @@ export default function HomePage({
                       </div>
                     ) : (
                       (effectiveIsMobile ||
-                      viewState.currentCalendarConfig ||
+                      currentCalendarConfig ||
                       hasPermission(214, 21)) && (
                         <div className="relative flex flex-col h-full w-full">
 
@@ -1200,25 +1261,25 @@ export default function HomePage({
 
                               /* État Temporel */
                               dayInTimeline={timeline.days}
-                              selectedDate={viewState.selectedDate}
-                              initialEmployeeId={viewState.lastPositionEmployeeId}
-                              onCalendarPositionChange={viewState.handleCalendarPositionChange}
+                              selectedDate={selectedDate}
+                              initialEmployeeId={lastPositionEmployeeId}
+                              onCalendarPositionChange={handleCalendarPositionChange}
                               mainScrollRef={timeline.mainScrollRef}
 
                               /* Configuration */
-                              isDisplayWeekend={viewState.isDisplayWeekend}
-                              isFullDay={viewState.isFullDay}
+                              isDisplayWeekend={isDisplayWeekend}
+                              isFullDay={isFullDay}
                               isMobile={effectiveIsMobile}
                               nonWorkingDates={nonWorkingDates}
-                              tagPlacement={viewState.tagPlacement}
-                              overlapDisplayMode={viewState.overlapDisplayMode}
-                              mobileAppointmentDisplay={viewState.mobileAppointmentDisplay}
-                              HALF_DAY_INTERVALS={viewState.constants.intervals}
+                              tagPlacement={tagPlacement}
+                              overlapDisplayMode={overlapDisplayMode}
+                              mobileAppointmentDisplay={mobileAppointmentDisplay}
+                              HALF_DAY_INTERVALS={constants.intervals}
 
                               /* Config Calendrier */
-                              calendarConfig={viewState.currentCalendarConfig}
-                              onCalendarConfigChange={viewState.onCalendarConfigChange}
-                              availableConfigs={viewState.availableConfigs}
+                              calendarConfig={currentCalendarConfig}
+                              onCalendarConfigChange={onCalendarConfigChange}
+                              availableConfigs={availableConfigs}
 
                               /* Actions & Events */
                               onAppointmentMoved={appointmentLogic.moveAppointment}
@@ -1246,17 +1307,17 @@ export default function HomePage({
                         </div>
                       )
                     )
-                  ) : viewState.viewType !== 'calendar' ? (
+                  ) : viewType !== 'calendar' ? (
                     /* VUES TABLEAUX (Chantier, Paie, Employés) */
                     <Suspense fallback={<Loader message="Chargement du tableau..." />}>
-                      {viewState.viewType === 'chantier-table' && chantierViewsLoading ? (
+                      {viewType === 'chantier-table' && chantierViewsLoading ? (
                         <Loader message="Chargement de la vue chantier..." />
                       ) : <DataTableFrame
-                            key={viewState.viewType}
+                            key={viewType}
                             categoriesStructure={(() => {
-                              const structure = viewState.viewType === 'chantier-table'
+                              const structure = viewType === 'chantier-table'
                                 ? chantierStructure
-                                : getTableStructure(viewState.viewType, {
+                                : getTableStructure(viewType, {
                                 handleOpenEditModal: appointmentLogic.handleOpenEditModal,
                                 onImageClick: interaction.handleOpenImageModal,
                                 initialTeams: dataLayer.initialTeams,
@@ -1265,7 +1326,7 @@ export default function HomePage({
                                 ressources: dataLayer.itemsRef.current,
                                 setNotification: setLockNotification,
                               }) || [];
-                              if (viewState.viewType !== 'chantier-table' || !chantierColumns) return structure;
+                              if (viewType !== 'chantier-table' || !chantierColumns) return structure;
                               if (chantierColumns.length === 0) return structure;
                               const order = new Map(chantierColumns.map((column, index) => [column, index]));
                               const filteredStructure = structure
@@ -1291,9 +1352,9 @@ export default function HomePage({
                             paginatedSearchFunction={handlePaginatedSearch}
                             refreshKey={dataLayer.appointmentsVersion + tableRefreshVersion}
                             loadingElement={<Loader message="Chargement des données..." />}
-                            showGroupHeaders={viewState.viewType === 'chantier-table'}
-                            onRowClick={viewState.viewType === 'employee-table' ? undefined : handleTableRowClick}
-                            onRightClick={viewState.viewType === 'employee-table' ? undefined : interaction.handleDataTableContextMenu}
+                            showGroupHeaders={viewType === 'chantier-table'}
+                            onRowClick={viewType === 'employee-table' ? undefined : handleTableRowClick}
+                            onRightClick={viewType === 'employee-table' ? undefined : interaction.handleDataTableContextMenu}
                             heightCell={60}
                           />
                       }
@@ -1325,16 +1386,16 @@ export default function HomePage({
             user={user}
             modalsState={{
               isModalOpen: appointmentLogic.isModalOpen,
-              isSettingsOpen: viewState.isSettingsOpen,
-              isFilterModalOpen: viewState.isFilterModalOpen,
+              isSettingsOpen: isSettingsOpen,
+              isFilterModalOpen: isFilterModalOpen,
               isImageSelectorOpen: interaction.isImageSelectorOpen,
-              isConfigModalOpen: viewState.calendarConfigHook.isConfigModalOpen,
+              isConfigModalOpen: calendarConfigHook.isConfigModalOpen,
               repeatData: appointmentLogic.repeatData,
               extendData: appointmentLogic.extendData,
-              modalInfo: viewState.modalInfo,
+              modalInfo: modalInfo,
               selectedAppointmentForm: appointmentLogic.selectedAppointment,
               deleteConfirmData: deleteConfirmData,
-              tagPlacement: viewState.tagPlacement,
+              tagPlacement: tagPlacement,
             }}
             handlers={{
               closeModal: () => appointmentLogic.setIsModalOpen(false),
@@ -1370,7 +1431,7 @@ export default function HomePage({
                 }
 
                 // Logique de décision basée sur la vue active
-                if (viewState.viewType === 'employee-table') {
+                if (viewType === 'employee-table') {
                     const id = appointmentLogic.selectedEmployee?.IdPersonnel || null;
                     if (id === null) return;                    
                     dataLayer.updateEmployeeImage(id, newImage);
@@ -1392,17 +1453,17 @@ export default function HomePage({
               fetchPaginatedImages: dataLayer.fetchPaginatedImages,
 
               // Settings & Config
-              closeSettings: () => viewState.setIsSettingsOpen(false),
-              closeFilterModal: () => viewState.setIsFilterModalOpen(false),
+              closeSettings: () => setIsSettingsOpen(false),
+              closeFilterModal: () => setIsFilterModalOpen(false),
               submitFilters: saveChantierFilters,
               applyFilters: applyChantierFilters,
               
-              closeConfigModal: viewState.calendarConfigHook.closeConfigModal,
-              setCurrentConfig: viewState.onCalendarConfigChange,
-              saveCustomConfig: viewState.calendarConfigHook.saveConfig,
-              deleteCustomConfig: viewState.calendarConfigHook.deleteConfig,
-              setEditingConfig: viewState.calendarConfigHook.setEditingConfig,
-              setIsCreatingConfig: viewState.calendarConfigHook.setIsCreatingConfig,
+              closeConfigModal: calendarConfigHook.closeConfigModal,
+              setCurrentConfig: onCalendarConfigChange,
+              saveCustomConfig: calendarConfigHook.saveConfig,
+              deleteCustomConfig: calendarConfigHook.deleteConfig,
+              setEditingConfig: calendarConfigHook.setEditingConfig,
+              setIsCreatingConfig: calendarConfigHook.setIsCreatingConfig,
 
               // Correction : Setter pour l'item sélectionné
               setSelectedItem: appointmentLogic.setSelectedItem,
@@ -1423,36 +1484,36 @@ export default function HomePage({
               isUploading: interaction.isUploading,
               uploadError: interaction.uploadError,
               
-              editingConfig: viewState.calendarConfigHook.editingConfig,
-              isCreatingConfig: viewState.calendarConfigHook.isCreatingConfig,
-              availableConfigs: viewState.availableConfigs,
-              currentConfig: viewState.currentCalendarConfig,
+              editingConfig: calendarConfigHook.editingConfig,
+              isCreatingConfig: calendarConfigHook.isCreatingConfig,
+              availableConfigs: availableConfigs,
+              currentConfig: currentCalendarConfig,
             }}
             config={{
-              includeWeekend: viewState.includeWeekend,
-              setIncludeWeekend: viewState.setIncludeWeekend,
-              respectNonWorkingDays: viewState.respectNonWorkingDays,
-              setRespectNonWorkingDays: viewState.setRespectNonWorkingDays,
-              tagPlacement: viewState.tagPlacement,
-              setTagPlacement: viewState.setTagPlacement,
-              overlapDisplayMode: viewState.overlapDisplayMode,
-              setOverlapDisplayMode: viewState.setOverlapDisplayMode,
-              mobileAppointmentDisplay: viewState.mobileAppointmentDisplay,
-              handleSaveMobileAppointmentDisplay: viewState.handleSaveMobileAppointmentDisplay,
-              mobileAppointmentFieldOptions: viewState.mobileAppointmentFieldOptions,
-              mobileAppointmentSettingsLoading: viewState.mobileAppointmentSettingsLoading,
-              loadMobileAppointmentSettings: viewState.loadMobileAppointmentSettings,
-              HALF_DAY_INTERVALS: viewState.constants.intervals,
-              isFullDay: viewState.isFullDay,
-              isDisplayWeekend: viewState.isDisplayWeekend,
-              viewType: viewState.viewType,
+              includeWeekend: includeWeekend,
+              setIncludeWeekend: setIncludeWeekend,
+              respectNonWorkingDays: respectNonWorkingDays,
+              setRespectNonWorkingDays: setRespectNonWorkingDays,
+              tagPlacement: tagPlacement,
+              setTagPlacement: setTagPlacement,
+              overlapDisplayMode: overlapDisplayMode,
+              setOverlapDisplayMode: setOverlapDisplayMode,
+              mobileAppointmentDisplay: mobileAppointmentDisplay,
+              handleSaveMobileAppointmentDisplay: handleSaveMobileAppointmentDisplay,
+              mobileAppointmentFieldOptions: mobileAppointmentFieldOptions,
+              mobileAppointmentSettingsLoading: mobileAppointmentSettingsLoading,
+              loadMobileAppointmentSettings: loadMobileAppointmentSettings,
+              HALF_DAY_INTERVALS: constants.intervals,
+              isFullDay: isFullDay,
+              isDisplayWeekend: isDisplayWeekend,
+              viewType: viewType,
               setNotification: setLockNotification,
             }}
           />
 
           <NotificationsPanel 
-            isOpen={viewState.isNotificationsPanelOpen}
-            onClose={() => viewState.setIsNotificationsPanelOpen(false)}
+            isOpen={isNotificationsPanelOpen}
+            onClose={() => setIsNotificationsPanelOpen(false)}
             notifications={notifications.notifications}
             onMarkAsRead={notifications.markAsRead}
           />
@@ -1466,8 +1527,8 @@ export default function HomePage({
           />
 
           <SearchOverlay
-            isOpen={viewState.isSearchOverlayOpen}
-            onClose={() => viewState.setIsSearchOverlayOpen(false)}
+            isOpen={isSearchOverlayOpen}
+            onClose={() => setIsSearchOverlayOpen(false)}
             onSearch={searchOverlayItems}
             onItemAction={handleSearchOverlayItemAction}
             placeholder="Rechercher un événement..."

@@ -176,6 +176,13 @@ async function onCheckDeleteDayType(id: string) {
   return await getRequest(`/demo/planning/day-type/${id}/delete-impact`, 'onCheckDeleteDayType');
 }
 
+async function getPlanningParameters(listeIdParametres: string[]) {
+  return await getRequest(`/demo/parametres/${listeIdParametres.join(',')}`, 'getPlanningParameters');
+}
+
+async function setPlanningParametre(idParametre: string, valeurParametre: string | number | boolean) {
+  return await putRequest(`/demo/parametres/${idParametre}`, { valeurParametre }, 'setParametre');
+}
 export default {
   getCalendarConfigsByUserId,
   createCalendarConfig,
@@ -207,5 +214,7 @@ export default {
   getAvailableColumns,
   getAvailablesYearForNonWorkingDate,
   editNonWorkingDate,
-  onCheckDeleteDayType
+  onCheckDeleteDayType,
+  getPlanningParameters,
+  setPlanningParametre,
 };

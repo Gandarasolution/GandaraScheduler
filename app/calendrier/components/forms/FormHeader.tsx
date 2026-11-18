@@ -9,6 +9,7 @@
 
 "use client";
 import React from 'react';
+import { ColorHexInput } from '../ui';
 
 /**
  * Configuration des couleurs personnalisables
@@ -202,67 +203,31 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
           {/* Sélecteurs de couleur */}
           <div className="flex flex-col gap-2 w-full">
             {/* Couleur de fond */}
-            <div className="relative group flex items-center gap-2">
-              <label 
-                htmlFor="color-fond"
-                className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                style={{ backgroundColor: colors.background || '#1E40AF' }}
-                title="Couleur de fond"
-              />
-              <input
-                id="color-fond"
-                type="color"
-                value={normalizeColorForInput(colors.background)}
-                onChange={(e) => onColorChange('background', e.target.value)}
-                className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-                title="Couleur de fond"
-              />
-              <label htmlFor="color-fond" className="cursor-pointer text-sm flex-1">
-                Couleur de fond
-              </label>
-            </div>
+            <ColorHexInput
+              id="default-color-fond"
+              label="Couleur de fond"
+              value={colors.background}
+              fallbackColor="#1E40AF"
+              onChange={(val) => onColorChange('background', val)}
+            />
 
             {/* Couleur de bordure */}
-            <div className="relative group flex items-center gap-2">
-              <label 
-                htmlFor="color-bordure"
-                className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                style={{ backgroundColor: colors.border || '#1E40AF' }}
-                title="Couleur de bordure"
-              />
-              <input
-                id="color-bordure"
-                type="color"
-                value={normalizeColorForInput(colors.border)}
-                onChange={(e) => onColorChange('border', e.target.value)}
-                className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-                title="Couleur de bordure"
-              />
-              <label htmlFor="color-bordure" className="cursor-pointer text-sm flex-1">
-                Couleur de bordure
-              </label>
-            </div>
+            <ColorHexInput
+              id="default-color-bordure"
+              label="Couleur de bordure"
+              value={colors.border}
+              fallbackColor="#1E40AF"
+              onChange={(val) => onColorChange('border', val)}
+            />
 
             {/* Couleur de texte */}
-            <div className="relative group flex items-center gap-2">
-              <label 
-                htmlFor="color-texte"
-                className="w-4 h-4 rounded border-2 border-default cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                style={{ backgroundColor: colors.text || '#FFFFFF' }}
-                title="Couleur de texte"
-              />
-              <input
-                id="color-texte"
-                type="color"
-                value={normalizeColorForInput(colors.text, '#FFFFFF')}
-                onChange={(e) => onColorChange('text', e.target.value)}
-                className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-                title="Couleur de texte"
-              />
-              <label htmlFor="color-texte" className="cursor-pointer text-sm flex-1">
-                Couleur de texte
-              </label>
-            </div>
+            <ColorHexInput
+              id="default-color-texte"
+              label="Couleur de texte"
+              value={colors.text}
+              fallbackColor="#FFFFFF"
+              onChange={(val) => onColorChange('text', val)}
+            />
           </div>
         </div>
       </div>

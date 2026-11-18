@@ -1,3 +1,6 @@
+import { useState, useRef, useEffect } from "react";
+import { HexColorPicker, HexColorInput } from "react-colorful";
+
 export const normalizeColorForInput = (color: string | undefined, fallback: string = '#1E40AF'): string => {
   if (!color) return fallback;
   if (color.length === 9 && color.startsWith('#')) {
@@ -26,53 +29,101 @@ export const ColorHexInput = ({
   fallbackColor,
   onChange,
 }: ColorHexInputProps) => {
-  const displayColor = value || fallbackColor;
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const displayColor = normalizeColorForInput(value, fallbackColor);
 
-  const handleTextChange = (raw: string) => {
-    let formatted = raw.trim();
-    if (formatted && !formatted.startsWith("#")) {
-      formatted = `#${formatted}`;
-    }
-    if (/^#[0-9A-Fa-f]{0,6}$/.test(formatted) || formatted === "") {
-      onChange(formatted.toUpperCase());
+  // Vérifie si le navigateur supporte la pipette (Chrome / Edge / Opera)
+  const supportsEyeDropper = typeof window !== "undefined" && "EyeDropper" in window;
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const handleEyeDropper = async () => {
+    if (!supportsEyeDropper) return;
+    try {
+      // @ts-expect-error EyeDropper API native Chromium
+      const eyeDropper = new window.EyeDropper();
+      const result = await eyeDropper.open();
+      if (result?.sRGBHex) {
+        onChange(result.sRGBHex.toUpperCase());
+      }
+    } catch {
+      // L'utilisateur a annulé avec Échap
     }
   };
 
   return (
-    <div className="flex items-center gap-3">
-      {/* Pilule contenant la pastille couleur + l'input hex */}
-      <div className="flex items-center gap-1.5 bg-white border border-default rounded-xl p-1 shadow-sm">
-        {/* Pastille cliquable liée à l'input color */}
-        <label
-          htmlFor={id}
-          className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
-          style={{ backgroundColor: normalizeColorForInput(displayColor) }}
-          title={`Choisir ${label.toLowerCase()}`}
-        />
-        <input
-          id={id}
-          type="color"
-          value={normalizeColorForInput(displayColor)}
-          onChange={(e) => onChange(e.target.value.toUpperCase())}
-          className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-        />
-
-        {/* Champ texte du code hexadécimal */}
-        <input
-          id={`${id}-text`}
-          type="text"
-          value={displayColor}
-          onChange={(e) => handleTextChange(e.target.value)}
-          maxLength={7}
-          placeholder="#000000"
-          className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
-        />
-      </div>
-
-      {/* Label après l'input */}
-      <label htmlFor={`${id}-text`} className="text-sm text-primary cursor-pointer">
+    <div ref={containerRef} className="relative flex items-center gap-3">
+      {/* Pastille cliquable */}
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-4 h-4 border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
+        style={{ backgroundColor: displayColor }}
+        title={`Choisir ${label.toLowerCase()}`}
+      />
+      <label
+        htmlFor={id}
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="text-sm text-primary cursor-pointer select-none"
+      >
         {label}
       </label>
+
+      {/* Fenêtre ouverte au clic */}
+      {isOpen && (
+        <div className="absolute left-0 top-9 z-50 rounded-2xl border border-default bg-white p-3 shadow-xl space-y-2.5 w-[224px]">
+          <HexColorPicker
+            color={displayColor}
+            onChange={(newColor) => onChange(newColor.toUpperCase())}
+          />
+
+          <div className="flex items-center gap-2">
+            {/* Bouton Pipette */}
+            {supportsEyeDropper && (
+              <button
+                type="button"
+                onClick={handleEyeDropper}
+                title="Pipette : prélever une couleur à l'écran"
+                className="p-1.5 rounded-lg border border-default hover:bg-secondary-bg text-primary transition-colors cursor-pointer shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
+                </svg>
+              </button>
+            )}
+
+            {/* Pastille aperçu */}
+            <div
+              className="w-6 h-6 rounded-full border border-default shrink-0 shadow-xs"
+              style={{ backgroundColor: displayColor }}
+            />
+
+            {/* Input HEX */}
+            <div className="flex items-center flex-1 border border-default rounded-lg px-2 py-1 bg-white">
+              <span className="text-xs font-mono text-secondary">#</span>
+              <HexColorInput
+                color={displayColor}
+                onChange={(newColor) => onChange(newColor.toUpperCase())}
+                className="w-full text-xs font-mono font-semibold text-primary uppercase focus:outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

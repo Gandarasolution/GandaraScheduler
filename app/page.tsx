@@ -9,6 +9,7 @@ import { useAuth } from './calendrier/hooks/utils/AuthContext';
 import SelectionScreen from './login/SelectionScreen';
 import { axiosAgent } from '@/app/service/axios.service';
 import { DayTypesProvider } from './calendrier/hooks/data/dayTypesContext';
+import { CalendarViewProvider } from './calendrier/hooks/calendar/CalendarViewContext';
 
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 
@@ -37,6 +38,9 @@ export default function Home() {
 
   const isMobile = deviceType === 'mobile';
   const isTablet = deviceType === 'tablet';
+
+  console.log('Device Type:', deviceType, 'isMobile:', isMobile, 'isTablet:', isTablet);
+  console.log(isMobile || (isTablet && !hasPermission(229)))
 
   // Fonction pour changer le thème
   const handleThemeChange = useCallback((newTheme: ThemeType) => {
@@ -136,9 +140,11 @@ export default function Home() {
             console.error('[Error Boundary]', error, errorInfo);
           }}
         >
-          <DayTypesProvider>
-            <Calendrier isMobile={isMobile} isTablet={isTablet} />
-          </DayTypesProvider>
+          <CalendarViewProvider idPlanning={currentPlanningId} user={user} isMobile={isMobile}>
+            <DayTypesProvider>
+              <Calendrier isMobile={isMobile} isTablet={isTablet} />
+            </DayTypesProvider>
+          </CalendarViewProvider>
         </ErrorBoundary>
       );
     }
@@ -149,7 +155,7 @@ export default function Home() {
   return (
     <>
       {/* Overlay de blocage en mode paysage (uniquement sur smartphone, pas sur tablette) */}
-      {isMobile || (isTablet && !hasPermission(229)) && (
+      {(isMobile || (isTablet && !hasPermission(229))) && (
         <div
           className="portrait-only-overlay fixed inset-0 z-[10000] flex-col items-center justify-center p-6 text-center select-none"
           style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}

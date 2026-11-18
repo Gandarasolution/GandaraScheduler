@@ -1,4 +1,4 @@
-export { useCalendarView } from './useCalendarView';
+export { useCalendarView } from './CalendarViewContext';
 export { useCalendarVirtualization } from './useCalendarVirtualization';
 export { useTimeline } from './useTimeline';
 export {useCalendarColumns} from './useCalendarColumns';

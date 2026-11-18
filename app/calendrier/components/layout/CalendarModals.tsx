@@ -396,6 +396,8 @@ export const CalendarModals = memo(({
         {
           id: "tagPlacement",
           label: "Placement de l'étiquette",
+          classNameLabel: "font-semibold",
+          classNameSelect: "bg-primary-bg",
           type: "select",
           value: config.tagPlacement,
           onChange: config.setTagPlacement,
@@ -406,7 +408,9 @@ export const CalendarModals = memo(({
         },
         {
           id: "overlapDisplayMode",
-          label: "Affichage des chevauchements dans la sidebar",
+          label: "Affichage Multi-évenements sur la barre personnel",
+          classNameLabel: "font-semibold",
+          classNameSelect: "bg-primary-bg",
           type: "select",
           value: config.overlapDisplayMode,
           onChange: config.setOverlapDisplayMode,

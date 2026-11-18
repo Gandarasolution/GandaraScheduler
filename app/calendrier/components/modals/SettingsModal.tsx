@@ -5,7 +5,7 @@ import { format, isBefore, startOfDay } from "date-fns";
 import { Appointment, DayType, ImageType, Item, MobileAppointmentDisplayConfig, User } from "../../types";
 import { DisplaySettings } from "@/app/service/displaySettings.service";
 import { AppointmentCard, DragOverTarget, MobileAppointmentFieldOption } from "../Calendar/MobileCalendar/AppointmentList";
-import { ColorHexInput, normalizeColorForInput } from "../index";
+import { AppointmentItem, ColorHexInput, normalizeColorForInput } from "../index";
 
 type SettingsModalProps = {
   onClose: () => void;
@@ -13,12 +13,16 @@ type SettingsModalProps = {
   isSettingsOpen: boolean;
 };
 
+type SaveAction = {
+  isDirty: boolean;
+  save: () => Promise<void>;
+};
 
 const previewAppointment: Appointment = {
   IdPlanningEvenement: -1,
   AnnotationPlanningEvenement: "Prévoir le matériel nécessaire",
-  DebutPlanningEvenement: new Date(2026, 8, 7, 9, 0).getTime(),
-  FinPlanningEvenement: new Date(2026, 8, 7, 11, 0).getTime(),
+  DebutPlanningEvenement: new Date(2026, 8, 7).getTime(),
+  FinPlanningEvenement: new Date(2026, 8, 7).getTime(),
   IdEmploye: 1,
   IdPlanningRessource: 1,
   EtapeValidation: "Validé",
@@ -39,8 +43,8 @@ const previewItem = {
   Type: "Projet",
   ChefChantier: "MONNOT Romain",
   ChargeAffaire: "DECREUSE Vivien",
-  AdresseChantier : "Rue Jean Wyrsch 25000 BESANCON",
-  Identifiant: '41 lgt wyrsch',
+  AdresseChantier: "Rue Jean Wyrsch 25000 BESANCON",
+  Identifiant: "41 lgt wyrsch",
   PoleActivite: "TRAVAUX CVC2",
 } as unknown as Item;
 
@@ -92,33 +96,32 @@ const getFieldRows = (
 ): FieldRows => {
   const primaryFields = value.primaryFieldRows?.length
     ? value.primaryFieldRows
-      .slice(0, MAX_PRIMARY_ROWS)
-      .map((row, index) => {
-        if (index !== 0) return row.slice(0, MAX_FIELDS_PER_PRIMARY_ROW);
+        .slice(0, MAX_PRIMARY_ROWS)
+        .map((row, index) => {
+          if (index !== 0) return row.slice(0, MAX_FIELDS_PER_PRIMARY_ROW);
 
-        let regularCount = 0;
-        let specialCount = 0;
-        return row.filter((field) => {
-          if (isSpecialField(field, options)) {
-            if (specialCount >= MAX_TITLE_SPECIAL_FIELDS) return false;
-            specialCount += 1;
-          } else {
-            if (regularCount >= MAX_TITLE_REGULAR_FIELDS) return false;
-            regularCount += 1;
-          }
-          return true;
-        });
-      })
+          let regularCount = 0;
+          let specialCount = 0;
+          return row.filter((field) => {
+            if (isSpecialField(field, options)) {
+              if (specialCount >= MAX_TITLE_SPECIAL_FIELDS) return false;
+              specialCount += 1;
+            } else {
+              if (regularCount >= MAX_TITLE_REGULAR_FIELDS) return false;
+              regularCount += 1;
+            }
+            return true;
+          });
+        })
     : value.primaryFields.map((field) => [field]);
-    
+
   const secondarySourceRows = value.secondaryFieldRows?.length
     ? value.secondaryFieldRows
-    : value.secondaryFields.map((field) => [field])
+    : value.secondaryFields.map((field) => [field]);
 
-  // Limite uniquement au nombre de champs max par LIGNE.
   const secondaryFields = secondarySourceRows
     .slice(0, 5)
-    .map(row => row.slice(0, MAX_SECONDARY_FIELDS));
+    .map((row) => row.slice(0, MAX_SECONDARY_FIELDS));
 
   return {
     primaryFields,
@@ -128,27 +131,120 @@ const getFieldRows = (
 
 const flattenFieldRows = (rows: string[][]) => rows.flat();
 
+const InlineSaveButton = ({
+  isDirty,
+  isSaving,
+  onSave,
+  className,
+}: {
+  isDirty: boolean;
+  isSaving: boolean;
+  onSave: () => Promise<void> | void;
+  className?: string;
+}) => {
+  if (!isDirty && !isSaving) return null;
 
+  return (
+    <button
+      type="button"
+      onClick={onSave}
+      disabled={isSaving}
+      title="Enregistrer les modifications"
+      className={`${className || ""} cursor-pointer bg-primary text-white px-4 py-2 rounded-xl shadow-md hover:bg-primary-600 text-sm
+      hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50`}
+    >
+      {isSaving ? (
+        <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      ) : (
+        <span>Appliquer les modifications</span>
+      )}
+    </button>
+  );
+};
 
+const SelectSettingItem = ({
+  setting,
+  registerSaveAction,
+}: {
+  setting: any;
+  registerSaveAction: (id: string, action: SaveAction | null) => void;
+}) => {
+  const [localValue, setLocalValue] = useState(setting.value);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setLocalValue(setting.value);
+  }, [setting.value]);
+
+  const isDirty = String(localValue) !== String(setting.value);
+
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      await setting.onChange(localValue);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [localValue, setting]);
+
+  useEffect(() => {
+    const actionId = String(setting.id || setting.label || "select-setting");
+    registerSaveAction(actionId, { isDirty, save: handleSave });
+    return () => registerSaveAction(actionId, null);
+  }, [setting.id, setting.label, isDirty, handleSave, registerSaveAction]);
+
+  return (
+    <div className={`flex flex-col gap-2 w-full${setting.classNameContainer || ""}`}>
+      <label htmlFor={setting.id} className={"text-sm font-medium text-primary " + (setting.classNameLabel || "")}>
+        {setting.label}
+      </label>
+      <div className="flex items-center gap-2.5">
+        <select
+          id={setting.id}
+          className={"w-[270px] border border-default rounded-xl px-2 py-2 text-sm bg-transparent shadow-sm " + (setting.classNameSelect || "")}
+          value={localValue}
+          onChange={(e) => setLocalValue(e.target.value)}
+        >
+          {setting.options?.map((option: any) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        <InlineSaveButton
+          isDirty={isDirty}
+          isSaving={isSaving}
+          onSave={handleSave}
+        />
+      </div>
+    </div>
+  );
+};
 
 const DefaultDisplaySettingsEditor = ({
   setting,
   registerSaveAction,
 }: {
   setting: {
+    id?: string;
     value: DisplaySettings | null;
     fetchDisplaySettings: () => Promise<{ success: boolean; message?: string }>;
     onChange: (value: DisplaySettings) => Promise<{ success: boolean; message?: string }>;
     onSelectImage: (onSelect: (image: ImageType) => void, actualImage?: ImageType) => void;
     onApplyToAllEvents?: (value: DisplaySettings) => Promise<{ success: boolean; message?: string }>;
   };
-  registerSaveAction: (action: { isDirty: boolean; save: () => Promise<void> } | null) => void;
+  registerSaveAction: (id: string, action: SaveAction | null) => void;
 }) => {
   const [localValue, setLocalValue] = useState<DisplaySettings | null>(setting.value);
   const [savedSnapshot, setSavedSnapshot] = useState<string | null>(
     setting.value ? JSON.stringify(setting.value) : null
   );
   const [isLoading, setIsLoading] = useState(!setting.value);
+  const [isSaving, setIsSaving] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,9 +291,22 @@ const DefaultDisplaySettingsEditor = ({
   }, [localValue, setting]);
 
   useEffect(() => {
-    registerSaveAction({ isDirty, save });
-    return () => registerSaveAction(null);
-  }, [isDirty, save, registerSaveAction]);
+    const actionId = String(setting.id || "default-display-settings");
+    registerSaveAction(actionId, { isDirty, save });
+    return () => registerSaveAction(actionId, null);
+  }, [setting.id, isDirty, save, registerSaveAction]);
+
+  const handleInlineSave = async () => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      await save();
+    } catch (err: any) {
+      setError(err?.message || "Erreur lors de la sauvegarde.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const updateColor = (
     key: keyof Pick<
@@ -259,15 +368,12 @@ const DefaultDisplaySettingsEditor = ({
   return (
     <div className="space-y-5 w-full">
       <div>
-        <h4 className="text-sm font-semibold text-primary">Valeurs par défaut</h4>
-        <p className="text-xs text-secondary mt-1">
-          Ces valeurs sont utilisées lors de la création d’une nouvelle ressource.
-        </p>
+        <h4 className="text-sm font-semibold text-primary">Définition l’apparence par défaut des chantiers</h4>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="flex flex-row gap-4">
+      <div className="flex flex-row items-center gap-4">
         {/* Image par défaut */}
         <div className="flex items-center gap-2.5 pb-1">
           <button
@@ -295,8 +401,9 @@ const DefaultDisplaySettingsEditor = ({
             )}
           </button>
         </div>
+
+        {/* Inputs de couleur */}
         <div className="flex flex-col gap-2.5 max-w-xs">
-          {/* Couleur de fond */}
           <ColorHexInput
             id="default-color-fond"
             label="Couleur de fond"
@@ -305,7 +412,6 @@ const DefaultDisplaySettingsEditor = ({
             onChange={(val) => updateColor("CouleurFondParDefaut", val)}
           />
 
-          {/* Couleur de bordure */}
           <ColorHexInput
             id="default-color-bordure"
             label="Couleur de bordure"
@@ -322,20 +428,60 @@ const DefaultDisplaySettingsEditor = ({
             onChange={(val) => updateColor("CouleurTexteParDefaut", val)}
           />
         </div>
+
+        {/* Bouton de validation placé à droite des inputs de couleur */}
+        <div className="pb-0.5">
+          <InlineSaveButton
+            isDirty={isDirty}
+            isSaving={isSaving}
+            onSave={handleInlineSave}
+            className="w-full"
+          />
+          {setting.onApplyToAllEvents && (
+            <div className="pt-2">
+              <button
+                type="button"
+                disabled={isApplying}
+                onClick={() => setIsConfirmOpen(true)}
+                className="
+                  px-4 py-2 rounded-xl border border-default text-white hover:bg-primary-600 
+                  bg-primary text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isApplying ? (
+                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  "Appliquer à tous les chantier"
+                )}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {setting.onApplyToAllEvents && (
-        <div className="pt-2">
-          <button
-            type="button"
-            disabled={isApplying}
-            onClick={() => setIsConfirmOpen(true)}
-            className="px-4 py-2 rounded-xl border border-default text-primary hover:bg-secondary-bg text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isApplying ? "Application en cours..." : "Appliquer à tous les événements"}
-          </button>
-        </div>
-      )}
+      <AppointmentItem
+        appointment={{
+          ...previewAppointment,
+        }}
+        event={{
+          ...previewItem,
+          CouleurFondPlanningRessource: localValue.CouleurFondParDefaut,
+          CouleurBordurePlanningRessource: localValue.CouleurBordureParDefaut,
+          CouleurTextePlanningRessource: localValue.CouleurTexteParDefaut,
+        }}
+        isFullDay={true}
+        source={"demo"}
+        isMobile={false}
+        isDisplayWeekend={false}
+        chargeeAffaire={previewItem && previewItem?.Type === "Projet" ? previewItem?.ChargeAffaire : ""}
+        onDoubleClick={() => {}}
+        onAppointmentResize={() => {}}
+        handleContextMenu={() => {}}
+        tagPlacement={localStorage.getItem("tagPlacement") as "hover" | "fixed" | undefined}
+        mainScrollRef={null}
+      />
 
       {/* Modale de confirmation */}
       {isConfirmOpen && (
@@ -347,7 +493,7 @@ const DefaultDisplaySettingsEditor = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-modal-title"
-            className="w-full max-w-sm rounded-2xl border border-default bg-white dark:bg-neutral-900 p-5 shadow-xl space-y-4"
+            className="w-full max-w-sm rounded-2xl border border-default bg-primary-bg dark:bg-neutral-900 p-5 shadow-xl space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-1.5">
@@ -382,14 +528,12 @@ const DefaultDisplaySettingsEditor = ({
   );
 };
 
-
-
 const MobileDisplayEditor = ({
   setting,
   registerSaveAction,
 }: {
   setting: any;
-  registerSaveAction: (action: { isDirty: boolean; save: () => Promise<void> } | null) => void;
+  registerSaveAction: (id: string, action: SaveAction | null) => void;
 }) => {
   const initialFieldRows = getFieldRows(setting.value, setting.options || []);
   const [localValue, setLocalValue] = useState<MobileAppointmentDisplayConfig>({
@@ -408,18 +552,17 @@ const MobileDisplayEditor = ({
   const [dragOverInfo, setDragOverInfo] = useState<DragOverTarget>(null);
   const [highlightedFieldCode, setHighlightedFieldCode] = useState<string | null>(null);
 
-  // --- NOUVEAU : États pour gérer le chargement des options ---
-  const [isLoadingOptions, setIsLoadingOptions] = useState(typeof setting.fetchFieldOptions === 'function');
+  const [isLoadingOptions, setIsLoadingOptions] = useState(typeof setting.fetchFieldOptions === "function");
   const [optionsError, setOptionsError] = useState<string | null>(null);
   const hasFetchedOptions = useRef(false);
 
-  // Appel de fetchFieldOptions au montage du composant
   useEffect(() => {
-    if (typeof setting.fetchFieldOptions === 'function' && !hasFetchedOptions.current) {
+    if (typeof setting.fetchFieldOptions === "function" && !hasFetchedOptions.current) {
       hasFetchedOptions.current = true;
       setIsLoadingOptions(true);
-      
-      setting.fetchFieldOptions()
+
+      setting
+        .fetchFieldOptions()
         .then((res: any) => {
           if (res && !res.success && res.message) {
             setOptionsError(res.message);
@@ -456,22 +599,20 @@ const MobileDisplayEditor = ({
   }, [localValue, setting]);
 
   useEffect(() => {
-    registerSaveAction({ isDirty, save: handleSave });
-    return () => registerSaveAction(null);
-  }, [isDirty, handleSave, registerSaveAction]);
+    const actionId = String(setting.id || "mobile-appointment-fields");
+    registerSaveAction(actionId, { isDirty, save: handleSave });
+    return () => registerSaveAction(actionId, null);
+  }, [setting.id, isDirty, handleSave, registerSaveAction]);
 
   const { normalAvailableOptions, specialAvailableOptions, totalAvailableCount } = useMemo(() => {
     const allOptions = (setting.options || []) as MobileAppointmentFieldOption[];
 
-    // 1. Filtrer les options non attribuées
     const unassigned = allOptions.filter((opt) => {
       const inPrimary = localValue.primaryFields.includes(opt.Code);
       const inSecondary = localValue.secondaryFields.includes(opt.Code);
-      return !(inPrimary && inSecondary); // Remarque : || garantit qu'il n'est ni dans l'un ni dans l'autre
+      return !(inPrimary && inSecondary);
     });
 
-
-    // 2. Séparer selon CaractereSpecial
     const normal = unassigned.filter((opt) => !opt.CaractereSpecial);
     const special = unassigned.filter((opt) => opt.CaractereSpecial);
 
@@ -481,8 +622,6 @@ const MobileDisplayEditor = ({
       totalAvailableCount: unassigned.length,
     };
   }, [setting.options, localValue]);
-
-
 
   const removeField = (column: "primaryFields" | "secondaryFields", fieldCode: string) => {
     setLocalValue((prev) => {
@@ -528,7 +667,7 @@ const MobileDisplayEditor = ({
   ) => {
     event.preventDefault();
     const fieldCode = (event.dataTransfer.getData("text/plain") || draggedItem?.fieldCode) as string;
-    
+
     if (!fieldCode) return;
 
     if (fieldCode === targetFieldCode && draggedItem?.column === column) {
@@ -541,15 +680,12 @@ const MobileDisplayEditor = ({
       let primaryRows = getFieldRows(prev, setting.options || []).primaryFields;
       let secondaryRows = getFieldRows(prev, setting.options || []).secondaryFields;
 
-      // On le retire TOUJOURS de sa colonne de destination pour éviter les doublons au sein d'une même section.
       if (column === "primaryFields") {
         primaryRows = primaryRows.map((row) => row.filter((f) => f !== fieldCode));
       } else {
         secondaryRows = secondaryRows.map((row) => row.filter((f) => f !== fieldCode));
       }
 
-      // Un déplacement entre deux lignes de la même section doit retirer le champ de sa ligne d'origine.
-      // Un déplacement entre les sections conserve volontairement le champ dans la section source.
       if (draggedItem?.column === column) {
         if (column === "primaryFields") {
           primaryRows = primaryRows.map((row) => row.filter((f) => f !== fieldCode));
@@ -559,7 +695,7 @@ const MobileDisplayEditor = ({
       }
 
       let targetRows = column === "primaryFields" ? primaryRows : secondaryRows;
-      
+
       const rowIndex = targetRowIndex ?? (targetRows.length > 0 ? targetRows.length - 1 : 0);
 
       if (insertRow) {
@@ -575,11 +711,12 @@ const MobileDisplayEditor = ({
       const currentRow = targetRows[rowIndex];
 
       const options = setting.options || [];
-      const rowIsFull = column === "primaryFields" && rowIndex === 0
-        ? isTitleRowFull(currentRow, options, fieldCode)
-        : column === "primaryFields"
-          ? countRegularFields(currentRow, options, fieldCode) >= MAX_FIELDS_PER_PRIMARY_ROW
-          : countRegularFields(currentRow, options, fieldCode) >= MAX_SECONDARY_FIELDS;
+      const rowIsFull =
+        column === "primaryFields" && rowIndex === 0
+          ? isTitleRowFull(currentRow, options, fieldCode)
+          : column === "primaryFields"
+            ? countRegularFields(currentRow, options, fieldCode) >= MAX_FIELDS_PER_PRIMARY_ROW
+            : countRegularFields(currentRow, options, fieldCode) >= MAX_SECONDARY_FIELDS;
       if (rowIsFull) {
         return prev;
       }
@@ -595,7 +732,6 @@ const MobileDisplayEditor = ({
         currentRow.push(fieldCode);
       }
 
-      // Une ligne vide ne doit jamais rester dans la configuration après un déplacement.
       primaryRows = primaryRows.filter((row) => row.length > 0);
       secondaryRows = secondaryRows.filter((row) => row.length > 0);
 
@@ -612,7 +748,6 @@ const MobileDisplayEditor = ({
     setDragOverInfo(null);
   };
 
-  // --- NOUVEAU : Affichage du Loader tant que isLoadingOptions est true ---
   if (isLoadingOptions) {
     return (
       <div className="w-full flex items-center justify-center min-h-[300px] bg-secondary-bg/40 rounded-xl border border-dashed border-light">
@@ -623,8 +758,6 @@ const MobileDisplayEditor = ({
 
   return (
     <div className="w-full flex flex-col gap-3 poppins">
-      
-      {/* Affichage d'une éventuelle erreur au chargement des options */}
       {optionsError && (
         <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl border border-red-200">
           {optionsError}
@@ -634,7 +767,6 @@ const MobileDisplayEditor = ({
       <div className="flex flex-col gap-3 h-full">
         {/* SECTION CHAMPS DISPONIBLES */}
         <div className="rounded-xl border border-default bg-secondary-bg/50 p-2.5 space-y-3">
-          {/* En-tête avec compteur global */}
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-secondary">
               Champs disponibles ({totalAvailableCount})
@@ -659,8 +791,8 @@ const MobileDisplayEditor = ({
                   }}
                   onMouseEnter={() => setHighlightedFieldCode(option.Code)}
                   onMouseLeave={() => setHighlightedFieldCode(null)}
-                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
-                    highlightedFieldCode === option.Code ? 'ring-2 ring-primary ring-offset-1' : ''
+                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary-bg px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
+                    highlightedFieldCode === option.Code ? "ring-2 ring-primary ring-offset-1" : ""
                   }`}
                 >
                   <span className="font-medium truncate">{option.Libelle}</span>
@@ -690,8 +822,8 @@ const MobileDisplayEditor = ({
                   }}
                   onMouseEnter={() => setHighlightedFieldCode(option.Code)}
                   onMouseLeave={() => setHighlightedFieldCode(null)}
-                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-white px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
-                    highlightedFieldCode === option.Code ? 'ring-2 ring-primary ring-offset-1' : ''
+                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary-bg px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
+                    highlightedFieldCode === option.Code ? "ring-2 ring-primary ring-offset-1" : ""
                   }`}
                 >
                   <span className="font-medium truncate">{option.Libelle}</span>
@@ -704,14 +836,13 @@ const MobileDisplayEditor = ({
           </div>
 
           <div className="mt-2 text-[11px] text-secondary">
-            Organisez les informations de la carte mobile. Glissez un champ directement sur la carte pour l'insérer à l'endroit désigné par la barre verticale.
+            Organisez les informations de la carte mobile. Glissez un champ directement sur la carte pour l&apos;insérer à l&apos;endroit désigné par la barre verticale.
           </div>
         </div>
 
         {/* SECTION APERÇU CÔTE À CÔTE */}
         <div className="rounded-xlbg-secondary-bg/40 space-y-3 h-full">
-          <div className="flex items-center gap-2 pb-1.5 border-b border-ultra-light">
-          </div>
+          <div className="flex items-center gap-2 pb-1.5 border-b border-ultra-light"></div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* CÔTÉ GAUCHE : APERÇU PRINCIPALE */}
@@ -726,7 +857,6 @@ const MobileDisplayEditor = ({
                   + Ligne
                 </button>
               </div>
-
 
               <AppointmentCard
                 app={previewAppointment}
@@ -744,8 +874,8 @@ const MobileDisplayEditor = ({
                   e.dataTransfer.effectAllowed = "move";
                   e.dataTransfer.setData("text/plain", fieldCode);
                 }}
-                        onPreviewDragOver={(_, column, rowIndex, fieldCode, blocked, insertRow, surface) => {
-                                  setDragOverInfo({ column, rowIndex, fieldCode, blocked, insertRow, surface });
+                onPreviewDragOver={(_, column, rowIndex, fieldCode, blocked, insertRow, surface) => {
+                  setDragOverInfo({ column, rowIndex, fieldCode, blocked, insertRow, surface });
                 }}
                 onPreviewDragLeave={() => setDragOverInfo(null)}
                 onPreviewDrop={handlePreviewDrop}
@@ -809,7 +939,6 @@ const MobileDisplayEditor = ({
     </div>
   );
 };
-
 
 const NewDayTypeForm = ({
   onAdd,
@@ -927,7 +1056,7 @@ const NewDayTypeForm = ({
                 setError(null);
               }}
               placeholder="Ex: Astreinte, Congé..."
-              className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-white shadow-sm hover:shadow-md w-full"
+              className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-bg shadow-sm hover:shadow-md w-full"
             />
           </div>
 
@@ -935,8 +1064,8 @@ const NewDayTypeForm = ({
             <label htmlFor="new-color-fond-hex" className="text-xs text-secondary font-medium poppins">
               Couleur Fond
             </label>
-            <div className="flex items-center gap-1.5 bg-white border border-default rounded-xl p-1 shadow-sm">
-              <label 
+            <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+              <label
                 htmlFor="new-color-fond"
                 className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
                 style={{ backgroundColor: normalizeColorForInput(CouleurFond) }}
@@ -964,17 +1093,17 @@ const NewDayTypeForm = ({
             <label htmlFor="new-color-texte-hex" className="text-xs text-secondary font-medium poppins">
               Couleur Texte
             </label>
-            <div className="flex items-center gap-1.5 bg-white border border-default rounded-xl p-1 shadow-sm">
-              <label 
+            <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+              <label
                 htmlFor="new-color-texte"
                 className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
-                style={{ backgroundColor: normalizeColorForInput(CouleurTexte, '#FFFFFF') }}
+                style={{ backgroundColor: normalizeColorForInput(CouleurTexte, "#FFFFFF") }}
                 title="Choisir couleur de texte"
               />
               <input
                 id="new-color-texte"
                 type="color"
-                value={normalizeColorForInput(CouleurTexte, '#FFFFFF')}
+                value={normalizeColorForInput(CouleurTexte, "#FFFFFF")}
                 onChange={(e) => setCouleurTexte(e.target.value)}
                 className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
               />
@@ -999,7 +1128,7 @@ const NewDayTypeForm = ({
                 className={`h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
                   isBold
                     ? "bg-primary text-white border-primary shadow-sm"
-                    : "bg-white text-primary border-light hover:bg-secondary/10"
+                    : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
                 }`}
               >
                 B
@@ -1011,7 +1140,7 @@ const NewDayTypeForm = ({
                 className={`h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
                   isItalic
                     ? "bg-primary text-white border-primary shadow-sm"
-                    : "bg-white text-primary border-light hover:bg-secondary/10"
+                    : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
                 }`}
               >
                 I
@@ -1021,12 +1150,12 @@ const NewDayTypeForm = ({
 
           <div className="flex flex-col gap-1">
             <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
-            <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-white">
+            <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-bg">
               <div
                 className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
                 style={{
-                  backgroundColor: normalizeColorForInput(CouleurFond, '#2563eb'),
-                  color: normalizeColorForInput(CouleurTexte, '#ffffff'),
+                  backgroundColor: normalizeColorForInput(CouleurFond, "#2563eb"),
+                  color: normalizeColorForInput(CouleurTexte, "#ffffff"),
                   fontWeight: isBold ? "700" : "400",
                   fontStyle: isItalic ? "italic" : "normal",
                 }}
@@ -1065,9 +1194,7 @@ const NewDayTypeForm = ({
         </div>
       </div>
 
-      {formError && (
-        <p className="text-xs text-red-500 font-medium poppins">{formError}</p>
-      )}
+      {formError && <p className="text-xs text-red-500 font-medium poppins">{formError}</p>}
     </div>
   );
 };
@@ -1082,6 +1209,7 @@ const DayTypeSingleEditor = ({
   setError,
   canDelete,
   canEdit,
+  registerSaveAction,
 }: {
   dayType: DayType;
   isSelected: boolean;
@@ -1092,12 +1220,13 @@ const DayTypeSingleEditor = ({
   setError: (msg: string | null) => void;
   canDelete: boolean;
   canEdit: boolean;
+  registerSaveAction: (id: string, action: SaveAction | null) => void;
 }) => {
   const [localType, setLocalType] = useState(dayType);
   const [isSaving, setIsSaving] = useState(false);
   const [isCheckingDelete, setIsCheckingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   const [deleteModalState, setDeleteModalState] = useState<{
     isOpen: boolean;
     checkRequired: boolean;
@@ -1116,12 +1245,16 @@ const DayTypeSingleEditor = ({
     setLocalType(dayType);
   }, [dayType]);
 
+  
+
   const isDirty =
     localType.Libelle !== dayType.Libelle ||
     localType.CouleurFond !== dayType.CouleurFond ||
     localType.CouleurTexte !== dayType.CouleurTexte ||
     localType.isBold !== dayType.isBold ||
     localType.isItalic !== dayType.isItalic;
+
+  
 
   const handleLabelChange = (value: string) => {
     setLocalType((prev: any) => ({ ...prev, Libelle: value }));
@@ -1177,7 +1310,7 @@ const DayTypeSingleEditor = ({
 
     try {
       const res = await onCheckDelete(dayType.Id);
-      
+
       let parsedCount: number | null = null;
       if (res.checkRequired && res.message) {
         const match = res.message.match(/\d+/);
@@ -1202,9 +1335,9 @@ const DayTypeSingleEditor = ({
   const confirmDelete = async () => {
     if (!onDelete || !canDelete) return;
 
-    const countToSend = deleteModalState.checkRequired ? (parseInt(confirmInput, 10) || 0) : 0;
+    const countToSend = deleteModalState.checkRequired ? parseInt(confirmInput, 10) || 0 : 0;
 
-    setDeleteModalState(prev => ({ ...prev, isOpen: false }));
+    setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
     setIsDeleting(true);
     setError(null);
 
@@ -1219,18 +1352,33 @@ const DayTypeSingleEditor = ({
       setIsDeleting(false);
     }
   };
+  
 
-  const isConfirmDisabled = deleteModalState.checkRequired && (
-    deleteModalState.expectedCount !== null 
+  const isConfirmDisabled =
+    deleteModalState.checkRequired &&
+    (deleteModalState.expectedCount !== null
       ? parseInt(confirmInput.trim(), 10) !== deleteModalState.expectedCount
-      : !confirmInput.trim()
-  );
+      : !confirmInput.trim());
+
+
+
+  useEffect(() => {
+    const actionId = `day-type-${dayType.Id}`;
+    registerSaveAction(actionId, { isDirty, save: handleSave });
+    return () => registerSaveAction(actionId, null);
+  }, [dayType.Id, isDirty, handleSave, registerSaveAction]);
+
+
 
   return (
-    <div className={`p-3.5 rounded-2xl border transition-all duration-200 flex flex-wrap items-center justify-between gap-3 shadow-sm relative ${isSelected ? 'border-primary bg-primary/10 ' : 'border-light bg-secondary/10 hover:border-primary/30'}`}>
+    <div
+      className={`p-3.5 rounded-2xl border transition-all duration-200 flex flex-wrap items-center justify-between gap-3 shadow-sm relative ${
+        isSelected ? "border-primary bg-primary/10 " : "border-light bg-secondary/10 hover:border-primary/30"
+      }`}
+    >
       {deleteModalState.isOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+          <div className="bg-primary-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center gap-3 text-red-600">
               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1240,9 +1388,7 @@ const DayTypeSingleEditor = ({
 
             {deleteModalState.checkRequired ? (
               <div className="space-y-3">
-                <p className="text-xs text-secondary leading-relaxed poppins font-medium">
-                  {deleteModalState.message}
-                </p>
+                <p className="text-xs text-secondary leading-relaxed poppins font-medium">{deleteModalState.message}</p>
                 <div className="space-y-1">
                   <label htmlFor={`confirmInput-${dayType.Id}`} className="text-[11px] text-secondary font-semibold poppins">
                     Veuillez saisir le nombre de jour(s) pour confirmer :
@@ -1253,7 +1399,7 @@ const DayTypeSingleEditor = ({
                     value={confirmInput}
                     onChange={(e) => setConfirmInput(e.target.value)}
                     placeholder={deleteModalState.expectedCount !== null ? `Entrez ${deleteModalState.expectedCount}` : "Nombre de jours"}
-                    className="w-full border border-default rounded-xl px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
+                    className="w-full border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-bg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
                   />
                 </div>
               </div>
@@ -1267,7 +1413,7 @@ const DayTypeSingleEditor = ({
               <button
                 type="button"
                 className="px-3.5 py-1.5 rounded-xl border border-light text-xs font-semibold text-secondary hover:bg-secondary/10 transition-colors cursor-pointer poppins"
-                onClick={() => setDeleteModalState(prev => ({ ...prev, isOpen: false }))}
+                onClick={() => setDeleteModalState((prev) => ({ ...prev, isOpen: false }))}
               >
                 Annuler
               </button>
@@ -1295,18 +1441,18 @@ const DayTypeSingleEditor = ({
             value={localType.Libelle || ""}
             onChange={(e) => handleLabelChange(e.target.value)}
             placeholder="Ex: Jour Férié..."
-            className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-white shadow-sm hover:shadow-md w-full"
+            className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-bg shadow-sm hover:shadow-md w-full"
             disabled={dayType.isLocked || !canEdit}
           />
         </div>
 
         <div className="flex flex-col gap-1">
           <span className="text-xs text-secondary font-medium poppins">Couleur Fond</span>
-          <div className="flex items-center gap-1.5 bg-white border border-default rounded-xl p-1 shadow-sm">
-            <label 
+          <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+            <label
               htmlFor={`color-fond-${dayType.Id}`}
               className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
-              style={{ backgroundColor: normalizeColorForInput(localType.CouleurFond, '#1E40AF') }}
+              style={{ backgroundColor: normalizeColorForInput(localType.CouleurFond, "#1E40AF") }}
               title="Changer couleur de fond"
             />
             <input
@@ -1330,17 +1476,17 @@ const DayTypeSingleEditor = ({
 
         <div className="flex flex-col gap-1">
           <span className="text-xs text-secondary font-medium poppins">Couleur Texte</span>
-          <div className="flex items-center gap-1.5 bg-white border border-default rounded-xl p-1 shadow-sm">
-            <label 
+          <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+            <label
               htmlFor={`color-texte-${dayType.Id}`}
               className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
-              style={{ backgroundColor: normalizeColorForInput(localType.CouleurTexte, '#FFFFFF') }}
+              style={{ backgroundColor: normalizeColorForInput(localType.CouleurTexte, "#FFFFFF") }}
               title="Changer couleur de texte"
             />
             <input
               id={`color-texte-${dayType.Id}`}
               type="color"
-              value={normalizeColorForInput(localType.CouleurTexte, '#FFFFFF')}
+              value={normalizeColorForInput(localType.CouleurTexte, "#FFFFFF")}
               onChange={(e) => handleColorChange("CouleurTexte", e.target.value)}
               className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
               disabled={!canEdit}
@@ -1363,12 +1509,11 @@ const DayTypeSingleEditor = ({
               type="button"
               onClick={() => handleToggle("isBold")}
               title="Gras"
-              className={`${!canEdit ? 'opacity-50 cursor-not-allowed' : ''} h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
+              className={`${!canEdit ? "opacity-50 cursor-not-allowed" : ""} h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
                 localType.isBold
                   ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-primary border-light hover:bg-secondary/10"
-              }
-              `}
+                  : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
+              }`}
               disabled={!canEdit}
             >
               B
@@ -1377,10 +1522,10 @@ const DayTypeSingleEditor = ({
               type="button"
               onClick={() => handleToggle("isItalic")}
               title="Italique"
-              className={` ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''} h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
+              className={` ${!canEdit ? "opacity-50 cursor-not-allowed" : ""} h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
                 localType.isItalic
                   ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-primary border-light hover:bg-secondary/10"
+                  : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
               }`}
               disabled={!canEdit}
             >
@@ -1391,12 +1536,12 @@ const DayTypeSingleEditor = ({
 
         <div className="flex flex-col gap-1">
           <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
-          <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-white">
+          <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-bg">
             <div
               className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
               style={{
-                backgroundColor: normalizeColorForInput(localType.CouleurFond, '#1E40AF'),
-                color: normalizeColorForInput(localType.CouleurTexte, '#FFFFFF'),
+                backgroundColor: normalizeColorForInput(localType.CouleurFond, "#1E40AF"),
+                color: normalizeColorForInput(localType.CouleurTexte, "#FFFFFF"),
                 fontWeight: localType.isBold ? "700" : "400",
                 fontStyle: localType.isItalic ? "italic" : "normal",
               }}
@@ -1412,7 +1557,7 @@ const DayTypeSingleEditor = ({
         <span className="text-xs font-medium poppins opacity-0 pointer-events-none select-none hidden sm:block">
           Actions
         </span>
-        
+
         <div className="flex items-center gap-2 h-full">
           {isDirty && canEdit ? (
             <button
@@ -1458,9 +1603,9 @@ const DayTypeSingleEditor = ({
             type="button"
             onClick={onSelect}
             className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
-              isSelected 
-                ? "bg-primary text-white ring-2 ring-primary/20" 
-                : "bg-white border border-light hover:bg-primary/5 text-primary"
+              isSelected
+                ? "bg-primary text-white ring-2 ring-primary/20"
+                : "bg-primary-bg border border-light hover:bg-primary/5 text-primary"
             }`}
           >
             <span>Voir les jours</span>
@@ -1485,7 +1630,6 @@ const NonWorkingDaysEditor = ({
   setting: any;
   selectedDayTypeId: string | null;
   setSelectedDayTypeId: (id: string | null) => void;
-  
   canEdit: boolean;
   canDelete: boolean;
   canAdd: boolean;
@@ -1499,9 +1643,7 @@ const NonWorkingDaysEditor = ({
   const [isLoadingYear, setIsLoadingYear] = useState(false);
   const [deletingDates, setDeletingDates] = useState<Record<string, boolean>>({});
   const [dateErrorMessage, setDateErrorMessage] = useState<string | null>(null);
-
   const [error, setError] = useState<string | null>(null);
-
 
   const [pendingDeleteDate, setPendingDeleteDate] = useState<{
     dateKey: string;
@@ -1543,13 +1685,15 @@ const NonWorkingDaysEditor = ({
   useEffect(() => {
     const fetchYears = settingRef.current.getAvailablesYearForNonWorkingDate || settingRef.current.fetchAvailableYears;
     if (typeof fetchYears === "function") {
-      fetchYears().then((res: any) => {
-        if (Array.isArray(res)) {
-          setAvailableYearsState(res);
-        } else if (res && res.success && Array.isArray(res.data)) {
-          setAvailableYearsState(res.data);
-        }
-      }).catch(() => {});
+      fetchYears()
+        .then((res: any) => {
+          if (Array.isArray(res)) {
+            setAvailableYearsState(res);
+          } else if (res && res.success && Array.isArray(res.data)) {
+            setAvailableYearsState(res.data);
+          }
+        })
+        .catch(() => {});
     }
   }, []);
 
@@ -1578,10 +1722,12 @@ const NonWorkingDaysEditor = ({
           if (res && res.data) {
             const nonWorkingDates = res.data.nonWorkingDates || [];
             const recordData = Object.fromEntries(
-              nonWorkingDates.map((item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; TypeJourCode: string; }) => [
-                item.DatePlanningJourNontravaille,
-                { Id: Number(item.IdPlanningJourNontravaille), TypeJourCode: item.TypeJourCode }
-              ])
+              nonWorkingDates.map(
+                (item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; TypeJourCode: string }) => [
+                  item.DatePlanningJourNontravaille,
+                  { Id: Number(item.IdPlanningJourNontravaille), TypeJourCode: item.TypeJourCode },
+                ]
+              )
             );
             currentSetting.setNonWorkingDates(recordData);
           }
@@ -1600,7 +1746,7 @@ const NonWorkingDaysEditor = ({
     return Object.entries(dates).filter(([dateKey, val]: [string, any]) => {
       const year = new Date(dateKey).getFullYear();
       const itemObj = typeof val === "object" ? val : { TypeJourCode: val };
-      
+
       const matchYear = year === Number(selectedYear);
       const matchType = filterType === "all" || String(itemObj.TypeJourCode) === String(filterType);
 
@@ -1625,10 +1771,7 @@ const NonWorkingDaysEditor = ({
 
     try {
       if (setting.addNonWorkingDatesToPlanning) {
-        const response = await setting.addNonWorkingDatesToPlanning(
-          parsedDate,
-          typeId
-        );
+        const response = await setting.addNonWorkingDatesToPlanning(parsedDate, typeId);
         if (response && response.success && response.data) {
           setting.setNonWorkingDates((prev: any) => {
             const updated = {
@@ -1639,9 +1782,7 @@ const NonWorkingDaysEditor = ({
               },
             };
 
-            const sortedKeys = Object.keys(updated).sort((a, b) => 
-              new Date(a).getTime() - new Date(b).getTime()
-            );
+            const sortedKeys = Object.keys(updated).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
             return sortedKeys.reduce((acc: Record<string, any>, key) => {
               acc[key] = updated[key];
@@ -1676,7 +1817,8 @@ const NonWorkingDaysEditor = ({
       return;
     }
 
-    const selectedTypeForAdd = newTypeId || (selectedDayTypeId !== "all" ? selectedDayTypeId : null) || setting.dayTypesOptions?.[0]?.Id;
+    const selectedTypeForAdd =
+      newTypeId || (selectedDayTypeId !== "all" ? selectedDayTypeId : null) || setting.dayTypesOptions?.[0]?.Id;
 
     if (!selectedTypeForAdd) {
       setDateErrorMessage("Veuillez choisir un type de jour.");
@@ -1687,7 +1829,10 @@ const NonWorkingDaysEditor = ({
 
     if (setting.nonWorkingDates && setting.nonWorkingDates[formattedInputDate]) {
       setDateErrorMessage(
-        `Un jour non travaillé existe déjà à cette date (${setting.dayTypesOptions.find((t: any) => t.Id === setting.nonWorkingDates[formattedInputDate].TypeJourCode)?.Libelle || "Inconnu"}).`
+        `Un jour non travaillé existe déjà à cette date (${
+          setting.dayTypesOptions.find((t: any) => t.Id === setting.nonWorkingDates[formattedInputDate].TypeJourCode)
+            ?.Libelle || "Inconnu"
+        }).`
       );
       return;
     }
@@ -1713,7 +1858,14 @@ const NonWorkingDaysEditor = ({
     const itemObj = typeof currentVal === "object" ? currentVal : { TypeJourCode: currentVal };
     setEditingDateKey(dateKey);
     setEditDateValue(dateKey);
-    setEditTypeIdValue(String(itemObj.TypeJourCode || (selectedDayTypeId !== "all" ? selectedDayTypeId : null) || setting.dayTypesOptions?.[0]?.Id || ""));
+    setEditTypeIdValue(
+      String(
+        itemObj.TypeJourCode ||
+          (selectedDayTypeId !== "all" ? selectedDayTypeId : null) ||
+          setting.dayTypesOptions?.[0]?.Id ||
+          ""
+      )
+    );
     setError(null);
   };
 
@@ -1723,7 +1875,12 @@ const NonWorkingDaysEditor = ({
     setEditTypeIdValue("");
   };
 
-  const executeSaveEdit = async (originalDateKey: string, originalVal: any, newDateValueStr: string, newTypeIdStr: string) => {
+  const executeSaveEdit = async (
+    originalDateKey: string,
+    originalVal: any,
+    newDateValueStr: string,
+    newTypeIdStr: string
+  ) => {
     if (!canEdit) return;
 
     const formattedNewDate = format(new Date(newDateValueStr), "yyyy-MM-dd");
@@ -1751,15 +1908,13 @@ const NonWorkingDaysEditor = ({
       setting.setNonWorkingDates((prev: any) => {
         const updated = { ...prev };
         delete updated[originalDateKey];
-        
+
         updated[formattedNewDate] = {
           Id: dateId,
           TypeJourCode: newTypeIdStr,
         };
 
-        const sortedKeys = Object.keys(updated).sort((a, b) => 
-          new Date(a).getTime() - new Date(b).getTime()
-        );
+        const sortedKeys = Object.keys(updated).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
         return sortedKeys.reduce((acc: Record<string, any>, key) => {
           acc[key] = updated[key];
@@ -1781,7 +1936,12 @@ const NonWorkingDaysEditor = ({
     const formattedNewDate = format(new Date(editDateValue), "yyyy-MM-dd");
 
     if (formattedNewDate !== originalDateKey && setting.nonWorkingDates?.[formattedNewDate]) {
-      setError(`Un jour non travaillé existe déjà à cette date (${setting.dayTypesOptions.find((t: any) => t.Id === setting.nonWorkingDates[formattedNewDate].TypeJourCode)?.Libelle || "Inconnu"}).`);
+      setError(
+        `Un jour non travaillé existe déjà à cette date (${
+          setting.dayTypesOptions.find((t: any) => t.Id === setting.nonWorkingDates[formattedNewDate].TypeJourCode)
+            ?.Libelle || "Inconnu"
+        }).`
+      );
       return;
     }
 
@@ -1805,9 +1965,9 @@ const NonWorkingDaysEditor = ({
   const executeDeleteDate = async (dateKey: string, dateId: number | string) => {
     if (!canDelete) return;
 
-    setDeletingDates(prev => ({ ...prev, [dateKey]: true }));
+    setDeletingDates((prev) => ({ ...prev, [dateKey]: true }));
     setError(null);
-    
+
     try {
       if (setting.removeNonWorkingDatesFromPlanning) {
         const response = await setting.removeNonWorkingDatesFromPlanning(dateId);
@@ -1830,7 +1990,7 @@ const NonWorkingDaysEditor = ({
     } catch (error: any) {
       setError(error?.message || "Erreur lors de la suppression.");
     } finally {
-      setDeletingDates(prev => {
+      setDeletingDates((prev) => {
         const next = { ...prev };
         delete next[dateKey];
         return next;
@@ -1845,15 +2005,13 @@ const NonWorkingDaysEditor = ({
 
   if (!hasInteracted) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-white/40 rounded-2xl border border-dashed border-light min-h-[300px]">
+      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-primary-bg/40 rounded-2xl border border-dashed border-light min-h-[300px]">
         <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </div>
-        <p className="text-sm font-semibold text-primary poppins">
-          Aucun type de jour sélectionné
-        </p>
+        <p className="text-sm font-semibold text-primary poppins">Aucun type de jour sélectionné</p>
         <p className="text-xs text-secondary/80 mt-1 max-w-xs poppins leading-relaxed">
           Veuillez cliquer sur <span className="font-semibold text-primary">« Voir les jours »</span> sur un type de jour à gauche pour afficher et gérer ses jours configurés.
         </p>
@@ -1863,13 +2021,11 @@ const NonWorkingDaysEditor = ({
 
   return (
     <div className="flex flex-col gap-4 w-full h-full min-h-0 relative">
-      <h4 className="text-sm font-semibold text-primary pb-2 border-b border-ultra-light">
-        Jours enregistrés
-      </h4>
+      <h4 className="text-sm font-semibold text-primary pb-2 border-b border-ultra-light">Jours enregistrés</h4>
 
       {pendingDeleteDate && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
-          <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+          <div className="bg-primary-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center gap-3 text-red-600">
               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1905,7 +2061,7 @@ const NonWorkingDaysEditor = ({
 
       {pendingPastDateAction && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
-          <div className="bg-white p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-primary-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3 text-amber-600">
               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -1913,7 +2069,7 @@ const NonWorkingDaysEditor = ({
               <h5 className="font-semibold text-sm text-primary">Date antérieure détectée</h5>
             </div>
             <p className="text-xs text-secondary leading-relaxed">
-              La date choisie (<strong>{format(new Date(pendingPastDateAction.dateStr), "dd/MM/yyyy")}</strong>) est antérieure à aujourd'hui. Souhaitez-vous vraiment continuer ?
+              La date choisie (<strong>{format(new Date(pendingPastDateAction.dateStr), "dd/MM/yyyy")}</strong>) est antérieure à aujourd&apos;hui. Souhaitez-vous vraiment continuer ?
             </p>
             <div className="flex justify-end gap-2 pt-2">
               <button
@@ -1944,7 +2100,7 @@ const NonWorkingDaysEditor = ({
       )}
 
       {/* Barre de Filtres */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-light shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-primary-bg p-3 rounded-xl border border-light shadow-sm">
         <div className="flex items-center gap-2 ml-auto">
           <span className="text-xs font-semibold text-secondary whitespace-nowrap">Année :</span>
           <select
@@ -1952,7 +2108,7 @@ const NonWorkingDaysEditor = ({
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
             disabled={isLoadingYear}
-            className="border border-default rounded-xl px-3 py-1.5 text-xs bg-white font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm disabled:opacity-50"
+            className="border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-bg font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm disabled:opacity-50"
           >
             {availableYears.map((year) => (
               <option key={year} value={year}>
@@ -1982,9 +2138,7 @@ const NonWorkingDaysEditor = ({
         ) : (
           <div className="p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-2.5 shadow-sm shrink-0">
             <div className="flex items-center justify-between pb-1 border-b border-primary/20">
-              <h5 className="text-xs font-semibold text-primary">
-                Nouveau jour
-              </h5>
+              <h5 className="text-xs font-semibold text-primary">Nouveau jour</h5>
               <button
                 type="button"
                 onClick={() => {
@@ -2007,13 +2161,13 @@ const NonWorkingDaysEditor = ({
                   setNewDate(e.target.value);
                   if (dateErrorMessage) setDateErrorMessage(null);
                 }}
-                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-white shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
+                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
               />
 
               <select
                 value={newTypeId || (selectedDayTypeId !== "all" ? selectedDayTypeId : null) || setting.dayTypesOptions?.[0]?.Id || ""}
                 onChange={(e) => setNewTypeId(e.target.value)}
-                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-white shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
+                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
               >
                 {setting.dayTypesOptions?.map((dt: any) => (
                   <option key={dt.Id} value={dt.Id}>
@@ -2039,18 +2193,13 @@ const NonWorkingDaysEditor = ({
               </button>
             </div>
 
-            {dateErrorMessage && (
-              <p className="text-[11px] text-red-500 font-medium">{dateErrorMessage}</p>
-            )}
-            {error && (
-              <p className="text-[11px] text-red-500 font-medium">{error}</p>
-            )}
+            {dateErrorMessage && <p className="text-[11px] text-red-500 font-medium">{dateErrorMessage}</p>}
+            {error && <p className="text-[11px] text-red-500 font-medium">{error}</p>}
           </div>
-        ))
-      }
+        ))}
 
       {/* Liste des jours */}
-      <div className="bg-white/60 rounded-xl p-3 min-h-[160px] relative flex-1 min-h-0 border border-light overflow-y-auto">
+      <div className="bg-primary-bg/60 rounded-xl p-3 min-h-[160px] relative flex-1 min-h-0 border border-light overflow-y-auto">
         {isLoadingYear ? (
           <div className="py-8">
             <Loader size="md" message={`Chargement...`} />
@@ -2064,19 +2213,22 @@ const NonWorkingDaysEditor = ({
 
                 if (isEditingThisDate) {
                   return (
-                    <div key={dateKey} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-primary/10 rounded-xl p-2.5 shadow-sm border border-primary/30 gap-2">
+                    <div
+                      key={dateKey}
+                      className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-primary/10 rounded-xl p-2.5 shadow-sm border border-primary/30 gap-2"
+                    >
                       <div className="flex flex-1 items-center gap-2">
                         <input
                           type="date"
                           value={editDateValue}
                           onChange={(e) => setEditDateValue(e.target.value)}
-                          className="border border-default rounded-lg px-2 py-1 text-xs bg-white shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
+                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
                         />
 
                         <select
                           value={editTypeIdValue}
                           onChange={(e) => setEditTypeIdValue(e.target.value)}
-                          className="border border-default rounded-lg px-2 py-1 text-xs bg-white shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
+                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
                         >
                           {setting.dayTypesOptions?.map((dt: any) => (
                             <option key={dt.Id} value={dt.Id}>
@@ -2103,7 +2255,7 @@ const NonWorkingDaysEditor = ({
                           disabled={isSavingEdit}
                           onClick={handleCancelEdit}
                           title="Annuler"
-                          className="text-secondary bg-white p-1.5 rounded-lg border border-light transition-all cursor-pointer shadow-xs hover:bg-secondary/10"
+                          className="text-secondary bg-primary-bg p-1.5 rounded-lg border border-light transition-all cursor-pointer shadow-xs hover:bg-secondary/10"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2117,20 +2269,23 @@ const NonWorkingDaysEditor = ({
                 const dateObj = new Date(dateKey);
                 const isDeletingThisDate = Boolean(deletingDates[dateKey]);
                 const currentTypeColor = getDayTypeColor(itemObj.TypeJourCode);
-                const currentTypeObj = setting.dayTypesOptions?.find((dt: any) => String(dt.Id) === String(itemObj.TypeJourCode));
+                const currentTypeObj = setting.dayTypesOptions?.find(
+                  (dt: any) => String(dt.Id) === String(itemObj.TypeJourCode)
+                );
                 const formattedDateStr = format(dateObj, "dd/MM/yyyy");
 
                 return (
-                  <div key={dateKey} className="flex items-center justify-between bg-white rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group">
+                  <div
+                    key={dateKey}
+                    className="flex items-center justify-between bg-primary-bg rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
+                  >
                     <div className="flex items-center gap-2.5">
-                      <div 
-                        className="w-3 h-3 rounded-full shrink-0 shadow-sm" 
-                        style={{ backgroundColor: currentTypeColor }} 
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0 shadow-sm"
+                        style={{ backgroundColor: currentTypeColor }}
                         title={currentTypeObj?.Libelle || `Type ID: ${itemObj.TypeJourCode}`}
                       />
-                      <span className="text-xs font-medium text-primary">
-                        {formattedDateStr}
-                      </span>
+                      <span className="text-xs font-medium text-primary">{formattedDateStr}</span>
                       {currentTypeObj && (
                         <span className="text-[10px] text-secondary/70 bg-secondary-bg px-2 py-0.5 rounded-full border border-ultra-light">
                           {currentTypeObj.Libelle}
@@ -2142,7 +2297,10 @@ const NonWorkingDaysEditor = ({
                       {canEdit && (
                         <button
                           type="button"
-                          className={"text-secondary hover:text-primary p-1 rounded transition-all cursor-pointer" + (isDeletingThisDate || !canEdit ? " disabled" : "")}
+                          className={
+                            "text-secondary hover:text-primary p-1 rounded transition-all cursor-pointer" +
+                            (isDeletingThisDate || !canEdit ? " disabled" : "")
+                          }
                           title="Modifier le jour (date et type)"
                           onClick={() => handleStartEdit(dateKey, val)}
                           disabled={isDeletingThisDate || !canEdit}
@@ -2156,7 +2314,10 @@ const NonWorkingDaysEditor = ({
                       {canDelete && (
                         <button
                           type="button"
-                          className={"text-red-400 hover:text-red-600 p-1 rounded transition-all cursor-pointer disabled:opacity-50" + (isDeletingThisDate || !canDelete ? " disabled" : "")}
+                          className={
+                            "text-red-400 hover:text-red-600 p-1 rounded transition-all cursor-pointer disabled:opacity-50" +
+                            (isDeletingThisDate || !canDelete ? " disabled" : "")
+                          }
                           disabled={isDeletingThisDate || !canDelete}
                           title="Supprimer"
                           onClick={() => {
@@ -2195,8 +2356,7 @@ const NonWorkingDaysEditor = ({
   );
 };
 
-
-const  SettingsModalContent: React.FC<{
+const SettingsModalContent: React.FC<{
   onClose: () => void;
   settings: any;
   currentCategoryObj: any;
@@ -2204,34 +2364,31 @@ const  SettingsModalContent: React.FC<{
   setApiError: (err: string | null) => void;
   selectedDayTypeId: string | null;
   setSelectedDayTypeId: (id: string | null) => void;
-  pendingSaveAction: { isDirty: boolean; save: () => Promise<void> } | null;
-  setPendingSaveAction: React.Dispatch<React.SetStateAction<{ isDirty: boolean; save: () => Promise<void> } | null>>;
+  isAnyDirty: boolean;
+  registerSaveAction: (id: string, action: SaveAction | null) => void;
   handleFooterSave: () => Promise<void>;
   isSavingPending: boolean;
 }> = ({
-  onClose,
-  settings,
   currentCategoryObj,
   apiError,
   setApiError,
   selectedDayTypeId,
   setSelectedDayTypeId,
-  pendingSaveAction,
-  setPendingSaveAction,
+  isAnyDirty,
+  registerSaveAction,
   handleFooterSave,
   isSavingPending,
 }) => {
-  // Récupération de la méthode de fermeture sécurisée avec sauvegarde depuis la Modal
   const { handleCloseWithSave } = useModalContext();
-
+  const showFooterSave =
+    currentCategoryObj?.key === "mobileAppointmentFields" && (isAnyDirty || isSavingPending);
 
   return (
     <div className="flex flex-col h-full min-h-0 poppins gap-4">
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <div className="bg-secondary-bg px-5 shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
+        <div className="bg-secondary-bg shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
           {currentCategoryObj && (
             <div className="flex flex-col h-full min-h-0">
-
               {apiError && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start justify-between gap-3 text-red-700 text-sm poppins shadow-sm shrink-0">
                   <div className="flex items-center gap-2.5">
@@ -2292,7 +2449,7 @@ const  SettingsModalContent: React.FC<{
                           className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
                             selectedDayTypeId === "all"
                               ? "bg-primary text-white ring-2 ring-primary/20"
-                              : "bg-white border border-light hover:bg-primary/5 text-primary"
+                              : "bg-primary-bg border border-light hover:bg-primary/5 text-primary"
                           }`}
                         >
                           <span>Voir les jours</span>
@@ -2302,31 +2459,36 @@ const  SettingsModalContent: React.FC<{
                         </button>
                       </div>
 
-                      {currentCategoryObj.items?.find((item: any) => item.type === "day-type-settings")?.dayTypes?.map((dayType: DayType) => {
-                        const dayTypeSetting = currentCategoryObj.items?.find((item: any) => item.type === "day-type-settings");
-                        return (
-                          <DayTypeSingleEditor
-                            key={dayType.Id}
-                            dayType={dayType}
-                            isSelected={String(dayType.Id) === String(selectedDayTypeId)}
-                            onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
-                            onUpdate={dayTypeSetting?.onUpdateDayType}
-                            onCheckDelete={dayTypeSetting?.onCheckDeleteDayType}
-                            onDelete={async (id: string | number, count: number) => {
-                              const result = await dayTypeSetting?.onDeleteDayType?.(id, count)
-                              
-                              if (result?.success) {
-                                setSelectedDayTypeId("all");  
-                              }
+                      {currentCategoryObj.items
+                        ?.find((item: any) => item.type === "day-type-settings")
+                        ?.dayTypes?.map((dayType: DayType) => {
+                          const dayTypeSetting = currentCategoryObj.items?.find(
+                            (item: any) => item.type === "day-type-settings"
+                          );
+                          return (
+                            <DayTypeSingleEditor
+                              key={dayType.Id}
+                              dayType={dayType}
+                              isSelected={String(dayType.Id) === String(selectedDayTypeId)}
+                              onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
+                              onUpdate={dayTypeSetting?.onUpdateDayType}
+                              onCheckDelete={dayTypeSetting?.onCheckDeleteDayType}
+                              onDelete={async (id: string | number, count: number) => {
+                                const result = await dayTypeSetting?.onDeleteDayType?.(id, count);
 
-                              return result;
-                            }}
-                            setError={setApiError}
-                            canEdit={dayTypeSetting?.canEdit}
-                            canDelete={dayTypeSetting?.canDelete}
-                          />
-                        );
-                      })}
+                                if (result?.success) {
+                                  setSelectedDayTypeId("all");
+                                }
+
+                                return result;
+                              }}
+                              setError={setApiError}
+                              canEdit={dayTypeSetting?.canEdit}
+                              canDelete={dayTypeSetting?.canDelete}
+                              registerSaveAction={registerSaveAction}
+                            />
+                          );
+                        })}
                     </div>
                   </div>
 
@@ -2342,7 +2504,7 @@ const  SettingsModalContent: React.FC<{
                         canDelete={currentCategoryObj.items?.find((item: any) => item.type === "custom-non-working-dates")?.canDelete}
                       />
                     ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-white/40 rounded-xl border border-dashed border-light min-h-[250px]">
+                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-primary-bg/40 rounded-xl border border-dashed border-light min-h-[250px]">
                         <p className="text-sm font-medium text-secondary poppins">Aucune donnée de configuration</p>
                       </div>
                     )}
@@ -2353,34 +2515,25 @@ const  SettingsModalContent: React.FC<{
                   {currentCategoryObj.items.map((setting: any, settingIdx: number) => (
                     <div
                       key={setting.id}
-                      className={`flex flex-col lg:flex-row  justify-between  ${
+                      className={`flex flex-col lg:flex-row justify-between ${
                         settingIdx !== currentCategoryObj.items.length - 1 ? "border-b border-ultra-light pb-4" : ""
-                        }
-                        ${setting.type === "mobile-appointment-fields" ? "h-full" : "lg:items-center"}`
-                      }
+                      } ${setting.type === "mobile-appointment-fields" ? "h-full" : "lg:items-center"}`}
                     >
                       {setting.type === "default-display-settings" ? (
-                        <DefaultDisplaySettingsEditor setting={setting} registerSaveAction={setPendingSaveAction} />
+                        <DefaultDisplaySettingsEditor
+                          setting={setting}
+                          registerSaveAction={registerSaveAction}
+                        />
                       ) : setting.type === "mobile-appointment-fields" ? (
-                        <MobileDisplayEditor setting={setting} registerSaveAction={setPendingSaveAction} />
+                        <MobileDisplayEditor
+                          setting={setting}
+                          registerSaveAction={registerSaveAction}
+                        />
                       ) : setting.type === "select" ? (
-                        <div className="flex flex-col gap-2">
-                          <label htmlFor={setting.id} className="text-sm font-medium text-primary">
-                            {setting.label}
-                          </label>
-                          <select
-                            id={setting.id}
-                            className="border border-default rounded-xl px-4 py-3 text-sm bg-transparent shadow-sm"
-                            value={setting.value}
-                            onChange={(e) => setting.onChange(e.target.value)}
-                          >
-                            {setting.options?.map((option: any) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        <SelectSettingItem
+                          setting={setting}
+                          registerSaveAction={registerSaveAction}
+                        />
                       ) : (
                         <input
                           id={setting.id}
@@ -2404,7 +2557,7 @@ const  SettingsModalContent: React.FC<{
         <button
           type="button"
           className={`px-8 py-3 rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer ${
-            pendingSaveAction?.isDirty
+            showFooterSave
               ? "bg-secondary-bg border border-light text-primary hover:bg-secondary/10"
               : "bg-primary text-white hover:bg-primary-600"
           }`}
@@ -2414,7 +2567,7 @@ const  SettingsModalContent: React.FC<{
           Fermer
         </button>
 
-        {(pendingSaveAction?.isDirty || isSavingPending) && (
+        {showFooterSave && (
           <button
             type="button"
             className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 min-w-[220px]"
@@ -2439,19 +2592,18 @@ const  SettingsModalContent: React.FC<{
   );
 };
 
-
 const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   isSettingsOpen,
   settings,
 }) => {
-  const [activeCategory, setActiveCategory] = useState<string>(() => {
-    return sessionStorage.getItem('activeSettingsCategory') || settings?.[0]?.category || "";
+  const [activeCategory] = useState<string>(() => {
+    return sessionStorage.getItem("activeSettingsCategory") || settings?.[0]?.category || "";
   });
 
   const [selectedDayTypeId, setSelectedDayTypeId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [pendingSaveAction, setPendingSaveAction] = useState<{ isDirty: boolean; save: () => Promise<void> } | null>(null);
+  const [saveActions, setSaveActions] = useState<Record<string, SaveAction>>({});
   const [isSavingPending, setIsSavingPending] = useState(false);
 
   const hasFetchedRef = useRef(false);
@@ -2460,19 +2612,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     return settings.find((cat: any) => cat.key === activeCategory) || settings[0];
   }, [settings, activeCategory]);
 
+  const registerSaveAction = useCallback((id: string, action: SaveAction | null) => {
+    setSaveActions((prev) => {
+      if (!action) {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: action };
+    });
+  }, []);
+
+  const isAnyDirty = useMemo(
+    () => Object.values(saveActions).some((action) => action.isDirty),
+    [saveActions]
+  );
+
   useEffect(() => {
-    if (isSettingsOpen && !hasFetchedRef.current) { 
+    if (isSettingsOpen && !hasFetchedRef.current) {
       hasFetchedRef.current = true;
       settings.forEach((cat: any) => {
         cat.items?.forEach((setting: any) => {
           if (setting.type === "day-type-settings" && typeof setting.fetchDayTypes === "function") {
-            setting.fetchDayTypes().then((res: any) => {
-              if (res && !res.success && res.message) {
-                setApiError(res.message);
-              }
-            }).catch((err: any) => {
-              setApiError(err?.message || "Erreur lors du chargement des types de jours.");
-            });
+            setting
+              .fetchDayTypes()
+              .then((res: any) => {
+                if (res && !res.success && res.message) {
+                  setApiError(res.message);
+                }
+              })
+              .catch((err: any) => {
+                setApiError(err?.message || "Erreur lors du chargement des types de jours.");
+              });
           }
         });
       });
@@ -2480,23 +2652,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     if (!isSettingsOpen) {
       setApiError(null);
-      setPendingSaveAction(null);
+      setSaveActions({});
       setSelectedDayTypeId(null);
     }
   }, [isSettingsOpen, settings]);
 
-  const handleFooterSave = async () => {
-    if (!pendingSaveAction?.save) return;
+  const handleSaveAll = useCallback(async () => {
+    const dirtyActions = Object.values(saveActions).filter((action) => action.isDirty);
+    if (dirtyActions.length === 0) return;
+
     setIsSavingPending(true);
     setApiError(null);
     try {
-      await pendingSaveAction.save();
-      setIsSavingPending(false);
+      await Promise.all(dirtyActions.map((action) => action.save()));
     } catch (error: any) {
       setApiError(error?.message || "Erreur lors de la sauvegarde.");
+      throw error;
+    } finally {
       setIsSavingPending(false);
     }
-  };
+  }, [saveActions]);
 
   return (
     <Modal
@@ -2504,15 +2679,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       onClose={onClose}
       title={currentCategoryObj?.category || "Paramètres"}
       className={`${
-        currentCategoryObj?.key === 'daysManagement' 
-          ? 'w-[min(98vw,1500px)]' 
-          : currentCategoryObj?.key === 'mobileAppointmentFields'
-            ? 'w-[min(95vw,1400px)]'
-            : 'w-[min(95vw,900px)]'
-      } h-[90vh] max-h-[950px] overflow-hidden flex flex-col`}
+        currentCategoryObj?.key === "daysManagement"
+          ? "w-[min(98vw,1500px)]"
+          : currentCategoryObj?.key === "mobileAppointmentFields"
+            ? "w-[min(95vw,1400px)]"
+            : "w-[min(95vw,607px)]"
+      } max-h-[950px] overflow-hidden flex flex-col`}
       classNameContent="flex-1 overflow-hidden p-4 flex flex-col min-h-0"
-      confirmCloseOnOverlay={currentCategoryObj?.hasUnsavedChanges && pendingSaveAction?.isDirty}
-      onSave={handleFooterSave}
+      confirmCloseOnOverlay={(currentCategoryObj?.hasUnsavedChanges ?? true) && isAnyDirty}
+      onSave={handleSaveAll}
     >
       <SettingsModalContent
         onClose={onClose}
@@ -2522,9 +2697,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         setApiError={setApiError}
         selectedDayTypeId={selectedDayTypeId}
         setSelectedDayTypeId={setSelectedDayTypeId}
-        pendingSaveAction={pendingSaveAction}
-        setPendingSaveAction={setPendingSaveAction}
-        handleFooterSave={handleFooterSave}
+        isAnyDirty={isAnyDirty}
+        registerSaveAction={registerSaveAction}
+        handleFooterSave={handleSaveAll}
         isSavingPending={isSavingPending}
       />
     </Modal>

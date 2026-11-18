@@ -4,6 +4,7 @@ import { memo, useEffect, useState, useRef } from 'react';
 import DatePicker from '../ui/DatePicker';
 import { useAuth } from '../../hooks/utils/AuthContext';
 import ChantierViewsControl, { ChantierViewsControlProps } from '../Table/ChantierViewsControl';
+import { useCalendarView } from '../../hooks';
 
 const SelectedCheck = () => (
   <div
@@ -32,7 +33,6 @@ const SelectedCheck = () => (
 interface CalendarHeaderProps {
   theme: string;
   user: any;
-  viewState: any; 
   notifications: any; 
   handleAddModal: (appointment: Appointment) => void;
   onNavigateDate: (date: number) => void;
@@ -42,7 +42,6 @@ interface CalendarHeaderProps {
 export const CalendarHeader = memo(({ 
   theme, 
   user, 
-  viewState, 
   notifications, 
   handleAddModal,
   onNavigateDate,
@@ -63,7 +62,7 @@ export const CalendarHeader = memo(({
     isDisplayWeekend, setIsDisplayWeekend,
     isFullDay, setIsFullDay,
     selectedDate, setSelectedDate
-  } = viewState;
+  } = useCalendarView();
 
   const { hasPermission } = useAuth();
   const [isHelpOpen, setIsHelpOpen] = useState(false);
