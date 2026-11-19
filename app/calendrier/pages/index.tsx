@@ -1382,20 +1382,15 @@ export default function HomePage({
           />
 
           {/* Gestion centralisée de toutes les modales */}
-          <CalendarModals 
+          <CalendarModals
             user={user}
             modalsState={{
               isModalOpen: appointmentLogic.isModalOpen,
-              isSettingsOpen: isSettingsOpen,
-              isFilterModalOpen: isFilterModalOpen,
               isImageSelectorOpen: interaction.isImageSelectorOpen,
-              isConfigModalOpen: calendarConfigHook.isConfigModalOpen,
               repeatData: appointmentLogic.repeatData,
               extendData: appointmentLogic.extendData,
-              modalInfo: modalInfo,
               selectedAppointmentForm: appointmentLogic.selectedAppointment,
               deleteConfirmData: deleteConfirmData,
-              tagPlacement: tagPlacement,
             }}
             handlers={{
               closeModal: () => appointmentLogic.setIsModalOpen(false),
@@ -1405,7 +1400,7 @@ export default function HomePage({
               handleDeleteManualRessource: appointmentLogic.handleDeleteManualRessource,
               handleDeactivateDimension: appointmentLogic.handleDeactivateDimension,
               setDeleteConfirmData: setDeleteConfirmData,
-              
+
               // Repeat / Extend
               setRepeatData: appointmentLogic.setRepeatData,
               handleRepeat: appointmentLogic.handleRepeat,
@@ -1430,49 +1425,33 @@ export default function HomePage({
                   return;
                 }
 
-                // Logique de décision basée sur la vue active
                 if (viewType === 'employee-table') {
-                    const id = appointmentLogic.selectedEmployee?.IdPersonnel || null;
-                    if (id === null) return;                    
-                    dataLayer.updateEmployeeImage(id, newImage);
+                  const id = appointmentLogic.selectedEmployee?.IdPersonnel || null;
+                  if (id === null) return;
+                  dataLayer.updateEmployeeImage(id, newImage);
                 } else {
                   const id = appointmentLogic.selectedItem?.IdPlanningRessource || null;
-                    if (id === null) return;                    
-                    appointmentLogic.setSelectedItem(prev => {
-                        if (prev) {
-                            return { ...prev, Image: { id: newImage.id, image: newImage.image } };
-                        }
-                        return prev;
-                    });
+                  if (id === null) return;
+                  appointmentLogic.setSelectedItem(prev => {
+                    if (prev) {
+                      return { ...prev, Image: { id: newImage.id, image: newImage.image } };
+                    }
+                    return prev;
+                  });
                 }
-                // Fermer la modale via l'interaction
                 interaction.handleCloseImageModal();
               },
               handleImageUpload: interaction.handleImageUpload,
               openImageModalForEvent: () => interaction.handleOpenImageModal(),
               fetchPaginatedImages: dataLayer.fetchPaginatedImages,
+              addImage: dataLayer.addImage,
 
-              // Settings & Config
-              closeSettings: () => setIsSettingsOpen(false),
-              closeFilterModal: () => setIsFilterModalOpen(false),
+              // Filters
               submitFilters: saveChantierFilters,
               applyFilters: applyChantierFilters,
-              
-              closeConfigModal: calendarConfigHook.closeConfigModal,
-              setCurrentConfig: onCalendarConfigChange,
-              saveCustomConfig: calendarConfigHook.saveConfig,
-              deleteCustomConfig: calendarConfigHook.deleteConfig,
-              setEditingConfig: calendarConfigHook.setEditingConfig,
-              setIsCreatingConfig: calendarConfigHook.setIsCreatingConfig,
 
-              // Correction : Setter pour l'item sélectionné
               setSelectedItem: appointmentLogic.setSelectedItem,
               onLockedError: setLockNotification,
-              
-              addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
-              removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,
-              editNonWorkingDates: calendarConfigService.editNonWorkingDate,
-              addImage: dataLayer.addImage,
             }}
             data={{
               appointments: dataLayer.appointmentsRef.current,
@@ -1483,31 +1462,6 @@ export default function HomePage({
               keyOfFilter: keyOfFilter,
               isUploading: interaction.isUploading,
               uploadError: interaction.uploadError,
-              
-              editingConfig: calendarConfigHook.editingConfig,
-              isCreatingConfig: calendarConfigHook.isCreatingConfig,
-              availableConfigs: availableConfigs,
-              currentConfig: currentCalendarConfig,
-            }}
-            config={{
-              includeWeekend: includeWeekend,
-              setIncludeWeekend: setIncludeWeekend,
-              respectNonWorkingDays: respectNonWorkingDays,
-              setRespectNonWorkingDays: setRespectNonWorkingDays,
-              tagPlacement: tagPlacement,
-              setTagPlacement: setTagPlacement,
-              overlapDisplayMode: overlapDisplayMode,
-              setOverlapDisplayMode: setOverlapDisplayMode,
-              mobileAppointmentDisplay: mobileAppointmentDisplay,
-              handleSaveMobileAppointmentDisplay: handleSaveMobileAppointmentDisplay,
-              mobileAppointmentFieldOptions: mobileAppointmentFieldOptions,
-              mobileAppointmentSettingsLoading: mobileAppointmentSettingsLoading,
-              loadMobileAppointmentSettings: loadMobileAppointmentSettings,
-              HALF_DAY_INTERVALS: constants.intervals,
-              isFullDay: isFullDay,
-              isDisplayWeekend: isDisplayWeekend,
-              viewType: viewType,
-              setNotification: setLockNotification,
             }}
           />
 

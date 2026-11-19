@@ -755,6 +755,7 @@ export const CalendarViewProvider: React.FC<CalendarViewProviderProps> = ({
 
   const onCalendarConfigChange = useCallback(
     (config: CalendarConfig) => {
+      console.log('Changement de configuration du calendrier :', config);
       calendarConfigService
         .setLastVueForUser(config.IdPlanningVue || -1)
         .then(() => {

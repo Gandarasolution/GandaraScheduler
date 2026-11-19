@@ -20,7 +20,6 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
   const [configs, setConfigs] = useState<CalendarConfig[]>([]);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<CalendarConfig | null>(null);
-  const [isCreatingConfig, setIsCreatingConfig] = useState(false);
 
   const loadConfigs = async (hasPermission: boolean) => {
     //console.log('Loading configs with permission:', hasPermission);
@@ -41,46 +40,35 @@ export function useCalendarConfig({ user, idPlanning, setCurrentCalendarConfig }
     setIsConfigModalOpen(true);
   }, []);
 
-  const closeConfigModal = useCallback(() => {
-    setIsConfigModalOpen(false);
-    setEditingConfig(null);
-    setIsCreatingConfig(false);
-  }, []);
 
-  const startCreatingConfig = useCallback(() => {
-    setIsCreatingConfig(true);
-    setEditingConfig(null);
-  }, []);
 
-  const startEditingConfig = useCallback((config: CalendarConfig) => {
-    setEditingConfig(config);
-    setIsCreatingConfig(false);
-  }, []);
-
-  const saveConfig = useCallback(async (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => {
-    if (isCreatingConfig) {
+  const saveConfig = useCallback(async (config: { planningVue: CalendarConfig; filtrePerso: any, utilisateursAutorises: number[] },  type: 'create' | 'update'): Promise<{ success: boolean; message?: string }> => {
+    if (type === 'create') {
       const response = await calendarConfigService.createCalendarConfig(config);
       //console.log('Create Config Response:', response);
       if (response?.success) {
         //console.log('Config created successfully:', response.data);
         setConfigs(prev => [...prev, response.data]);
         
-        return response;
+        return {success: true};
       }else {
         console.error('Failed to create config:', response?.message);
-        return response;
+        return {success: false, message: response?.message};
       }
-    } else if (editingConfig) {
-      const response = await calendarConfigService.updateCalendarConfig(editingConfig.IdPlanningVue, config);
+    } else if (type === 'update') {
+      const response = await calendarConfigService.updateCalendarConfig(config.planningVue.IdPlanningVue, config);
       if (response?.success && (response.data || response.message)) {
-        setConfigs(prev => prev.map(c => c.IdPlanningVue === editingConfig.IdPlanningVue ? response.data : c));
-        return response;
+        setConfigs(prev => prev.map(c => c.IdPlanningVue === config.planningVue.IdPlanningVue ? response.data : c));
+        return {success: true};
       } else {
         console.error('Failed to update config:', response?.message);
-        return response;
+        return {success: false, message: response?.message};
       }
+      
     }
-  }, [isCreatingConfig, editingConfig, closeConfigModal, user.IdPersonnel]);
+
+    return {success: false, message: "Type d'opération inconnu. Aucune configuration en cours de création ou d'édition."};
+  }, [editingConfig, user.IdPersonnel]);
 
 
   const deleteConfig = useCallback(async (configId: number): Promise<{success: boolean, message?: string} | void> => {
@@ -108,17 +96,12 @@ useEffect(() => {
   return {
     isConfigModalOpen,
     editingConfig,
-    isCreatingConfig,
     configs, setConfigs,
     openConfigModal,
-    closeConfigModal,
-    startCreatingConfig,
-    startEditingConfig,
     saveConfig,
     deleteConfig,
     setIsConfigModalOpen,
     setEditingConfig,
-    setIsCreatingConfig,
     loadConfigs,
   };
 }

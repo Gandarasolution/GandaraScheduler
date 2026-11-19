@@ -39,9 +39,6 @@ export default function Home() {
   const isMobile = deviceType === 'mobile';
   const isTablet = deviceType === 'tablet';
 
-  console.log('Device Type:', deviceType, 'isMobile:', isMobile, 'isTablet:', isTablet);
-  console.log(isMobile || (isTablet && !hasPermission(229)))
-
   // Fonction pour changer le thème
   const handleThemeChange = useCallback((newTheme: ThemeType) => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;

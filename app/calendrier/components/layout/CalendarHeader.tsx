@@ -5,6 +5,7 @@ import DatePicker from '../ui/DatePicker';
 import { useAuth } from '../../hooks/utils/AuthContext';
 import ChantierViewsControl, { ChantierViewsControlProps } from '../Table/ChantierViewsControl';
 import { useCalendarView } from '../../hooks';
+import { FolderCog, LayoutTemplate } from 'lucide-react';
 
 const SelectedCheck = () => (
   <div
@@ -241,6 +242,16 @@ export const CalendarHeader = memo(({
                               </svg>
                             </div>
                             <span className="flex-1 text-sm font-medium">Affichage mobile</span>
+                          </button>
+
+                          <button
+                            className="w-full px-3 py-2.5 rounded-xl text-left flex items-center gap-3 transition-all duration-150 group text-primary hover:bg-primary-50"
+                            onClick={() => openSetting("calendarConfigurations")}
+                          >
+                            <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all duration-150 text-primary group-hover:bg-primary group-hover:!text-white">
+                              <LayoutTemplate/>
+                            </div>
+                            <span className="flex-1 text-sm font-medium">Gestion des vues</span>
                           </button>
                           <div className="mx-2 my-2 h-px bg-primary-100" />
                         </>
@@ -735,7 +746,7 @@ export const CalendarHeader = memo(({
                   </svg>
                 </button>
                 <button 
-                  className={"transition cursor-pointer btn-header  border-default px-3 py-2" + (!hasPermission(214, 23) ? '' : ' border-r')}
+                  className={"transition cursor-pointer btn-header  border-default px-3 py-2"}
                   onClick={() => setIsFullDay(!isFullDay)}
                 >
                   {!isFullDay ? (
@@ -754,21 +765,7 @@ export const CalendarHeader = memo(({
                 </button>
               </>
             )}
-            {(hasPermission(214, 23)) && (
-              <>
-                <button 
-                  className="transition btn-header px-3 py-2 group hover:text-[#00947f] cursor-pointer text-gray-400"
-                  name="filtrer"
-                  onClick={() => viewType === 'calendar' ? calendarConfigHook.openConfigModal() : setIsFilterModalOpen(true)}
-                  title="Filtrer"
-                >
-                  <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bg-icon w-5 h-5 text-inherit text-gray-500 transition duration-200">
-                    <g><path d="m6.5 16c-.072 0-.145-.016-.212-.047-.176-.082-.288-.259-.288-.453v-6.285c0-.346-.121-.683-.34-.951l-5.434-6.63c-.145-.178-.226-.404-.226-.634 0-.551.449-1 1-1h14c.551 0 1 .449 1 1 0 .23-.081.456-.227.634l-5.434 6.63c-.218.268-.339.605-.339.951v2.849c0 .744-.328 1.444-.9 1.92l-2.28 1.9c-.091.076-.205.116-.32.116zm8.5-15h.01z"/></g>
-                  </svg>
-                </button>
-              </>
-            )}
-            
+          
           </div>
 
           {/* Bouton Ajouter Évènement */}

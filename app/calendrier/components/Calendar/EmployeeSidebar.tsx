@@ -23,7 +23,7 @@ import {
 } from '../../utils/constants';
 import { getDimensionItemKey, HierarchicalGroupItem } from '../../utils/filters';
 import { FlatRow } from '../../hooks';
-import { GroupIcon } from '../Table/ChantierViewsControl';
+import { GroupIcon } from '@/app/calendrier';
 
 interface EmployeeSidebarProps {
   dimensionItems: HierarchicalGroupItem[];

@@ -6,7 +6,7 @@ import {
   Modal, 
 } from '@/app/calendrier/components';
 import Loader from '../ui/Loader';
-import { Appointment, Item, CalendarConfig, ImageType, User, AutreItem, MobileAppointmentDisplayConfig, DayType } from '../../types';
+import { Appointment, Item, ImageType, User, AutreItem, DayType } from '../../types';
 import { ActiveFilters, FilterType } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
@@ -16,8 +16,8 @@ import { useAuth } from '../../hooks/utils/AuthContext';
 import permissionService from '@/app/service/permission.service';
 import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
 import calendarConfigService from '@/app/service/calendarConfig.service';
-import displaySettingsService, { DisplaySettingsUpdate } from '@/app/service/displaySettings.service';
-import { DisplaySettings } from '@/app/service/displaySettings.service';
+import displaySettingsService, { DisplaySettingsUpdate, DisplaySettings } from '@/app/service/displaySettings.service';
+import { useCalendarView } from '../../hooks';
 
 type ModalActionResult = { success: boolean; message?: string };
 
@@ -27,7 +27,6 @@ const SettingsModal = lazy(() => import('../modals/SettingsModal'));
 const FilterModal = lazy(() => import('../modals/FilterModal'));
 const DeleteModal = lazy(() => import('../modals/DeleteModal'));
 
-// Composant de fallback pour le chargement
 const ModalLoadingFallback = () => (
   <div className="flex min-h-[320px] w-full items-center justify-center rounded-xl bg-secondary-bg">
     <Loader size="lg" message="Chargement en cours..." />
@@ -38,65 +37,46 @@ interface CalendarModalsProps {
   user: User;
   modalsState: {
     isModalOpen: boolean;
-    isSettingsOpen: boolean;
-    isFilterModalOpen: boolean;
     isImageSelectorOpen: boolean;
-    isConfigModalOpen: boolean;
     repeatData: RepeatData | null;
     extendData: number | null;
-    modalInfo: { message: string, color: string } | null;
     selectedAppointmentForm: Appointment | null;
-    deleteConfirmData: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null;
-    tagPlacement: 'hover' | 'fixed';
+    deleteConfirmData: { item: Item; isUsedInPlanning: boolean; isActive: boolean } | null;
   };
   handlers: {
     closeModal: () => void;
-    saveAppointment: (app: Appointment, evt: Item, includeNonWork: boolean, type: 'create' | 'update') => Promise<{ success: boolean; message?: string }>;
+    saveAppointment: (
+      app: Appointment,
+      evt: Item,
+      includeNonWork: boolean,
+      type: 'create' | 'update'
+    ) => Promise<{ success: boolean; message?: string }>;
     handleAddManualRessource: (dimension: AutreItem) => Promise<{ success: boolean; message?: string }>;
     handleEditRessource: (dimension: Item) => Promise<{ success: boolean; message?: string }>;
     handleDeleteManualRessource?: (dimensionId: number, forceDelete?: boolean) => any;
     handleDeactivateDimension?: (dimensionId: number) => any;
-    setDeleteConfirmData?: (data: { item: Item, isUsedInPlanning: boolean, isActive: boolean } | null) => void;
-    
-    // Repeat Handlers
+    setDeleteConfirmData?: (data: { item: Item; isUsedInPlanning: boolean; isActive: boolean } | null) => void;
+
+    // Repeat & Extend Handlers
     setRepeatData: (data: RepeatData | null) => void;
     handleRepeat: () => Promise<ModalActionResult>;
-    
-    // Extend Handlers
     setExtendData: (date: number | null) => void;
     handleExtend: () => Promise<ModalActionResult>;
-    
+
     // Image Handlers
     closeImageModal: () => void;
     handleImageSelect: (image: ImageType) => void;
     handleImageUpload: (file: File) => Promise<ImageType>;
     openImageModalForEvent: (id?: number) => void;
     fetchPaginatedImages: (page: number, limit?: number) => Promise<{ image: ImageType[]; totalLignes: number }>;
+    addImage: (base64: string) => Promise<{ success: boolean; id?: number; message?: string }>;
 
-    // Settings & Config Handlers
-    closeSettings: () => void;
-    closeFilterModal: () => void;
+    // Filter Handlers
     submitFilters: (filters: ActiveFilters) => Promise<boolean>;
     applyFilters: (filters: ActiveFilters) => void;
-    
-    // Config Calendar
-    closeConfigModal: () => void;
-    setCurrentConfig: (config: CalendarConfig) => void;
-    saveCustomConfig: (config: { planningVue: any; filtrePerso: any, utilisateursAutorises: number[] }) => Promise<{success: boolean, data: any} | {success: boolean, message: string} | void> | void;
-    deleteCustomConfig: (configId: number) => Promise<{success: boolean, message?: string} | void> | void;
-    
-    // Config Configuration Editing State (from hook)
-    setEditingConfig: (config: any) => void;
-    setIsCreatingConfig: (val: boolean) => void;
-    addNonWorkingDatesToPlanning: (date: number, codeType: string) => Promise<any>;
-    removeNonWorkingDatesFromPlanning: (idPlanning: number, date: number) => Promise<any>;
-    editNonWorkingDates: (data: {id: number, date: Date, typeJourCode: string}) => Promise<any>;
 
     setSelectedItem: (item: Item | null) => void;
     onLockedError: (message: string) => void;
-
-    addImage: (base64: string) => Promise<{ success: boolean; id?: number; message?: string }>;
-
     applyDisplaySettingsToAllEvents: (value: DisplaySettings) => Promise<{ success: boolean; message?: string }>;
   };
   data: {
@@ -108,45 +88,14 @@ interface CalendarModalsProps {
     keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } };
     isUploading: boolean;
     uploadError: string | null;
-    
-    // Config Editing Data
-    editingConfig: any;
-    isCreatingConfig: boolean;
-    availableConfigs: CalendarConfig[];
-    currentConfig: CalendarConfig | null;
-  };
-  config: {
-    // Settings Values
-    includeWeekend: boolean;
-    setIncludeWeekend: (v: boolean) => void;
-    respectNonWorkingDays: boolean;
-    setRespectNonWorkingDays: (v: boolean) => void;
-    tagPlacement: 'hover' | 'fixed';
-    setTagPlacement: (v: 'hover' | 'fixed') => void;
-    overlapDisplayMode: 'button' | 'count';
-    setOverlapDisplayMode: (v: 'button' | 'count') => void;
-    mobileAppointmentDisplay: MobileAppointmentDisplayConfig;
-    handleSaveMobileAppointmentDisplay: (value: MobileAppointmentDisplayConfig) => Promise<{ success: boolean; message?: string }>;
-    mobileAppointmentFieldOptions: Array<{ Code: string; Libelle: string; CaractereSpecial: boolean; Id: number }>;
-    mobileAppointmentSettingsLoading: boolean;
-    loadMobileAppointmentSettings: () => Promise<{ success: boolean; message?: string }>;
-
-    setNotification: (notifications: any) => void;
-    
-    // Constants
-    HALF_DAY_INTERVALS: any[];
-    isFullDay: boolean;
-    isDisplayWeekend: boolean;
-    viewType: 'calendar' | 'chantier-table' | 'paie-table' | 'employee-table' | 'manual-event-table';
   };
 }
 
-export const CalendarModals = memo(({ 
+export const CalendarModals = memo(({
   user,
-  modalsState, 
-  handlers, 
-  data, 
-  config 
+  modalsState,
+  handlers,
+  data,
 }: CalendarModalsProps) => {
   const { hasPermission } = useAuth();
   const [isFormDirty, setIsFormDirty] = useState(false);
@@ -154,7 +103,45 @@ export const CalendarModals = memo(({
   const [modalSubmitError, setModalSubmitError] = useState<string | null>(null);
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings | null>(null);
 
-  const { DayTypes, fetchDayTypes, addDayType, updateDayType, removeDayType, onCheckDeleteDayType, nonWorkingDates, setNonWorkingDates } = useDayTypesContext();
+  const {
+    DayTypes,
+    fetchDayTypes,
+    addDayType,
+    updateDayType,
+    removeDayType,
+    onCheckDeleteDayType,
+    nonWorkingDates,
+    setNonWorkingDates,
+  } = useDayTypesContext();
+
+  // Récupération directe des états, configs et handlers depuis useCalendarView
+  const {
+    includeWeekend,
+    setIncludeWeekend,
+    respectNonWorkingDays,
+    setRespectNonWorkingDays,
+    tagPlacement,
+    setTagPlacement,
+    overlapDisplayMode,
+    setOverlapDisplayMode,
+    mobileAppointmentDisplay,
+    handleSaveMobileAppointmentDisplay,
+    mobileAppointmentFieldOptions,
+    mobileAppointmentSettingsLoading,
+    loadMobileAppointmentSettings,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    isFilterModalOpen,
+    setIsFilterModalOpen,
+    modalInfo,
+    viewType,
+    isFullDay,
+    constants,
+    calendarConfigHook,
+    currentCalendarConfig,
+    onCalendarConfigChange,
+    availableConfigs,
+  } = useCalendarView();
 
   const loadDisplaySettings = async () => {
     const result = await displaySettingsService.getDisplaySettings();
@@ -200,6 +187,7 @@ export const CalendarModals = memo(({
         ? { ImageParDefaut: String(changedValues.ImageParDefaut.id) }
         : {}),
     };
+
     const result = await displaySettingsService.updateDisplaySettings(updatePayload);
     if (!result?.success) {
       return { success: false, message: result?.message || 'Erreur lors de la sauvegarde des options d’affichage.' };
@@ -208,7 +196,6 @@ export const CalendarModals = memo(({
     return { success: true };
   };
 
- 
   const [configImageSelectorContext, setConfigImageSelectorContext] = useState<{
     actualImage?: ImageType;
     onSelect: (image: ImageType) => void;
@@ -230,7 +217,6 @@ export const CalendarModals = memo(({
       closeImageSelector();
       return;
     }
-
     handlers.handleImageSelect(image);
   };
 
@@ -268,8 +254,6 @@ export const CalendarModals = memo(({
       setModalSubmitError(null);
     }
   }, [modalsState.repeatData, modalsState.extendData]);
-
-
 
   const settings = useMemo(() => [
     ...(hasPermission(214, 23) ? [
@@ -322,26 +306,24 @@ export const CalendarModals = memo(({
             }
           },
           {
-            id: "nonWorkedDay", 
-            label: "Dates non travaillées personnalisées", 
+            id: "nonWorkedDay",
+            label: "Dates non travaillées personnalisées",
             type: "custom-non-working-dates",
             nonWorkingDates: nonWorkingDates,
             canEdit: hasPermission(223),
             canDelete: hasPermission(223),
             canAdd: hasPermission(223),
             setNonWorkingDates: setNonWorkingDates,
-            addNonWorkingDatesToPlanning: handlers.addNonWorkingDatesToPlanning,
-            removeNonWorkingDatesFromPlanning: handlers.removeNonWorkingDatesFromPlanning,
-            updateNonWorkingDate: handlers.editNonWorkingDates,
-            
+            addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
+            removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,
+            updateNonWorkingDate: calendarConfigService.editNonWorkingDate,
             getAvailablesYearForNonWorkingDate: async () => {
               try {
                 return await calendarConfigService.getAvailablesYearForNonWorkingDate();
-              } catch (error: any) {
+              } catch {
                 return [];
               }
             },
-
             fetchNonWorkingDays: async (selectedYear: number) => {
               try {
                 return await calendarConfigService.getNonWorkingDates([selectedYear]);
@@ -361,14 +343,14 @@ export const CalendarModals = memo(({
             id: "mobileAppointmentFields",
             label: null,
             type: "mobile-appointment-fields",
-            value: config.mobileAppointmentDisplay,
-            onChange: config.handleSaveMobileAppointmentDisplay,
-            options: config.mobileAppointmentFieldOptions,
-            isLoading: config.mobileAppointmentSettingsLoading,
-            mobileAppointmentFieldOptions: config.mobileAppointmentFieldOptions,
+            value: mobileAppointmentDisplay,
+            onChange: handleSaveMobileAppointmentDisplay,
+            options: mobileAppointmentFieldOptions,
+            isLoading: mobileAppointmentSettingsLoading,
+            mobileAppointmentFieldOptions: mobileAppointmentFieldOptions,
             fetchFieldOptions: async () => {
               try {
-                return await config.loadMobileAppointmentSettings();
+                return await loadMobileAppointmentSettings();
               } catch (error: any) {
                 return { success: false, message: error?.message || "Erreur lors du chargement des options" };
               }
@@ -378,6 +360,25 @@ export const CalendarModals = memo(({
         hasUnsavedChanges: true
       }
     ] : []),
+    {
+      category: "Gestion des vues",
+      key: "calendarConfigurations",
+      items: [
+        {
+          id: "calendarConfigurations",
+          label: "Configurations des vues",
+          type: "calendar-configurations",
+          user: user,
+          availableConfigs: availableConfigs,
+          currentConfig: currentCalendarConfig,
+          onConfigChange: onCalendarConfigChange,
+          onSaveConfig: calendarConfigHook.saveConfig,
+          onDeleteConfig: calendarConfigHook.deleteConfig,
+          handleOpenImageModal: openImageModalForConfig,
+          addImage: handlers.addImage,
+        }
+      ]
+    },
     {
       category: "Options d’affichage",
       key: "displaySettings",
@@ -398,9 +399,10 @@ export const CalendarModals = memo(({
           label: "Placement de l'étiquette",
           classNameLabel: "font-semibold",
           classNameSelect: "bg-primary-bg",
+          classNameInlineSaveButton: "ml-auto",
           type: "select",
-          value: config.tagPlacement,
-          onChange: config.setTagPlacement,
+          value: tagPlacement,
+          onChange: setTagPlacement,
           options: [
             { value: 'hover', label: 'Au clic sur une icône' },
             { value: 'fixed', label: 'Toujours visible (bord inférieur)' }
@@ -411,9 +413,10 @@ export const CalendarModals = memo(({
           label: "Affichage Multi-évenements sur la barre personnel",
           classNameLabel: "font-semibold",
           classNameSelect: "bg-primary-bg",
+          classNameInlineSaveButton: "ml-auto",
           type: "select",
-          value: config.overlapDisplayMode,
-          onChange: config.setOverlapDisplayMode,
+          value: overlapDisplayMode,
+          onChange: setOverlapDisplayMode,
           options: [
             { value: 'button', label: 'Bouton Développer / Réduire' },
             { value: 'count', label: 'Nombre d’événements masqués' }
@@ -422,24 +425,37 @@ export const CalendarModals = memo(({
       ]
     }
   ], [
-    config.includeWeekend, 
-    config.respectNonWorkingDays, 
-    nonWorkingDates, 
-    config.setIncludeWeekend, 
-    config.setRespectNonWorkingDays, 
-    setNonWorkingDates, 
-    config.tagPlacement, 
-    config.setTagPlacement, 
-    config.overlapDisplayMode,
-    config.setOverlapDisplayMode,
+    hasPermission,
+    includeWeekend,
+    respectNonWorkingDays,
+    nonWorkingDates,
+    setIncludeWeekend,
+    setRespectNonWorkingDays,
+    setNonWorkingDates,
+    tagPlacement,
+    setTagPlacement,
+    overlapDisplayMode,
+    setOverlapDisplayMode,
     displaySettings,
-    config.mobileAppointmentDisplay, 
-    config.handleSaveMobileAppointmentDisplay, 
-    config.mobileAppointmentFieldOptions, 
-    config.mobileAppointmentSettingsLoading, 
-    handlers.addNonWorkingDatesToPlanning, 
-    handlers.removeNonWorkingDatesFromPlanning,
+    mobileAppointmentDisplay,
+    handleSaveMobileAppointmentDisplay,
+    mobileAppointmentFieldOptions,
+    mobileAppointmentSettingsLoading,
+    loadMobileAppointmentSettings,
     DayTypes,
+    user,
+    availableConfigs,
+    currentCalendarConfig,
+    onCalendarConfigChange,
+    calendarConfigHook.saveConfig,
+    calendarConfigHook.deleteConfig,
+    handlers.addImage,
+    handlers.applyDisplaySettingsToAllEvents,
+    fetchDayTypes,
+    addDayType,
+    updateDayType,
+    removeDayType,
+    onCheckDeleteDayType,
   ]);
 
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {
@@ -453,35 +469,34 @@ export const CalendarModals = memo(({
     if (modalsState.repeatData) return "Répéter ce rendez-vous";
     if (modalsState.extendData) return "Prolonger le rendez-vous";
     if (modalsState.selectedAppointmentForm) {
-        if (resourceEditMode === 'createRessource') return "Création de la ressource";
-        if (resourceEditMode === 'editRessource') 
-          return `Modification de la ressource ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.Type === 'Projet' 
-            ? ` - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource}` 
-            : '' 
-          }`;
-        return `Modifier l'Évènement - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource || 'Ressource inconnue'}`;
+      if (resourceEditMode === 'createRessource') return "Création de la ressource";
+      if (resourceEditMode === 'editRessource') {
+        return `Modification de la ressource ${
+          data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.Type === 'Projet'
+            ? ` - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource}`
+            : ''
+        }`;
+      }
+      return `Modifier l'Évènement - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource || 'Ressource inconnue'}`;
     }
     return "Ajouter un rendez-vous";
-  };  
+  };
 
   const handleCloseModal = () => {
-      // Le composant enfant (AppointmentForm) gère déjà son propre unlock si besoin
-      // Mais en sécurité, on débloque si c'est une édition classique
-      if (resourceEditMode === 'editAppointment' && !modalsState.repeatData && !modalsState.extendData) {
-        eventService.unlockEvenement(modalsState.selectedAppointmentForm?.IdPlanningEvenement);
-      }
-      handlers.closeModal();
-  }
+    if (resourceEditMode === 'editAppointment' && !modalsState.repeatData && !modalsState.extendData) {
+      eventService.unlockEvenement(modalsState.selectedAppointmentForm?.IdPlanningEvenement);
+    }
+    handlers.closeModal();
+  };
 
   const handleCloseRepeatOrExtend = () => {
-    // Si on annule Repeat ou Extend, on doit libérer le verrou récupéré lors de l'ouverture
     if (modalsState.selectedAppointmentForm?.IdPlanningEvenement) {
       eventService.unlockEvenement(modalsState.selectedAppointmentForm.IdPlanningEvenement);
     }
     handlers.setRepeatData(null);
     handlers.setExtendData(null);
   };
-  
+
   return (
     <>
       <Modal
@@ -497,13 +512,15 @@ export const CalendarModals = memo(({
         title={getMainModalTitle()}
         whithoutCloseButton={true}
         roundedSize="2xl"
-        classNameContent='px-4 py-4'
+        classNameContent="px-4 py-4"
         confirmCloseOnOverlay={true}
         hasUnsavedChanges={isFormDirty}
         onSave={
-          !!modalsState.repeatData ? handleRepeatSubmit 
-          : !!modalsState.extendData ? handleExtendSubmit 
-          : undefined
+          !!modalsState.repeatData
+            ? handleRepeatSubmit
+            : !!modalsState.extendData
+              ? handleExtendSubmit
+              : undefined
         }
       >
         {/* CAS 1: Répétition */}
@@ -518,7 +535,7 @@ export const CalendarModals = memo(({
             error={modalSubmitError}
             onLockedError={handlers.onLockedError}
           />
-        ) : modalsState.extendData ? (          
+        ) : modalsState.extendData ? (
           /* CAS 2: Prolongation */
           <ExtendAppointmentContent
             appointment={modalsState.selectedAppointmentForm}
@@ -535,14 +552,14 @@ export const CalendarModals = memo(({
           <AppointmentForm
             key={`${resourceEditMode ?? 'new'}-${modalsState.selectedAppointmentForm?.IdPlanningEvenement ?? 'empty'}-${modalsState.selectedAppointmentForm?.IdPlanningRessource ?? 'empty'}`}
             appointments={data.appointments}
-            tagPlacement={modalsState.tagPlacement}
+            tagPlacement={tagPlacement}
             appointment={modalsState.selectedAppointmentForm as Appointment}
             item={data.selectedItem as Item}
             isReducedVersion={resourceEditMode !== null}
             resourceEditMode={resourceEditMode}
             employees={data.employees}
-            HALF_DAY_INTERVALS={config.HALF_DAY_INTERVALS}
-            isFullDay={config.isFullDay}
+            HALF_DAY_INTERVALS={constants.intervals}
+            isFullDay={isFullDay}
             nonWorkingDates={nonWorkingDates}
             onSave={handlers.saveAppointment}
             isExpand={resourceEditMode === 'editAppointment'}
@@ -564,34 +581,17 @@ export const CalendarModals = memo(({
       </Modal>
 
       {/* --- PARAMETRES --- */}
-      {modalsState.isSettingsOpen && (
-        <SettingsModal 
-          onClose={handlers.closeSettings}
-          settings={settings} 
-          isSettingsOpen={modalsState.isSettingsOpen}
+      {isSettingsOpen && (
+        <SettingsModal
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          isSettingsOpen={isSettingsOpen}
         />
       )}
-      
+
       {/* --- CONFIGURATION VUES CALENDRIER --- */}
-      {modalsState.isConfigModalOpen && (
-        <ConfigurationModal
-          user={user}
-          isOpen={modalsState.isConfigModalOpen}
-          onClose={handlers.closeConfigModal}
-          availableConfigs={data.availableConfigs}
-          currentConfig={data.currentConfig}
-          onConfigChange={handlers.setCurrentConfig}
-          onSaveConfig={handlers.saveCustomConfig}
-          onDeleteConfig={handlers.deleteCustomConfig}
-          editingConfig={data.editingConfig}
-          setEditingConfig={handlers.setEditingConfig}
-          isCreatingConfig={data.isCreatingConfig}
-          setIsCreatingConfig={handlers.setIsCreatingConfig}
-          handleOpenImageModal={openImageModalForConfig}
-          addImage={handlers.addImage}
-        />
-      )}
       
+
       {/* --- SELECTEUR D'IMAGES --- */}
       {modalsState.isImageSelectorOpen && (
         <Suspense fallback={<ModalLoadingFallback />}>
@@ -609,29 +609,29 @@ export const CalendarModals = memo(({
       )}
 
       {/* --- FILTRES TABLEAUX --- */}
-      {modalsState.isFilterModalOpen && (
+      {isFilterModalOpen && (
         <FilterModal
-          title='Filtres avancés'
-          isOpen={modalsState.isFilterModalOpen}
+          title="Filtres avancés"
+          isOpen={isFilterModalOpen}
           onSubmit={handlers.submitFilters}
           onApply={handlers.applyFilters}
-          onClose={handlers.closeFilterModal}
+          onClose={() => setIsFilterModalOpen(false)}
           keyOfFilter={data.keyOfFilter}
-          viewType={config.viewType}
+          viewType={viewType}
         />
       )}
 
       {/* --- NOTIFICATION FLOTTANTE (INFO MODALE) --- */}
-      {modalsState.modalInfo && (
-        <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 bg-${modalsState.modalInfo.color}-100 px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-4 border border-${modalsState.modalInfo.color}-300`}>
-          <span className={`font-semibold text-lg text-${modalsState.modalInfo.color}-800`}>{modalsState.modalInfo.message}</span>
+      {modalInfo && (
+        <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 bg-${modalInfo.color}-100 px-6 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-4 border border-${modalInfo.color}-300`}>
+          <span className={`font-semibold text-lg text-${modalInfo.color}-800`}>{modalInfo.message}</span>
         </div>
       )}
 
       {/* --- CONFIRMATION SUPPRESSION RUBRIQUE --- */}
       {modalsState.deleteConfirmData && (() => {
         const { item, isUsedInPlanning, isActive } = modalsState.deleteConfirmData;
-        
+
         // Scénario 1 : Rubrique déjà désactivée
         if (!isActive) {
           const scenario: DeleteScenario = {
@@ -779,7 +779,6 @@ export const CalendarModals = memo(({
     </>
   );
 });
-
 
 
 const RepeatAppointmentContent = ({
