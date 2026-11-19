@@ -6,7 +6,7 @@ import {
   Modal, 
 } from '@/app/calendrier/components';
 import Loader from '../ui/Loader';
-import { Appointment, Item, ImageType, User, AutreItem, DayType } from '../../types';
+import { Appointment, Item, ImageType, User, AutreItem, DayType, Equipe } from '../../types';
 import { ActiveFilters, FilterType } from '../../utils/searchAndFilterUtils';
 import { RepeatData } from '../../hooks/appointments/useAppointmentLogic';
 import { DeleteScenario } from '../modals/DeleteModal';
@@ -17,13 +17,13 @@ import permissionService from '@/app/service/permission.service';
 import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
 import calendarConfigService from '@/app/service/calendarConfig.service';
 import displaySettingsService, { DisplaySettingsUpdate, DisplaySettings } from '@/app/service/displaySettings.service';
-import { useCalendarView } from '../../hooks';
+import { useCalendarView, useDataLayer } from '../../hooks';
 
 type ModalActionResult = { success: boolean; message?: string };
 
 // Lazy loading des modales lourdes
 const AppointmentForm = lazy(() => import('../forms/AppointmentForm'));
-const SettingsModal = lazy(() => import('../modals/SettingsModal'));
+const SettingsModal = lazy(() => import('../modals/Settings/SettingsModal'));
 const FilterModal = lazy(() => import('../modals/FilterModal'));
 const DeleteModal = lazy(() => import('../modals/DeleteModal'));
 
@@ -142,6 +142,17 @@ export const CalendarModals = memo(({
     onCalendarConfigChange,
     availableConfigs,
   } = useCalendarView();
+
+  const {
+    initialTeams,
+    globalEmployees,
+    addTeam,
+    updateTeam,
+    deleteTeam,
+    addPersonnelToTeam,
+    removePersonnelFromTeam,
+    fetchTeamMembers
+  } = useDataLayer();
 
   const loadDisplaySettings = async () => {
     const result = await displaySettingsService.getDisplaySettings();
@@ -336,6 +347,40 @@ export const CalendarModals = memo(({
         ]
       },
       {
+        category: "Gestion des équipes",
+        key: "teamsManagement",
+        items: [
+          {
+            id: "teamSettings",
+            label: "Liste des équipes",
+            type: "team-settings",
+            teams: Object.values(initialTeams || {}),
+            canEdit: hasPermission(224),
+            canDelete: hasPermission(224),
+            canAdd: hasPermission(224),
+            onAddTeam: addTeam,
+            onUpdateTeam: updateTeam,
+            onDeleteTeam: deleteTeam,
+          },
+          {
+            id: "teamMembersSettings",
+            label: "Personnel de l'équipe",
+            type: "team-members-settings",
+            allPersonnel: (globalEmployees || []).map((emp) => ({
+              Id: emp.IdPersonnel,
+              Nom: emp.Nom,
+              Prenom: emp.Prenom,
+            })),
+            canAdd: hasPermission(224),
+            canDelete: hasPermission(224),
+            fetchTeamMembers,
+            onAddPersonnelToTeam: addPersonnelToTeam,
+            onRemovePersonnelFromTeam: (_teamId: number, personnelId: number) =>
+              removePersonnelFromTeam(personnelId),
+          },
+        ],
+      },
+      {
         category: "Affichage mobile des événements",
         key: "mobileAppointmentFields",
         items: [
@@ -456,6 +501,14 @@ export const CalendarModals = memo(({
     updateDayType,
     removeDayType,
     onCheckDeleteDayType,
+    initialTeams,
+    globalEmployees,
+    addTeam,
+    updateTeam,
+    deleteTeam,
+    addPersonnelToTeam,
+    removePersonnelFromTeam,
+    fetchTeamMembers
   ]);
 
   const resourceEditMode: 'createRessource' | 'editRessource' | 'editAppointment' | null = useMemo(() => {

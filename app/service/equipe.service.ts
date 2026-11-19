@@ -16,9 +16,19 @@ async function getPoleActivites() {
     return await getRequest(`/demo/pole-activites`, 'getPoleActivites');
 }
 
+async function updateEquipe(id: number, data: any) {
+    return await postRequest(`/demo/equipes/${id}`, data, 'updateEquipe');
+}
+
+async function getEquipePersonnel(id: number) {
+    return await getRequest(`/demo/equipes/${id}/personnel`, 'getEquipePersonnel');
+}
+
 export default {
     getEquipes,
     createEquipe,
     deleteEquipe,
-    getPoleActivites
+    getPoleActivites,
+    updateEquipe,
+    getEquipePersonnel
 }

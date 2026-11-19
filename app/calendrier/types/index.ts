@@ -291,62 +291,6 @@ export interface HistoryAction {
   createdAppointments?: Appointment[]; // Pour les RDV créés lors d'un resize split
 } 
 
-/**
- * Rôles disponibles dans l'application
- * @type UserRole
- */
-export type UserRole = 'admin' | 'manager' | 'user' | 'viewer';
-
-/**
- * Permissions pour les actions sur les rubriques sociales
- * @interface SocialPermissions
- */
-export interface SocialPermissions {
-  /** Peut voir les rubriques sociales */
-  canView: boolean;
-  /** Peut créer des événements de rubriques sociales */
-  canCreate: boolean;
-  /** Peut éditer les événements de rubriques sociales */
-  canEdit: boolean;
-  /** Peut supprimer les événements de rubriques sociales */
-  canDelete: boolean;
-}
-
-/**
- * Permissions pour les actions sur les chantiers
- * @interface ChantierPermissions
- */
-export interface ChantierPermissions {
-  /** Peut voir les chantiers */
-  canView: boolean;
-  /** Peut créer des chantiers */
-  canCreate: boolean;
-  /** Peut éditer les chantiers */
-  canEdit: boolean;
-  /** Peut supprimer les chantiers */
-  canDelete: boolean;
-}
-
-/**
- * Structure complète des permissions utilisateur
- * @interface UserPermissions
- */
-export interface UserPermissions {
-  /** Permissions sur les rubriques sociales */
-  social: SocialPermissions;
-  /** Permissions sur les chantiers */
-  chantier: ChantierPermissions;
-  /** Peut voir tous les calendriers */
-  canViewAllCalendars: boolean;
-  /** Peut éditer son propre calendrier */
-  canEditOwnCalendar: boolean;
-  /** Peut éditer tous les calendriers */
-  canEditAllCalendars: boolean;
-  /** Peut accéder à la vue rubrique sociale (paie) */
-  canAccessSocialView: boolean;
-  /** Peut accéder à la vue événements manuels */
-  canAccessManualEventsView: boolean;
-}
 
 /**
  * Interface représentant un utilisateur

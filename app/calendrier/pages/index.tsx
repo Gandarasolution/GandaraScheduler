@@ -17,7 +17,6 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 
-
 // --- COMPOSANTS UI (Eager loading pour éviter le flash) ---
 import { 
   RightClickComponent, 
@@ -66,12 +65,12 @@ import calendarConfigService from '@/app/service/calendarConfig.service';
 import { createSearchAndFilterUtils, FilterType, ActiveFilters } from "../utils/searchAndFilterUtils";
 import { Appointment, User, Item } from '../types';
 import type { Notification } from '../types';
-import { INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER } from '../utils/constants';
 import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
 import TopNotification from '../components/ui/TopNotification';
 import { DayTypesProvider, useDayTypesContext } from '../hooks/data/dayTypesContext';
 import { axiosAgent } from '@/app/service/axios.service';
+import { DataLayerProvider } from '../hooks/data/DataLayerContext';
 
 
 /**
@@ -85,29 +84,24 @@ function NoSSR({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/**
- * Composant Principal HomePage
- */
 export default function HomePage({
-    isMobile,
-    isTablet
+  isMobile,
+  isTablet,
 }: {
-    isMobile: boolean;
-    isTablet: boolean;
+  isMobile: boolean;
+  isTablet: boolean;
 }) {
-  const { hasPermission, currentPlanningId, logout, currentVueId, setCurrentVueId } = useAuth();
+  const { hasPermission } = useAuth();
+  const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
+  const [lockNotification, setLockNotification] = useState<string | null>(null);
 
-  // Détection de l'orientation (portrait vs paysage)
-  const [isPortrait, setIsPortrait] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerHeight > window.innerWidth;
-  });
+  // Calcul de effectiveIsMobile (remonté ici pour le passer au Provider)
+  const [isPortrait, setIsPortrait] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerHeight > window.innerWidth : false
+  );
 
   useEffect(() => {
-    const updateOrientation = () => {
-      setIsPortrait(window.innerHeight > window.innerWidth);
-    };
-
+    const updateOrientation = () => setIsPortrait(window.innerHeight > window.innerWidth);
     updateOrientation();
     window.addEventListener('resize', updateOrientation);
     window.addEventListener('orientationchange', updateOrientation);
@@ -117,24 +111,52 @@ export default function HomePage({
     };
   }, []);
 
-  const hasDesktopPermission = useMemo(() => {
-    return Boolean(hasPermission(229));
-  }, [hasPermission]);
+  const hasDesktopPermission = useMemo(() => Boolean(hasPermission(229)), [hasPermission]);
 
-  // Matrice d'affichage :
-  // - Téléphone (isMobile)               -> mode mobile
-  // - Tablette portrait                  -> mode mobile
-  // - Tablette paysage                   -> desktop si perm 229, sinon mobile
-  // - Desktop                            -> desktop si perm 229, sinon mobile
   const effectiveIsMobile = useMemo(() => {
     if (isMobile) return true;
-    if (isTablet) {
-      return isPortrait ? true : !hasDesktopPermission;
-    }
+    if (isTablet) return isPortrait ? true : !hasDesktopPermission;
     return !hasDesktopPermission;
   }, [isMobile, isTablet, isPortrait, hasDesktopPermission]);
 
+  return (
+    <DataLayerProvider
+      globalEmployees={globalEmployees}
+      setGlobalEmployees={setGlobalEmployees}
+      setNotification={setLockNotification}
+      isMobile={effectiveIsMobile}
+      onError={setLockNotification}
+    >
+      <HomePageContent
+        effectiveIsMobile={effectiveIsMobile}
+        globalEmployees={globalEmployees}
+        setGlobalEmployees={setGlobalEmployees}
+        lockNotification={lockNotification}
+        setLockNotification={setLockNotification}
+      />
+    </DataLayerProvider>
+  );
+}
+
+
+function HomePageContent({
+    effectiveIsMobile,
+    globalEmployees,
+    setGlobalEmployees,
+    lockNotification,
+    setLockNotification,
+}: {
+    effectiveIsMobile: boolean;
+    globalEmployees: User[];
+    setGlobalEmployees: React.Dispatch<React.SetStateAction<User[]>>;
+    lockNotification: string | null;
+    setLockNotification: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  const { hasPermission, currentPlanningId, logout, currentVueId, setCurrentVueId } = useAuth();
+
   const { nonWorkingDates, loadNonWorkingDates, setNonWorkingDates } = useDayTypesContext();
+
+  const dataLayer = useDataLayer();
   
   const user = useCurrentUser();
 
@@ -201,7 +223,6 @@ export default function HomePage({
   
   const [loadCalendar, setLoadCalendar] = useState(true); 
   const [lastMercureEvent, setLastMercureEvent] = useState<{ action: string; data: any } | null>(null);
-  const [lockNotification, setLockNotification] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
@@ -239,18 +260,6 @@ export default function HomePage({
   const isFirstRenderRef = useRef(true);
   const [errorPlanning, setErrorPlanning] = useState<string | null>(null);
 
-  // Refs de données dynamiques (chargées via API)
-  const [globalEmployees, setGlobalEmployees] = useState<User[]>([]);
-
-
-  // 3. COUCHE DE DONNÉES (Employés, RDV, Événements)
-  const dataLayer = useDataLayer({ 
-    globalEmployees: globalEmployees,
-    setGlobalEmployees, 
-    setNotification: setLockNotification,
-    isMobile: effectiveIsMobile,
-    onError: setLockNotification
-  });
 
   // Réinitialise l'initialisation du planning lors d'un basculement mobile <-> desktop (ex: rotation tablette)
   const prevEffectiveIsMobileRef = useRef(effectiveIsMobile);
@@ -324,7 +333,7 @@ export default function HomePage({
     setSelectedCell: appointmentLogic.setSelectedCell,
     setSelectedEmployee: appointmentLogic.setSelectedEmployee,
     initialTeams: dataLayer.initialTeams,
-    updateEmployeeGroup: dataLayer.updateEmployeeGroup,
+    updateEmployeeGroup: dataLayer.updateEmployeeTeam,
     copyAppointment: appointmentLogic.copyAppointmentToClipboard,
     pasteAppointment: appointmentLogic.pasteAppointment,
     undoAction: appointmentLogic.undoLastAction,
@@ -630,10 +639,10 @@ export default function HomePage({
     handleOpenEditModal: appointmentLogic.handleOpenEditModal,
     onImageClick: interaction.handleOpenImageModal,
     initialTeams: dataLayer.initialTeams,
-    onTeamChange: dataLayer.updateEmployeeGroup,
+    onTeamChange: dataLayer.updateEmployeeTeam,
     onTransfer: handleTransferEmployee,
     ressources: dataLayer.itemsRef.current,
-  }) || [], [appointmentLogic.handleOpenEditModal, dataLayer.initialTeams, dataLayer.updateEmployeeGroup, handleTransferEmployee, interaction.handleOpenImageModal]);
+  }) || [], [appointmentLogic.handleOpenEditModal, dataLayer.initialTeams, dataLayer.updateEmployeeTeam, handleTransferEmployee, interaction.handleOpenImageModal]);
 
   useEffect(() => {
     void loadChantierViews();
@@ -1321,7 +1330,7 @@ export default function HomePage({
                                 handleOpenEditModal: appointmentLogic.handleOpenEditModal,
                                 onImageClick: interaction.handleOpenImageModal,
                                 initialTeams: dataLayer.initialTeams,
-                                onTeamChange: dataLayer.updateEmployeeGroup,
+                                onTeamChange: dataLayer.updateEmployeeTeam,
                                 onTransfer: handleTransferEmployee,
                                 ressources: dataLayer.itemsRef.current,
                                 setNotification: setLockNotification,
