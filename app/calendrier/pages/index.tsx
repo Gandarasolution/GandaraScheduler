@@ -189,8 +189,7 @@ function HomePageContent({
     setIsViewDropdownOpen,
     viewDropdownRef,
 
-    isSettingsOpen,
-    setIsSettingsOpen,
+    
     isFilterModalOpen,
     setIsFilterModalOpen,
     isSearchOverlayOpen,

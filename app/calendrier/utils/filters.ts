@@ -34,6 +34,26 @@ export interface HierarchicalGroupItem {
 }
 
 /**
+ * Retourne les éléments d'un Record ou d'un tableau triés par ordre alphabétique sur `Nom`.
+ */
+function getSortedDimensionList<T extends { Nom?: string | null }>(
+  collection: Record<number, T> | T[] | undefined | null
+): T[] {
+  if (!collection) return [];
+
+  const list = Array.isArray(collection)
+    ? [...collection]
+    : Object.values(collection);
+
+  return list.sort((a, b) =>
+    (a.Nom ?? '').localeCompare(b.Nom ?? '', 'fr', {
+      sensitivity: 'base',
+      numeric: true,
+    })
+  );
+}
+
+/**
  * Identifiant synthétique utilisé pour les employés sans équipe / sans pôle.
  */
 export const UNASSIGNED_DIMENSION_ID = '__unassigned__';
@@ -216,7 +236,9 @@ function getItemsByLevel(
   const result: HierarchicalGroupItem[] = [];
 
   if (levelType === 'pole') {
-    Object.values(poleActivites).forEach(pole => {
+    const sortedPoles = getSortedDimensionList(poleActivites);
+
+    sortedPoles.forEach(pole => {
       const poleEmployees = employees.filter(emp =>
         sameDimensionId(emp.PoleActivite, pole.Id)
       );
@@ -228,7 +250,7 @@ function getItemsByLevel(
           name: pole.Nom || 'Pôle sans nom',
           level: 0,
           employees: poleEmployees,
-          data: { pole }
+          data: { pole },
         });
       }
     });
@@ -246,19 +268,15 @@ function getItemsByLevel(
     // Toujours ajouté en dernier pour conserver les vrais pôles en premier.
     if (unassignedEmployees.length > 0) {
       result.push({
-        id: buildDimensionId(
-          'pole',
-          UNASSIGNED_DIMENSION_ID,
-          parentId
-        ),
+        id: buildDimensionId('pole', UNASSIGNED_DIMENSION_ID, parentId),
         rawId: UNASSIGNED_DIMENSION_ID,
         name: 'Sans Pôle',
         level: 0,
         employees: unassignedEmployees,
         data: {
           pole: null,
-          unassigned: true
-        }
+          unassigned: true,
+        },
       });
     }
 
@@ -266,7 +284,9 @@ function getItemsByLevel(
   }
 
   if (levelType === 'equipe') {
-    Object.values(groups).forEach(group => {
+    const sortedGroups = getSortedDimensionList(groups);
+
+    sortedGroups.forEach(group => {
       const groupEmployees = employees.filter(emp =>
         sameDimensionId(emp.Equipe, group.Id)
       );
@@ -278,7 +298,7 @@ function getItemsByLevel(
           name: group.Nom || 'Équipe sans nom',
           level: 0,
           employees: groupEmployees,
-          data: group
+          data: group,
         });
       }
     });
@@ -296,19 +316,15 @@ function getItemsByLevel(
     // Toujours ajouté en dernier pour conserver les vraies équipes en premier.
     if (unassignedEmployees.length > 0) {
       result.push({
-        id: buildDimensionId(
-          'equipe',
-          UNASSIGNED_DIMENSION_ID,
-          parentId
-        ),
+        id: buildDimensionId('equipe', UNASSIGNED_DIMENSION_ID, parentId),
         rawId: UNASSIGNED_DIMENSION_ID,
         name: 'Sans Équipe',
         level: 0,
         employees: unassignedEmployees,
         data: {
           group: null,
-          unassigned: true
-        }
+          unassigned: true,
+        },
       });
     }
 
