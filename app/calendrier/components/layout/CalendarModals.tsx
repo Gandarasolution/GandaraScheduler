@@ -18,12 +18,13 @@ import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
 import calendarConfigService from '@/app/service/calendarConfig.service';
 import displaySettingsService, { DisplaySettingsUpdate, DisplaySettings } from '@/app/service/displaySettings.service';
 import { useCalendarView, useDataLayer } from '../../hooks';
+import employeeService from '@/app/service/employee.service';
 
 type ModalActionResult = { success: boolean; message?: string };
 
 // Lazy loading des modales lourdes
 const AppointmentForm = lazy(() => import('../forms/AppointmentForm'));
-const SettingsModal = lazy(() => import('../modals/Settings/SettingsModal'));
+const ControlPanelModal = lazy(() => import('../modals/controlPanel/ControlPanelModal'));
 const FilterModal = lazy(() => import('../modals/FilterModal'));
 const DeleteModal = lazy(() => import('../modals/DeleteModal'));
 
@@ -129,8 +130,8 @@ export const CalendarModals = memo(({
     mobileAppointmentFieldOptions,
     mobileAppointmentSettingsLoading,
     loadMobileAppointmentSettings,
-    isSettingsOpen,
-    setIsSettingsOpen,
+    isControlPanelModalOpen,
+    setIsControlPanelModalOpen,
     isFilterModalOpen,
     setIsFilterModalOpen,
     modalInfo,
@@ -151,7 +152,9 @@ export const CalendarModals = memo(({
     deleteTeam,
     addPersonnelToTeam,
     removePersonnelFromTeam,
-    fetchTeamMembers
+    fetchTeamMembers,
+    onCheckDeleteTeam,
+    loadTeams
   } = useDataLayer();
 
   const loadDisplaySettings = async () => {
@@ -354,25 +357,23 @@ export const CalendarModals = memo(({
             id: "teamSettings",
             label: "Liste des équipes",
             type: "team-settings",
-            teams: Object.values(initialTeams || {}),
+            
             canEdit: hasPermission(224),
             canDelete: hasPermission(224),
             canAdd: hasPermission(224),
             onAddTeam: addTeam,
             onUpdateTeam: updateTeam,
             onDeleteTeam: deleteTeam,
+            onCheckDeleteTeam: onCheckDeleteTeam,
+            fetchEquipes: loadTeams
           },
           {
             id: "teamMembersSettings",
             label: "Personnel de l'équipe",
             type: "team-members-settings",
-            allPersonnel: (globalEmployees || []).map((emp) => ({
-              Id: emp.IdPersonnel,
-              Nom: emp.Nom,
-              Prenom: emp.Prenom,
-            })),
             canAdd: hasPermission(224),
             canDelete: hasPermission(224),
+            fetAllPersonnel: employeeService.getAllUsersActif,
             fetchTeamMembers,
             onAddPersonnelToTeam: addPersonnelToTeam,
             onRemovePersonnelFromTeam: (_teamId: number, personnelId: number) =>
@@ -634,11 +635,11 @@ export const CalendarModals = memo(({
       </Modal>
 
       {/* --- PARAMETRES --- */}
-      {isSettingsOpen && (
-        <SettingsModal
-          onClose={() => setIsSettingsOpen(false)}
+      {isControlPanelModalOpen && (
+        <ControlPanelModal
+          onClose={() => setIsControlPanelModalOpen(false)}
           settings={settings}
-          isSettingsOpen={isSettingsOpen}
+          isControlPanelModalOpen={isControlPanelModalOpen}
         />
       )}
 

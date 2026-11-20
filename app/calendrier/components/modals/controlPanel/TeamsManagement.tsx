@@ -1,10 +1,14 @@
 import { Equipe, User } from "@/app/calendrier/types";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { SaveAction } from "./SettingsModal";
-import { MasterDetailSplitLayout, CollapsibleCreateForm, SelectableEntityRow } from "./ui";
-import {  } from "./index";
-import { Loader } from "../..";
-
+import { SaveAction } from "./ControlPanelModal";
+import {
+  MasterDetailSplitLayout,
+  CollapsibleCreateForm,
+  SelectableEntityRow,
+  EmptySelectionPlaceholder,
+} from "./ui";
+import { Combobox, Loader } from "../..";
+import { UserCheck, UserX } from "lucide-react";
 
 const TeamMembersEditor = ({
   setting,
@@ -20,7 +24,10 @@ const TeamMembersEditor = ({
   canDelete: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedPersonnelId, setSelectedPersonnelId] = useState<string>("");
+  const [showInactiveMembers, setShowInactiveMembers] = useState(false);
+  const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<string[]>([]);
+  const [allPersonnel, setAllPersonnel] = useState<User[]>([]);
+  const [isLoadingAllPersonnel, setIsLoadingAllPersonnel] = useState(false);
   const [members, setMembers] = useState<User[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -34,6 +41,38 @@ const TeamMembersEditor = ({
   useEffect(() => {
     settingRef.current = setting;
   }, [setting]);
+
+  // Chargement de tout le personnel actif via fetAllPersonnel
+  useEffect(() => {
+    if (typeof settingRef.current.fetAllPersonnel !== "function") return;
+    let isMounted = true;
+    setIsLoadingAllPersonnel(true);
+
+    settingRef.current
+      .fetAllPersonnel()
+      .then((res: any) => {
+        if (!isMounted) return;
+        if (Array.isArray(res)) {
+          setAllPersonnel(res);
+        } else if (res?.success && Array.isArray(res.data)) {
+          setAllPersonnel(res.data);
+        } else {
+          setAllPersonnel([]);
+        }
+      })
+      .catch((err: any) => {
+        if (!isMounted) return;
+        console.error("Erreur lors du chargement de tout le personnel :", err);
+        setAllPersonnel([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingAllPersonnel(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const loadMembers = useCallback(async () => {
     if (!selectedTeamId || typeof settingRef.current.fetchTeamMembers !== "function") return;
@@ -57,27 +96,54 @@ const TeamMembersEditor = ({
   useEffect(() => {
     if (!selectedTeamId) return;
     setIsOpen(false);
-    setSelectedPersonnelId("");
+    setShowInactiveMembers(false);
+    setSelectedPersonnelIds([]);
     setFormError(null);
     loadMembers();
   }, [selectedTeamId, loadMembers]);
 
+  const formatPersonnelName = useCallback(
+    (p: User) =>
+      [p.Prenom, p.Nom].filter(Boolean).join(" ").trim() || `Personnel #${p.IdPersonnel}`,
+    []
+  );
+
+  // Filtrage des membres affichés selon l'état du bouton "Voir le personnel inactif"
+  const inactiveMembersCount = useMemo(
+    () => members.filter((m) => m.Actif === false || (m as any).isActif === false).length,
+    [members]
+  );
+
+  const displayedMembers = useMemo(() => {
+    if (showInactiveMembers) return members;
+    return members.filter((m) => m.Actif !== false && (m as any).isActif !== false);
+  }, [members, showInactiveMembers]);
+
   // Liste du personnel non encore présent dans l'équipe
   const availablePersonnel = useMemo(() => {
-    const allPersonnel: User[] = setting.allPersonnel || [];
     const existingIds = new Set(members.map((m) => Number(m.IdPersonnel)));
     return allPersonnel.filter((p) => !existingIds.has(Number(p.IdPersonnel)));
-  }, [setting.allPersonnel, members]);
+  }, [allPersonnel, members]);
 
-  const formatPersonnelName = (p: User) =>
-    [p.Prenom, p.Nom].filter(Boolean).join(" ").trim() || `Personnel #${p.IdPersonnel}`;
+  // Options formatées pour le Combobox
+  const comboboxOptions = useMemo(
+    () =>
+      availablePersonnel.map((person) => {
+        const isActif = (person as any).Actif !== false && (person as any).isActif !== false;
+        return {
+          value: String(person.IdPersonnel),
+          label: `${formatPersonnelName(person)} ( ${person.IdPersonnel} )`,
+          isActif,
+        };
+      }),
+    [availablePersonnel, formatPersonnelName]
+  );
 
-  const handleAddMember = async () => {
+  const handleAddMembers = async () => {
     if (!canAdd || !selectedTeamId) return;
 
-    const personnelIdToAdd = selectedPersonnelId || String(availablePersonnel[0]?.IdPersonnel || "");
-    if (!personnelIdToAdd) {
-      setFormError("Veuillez sélectionner un membre du personnel.");
+    if (selectedPersonnelIds.length === 0) {
+      setFormError("Veuillez sélectionner au moins un membre du personnel.");
       return;
     }
 
@@ -87,18 +153,31 @@ const TeamMembersEditor = ({
 
     try {
       if (setting.onAddPersonnelToTeam) {
-        const res = await setting.onAddPersonnelToTeam(Number(selectedTeamId), Number(personnelIdToAdd));
-        if (res && res.success) {
-          const addedPerson = (setting.allPersonnel || []).find(
-            (p: User) => Number(p.IdPersonnel) === Number(personnelIdToAdd)
-          );
-          if (addedPerson) {
-            setMembers((prev) => [...prev, addedPerson]);
+        const addedUsers: User[] = [];
+        const errors: string[] = [];
+
+        for (const idStr of selectedPersonnelIds) {
+          const personnelId = Number(idStr);
+          const res = await setting.onAddPersonnelToTeam(Number(selectedTeamId), personnelId);
+          if (res && res.success) {
+            const addedPerson = allPersonnel.find(
+              (p: User) => Number(p.IdPersonnel) === personnelId
+            );
+            if (addedPerson) addedUsers.push(addedPerson);
+          } else {
+            errors.push(res?.message || `Erreur pour l'employé #${personnelId}`);
           }
-          setSelectedPersonnelId("");
+        }
+
+        if (addedUsers.length > 0) {
+          setMembers((prev) => [...prev, ...addedUsers]);
+        }
+
+        if (errors.length === 0) {
+          setSelectedPersonnelIds([]);
           setIsOpen(false);
         } else {
-          setError(res?.message || "Erreur lors de l'ajout du personnel à l'équipe.");
+          setError(errors[0]);
         }
       }
     } catch (e: any) {
@@ -134,10 +213,16 @@ const TeamMembersEditor = ({
     }
   };
 
+  useEffect(() => {
+    if (inactiveMembersCount === 0 && showInactiveMembers) {
+      setShowInactiveMembers(false);
+    }
+  }, [inactiveMembersCount, showInactiveMembers]);
+
   if (!selectedTeamId) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-primary-bg/40 rounded-2xl border border-dashed border-light min-h-[300px]">
-        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+      <EmptySelectionPlaceholder
+        icon={
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -146,25 +231,49 @@ const TeamMembersEditor = ({
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
             />
           </svg>
-        </div>
-        <p className="text-sm font-semibold text-primary poppins">Aucune équipe sélectionnée</p>
-        <p className="text-xs text-secondary/80 mt-1 max-w-xs poppins leading-relaxed">
-          Veuillez cliquer sur <span className="font-semibold text-primary">« Voir le personnel »</span> sur une équipe à
-          gauche pour afficher et gérer ses membres.
-        </p>
-      </div>
+        }
+        title="Aucune équipe sélectionnée"
+        actionLabel="Voir le personnel"
+        targetDescription="une équipe"
+      />
     );
   }
 
   return (
     <div className="flex flex-col gap-4 w-full h-full min-h-0 relative">
-      <div className="flex items-center justify-between pb-2 border-b border-ultra-light">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-ultra-light">
         <h4 className="text-sm font-semibold text-primary">
           Personnel de l&apos;équipe {selectedTeam ? `« ${selectedTeam.Nom} »` : ""}
         </h4>
-        <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
-          {members.length} membre{members.length > 1 ? "s" : ""}
-        </span>
+
+        <div className="flex items-center gap-2">
+          {inactiveMembersCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowInactiveMembers((prev) => !prev)}
+              className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer flex items-center gap-1.5 ${
+                showInactiveMembers
+                  ? "bg-amber-500/15 text-amber-700 border-amber-500/30 shadow-xs"
+                  : "bg-primary-bg text-secondary border-light hover:text-primary hover:border-primary/30"
+              }`}
+              title={
+                showInactiveMembers
+                  ? "Masquer le personnel inactif"
+                  : "Afficher également le personnel inactif"
+              }
+            >
+              <UserX className="w-3.5 h-3.5 shrink-0" />
+              <span>Voir le personnel inactif</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-black/10 text-[10px] font-bold">
+                {inactiveMembersCount}
+              </span>
+            </button>
+          )}
+
+          <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
+            {displayedMembers.length} membre{displayedMembers.length > 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
 
       {pendingRemoveMember && (
@@ -232,7 +341,7 @@ const TeamMembersEditor = ({
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedPersonnelId("");
+                  setSelectedPersonnelIds([]);
                   setFormError(null);
                   setIsOpen(false);
                 }}
@@ -244,27 +353,30 @@ const TeamMembersEditor = ({
               </button>
             </div>
 
-            {availablePersonnel.length > 0 ? (
+            {isLoadingAllPersonnel ? (
+              <div className="py-2">
+                <Loader size="sm" message="Chargement du personnel..." />
+              </div>
+            ) : availablePersonnel.length > 0 ? (
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <select
-                  value={selectedPersonnelId || String(availablePersonnel[0]?.IdPersonnel || "")}
-                  onChange={(e) => {
-                    setSelectedPersonnelId(e.target.value);
-                    if (formError) setFormError(null);
-                  }}
-                  className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
-                >
-                  {availablePersonnel.map((person) => (
-                    <option key={person.IdPersonnel} value={person.IdPersonnel}>
-                      {formatPersonnelName(person)}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1 min-w-0">
+                  <Combobox
+                    multiple={true}
+                    options={comboboxOptions}
+                    value={selectedPersonnelIds}
+                    onValueChange={(vals: string[]) => {
+                      setSelectedPersonnelIds(vals);
+                      if (formError) setFormError(null);
+                    }}
+                    placeholder="Rechercher du personnel..."
+                    showInactiveToggle={true}
+                  />
+                </div>
 
                 <button
                   type="button"
-                  onClick={handleAddMember}
-                  disabled={isAdding}
+                  onClick={handleAddMembers}
+                  disabled={isAdding || selectedPersonnelIds.length === 0}
                   className="px-3 py-1.5 cursor-pointer bg-primary text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50 min-w-[70px]"
                 >
                   {isAdding ? (
@@ -284,7 +396,7 @@ const TeamMembersEditor = ({
                       ></path>
                     </svg>
                   ) : (
-                    "Valider"
+                    `Valider${selectedPersonnelIds.length > 0 ? ` (${selectedPersonnelIds.length})` : ""}`
                   )}
                 </button>
               </div>
@@ -306,16 +418,11 @@ const TeamMembersEditor = ({
           </div>
         ) : (
           <div className="space-y-2">
-            {members.length > 0 ? (
-              members.map((member) => {
+            {displayedMembers.length > 0 ? (
+              displayedMembers.map((member) => {
                 const isRemoving = Boolean(removingIds[member.IdPersonnel]);
                 const fullName = formatPersonnelName(member);
-                const initials = fullName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase();
+                const isMemberActive = member.Actif !== false && (member as any).isActif !== false;
 
                 return (
                   <div
@@ -323,10 +430,32 @@ const TeamMembersEditor = ({
                     className="flex items-center justify-between bg-primary-bg rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold shrink-0">
-                        {initials}
+                      <div className="relative inline-block" style={{ opacity: !isMemberActive ? 0.5 : 1 }}>
+                        <img
+                          src={
+                            member.Image ??
+                            `https://placehold.co/32x32/cccccc/333333?text=${(member.Nom || "?").charAt(0)}`
+                          }
+                          alt={`${member.Nom || ""} ${member.Prenom || ""}`}
+                          loading="lazy"
+                          className={`w-7 h-7 rounded-full border shadow ${
+                            member.Type === "INTERIM" ? "border-interim" : "border-employee"
+                          } ${!isMemberActive ? "grayscale" : ""}`}
+                        />
+                        {member.Type === "INTERIM" && (
+                          <span
+                            className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${
+                              !isMemberActive ? "bg-gray-400" : "bg-interim"
+                            }`}
+                          ></span>
+                        )}
                       </div>
                       <span className="text-xs font-medium text-primary">{fullName}</span>
+                      {!isMemberActive && (
+                        <span className="text-[10px] font-medium text-amber-700 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                          Inactif
+                        </span>
+                      )}
                     </div>
 
                     {canDelete && (
@@ -370,7 +499,9 @@ const TeamMembersEditor = ({
               })
             ) : (
               <p className="text-xs text-secondary italic text-center py-4">
-                Aucun personnel assigné à cette équipe.
+                {members.length > 0 && !showInactiveMembers
+                  ? "Aucun personnel actif assigné à cette équipe."
+                  : "Aucun personnel assigné à cette équipe."}
               </p>
             )}
           </div>
@@ -380,65 +511,76 @@ const TeamMembersEditor = ({
   );
 };
 
-
 const TeamRow: React.FC<{
   team: Equipe;
   isSelected: boolean;
   onSelect: () => void;
   onUpdate?: (t: Equipe) => Promise<{ success: boolean; message?: string }>;
-  onDelete?: (id: number) => Promise<void>;
+  onCheckDelete?: (id: number) => Promise<{ checkRequired: boolean; message?: string }>;
+  onDelete?: (id: number, count: number) => Promise<void>;
   canEdit: boolean;
   canDelete: boolean;
   setError: (msg: string | null) => void;
   registerSaveAction: (id: string, action: SaveAction | null) => void;
-}> = ({ team, isSelected, onSelect, onUpdate, onDelete, canEdit, canDelete, setError, registerSaveAction }) => {
+}> = ({
+  team,
+  isSelected,
+  onSelect,
+  onUpdate,
+  onCheckDelete,
+  onDelete,
+  canEdit,
+  canDelete,
+  setError,
+  registerSaveAction,
+}) => {
   const [nom, setNom] = useState(team.Nom);
   useEffect(() => setNom(team.Nom), [team.Nom]);
 
   return (
     <SelectableEntityRow
-        actionId={`team-${team.Id}`}
-        isSelected={isSelected}
-        isDirty={nom !== team.Nom}
-        canEdit={canEdit}
-        canDelete={canDelete}
-        selectButtonLabel="Voir le personnel"
-        deleteModalTitle="Supprimer l'équipe ?"
-        deleteModalDescription={
-            <>
-            Êtes-vous sûr de vouloir supprimer l&apos;équipe <strong className="text-primary">{team.Nom}</strong> ? Cette
-            action est irréversible.
-            </>
-        }
-        onSelect={onSelect}
-        onSave={async () => {
-            const res = await onUpdate?.({ ...team, Nom: nom.trim() });
-            if (res && !res.success) setError(res.message || "Erreur lors de la mise à jour.");
-        }}
-        onDelete={async () => {
-            await onDelete?.(team.Id);
-        }}  
-        setError={setError}
-        registerSaveAction={registerSaveAction}
-        >
-            <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-                <label className="text-xs text-secondary font-medium poppins">Nom de l&apos;équipe</label>
-                    <input
-                        type="text"
-                        value={nom}
-                        onChange={(e) => {
-                            setNom(e.target.value);
-                            setError(null);
-                        }}
-                        disabled={!canEdit}
-                        className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary-bg shadow-sm w-full"
-                    />
-            </div>
+      actionId={`team-${team.Id}`}
+      isSelected={isSelected}
+      isDirty={nom !== team.Nom}
+      canEdit={canEdit}
+      canDelete={canDelete}
+      selectButtonLabel="Voir le personnel"
+      deleteModalTitle="Supprimer l'équipe ?"
+      confirmCountLabel="Veuillez saisir le nombre de salarié(s) pour confirmer :"
+      deleteModalDescription={
+        <>
+          Êtes-vous sûr de vouloir supprimer l&apos;équipe <strong className="text-primary">{team.Nom}</strong> ? Cette
+          action est irréversible.
+        </>
+      }
+      onSelect={onSelect}
+      onSave={async () => {
+        const res = await onUpdate?.({ ...team, Nom: nom.trim() });
+        if (res && !res.success) setError(res.message || "Erreur lors de la mise à jour.");
+      }}
+      onCheckDelete={onCheckDelete ? () => onCheckDelete(team.Id) : undefined}
+      onDelete={async (count: number) => {
+        await onDelete?.(team.Id, count);
+      }}
+      setError={setError}
+      registerSaveAction={registerSaveAction}
+    >
+      <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+        <label className="text-xs text-secondary font-medium poppins">Nom de l&apos;équipe</label>
+        <input
+          type="text"
+          value={nom}
+          onChange={(e) => {
+            setNom(e.target.value);
+            setError(null);
+          }}
+          disabled={!canEdit}
+          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary-bg shadow-sm w-full"
+        />
+      </div>
     </SelectableEntityRow>
   );
 };
-
-
 
 export const TeamsManagementCategoryContent: React.FC<{
   categoryObj: any;
@@ -446,6 +588,8 @@ export const TeamsManagementCategoryContent: React.FC<{
   registerSaveAction: (id: string, action: SaveAction | null) => void;
 }> = ({ categoryObj, setApiError, registerSaveAction }) => {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [teams, setTeams] = useState<Equipe[]>([]);
+  const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -453,9 +597,51 @@ export const TeamsManagementCategoryContent: React.FC<{
   const teamsSetting = categoryObj.items?.find((item: any) => item.type === "team-settings");
   const membersSetting = categoryObj.items?.find((item: any) => item.type === "team-members-settings");
 
+  const teamsSettingRef = useRef(teamsSetting);
+  useEffect(() => {
+    teamsSettingRef.current = teamsSetting;
+  }, [teamsSetting]);
+
+  const loadTeamsList = useCallback(async () => {
+    const fetchFn = teamsSettingRef.current?.fetchEquipes;
+    if (typeof fetchFn !== "function") return;
+
+    setIsLoadingTeams(true);
+    setApiError(null);
+    try {
+      const res = await fetchFn();
+      if (Array.isArray(res)) {
+        setTeams(res);
+      } else if (res?.success && Array.isArray(res.data)) {
+        setTeams(res.data);
+      } else if (res?.success && res.data && typeof res.data === "object") {
+        setTeams(Object.values(res.data));
+      } else if (res && typeof res === "object" && !("success" in res)) {
+        setTeams(Object.values(res));
+      } else if (res && !res.success) {
+        setApiError(res.message || "Erreur lors du chargement des équipes.");
+        setTeams([]);
+      }
+    } catch (err: any) {
+      setApiError(err?.message || "Erreur lors du chargement des équipes.");
+      setTeams([]);
+    } finally {
+      setIsLoadingTeams(false);
+    }
+  }, [setApiError]);
+
+  useEffect(() => {
+    loadTeamsList();
+  }, [loadTeamsList]);
+
+  const validTeams = useMemo(
+    () => teams.filter((t: Equipe) => t && t.Id !== null && t.Id !== undefined),
+    [teams]
+  );
+
   const selectedTeam = useMemo(
-    () => teamsSetting?.teams?.find((t: Equipe) => String(t.Id) === String(selectedTeamId)),
-    [teamsSetting?.teams, selectedTeamId]
+    () => validTeams.find((t: Equipe) => String(t.Id) === String(selectedTeamId)),
+    [validTeams, selectedTeamId]
   );
 
   const handleCreateTeam = async () => {
@@ -470,6 +656,7 @@ export const TeamsManagementCategoryContent: React.FC<{
       if (res?.success) {
         setNewTeamName("");
         setFormError(null);
+        await loadTeamsList();
       } else {
         setApiError(res?.message || "Erreur lors de la création de l'équipe.");
       }
@@ -512,25 +699,49 @@ export const TeamsManagementCategoryContent: React.FC<{
             </CollapsibleCreateForm>
           )}
 
-          <div className="space-y-3">
-            {teamsSetting?.teams?.map((team: Equipe) => (
-              <TeamRow
-                key={team.Id}
-                team={team}
-                isSelected={String(team.Id) === String(selectedTeamId)}
-                onSelect={() => setSelectedTeamId(String(team.Id))}
-                onUpdate={teamsSetting.onUpdateTeam}
-                onDelete={async (id) => {
-                  const res = await teamsSetting.onDeleteTeam?.(id);
-                  if (res?.success && String(selectedTeamId) === String(id)) setSelectedTeamId(null);
-                }}
-                canEdit={teamsSetting.canEdit}
-                canDelete={teamsSetting.canDelete}
-                setError={setApiError}
-                registerSaveAction={registerSaveAction}
-              />
-            ))}
-          </div>
+          {isLoadingTeams ? (
+            <div className="py-8">
+              <Loader size="md" message="Chargement des équipes..." />
+            </div>
+          ) : validTeams.length > 0 ? (
+            <div className="space-y-3">
+              {validTeams.map((team: Equipe) => (
+                <TeamRow
+                  key={team.Id}
+                  team={team}
+                  isSelected={String(team.Id) === String(selectedTeamId)}
+                  onSelect={() => setSelectedTeamId(String(team.Id))}
+                  onUpdate={async (updatedTeam) => {
+                    const res = await teamsSetting.onUpdateTeam?.(updatedTeam);
+                    if (res?.success) {
+                      setTeams((prev) =>
+                        prev.map((t) => (String(t.Id) === String(updatedTeam.Id) ? updatedTeam : t))
+                      );
+                    }
+                    return res;
+                  }}
+                  onCheckDelete={teamsSetting.onCheckDeleteTeam}
+                  onDelete={async (id, count) => {
+                    const res = await teamsSetting.onDeleteTeam?.(id, count);
+                    if (res?.success) {
+                      setTeams((prev) => prev.filter((t) => String(t.Id) !== String(id)));
+                      if (String(selectedTeamId) === String(id)) setSelectedTeamId(null);
+                    } else if (res && !res.success) {
+                      setApiError(res.message || "Erreur lors de la suppression de l'équipe.");
+                    }
+                  }}
+                  canEdit={teamsSetting.canEdit}
+                  canDelete={teamsSetting.canDelete}
+                  setError={setApiError}
+                  registerSaveAction={registerSaveAction}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-secondary italic text-center py-6">
+              Aucune équipe enregistrée.
+            </p>
+          )}
         </>
       }
       rightContent={

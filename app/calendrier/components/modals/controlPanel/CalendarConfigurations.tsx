@@ -4,7 +4,7 @@ import { employeeService, calendarConfigService } from "@/app/service";
 import { GroupIcon, Lock } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Combobox } from "../../ui";
-import { SaveAction } from "./SettingsModal";
+import { SaveAction } from "./ControlPanelModal";
 
 
 

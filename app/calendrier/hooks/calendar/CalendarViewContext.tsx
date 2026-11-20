@@ -170,8 +170,8 @@ type CalendarViewContextValue = {
 
   // Modales & États UI
   isMobile: boolean;
-  isSettingsOpen: boolean;
-  setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isControlPanelModalOpen: boolean;
+  setIsControlPanelModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isFilterModalOpen: boolean;
   setIsFilterModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isSearchOverlayOpen: boolean;
@@ -447,7 +447,7 @@ export const CalendarViewProvider: React.FC<CalendarViewProviderProps> = ({
   const [mobileAppointmentSettingsLoading, setMobileAppointmentSettingsLoading] = useState(false);
 
   // --- États UI Volatiles ---
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isControlPanelModalOpen, setIsControlPanelModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({ empty: [] });
@@ -829,8 +829,8 @@ export const CalendarViewProvider: React.FC<CalendarViewProviderProps> = ({
       viewDropdownRef,
 
       isMobile,
-      isSettingsOpen,
-      setIsSettingsOpen,
+      isControlPanelModalOpen,
+      setIsControlPanelModalOpen,
       isFilterModalOpen,
       setIsFilterModalOpen,
       isSearchOverlayOpen,
@@ -889,7 +889,7 @@ export const CalendarViewProvider: React.FC<CalendarViewProviderProps> = ({
       setViewType,
       isViewDropdownOpen,
       isMobile,
-      isSettingsOpen,
+      isControlPanelModalOpen,
       isFilterModalOpen,
       isSearchOverlayOpen,
       activeFilters,

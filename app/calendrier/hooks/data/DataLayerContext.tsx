@@ -82,6 +82,7 @@ export interface DataLayerContextType {
   fetchTeamMembers: (
     teamId: number
   ) => Promise<{ success: boolean; data?: User[]; message?: string }>;
+  onCheckDeleteTeam: (id: number) => Promise<{ checkRequired: boolean; message?: string }>;
 }
 
 interface DataLayerProviderProps {
@@ -502,44 +503,63 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
         [teams]
     );
 
+    const onCheckDeleteTeam = useCallback(
+      async (id: number): Promise<{ checkRequired: boolean; message?: string }> => {
+        try {
+          const response = await equipeService.checkDeleteEquipe(id);
+          if (response?.success && response.checkRequired && response.message) {
+            return {
+              checkRequired: Boolean(response.checkRequired),
+              message: response.message,
+            };
+          }
+          return { checkRequired: false };
+        } catch (error: any) {
+          console.error("Erreur lors de la vérification de suppression de l'équipe:", error);
+          throw error;
+        }
+      },
+      []
+    );
+
     const deleteTeam = useCallback(
-    async (id: number): Promise<{ success: boolean; message?: string }> => {
+      async (id: number, numberEmployeeCheck: number = 0): Promise<{ success: boolean; message?: string }> => {
         const previousTeams = teams;
         const previousEmployees = globalEmployees;
 
         setTeams((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
+          const next = { ...prev };
+          delete next[id];
+          return next;
         });
 
         // Détache les employés qui appartenaient à l'équipe supprimée
         setGlobalEmployees((prev) =>
-        prev.map((emp) => (Number(emp.Equipe) === Number(id) ? { ...emp, Equipe: null } : emp))
+          prev.map((emp) => (Number(emp.Equipe) === Number(id) ? { ...emp, Equipe: null } : emp))
         );
 
         try {
-        const response = await equipeService.deleteEquipe(id);
-        if (response?.success) {
-            return { success: true };
-        }
-        setTeams(previousTeams);
-        setGlobalEmployees(previousEmployees);
-        return {
-            success: false,
-            message: response?.message || "Erreur lors de la suppression de l'équipe.",
-        };
+          const response = await equipeService.deleteEquipe(id, numberEmployeeCheck);
+          if (response?.success) {
+              return { success: true };
+          }
+          setTeams(previousTeams);
+          setGlobalEmployees(previousEmployees);
+          return {
+              success: false,
+              message: response?.message || "Erreur lors de la suppression de l'équipe.",
+          };
         } catch (error: any) {
-        console.error("Erreur lors de la suppression de l'équipe:", error);
-        setTeams(previousTeams);
-        setGlobalEmployees(previousEmployees);
-        return {
-            success: false,
-            message: error?.message || "Erreur lors de la suppression de l'équipe.",
-        };
+          console.error("Erreur lors de la suppression de l'équipe:", error);
+          setTeams(previousTeams);
+          setGlobalEmployees(previousEmployees);
+          return {
+              success: false,
+              message: error?.message || "Erreur lors de la suppression de l'équipe.",
+          };
         }
-    },
-    [teams, globalEmployees, setGlobalEmployees]
+      },
+      [teams, globalEmployees, setGlobalEmployees]
     );
     const addPersonnelToTeam = useCallback(
         async (teamId: number, personnelId: number): Promise<{ success: boolean; message?: string }> => {
@@ -681,7 +701,8 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
         deleteTeam,
         addPersonnelToTeam,
         removePersonnelFromTeam,
-        fetchTeamMembers
+        fetchTeamMembers,
+        onCheckDeleteTeam
     }),
     [
         isLoading,
@@ -707,7 +728,8 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
         updateTeam,
         deleteTeam,
         addPersonnelToTeam,
-        removePersonnelFromTeam
+        removePersonnelFromTeam,
+        onCheckDeleteTeam
     ]
   );
 

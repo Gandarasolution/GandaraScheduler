@@ -11,7 +11,7 @@ export const EmptySelectionPlaceholder: React.FC<{
     <p className="text-sm font-semibold text-primary poppins">{title}</p>
     <p className="text-xs text-secondary/80 mt-1 max-w-xs poppins leading-relaxed">
       Veuillez cliquer sur <span className="font-semibold text-primary">« {actionLabel} »</span> sur {targetDescription} à
-      gauche pour afficher et gérer ses éléments.
+      gauche.
     </p>
   </div>
 );

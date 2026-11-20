@@ -1,4 +1,4 @@
-export { default } from "./SettingsModal";
+export { default } from "./ControlPanelModal";
 export { MobileAppointmentFieldsCategoryContent } from "./MobileAppointmentFields";
 export { DisplaySettingsCategoryContent } from "./DisplaySettings";
 export { DaysManagementCategoryContent } from "./DaysManagement";

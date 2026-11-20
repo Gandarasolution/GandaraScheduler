@@ -3,7 +3,7 @@ import { DisplaySettings } from "@/app/service/displaySettings.service";
 import { useState, useEffect, useCallback } from "react";
 import { AppointmentItem } from "../../Calendar";
 import { ColorHexInput, Loader } from "../../ui";
-import { InlineSaveButton, previewAppointment, previewItem, SaveAction, SelectSettingItem } from "./SettingsModal";
+import { InlineSaveButton, previewAppointment, previewItem, SaveAction, SelectSettingItem } from "./ControlPanelModal";
 
 
 

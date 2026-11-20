@@ -2,7 +2,7 @@ import { MobileAppointmentDisplayConfig } from "@/app/calendrier/types";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { AppointmentCard } from "../../Calendar";
 import { DragOverTarget, MobileAppointmentFieldOption } from "../../Calendar/MobileCalendar/AppointmentList";
-import { SaveAction, previewAppointment, previewItem, previewEmployee } from "./SettingsModal";
+import { SaveAction, previewAppointment, previewItem, previewEmployee } from "./ControlPanelModal";
 import { Loader } from "../..";
 
 

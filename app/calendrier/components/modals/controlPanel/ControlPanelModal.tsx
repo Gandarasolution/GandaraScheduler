@@ -11,10 +11,10 @@ import { MobileAppointmentFieldsCategoryContent } from "./MobileAppointmentField
 import { CalendarConfigurationsEditor } from "./CalendarConfigurations";
 import { TeamsManagementCategoryContent } from "./TeamsManagement";
 
-type SettingsModalProps = {
+type ControlPanelModalProps = {
   onClose: () => void;
   settings: any;
-  isSettingsOpen: boolean;
+  isControlPanelModalOpen: boolean;
 };
 
 export type SaveAction = {
@@ -169,7 +169,7 @@ export const SelectSettingItem = ({
 };
 
 
-const SettingsModalContent: React.FC<{
+const ControlPanelModalContent: React.FC<{
   onClose: () => void;
   settings: any;
   currentCategoryObj: any;
@@ -362,7 +362,7 @@ const SettingsModalContent: React.FC<{
   );
 };
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, isSettingsOpen, settings }) => {
+const ControlPanelModal: React.FC<ControlPanelModalProps> = ({ onClose, isControlPanelModalOpen, settings }) => {
   const [activeCategory] = useState<string>(() => {
     return sessionStorage.getItem("activeSettingsCategory") || settings?.[0]?.key || "";
   });
@@ -395,16 +395,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, isSettingsOpen, 
     }
 
     saveCallbacksRef.current[id] = action.save;
+    const nextDirty = Boolean(action.isDirty);
+
     setDirtyMap((prev) => {
-      if (prev[id] === action.isDirty) return prev; // Aucun re-render si isDirty est identique
-      return { ...prev, [id]: action.isDirty };
+      if (prev[id] === nextDirty) return prev;
+      return { ...prev, [id]: nextDirty };
     });
   }, []);
 
   const isAnyDirty = useMemo(() => Object.values(dirtyMap).some(Boolean), [dirtyMap]);
 
   useEffect(() => {
-    if (isSettingsOpen && !hasFetchedRef.current) {
+    if (isControlPanelModalOpen && !hasFetchedRef.current) {
       hasFetchedRef.current = true;
       settings.forEach((cat: any) => {
         cat.items?.forEach((setting: any) => {
@@ -424,13 +426,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, isSettingsOpen, 
       });
     }
 
-    if (!isSettingsOpen) {
+    if (!isControlPanelModalOpen) {
       setApiError(null);
       setSaveActions({});
       setSelectedDayTypeId(null);
       setIsCalendarFormOpen(false);
     }
-  }, [isSettingsOpen, settings]);
+  }, [isControlPanelModalOpen, settings]);
 
   const handleSaveAll = useCallback(async () => {
     const dirtyIds = Object.entries(dirtyMap)
@@ -454,8 +456,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, isSettingsOpen, 
   const modalWidthClass = useMemo(() => {
     switch (currentCategoryObj?.key) {
       case "daysManagement":
+        return "w-[min(98vw,1500px)] max-h-[600px]!";
       case 'teamsManagement':
-        return "w-[min(98vw,1500px)] max-h-[500px]!";
+        return "w-[min(98vw,1100px)] max-h-[600px]!";
       case "mobileAppointmentFields":
         return "w-[min(95vw,1400px)]";
       case "calendarConfigurations":
@@ -470,7 +473,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, isSettingsOpen, 
 
   return (
     <Modal
-      isOpen={isSettingsOpen}
+      isOpen={isControlPanelModalOpen}
       onClose={onClose}
       title={currentCategoryObj?.category || "Paramètres"}
       className={`${modalWidthClass} max-h-[750px] overflow-hidden flex flex-col transition-all duration-300`}
@@ -478,7 +481,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, isSettingsOpen, 
       confirmCloseOnOverlay={(currentCategoryObj?.hasUnsavedChanges ?? true) && isAnyDirty}
       onSave={handleSaveAll}
     >
-      <SettingsModalContent
+      <ControlPanelModalContent
         onClose={onClose}
         settings={settings}
         currentCategoryObj={currentCategoryObj}
@@ -496,4 +499,4 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, isSettingsOpen, 
   );
 };
 
-export default memo(SettingsModal);
+export default memo(ControlPanelModal);

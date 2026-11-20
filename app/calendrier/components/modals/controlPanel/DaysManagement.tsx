@@ -2,7 +2,13 @@ import { format, isBefore, startOfDay } from "date-fns";
 import { Loader, normalizeColorForInput } from "../../ui";
 import { DayType } from "@/app/calendrier/types";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { SaveAction } from "./SettingsModal";
+import { SaveAction } from "./ControlPanelModal";
+import {
+  MasterDetailSplitLayout,
+  CollapsibleCreateForm,
+  SelectableEntityRow,
+  EmptySelectionPlaceholder,
+} from "./ui"; // Adaptez le chemin vers vos composants partagés
 
 const NewDayTypeForm = ({
   onAdd,
@@ -11,7 +17,6 @@ const NewDayTypeForm = ({
   onAdd?: (newType: any) => Promise<{ success: boolean; message?: string }>;
   setError: (msg: string | null) => void;
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [Libelle, setLibelle] = useState("");
   const [CouleurFond, setCouleurFond] = useState("#2563eb");
   const [CouleurTexte, setCouleurTexte] = useState("#ffffff");
@@ -44,13 +49,12 @@ const NewDayTypeForm = ({
           Libelle: Libelle.trim(),
           CouleurFond: normalizeColorForInput(CouleurFond),
           CouleurTexte: normalizeColorForInput(CouleurTexte),
-          isBold: isBold,
-          isItalic: isItalic,
+          isBold,
+          isItalic,
         });
 
         if (res && res.success) {
           resetForm();
-          setIsOpen(false);
         } else {
           setError(res?.message || "Erreur lors de la création du type de jour.");
         }
@@ -62,208 +66,140 @@ const NewDayTypeForm = ({
     }
   };
 
-  if (!isOpen) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setError(null);
-          setIsOpen(true);
-        }}
-        className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium text-sm poppins flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.99] shadow-sm mb-4 cursor-pointer"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-        Ajouter un type de jour
-      </button>
-    );
-  }
-
   return (
-    <div className="p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-4 shadow-sm mb-4">
-      <div className="flex items-center justify-between pb-2 border-b border-primary/20">
-        <h4 className="text-sm font-semibold text-primary poppins flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Nouveau type de jour
-        </h4>
-        <button
-          type="button"
-          onClick={() => {
-            resetForm();
-            setIsOpen(false);
+    <CollapsibleCreateForm
+      addButtonLabel="Ajouter un type de jour"
+      headerTitle="Nouveau type de jour"
+      isSubmitting={isSubmitting}
+      error={formError}
+      onOpen={() => setError(null)}
+      onReset={resetForm}
+      onSubmit={handleCreate}
+    >
+      <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+        <label htmlFor="newDayTypeLabel" className="text-xs text-secondary font-medium poppins">
+          Libellé
+        </label>
+        <input
+          id="newDayTypeLabel"
+          type="text"
+          value={Libelle}
+          onChange={(e) => {
+            setLibelle(e.target.value);
+            if (formError) setFormError(null);
+            setError(null);
           }}
-          className="text-secondary hover:text-primary transition-colors p-1 cursor-pointer"
-          title="Fermer"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+          placeholder="Ex: Astreinte, Congé..."
+          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-bg shadow-sm hover:shadow-md w-full"
+        />
       </div>
 
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-            <label htmlFor="newDayTypeLabel" className="text-xs text-secondary font-medium poppins">
-              Libellé
-            </label>
-            <input
-              id="newDayTypeLabel"
-              type="text"
-              value={Libelle}
-              onChange={(e) => {
-                setLibelle(e.target.value);
-                if (formError) setFormError(null);
-                setError(null);
-              }}
-              placeholder="Ex: Astreinte, Congé..."
-              className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-bg shadow-sm hover:shadow-md w-full"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="new-color-fond-hex" className="text-xs text-secondary font-medium poppins">
-              Couleur Fond
-            </label>
-            <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
-              <label
-                htmlFor="new-color-fond"
-                className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
-                style={{ backgroundColor: normalizeColorForInput(CouleurFond) }}
-                title="Choisir couleur de fond"
-              />
-              <input
-                id="new-color-fond"
-                type="color"
-                value={normalizeColorForInput(CouleurFond)}
-                onChange={(e) => setCouleurFond(e.target.value)}
-                className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-              />
-              <input
-                id="new-color-fond-hex"
-                type="text"
-                value={CouleurFond}
-                onChange={(e) => setCouleurFond(e.target.value)}
-                placeholder="#2563EB"
-                className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="new-color-texte-hex" className="text-xs text-secondary font-medium poppins">
-              Couleur Texte
-            </label>
-            <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
-              <label
-                htmlFor="new-color-texte"
-                className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
-                style={{ backgroundColor: normalizeColorForInput(CouleurTexte, "#FFFFFF") }}
-                title="Choisir couleur de texte"
-              />
-              <input
-                id="new-color-texte"
-                type="color"
-                value={normalizeColorForInput(CouleurTexte, "#FFFFFF")}
-                onChange={(e) => setCouleurTexte(e.target.value)}
-                className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-              />
-              <input
-                id="new-color-texte-hex"
-                type="text"
-                value={CouleurTexte}
-                onChange={(e) => setCouleurTexte(e.target.value)}
-                placeholder="#FFFFFF"
-                className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-secondary font-medium poppins">Style</span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setIsBold((prev) => !prev)}
-                title="Gras"
-                className={`h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
-                  isBold
-                    ? "bg-primary text-white border-primary shadow-sm"
-                    : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
-                }`}
-              >
-                B
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsItalic((prev) => !prev)}
-                title="Italique"
-                className={`h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
-                  isItalic
-                    ? "bg-primary text-white border-primary shadow-sm"
-                    : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
-                }`}
-              >
-                I
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
-            <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-bg">
-              <div
-                className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
-                style={{
-                  backgroundColor: normalizeColorForInput(CouleurFond, "#2563eb"),
-                  color: normalizeColorForInput(CouleurTexte, "#ffffff"),
-                  fontWeight: isBold ? "700" : "400",
-                  fontStyle: isItalic ? "italic" : "normal",
-                }}
-              >
-                <span className="block text-sm leading-none font-semibold">14</span>
-                <span className="block text-[9px] opacity-80 uppercase tracking-wider mt-0.5">Lun.</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1 shrink-0">
-            <span className="text-xs font-medium poppins opacity-0 pointer-events-none select-none hidden sm:block">
-              Action
-            </span>
-            <div className="flex items-center h-full">
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={isSubmitting}
-                title="Valider la création"
-                className="cursor-pointer bg-primary text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                ) : (
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="new-color-fond-hex" className="text-xs text-secondary font-medium poppins">
+          Couleur Fond
+        </label>
+        <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+          <label
+            htmlFor="new-color-fond"
+            className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
+            style={{ backgroundColor: normalizeColorForInput(CouleurFond) }}
+            title="Choisir couleur de fond"
+          />
+          <input
+            id="new-color-fond"
+            type="color"
+            value={normalizeColorForInput(CouleurFond)}
+            onChange={(e) => setCouleurFond(e.target.value)}
+            className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+          />
+          <input
+            id="new-color-fond-hex"
+            type="text"
+            value={CouleurFond}
+            onChange={(e) => setCouleurFond(e.target.value)}
+            placeholder="#2563EB"
+            className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
+          />
         </div>
       </div>
 
-      {formError && <p className="text-xs text-red-500 font-medium poppins">{formError}</p>}
-    </div>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="new-color-texte-hex" className="text-xs text-secondary font-medium poppins">
+          Couleur Texte
+        </label>
+        <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+          <label
+            htmlFor="new-color-texte"
+            className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
+            style={{ backgroundColor: normalizeColorForInput(CouleurTexte, "#FFFFFF") }}
+            title="Choisir couleur de texte"
+          />
+          <input
+            id="new-color-texte"
+            type="color"
+            value={normalizeColorForInput(CouleurTexte, "#FFFFFF")}
+            onChange={(e) => setCouleurTexte(e.target.value)}
+            className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+          />
+          <input
+            id="new-color-texte-hex"
+            type="text"
+            value={CouleurTexte}
+            onChange={(e) => setCouleurTexte(e.target.value)}
+            placeholder="#FFFFFF"
+            className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-secondary font-medium poppins">Style</span>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setIsBold((prev) => !prev)}
+            title="Gras"
+            className={`h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
+              isBold
+                ? "bg-primary text-white border-primary shadow-sm"
+                : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
+            }`}
+          >
+            B
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsItalic((prev) => !prev)}
+            title="Italique"
+            className={`h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
+              isItalic
+                ? "bg-primary text-white border-primary shadow-sm"
+                : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
+            }`}
+          >
+            I
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
+        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-bg">
+          <div
+            className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
+            style={{
+              backgroundColor: normalizeColorForInput(CouleurFond, "#2563eb"),
+              color: normalizeColorForInput(CouleurTexte, "#ffffff"),
+              fontWeight: isBold ? "700" : "400",
+              fontStyle: isItalic ? "italic" : "normal",
+            }}
+          >
+            <span className="block text-sm leading-none font-semibold">14</span>
+            <span className="block text-[9px] opacity-80 uppercase tracking-wider mt-0.5">Lun.</span>
+          </div>
+        </div>
+      </div>
+    </CollapsibleCreateForm>
   );
 };
 
@@ -291,23 +227,6 @@ const DayTypeSingleEditor = ({
   registerSaveAction: (id: string, action: SaveAction | null) => void;
 }) => {
   const [localType, setLocalType] = useState(dayType);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isCheckingDelete, setIsCheckingDelete] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const [deleteModalState, setDeleteModalState] = useState<{
-    isOpen: boolean;
-    checkRequired: boolean;
-    message: string;
-    expectedCount: number | null;
-  }>({
-    isOpen: false,
-    checkRequired: false,
-    message: "",
-    expectedCount: null,
-  });
-
-  const [confirmInput, setConfirmInput] = useState<string>("");
 
   useEffect(() => {
     setLocalType(dayType);
@@ -335,10 +254,8 @@ const DayTypeSingleEditor = ({
     setError(null);
   };
 
-  const handleSave = useCallback(async () => {
-    if (!onUpdate || !canEdit) return;
-    setIsSaving(true);
-    setError(null);
+  const handleSave = async () => {
+    if (!onUpdate) return;
     try {
       const res = await onUpdate({
         ...localType,
@@ -350,360 +267,173 @@ const DayTypeSingleEditor = ({
       }
     } catch (e: any) {
       setError(e?.message || "Erreur lors de la mise à jour.");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [onUpdate, canEdit, localType, setError]);
-
-  const handleInitiateDelete = async () => {
-    if (!canDelete) return;
-    setError(null);
-    setConfirmInput("");
-
-    if (!onCheckDelete) {
-      setDeleteModalState({
-        isOpen: true,
-        checkRequired: false,
-        message: "",
-        expectedCount: null,
-      });
-      return;
-    }
-
-    setIsCheckingDelete(true);
-
-    try {
-      const res = await onCheckDelete(dayType.Id);
-
-      let parsedCount: number | null = null;
-      if (res.checkRequired && res.message) {
-        const match = res.message.match(/\d+/);
-        if (match) {
-          parsedCount = parseInt(match[0], 10);
-        }
-      }
-
-      setDeleteModalState({
-        isOpen: true,
-        checkRequired: res.checkRequired,
-        message: res.message || "",
-        expectedCount: parsedCount,
-      });
-    } catch (e: any) {
-      setError(e?.message || "Erreur lors de la vérification de la suppression.");
-    } finally {
-      setIsCheckingDelete(false);
     }
   };
 
-  const confirmDelete = async () => {
-    if (!onDelete || !canDelete) return;
-
-    const countToSend = deleteModalState.checkRequired ? parseInt(confirmInput, 10) || 0 : 0;
-
-    setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
-    setIsDeleting(true);
-    setError(null);
-
+  const handleDelete = async (count: number) => {
+    if (!onDelete) return;
     try {
-      const res = await onDelete(dayType.Id, countToSend);
+      const res = await onDelete(dayType.Id, count);
       if (res && !res.success) {
         setError(res?.message || "Erreur lors de la suppression.");
       }
     } catch (e: any) {
       setError(e?.message || "Erreur lors de la suppression.");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
-  const isConfirmDisabled =
-    deleteModalState.checkRequired &&
-    (deleteModalState.expectedCount !== null
-      ? parseInt(confirmInput.trim(), 10) !== deleteModalState.expectedCount
-      : !confirmInput.trim());
-
-  useEffect(() => {
-    const actionId = `day-type-${dayType.Id}`;
-    registerSaveAction(actionId, { isDirty, save: handleSave });
-    return () => registerSaveAction(actionId, null);
-  }, [dayType.Id, isDirty, handleSave, registerSaveAction]);
-
   return (
-    <div
-      className={`p-3.5 rounded-2xl border transition-all duration-200 flex flex-wrap items-center justify-between gap-3 shadow-sm relative ${
-        isSelected ? "border-primary bg-primary/10 " : "border-light bg-secondary/10 hover:border-primary/30"
-      }`}
+    <SelectableEntityRow
+      actionId={`day-type-${dayType.Id}`}
+      isSelected={isSelected}
+      isDirty={isDirty}
+      canEdit={canEdit}
+      canDelete={canDelete}
+      isLocked={Boolean(dayType.isLocked)}
+      selectButtonLabel="Voir les jours"
+      deleteModalTitle="Supprimer le type de jour ?"
+      deleteModalDescription={
+        <>
+          Êtes-vous sûr de vouloir supprimer le type de jour{" "}
+          <strong className="text-primary">{dayType.Libelle}</strong> ? Cette action est irréversible.
+        </>
+      }
+      onSelect={onSelect}
+      onSave={handleSave}
+      onCheckDelete={onCheckDelete ? () => onCheckDelete(dayType.Id) : undefined}
+      onDelete={handleDelete}
+      setError={setError}
+      registerSaveAction={registerSaveAction}
     >
-      {deleteModalState.isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-primary-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
-            <div className="flex items-center gap-3 text-red-600">
-              <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-              <h5 className="font-semibold text-sm text-primary poppins">Supprimer le type de jour ?</h5>
-            </div>
+      <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+        <label htmlFor={`dayTypeLabelInput-${dayType.Id}`} className="text-xs text-secondary font-medium poppins">
+          Libellé
+        </label>
+        <input
+          id={`dayTypeLabelInput-${dayType.Id}`}
+          type="text"
+          value={localType.Libelle || ""}
+          onChange={(e) => handleLabelChange(e.target.value)}
+          placeholder="Ex: Jour Férié..."
+          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-bg shadow-sm hover:shadow-md w-full"
+          disabled={dayType.isLocked || !canEdit}
+        />
+      </div>
 
-            {deleteModalState.checkRequired ? (
-              <div className="space-y-3">
-                <p className="text-xs text-secondary leading-relaxed poppins font-medium">{deleteModalState.message}</p>
-                <div className="space-y-1">
-                  <label htmlFor={`confirmInput-${dayType.Id}`} className="text-[11px] text-secondary font-semibold poppins">
-                    Veuillez saisir le nombre de jour(s) pour confirmer :
-                  </label>
-                  <input
-                    id={`confirmInput-${dayType.Id}`}
-                    type="number"
-                    value={confirmInput}
-                    onChange={(e) => setConfirmInput(e.target.value)}
-                    placeholder={
-                      deleteModalState.expectedCount !== null
-                        ? `Entrez ${deleteModalState.expectedCount}`
-                        : "Nombre de jours"
-                    }
-                    className="w-full border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-bg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
-                  />
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-secondary leading-relaxed poppins">
-                Êtes-vous sûr de vouloir supprimer le type de jour{" "}
-                <strong className="text-primary">{dayType.Libelle}</strong> ? Cette action est irréversible.
-              </p>
-            )}
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                className="px-3.5 py-1.5 rounded-xl border border-light text-xs font-semibold text-secondary hover:bg-secondary/10 transition-colors cursor-pointer poppins"
-                onClick={() => setDeleteModalState((prev) => ({ ...prev, isOpen: false }))}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                disabled={isConfirmDisabled}
-                className="px-3.5 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer poppins"
-                onClick={confirmDelete}
-              >
-                Confirmer la suppression
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-center gap-3 flex-1 min-w-0 flex-wrap sm:flex-nowrap">
-        <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-          <label htmlFor={`dayTypeLabelInput-${dayType.Id}`} className="text-xs text-secondary font-medium poppins">
-            Libellé
-          </label>
-          <input
-            id={`dayTypeLabelInput-${dayType.Id}`}
-            type="text"
-            value={localType.Libelle || ""}
-            onChange={(e) => handleLabelChange(e.target.value)}
-            placeholder="Ex: Jour Férié..."
-            className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-bg shadow-sm hover:shadow-md w-full"
-            disabled={dayType.isLocked || !canEdit}
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-secondary font-medium poppins">Couleur Fond</span>
+        <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+          <label
+            htmlFor={`color-fond-${dayType.Id}`}
+            className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
+            style={{ backgroundColor: normalizeColorForInput(localType.CouleurFond, "#1E40AF") }}
+            title="Changer couleur de fond"
           />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-secondary font-medium poppins">Couleur Fond</span>
-          <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
-            <label
-              htmlFor={`color-fond-${dayType.Id}`}
-              className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
-              style={{ backgroundColor: normalizeColorForInput(localType.CouleurFond, "#1E40AF") }}
-              title="Changer couleur de fond"
-            />
-            <input
-              id={`color-fond-${dayType.Id}`}
-              type="color"
-              value={normalizeColorForInput(localType.CouleurFond)}
-              onChange={(e) => handleColorChange("CouleurFond", e.target.value)}
-              className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-              disabled={!canEdit}
-            />
-            <input
-              type="text"
-              value={localType.CouleurFond || ""}
-              onChange={(e) => handleColorChange("CouleurFond", e.target.value)}
-              placeholder="#1E40AF"
-              className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
-              disabled={!canEdit}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-secondary font-medium poppins">Couleur Texte</span>
-          <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
-            <label
-              htmlFor={`color-texte-${dayType.Id}`}
-              className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
-              style={{ backgroundColor: normalizeColorForInput(localType.CouleurTexte, "#FFFFFF") }}
-              title="Changer couleur de texte"
-            />
-            <input
-              id={`color-texte-${dayType.Id}`}
-              type="color"
-              value={normalizeColorForInput(localType.CouleurTexte, "#FFFFFF")}
-              onChange={(e) => handleColorChange("CouleurTexte", e.target.value)}
-              className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
-              disabled={!canEdit}
-            />
-            <input
-              type="text"
-              value={localType.CouleurTexte || ""}
-              onChange={(e) => handleColorChange("CouleurTexte", e.target.value)}
-              placeholder="#FFFFFF"
-              className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
-              disabled={!canEdit}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-secondary font-medium poppins">Style</span>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => handleToggle("isBold")}
-              title="Gras"
-              className={`${
-                !canEdit ? "opacity-50 cursor-not-allowed" : ""
-              } h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
-                localType.isBold
-                  ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
-              }`}
-              disabled={!canEdit}
-            >
-              B
-            </button>
-            <button
-              type="button"
-              onClick={() => handleToggle("isItalic")}
-              title="Italique"
-              className={` ${
-                !canEdit ? "opacity-50 cursor-not-allowed" : ""
-              } h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
-                localType.isItalic
-                  ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
-              }`}
-              disabled={!canEdit}
-            >
-              I
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
-          <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-bg">
-            <div
-              className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
-              style={{
-                backgroundColor: normalizeColorForInput(localType.CouleurFond, "#1E40AF"),
-                color: normalizeColorForInput(localType.CouleurTexte, "#FFFFFF"),
-                fontWeight: localType.isBold ? "700" : "400",
-                fontStyle: localType.isItalic ? "italic" : "normal",
-              }}
-            >
-              <span className="block text-xs leading-none font-semibold">14</span>
-              <span className="block text-[9px] opacity-80 uppercase tracking-wider mt-0.5">Lun.</span>
-            </div>
-          </div>
+          <input
+            id={`color-fond-${dayType.Id}`}
+            type="color"
+            value={normalizeColorForInput(localType.CouleurFond)}
+            onChange={(e) => handleColorChange("CouleurFond", e.target.value)}
+            className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+            disabled={!canEdit}
+          />
+          <input
+            type="text"
+            value={localType.CouleurFond || ""}
+            onChange={(e) => handleColorChange("CouleurFond", e.target.value)}
+            placeholder="#1E40AF"
+            className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
+            disabled={!canEdit}
+          />
         </div>
       </div>
 
-      <div className="flex flex-col gap-1 shrink-0">
-        <span className="text-xs font-medium poppins opacity-0 pointer-events-none select-none hidden sm:block">
-          Actions
-        </span>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-secondary font-medium poppins">Couleur Texte</span>
+        <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+          <label
+            htmlFor={`color-texte-${dayType.Id}`}
+            className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
+            style={{ backgroundColor: normalizeColorForInput(localType.CouleurTexte, "#FFFFFF") }}
+            title="Changer couleur de texte"
+          />
+          <input
+            id={`color-texte-${dayType.Id}`}
+            type="color"
+            value={normalizeColorForInput(localType.CouleurTexte, "#FFFFFF")}
+            onChange={(e) => handleColorChange("CouleurTexte", e.target.value)}
+            className="w-0 h-0 border-0 opacity-0 absolute pointer-events-none"
+            disabled={!canEdit}
+          />
+          <input
+            type="text"
+            value={localType.CouleurTexte || ""}
+            onChange={(e) => handleColorChange("CouleurTexte", e.target.value)}
+            placeholder="#FFFFFF"
+            className="w-20 px-1 py-0.5 text-xs font-mono font-semibold text-primary uppercase focus:outline-none bg-transparent"
+            disabled={!canEdit}
+          />
+        </div>
+      </div>
 
-        <div className="flex items-center gap-2 h-full">
-          {isDirty && canEdit ? (
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={isSaving}
-              title="Enregistrer les modifications"
-              className="cursor-pointer bg-primary text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
-            >
-              {isSaving ? (
-                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-              ) : (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </button>
-          ) : !dayType.isLocked || canDelete ? (
-            <button
-              type="button"
-              onClick={handleInitiateDelete}
-              disabled={isDeleting || isCheckingDelete}
-              title="Supprimer ce type de jour"
-              className="cursor-pointer bg-red-500 hover:bg-red-600 text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
-            >
-              {isDeleting || isCheckingDelete ? (
-                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-              ) : (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              )}
-            </button>
-          ) : null}
-
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-secondary font-medium poppins">Style</span>
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={onSelect}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
-              isSelected
-                ? "bg-primary text-white ring-2 ring-primary/20"
-                : "bg-primary-bg border border-light hover:bg-primary/5 text-primary"
+            onClick={() => handleToggle("isBold")}
+            title="Gras"
+            className={`${
+              !canEdit ? "opacity-50 cursor-not-allowed" : ""
+            } h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
+              localType.isBold
+                ? "bg-primary text-white border-primary shadow-sm"
+                : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
             }`}
+            disabled={!canEdit}
           >
-            <span>Voir les jours</span>
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            B
+          </button>
+          <button
+            type="button"
+            onClick={() => handleToggle("isItalic")}
+            title="Italique"
+            className={`${
+              !canEdit ? "opacity-50 cursor-not-allowed" : ""
+            } h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
+              localType.isItalic
+                ? "bg-primary text-white border-primary shadow-sm"
+                : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
+            }`}
+            disabled={!canEdit}
+          >
+            I
           </button>
         </div>
       </div>
-    </div>
+
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
+        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-bg">
+          <div
+            className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
+            style={{
+              backgroundColor: normalizeColorForInput(localType.CouleurFond, "#1E40AF"),
+              color: normalizeColorForInput(localType.CouleurTexte, "#FFFFFF"),
+              fontWeight: localType.isBold ? "700" : "400",
+              fontStyle: localType.isItalic ? "italic" : "normal",
+            }}
+          >
+            <span className="block text-xs leading-none font-semibold">14</span>
+            <span className="block text-[9px] opacity-80 uppercase tracking-wider mt-0.5">Lun.</span>
+          </div>
+        </div>
+      </div>
+    </SelectableEntityRow>
   );
 };
+
+
 
 const NonWorkingDaysEditor = ({
   setting,
@@ -1091,8 +821,8 @@ const NonWorkingDaysEditor = ({
 
   if (!hasInteracted) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-primary-bg/40 rounded-2xl border border-dashed border-light min-h-[300px]">
-        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-3">
+      <EmptySelectionPlaceholder
+        icon={
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -1101,13 +831,11 @@ const NonWorkingDaysEditor = ({
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-        </div>
-        <p className="text-sm font-semibold text-primary poppins">Aucun type de jour sélectionné</p>
-        <p className="text-xs text-secondary/80 mt-1 max-w-xs poppins leading-relaxed">
-          Veuillez cliquer sur <span className="font-semibold text-primary">« Voir les jours »</span> sur un type de
-          jour à gauche pour afficher et gérer ses jours configurés.
-        </p>
-      </div>
+        }
+        title="Aucun type de jour sélectionné"
+        actionLabel="Voir les jours"
+        targetDescription="un type de jour"
+      />
     );
   }
 
@@ -1489,8 +1217,6 @@ const NonWorkingDaysEditor = ({
 };
 
 
-
-
 export const DaysManagementCategoryContent: React.FC<{
   categoryObj: any;
   selectedDayTypeId: string | null;
@@ -1508,85 +1234,82 @@ export const DaysManagementCategoryContent: React.FC<{
   const nonWorkingSetting = categoryObj.items?.find((item: any) => item.type === "custom-non-working-dates");
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
-      {/* PANNEAU GAUCHE : Types de jours */}
-      <div className="lg:col-span-7 flex flex-col gap-4 min-h-0 overflow-y-auto pr-2">
-        <h4 className="text-sm font-semibold text-primary pb-2 border-b border-ultra-light">
-          Types de jours
-        </h4>
+    <MasterDetailSplitLayout
+      leftTitle="Types de jours"
+      leftContent={
+        <>
+          {dayTypeSetting?.canAdd && (
+            <NewDayTypeForm onAdd={dayTypeSetting.onAddDayType} setError={setApiError} />
+          )}
 
-        {dayTypeSetting?.canAdd && (
-          <NewDayTypeForm onAdd={dayTypeSetting.onAddDayType} setError={setApiError} />
-        )}
-
-        <div className="space-y-3">
-          <div
-            className={`p-3.5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 shadow-sm cursor-pointer ${
-              selectedDayTypeId === "all"
-                ? "border-primary bg-primary/10"
-                : "border-light bg-secondary/10 hover:border-primary/30"
-            }`}
-            onClick={() => setSelectedDayTypeId("all")}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                  />
-                </svg>
-              </div>
-              <span className="text-xs font-semibold text-primary poppins">Tous les types</span>
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedDayTypeId("all");
-              }}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
+          <div className="space-y-3">
+            {/* Carte fixe "Tous les types" */}
+            <div
+              className={`p-3.5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 shadow-sm cursor-pointer ${
                 selectedDayTypeId === "all"
-                  ? "bg-primary text-white ring-2 ring-primary/20"
-                  : "bg-primary-bg border border-light hover:bg-primary/5 text-primary"
+                  ? "border-primary bg-primary/10"
+                  : "border-light bg-secondary/10 hover:border-primary/30"
               }`}
+              onClick={() => setSelectedDayTypeId("all")}
             >
-              <span>Voir les jours</span>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-
-          {dayTypeSetting?.dayTypes?.map((dayType: DayType) => (
-            <DayTypeSingleEditor
-              key={dayType.Id}
-              dayType={dayType}
-              isSelected={String(dayType.Id) === String(selectedDayTypeId)}
-              onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
-              onUpdate={dayTypeSetting.onUpdateDayType}
-              onCheckDelete={dayTypeSetting.onCheckDeleteDayType}
-              onDelete={async (id: string | number, count: number) => {
-                const result = await dayTypeSetting.onDeleteDayType?.(id, count);
-                if (result?.success) {
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                    />
+                  </svg>
+                </div>
+                <span className="text-xs font-semibold text-primary poppins">Tous les types</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
                   setSelectedDayTypeId("all");
-                }
-                return result;
-              }}
-              setError={setApiError}
-              canEdit={dayTypeSetting.canEdit}
-              canDelete={dayTypeSetting.canDelete}
-              registerSaveAction={registerSaveAction}
-            />
-          ))}
-        </div>
-      </div>
+                }}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
+                  selectedDayTypeId === "all"
+                    ? "bg-primary text-white ring-2 ring-primary/20"
+                    : "bg-primary-bg border border-light hover:bg-primary/5 text-primary"
+                }`}
+              >
+                <span>Voir les jours</span>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
 
-      {/* PANNEAU DROIT : Dates non travaillées */}
-      <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-ultra-light pt-6 lg:pt-0 lg:pl-6 flex flex-col min-h-0 overflow-y-auto">
-        {nonWorkingSetting ? (
+            {dayTypeSetting?.dayTypes?.map((dayType: DayType) => (
+              <DayTypeSingleEditor
+                key={dayType.Id}
+                dayType={dayType}
+                isSelected={String(dayType.Id) === String(selectedDayTypeId)}
+                onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
+                onUpdate={dayTypeSetting.onUpdateDayType}
+                onCheckDelete={dayTypeSetting.onCheckDeleteDayType}
+                onDelete={async (id: string | number, count: number) => {
+                  const result = await dayTypeSetting.onDeleteDayType?.(id, count);
+                  if (result?.success) {
+                    setSelectedDayTypeId("all");
+                  }
+                  return result;
+                }}
+                setError={setApiError}
+                canEdit={dayTypeSetting.canEdit}
+                canDelete={dayTypeSetting.canDelete}
+                registerSaveAction={registerSaveAction}
+              />
+            ))}
+          </div>
+        </>
+      }
+      rightContent={
+        nonWorkingSetting && (
           <NonWorkingDaysEditor
             setting={nonWorkingSetting}
             selectedDayTypeId={selectedDayTypeId}
@@ -1595,12 +1318,9 @@ export const DaysManagementCategoryContent: React.FC<{
             canEdit={nonWorkingSetting.canEdit}
             canDelete={nonWorkingSetting.canDelete}
           />
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-primary-bg/40 rounded-xl border border-dashed border-light min-h-[250px]">
-            <p className="text-sm font-medium text-secondary poppins">Aucune donnée de configuration</p>
-          </div>
-        )}
-      </div>
-    </div>
+        )
+      }
+    />
   );
 };
+

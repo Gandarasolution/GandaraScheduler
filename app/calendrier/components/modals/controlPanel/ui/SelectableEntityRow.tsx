@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from "react";
-import { SaveAction } from "../SettingsModal";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { SaveAction } from "../ControlPanelModal"; // Adaptez le chemin si nécessaire
 
-export const SelectableEntityRow: React.FC<{
+export interface SelectableEntityRowProps {
   actionId: string;
   isSelected: boolean;
   isDirty: boolean;
@@ -11,14 +11,17 @@ export const SelectableEntityRow: React.FC<{
   selectButtonLabel: string;
   deleteModalTitle: string;
   deleteModalDescription: React.ReactNode;
+  confirmCountLabel?: string;
   onSelect: () => void;
-  onSave: () => Promise<void>;
+  onSave: () => Promise<unknown> | void;
   onCheckDelete?: () => Promise<{ checkRequired: boolean; message?: string }>;
-  onDelete?: (count: number) => Promise<void>;
+  onDelete?: (count: number) => Promise<unknown> | void;
   setError: (msg: string | null) => void;
   registerSaveAction: (id: string, action: SaveAction | null) => void;
   children: React.ReactNode;
-}> = ({
+}
+
+export const SelectableEntityRow: React.FC<SelectableEntityRowProps> = ({
   actionId,
   isSelected,
   isDirty,
@@ -28,6 +31,7 @@ export const SelectableEntityRow: React.FC<{
   selectButtonLabel,
   deleteModalTitle,
   deleteModalDescription,
+  confirmCountLabel,
   onSelect,
   onSave,
   onCheckDelete,
@@ -52,16 +56,22 @@ export const SelectableEntityRow: React.FC<{
     expectedCount: null,
   });
 
+  // Stabilise la référence de onSave pour éviter toute boucle de re-render dans useEffect
+  const onSaveRef = useRef(onSave);
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
   const handleSave = useCallback(async () => {
     if (!canEdit) return;
     setIsSaving(true);
     setError(null);
     try {
-      await onSave();
+      await onSaveRef.current();
     } finally {
       setIsSaving(false);
     }
-  }, [canEdit, onSave, setError]);
+  }, [canEdit, setError]);
 
   useEffect(() => {
     registerSaveAction(actionId, { isDirty, save: handleSave });
@@ -74,13 +84,20 @@ export const SelectableEntityRow: React.FC<{
     setConfirmInput("");
 
     if (!onCheckDelete) {
-      setDeleteModal({ isOpen: true, checkRequired: false, message: "", expectedCount: null });
+      setDeleteModal({
+        isOpen: true,
+        checkRequired: false,
+        message: "",
+        expectedCount: null,
+      });
       return;
     }
 
     setIsCheckingDelete(true);
     try {
       const res = await onCheckDelete();
+
+      console.log("onCheckDelete result:", res); // Ajout du log pour débogage
       const match = res.checkRequired && res.message ? res.message.match(/\d+/) : null;
       setDeleteModal({
         isOpen: true,
@@ -139,15 +156,19 @@ export const SelectableEntityRow: React.FC<{
               <div className="space-y-3">
                 <p className="text-xs text-secondary leading-relaxed poppins font-medium">{deleteModal.message}</p>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-secondary font-semibold poppins">
-                    Veuillez saisir le nombre de jour(s) pour confirmer :
+                  <label
+                    htmlFor={`confirmInput-${actionId}`}
+                    className="text-[11px] text-secondary font-semibold poppins"
+                  >
+                    {confirmCountLabel || "Veuillez saisir le nombre pour confirmer :"}
                   </label>
                   <input
+                    id={`confirmInput-${actionId}`}
                     type="number"
                     value={confirmInput}
                     onChange={(e) => setConfirmInput(e.target.value)}
                     placeholder={
-                      deleteModal.expectedCount !== null ? `Entrez ${deleteModal.expectedCount}` : "Nombre de jours"
+                      deleteModal.expectedCount !== null ? `Entrez ${deleteModal.expectedCount}` : "Nombre"
                     }
                     className="w-full border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-bg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
                   />
@@ -178,10 +199,10 @@ export const SelectableEntityRow: React.FC<{
         </div>
       )}
 
-      {/* CHAMPS SPÉCIFIQUES (Libellé + Couleurs OU Nom de l'équipe) */}
+      {/* CHAMPS SPÉCIFIQUES */}
       <div className="flex items-center gap-3 flex-1 min-w-0 flex-wrap sm:flex-nowrap">{children}</div>
 
-      {/* ACTIONS COMMUNES (Enregistrer / Supprimer + Voir le détail) */}
+      {/* ACTIONS COMMUNES */}
       <div className="flex flex-col gap-1 shrink-0">
         <span className="text-xs font-medium poppins opacity-0 pointer-events-none select-none hidden sm:block">
           Actions

@@ -1,4 +1,4 @@
-import { deleteRequest, getRequest, postRequest } from "./axios.service";
+import { deleteRequest, getRequest, postRequest, putRequest } from "./axios.service";
 
 async function getEquipes() {
     return await getRequest(`/demo/equipes`, 'getEquipes');
@@ -7,9 +7,13 @@ async function getEquipes() {
 async function createEquipe(data: any) {
     return await postRequest(`/demo/equipes`, data, 'createEquipe');
 }
-    
-async function deleteEquipe(id: number) {
-    return await deleteRequest(`/demo/equipes/${id}`, 'deleteEquipe', {});
+
+async function checkDeleteEquipe(id: number) {
+    return await getRequest(`/demo/equipes/${id}/check-delete`, 'checkDeleteEquipe');
+}
+
+async function deleteEquipe(id: number, numberEmployeeCheck: number = 0) {
+    return await deleteRequest(`/demo/equipes/${id}`, 'deleteEquipe', { numberEmployeeCheck });
 }
 
 async function getPoleActivites() {
@@ -17,7 +21,7 @@ async function getPoleActivites() {
 }
 
 async function updateEquipe(id: number, data: any) {
-    return await postRequest(`/demo/equipes/${id}`, data, 'updateEquipe');
+    return await putRequest(`/demo/equipes/${id}`, data, 'updateEquipe');
 }
 
 async function getEquipePersonnel(id: number) {
@@ -30,5 +34,6 @@ export default {
     deleteEquipe,
     getPoleActivites,
     updateEquipe,
-    getEquipePersonnel
+    getEquipePersonnel,
+    checkDeleteEquipe,
 }
