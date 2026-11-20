@@ -134,12 +134,12 @@ export const SelectableEntityRow: React.FC<SelectableEntityRowProps> = ({
   return (
     <div
       className={`p-3.5 rounded-2xl border transition-all duration-200 flex flex-wrap items-center justify-between gap-3 shadow-sm relative ${
-        isSelected ? "border-primary bg-primary/10" : "border-light bg-secondary/10 hover:border-primary/30"
+        isSelected ? "border-primary bg-primary-500/10" : "border-light bg-secondary/10 hover:border-primary/30"
       }`}
     >
       {deleteModal.isOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-primary-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+          <div className="bg-primary-500-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center gap-3 text-red-600">
               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -170,7 +170,7 @@ export const SelectableEntityRow: React.FC<SelectableEntityRowProps> = ({
                     placeholder={
                       deleteModal.expectedCount !== null ? `Entrez ${deleteModal.expectedCount}` : "Nombre"
                     }
-                    className="w-full border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-bg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
+                    className="w-full border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-500-bg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
                   />
                 </div>
               </div>
@@ -215,7 +215,7 @@ export const SelectableEntityRow: React.FC<SelectableEntityRowProps> = ({
               onClick={handleSave}
               disabled={isSaving}
               title="Enregistrer les modifications"
-              className="cursor-pointer bg-primary text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
+              className="cursor-pointer bg-primary-500 text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
             >
               {isSaving ? (
                 <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -267,8 +267,8 @@ export const SelectableEntityRow: React.FC<SelectableEntityRowProps> = ({
             onClick={onSelect}
             className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
               isSelected
-                ? "bg-primary text-white ring-2 ring-primary/20"
-                : "bg-primary-bg border border-light hover:bg-primary/5 text-primary"
+                ? "bg-primary-500 text-white ring-2 ring-primary/20"
+                : "bg-primary-500-bg border border-light hover:bg-primary-500/5 text-primary"
             }`}
           >
             <span>{selectButtonLabel}</span>

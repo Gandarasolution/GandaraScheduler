@@ -99,8 +99,8 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
           transition-all duration-200
           hover:scale-110
           focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-          bg-primary text-white
-          hover:bg-primary-600
+          bg-primary-500 text-white
+          hover:bg-primary-500-600
         `}
         aria-label="Changer le thème"
         title={`Thème actuel: ${currentThemeConfig.displayName}`}
@@ -163,7 +163,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                     rounded-md
                     transition-all duration-150
                     ${isActive 
-                      ? 'bg-primary text-white shadow-sm' 
+                      ? 'bg-primary-500 text-white shadow-sm' 
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                     }
                   `}

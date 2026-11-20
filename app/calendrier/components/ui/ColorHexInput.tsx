@@ -93,7 +93,7 @@ export const ColorHexInput = ({
                 type="button"
                 onClick={handleEyeDropper}
                 title="Pipette : prélever une couleur à l'écran"
-                className="p-1.5 rounded-lg border border-default hover:bg-secondary-bg text-primary transition-colors cursor-pointer shrink-0"
+                className="p-1.5 rounded-lg border border-default hover:bg-secondary text-primary transition-colors cursor-pointer shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path

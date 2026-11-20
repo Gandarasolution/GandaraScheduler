@@ -14,7 +14,7 @@
  */
 
 "use client";
-import React, { useMemo, ReactNode, memo, useEffect } from 'react';
+import React, { useMemo, ReactNode, memo, useEffect, useState, useRef, useCallback } from 'react';
 import { format, isToday, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CELL_WIDTH, TIMELINE_HEADERGROUPS_CELL_HEIGHT, TIMELINE_HEADERITEMS_CELL_HEIGHT } from '../../utils/constants';
@@ -22,6 +22,7 @@ import FlexibleFrame from '../dnd/FlexibleFrame';
 import { getWeekNumber } from '../../utils/dates';
 import { isHoliday } from '../../utils/dates';
 import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
+import { createPortal } from "react-dom";
 
 
 /**
@@ -88,7 +89,44 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
 
   const { DayTypes } = useDayTypesContext();
 
+  const [hoveredHeaderTooltip, setHoveredHeaderTooltip] = useState<{
+    id: number;
+    rect: DOMRect;
+  } | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    
 
+  const handleMouseEnterItemHeader = useCallback(
+    (itemHeaderId: number, e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+
+      tooltipTimeoutRef.current = setTimeout(() => {
+        setHoveredHeaderTooltip({ id: itemHeaderId, rect });
+      }, 500);
+    },
+    []
+  );
+
+  const handleMouseLeaveItemHeader = useCallback(() => {
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = null;
+    }
+    setHoveredHeaderTooltip(null);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, []);
+
+    
   /**
    * Calcule les groupes et leur portée pour l'en-tête
    * @returns Liste des groupes avec leur portée
@@ -178,7 +216,7 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
     return dayInTimeline.map(day => format(day, 'd', { locale: fr }));
   }, [dayInTimeline, customDayLabels, columns]);
 
-const computedHeaders = useMemo(() => {
+const computedHeaders = useMemo(() => {  
     const headersConfig = [];
 
     // Niveau 1: Groupes (Mois)
@@ -186,7 +224,7 @@ const computedHeaders = useMemo(() => {
       headersConfig.push({
         show: true,
         minHeight: TIMELINE_HEADERGROUPS_CELL_HEIGHT,
-        containerClassName: 'bg-secondary-bg border-ultra-light',
+        containerClassName: 'bg-secondary border-ultra-light',
         items: groupsInTimeline.map(group => ({
           span: group.span,
           key: group.key,
@@ -194,7 +232,7 @@ const computedHeaders = useMemo(() => {
             maxHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
             minHeight: `${TIMELINE_HEADERGROUPS_CELL_HEIGHT}px`,
           },
-          className: `col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-secondary-bg border-b`,
+          className: `col-span-full text-primary flex items-center justify-start py-2 text-[14px] poppins border-r border-ultra-light bg-secondary border-b`,
           render: () => (
             <div className="sticky left-0 z-30 pl-4">
               <div className="flex sticky flex-col items-center">
@@ -213,7 +251,7 @@ const computedHeaders = useMemo(() => {
       headersConfig.push({
         show: true,
         minHeight: TIMELINE_HEADERITEMS_CELL_HEIGHT,
-        containerClassName: 'bg-secondary-bg border-ultra-light',
+        containerClassName: 'bg-secondary border-ultra-light',
         items: itemsInTimeline.map((item, index) => {
           if ((customDayLabels && customDayLabels.length > 0) || columns) {
             return {
@@ -221,7 +259,7 @@ const computedHeaders = useMemo(() => {
               key: `item-${index}-custom`,
               style: { width: `${CELL_WIDTH}px`, height: 'auto', minWidth: `${CELL_WIDTH}px` },
               render: () => (
-                <div className="flex flex-col justify-center border-b border-r border-light text-center text-sm font-semibold text-primary p-2 bg-secondary-bg relative item-cell">
+                <div className="flex flex-col justify-center border-b border-r border-light text-center text-sm font-semibold text-primary p-2 bg-secondary relative item-cell">
                   <div className="flex flex-col justify-center items-center h-full px-2">
                     <span className="text-xs leading-3 break-words text-center">{item}</span>
                   </div>
@@ -241,9 +279,7 @@ const computedHeaders = useMemo(() => {
           const isNonWorking = nonworkingDates && nonworkingDates[dayKey];
 
           const dayType = DayTypes?.find(dt => dt.Id === nonworkingDates?.[dayKey]?.TypeJourCode);
-
-
-
+          const isTooltipVisible = hoveredHeaderTooltip?.id === Number(day);
 
           let backgroundColor = 'var(--bg-secondary)';
           let textColor = 'var(--text-primary)';
@@ -289,8 +325,44 @@ const computedHeaders = useMemo(() => {
                   backgroundColor: backgroundColor,
                   color: textColor,
                 }}
+                onMouseEnter={(e) => handleMouseEnterItemHeader(day, e)}
+                onMouseLeave={handleMouseLeaveItemHeader}
 
               >
+                {isTooltipVisible && hoveredHeaderTooltip && typeof document !== 'undefined' &&
+                  createPortal(
+                    <div
+                      role="tooltip"
+                      style={{
+                        position: 'fixed',
+                        top: hoveredHeaderTooltip.rect.bottom - TIMELINE_HEADERITEMS_CELL_HEIGHT - 8,
+                        left: hoveredHeaderTooltip.rect.left + hoveredHeaderTooltip.rect.width / 2,
+                        transform: 'translate(-50%, -100%)',
+                      }}
+                      className="z-[9999] px-3 py-1.5 text-xs font-medium text-black bg-page rounded-lg shadow-lg pointer-events-none whitespace-nowrap"
+                    >
+                      <span className="font-semibold">
+                        {format(day, 'EEEE dd MMMM yyyy', { locale: fr })}
+                      </span>
+                      {isNonWorking && dayType && (
+                        <span className="block text-xs mt-1">{dayType.Libelle}</span>
+                      )}
+                      {holiday && (
+                        <span className="block text-xs mt-1">Jour férié</span>
+                      )}
+                      {isWeekend(day) && !holiday && (
+                        <span className="block text-xs mt-1">Week-end</span>
+                      )}
+                      {isToday(day) && (
+                        <span className="block text-xs mt-1">Aujourd&apos;hui</span>
+                      )}
+
+                      {/* Flèche pointant vers le haut (vers la cellule d'en-tête) */}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-200" />
+                    </div>,
+                    document.body
+                  )
+                }
                 {new Date(day).getDay() === 1 && (
                   <span
                     className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
@@ -317,7 +389,7 @@ const computedHeaders = useMemo(() => {
     }
 
     return headersConfig;
-  }, [showGroupHeaders, showItemHeaders, groupsInTimeline, itemsInTimeline, dayInTimeline, nonworkingDates, customDayLabels, columns]);
+  }, [showGroupHeaders, showItemHeaders, groupsInTimeline, itemsInTimeline, dayInTimeline, nonworkingDates, customDayLabels, columns, hoveredHeaderTooltip]);
 
 
   return (

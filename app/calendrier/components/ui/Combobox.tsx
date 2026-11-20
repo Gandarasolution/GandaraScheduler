@@ -128,7 +128,7 @@ export function Combobox(props: ComboboxProps) {
               ? selectedOptions[0].label
               : placeholder
           }
-          className="w-full rounded-xl border border-default bg-primary-bg py-2.5 pl-9 pr-9 text-sm text-primary outline-none transition focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-xl border border-default bg-primary-500-bg py-2.5 pl-9 pr-9 text-sm text-primary outline-none transition focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -139,7 +139,7 @@ export function Combobox(props: ComboboxProps) {
 
       {/* Menu déroulant des options */}
       {isOpen && !disabled && (filteredOptions.length > 0 || (showInactiveToggle && inactiveOptions.length > 0)) && (
-        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-default bg-secondary-bg shadow-lg">
+        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-default bg-secondary shadow-lg">
           {filteredOptions.map((option) => {
             const isSelected = selectedValues.includes(option.value);
             return (
@@ -172,7 +172,7 @@ export function Combobox(props: ComboboxProps) {
             <button
               type="button"
               onClick={() => setShowInactive((current) => !current)}
-              className="w-full border-t border-default px-3 py-2 text-left text-xs font-medium text-secondary transition-colors hover:bg-primary-50 hover:text-primary"
+              className="w-full border-t border-default px-3 py-2 text-left text-xs font-medium text-secondary transition-colors hover:bg-primary-500-50 hover:text-primary"
             >
               {showInactive ? 'Masquer les inactifs' : 'Afficher les inactifs'}
             </button>
@@ -181,7 +181,7 @@ export function Combobox(props: ComboboxProps) {
       )}
 
       {isOpen && !disabled && searchQuery && filteredOptions.length === 0 && inactiveOptions.length === 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-xl border border-default bg-secondary-bg px-3 py-2 text-xs text-secondary shadow-lg">
+        <div className="absolute z-50 mt-1 w-full rounded-xl border border-default bg-secondary px-3 py-2 text-xs text-secondary shadow-lg">
           Aucun résultat trouvé
         </div>
       )}

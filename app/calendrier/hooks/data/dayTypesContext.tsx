@@ -122,7 +122,7 @@ export const DayTypesProvider = ({ children }: { children: ReactNode }) => {
             );
     
             // 2. On met à jour le state
-            setNonWorkingDates(recordData);
+            setNonWorkingDates({...nonWorkingDates, ...recordData});
     
     
             const dayTypes = result.data.typesNonWorkingDates;

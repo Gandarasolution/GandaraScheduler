@@ -59,9 +59,9 @@ const Loader = React.forwardRef<SVGSVGElement, LoaderProps>(
           </svg>
         ) : (
           <div className={"flex items-center gap-1.5 " + sizeClasses[size] + " " + className} aria-hidden="true">
-            <div className="w-1.5 h-2/3 bg-primary rounded-full animate-pulse" />
-            <div className="w-1.5 h-full bg-primary rounded-full animate-pulse" style={{ animationDelay: '250ms' }} />
-            <div className="w-1.5 h-2/3 bg-primary rounded-full animate-pulse" style={{ animationDelay: '500ms' }} />
+            <div className="w-1.5 h-2/3 bg-primary-500 rounded-full animate-pulse" />
+            <div className="w-1.5 h-full bg-primary-500 rounded-full animate-pulse" style={{ animationDelay: '250ms' }} />
+            <div className="w-1.5 h-2/3 bg-primary-500 rounded-full animate-pulse" style={{ animationDelay: '500ms' }} />
           </div>
         )}
 

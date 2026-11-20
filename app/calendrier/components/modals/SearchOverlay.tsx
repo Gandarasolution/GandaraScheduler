@@ -313,7 +313,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
             <input
               type="text"
               placeholder={placeholder}
-              className="block bg-secondary-bg placeholder:text-primary text-primary w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-sm sm:text-base"
+              className="block bg-secondary placeholder:text-primary text-primary w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-color focus:border-transparent text-sm sm:text-base"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               autoFocus
@@ -331,7 +331,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
 
         {/* Liste des items */}
         <div 
-          className="flex-1 overflow-y-auto px-2 sm:px-2 py-2 bg-secondary-bg rounded-2xl shadow-lg border border-light text-primary"
+          className="flex-1 overflow-y-auto px-2 sm:px-2 py-2 bg-secondary rounded-2xl shadow-lg border border-light text-primary"
           style={{ maxHeight }}
         >
           {searchInput.trim() !== '' && (
@@ -339,7 +339,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
               <span>
                 {isLoading && 'Recherche en cours...'}
               </span>
-              {isLoading && <span className="h-2 w-2 rounded-full bg-primary animate-ping" />}
+              {isLoading && <span className="h-2 w-2 rounded-full bg-primary-500 animate-ping" />}
             </div>
           )}
 
@@ -355,7 +355,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
               {Array.from({ length: 5 }).map((_, index) => (
                 <div
                   key={`skeleton-${index}`}
-                  className="rounded-xl border border-light bg-primary-50/30 px-3 py-3 animate-pulse"
+                  className="rounded-xl border border-light bg-primary-500-50/30 px-3 py-3 animate-pulse"
                 >
                   <div className="h-3 w-1/2 bg-light rounded mb-2" />
                   <div className="h-3 w-1/3 bg-light rounded" />
@@ -367,7 +367,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
               <p className="text-sm sm:text-base mb-3">{errorMessage}</p>
               <button
                 type="button"
-                className="px-3 py-1.5 rounded-lg border border-light hover:bg-primary-50 transition-colors"
+                className="px-3 py-1.5 rounded-lg border border-light hover:bg-primary-500-50 transition-colors"
                 onClick={() => {
                   if (searchInput.trim() !== '') {
                     void executeSearch(searchInput.trim());
@@ -390,7 +390,7 @@ const SearchOverlay = <T extends SearchableItem = SearchableItem>({
               {items.map((item, index) => (
                 <div 
                   key={`${item.id}-${index}`} 
-                  className="w-full flex justify-between hover:bg-primary-50 rounded-xl transition-colors px-1 sm:px-2"
+                  className="w-full flex justify-between hover:bg-primary-500-50 rounded-xl transition-colors px-1 sm:px-2"
                 >
                   {/* Rendu personnalisé ou rendu par défaut */}
                   {renderItem ? (

@@ -84,12 +84,12 @@ export function PermissionsPanel({
   }, [usersWithPermission, searchQuery]);
 
   return (
-    <div className="mt-4 border border-primary rounded-xl overflow-hidden bg-secondary-bg">
+    <div className="mt-4 border border-primary rounded-xl overflow-hidden bg-secondary">
       {/* En-tête cliquable */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 hover:bg-primary-50 transition-colors focus:outline-none"
+        className="w-full flex items-center justify-between p-4 hover:bg-primary-500-50 transition-colors focus:outline-none"
       >
         <div className="flex items-center gap-3">
           <div className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}>
@@ -107,7 +107,7 @@ export function PermissionsPanel({
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-tertiary">{filteredUsers.length} utilisateur(s)</span>
-          <span className="text-xs px-2 py-1 rounded-full bg-primary-50 text-primary font-medium">
+          <span className="text-xs px-2 py-1 rounded-full bg-primary-500-50 text-primary font-medium">
             {isOpen ? 'Masquer' : 'Afficher'}
           </span>
         </div>
@@ -144,7 +144,7 @@ export function PermissionsPanel({
           {/* Tableau des permissions */}
           <div className="max-h-[300px] overflow-y-auto border border-default rounded-lg shadow-sm">
             <table className="w-full text-xs">
-              <thead className="bg-primary-bg sticky top-0 z-10 shadow-sm">
+              <thead className="bg-primary-500-bg sticky top-0 z-10 shadow-sm">
                 <tr>
                   <th className="w-1/3 text-left py-3 px-3 font-semibold text-primary border-b border-default">
                     Utilisateur
@@ -158,14 +158,14 @@ export function PermissionsPanel({
                 {filteredUsers.map((user, index) => (
                   <tr 
                     key={user.IdPersonnel} 
-                    className={`hover:bg-primary-50 transition-colors border-b border-default ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-secondary-bg'
+                    className={`hover:bg-primary-500-50 transition-colors border-b border-default ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-secondary'
                     }`}
                   >
                     <td className="py-2.5 px-3 text-primary font-medium">
                       <div className="flex items-center gap-2">
                         {user.Initials && (
-                          <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                          <div className="w-6 h-6 rounded-full bg-primary-500 text-white flex items-center justify-center text-[10px] font-bold">
                             {user.Initials}
                           </div>
                         )}
@@ -184,7 +184,7 @@ export function PermissionsPanel({
                           }
                         }}
                         aria-label={`Niveau d'accès pour ${user.NomPersonnel} ${user.PrenomPersonnel}`}
-                        className="w-full min-w-0 rounded-lg border border-default bg-secondary-bg px-3 py-2 text-xs font-medium text-primary shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full min-w-0 rounded-lg border border-default bg-secondary px-3 py-2 text-xs font-medium text-primary shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       >
                         {permissions.map(permission => (
                           <option key={permission.IdDroit} value={String(permission.IdDroit)}>

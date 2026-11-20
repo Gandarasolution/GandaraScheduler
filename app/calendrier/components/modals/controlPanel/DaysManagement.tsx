@@ -90,7 +90,7 @@ const NewDayTypeForm = ({
             setError(null);
           }}
           placeholder="Ex: Astreinte, Congé..."
-          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-bg shadow-sm hover:shadow-md w-full"
+          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-500-bg shadow-sm hover:shadow-md w-full"
         />
       </div>
 
@@ -98,7 +98,7 @@ const NewDayTypeForm = ({
         <label htmlFor="new-color-fond-hex" className="text-xs text-secondary font-medium poppins">
           Couleur Fond
         </label>
-        <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+        <div className="flex items-center gap-1.5 bg-primary-500-bg border border-default rounded-xl p-1 shadow-sm">
           <label
             htmlFor="new-color-fond"
             className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
@@ -127,7 +127,7 @@ const NewDayTypeForm = ({
         <label htmlFor="new-color-texte-hex" className="text-xs text-secondary font-medium poppins">
           Couleur Texte
         </label>
-        <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+        <div className="flex items-center gap-1.5 bg-primary-500-bg border border-default rounded-xl p-1 shadow-sm">
           <label
             htmlFor="new-color-texte"
             className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
@@ -161,8 +161,8 @@ const NewDayTypeForm = ({
             title="Gras"
             className={`h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
               isBold
-                ? "bg-primary text-white border-primary shadow-sm"
-                : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
+                ? "bg-primary-500 text-white border-primary shadow-sm"
+                : "bg-primary-500-bg text-primary border-light hover:bg-secondary/10"
             }`}
           >
             B
@@ -173,8 +173,8 @@ const NewDayTypeForm = ({
             title="Italique"
             className={`h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
               isItalic
-                ? "bg-primary text-white border-primary shadow-sm"
-                : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
+                ? "bg-primary-500 text-white border-primary shadow-sm"
+                : "bg-primary-500-bg text-primary border-light hover:bg-secondary/10"
             }`}
           >
             I
@@ -184,7 +184,7 @@ const NewDayTypeForm = ({
 
       <div className="flex flex-col gap-1">
         <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
-        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-bg">
+        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-500-bg">
           <div
             className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
             style={{
@@ -315,14 +315,14 @@ const DayTypeSingleEditor = ({
           value={localType.Libelle || ""}
           onChange={(e) => handleLabelChange(e.target.value)}
           placeholder="Ex: Jour Férié..."
-          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-bg shadow-sm hover:shadow-md w-full"
+          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-500-bg shadow-sm hover:shadow-md w-full"
           disabled={dayType.isLocked || !canEdit}
         />
       </div>
 
       <div className="flex flex-col gap-1">
         <span className="text-xs text-secondary font-medium poppins">Couleur Fond</span>
-        <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+        <div className="flex items-center gap-1.5 bg-primary-500-bg border border-default rounded-xl p-1 shadow-sm">
           <label
             htmlFor={`color-fond-${dayType.Id}`}
             className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
@@ -350,7 +350,7 @@ const DayTypeSingleEditor = ({
 
       <div className="flex flex-col gap-1">
         <span className="text-xs text-secondary font-medium poppins">Couleur Texte</span>
-        <div className="flex items-center gap-1.5 bg-primary-bg border border-default rounded-xl p-1 shadow-sm">
+        <div className="flex items-center gap-1.5 bg-primary-500-bg border border-default rounded-xl p-1 shadow-sm">
           <label
             htmlFor={`color-texte-${dayType.Id}`}
             className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
@@ -387,8 +387,8 @@ const DayTypeSingleEditor = ({
               !canEdit ? "opacity-50 cursor-not-allowed" : ""
             } h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
               localType.isBold
-                ? "bg-primary text-white border-primary shadow-sm"
-                : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
+                ? "bg-primary-500 text-white border-primary shadow-sm"
+                : "bg-primary-500-bg text-primary border-light hover:bg-secondary/10"
             }`}
             disabled={!canEdit}
           >
@@ -402,8 +402,8 @@ const DayTypeSingleEditor = ({
               !canEdit ? "opacity-50 cursor-not-allowed" : ""
             } h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
               localType.isItalic
-                ? "bg-primary text-white border-primary shadow-sm"
-                : "bg-primary-bg text-primary border-light hover:bg-secondary/10"
+                ? "bg-primary-500 text-white border-primary shadow-sm"
+                : "bg-primary-500-bg text-primary border-light hover:bg-secondary/10"
             }`}
             disabled={!canEdit}
           >
@@ -414,7 +414,7 @@ const DayTypeSingleEditor = ({
 
       <div className="flex flex-col gap-1">
         <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
-        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-bg">
+        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-500-bg">
           <div
             className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
             style={{
@@ -450,6 +450,7 @@ const NonWorkingDaysEditor = ({
   canDelete: boolean;
   canAdd: boolean;
 }) => {
+  const isHolidayTypeSelected = String(selectedDayTypeId).toLowerCase() === "ferie";
   const [isOpen, setIsOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [availableYearsState, setAvailableYearsState] = useState<number[]>([]);
@@ -534,18 +535,6 @@ const NonWorkingDaysEditor = ({
         .then((res: any) => {
           if (res && !res.success && res.message) {
             setError(res.message);
-          }
-          if (res && res.data) {
-            const nonWorkingDates = res.data.nonWorkingDates || [];
-            const recordData = Object.fromEntries(
-              nonWorkingDates.map(
-                (item: { DatePlanningJourNontravaille: any; IdPlanningJourNontravaille: string; TypeJourCode: string }) => [
-                  item.DatePlanningJourNontravaille,
-                  { Id: Number(item.IdPlanningJourNontravaille), TypeJourCode: item.TypeJourCode },
-                ]
-              )
-            );
-            currentSetting.setNonWorkingDates(recordData);
           }
         })
         .catch((err: any) => {
@@ -845,7 +834,7 @@ const NonWorkingDaysEditor = ({
 
       {pendingDeleteDate && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
-          <div className="bg-primary-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+          <div className="bg-primary-500-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center gap-3 text-red-600">
               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -887,7 +876,7 @@ const NonWorkingDaysEditor = ({
 
       {pendingPastDateAction && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
-          <div className="bg-primary-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-primary-500-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3 text-amber-600">
               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -913,7 +902,7 @@ const NonWorkingDaysEditor = ({
               </button>
               <button
                 type="button"
-                className="px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary-600 shadow-sm transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 rounded-xl bg-primary-500 text-white text-xs font-semibold hover:bg-primary-500-600 shadow-sm transition-colors cursor-pointer"
                 onClick={async () => {
                   const action = pendingPastDateAction;
                   setPendingPastDateAction(null);
@@ -931,7 +920,7 @@ const NonWorkingDaysEditor = ({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-primary-bg p-3 rounded-xl border border-light shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-primary-500-bg p-3 rounded-xl border border-light shadow-sm">
         <div className="flex items-center gap-2 ml-auto">
           <span className="text-xs font-semibold text-secondary whitespace-nowrap">Année :</span>
           <select
@@ -939,7 +928,7 @@ const NonWorkingDaysEditor = ({
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
             disabled={isLoadingYear}
-            className="border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-bg font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm disabled:opacity-50"
+            className="border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-500-bg font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm disabled:opacity-50"
           >
             {availableYears.map((year) => (
               <option key={year} value={year}>
@@ -950,7 +939,7 @@ const NonWorkingDaysEditor = ({
         </div>
       </div>
 
-      {canAdd &&
+      {canAdd && !isHolidayTypeSelected &&
         (!isOpen ? (
           <button
             type="button"
@@ -959,7 +948,7 @@ const NonWorkingDaysEditor = ({
               setDateErrorMessage(null);
               setIsOpen(true);
             }}
-            className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
+            className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary-500/5 hover:bg-primary-500/10 text-primary font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
           >
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -967,7 +956,7 @@ const NonWorkingDaysEditor = ({
             Ajouter une date
           </button>
         ) : (
-          <div className="p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-2.5 shadow-sm shrink-0">
+          <div className="p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary-500/5 flex flex-col gap-2.5 shadow-sm shrink-0">
             <div className="flex items-center justify-between pb-1 border-b border-primary/20">
               <h5 className="text-xs font-semibold text-primary">Nouveau jour</h5>
               <button
@@ -992,7 +981,7 @@ const NonWorkingDaysEditor = ({
                   setNewDate(e.target.value);
                   if (dateErrorMessage) setDateErrorMessage(null);
                 }}
-                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
+                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary-500-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
               />
 
               <select
@@ -1003,7 +992,7 @@ const NonWorkingDaysEditor = ({
                   ""
                 }
                 onChange={(e) => setNewTypeId(e.target.value)}
-                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
+                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary-500-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
               >
                 {setting.dayTypesOptions?.map((dt: any) => (
                   <option key={dt.Id} value={dt.Id}>
@@ -1016,7 +1005,7 @@ const NonWorkingDaysEditor = ({
                 type="button"
                 onClick={handleAddDate}
                 disabled={isAdding}
-                className="px-3 py-1.5 cursor-pointer bg-primary text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50 min-w-[70px]"
+                className="px-3 py-1.5 cursor-pointer bg-primary-500 text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50 min-w-[70px]"
               >
                 {isAdding ? (
                   <svg className="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
@@ -1038,7 +1027,7 @@ const NonWorkingDaysEditor = ({
           </div>
         ))}
 
-      <div className="bg-primary-bg/60 rounded-xl p-3 min-h-[160px] relative flex-1 min-h-0 border border-light overflow-y-auto">
+      <div className="bg-primary-500-bg/60 rounded-xl p-3 min-h-[160px] relative flex-1 min-h-0 border border-light overflow-y-auto">
         {isLoadingYear ? (
           <div className="py-8">
             <Loader size="md" message={`Chargement...`} />
@@ -1054,20 +1043,20 @@ const NonWorkingDaysEditor = ({
                   return (
                     <div
                       key={dateKey}
-                      className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-primary/10 rounded-xl p-2.5 shadow-sm border border-primary/30 gap-2"
+                      className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-primary-500/10 rounded-xl p-2.5 shadow-sm border border-primary/30 gap-2"
                     >
                       <div className="flex flex-1 items-center gap-2">
                         <input
                           type="date"
                           value={editDateValue}
                           onChange={(e) => setEditDateValue(e.target.value)}
-                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
+                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary-500-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
                         />
 
                         <select
                           value={editTypeIdValue}
                           onChange={(e) => setEditTypeIdValue(e.target.value)}
-                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
+                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary-500-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
                         >
                           {setting.dayTypesOptions?.map((dt: any) => (
                             <option key={dt.Id} value={dt.Id}>
@@ -1083,7 +1072,7 @@ const NonWorkingDaysEditor = ({
                           disabled={isSavingEdit}
                           onClick={() => handleSaveEdit(dateKey, val)}
                           title="Enregistrer"
-                          className="text-white bg-primary p-1.5 rounded-lg transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                          className="text-white bg-primary-500 p-1.5 rounded-lg transition-all disabled:opacity-50 cursor-pointer shadow-xs"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -1094,7 +1083,7 @@ const NonWorkingDaysEditor = ({
                           disabled={isSavingEdit}
                           onClick={handleCancelEdit}
                           title="Annuler"
-                          className="text-secondary bg-primary-bg p-1.5 rounded-lg border border-light transition-all cursor-pointer shadow-xs hover:bg-secondary/10"
+                          className="text-secondary bg-primary-500-bg p-1.5 rounded-lg border border-light transition-all cursor-pointer shadow-xs hover:bg-secondary/10"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1116,7 +1105,7 @@ const NonWorkingDaysEditor = ({
                 return (
                   <div
                     key={dateKey}
-                    className="flex items-center justify-between bg-primary-bg rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
+                    className="flex items-center justify-between bg-primary-500-bg rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
                   >
                     <div className="flex items-center gap-2.5">
                       <div
@@ -1126,7 +1115,7 @@ const NonWorkingDaysEditor = ({
                       />
                       <span className="text-xs font-medium text-primary">{formattedDateStr}</span>
                       {currentTypeObj && (
-                        <span className="text-[10px] text-secondary/70 bg-secondary-bg px-2 py-0.5 rounded-full border border-ultra-light">
+                        <span className="text-[10px] text-secondary/70 bg-secondary px-2 py-0.5 rounded-full border border-ultra-light">
                           {currentTypeObj.Libelle}
                         </span>
                       )}
@@ -1230,8 +1219,40 @@ export const DaysManagementCategoryContent: React.FC<{
   setApiError,
   registerSaveAction,
 }) => {
+  const [isLoadingDayTypes, setIsLoadingDayTypes] = useState(false);
+
   const dayTypeSetting = categoryObj.items?.find((item: any) => item.type === "day-type-settings");
   const nonWorkingSetting = categoryObj.items?.find((item: any) => item.type === "custom-non-working-dates");
+
+  const dayTypeSettingRef = useRef(dayTypeSetting);
+  useEffect(() => {
+    dayTypeSettingRef.current = dayTypeSetting;
+  }, [dayTypeSetting]);
+
+  useEffect(() => {
+    const fetchFn = dayTypeSettingRef.current?.fetchDayTypes;
+    if (typeof fetchFn !== "function") return;
+
+    let isMounted = true;
+    setIsLoadingDayTypes(true);
+    setApiError(null);
+
+    Promise.resolve(fetchFn())
+      .catch((err: any) => {
+        if (isMounted) {
+          setApiError(err?.message || "Erreur lors du chargement des types de jours.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingDayTypes(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setApiError]);
 
   return (
     <MasterDetailSplitLayout
@@ -1242,70 +1263,76 @@ export const DaysManagementCategoryContent: React.FC<{
             <NewDayTypeForm onAdd={dayTypeSetting.onAddDayType} setError={setApiError} />
           )}
 
-          <div className="space-y-3">
-            {/* Carte fixe "Tous les types" */}
-            <div
-              className={`p-3.5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 shadow-sm cursor-pointer ${
-                selectedDayTypeId === "all"
-                  ? "border-primary bg-primary/10"
-                  : "border-light bg-secondary/10 hover:border-primary/30"
-              }`}
-              onClick={() => setSelectedDayTypeId("all")}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                    />
-                  </svg>
-                </div>
-                <span className="text-xs font-semibold text-primary poppins">Tous les types</span>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedDayTypeId("all");
-                }}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
-                  selectedDayTypeId === "all"
-                    ? "bg-primary text-white ring-2 ring-primary/20"
-                    : "bg-primary-bg border border-light hover:bg-primary/5 text-primary"
-                }`}
-              >
-                <span>Voir les jours</span>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+          {isLoadingDayTypes ? (
+            <div className="py-8">
+              <Loader size="md" message="Chargement des types de jours..." />
             </div>
-
-            {dayTypeSetting?.dayTypes?.map((dayType: DayType) => (
-              <DayTypeSingleEditor
-                key={dayType.Id}
-                dayType={dayType}
-                isSelected={String(dayType.Id) === String(selectedDayTypeId)}
-                onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
-                onUpdate={dayTypeSetting.onUpdateDayType}
-                onCheckDelete={dayTypeSetting.onCheckDeleteDayType}
-                onDelete={async (id: string | number, count: number) => {
-                  const result = await dayTypeSetting.onDeleteDayType?.(id, count);
-                  if (result?.success) {
+          ) : (
+            <div className="space-y-3">
+              {/* Carte fixe "Tous les types" */}
+              <div
+                className={`p-3.5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 shadow-sm cursor-pointer ${
+                  selectedDayTypeId === "all"
+                    ? "border-primary bg-primary-500/10"
+                    : "border-light bg-secondary/10 hover:border-primary/30"
+                }`}
+                onClick={() => setSelectedDayTypeId("all")}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-semibold text-primary poppins">Tous les types</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setSelectedDayTypeId("all");
-                  }
-                  return result;
-                }}
-                setError={setApiError}
-                canEdit={dayTypeSetting.canEdit}
-                canDelete={dayTypeSetting.canDelete}
-                registerSaveAction={registerSaveAction}
-              />
-            ))}
-          </div>
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
+                    selectedDayTypeId === "all"
+                      ? "bg-primary-500 text-white ring-2 ring-primary/20"
+                      : "bg-primary-500-bg border border-light hover:bg-primary-500/5 text-primary"
+                  }`}
+                >
+                  <span>Voir les jours</span>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+
+              {dayTypeSetting?.dayTypes?.map((dayType: DayType) => (
+                <DayTypeSingleEditor
+                  key={dayType.Id}
+                  dayType={dayType}
+                  isSelected={String(dayType.Id) === String(selectedDayTypeId)}
+                  onSelect={() => setSelectedDayTypeId(String(dayType.Id))}
+                  onUpdate={dayTypeSetting.onUpdateDayType}
+                  onCheckDelete={dayTypeSetting.onCheckDeleteDayType}
+                  onDelete={async (id: string | number, count: number) => {
+                    const result = await dayTypeSetting.onDeleteDayType?.(id, count);
+                    if (result?.success) {
+                      setSelectedDayTypeId("all");
+                    }
+                    return result;
+                  }}
+                  setError={setApiError}
+                  canEdit={dayTypeSetting.canEdit}
+                  canDelete={dayTypeSetting.canDelete}
+                  registerSaveAction={registerSaveAction}
+                />
+              ))}
+            </div>
+          )}
         </>
       }
       rightContent={

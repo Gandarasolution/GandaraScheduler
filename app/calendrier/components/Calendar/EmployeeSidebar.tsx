@@ -145,7 +145,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     return (
       <div
         key={`${reactKeyPrefix}-employee-${employee.IdPersonnel}`}
-        className="relative flex cursor-pointer bg-primary-bg border-l border-r border-default"
+        className="relative flex cursor-pointer bg-primary-500-bg border-l border-r border-default"
         style={{
           height: employeeRowHeight,
           alignItems: 'center',
@@ -170,7 +170,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
         )}
 
         <div
-          className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-50 transition-colors duration-150 employee-row-item"
+          className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-500-50 transition-colors duration-150 employee-row-item"
           data-employee-id={employee.IdPersonnel}
           onMouseOver={() => updateHighlightedEmployeeRow(employee.IdPersonnel)}
           onContextMenu={(event) => onEmployeeContextMenu(event, employee)}
@@ -238,13 +238,10 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     if (childEmployees.length === 0) return null;
 
     return (
-      <div key={String(child.id)} className="bg-primary-bg">
-        {/*
-          On conserve exactement CELL_HEIGHT pour rester aligné avec la virtualisation,
-          mais le hover est contenu dans un bloc intérieur avec du padding horizontal.
-        */}
+      <div key={String(child.id)} className="bg-primary-500-bg">
+        
         <div
-          className="flex items-center bg-primary-bg"
+          className="flex items-center bg-primary-500-bg"
           style={{
             height: CELL_HEIGHT,
             paddingLeft: 18,
@@ -257,7 +254,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
           <button
             type="button"
             onClick={() => onToggleItem(child.id)}
-            className="flex w-full items-center justify-between rounded-xl px-3 bg-secondary-bg hover:bg-primary-50 transition-colors duration-150 focus:outline-none cursor-pointer"
+            className="flex w-full items-center justify-between rounded-xl px-3 bg-secondary hover:bg-primary-500-50 transition-colors duration-150 focus:outline-none cursor-pointer"
             style={{ height: Math.max(32, CELL_HEIGHT - 8) }}
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -371,7 +368,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
               <button
                 // Ajout de "overflow-hidden" ici pour que le bouton rogne ses propres bords dans l'arrondi 4xl
-                className={`relative z-10 flex justify-between items-center px-4 bg-primary-bg focus:outline-none cursor-pointer ${
+                className={`relative z-10 flex justify-between items-center px-4 bg-primary-500-bg focus:outline-none cursor-pointer ${
                   isOpen
                     ? 'rounded-t-4xl border-t border-r border-l border-default w-full'
                     : 'rounded-4xl border border-default w-full'
@@ -408,7 +405,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                
                 
                 {/* 4. Footer */}
-                <div className="relative z-20 w-full h-5 bg-primary-bg border-b border-l border-r border-default rounded-b-4xl overflow-hidden" />
+                <div className="relative z-20 w-full h-5 bg-primary-500-bg border-b border-l border-r border-default rounded-b-4xl overflow-hidden" />
                 
                 {/* Masques extérieurs placés juste en dessous pour cacher les excédents sur les côtés */}
                 <div className="absolute bottom-0 -left-[1px] w-6 h-5 bg-page z-10 pointer-events-none" />

@@ -254,7 +254,7 @@ const TeamMembersEditor = ({
               className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer flex items-center gap-1.5 ${
                 showInactiveMembers
                   ? "bg-amber-500/15 text-amber-700 border-amber-500/30 shadow-xs"
-                  : "bg-primary-bg text-secondary border-light hover:text-primary hover:border-primary/30"
+                  : "bg-primary-500-bg text-secondary border-light hover:text-primary hover:border-primary/30"
               }`}
               title={
                 showInactiveMembers
@@ -270,7 +270,7 @@ const TeamMembersEditor = ({
             </button>
           )}
 
-          <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
+          <span className="text-[11px] font-semibold text-primary bg-primary-500/10 px-2.5 py-0.5 rounded-full">
             {displayedMembers.length} membre{displayedMembers.length > 1 ? "s" : ""}
           </span>
         </div>
@@ -278,7 +278,7 @@ const TeamMembersEditor = ({
 
       {pendingRemoveMember && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
-          <div className="bg-primary-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+          <div className="bg-primary-500-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center gap-3 text-red-600">
               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -327,7 +327,7 @@ const TeamMembersEditor = ({
               setFormError(null);
               setIsOpen(true);
             }}
-            className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
+            className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary-500/5 hover:bg-primary-500/10 text-primary font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
           >
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -335,7 +335,7 @@ const TeamMembersEditor = ({
             Ajouter un personnel
           </button>
         ) : (
-          <div className="p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-2.5 shadow-sm shrink-0">
+          <div className="p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary-500/5 flex flex-col gap-2.5 shadow-sm shrink-0">
             <div className="flex items-center justify-between pb-1 border-b border-primary/20">
               <h5 className="text-xs font-semibold text-primary">Ajouter un membre</h5>
               <button
@@ -377,7 +377,7 @@ const TeamMembersEditor = ({
                   type="button"
                   onClick={handleAddMembers}
                   disabled={isAdding || selectedPersonnelIds.length === 0}
-                  className="px-3 py-1.5 cursor-pointer bg-primary text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50 min-w-[70px]"
+                  className="px-3 py-1.5 cursor-pointer bg-primary-500 text-white rounded-lg font-medium text-xs shadow-md hover:shadow-lg flex items-center justify-center gap-1 shrink-0 disabled:opacity-50 min-w-[70px]"
                 >
                   {isAdding ? (
                     <svg className="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
@@ -411,7 +411,7 @@ const TeamMembersEditor = ({
           </div>
         ))}
 
-      <div className="bg-primary-bg/60 rounded-xl p-3 min-h-[160px] relative flex-1 border border-light overflow-y-auto">
+      <div className="bg-primary-500-bg/60 rounded-xl p-3 min-h-[160px] relative flex-1 border border-light overflow-y-auto">
         {isLoadingMembers ? (
           <div className="py-8">
             <Loader size="md" message="Chargement..." />
@@ -427,7 +427,7 @@ const TeamMembersEditor = ({
                 return (
                   <div
                     key={member.IdPersonnel}
-                    className="flex items-center justify-between bg-primary-bg rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
+                    className="flex items-center justify-between bg-primary-500-bg rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="relative inline-block" style={{ opacity: !isMemberActive ? 0.5 : 1 }}>
@@ -575,7 +575,7 @@ const TeamRow: React.FC<{
             setError(null);
           }}
           disabled={!canEdit}
-          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary-bg shadow-sm w-full"
+          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary-500-bg shadow-sm w-full"
         />
       </div>
     </SelectableEntityRow>
@@ -693,7 +693,7 @@ export const TeamsManagementCategoryContent: React.FC<{
                     if (formError) setFormError(null);
                   }}
                   placeholder="Ex: Équipe Technique, Commercial..."
-                  className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary-bg shadow-sm w-full"
+                  className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary-500-bg shadow-sm w-full"
                 />
               </div>
             </CollapsibleCreateForm>

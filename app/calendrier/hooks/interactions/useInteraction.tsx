@@ -76,11 +76,11 @@ export const useInteraction = ({
 
     const items: any[] = [{
       label: 'Équipe',
-      logo: <span className="w-4 h-4 rounded-full bg-primary inline-block" />,
+      logo: <span className="w-4 h-4 rounded-full bg-primary-500 inline-block" />,
       control: (
         <select
           value={employee.Equipe ?? ''}
-          className="min-w-50 rounded-lg border border-default bg-secondary-bg px-2 py-1 text-sm"
+          className="min-w-50 rounded-lg border border-default bg-secondary px-2 py-1 text-sm"
           onClick={(event) => event.stopPropagation()}
           onChange={async (event) => {
             const value = event.target.value;

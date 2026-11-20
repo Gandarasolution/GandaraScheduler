@@ -84,8 +84,8 @@ export const InlineSaveButton = ({
       onClick={onSave}
       disabled={isSaving}
       title="Enregistrer les modifications"
-      className={`${className || ""} px-3 py-2 rounded-xl border border-default text-white hover:bg-primary-600 
-      bg-primary text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+      className={`${className || ""} px-3 py-2 rounded-xl border border-default text-white hover:bg-primary-500-600 
+      bg-primary-500 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
     >
       {isSaving ? (
         <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -284,7 +284,7 @@ const ControlPanelModalContent: React.FC<{
   return (
     <div className="flex flex-col h-full min-h-0 poppins gap-4">
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <div className="bg-secondary-bg shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
+        <div className="bg-secondary shadow-sm flex flex-col min-h-0 overflow-y-auto flex-1">
           {currentCategoryObj && (
             <div className="flex flex-col h-full min-h-0">
               {apiError && (
@@ -324,8 +324,8 @@ const ControlPanelModalContent: React.FC<{
           type="button"
           className={`px-8 py-3 rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer ${
             showFooterSave
-              ? "bg-secondary-bg border border-light text-primary hover:bg-secondary/10"
-              : "bg-primary text-white hover:bg-primary-600"
+              ? "bg-secondary border border-light text-primary hover:bg-secondary/10"
+              : "bg-primary-500 text-white hover:bg-primary-500-600"
           }`}
           onClick={handleCloseWithSave}
           disabled={isSavingPending}
@@ -336,7 +336,7 @@ const ControlPanelModalContent: React.FC<{
         {showFooterSave && (
           <button
             type="button"
-            className="px-8 py-3 bg-primary text-white rounded-xl hover:bg-primary-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 min-w-[220px]"
+            className="px-8 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-500-600 active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 min-w-[220px]"
             onClick={handleFooterSave}
             disabled={isSavingPending}
           >
@@ -370,13 +370,10 @@ const ControlPanelModal: React.FC<ControlPanelModalProps> = ({ onClose, isContro
   const [isCalendarFormOpen, setIsCalendarFormOpen] = useState(false);
   const [selectedDayTypeId, setSelectedDayTypeId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [saveActions, setSaveActions] = useState<Record<string, SaveAction>>({});
   const [isSavingPending, setIsSavingPending] = useState(false);
 
   const saveCallbacksRef = useRef<Record<string, () => Promise<void>>>({});
   const [dirtyMap, setDirtyMap] = useState<Record<string, boolean>>({});
-
-  const hasFetchedRef = useRef(false);
 
   const currentCategoryObj = useMemo(() => {
     return settings.find((cat: any) => cat.key === activeCategory) || settings[0];
@@ -406,33 +403,12 @@ const ControlPanelModal: React.FC<ControlPanelModalProps> = ({ onClose, isContro
   const isAnyDirty = useMemo(() => Object.values(dirtyMap).some(Boolean), [dirtyMap]);
 
   useEffect(() => {
-    if (isControlPanelModalOpen && !hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      settings.forEach((cat: any) => {
-        cat.items?.forEach((setting: any) => {
-          if (setting.type === "day-type-settings" && typeof setting.fetchDayTypes === "function") {
-            setting
-              .fetchDayTypes()
-              .then((res: any) => {
-                if (res && !res.success && res.message) {
-                  setApiError(res.message);
-                }
-              })
-              .catch((err: any) => {
-                setApiError(err?.message || "Erreur lors du chargement des types de jours.");
-              });
-          }
-        });
-      });
-    }
-
     if (!isControlPanelModalOpen) {
       setApiError(null);
-      setSaveActions({});
       setSelectedDayTypeId(null);
       setIsCalendarFormOpen(false);
     }
-  }, [isControlPanelModalOpen, settings]);
+  }, [isControlPanelModalOpen]);
 
   const handleSaveAll = useCallback(async () => {
     const dirtyIds = Object.entries(dirtyMap)
@@ -457,19 +433,18 @@ const ControlPanelModal: React.FC<ControlPanelModalProps> = ({ onClose, isContro
     switch (currentCategoryObj?.key) {
       case "daysManagement":
         return "w-[min(98vw,1500px)] max-h-[600px]!";
-      case 'teamsManagement':
+      case "teamsManagement":
         return "w-[min(98vw,1100px)] max-h-[600px]!";
       case "mobileAppointmentFields":
         return "w-[min(95vw,1400px)]";
       case "calendarConfigurations":
         return isCalendarFormOpen
-          ? "w-[min(96vw,1300px)] h-[90vh]" // Taille élargie avec le panneau droit ouvert
-          : "w-[min(95vw,620px)]";  // Taille compacte pour la liste seule
+          ? "w-[min(96vw,1300px)] h-[90vh]"
+          : "w-[min(95vw,620px)]";
       default:
         return "w-[min(95vw,607px)]";
     }
   }, [currentCategoryObj?.key, isCalendarFormOpen]);
-
 
   return (
     <Modal
@@ -498,5 +473,4 @@ const ControlPanelModal: React.FC<ControlPanelModalProps> = ({ onClose, isContro
     </Modal>
   );
 };
-
 export default memo(ControlPanelModal);

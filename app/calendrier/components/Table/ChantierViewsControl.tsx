@@ -251,7 +251,7 @@ const Skeleton = memo(function Skeleton({
   return (
     <div
       aria-hidden="true"
-      className={`animate-pulse rounded-lg bg-secondary-bg ${className}`}
+      className={`animate-pulse rounded-lg bg-secondary ${className}`}
     />
   );
 });
@@ -264,7 +264,7 @@ const LoadingMessage = memo(function LoadingMessage({
   return (
     <div
       role="status"
-      className="flex items-center justify-center gap-3 rounded-xl border border-default bg-secondary-bg px-4 py-5 text-sm text-secondary"
+      className="flex items-center justify-center gap-3 rounded-xl border border-default bg-secondary px-4 py-5 text-sm text-secondary"
     >
       <Loader2 className="h-4 w-4 animate-spin text-primary" />
       {message}
@@ -1081,14 +1081,14 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
       return (
         <div
           key={category.label + "-group-" + key}
-          className="min-w-0 space-y-2 rounded-xl border border-default bg-primary-bg p-3"
+          className="min-w-0 space-y-2 rounded-xl border border-default bg-primary-500-bg p-3"
         >
           <div className="flex items-center justify-between gap-2 px-0.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
               {category.label}
             </label>
             {values.length > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-primary-500/10 px-1.5 text-[10px] font-semibold text-primary">
                 {values.length}
               </span>
             )}
@@ -1106,8 +1106,8 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                     transition-all duration-200 cursor-pointer border
                     ${
                       isSelected
-                        ? "border-primary bg-primary text-white shadow-sm"
-                        : "border-default bg-secondary-bg/60 text-secondary hover:border-primary/40"
+                        ? "border-primary bg-primary-500 text-white shadow-sm"
+                        : "border-default bg-secondary/60 text-secondary hover:border-primary/40"
                     }
                   `}
                 >
@@ -1145,14 +1145,14 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
     return (
       <div
         key={category.label + "-group-" + key}
-        className="min-w-0 space-y-2 rounded-xl border border-default bg-primary-bg p-3"
+        className="min-w-0 space-y-2 rounded-xl border border-default bg-primary-500-bg p-3"
       >
         <div className="flex items-center justify-between gap-2 px-0.5">
           <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
             {category.label}
           </label>
           {values.length > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-primary-500/10 px-1.5 text-[10px] font-semibold text-primary">
               {values.length}
             </span>
           )}
@@ -1192,7 +1192,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           {!compact && (
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-500/10 text-primary">
                 <Globe2 className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -1266,7 +1266,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
 
                 return <GroupIcon className="text-primary" />;
               })()}
-              className="rounded-xl border-default bg-secondary-bg px-2 py-1.5"
+              className="rounded-xl border-default bg-secondary px-2 py-1.5"
             />
           </div>
         </div>
@@ -1303,7 +1303,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
             <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
               {/* Cadre 1 : Nom de la vue + Visibilité */}
               <section
-                className={`flex flex-col justify-between min-w-0 rounded-2xl border border-default bg-secondary-bg/40 p-4 transition-all lg:col-span-7 `}
+                className={`flex flex-col justify-between min-w-0 rounded-2xl border border-default bg-secondary/40 p-4 transition-all lg:col-span-7 `}
               >
                 <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-12">
                   {/* Input : Nom de la vue */}
@@ -1325,7 +1325,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                         onChange={(event) => setName(event.target.value)}
                         placeholder="Ex. Suivi des chantiers en cours"
                         maxLength={100}
-                        className="mt-1.5 w-full rounded-xl border border-default bg-primary-bg px-3 py-2 text-sm text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        className="mt-1.5 w-full rounded-xl border border-default bg-primary-500-bg px-3 py-2 text-sm text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                         autoFocus
                       />
                     )}
@@ -1344,8 +1344,8 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                         disabled={isLoadingDetails}
                         className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
                           !isPrivate
-                            ? "border-primary bg-primary text-white"
-                            : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"
+                            ? "border-primary bg-primary-500 text-white"
+                            : "border-default bg-primary-500-bg text-secondary hover:bg-secondary"
                         }`}
                       >
                         <GroupIcon className="h-3.5 w-3.5 shrink-0" />
@@ -1357,8 +1357,8 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                         disabled={isLoadingDetails}
                         className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
                           isPrivate
-                            ? "border-primary bg-primary text-white"
-                            : "border-default bg-primary-bg text-secondary hover:bg-secondary-bg"
+                            ? "border-primary bg-primary-500 text-white"
+                            : "border-default bg-primary-500-bg text-secondary hover:bg-secondary"
                         }`}
                       >
                         <Lock className="h-3.5 w-3.5 shrink-0" />
@@ -1371,7 +1371,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
 
               {/* Cadre 2 : Sélection des utilisateurs autorisés (S'affiche uniquement si privée) */}
               {isPrivate && (
-                <section className="flex flex-col justify-between min-w-0 rounded-2xl border border-default bg-secondary-bg/40 p-4 lg:col-span-5">
+                <section className="flex flex-col justify-between min-w-0 rounded-2xl border border-default bg-secondary/40 p-4 lg:col-span-5">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
@@ -1409,7 +1409,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
 
             {/* Layout principal : Colonnes (col-span-7) & Filtres (col-span-5) */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-              <section className="rounded-2xl border border-default bg-secondary-bg/50 p-4 sm:p-5 lg:col-span-7">
+              <section className="rounded-2xl border border-default bg-secondary/50 p-4 sm:p-5 lg:col-span-7">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-primary">
@@ -1428,7 +1428,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                   <Skeleton className="h-64 w-full" />
                 ) : (
                   <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
-                    <div className="min-w-0 rounded-xl border border-default bg-primary-bg p-3 lg:col-span-5">
+                    <div className="min-w-0 rounded-xl border border-default bg-primary-500-bg p-3 lg:col-span-5">
                       <div className="mb-3 flex items-center justify-between">
                         <span className="text-xs font-semibold text-secondary">
                           Disponibles ({availableColumns.length})
@@ -1468,7 +1468,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                                           : [...current, column.id]
                                       )
                                     }
-                                    className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-dashed border-default px-2 py-1.5 text-xs text-primary hover:border-primary hover:bg-primary/5"
+                                    className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-dashed border-default px-2 py-1.5 text-xs text-primary hover:border-primary hover:bg-primary-500/5"
                                   >
                                     <Plus className="h-3.5 w-3.5" />
                                     {column.label}
@@ -1487,7 +1487,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                       </div>
                     </div>
 
-                    <div className="min-w-0 rounded-xl border border-default bg-primary-bg p-3 lg:col-span-7">
+                    <div className="min-w-0 rounded-xl border border-default bg-primary-500-bg p-3 lg:col-span-7">
                       <div className="mb-3 flex items-center justify-between">
                         <span className="text-xs font-semibold text-secondary">
                           Ordre d'affichage ({columns.length})
@@ -1536,10 +1536,10 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                               }}
                               className={`flex min-w-0 items-center gap-2 rounded-xl border px-2 py-2 text-sm ${
                                 draggedColumn === id
-                                  ? "border-primary bg-primary/10 opacity-50"
+                                  ? "border-primary bg-primary-500/10 opacity-50"
                                   : dragOverColumn === id
-                                  ? "border-primary bg-primary/10"
-                                  : "border-default bg-secondary-bg/30"
+                                  ? "border-primary bg-primary-500/10"
+                                  : "border-default bg-secondary/30"
                               }`}
                             >
                               <button
@@ -1562,7 +1562,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                                 <GripVertical className="h-4 w-4" />
                               </button>
 
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary-500/10 text-xs font-semibold text-primary">
                                 {index + 1}
                               </span>
 
@@ -1570,7 +1570,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                                 {column.label}
                               </span>
 
-                              <span className="hidden shrink-0 rounded-md bg-primary-bg px-2 py-0.5 text-[10px] text-xs font-semibold uppercase tracking-wide text-secondary sm:inline-block">
+                              <span className="hidden shrink-0 rounded-md bg-primary-500-bg px-2 py-0.5 text-[10px] text-xs font-semibold uppercase tracking-wide text-secondary sm:inline-block">
                                 {column.categoryLabel}
                               </span>
 
@@ -1645,7 +1645,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
               </section>
 
               {/* Section Filtres : Affichage vertical uniquement */}
-              <section className="rounded-2xl border border-default bg-secondary-bg/50 p-4 sm:p-5 lg:col-span-5">
+              <section className="rounded-2xl border border-default bg-secondary/50 p-4 sm:p-5 lg:col-span-5">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <SlidersHorizontal className="h-5 w-5 text-primary" />
@@ -1658,7 +1658,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                       </p>
                     </div>
                   </div>
-                  <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-white">
+                  <span className="rounded-full bg-primary-500 px-2.5 py-1 text-xs font-semibold text-white">
                     {selectedFilterCount}
                   </span>
                 </div>
@@ -1678,7 +1678,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-default bg-primary-bg px-5 py-4 sm:px-7">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-default bg-primary-500-bg px-5 py-4 sm:px-7">
             <div className="text-xs text-red-600">
               {columns.length === 0 && detailsLoaded
                 ? "Sélectionnez au moins une colonne."
@@ -1690,7 +1690,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                 type="button"
                 disabled={isSaving}
                 onClick={() => setIsEditorOpen(false)}
-                className="rounded-xl border border-default px-4 py-2.5 text-sm text-secondary hover:bg-secondary-bg disabled:opacity-50"
+                className="rounded-xl border border-default px-4 py-2.5 text-sm text-secondary hover:bg-secondary disabled:opacity-50"
               >
                 Annuler
               </button>
@@ -1705,7 +1705,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                   !userId
                 }
                 onClick={() => void saveView()}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-500-dark disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSaving || isEditorLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1744,7 +1744,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
               type="button"
               onClick={() => setViewToDelete(null)}
               disabled={deletingViewId !== null}
-              className="cursor-pointer rounded-xl border border-default px-4 py-2 text-sm font-medium text-secondary hover:bg-secondary-bg disabled:opacity-50"
+              className="cursor-pointer rounded-xl border border-default px-4 py-2 text-sm font-medium text-secondary hover:bg-secondary disabled:opacity-50"
             >
               Annuler
             </button>

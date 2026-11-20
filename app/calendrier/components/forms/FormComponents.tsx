@@ -85,7 +85,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         value={selectedEmployeeId || ''}
         onChange={(e) => onEmployeeChange(Number(e.target.value))}
         disabled={disabled}
-        className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-secondary-bg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {!selectedEmployeeId && <option value="">{placeholder}</option>}
         {employees.map(employee => (
@@ -233,7 +233,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     <div className="flex flex-col sm:flex-row justify-between gap-3 mt-auto pt-5">
       <button
         type={primaryType}
-        className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-4 py-3 bg-primary-500 cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={disabled}
       >
         {primaryLabel}
@@ -243,7 +243,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         type="button"
         onClick={onSecondary}
         disabled={disabled}
-        className="px-4 py-3 bg-primary cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-4 py-3 bg-primary-500 cursor-pointer text-white rounded-xl flex-1 sm:flex-none sm:w-[110px] flex items-center poppins text-sm justify-center font-medium touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {secondaryLabel}
       </button>

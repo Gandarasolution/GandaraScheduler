@@ -396,7 +396,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         )}
 
         <div 
-          className="calendar-table bg-secondary-bg relative"
+          className="calendar-table bg-secondary relative"
           style={{ width: `${dayInTimeline.length * CELL_WIDTH}px`, position: 'relative', height: totalContentHeight }}
           onMouseMove={handleMouseOver}
           onMouseOut={handleMouseOut}

@@ -29,7 +29,7 @@ const FilterModal = lazy(() => import('../modals/FilterModal'));
 const DeleteModal = lazy(() => import('../modals/DeleteModal'));
 
 const ModalLoadingFallback = () => (
-  <div className="flex min-h-[320px] w-full items-center justify-center rounded-xl bg-secondary-bg">
+  <div className="flex min-h-[320px] w-full items-center justify-center rounded-xl bg-secondary">
     <Loader size="lg" message="Chargement en cours..." />
   </div>
 );
@@ -113,6 +113,7 @@ export const CalendarModals = memo(({
     onCheckDeleteDayType,
     nonWorkingDates,
     setNonWorkingDates,
+    loadNonWorkingDates
   } = useDayTypesContext();
 
   // Récupération directe des états, configs et handlers depuis useCalendarView
@@ -338,13 +339,7 @@ export const CalendarModals = memo(({
                 return [];
               }
             },
-            fetchNonWorkingDays: async (selectedYear: number) => {
-              try {
-                return await calendarConfigService.getNonWorkingDates([selectedYear]);
-              } catch (error: any) {
-                return { success: false, message: error?.message || "Erreur lors du chargement" };
-              }
-            },
+            fetchNonWorkingDays: loadNonWorkingDates,
             dayTypesOptions: DayTypes || [],
           }
         ]
@@ -444,7 +439,7 @@ export const CalendarModals = memo(({
           id: "tagPlacement",
           label: "Placement de l'étiquette",
           classNameLabel: "font-semibold",
-          classNameSelect: "bg-primary-bg",
+          classNameSelect: "bg-primary-500-bg",
           classNameInlineSaveButton: "ml-auto",
           type: "select",
           value: tagPlacement,
@@ -458,7 +453,7 @@ export const CalendarModals = memo(({
           id: "overlapDisplayMode",
           label: "Affichage Multi-évenements sur la barre personnel",
           classNameLabel: "font-semibold",
-          classNameSelect: "bg-primary-bg",
+          classNameSelect: "bg-primary-500-bg",
           classNameInlineSaveButton: "ml-auto",
           type: "select",
           value: overlapDisplayMode,
@@ -910,7 +905,7 @@ const RepeatAppointmentContent = ({
             />
           </label>
           <select
-            className="border border-default bg-secondary-bg rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition ml-2 custom-select"
+            className="border border-default bg-secondary rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-color transition ml-2 custom-select"
             value={repeatData.repeatInterval || "day"}
             onChange={(e) => {
               const value = e.target.value as "day" | "week" | "month";
@@ -994,7 +989,7 @@ const RepeatAppointmentContent = ({
           type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+          className={`px-4 py-2 bg-primary-500 text-white rounded-xl transition-colors ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
         >
           Annuler
         </button>
@@ -1002,7 +997,7 @@ const RepeatAppointmentContent = ({
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors flex items-center justify-center min-w-[120px] ${isSubmitting ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+          className={`px-4 py-2 bg-primary-500 text-white rounded-xl transition-colors flex items-center justify-center min-w-[120px] ${isSubmitting ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
         >
           {isSubmitting && (
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
@@ -1096,7 +1091,7 @@ const ExtendAppointmentContent = ({
           type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors w-[110px] mr-[89px] ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+          className={`px-4 py-2 bg-primary-500 text-white rounded-xl transition-colors w-[110px] mr-[89px] ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
         >
           Annuler
         </button>
@@ -1104,7 +1099,7 @@ const ExtendAppointmentContent = ({
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className={`px-4 py-2 bg-primary text-white rounded-xl transition-colors w-[140px] flex items-center justify-center ${isSubmitting ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+          className={`px-4 py-2 bg-primary-500 text-white rounded-xl transition-colors w-[140px] flex items-center justify-center ${isSubmitting ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
         >
           {isSubmitting && (
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">

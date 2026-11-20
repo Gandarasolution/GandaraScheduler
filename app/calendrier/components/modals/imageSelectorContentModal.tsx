@@ -163,7 +163,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
           <div
             className={`relative border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
               dragActive 
-                ? 'border-primary bg-primary-50' 
+                ? 'border-primary bg-primary-500-50' 
                 : 'border-gray-300 hover:border-primary'
             }`}
             onDrop={handleDrop}
@@ -220,7 +220,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded cursor-pointer ${viewMode === 'grid' ? 'bg-primary text-white' : 'bg-transparent'}`}
+                className={`p-2 rounded cursor-pointer ${viewMode === 'grid' ? 'bg-primary-500 text-white' : 'bg-transparent'}`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M10 4H4C2.9 4 2 4.9 2 6V12C2 13.1 2.9 14 4 14H10C11.1 14 12 13.1 12 12V6C12 4.9 11.1 4 10 4Z"/>
@@ -231,7 +231,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded cursor-pointer  ${viewMode === 'list' ? 'bg-primary text-white' : 'bg-transparent'}`}
+                className={`p-2 rounded cursor-pointer  ${viewMode === 'list' ? 'bg-primary-500 text-white' : 'bg-transparent'}`}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13H1V11H3V13Z"/>
@@ -268,7 +268,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                   <div 
                     className={`border-2 rounded-lg p-2 hover:border-primary hover:shadow-md transition-all relative ${
                       index === 0 && currentPage === 1 && actualImage !== null && image.id === actualImage?.id
-                        ? 'border-primary shadow-lg bg-primary-50' 
+                        ? 'border-primary shadow-lg bg-primary-500-50' 
                         : 'border-gray-200 hover:border-primary'
                     }`}
                     title={`Image ${image.id}`}
@@ -292,7 +292,7 @@ const ImageSelectorContentModal: React.FC<ImageSelectorContentProps> = ({
                   onClick={() => onImageSelect(image)}
                   className={`flex items-center p-3 border-2 rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all group relative ${
                     index === 0 && currentPage === 1 && actualImage !== null && image.id === actualImage?.id
-                      ? 'border-primary shadow-md bg-primary-50' 
+                      ? 'border-primary shadow-md bg-primary-500-50' 
                       : 'border-gray-200'
                   }`}
                   title={`Image ${image.id}`}

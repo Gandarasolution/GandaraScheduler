@@ -66,7 +66,7 @@
 // ============================================================================
 .calendar-table {
   border-spacing: 0;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-primary-500);
   color: var(--text-primary);
   border-color: var(--calendar-border);
   
@@ -226,7 +226,7 @@
     box-shadow: var(--shadow-md);
     
     .employee-avatar {
-      border: 3px solid var(--bg-primary);
+      border: 3px solid var(--bg-primary-500);
       box-shadow: var(--shadow-md);
     }
     
@@ -240,7 +240,7 @@
 
   /* Headers de date mobile cohérents avec le style desktop */
   .mobile-day-header {
-    background: linear-gradient(135deg, var(--bg-primary) 0%, #f8fafc 100%) !important;
+    background: linear-gradient(135deg, var(--bg-primary-500) 0%, #f8fafc 100%) !important;
     border-bottom: 1px solid var(--border-light) !important;
     color: var(--text-primary) !important;
     padding: 12px 16px !important;
@@ -283,7 +283,7 @@
 
   /* Cellules de jour mobile avec le même style que desktop */
   .mobile-day-cell {
-    background-color: var(--bg-primary);
+    background-color: var(--bg-primary-500);
     border-bottom: 1px solid var(--border-light);
     min-height: 80px;
     
@@ -360,7 +360,7 @@
     }
 
     .mobile-day-cell {
-      background-color: var(--bg-primary);
+      background-color: var(--bg-primary-500);
       border-bottom: 1px solid var(--border-light);
       
       &.weekend {

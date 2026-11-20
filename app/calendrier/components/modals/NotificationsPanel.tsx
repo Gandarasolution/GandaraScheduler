@@ -122,7 +122,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
 
       <div className={isMobile
         ? 'absolute top-full right-0 mt-2 w-80 rounded-3xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-30 bg-[var(--bg-card)] shadow-2xl border border-[var(--border-light)]'
-        : 'fixed top-16 right-4 w-96 max-h-[80vh] bg-secondary-bg text-primary rounded-2xl shadow-2xl border border-default z-50 flex flex-col poppins'}
+        : 'fixed top-16 right-4 w-96 max-h-[80vh] bg-secondary text-primary rounded-2xl shadow-2xl border border-default z-50 flex flex-col poppins'}
         onClick={(event) => isMobile && event.stopPropagation()}
       >
         <div className={isMobile
@@ -135,7 +135,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
               {isMobile && <p className="text-xs text-[var(--text-tertiary)]">{notifications.length} notification{notifications.length > 1 ? 's' : ''}</p>}
             </div>
             {notifications.length > 0 && (
-              <span className={isMobile ? 'hidden' : 'bg-secondary-bg/20 text-xs px-2 py-1 rounded-full'}>
+              <span className={isMobile ? 'hidden' : 'bg-secondary/20 text-xs px-2 py-1 rounded-full'}>
                 {notifications.length}
               </span>
             )}
@@ -148,7 +148,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                 onClick={onMarkAllAsRead}
                 className={isMobile 
                   ? 'text-xs font-medium text-[var(--color-primary-500)] hover:underline mr-1' 
-                  : 'text-white/80 hover:text-white p-1 rounded-lg hover:bg-secondary-bg/20 transition-colors flex items-center gap-1'}
+                  : 'text-white/80 hover:text-white p-1 rounded-lg hover:bg-secondary/20 transition-colors flex items-center gap-1'}
                 title="Tout marquer comme lu"
               >
                 {isMobile ? 'Tout lire' : <CheckCheck size={18} />}
@@ -157,7 +157,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
 
             <button
               onClick={onClose}
-              className={isMobile ? 'text-[var(--text-tertiary)]' : 'text-white/80 hover:text-white p-1 rounded-lg hover:bg-secondary-bg/20 transition-colors'}
+              className={isMobile ? 'text-[var(--text-tertiary)]' : 'text-white/80 hover:text-white p-1 rounded-lg hover:bg-secondary/20 transition-colors'}
               aria-label="Fermer les notifications"
             >
               <X size={isMobile ? 18 : 20} />
@@ -183,7 +183,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({
                   className={isMobile
                     ? 'px-6 py-4 transition-colors cursor-pointer border-b border-[var(--bg-secondary)]'
                     : `relative p-4 mb-2 rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer ${notification.IsRead ? 'bg-gray-50 border-gray-200' : 'bg-secondary border-l-4 border-l-[#009580] shadow-sm'}`}
-                  style={isMobile ? { backgroundColor: notification.IsRead ? 'transparent' : 'var(--bg-primary)' } : undefined}
+                  style={isMobile ? { backgroundColor: notification.IsRead ? 'transparent' : 'var(--bg-primary-500)' } : undefined}
                   onClick={() => !notification.IsRead && onMarkAsRead([notification.Id])}
                 >
                   <div className="flex items-start gap-3">

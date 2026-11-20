@@ -743,8 +743,6 @@ input[type="date"] { font-variant-numeric: tabular-nums; }
 @utility bg-primary-800 { background-color: var(--color-primary-800) !important; }
 @utility bg-primary-900 { background-color: var(--color-primary-900) !important; }
 
-// Alias pour compatibilité (recommandé : utiliser bg-primary-500)
-@utility bg-primary { background-color: var(--color-primary-500) !important; }
 
 // ══════════════════════════════════════════════════════════════════════════
 // BACKGROUNDS (Statuts)
@@ -769,9 +767,10 @@ input[type="date"] { font-variant-numeric: tabular-nums; }
 // BACKGROUNDS (Sémantiques)
 // ══════════════════════════════════════════════════════════════════════════
 @utility bg-page { background-color: var(--bg-page) !important; }
-@utility bg-primary-bg { background-color: var(--bg-primary) !important; }
-@utility bg-secondary-bg { background-color: var(--bg-secondary) !important; }
+@utility bg-primary { background-color: var(--bg-primary) !important; }
+@utility bg-secondary { background-color: var(--bg-secondary) !important; }
 @utility bg-tertiary { background-color: var(--bg-tertiary) !important; }
+@utility bg-quaternary { background-color: var(--bg-quaternary) !important; }
 @utility bg-card { background-color: var(--bg-card) !important; }
 @utility bg-elevated { background-color: var(--bg-elevated) !important; }
 @utility bg-subtle { background-color: var(--bg-subtle) !important; }

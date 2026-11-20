@@ -480,7 +480,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
         {/* Vue active */}
         <div className="bg-gradient-to-br from-primary-ultra-light/50 to-primary-light/50 p-4 rounded-2xl border border-primary/20 shadow-sm relative overflow-hidden shrink-0">
           <h3 className="font-semibold text-primary text-sm mb-3 flex items-center gap-2">
-            <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center shadow-sm">
+            <div className="w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center shadow-sm">
               <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fillRule="evenodd"
@@ -516,7 +516,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                   </p>
                 )}
                 {currentConfig.Group && (
-                  <span className="text-[11px] bg-primary-bg text-primary px-2 py-0.5 rounded-md border border-primary/10 font-medium inline-block">
+                  <span className="text-[11px] bg-primary-500-bg text-primary px-2 py-0.5 rounded-md border border-primary/10 font-medium inline-block">
                     {currentConfig.Group.ChampsPremierGroupePlanningVue &&
                       `Niv.1: ${currentConfig.Group.ChampsPremierGroupePlanningVue}`}
                     {currentConfig.Group.ChampsDeuxiemeGroupePlanningVue &&
@@ -540,7 +540,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                 setEditingConfig(null);
                 setIsCreatingConfig(true);
               }}
-              className="px-3.5 py-2 bg-primary text-white rounded-xl text-xs font-medium hover:bg-primary-600 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+              className="px-3.5 py-2 bg-primary-500 text-white rounded-xl text-xs font-medium hover:bg-primary-500-600 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -563,10 +563,10 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
               key={config.IdPlanningVue}
               className={`p-3.5 rounded-2xl border transition-all duration-200 group ${
                 currentConfig?.IdPlanningVue === config.IdPlanningVue
-                  ? "border-primary bg-primary/10 shadow-sm"
+                  ? "border-primary bg-primary-500/10 shadow-sm"
                   : config.isLocked
                   ? "border-red-100 bg-red-50/30 opacity-75"
-                  : "border-light bg-primary-bg hover:border-primary/40"
+                  : "border-light bg-primary-500-bg hover:border-primary/40"
               }`}
             >
               <div className="flex items-start gap-3">
@@ -587,7 +587,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                       {config.LibellePlanningVue}
                     </span>
                     {currentConfig?.IdPlanningVue === config.IdPlanningVue && (
-                      <span className="w-2 h-2 bg-primary rounded-full shrink-0" />
+                      <span className="w-2 h-2 bg-primary-500 rounded-full shrink-0" />
                     )}
                   </div>
                   {config.DescriptionPlanningVue && (
@@ -596,7 +596,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                     </p>
                   )}
                   {config.Group && (
-                    <span className="text-[11px] bg-secondary-bg px-2 py-0.5 rounded border border-ultra-light text-secondary font-medium inline-block">
+                    <span className="text-[11px] bg-secondary px-2 py-0.5 rounded border border-ultra-light text-secondary font-medium inline-block">
                       {config.Group.ChampsPremierGroupePlanningVue &&
                         `Niv.1: ${config.Group.ChampsPremierGroupePlanningVue}`}
                       {config.Group.ChampsDeuxiemeGroupePlanningVue &&
@@ -619,7 +619,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                     className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                       config.isLocked
                         ? "text-red-300 cursor-not-allowed"
-                        : "text-secondary hover:text-primary hover:bg-primary/10"
+                        : "text-secondary hover:text-primary hover:bg-primary-500/10"
                     }`}
                     title={config.isLocked ? "Verrouillé" : "Modifier"}
                   >
@@ -701,7 +701,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
               )}
 
               {/* Nom & Description */}
-              <div className="space-y-3 bg-primary-bg p-4 rounded-2xl border border-light">
+              <div className="space-y-3 bg-primary-500-bg p-4 rounded-2xl border border-light">
                 <div>
                   <label className="block text-xs font-semibold text-primary mb-1">
                     Nom de la configuration <span className="text-red-500">*</span>
@@ -710,7 +710,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                     type="text"
                     value={configName}
                     onChange={(e) => setConfigName(e.target.value)}
-                    className="w-full px-3 py-2 bg-primary-bg border border-default rounded-xl text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    className="w-full px-3 py-2 bg-primary-500-bg border border-default rounded-xl text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none"
                     placeholder="Ex: Vue Technique par contrats"
                   />
                 </div>
@@ -720,7 +720,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                   <textarea
                     value={configDescription}
                     onChange={(e) => setConfigDescription(e.target.value)}
-                    className="w-full px-3 py-2 bg-primary-bg border border-default rounded-xl text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    className="w-full px-3 py-2 bg-primary-500-bg border border-default rounded-xl text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none"
                     placeholder="Donnez un contexte à cette vue..."
                     rows={2}
                   />
@@ -728,7 +728,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
               </div>
 
               {/* Visibilité */}
-              <div className="bg-primary-bg border border-light rounded-2xl p-4 space-y-3">
+              <div className="bg-primary-500-bg border border-light rounded-2xl p-4 space-y-3">
                 <h5 className="text-xs font-bold text-primary">Visibilité</h5>
                 <div className="flex gap-3">
                   <label
@@ -753,7 +753,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
 
                   <label
                     className={`flex-1 border p-2.5 rounded-xl cursor-pointer transition-all flex items-center gap-2.5 ${
-                      isPrivate ? "border-primary bg-primary/10" : "border-light hover:bg-secondary/10"
+                      isPrivate ? "border-primary bg-primary-500/10" : "border-light hover:bg-secondary/10"
                     }`}
                   >
                     <input
@@ -799,7 +799,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
 
               {/* Icône & Arborescence */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-primary-bg p-4 rounded-2xl border border-light flex flex-col">
+                <div className="bg-primary-500-bg p-4 rounded-2xl border border-light flex flex-col">
                   <label className="block text-xs font-semibold text-primary mb-2">Icône de la vue</label>
                   <div
                     onClick={() => handleOpenImageModal(configImage, setConfigImage)}
@@ -832,9 +832,9 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                   </div>
                 </div>
 
-                <div className="bg-primary-bg p-4 rounded-2xl border border-light space-y-2">
+                <div className="bg-primary-500-bg p-4 rounded-2xl border border-light space-y-2">
                   <label className="block text-xs font-semibold text-primary">Arborescence</label>
-                  <div className="flex bg-secondary-bg p-1 rounded-lg border border-light">
+                  <div className="flex bg-secondary p-1 rounded-lg border border-light">
                     <span className="text-[10px] uppercase font-bold text-secondary my-auto px-2 w-12">Niv 1</span>
                     <button
                       type="button"
@@ -844,7 +844,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                         if (val === groupingLevel2) setGroupingLevel2(undefined);
                       }}
                       className={`flex-1 py-1 text-xs rounded-md font-medium cursor-pointer ${
-                        groupingLevel1 === "equipe" ? "bg-primary text-white" : "text-secondary"
+                        groupingLevel1 === "equipe" ? "bg-primary-500 text-white" : "text-secondary"
                       }`}
                     >
                       Équipe
@@ -857,14 +857,14 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                         if (val === groupingLevel2) setGroupingLevel2(undefined);
                       }}
                       className={`flex-1 py-1 text-xs rounded-md font-medium cursor-pointer ${
-                        groupingLevel1 === "pole" ? "bg-primary text-white" : "text-secondary"
+                        groupingLevel1 === "pole" ? "bg-primary-500 text-white" : "text-secondary"
                       }`}
                     >
                       Pôle
                     </button>
                   </div>
 
-                  <div className="flex bg-secondary-bg p-1 rounded-lg border border-light">
+                  <div className="flex bg-secondary p-1 rounded-lg border border-light">
                     <span className="text-[10px] uppercase font-bold text-secondary my-auto px-2 w-12">Niv 2</span>
                     <button
                       type="button"
@@ -875,7 +875,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                       }}
                       className={`flex-1 py-1 text-xs rounded-md font-medium cursor-pointer ${
                         groupingLevel2 === "equipe"
-                          ? "bg-primary text-white"
+                          ? "bg-primary-500 text-white"
                           : groupingLevel1 === "equipe"
                           ? "opacity-30 cursor-not-allowed"
                           : "text-secondary"
@@ -892,7 +892,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                       }}
                       className={`flex-1 py-1 text-xs rounded-md font-medium cursor-pointer ${
                         groupingLevel2 === "pole"
-                          ? "bg-primary text-white"
+                          ? "bg-primary-500 text-white"
                           : groupingLevel1 === "pole"
                           ? "opacity-30 cursor-not-allowed"
                           : "text-secondary"
@@ -905,16 +905,16 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
               </div>
 
               {/* Ressources ciblées */}
-              <div className="bg-primary-bg border border-light rounded-2xl p-4 space-y-3">
+              <div className="bg-primary-500-bg border border-light rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h5 className="text-xs font-bold text-primary">Ressources ciblées</h5>
-                  <span className="text-[11px] font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] font-semibold bg-primary-500/10 text-primary px-2 py-0.5 rounded-full">
                     {activeFilters.length} actif{activeFilters.length > 1 ? "s" : ""}
                   </span>
                 </div>
 
                 {editingFilterId !== null ? (
-                  <div className="bg-secondary-bg border border-light rounded-xl p-3 space-y-3 animate-in fade-in duration-150">
+                  <div className="bg-secondary border border-light rounded-xl p-3 space-y-3 animate-in fade-in duration-150">
                     {(() => {
                       const filterToEdit = filtresPerso.find((f) => f.IdFiltre === editingFilterId);
                       if (!filterToEdit) return null;
@@ -974,8 +974,8 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                                   }}
                                   className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 ${
                                     isSelected
-                                      ? "bg-primary text-white border-primary shadow-2xs"
-                                      : "bg-primary-bg text-primary border-light hover:border-primary/40"
+                                      ? "bg-primary-500 text-white border-primary shadow-2xs"
+                                      : "bg-primary-500-bg text-primary border-light hover:border-primary/40"
                                   }`}
                                 >
                                   {isSelected && (
@@ -993,7 +993,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                             <button
                               type="button"
                               onClick={() => setEditingFilterId(null)}
-                              className="w-full bg-primary text-white py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:bg-primary-600 transition-colors"
+                              className="w-full bg-primary-500 text-white py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:bg-primary-500-600 transition-colors"
                             >
                               Terminer la sélection
                             </button>
@@ -1003,7 +1003,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                     })()}
                   </div>
                 ) : isAddingFilter ? (
-                  <div className="bg-secondary-bg border border-light rounded-xl p-3 space-y-2.5 animate-in fade-in duration-150">
+                  <div className="bg-secondary border border-light rounded-xl p-3 space-y-2.5 animate-in fade-in duration-150">
                     <div className="flex items-center justify-between pb-1.5 border-b border-ultra-light">
                       <span className="text-xs font-bold text-primary">Choisir un critère</span>
                       <button
@@ -1031,7 +1031,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                               setEditingFilterId(filtre.IdFiltre);
                               setIsAddingFilter(false);
                             }}
-                            className="px-3 py-1.5 bg-primary-bg hover:scale-105 border border-light rounded-lg text-xs font-medium text-primary flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
+                            className="px-3 py-1.5 bg-primary-500-bg hover:scale-105 border border-light rounded-lg text-xs font-medium text-primary flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
                           >
                             <span>+</span>
                             <span>{filtre.LibelleFiltre}</span>
@@ -1054,7 +1054,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                             <div
                               key={filtre.IdFiltre}
                               onClick={() => setEditingFilterId(filtre.IdFiltre)}
-                              className="bg-secondary-bg/60 border border-light p-3 rounded-xl cursor-pointer hover:border-primary/40 space-y-1.5 transition-colors"
+                              className="bg-secondary/60 border border-light p-3 rounded-xl cursor-pointer hover:border-primary/40 space-y-1.5 transition-colors"
                             >
                               <div className="flex justify-between items-center">
                                 <span className="text-xs font-bold text-primary">{filtre.LibelleFiltre}</span>
@@ -1078,7 +1078,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                                 {selectedValues.map((val) => (
                                   <span
                                     key={val.Id}
-                                    className="text-[11px] bg-primary-bg text-secondary px-2 py-0.5 rounded border border-light"
+                                    className="text-[11px] bg-primary-500-bg text-secondary px-2 py-0.5 rounded border border-light"
                                   >
                                     {val.Nom}
                                   </span>
@@ -1089,7 +1089,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                         })}
                       </div>
                     ) : (
-                      <p className="text-xs text-secondary italic text-center py-3 bg-secondary-bg/40 rounded-xl border border-dashed border-light">
+                      <p className="text-xs text-secondary italic text-center py-3 bg-secondary/40 rounded-xl border border-dashed border-light">
                         Aucun filtre ciblé (toutes les ressources affichées).
                       </p>
                     )}
@@ -1098,7 +1098,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                       type="button"
                       onClick={() => setIsAddingFilter(true)}
                       disabled={availableFilters.length === 0}
-                      className="w-full py-2 bg-primary/10 hover:bg-primary/15 text-primary border border-primary/20 rounded-xl text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                      className="w-full py-2 bg-primary-500/10 hover:bg-primary-500/15 text-primary border border-primary/20 rounded-xl text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
                     >
                       + Ajouter un critère
                     </button>

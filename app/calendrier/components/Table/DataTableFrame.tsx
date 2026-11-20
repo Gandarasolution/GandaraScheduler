@@ -254,7 +254,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
   customRenderers = {},
   enableHighlight = true,
   showGroupHeaders = true,
-  headerClassName = 'bg-primary-50',
+  headerClassName = 'bg-primary-500-50',
   showColumnVisibilityToggle = true,
   withHeader = true,
   customHeader,
@@ -1101,7 +1101,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
             })),
             show: true,
             minHeight: '40px',
-            containerClassName: 'bg-secondary-bg border-ultra-light',
+            containerClassName: 'bg-secondary border-ultra-light',
           }] : []),
           // Niveau 2: En-têtes de colonnes (si withHeader=true)
           ...(withHeader ? [{
@@ -1248,7 +1248,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
               }),
             show: true,
             minHeight: '56px',
-            containerClassName: 'bg-secondary-bg border-ultra-light',
+            containerClassName: 'bg-secondary border-ultra-light',
           }] : [])
         ]}
       >
@@ -1418,7 +1418,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
             <div className="flex items-center justify-center gap-1">
           <button
             type="button"
-            className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-ultra-light disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-500-ultra-light disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isPaginationLoading || safeCurrentPage === 1}
             onClick={() => handlePageSquareClick(safeCurrentPage - 1)}
             aria-label="Page précédente"
@@ -1429,7 +1429,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
             <>
               <button
                 type="button"
-                className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-ultra-light disabled:opacity-60"
+                className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-500-ultra-light disabled:opacity-60"
                 disabled={isPaginationLoading}
                 onClick={() => handlePageSquareClick(1)}
                 aria-label="Première page"
@@ -1448,8 +1448,8 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
                 type="button"
                 className={`h-7 min-w-7 rounded-sm border px-1 text-xs font-medium transition-colors ${
                   isCurrent
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white text-primary border-default hover:bg-primary-ultra-light'
+                    ? 'bg-primary-500 text-white border-primary'
+                    : 'bg-white text-primary border-default hover:bg-primary-500-ultra-light'
                 } ${isPaginationLoading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                 disabled={isPaginationLoading}
                 onClick={() => handlePageSquareClick(pageNum)}
@@ -1464,7 +1464,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
               <span className="px-1 text-sm text-primary" aria-hidden="true">…</span>
               <button
                 type="button"
-                className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-ultra-light disabled:opacity-60"
+                className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-500-ultra-light disabled:opacity-60"
                 disabled={isPaginationLoading}
                 onClick={() => handlePageSquareClick(effectiveTotalPages)}
                 aria-label="Dernière page"
@@ -1475,7 +1475,7 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
           )}
           <button
             type="button"
-            className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-ultra-light disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-sm border border-default bg-white px-2 py-1 text-xs text-primary hover:bg-primary-500-ultra-light disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isPaginationLoading || safeCurrentPage === effectiveTotalPages}
             onClick={() => handlePageSquareClick(safeCurrentPage + 1)}
             aria-label="Page suivante"

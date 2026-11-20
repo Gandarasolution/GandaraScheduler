@@ -161,7 +161,7 @@ const DefaultDisplaySettingsEditor = ({
             type="button"
             onClick={handleOpenImagePicker}
             title="Choisir une image par défaut"
-            className="w-10 h-10 rounded border border-default overflow-hidden bg-secondary-bg flex items-center justify-center cursor-pointer hover:scale-110 transition-transform shadow-sm flex-shrink-0"
+            className="w-10 h-10 rounded border border-default overflow-hidden bg-secondary flex items-center justify-center cursor-pointer hover:scale-110 transition-transform shadow-sm flex-shrink-0"
           >
             {image ? (
               <img src={image.url} alt="Image par défaut" className="w-full h-full object-contain" />
@@ -213,8 +213,8 @@ const DefaultDisplaySettingsEditor = ({
                 disabled={isApplying}
                 onClick={() => setIsConfirmOpen(true)}
                 className="
-                  px-3 py-2 rounded-xl border border-default text-white hover:bg-primary-600 
-                  bg-primary text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  px-3 py-2 rounded-xl border border-default text-white hover:bg-primary-500-600 
+                  bg-primary-500 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isApplying ? (
                   <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -265,7 +265,7 @@ const DefaultDisplaySettingsEditor = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-modal-title"
-            className="w-full max-w-sm rounded-2xl border border-default bg-primary-bg dark:bg-neutral-900 p-5 shadow-xl space-y-4"
+            className="w-full max-w-sm rounded-2xl border border-default bg-primary-500-bg dark:bg-neutral-900 p-5 shadow-xl space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-1.5">
@@ -281,14 +281,14 @@ const DefaultDisplaySettingsEditor = ({
               <button
                 type="button"
                 onClick={() => setIsConfirmOpen(false)}
-                className="px-4 py-2 rounded-xl border border-default text-primary hover:bg-secondary-bg text-xs font-medium cursor-pointer transition-colors"
+                className="px-4 py-2 rounded-xl border border-default text-primary hover:bg-secondary text-xs font-medium cursor-pointer transition-colors"
               >
                 Non
               </button>
               <button
                 type="button"
                 onClick={handleConfirmApplyToAllEvents}
-                className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity"
+                className="px-4 py-2 rounded-xl bg-primary-500 text-white text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity"
               >
                 Oui
               </button>

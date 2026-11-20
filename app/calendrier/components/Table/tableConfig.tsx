@@ -268,7 +268,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                                 event.stopPropagation();
                                 deps.onTransfer?.(item as unknown as User);
                             }}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors cursor-pointer"
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500 hover:bg-primary-500-600 transition-colors cursor-pointer"
                         >
                             <ArrowRightLeft className="w-4 h-4" /> 
                             Transférer
@@ -461,7 +461,7 @@ const TeamSelectCell = ({ item, initialTeams, onTeamChange, setNotification }: T
           className={`cursor-pointer p-1 text-white rounded-md disabled:opacity-50 transition-colors flex-shrink-0 ${
             isError 
               ? 'bg-red-500 hover:bg-red-600' // 👈 Rouge en cas d'erreur
-              : 'bg-primary hover:bg-secondary' // Couleur normale
+              : 'bg-primary-500 hover:bg-secondary' // Couleur normale
           }`}
           title={isError ? "Réessayer" : "Appliquer le changement"}
         >

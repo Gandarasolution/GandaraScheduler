@@ -309,7 +309,7 @@ export const TagsManager: React.FC<ExtendedTagsManagerProps> = ({
               const tag = tagId ? tags.find(t => Number(t.IdPlanningEtiquette) === Number(tagId)) : undefined;
               onSelectTag?.(tag);
             }}
-            className="flex-1 p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-secondary-bg"
+            className="flex-1 p-3 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color text-sm bg-secondary"
           >
             <option value="">{placeholder}</option>
             {tags.map((tag) => (
@@ -324,7 +324,7 @@ export const TagsManager: React.FC<ExtendedTagsManagerProps> = ({
             type="button"
             disabled={isCreating}
             onClick={handleToggleCreation}
-            className={`w-10 h-10 flex items-center justify-center bg-primary text-white rounded-xl hover:bg-primary-600 transition-colors shadow-sm ${isCreating ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-10 h-10 flex items-center justify-center bg-primary-500 text-white rounded-xl hover:bg-primary-500-600 transition-colors shadow-sm ${isCreating ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={state.showCreation ? "Annuler" : "Créer une étiquette"}
           >
             {isCreating ? (
@@ -350,7 +350,7 @@ export const TagsManager: React.FC<ExtendedTagsManagerProps> = ({
       
         {/* Aperçu de l'étiquette sélectionnée */}
         {selectedTag && !state.showCreation && (
-          <div className="flex items-center gap-2 p-3 bg-primary-50 rounded-xl">
+          <div className="flex items-center gap-2 p-3 bg-primary-500-50 rounded-xl">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-primary">
               <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
             </svg>

@@ -155,7 +155,7 @@ export default function Home() {
       {(isMobile || (isTablet && !hasPermission(229))) && (
         <div
           className="portrait-only-overlay fixed inset-0 z-[10000] flex-col items-center justify-center p-6 text-center select-none"
-          style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+          style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

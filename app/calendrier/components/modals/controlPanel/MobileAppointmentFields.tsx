@@ -296,7 +296,7 @@ const MobileDisplayEditor = ({
 
   if (isLoadingOptions) {
     return (
-      <div className="w-full flex items-center justify-center min-h-[300px] bg-secondary-bg/40 rounded-xl border border-dashed border-light">
+      <div className="w-full flex items-center justify-center min-h-[300px] bg-secondary/40 rounded-xl border border-dashed border-light">
         <Loader size="md" message="Chargement des champs..." />
       </div>
     );
@@ -309,7 +309,7 @@ const MobileDisplayEditor = ({
       )}
 
       <div className="flex flex-col gap-3 h-full">
-        <div className="rounded-xl border border-default bg-secondary-bg/50 p-2.5 space-y-3">
+        <div className="rounded-xl border border-default bg-secondary/50 p-2.5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-secondary">
               Champs disponibles ({totalAvailableCount})
@@ -333,7 +333,7 @@ const MobileDisplayEditor = ({
                   }}
                   onMouseEnter={() => setHighlightedFieldCode(option.Code)}
                   onMouseLeave={() => setHighlightedFieldCode(null)}
-                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary-bg px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
+                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary-500-bg px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
                     highlightedFieldCode === option.Code ? "ring-2 ring-primary ring-offset-1" : ""
                   }`}
                 >
@@ -363,7 +363,7 @@ const MobileDisplayEditor = ({
                   }}
                   onMouseEnter={() => setHighlightedFieldCode(option.Code)}
                   onMouseLeave={() => setHighlightedFieldCode(null)}
-                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary-bg px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
+                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary-500-bg px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
                     highlightedFieldCode === option.Code ? "ring-2 ring-primary ring-offset-1" : ""
                   }`}
                 >
@@ -386,13 +386,13 @@ const MobileDisplayEditor = ({
           <div className="flex items-center gap-2 pb-1.5 border-b border-ultra-light"></div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-light bg-primary/5 p-3">
+            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-light bg-primary-500/5 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-primary">Concepteur d’affichage</span>
                 <button
                   type="button"
                   onClick={() => addRow("primaryFields")}
-                  className="cursor-pointer px-2 py-0.5 rounded border border-dashed border-primary/40 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                  className="cursor-pointer px-2 py-0.5 rounded border border-dashed border-primary/40 text-[10px] font-medium text-primary hover:bg-primary-500/10 transition-colors"
                 >
                   + Ligne
                 </button>

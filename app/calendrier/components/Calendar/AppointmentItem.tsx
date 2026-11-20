@@ -658,7 +658,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
                 <div 
                   className="absolute right-6 -bottom-3 z-40 px-1.5 py-0.5 rounded-sm text-xs font-medium shadow-sm transition-all duration-200"
                   style={{
-                    backgroundColor: 'var(--bg-primary)', 
+                    backgroundColor: 'var(--bg-primary-500)', 
                     color: 'var(--contraste-max)', 
                     maxWidth: '120px',
                     border: `1px solid var(--color-gray-400)`,

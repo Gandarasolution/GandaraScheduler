@@ -109,7 +109,7 @@ export default function LoginPage({ login }: LoginPageProps) {
   return (
     <div
       className="h-dvh flex flex-col justify-start overflow-y-auto overscroll-contain px-4 pt-6 pb-[14vh] sm:px-6"
-      style={{ backgroundColor: 'var(--bg-primary)' }}
+      style={{ backgroundColor: 'var(--bg-primary-500)' }}
     >
       <div
         className="my-auto mx-auto p-6 sm:p-8 rounded-2xl shadow-md w-full max-w-md border border-light transition-all duration-300"
@@ -152,7 +152,7 @@ export default function LoginPage({ login }: LoginPageProps) {
                 required
                 placeholder="Ex: gandara-dev"
                 className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
-                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
               />
               <p className="text-xs text-tertiary mt-2 poppins">
                 Entrez le code fourni par votre administrateur pour accéder à votre environnement.
@@ -174,7 +174,7 @@ export default function LoginPage({ login }: LoginPageProps) {
               required
               placeholder="Votre identifiant"
               className="w-full min-h-12 px-4 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
-              style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+              style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
             />
           </div>
 
@@ -193,7 +193,7 @@ export default function LoginPage({ login }: LoginPageProps) {
                 required
                 placeholder="••••••••"
                 className="w-full min-h-12 pl-4 pr-12 py-3 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
-                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
               />
               <button
                 type="button"
@@ -213,7 +213,7 @@ export default function LoginPage({ login }: LoginPageProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full min-h-12 bg-primary hover:bg-primary-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg poppins flex justify-center items-center"
+            className="w-full min-h-12 bg-primary-500 hover:bg-primary-500-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg poppins flex justify-center items-center"
           >
             {loading ? (
               <>

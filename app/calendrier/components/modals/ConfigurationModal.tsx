@@ -345,7 +345,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
         <div className="bg-gradient-to-br from-primary-ultra-light/50 to-primary-light/50 p-5 rounded-2xl border border-primary/20 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
           <h3 className="font-semibold text-primary mb-3 flex items-center gap-2 relative z-10">
-            <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-md">
+            <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center shadow-md">
               <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
               </svg>
@@ -405,7 +405,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   setEditingConfig(null);
                   setIsCreatingConfig(true);
                 }}
-                className="px-4 py-2 bg-primary text-white rounded-xl text-sm hover:bg-primary-dark transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95"
+                className="px-4 py-2 bg-primary-500 text-white rounded-xl text-sm hover:bg-primary-500-dark transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                 Nouvelle vue
@@ -426,10 +426,10 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 key={config.IdPlanningVue}
                 className={`p-4 rounded-xl border transition-all duration-200 group ${
                   currentConfig?.IdPlanningVue === config.IdPlanningVue 
-                    ? 'border-primary bg-primary-ultra-light/20 shadow-md ring-1 ring-primary/20' 
+                    ? 'border-primary bg-primary-500-ultra-light/20 shadow-md ring-1 ring-primary/20' 
                     : config.isLocked 
                       ? 'border-red-100 bg-red-50/30 opacity-75'
-                      : 'border-ultra-light hover:border-primary/40 hover:bg-secondary-bg/30 hover:shadow-sm'
+                      : 'border-ultra-light hover:border-primary/40 hover:bg-secondary/30 hover:shadow-sm'
                 }`}
               >
                 <div className="flex items-start gap-4 mb-2">
@@ -450,7 +450,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                           {config.LibellePlanningVue}
                         </span>
                         {currentConfig?.IdPlanningVue === config.IdPlanningVue && (
-                          <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-sm"></div>
+                          <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse shadow-sm"></div>
                         )}
                         {config.isLocked && (
                           <span className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-red-100 text-red-600">
@@ -463,7 +463,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                       )}
                       <div className="flex flex-wrap items-center gap-2">
                         {config.Group && (
-                          <span className="text-[11px] bg-secondary-bg px-2 py-0.5 rounded border border-ultra-light text-secondary font-medium">
+                          <span className="text-[11px] bg-secondary px-2 py-0.5 rounded border border-ultra-light text-secondary font-medium">
                             {config.Group.ChampsPremierGroupePlanningVue && `Niv.1: ${config.Group.ChampsPremierGroupePlanningVue}`}
                             {config.Group.ChampsDeuxiemeGroupePlanningVue && ` | Niv.2: ${config.Group.ChampsDeuxiemeGroupePlanningVue}`}
                           </span>
@@ -484,7 +484,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     }}
                     disabled={config.isLocked}
                     className={`p-1.5 rounded-md transition-all duration-200 cursor-pointer ${
-                      config.isLocked ? 'text-red-300 cursor-not-allowed' : 'text-secondary hover:text-primary hover:bg-primary-ultra-light'
+                      config.isLocked ? 'text-red-300 cursor-not-allowed' : 'text-secondary hover:text-primary hover:bg-primary-500-ultra-light'
                     }`}
                     title={config.isLocked ? "Verrouillé" : "Modifier"}
                   >
@@ -547,7 +547,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 )}
 
                 {/* Nom & Description */}
-                <div className="space-y-4 bg-secondary-bg/30 p-5 rounded-2xl border border-ultra-light/50">
+                <div className="space-y-4 bg-secondary/30 p-5 rounded-2xl border border-ultra-light/50">
                   <div>
                     <label className="block text-sm font-semibold text-primary mb-1.5">Nom de la configuration <span className="text-red-500">*</span></label>
                     <input
@@ -603,14 +603,14 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                     </label>
 
                     {/* Option Privée */}
-                    <label className={`flex-1 border p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 ${isPrivate ? 'border-primary bg-primary-ultra-light/20 shadow-sm' : 'border-gray-200 hover:bg-gray-50'}`}>
+                    <label className={`flex-1 border p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 ${isPrivate ? 'border-primary bg-primary-500-ultra-light/20 shadow-sm' : 'border-gray-200 hover:bg-gray-50'}`}>
                       <input 
                         type="radio" 
                         checked={isPrivate} 
                         onChange={() => setIsPrivate(true)} 
                         className="hidden" 
                       />
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isPrivate ? 'bg-primary/20 text-primary' : 'bg-gray-100 text-gray-400'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isPrivate ? 'bg-primary-500/20 text-primary' : 'bg-gray-100 text-gray-400'}`}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
                       </div>
                       <div>
@@ -653,7 +653,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                                   />
                                   <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
                                     {u.nom || u.Nom} {u.prenom || u.Prenom}
-                                    {isMe && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">Moi</span>}
+                                    {isMe && <span className="text-[10px] bg-primary-500/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">Moi</span>}
                                   </span>
                                 </label>
                               );
@@ -670,11 +670,11 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                 {/* Image & Groupement */}
                 <div className="grid grid-cols-2 gap-4">
                   {/* Image */}
-                  <div className="bg-secondary-bg/30 p-5 rounded-2xl border border-ultra-light/50 flex flex-col">
+                  <div className="bg-secondary/30 p-5 rounded-2xl border border-ultra-light/50 flex flex-col">
                     <label className="block text-sm font-semibold text-primary mb-3">Icône de la vue</label>
                     <div
                       onClick={() => handleOpenImageModal(configImage, setConfigImage)}
-                      className="flex-1 border-2 border-dashed border-gray-300 bg-white rounded-xl p-3 flex flex-col items-center justify-center hover:border-primary hover:bg-primary-ultra-light/20 transition-all cursor-pointer group"
+                      className="flex-1 border-2 border-dashed border-gray-300 bg-white rounded-xl p-3 flex flex-col items-center justify-center hover:border-primary hover:bg-primary-500-ultra-light/20 transition-all cursor-pointer group"
                     >
                       {configImage ? (
                         <div className="flex items-center gap-3 w-full justify-between">
@@ -695,7 +695,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                   </div>
 
                   {/* Niveaux de groupement */}
-                  <div className="bg-secondary-bg/30 p-5 rounded-2xl border border-ultra-light/50">
+                  <div className="bg-secondary/30 p-5 rounded-2xl border border-ultra-light/50">
                     <label className="block text-sm font-semibold text-primary mb-3">Arborescence</label>
                     
                     <div className="space-y-3">
@@ -708,7 +708,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                             setGroupingLevel1(val);
                             if (val === groupingLevel2) setGroupingLevel2(undefined);
                           }}
-                          className={`flex-1 py-1 text-xs rounded-md font-medium transition-all ${groupingLevel1 === 'equipe' ? 'bg-primary text-white shadow-sm' : 'text-secondary hover:bg-gray-50'}`}
+                          className={`flex-1 py-1 text-xs rounded-md font-medium transition-all ${groupingLevel1 === 'equipe' ? 'bg-primary-500 text-white shadow-sm' : 'text-secondary hover:bg-gray-50'}`}
                         >Équipe</button>
                         <button
                           type="button"
@@ -717,7 +717,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                             setGroupingLevel1(val);
                             if (val === groupingLevel2) setGroupingLevel2(undefined);
                           }}
-                          className={`flex-1 py-1 text-xs rounded-md font-medium transition-all ${groupingLevel1 === 'pole' ? 'bg-primary text-white shadow-sm' : 'text-secondary hover:bg-gray-50'}`}
+                          className={`flex-1 py-1 text-xs rounded-md font-medium transition-all ${groupingLevel1 === 'pole' ? 'bg-primary-500 text-white shadow-sm' : 'text-secondary hover:bg-gray-50'}`}
                         >Pôle</button>
                       </div>
 
@@ -729,7 +729,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                             if (groupingLevel1 !== 'equipe') setGroupingLevel2(groupingLevel2 === 'equipe' ? undefined : 'equipe');
                           }}
                           disabled={groupingLevel1 === 'equipe'}
-                          className={`flex-1 py-1 text-xs rounded-md font-medium transition-all ${groupingLevel2 === 'equipe' ? 'bg-primary text-white shadow-sm' : groupingLevel1 === 'equipe' ? 'opacity-30 cursor-not-allowed' : 'text-secondary hover:bg-gray-50'}`}
+                          className={`flex-1 py-1 text-xs rounded-md font-medium transition-all ${groupingLevel2 === 'equipe' ? 'bg-primary-500 text-white shadow-sm' : groupingLevel1 === 'equipe' ? 'opacity-30 cursor-not-allowed' : 'text-secondary hover:bg-gray-50'}`}
                         >Équipe</button>
                         <button
                           type="button"
@@ -737,7 +737,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
                             if (groupingLevel1 !== 'pole') setGroupingLevel2(groupingLevel2 === 'pole' ? undefined : 'pole');
                           }}
                           disabled={groupingLevel1 === 'pole'}
-                          className={`flex-1 py-1 text-xs rounded-md font-medium transition-all ${groupingLevel2 === 'pole' ? 'bg-primary text-white shadow-sm' : groupingLevel1 === 'pole' ? 'opacity-30 cursor-not-allowed' : 'text-secondary hover:bg-gray-50'}`}
+                          className={`flex-1 py-1 text-xs rounded-md font-medium transition-all ${groupingLevel2 === 'pole' ? 'bg-primary-500 text-white shadow-sm' : groupingLevel1 === 'pole' ? 'opacity-30 cursor-not-allowed' : 'text-secondary hover:bg-gray-50'}`}
                         >Pôle</button>
                       </div>
                     </div>
@@ -970,7 +970,7 @@ const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
               <button
                 onClick={handleSave}
                 disabled={!configName.trim() || isLoadingForm || isSaving}
-                className="px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-dark shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all font-bold min-w-[140px] flex justify-center items-center gap-2"
+                className="px-6 py-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-500-dark shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all font-bold min-w-[140px] flex justify-center items-center gap-2"
               >
                 {isSaving ? (
                   <>

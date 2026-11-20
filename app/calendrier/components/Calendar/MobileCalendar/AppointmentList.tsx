@@ -117,7 +117,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
       <div
         key={`${column}-insert-row-${rowIndex}`}
         className={`h-3 -my-1 flex items-center rounded transition-colors ${
-          isTarget ? (blocked ? 'bg-red-100/60' : 'bg-primary-100/60') : ''
+          isTarget ? (blocked ? 'bg-red-100/60' : 'bg-primary-500-100/60') : ''
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -542,7 +542,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                           "primaryFields",
                           0,
                           field,
-                          <span className={`${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-50/40 rounded-md shadow-sm ' : ''} p-1`}>
+                          <span className={`${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-500-50/40 rounded-md shadow-sm ' : ''} p-1`}>
                             {getFieldLabel(field)}
                           </span>,
                           "fieldNames"
@@ -572,10 +572,10 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                           isBlockedRowTarget("primaryFields", actualRowIndex, "fieldNames") 
                             ? 'pb-4 border-b-2 border-red-500 bg-red-50/30' 
                             : isRowTarget && !isEmptyRow
-                              ? 'bg-primary/5'
+                              ? 'bg-primary-500/5'
                               : isEmptyRow
                                 ? isRowTarget 
-                                  ? 'border-2 border-dashed border-primary-500 bg-primary-50/60' 
+                                  ? 'border-2 border-dashed border-primary-500 bg-primary-500-50/60' 
                                   : 'border-2 border-dashed border-gray-200 bg-gray-50/40'
                                 : ''
                         }`}
@@ -614,7 +614,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                                 "primaryFields",
                                 actualRowIndex,
                                 field,
-                                <span className={`p-1 ${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-50/40 rounded-md shadow-sm ' : ''} font-medium`}>{getFieldLabel(field)}</span>,
+                                <span className={`p-1 ${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-500-50/40 rounded-md shadow-sm ' : ''} font-medium`}>{getFieldLabel(field)}</span>,
                                 "fieldNames"
                               )}
                             </React.Fragment>
@@ -664,7 +664,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                             ? 'pb-4 border-b-2 border-red-500 bg-red-50/30' 
                             : isEmptyRow
                               ? isRowTarget 
-                                ? 'border-2 border-dashed border-primary-500 bg-primary-50/60 rounded' 
+                                ? 'border-2 border-dashed border-primary-500 bg-primary-500-50/60 rounded' 
                                 : 'border-2 border-dashed border-gray-200 bg-gray-50/40 rounded'
                               : ''
                         }`}
@@ -711,7 +711,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                                         {getFieldIcon(field)}
                                       </span>
                                     )}
-                                    <span className={`p-1 ${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-50/40 rounded-md shadow-sm ' : ''} font-medium`}>{getFieldLabel(field)}</span>
+                                    <span className={`p-1 ${highlightedFieldCode === field ? 'border border-primary-500 bg-primary-500-50/40 rounded-md shadow-sm ' : ''} font-medium`}>{getFieldLabel(field)}</span>
                                   </span>,
                                   "fieldNames"
                                 )}
@@ -838,8 +838,8 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
           <div
             className={
               preview
-                ? "mt-0 w-full rounded-xl border border-light bg-secondary-bg p-3"
-                : "relative max-h-[68vh] w-full overflow-hidden rounded-t-[2rem] bg-secondary-bg px-5 pb-5 pt-3 shadow-2xl"
+                ? "mt-0 w-full rounded-xl border border-light bg-secondary p-3"
+                : "relative max-h-[68vh] w-full overflow-hidden rounded-t-[2rem] bg-secondary px-5 pb-5 pt-3 shadow-2xl"
             }
             onClick={!preview ? (e) => e.stopPropagation() : undefined}
             style={
@@ -902,7 +902,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsSecondaryOpen(false)}
-                    className="rounded-full p-2 text-secondary hover:bg-primary/10"
+                    className="rounded-full p-2 text-secondary hover:bg-primary-500/10"
                     aria-label="Fermer les détails du rendez-vous"
                   >
                     <X size={18} />
@@ -934,7 +934,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                       !dragOverInfo?.insertRow
                         ? dragOverInfo?.blocked
                           ? "ring-1 ring-dashed ring-red-500 bg-red-50 text-red-600"
-                          : "ring-1 ring-dashed ring-primary-500 bg-primary-50/40 text-primary-700"
+                          : "ring-1 ring-dashed ring-primary-500 bg-primary-500-50/40 text-primary-700"
                         : ""
                     }`}
                     onDragOver={(e) => {
@@ -972,7 +972,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
                             isSpecialField(field) ? "gap-0" : "gap-1"
                           } ${
                             highlightedFieldCode === field
-                              ? "border border-primary-500 bg-primary-50/40 rounded-md shadow-sm "
+                              ? "border border-primary-500 bg-primary-500-50/40 rounded-md shadow-sm "
                               : ""
                           }`}
                         >

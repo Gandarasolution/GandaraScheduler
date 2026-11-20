@@ -36,7 +36,7 @@ export default function SelectionScreen({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-6 sm:px-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="min-h-screen flex items-center justify-center px-4 py-6 sm:px-6" style={{ backgroundColor: 'var(--bg-primary-500)' }}>
       <div className="p-6 sm:p-8 rounded-2xl shadow-md w-full max-w-md max-h-[calc(100vh-3rem)] overflow-y-auto border border-light relative" style={{ backgroundColor: 'var(--bg-card)' }}>
         
         {/* Bouton retour (utile si on s'est trompé de planning) */}
@@ -54,7 +54,7 @@ export default function SelectionScreen({
 
         {/* En-tête */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4 shadow-sm">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-500 rounded-2xl mb-4 shadow-sm">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
@@ -81,7 +81,7 @@ export default function SelectionScreen({
                 onClick={() => handleSelect(option.id)}
                 disabled={loadingId !== null}
                 className="w-full min-h-16 flex items-center justify-between gap-3 p-4 border border-default rounded-xl hover:border-primary hover:shadow-md transition-all group disabled:opacity-50 disabled:cursor-not-allowed text-left cursor-pointer"
-                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
               >
                 <div className="flex flex-col">
                   <span className="font-medium text-primary poppins group-hover:text-primary-600">

@@ -349,7 +349,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 setIsSubmitting(false);
               }
             }}
-            className="px-4 py-2 cursor-pointer bg-primary text-white rounded hover:bg-primary-600 transition rounded-lg disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center gap-2"
+            className="px-4 py-2 cursor-pointer bg-primary-500 text-white rounded hover:bg-primary-500-600 transition rounded-lg disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center gap-2"
             >
             {isSubmitting && (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

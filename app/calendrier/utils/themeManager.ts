@@ -60,7 +60,7 @@ export const AVAILABLE_THEMES: Record<ThemeType, ThemeConfig> = {
     displayName: 'Clair',
     description: 'Thème clair par défaut de Gandara Scheduler',
     preview: {
-      primary: 'bg-primary',
+      primary: 'bg-primary-500',
       background: '#ffffff',
       text: '#111827',
     },

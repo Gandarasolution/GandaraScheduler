@@ -23,7 +23,7 @@ type ApiResponse<T> = {
 const fieldClassName = [
   "w-full min-h-12 px-4 py-3",
   "rounded-xl border border-default",
-  "bg-secondary-bg text-primary",
+  "bg-secondary text-primary",
   "text-sm transition-colors duration-200",
   "hover:border-gray-400",
   "focus:outline-none focus:border-focus",
@@ -202,8 +202,8 @@ export default function TransferPlanningModal({
                 <label className="text-sm font-semibold text-primary">Personnel source</label>
                 <span className="text-xs text-secondary">Point de départ</span>
               </div>
-              <div className="flex items-center gap-3 rounded-xl border border-default bg-secondary-bg p-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-50 text-sm font-bold text-primary-600">
+              <div className="flex items-center gap-3 rounded-xl border border-default bg-secondary p-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-500-50 text-sm font-bold text-primary-600">
                   {sourceEmployee?.Prenom?.charAt(0) ?? ""}{" "}
                   {sourceEmployee?.Nom?.charAt(0) ?? ""}
                 </div>
@@ -281,14 +281,14 @@ export default function TransferPlanningModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="cursor-pointer min-h-11 rounded-xl border border-default bg-primary-bg px-5 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer min-h-11 rounded-xl border border-default bg-primary-500-bg px-5 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || !sourceEmployee || targetEmployees.length === 0}
-                className="cursor-pointer inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-color focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-500-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-color focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>

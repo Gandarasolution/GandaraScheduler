@@ -34,7 +34,7 @@ export const CollapsibleCreateForm: React.FC<{
           onOpen?.();
           setIsOpen(true);
         }}
-        className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium text-sm poppins flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.99] shadow-sm mb-4 cursor-pointer"
+        className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary-500/5 hover:bg-primary-500/10 text-primary font-medium text-sm poppins flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.99] shadow-sm mb-4 cursor-pointer"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -45,7 +45,7 @@ export const CollapsibleCreateForm: React.FC<{
   }
 
   return (
-    <div className="p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-4 shadow-sm mb-4">
+    <div className="p-4 rounded-2xl border-2 border-dashed border-primary/40 bg-primary-500/5 flex flex-col gap-4 shadow-sm mb-4">
       <div className="flex items-center justify-between pb-2 border-b border-primary/20">
         <h4 className="text-sm font-semibold text-primary poppins flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,7 +74,7 @@ export const CollapsibleCreateForm: React.FC<{
             onClick={onSubmit}
             disabled={isSubmitting}
             title="Valider la création"
-            className="cursor-pointer bg-primary text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
+            className="cursor-pointer bg-primary-500 text-white p-2 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center shrink-0 active:scale-95 disabled:opacity-50"
           >
             {isSubmitting ? (
               <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">

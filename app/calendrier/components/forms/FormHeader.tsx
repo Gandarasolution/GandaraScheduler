@@ -190,7 +190,7 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
                 onClick={() => {
                   if (!isMobile && onIconClick) onIconClick();
                 }}
-                className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
+                className="absolute -top-1 -right-1 w-4 h-4 bg-primary-500 text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary-500 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
                 title="Modifier l'image"
               >
                 <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">
@@ -427,7 +427,7 @@ export default FormHeader;
 //               onClick={() => {
 //                 if (!isMobile && onIconClick) onIconClick();
 //               }}
-//               className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
+//               className="absolute -top-1 -right-1 w-4 h-4 bg-primary-500 text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary-500 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
 //               title="Modifier l'image"
 //             >
 //               <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">

@@ -299,7 +299,7 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
     >
       {selectionOverlay && (
         <div
-          className="absolute top-0 bottom-0 pointer-events-none rounded-md bg-primary/20 border border-primary/40 z-20"
+          className="absolute top-0 bottom-0 pointer-events-none rounded-md bg-primary-500/20 border border-primary/40 z-20"
           style={{
             left: selectionOverlay.left,
             width: selectionOverlay.width,
