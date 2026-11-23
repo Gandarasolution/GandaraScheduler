@@ -4,3 +4,4 @@ export { DisplaySettingsCategoryContent } from "./DisplaySettings";
 export { DaysManagementCategoryContent } from "./DaysManagement";
 export { CalendarConfigurationsEditor } from "./CalendarConfigurations";
 export * from "./ui";
+export * from "./controlPanelRegistry";

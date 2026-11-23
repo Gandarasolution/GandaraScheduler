@@ -120,6 +120,7 @@ const Modal: React.FC<ModalProps> = ({
 }) => {
     const [showConfirm, setShowConfirm] = useState(false);
     const childSaveHandlerRef = useRef<(() => void | Promise<void>) | null>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
     
     /**
      * Permet aux composants enfants d'enregistrer leur gestionnaire de sauvegarde
@@ -159,17 +160,59 @@ const Modal: React.FC<ModalProps> = ({
      * Ajoute et nettoie automatiquement l'event listener
      */
     useEffect(() => {
-        const handleEscape = (event: KeyboardEvent) => {            
-            if (event.key === 'Escape') {
-                handleCloseWithSave();
+        if (!isOpen) return;
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape' || event.defaultPrevented) return;
+
+            // 1. Si la confirmation de sauvegarde est ouverte, Escape ferme uniquement cette confirmation
+            if (showConfirm) {
+                event.preventDefault();
+                event.stopPropagation();
+                setShowConfirm(false);
+                return;
             }
+
+            // 2. Vérifier si un popover / dropdown / sélecteur de couleur est ouvert dans la modale
+            const modalEl = modalRef.current;
+            if (modalEl) {
+                const hasOpenPopover = modalEl.querySelector(
+                    '[role="dialog"], [role="listbox"], [role="menu"], [data-state="open"], [aria-expanded="true"], .color-picker-popover'
+                );
+                if (hasOpenPopover) {
+                    return;
+                }
+            }
+
+            // 3. Vérifier l'élément actif (input natif, select, ou bouton de couleur avec aria-expanded)
+            const activeEl = document.activeElement as HTMLElement | null;
+            if (activeEl) {
+                const tagName = activeEl.tagName.toLowerCase();
+                if (tagName === 'select') return;
+
+                if (tagName === 'input') {
+                    const inputType = (activeEl as HTMLInputElement).type;
+                    if (['color', 'date', 'datetime-local', 'time', 'month', 'week'].includes(inputType)) {
+                        activeEl.blur();
+                        return;
+                    }
+                }
+            }
+
+            // 4. Ignorer si une autre modale est ouverte par-dessus
+            const modals = document.querySelectorAll('.modal');
+            if (modals.length > 1 && modals[modals.length - 1] !== modalEl) {
+                return;
+            }
+
+            handleCloseWithSave();
         };
 
         document.addEventListener('keydown', handleEscape);
         return () => {
             document.removeEventListener('keydown', handleEscape);
         };
-    }, [handleCloseWithSave]);
+    }, [isOpen, showConfirm, handleCloseWithSave]);
     
     const handleOverlayClick = () => {
         handleCloseWithSave();
@@ -217,7 +260,7 @@ const Modal: React.FC<ModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center modal">
+        <div ref={modalRef} className="fixed inset-0 z-50 flex items-center justify-center modal">
             {/* Overlay */}
             {isOverlayVisible && (
                 <div 

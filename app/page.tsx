@@ -152,7 +152,7 @@ export default function Home() {
   return (
     <>
       {/* Overlay de blocage en mode paysage (uniquement sur smartphone, pas sur tablette) */}
-      {(isMobile || (isTablet && !hasPermission(229))) && (
+      {(isMobile || (isTablet && !hasPermission(229, 3))) && (
         <div
           className="portrait-only-overlay fixed inset-0 z-[10000] flex-col items-center justify-center p-6 text-center select-none"
           style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}

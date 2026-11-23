@@ -24,6 +24,7 @@ export interface TableConfigDeps {
   onTransfer?: (employee: User) => void;
   ressources?: Record<number, Item>;
   setNotification?: (message: string) => void;
+  hasPermission?: (permissionId: number, level: number) => boolean;
 }
 
 // 1. Renderer pour les images de Chantiers / Paie (Affiche un mini AppointmentItem)
@@ -231,14 +232,23 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
             { key: 'Nom', label: 'Nom' },
             { key: 'Prenom', label: 'Prénom'}, 
             { key: 'Equipe', label: 'Équipe', 
-                renderer:(value: any, item: GenericDataItem) => (  
-                <TeamSelectCell
-                    item={item as unknown as User}
-                    initialTeams={deps.initialTeams || {}}
-                    onTeamChange={deps.onTeamChange || (async () => ({ success: true }))}
-                    setNotification={deps.setNotification || (() => {})}
-                />
-                ), 
+                renderer: (value: any, item: GenericDataItem) => {
+                    if (!deps?.hasPermission?.(172, 3)) {
+                        return (
+                            <div className="flex items-center justify-center w-full h-full">
+                                <span className="poppins">{value || 'Aucune équipe'}</span>
+                            </div>
+                        );
+                    }
+                    return (
+                        <TeamSelectCell
+                            item={item as unknown as User}
+                            initialTeams={deps?.initialTeams || {}}
+                            onTeamChange={deps?.onTeamChange || (async () => ({ success: true }))}
+                            setNotification={deps?.setNotification || (() => {})}
+                        />
+                    );
+                },
             },
             { key: 'Type', label: 'Type', 
                 renderer: (value: string) => {
@@ -268,7 +278,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                                 event.stopPropagation();
                                 deps.onTransfer?.(item as unknown as User);
                             }}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500 hover:bg-primary-500-600 transition-colors cursor-pointer"
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors cursor-pointer"
                         >
                             <ArrowRightLeft className="w-4 h-4" /> 
                             Transférer
@@ -461,7 +471,7 @@ const TeamSelectCell = ({ item, initialTeams, onTeamChange, setNotification }: T
           className={`cursor-pointer p-1 text-white rounded-md disabled:opacity-50 transition-colors flex-shrink-0 ${
             isError 
               ? 'bg-red-500 hover:bg-red-600' // 👈 Rouge en cas d'erreur
-              : 'bg-primary-500 hover:bg-secondary' // Couleur normale
+              : 'bg-primary-500 hover:bg-primary-600' // Couleur normale
           }`}
           title={isError ? "Réessayer" : "Appliquer le changement"}
         >

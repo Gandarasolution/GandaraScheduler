@@ -14,12 +14,14 @@ const TeamMembersEditor = ({
   setting,
   selectedTeamId,
   selectedTeam,
+  teams = [],
   canAdd,
   canDelete,
 }: {
   setting: any;
   selectedTeamId: string | null;
   selectedTeam?: Equipe;
+  teams?: Equipe[];
   canAdd: boolean;
   canDelete: boolean;
 }) => {
@@ -36,13 +38,17 @@ const TeamMembersEditor = ({
   const [error, setError] = useState<string | null>(null);
 
   const [pendingRemoveMember, setPendingRemoveMember] = useState<User | null>(null);
+  const [pendingTeamTransfer, setPendingTeamTransfer] = useState<{
+    personnelIds: string[];
+    alreadyAssigned: { person: User; currentTeamName: string }[];
+  } | null>(null);
 
   const settingRef = useRef(setting);
   useEffect(() => {
     settingRef.current = setting;
   }, [setting]);
 
-  // Chargement de tout le personnel actif via fetAllPersonnel
+  // Chargement de tout le personnel via fetAllPersonnel
   useEffect(() => {
     if (typeof settingRef.current.fetAllPersonnel !== "function") return;
     let isMounted = true;
@@ -98,6 +104,7 @@ const TeamMembersEditor = ({
     setIsOpen(false);
     setShowInactiveMembers(false);
     setSelectedPersonnelIds([]);
+    setPendingTeamTransfer(null);
     setFormError(null);
     loadMembers();
   }, [selectedTeamId, loadMembers]);
@@ -108,7 +115,48 @@ const TeamMembersEditor = ({
     []
   );
 
-  // Filtrage des membres affichés selon l'état du bouton "Voir le personnel inactif"
+  // Extraction robuste de l'équipe actuelle d'un employé (ID, chaîne ou objet imbriqué)
+  const getPersonCurrentTeam = useCallback(
+    (person: User): { id: string; name: string } | null => {
+      const p = person as any;
+      const rawEquipe =
+        p.Equipe ??
+        p.IdEquipe ??
+        p.EquipeId ??
+        p.idEquipe ??
+        p.equipe_id ??
+        p.equipe;
+
+      if (rawEquipe === null || rawEquipe === undefined) return null;
+
+      let teamId: string | null = null;
+      let embeddedName: string | null = null;
+
+      if (typeof rawEquipe === "object") {
+        const objId = rawEquipe.Id ?? rawEquipe.id ?? rawEquipe.IdEquipe;
+        if (objId !== null && objId !== undefined) teamId = String(objId).trim();
+        embeddedName = rawEquipe.Nom ?? rawEquipe.nom ?? rawEquipe.Libelle ?? null;
+      } else {
+        teamId = String(rawEquipe).trim();
+      }
+
+      if (!teamId || teamId === "" || teamId === "0" || teamId === "null" || teamId === "undefined") {
+        return null;
+      }
+
+      const foundTeam = teams.find((t) => String(t.Id).trim() === teamId);
+      const teamName =
+        foundTeam?.Nom ||
+        embeddedName ||
+        p.EquipeNom ||
+        p.NomEquipe ||
+        `Équipe #${teamId}`;
+
+      return { id: teamId, name: teamName };
+    },
+    [teams]
+  );
+
   const inactiveMembersCount = useMemo(
     () => members.filter((m) => m.Actif === false || (m as any).isActif === false).length,
     [members]
@@ -119,33 +167,37 @@ const TeamMembersEditor = ({
     return members.filter((m) => m.Actif !== false && (m as any).isActif !== false);
   }, [members, showInactiveMembers]);
 
-  // Liste du personnel non encore présent dans l'équipe
   const availablePersonnel = useMemo(() => {
     const existingIds = new Set(members.map((m) => Number(m.IdPersonnel)));
     return allPersonnel.filter((p) => !existingIds.has(Number(p.IdPersonnel)));
   }, [allPersonnel, members]);
 
-  // Options formatées pour le Combobox
+  // Options formatées pour le Combobox avec indication de l'équipe actuelle
   const comboboxOptions = useMemo(
     () =>
       availablePersonnel.map((person) => {
         const isActif = (person as any).Actif !== false && (person as any).isActif !== false;
+        const currentTeam = getPersonCurrentTeam(person);
+        console.log("Current team for", person.IdPersonnel, ":", currentTeam);
+        const hasOtherTeam =
+          currentTeam !== null && currentTeam.id !== String(selectedTeamId).trim();
+
+        console.log(selectedTeamId)
+
         return {
           value: String(person.IdPersonnel),
-          label: `${formatPersonnelName(person)} ( ${person.IdPersonnel} )`,
+          label: hasOtherTeam
+            ? `${formatPersonnelName(person)} ( ${person.IdPersonnel} ) — [${currentTeam.name}]`
+            : `${formatPersonnelName(person)} ( ${person.IdPersonnel} )`,
+          badge: hasOtherTeam ? currentTeam.name : undefined,
           isActif,
         };
       }),
-    [availablePersonnel, formatPersonnelName]
+    [availablePersonnel, formatPersonnelName, getPersonCurrentTeam, selectedTeamId]
   );
 
-  const handleAddMembers = async () => {
+  const executeAddMembers = async (personnelIdsToAdd: string[]) => {
     if (!canAdd || !selectedTeamId) return;
-
-    if (selectedPersonnelIds.length === 0) {
-      setFormError("Veuillez sélectionner au moins un membre du personnel.");
-      return;
-    }
 
     setFormError(null);
     setError(null);
@@ -156,21 +208,34 @@ const TeamMembersEditor = ({
         const addedUsers: User[] = [];
         const errors: string[] = [];
 
-        for (const idStr of selectedPersonnelIds) {
+        for (const idStr of personnelIdsToAdd) {
           const personnelId = Number(idStr);
           const res = await setting.onAddPersonnelToTeam(Number(selectedTeamId), personnelId);
           if (res && res.success) {
             const addedPerson = allPersonnel.find(
               (p: User) => Number(p.IdPersonnel) === personnelId
             );
-            if (addedPerson) addedUsers.push(addedPerson);
+            if (addedPerson) {
+              addedUsers.push({
+                ...addedPerson,
+                Equipe: Number(selectedTeamId),
+              } as User);
+            }
           } else {
             errors.push(res?.message || `Erreur pour l'employé #${personnelId}`);
           }
         }
 
         if (addedUsers.length > 0) {
+          const addedIdsSet = new Set(addedUsers.map((u) => Number(u.IdPersonnel)));
           setMembers((prev) => [...prev, ...addedUsers]);
+          setAllPersonnel((prev) =>
+            prev.map((p) =>
+              addedIdsSet.has(Number(p.IdPersonnel))
+                ? ({ ...p, Equipe: Number(selectedTeamId), IdEquipe: Number(selectedTeamId) } as User)
+                : p
+            )
+          );
         }
 
         if (errors.length === 0) {
@@ -187,6 +252,41 @@ const TeamMembersEditor = ({
     }
   };
 
+  const handleAddMembers = async () => {
+    if (!canAdd || !selectedTeamId) return;
+
+    if (selectedPersonnelIds.length === 0) {
+      setFormError("Veuillez sélectionner au moins un membre du personnel.");
+      return;
+    }
+
+    // Détecter les salariés sélectionnés qui appartiennent déjà à une autre équipe
+    const alreadyAssigned = selectedPersonnelIds
+      .map((idStr) => {
+        const person = allPersonnel.find((p) => String(p.IdPersonnel) === String(idStr));
+        if (!person) return null;
+
+        const currentTeam = getPersonCurrentTeam(person);
+        if (!currentTeam || currentTeam.id === String(selectedTeamId).trim()) return null;
+
+        return {
+          person,
+          currentTeamName: currentTeam.name,
+        };
+      })
+      .filter((item): item is { person: User; currentTeamName: string } => item !== null);
+
+    if (alreadyAssigned.length > 0) {
+      setPendingTeamTransfer({
+        personnelIds: [...selectedPersonnelIds],
+        alreadyAssigned,
+      });
+      return;
+    }
+
+    await executeAddMembers(selectedPersonnelIds);
+  };
+
   const executeRemoveMember = async (member: User) => {
     if (!canDelete || !selectedTeamId) return;
 
@@ -195,9 +295,21 @@ const TeamMembersEditor = ({
 
     try {
       if (setting.onRemovePersonnelFromTeam) {
-        const res = await setting.onRemovePersonnelFromTeam(Number(selectedTeamId), Number(member.IdPersonnel));
+        const res = await setting.onRemovePersonnelFromTeam(
+          Number(selectedTeamId),
+          Number(member.IdPersonnel)
+        );
         if (res && res.success) {
-          setMembers((prev) => prev.filter((m) => Number(m.IdPersonnel) !== Number(member.IdPersonnel)));
+          setMembers((prev) =>
+            prev.filter((m) => Number(m.IdPersonnel) !== Number(member.IdPersonnel))
+          );
+          setAllPersonnel((prev) =>
+            prev.map((p) =>
+              Number(p.IdPersonnel) === Number(member.IdPersonnel)
+                ? ({ ...p, Equipe: null, IdEquipe: null } as User)
+                : p
+            )
+          );
         } else {
           setError(res?.message || "Erreur lors du retrait du personnel.");
         }
@@ -254,7 +366,7 @@ const TeamMembersEditor = ({
               className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer flex items-center gap-1.5 ${
                 showInactiveMembers
                   ? "bg-amber-500/15 text-amber-700 border-amber-500/30 shadow-xs"
-                  : "bg-primary-500-bg text-secondary border-light hover:text-primary hover:border-primary/30"
+                  : "bg-primary text-secondary border-light hover:text-primary hover:border-primary/30"
               }`}
               title={
                 showInactiveMembers
@@ -270,15 +382,90 @@ const TeamMembersEditor = ({
             </button>
           )}
 
-          <span className="text-[11px] font-semibold text-primary bg-primary-500/10 px-2.5 py-0.5 rounded-full">
+          <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
             {displayedMembers.length} membre{displayedMembers.length > 1 ? "s" : ""}
           </span>
         </div>
       </div>
 
+      {/* Modale de confirmation de changement d'équipe */}
+      {pendingTeamTransfer && (
+        <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
+          <div className="bg-primary p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+            <div className="flex items-center gap-3 text-amber-600">
+              <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <h5 className="font-semibold text-sm text-primary">Changement d&apos;équipe détecté</h5>
+            </div>
+
+            {pendingTeamTransfer.alreadyAssigned.length === 1 ? (
+              <p className="text-xs text-secondary leading-relaxed">
+                <strong className="text-primary">
+                  {formatPersonnelName(pendingTeamTransfer.alreadyAssigned[0].person)}
+                </strong>{" "}
+                fait déjà partie de l&apos;équipe{" "}
+                <strong className="text-primary">
+                  « {pendingTeamTransfer.alreadyAssigned[0].currentTeamName} »
+                </strong>
+                . Souhaitez-vous vraiment le transférer vers{" "}
+                <strong className="text-primary">
+                  {selectedTeam ? `« ${selectedTeam.Nom} »` : "cette équipe"}
+                </strong>{" "}
+                ?
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-secondary leading-relaxed">
+                  Les membres suivants appartiennent déjà à une autre équipe :
+                </p>
+                <ul className="text-xs text-secondary space-y-1 max-h-28 overflow-y-auto pl-3 list-disc">
+                  {pendingTeamTransfer.alreadyAssigned.map(({ person, currentTeamName }) => (
+                    <li key={person.IdPersonnel}>
+                      <strong className="text-primary">{formatPersonnelName(person)}</strong> (actuellement dans{" "}
+                      <strong className="text-primary">« {currentTeamName} »</strong>)
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-secondary leading-relaxed">
+                  Souhaitez-vous vraiment changer leur équipe ?
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="px-3.5 py-1.5 rounded-xl border border-light text-xs font-semibold text-secondary hover:bg-secondary/10 transition-colors cursor-pointer"
+                onClick={() => setPendingTeamTransfer(null)}
+              >
+                Non
+              </button>
+              <button
+                type="button"
+                className="px-3.5 py-1.5 rounded-xl bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 shadow-sm transition-colors cursor-pointer"
+                onClick={async () => {
+                  const ids = pendingTeamTransfer.personnelIds;
+                  setPendingTeamTransfer(null);
+                  await executeAddMembers(ids);
+                }}
+              >
+                Oui, confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modale de confirmation de retrait */}
       {pendingRemoveMember && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
-          <div className="bg-primary-500-bg p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+          <div className="bg-primary p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center gap-3 text-red-600">
               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -327,7 +514,7 @@ const TeamMembersEditor = ({
               setFormError(null);
               setIsOpen(true);
             }}
-            className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary-500/5 hover:bg-primary-500/10 text-primary font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
+            className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
           >
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -335,7 +522,7 @@ const TeamMembersEditor = ({
             Ajouter un personnel
           </button>
         ) : (
-          <div className="p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary-500/5 flex flex-col gap-2.5 shadow-sm shrink-0">
+          <div className="p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex flex-col gap-2.5 shadow-sm shrink-0">
             <div className="flex items-center justify-between pb-1 border-b border-primary/20">
               <h5 className="text-xs font-semibold text-primary">Ajouter un membre</h5>
               <button
@@ -411,7 +598,7 @@ const TeamMembersEditor = ({
           </div>
         ))}
 
-      <div className="bg-primary-500-bg/60 rounded-xl p-3 min-h-[160px] relative flex-1 border border-light overflow-y-auto">
+      <div className="bg-primary/60 rounded-xl p-3 min-h-[160px] relative flex-1 border border-light overflow-y-auto">
         {isLoadingMembers ? (
           <div className="py-8">
             <Loader size="md" message="Chargement..." />
@@ -427,7 +614,7 @@ const TeamMembersEditor = ({
                 return (
                   <div
                     key={member.IdPersonnel}
-                    className="flex items-center justify-between bg-primary-500-bg rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
+                    className="flex items-center justify-between bg-primary rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="relative inline-block" style={{ opacity: !isMemberActive ? 0.5 : 1 }}>
@@ -510,6 +697,7 @@ const TeamMembersEditor = ({
     </div>
   );
 };
+
 
 const TeamRow: React.FC<{
   team: Equipe;
@@ -750,6 +938,7 @@ export const TeamsManagementCategoryContent: React.FC<{
             setting={membersSetting}
             selectedTeamId={selectedTeamId}
             selectedTeam={selectedTeam}
+            teams={validTeams}
             canAdd={membersSetting.canAdd}
             canDelete={membersSetting.canDelete}
           />

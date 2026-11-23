@@ -776,43 +776,40 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
     [keyOfFilter]
   );
 
-  const isDeletableView = useCallback(
-    (view?: ChantierView | null) => {
-      if (!view || view.isEphemeral || view.isLocked) return false;
-
-      const viewIdNum = Number(view.id);
-      if (!Number.isInteger(viewIdNum) || viewIdNum <= 0) return false;
-
+  const hasViewPermission = useCallback(
+    (view: ChantierView): boolean => {
       if (view.isPrivate) {
-        const isUserInView =
+        return (
           !view.users ||
           view.users.length === 0 ||
-          (userId !== undefined && view.users.includes(userId));
-
-        return isUserInView;
+          (userId !== undefined && view.users.includes(userId))
+        );
       }
 
-      return hasPermission(219);
+      return hasPermission(220, 3);
     },
     [hasPermission, userId]
   );
 
   const isEditableView = useCallback(
-    (view?: ChantierView | null) => {
+    (view?: ChantierView | null): boolean => {
       if (!view || view.isEphemeral) return false;
 
-      if (view.isPrivate) {
-        const isUserInView =
-          !view.users ||
-          view.users.length === 0 ||
-          (userId !== undefined && view.users.includes(userId));
-
-        return isUserInView;
-      }
-
-      return hasPermission(220);
+      return hasViewPermission(view);
     },
-    [hasPermission, userId]
+    [hasViewPermission]
+  );
+
+  const isDeletableView = useCallback(
+    (view?: ChantierView | null): boolean => {
+      if (!view || view.isEphemeral || view.isLocked) return false;
+
+      const viewIdNum = Number(view.id);
+      if (!Number.isInteger(viewIdNum) || viewIdNum <= 0) return false;
+
+      return hasViewPermission(view);
+    },
+    [hasViewPermission]
   );
 
   const moveColumn = useCallback((target: string) => {

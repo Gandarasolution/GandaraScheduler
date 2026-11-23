@@ -1,11 +1,10 @@
 export { default as Modal } from './Modal';
 export { default as AlertModal } from './AlertModal';
-export { default as ConfigurationModal } from './ConfigurationModal';
 export { default as DeleteModal } from './DeleteModal';
 export { default as FilterModal } from './FilterModal';
 export { default as NotificationsPanel } from './NotificationsPanel';
 export { default as SearchOverlay } from './SearchOverlay';
-export { default as ControlPanelModal } from './controlPanel/ControlPanelModal';
+export * from './controlPanel';
 export { default as ImageSelectorContentModal } from './imageSelectorContentModal';
 export { default as TransferPlanningModal } from './TransferPlanningModal';
 

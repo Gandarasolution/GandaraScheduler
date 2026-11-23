@@ -175,9 +175,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [formEndDate, setFormEndDate] = useState(() => new Date(appointment.FinPlanningEvenement));
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
   const canEditImage = formDataItemType?.Type === 'Projet'
-    ? hasPermission(225)
+    ? hasPermission(225, 3)
     : (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso')
-      ? hasPermission(226)
+      ? hasPermission(226,3 )
       : false;
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);

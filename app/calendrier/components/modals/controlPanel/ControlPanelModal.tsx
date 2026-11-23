@@ -325,7 +325,7 @@ const ControlPanelModalContent: React.FC<{
           className={`px-8 py-3 rounded-xl active:scale-95 transition-all duration-200 font-medium poppins text-sm shadow-md cursor-pointer ${
             showFooterSave
               ? "bg-secondary border border-light text-primary hover:bg-secondary/10"
-              : "bg-primary-500 text-white hover:bg-primary-500-600"
+              : "bg-primary-500 text-white hover:bg-primary-600"
           }`}
           onClick={handleCloseWithSave}
           disabled={isSavingPending}
@@ -434,7 +434,7 @@ const ControlPanelModal: React.FC<ControlPanelModalProps> = ({ onClose, isContro
       case "daysManagement":
         return "w-[min(98vw,1500px)] max-h-[600px]!";
       case "teamsManagement":
-        return "w-[min(98vw,1100px)] max-h-[600px]!";
+        return "w-[min(98vw,1200px)] max-h-[600px]!";
       case "mobileAppointmentFields":
         return "w-[min(95vw,1400px)]";
       case "calendarConfigurations":

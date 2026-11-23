@@ -60,6 +60,20 @@ export const ColorHexInput = ({
     }
   };
 
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setIsOpen(false);
+      }
+    };
+    // Phase de capture (true) pour intercepter Escape AVANT le document.addEventListener du Modal
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [isOpen]);
+
   return (
     <div ref={containerRef} className="relative flex items-center gap-3">
       {/* Pastille cliquable */}
@@ -69,6 +83,7 @@ export const ColorHexInput = ({
         className="w-4 h-4 border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
         style={{ backgroundColor: displayColor }}
         title={`Choisir ${label.toLowerCase()}`}
+        aria-expanded={isOpen}
       />
       <label
         htmlFor={id}

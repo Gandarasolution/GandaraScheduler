@@ -26,7 +26,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (login: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: (reason?: 'inactive' | 'expired') => void;
-  hasPermission: (idDroit: number, niveauMinimum?: number) => boolean;
+  hasPermission: (idDroit: number, niveauMinimum: number) => boolean;
   setLastVueForUser: (idVue: number) => void;
   checkEnvironment: () => Promise<{ error?: string; success: boolean }>;
   resolveCompanyCode: (codeEntreprise: string) => Promise<{ error?: string; success: boolean }>;
@@ -112,13 +112,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     axiosAgent.defaults.headers.common['X-Planning-Id'] = '';
   }, []);
 
-  const hasPermission = useCallback((idDroit: number, niveauMinimum: number = 1) => {
-    const droit = droits.find(d =>  Number(d.idDroit) === Number(idDroit));
+  const hasPermission = useCallback((idDroit: number, niveauMinimum: number): boolean => {
+    const droit = droits.find(d => Number(d.idDroit) === Number(idDroit));
     if (!droit) return false;
-    return droit.gestionParNiveau
-        ? Number(droit.idDroitNiveau) >= Number(niveauMinimum)
-        : true;
-  }, [droits]);
+
+    return Number(droit.idDroitNiveau) >= Number(niveauMinimum);
+}, [droits]);
 
   const setLastVueForUser = async (idVue: number) => {
     setCurrentVueId(idVue);

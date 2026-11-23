@@ -28,6 +28,7 @@ import {
   TransferPlanningModal, 
   DraggableSource, 
   Loader,
+  PlanningErrorState
 } from '@/app/calendrier/components';
 import type { SearchableItem } from '@/app/calendrier/components/modals/SearchOverlay';
 import { getTableStructure } from '../components/Table/tableConfig';
@@ -111,7 +112,7 @@ export default function HomePage({
     };
   }, []);
 
-  const hasDesktopPermission = useMemo(() => Boolean(hasPermission(229)), [hasPermission]);
+  const hasDesktopPermission = useMemo(() => Boolean(hasPermission(229, 3)), [hasPermission]);
 
   const effectiveIsMobile = useMemo(() => {
     if (isMobile) return true;
@@ -257,7 +258,10 @@ function HomePageContent({
   const loadedYearsRef = useRef(new Map<number, Set<number>>());
   const loadingYearsRef = useRef(new Map<number, Set<number>>());
   const isFirstRenderRef = useRef(true);
-  const [errorPlanning, setErrorPlanning] = useState<string | null>(null);
+  const [errorPlanning, setErrorPlanning] = useState<{
+    code?: string | number;
+    message: string;
+  } | null>(null);
 
 
   // Réinitialise l'initialisation du planning lors d'un basculement mobile <-> desktop (ex: rotation tablette)
@@ -641,6 +645,7 @@ function HomePageContent({
     onTeamChange: dataLayer.updateEmployeeTeam,
     onTransfer: handleTransferEmployee,
     ressources: dataLayer.itemsRef.current,
+    hasPermission: hasPermission,
   }) || [], [appointmentLogic.handleOpenEditModal, dataLayer.initialTeams, dataLayer.updateEmployeeTeam, handleTransferEmployee, interaction.handleOpenImageModal]);
 
   useEffect(() => {
@@ -736,7 +741,10 @@ function HomePageContent({
       } catch (error) {
         if (isMounted) {
           console.error("Impossible de charger la dernière vue du planning.", error);
-          setErrorPlanning("Impossible de charger la configuration de la vue du planning.");
+          setErrorPlanning({
+            code: "500",
+            message: "Impossible de charger la configuration de la vue du planning."
+          });
           setLoadCalendar(false);
         }
         return false;
@@ -764,7 +772,10 @@ function HomePageContent({
         if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
           setGlobalEmployees(employeesResponse.data);
         } else {
-          setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+          setErrorPlanning({
+            code: "500",
+            message: "Erreur lors du chargement des employés. Veuillez réessayer."
+          });
           setGlobalEmployees([]);
           setLoadCalendar(false);
           return;
@@ -775,7 +786,10 @@ function HomePageContent({
 
       let rep = await dataLayer.loadTeams();
       if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
-        setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
+        setErrorPlanning({
+          code: "500",
+          message: "Erreur lors du chargement des équipes. Veuillez réessayer."
+        });
         setLoadCalendar(false);
         return;
       }
@@ -799,7 +813,10 @@ function HomePageContent({
 
       rep = await dataLayer.loadPoleActivites();
       if (!rep?.success || !Array.isArray(rep.data) || rep.data.length === 0) {
-        setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
+        setErrorPlanning({
+          code: "500",
+          message: "Erreur lors du chargement des pôles d'activité. Veuillez réessayer."
+        });
         setLoadCalendar(false);
         return;
       }
@@ -826,7 +843,10 @@ function HomePageContent({
       if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
       } else {
-        setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+        setErrorPlanning({
+          code: "500",
+          message: "Erreur lors du chargement des employés. Veuillez réessayer."
+        });
         setGlobalEmployees([]);
         setLoadCalendar(false);
         return;
@@ -844,7 +864,10 @@ function HomePageContent({
       if (hasPermission(214, 23) || hasPermission(214, 22)) {
         initializePaieTableAndManualEventTable();
       } else {
-        setErrorPlanning("Vous n'avez pas les droits nécessaires pour accéder à cette vue.");
+        setErrorPlanning({
+          code: "403",
+          message: "Vous n'avez pas les droits nécessaires pour accéder à cette vue."
+        });
         setLoadCalendar(false);
       }
     }
@@ -906,18 +929,22 @@ function HomePageContent({
         if (result?.success) {
           yearsToFetch.forEach((year) => loadedYears.add(year));
         } else if (isMounted) {
-          setErrorPlanning(
-            result?.message ||
+          setErrorPlanning({
+            code: "500",
+            message:
+              result?.message ||
               "Erreur lors du chargement des jours non travaillés. Veuillez réessayer."
-          );
+          });
         }
       } catch (error: unknown) {
         if (isMounted) {
-          setErrorPlanning(
-            error instanceof Error
-              ? error.message
-              : "Erreur lors du chargement des jours non travaillés."
-          );
+          setErrorPlanning({
+            code: "500",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Erreur lors du chargement des jours non travaillés."
+          });
         }
       } finally {
         yearsToFetch.forEach((year) => loadingYears.delete(year));
@@ -961,7 +988,10 @@ function HomePageContent({
         setGlobalEmployees(employeesResponse.data);
         setEmployeesVersion(prev => prev + 1);
       } else {
-        setErrorPlanning("Erreur lors du chargement des employés. Veuillez réessayer.");
+        setErrorPlanning({
+          code: "500",
+          message: "Erreur lors du chargement des employés. Veuillez réessayer."
+        });
         setGlobalEmployees([]);
         setLoadCalendar(false);
         return;
@@ -969,14 +999,20 @@ function HomePageContent({
 
       const teamsResponse = await dataLayer.loadTeams();
       if (teamsResponse?.success === false || !Array.isArray(teamsResponse.data) || teamsResponse.data.length === 0) {
-        setErrorPlanning("Erreur lors du chargement des équipes. Veuillez réessayer.");
+        setErrorPlanning({
+          code: "500",
+          message: "Erreur lors du chargement des équipes. Veuillez réessayer."
+        });
         setLoadCalendar(false);
         return;
       }
 
       const poleActivitesResponse = await dataLayer.loadPoleActivites();
       if (poleActivitesResponse?.success === false || !Array.isArray(poleActivitesResponse.data) || poleActivitesResponse.data.length === 0) {
-        setErrorPlanning("Erreur lors du chargement des pôles d'activité. Veuillez réessayer.");
+        setErrorPlanning({
+          code: "500",
+          message: "Erreur lors du chargement des pôles d'activité. Veuillez réessayer."
+        });
         setLoadCalendar(false);
         return;
       }
@@ -1231,13 +1267,22 @@ function HomePageContent({
                   {viewType === 'calendar' && !loadCalendar ? (
                     /* VUE PLANNING */
                     errorPlanning ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <p className="text-red-600 text-lg font-semibold">
-                            {errorPlanning}
-                          </p>
-                        </div>
-                      </div>
+                      <PlanningErrorState
+                        code={errorPlanning.code}
+                        title={
+                          String(errorPlanning.code) === "403"
+                            ? "Accès non autorisé"
+                            : "Impossible d'afficher le planning"
+                        }
+                        message={errorPlanning.message}
+                        onRetry={() => {
+                          setErrorPlanning(null);
+                          hasInitializedPlanningRef.current = false;
+                          hasInitializedTeamsRef.current = false;
+                          hasInitializedEmployeesRef.current = false;
+                          setLoadCalendar(true);
+                        }}
+                      />
                     ) : (
                       (effectiveIsMobile ||
                       currentCalendarConfig ||
@@ -1333,6 +1378,7 @@ function HomePageContent({
                                 onTransfer: handleTransferEmployee,
                                 ressources: dataLayer.itemsRef.current,
                                 setNotification: setLockNotification,
+                                hasPermission: hasPermission,
                               }) || [];
                               if (viewType !== 'chantier-table' || !chantierColumns) return structure;
                               if (chantierColumns.length === 0) return structure;

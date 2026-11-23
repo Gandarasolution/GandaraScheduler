@@ -1,7 +1,7 @@
 import React, { memo, useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { format } from 'date-fns';
 import { 
-  ConfigurationModal,
+  CONTROL_PANEL_META_BY_KEY,
   ImageSelectorContentModal,
   Modal, 
 } from '@/app/calendrier/components';
@@ -271,19 +271,19 @@ export const CalendarModals = memo(({
   }, [modalsState.repeatData, modalsState.extendData]);
 
   const settings = useMemo(() => [
-    ...(hasPermission(214, 23) ? [
+    ...(CONTROL_PANEL_META_BY_KEY.daysManagement.isAllowed(hasPermission) ? [
       {
-        category: "Gestion des jours",
-        key: "daysManagement",
+        category: CONTROL_PANEL_META_BY_KEY.daysManagement.categoryTitle,
+        key: CONTROL_PANEL_META_BY_KEY.daysManagement.key,
         items: [
-          {
+          ...(hasPermission(224, 3) ? [{
             id: "dayTypeSettings",
             label: "Styles des types de jours",
             type: "day-type-settings",
             dayTypes: DayTypes || [],
-            canEdit: hasPermission(224),
-            canDelete: hasPermission(224),
-            canAdd: hasPermission(224),
+            canEdit: hasPermission(224, 3),
+            canDelete: hasPermission(224, 3),
+            canAdd: hasPermission(224, 3),
             fetchDayTypes: async () => {
               try {
                 return await fetchDayTypes();
@@ -319,15 +319,15 @@ export const CalendarModals = memo(({
                 return { success: false, message: error?.message || "Erreur lors de la récupération du nombre de jours affectés" };
               }
             }
-          },
-          {
+          }] : []),
+          ...(hasPermission(223, 3) ? [{
             id: "nonWorkedDay",
             label: "Dates non travaillées personnalisées",
             type: "custom-non-working-dates",
             nonWorkingDates: nonWorkingDates,
-            canEdit: hasPermission(223),
-            canDelete: hasPermission(223),
-            canAdd: hasPermission(223),
+            canEdit: hasPermission(223, 3),
+            canDelete: hasPermission(223, 3),
+            canAdd: hasPermission(223, 3),
             setNonWorkingDates: setNonWorkingDates,
             addNonWorkingDatesToPlanning: calendarConfigService.addNonWorkingDatesToPlanning,
             removeNonWorkingDatesFromPlanning: calendarConfigService.removeNonWorkingDatesFromPlanning,
@@ -341,21 +341,22 @@ export const CalendarModals = memo(({
             },
             fetchNonWorkingDays: loadNonWorkingDates,
             dayTypesOptions: DayTypes || [],
-          }
+          }] : [])
         ]
-      },
+      }
+    ] : []),
+    ...(CONTROL_PANEL_META_BY_KEY.teamsManagement.isAllowed(hasPermission) ? [
       {
-        category: "Gestion des équipes",
-        key: "teamsManagement",
+        category: CONTROL_PANEL_META_BY_KEY.teamsManagement.categoryTitle,
+        key: CONTROL_PANEL_META_BY_KEY.teamsManagement.key,
         items: [
           {
             id: "teamSettings",
             label: "Liste des équipes",
             type: "team-settings",
-            
-            canEdit: hasPermission(224),
-            canDelete: hasPermission(224),
-            canAdd: hasPermission(224),
+            canEdit: hasPermission(172, 3),
+            canDelete: hasPermission(172, 3),
+            canAdd: hasPermission(172, 3),
             onAddTeam: addTeam,
             onUpdateTeam: updateTeam,
             onDeleteTeam: deleteTeam,
@@ -366,8 +367,8 @@ export const CalendarModals = memo(({
             id: "teamMembersSettings",
             label: "Personnel de l'équipe",
             type: "team-members-settings",
-            canAdd: hasPermission(224),
-            canDelete: hasPermission(224),
+            canAdd: hasPermission(172, 3),
+            canDelete: hasPermission(172, 3),
             fetAllPersonnel: employeeService.getAllUsersActif,
             fetchTeamMembers,
             onAddPersonnelToTeam: addPersonnelToTeam,
@@ -376,9 +377,11 @@ export const CalendarModals = memo(({
           },
         ],
       },
+    ] : []),
+    ...(CONTROL_PANEL_META_BY_KEY.mobileAppointmentFields.isAllowed(hasPermission) ? [
       {
-        category: "Affichage mobile des événements",
-        key: "mobileAppointmentFields",
+        category: CONTROL_PANEL_META_BY_KEY.mobileAppointmentFields.categoryTitle,
+        key: CONTROL_PANEL_META_BY_KEY.mobileAppointmentFields.key,
         items: [
           {
             id: "mobileAppointmentFields",
@@ -401,30 +404,32 @@ export const CalendarModals = memo(({
         hasUnsavedChanges: true
       }
     ] : []),
+    ...(CONTROL_PANEL_META_BY_KEY.calendarConfigurations.isAllowed(hasPermission) ? [
+      {
+        category: CONTROL_PANEL_META_BY_KEY.calendarConfigurations.categoryTitle,
+        key: CONTROL_PANEL_META_BY_KEY.calendarConfigurations.key,
+        items: [
+          {
+            id: "calendarConfigurations",
+            label: "Configurations des vues",
+            type: "calendar-configurations",
+            user: user,
+            availableConfigs: availableConfigs,
+            currentConfig: currentCalendarConfig,
+            onConfigChange: onCalendarConfigChange,
+            onSaveConfig: calendarConfigHook.saveConfig,
+            onDeleteConfig: calendarConfigHook.deleteConfig,
+            handleOpenImageModal: openImageModalForConfig,
+            addImage: handlers.addImage,
+          }
+        ]
+      },
+    ] : []),
     {
-      category: "Gestion des vues",
-      key: "calendarConfigurations",
+      category: CONTROL_PANEL_META_BY_KEY.displaySettings.categoryTitle,
+      key: CONTROL_PANEL_META_BY_KEY.displaySettings.key,
       items: [
-        {
-          id: "calendarConfigurations",
-          label: "Configurations des vues",
-          type: "calendar-configurations",
-          user: user,
-          availableConfigs: availableConfigs,
-          currentConfig: currentCalendarConfig,
-          onConfigChange: onCalendarConfigChange,
-          onSaveConfig: calendarConfigHook.saveConfig,
-          onDeleteConfig: calendarConfigHook.deleteConfig,
-          handleOpenImageModal: openImageModalForConfig,
-          addImage: handlers.addImage,
-        }
-      ]
-    },
-    {
-      category: "Options d’affichage",
-      key: "displaySettings",
-      items: [
-        ...(hasPermission(227) ? [{
+        ...(hasPermission(227, 3) ? [{
           id: "defaultDisplaySettings",
           label: "Paramètres par défaut",
           type: "default-display-settings",
