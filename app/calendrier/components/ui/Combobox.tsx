@@ -7,13 +7,27 @@ export interface ComboboxOption {
   label: string;
   icon?: React.ReactNode;
   isActif?: boolean;
+  disabled?: boolean;
+  [key: string]: any;
 }
 
 type BaseComboboxProps = {
   options: ComboboxOption[];
   placeholder?: string;
   disabled?: boolean;
+
+  /** Active l'affichage du bouton en bas de la liste */
   showInactiveToggle?: boolean;
+  /** État contrôlé du toggle (optionnel : géré en interne si non fourni) */
+  showInactive?: boolean;
+  /** Callback appelé au clic sur le bouton de bascule */
+  onToggleInactive?: (nextValue: boolean) => void;
+  /** Prédicat indiquant si une option doit être masquée quand le toggle est désactivé (défaut: option.isActif === false) */
+  isOptionHidden?: (option: ComboboxOption) => boolean;
+  /** Libellé affiché quand les éléments cachés sont masqués */
+  showInactiveLabel?: string;
+  /** Libellé affiché quand les éléments cachés sont visibles */
+  hideInactiveLabel?: string;
 };
 
 type SingleComboboxProps = BaseComboboxProps & {
@@ -30,6 +44,8 @@ type MultiComboboxProps = BaseComboboxProps & {
 
 export type ComboboxProps = SingleComboboxProps | MultiComboboxProps;
 
+const defaultIsOptionHidden = (option: ComboboxOption) => option.isActif === false;
+
 export function Combobox(props: ComboboxProps) {
   const {
     options,
@@ -37,11 +53,27 @@ export function Combobox(props: ComboboxProps) {
     disabled,
     multiple = false,
     showInactiveToggle = false,
+    showInactive: controlledShowInactive,
+    onToggleInactive,
+    isOptionHidden = defaultIsOptionHidden,
+    showInactiveLabel = 'Afficher les inactifs',
+    hideInactiveLabel = 'Masquer les inactifs',
   } = props;
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  const [internalShowInactive, setInternalShowInactive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const isShowingInactive = controlledShowInactive ?? internalShowInactive;
+
+  const handleToggleInactive = () => {
+    const next = !isShowingInactive;
+    if (controlledShowInactive === undefined) {
+      setInternalShowInactive(next);
+    }
+    onToggleInactive?.(next);
+  };
 
   // Normalisation des valeurs sélectionnées sous forme d'un tableau pour simplifier la logique interne
   const selectedValues = multiple
@@ -52,11 +84,17 @@ export function Combobox(props: ComboboxProps) {
 
   const selectedOptions = options.filter(opt => selectedValues.includes(opt.value));
 
+  // Options masquables qui ne sont pas déjà sélectionnées (en mode multiple)
+  const hiddenOptions = options.filter(option => {
+    if (!isOptionHidden(option)) return false;
+    if (multiple && selectedValues.includes(option.value)) return false;
+    return true;
+  });
+
   // En mode 'single', on montre l'option actuellement choisie si la recherche est vide
   // En mode 'multiple', on filtre les options déjà sélectionnées
-  const inactiveOptions = options.filter(option => option.isActif === false);
   const filteredOptions = options.filter(option => {
-    if (showInactiveToggle && option.isActif === false && !showInactive) {
+    if (showInactiveToggle && isOptionHidden(option) && !isShowingInactive) {
       return false;
     }
     const matchesQuery = option?.label?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -65,6 +103,8 @@ export function Combobox(props: ComboboxProps) {
     }
     return matchesQuery;
   });
+
+  console.log('filteredOptions', filteredOptions);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -84,6 +124,7 @@ export function Combobox(props: ComboboxProps) {
   };
 
   const handleOptionClick = (option: ComboboxOption) => {
+    if (option.disabled) return;
     if (multiple) {
       (props as MultiComboboxProps).onValueChange([...(props.value as string[]), option.value]);
     } else {
@@ -107,7 +148,6 @@ export function Combobox(props: ComboboxProps) {
     if (!disabled) setIsOpen(true);
   };
 
-
   return (
     <div ref={containerRef} className="relative space-y-2">
       {/* Champ de recherche */}
@@ -128,7 +168,7 @@ export function Combobox(props: ComboboxProps) {
               ? selectedOptions[0].label
               : placeholder
           }
-          className="w-full rounded-xl border border-default bg-primary-500-bg py-2.5 pl-9 pr-9 text-sm text-primary outline-none transition focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-xl border border-default bg-primary py-2.5 pl-9 pr-9 text-sm text-primary outline-none transition focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -138,49 +178,64 @@ export function Combobox(props: ComboboxProps) {
       </div>
 
       {/* Menu déroulant des options */}
-      {isOpen && !disabled && (filteredOptions.length > 0 || (showInactiveToggle && inactiveOptions.length > 0)) && (
+      {isOpen && !disabled && (filteredOptions.length > 0 || (showInactiveToggle && hiddenOptions.length > 0)) && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-default bg-secondary shadow-lg">
           {filteredOptions.map((option) => {
             const isSelected = selectedValues.includes(option.value);
+            const isHiddenType = isOptionHidden(option);
+            const isOptionDisabled = Boolean(option.disabled);
+
             return (
               <button
                 key={option.value}
                 type="button"
+                disabled={isOptionDisabled}
                 onClick={() => handleOptionClick(option)}
-                className={`w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer flex items-center justify-between ${
-                  isSelected ? 'font-semibold text-primary-600' : 'text-primary'
-                } ${option.isActif === false ? 'italic' : ''
-                }`}
+                className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between ${
+                  isOptionDisabled
+                    ? 'opacity-45 grayscale cursor-not-allowed text-secondary bg-black/5'
+                    : isSelected
+                    ? 'font-semibold text-primary-600 cursor-pointer'
+                    : 'text-primary cursor-pointer'
+                } ${isHiddenType && !isOptionDisabled ? 'italic' : ''}`}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+                  if (!isOptionDisabled) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
+                  if (!isOptionDisabled) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
                 }}
               >
                 <span>{option.label}</span>
-                <div className={`w-5 h-5 flex items-center justify-center`}>{option.icon}</div>
-                {isSelected && (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {option.icon && (
+                    <div className="w-5 h-5 flex items-center justify-center">{option.icon}</div>
+                  )}
+                  {isSelected && !isOptionDisabled && (
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
               </button>
             );
           })}
-          {showInactiveToggle && inactiveOptions.length > 0 && (
+          {showInactiveToggle && hiddenOptions.length > 0 && (
             <button
               type="button"
-              onClick={() => setShowInactive((current) => !current)}
-              className="w-full border-t border-default px-3 py-2 text-left text-xs font-medium text-secondary transition-colors hover:bg-primary-500-50 hover:text-primary"
+              onClick={handleToggleInactive}
+              className="w-full border-t border-default px-3 py-2 text-left text-xs font-medium text-secondary transition-colors hover:bg-primary-500-50 hover:text-primary cursor-pointer"
             >
-              {showInactive ? 'Masquer les inactifs' : 'Afficher les inactifs'}
+              {isShowingInactive ? hideInactiveLabel : showInactiveLabel}
             </button>
           )}
         </div>
       )}
 
-      {isOpen && !disabled && searchQuery && filteredOptions.length === 0 && inactiveOptions.length === 0 && (
+      {isOpen && !disabled && searchQuery && filteredOptions.length === 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-xl border border-default bg-secondary px-3 py-2 text-xs text-secondary shadow-lg">
           Aucun résultat trouvé
         </div>
@@ -193,7 +248,7 @@ export function Combobox(props: ComboboxProps) {
             <div
               key={option.value}
               className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium ${
-                option.isActif === false ? 'italic' : ''
+                isOptionHidden(option) ? 'italic' : ''
               }`}
               style={{
                 backgroundColor: 'var(--color-primary-100)',

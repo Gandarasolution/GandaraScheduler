@@ -1197,6 +1197,15 @@ function HomePageContent({
         break;
       }
 
+      case 'EMPLOYEE_LOCKED':
+        setGlobalEmployees((prev) => prev.map((emp) => (Number(emp.IdPersonnel) === Number(data.IdPersonnel) ? { ...emp, isLocked: true } : emp)));
+        break;
+
+      case 'EMPLOYEE_UNLOCKED':
+        setGlobalEmployees((prev) => prev.map((emp) => (Number(emp.IdPersonnel) === Number(data.IdPersonnel) ? { ...emp, isLocked: false } : emp)));
+        break;
+        
+
       default:
         console.warn("Action Mercure inconnue :", action);      
     }

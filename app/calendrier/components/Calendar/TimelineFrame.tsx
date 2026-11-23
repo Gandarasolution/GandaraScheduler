@@ -279,7 +279,7 @@ const computedHeaders = useMemo(() => {
           const isNonWorking = nonworkingDates && nonworkingDates[dayKey];
 
           const dayType = DayTypes?.find(dt => dt.Id === nonworkingDates?.[dayKey]?.TypeJourCode);
-          const isTooltipVisible = hoveredHeaderTooltip?.id === Number(day);
+          const isTooltipVisible = hoveredHeaderTooltip?.id === Number(day) && (nonworkingDates?.[dayKey]?.TypeJourCode || holiday || isToday(day));
 
           let backgroundColor = 'var(--bg-secondary)';
           let textColor = 'var(--text-primary)';
@@ -346,12 +346,6 @@ const computedHeaders = useMemo(() => {
                       </span>
                       {isNonWorking && dayType && (
                         <span className="block text-xs mt-1">{dayType.Libelle}</span>
-                      )}
-                      {holiday && (
-                        <span className="block text-xs mt-1">Jour férié</span>
-                      )}
-                      {isWeekend(day) && !holiday && (
-                        <span className="block text-xs mt-1">Week-end</span>
                       )}
                       {isToday(day) && (
                         <span className="block text-xs mt-1">Aujourd&apos;hui</span>

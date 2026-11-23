@@ -1078,7 +1078,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
       return (
         <div
           key={category.label + "-group-" + key}
-          className="min-w-0 space-y-2 rounded-xl border border-default bg-primary-500-bg p-3"
+          className="min-w-0 space-y-2 rounded-xl border border-default bg-primary p-3"
         >
           <div className="flex items-center justify-between gap-2 px-0.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
@@ -1142,7 +1142,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
     return (
       <div
         key={category.label + "-group-" + key}
-        className="min-w-0 space-y-2 rounded-xl border border-default bg-primary-500-bg p-3"
+        className="min-w-0 space-y-2 rounded-xl border border-default bg-primary p-3"
       >
         <div className="flex items-center justify-between gap-2 px-0.5">
           <label className="text-xs font-semibold uppercase tracking-wider text-secondary">
@@ -1322,7 +1322,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                         onChange={(event) => setName(event.target.value)}
                         placeholder="Ex. Suivi des chantiers en cours"
                         maxLength={100}
-                        className="mt-1.5 w-full rounded-xl border border-default bg-primary-500-bg px-3 py-2 text-sm text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        className="mt-1.5 w-full rounded-xl border border-default bg-primary px-3 py-2 text-sm text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                         autoFocus
                       />
                     )}
@@ -1342,7 +1342,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                         className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
                           !isPrivate
                             ? "border-primary bg-primary-500 text-white"
-                            : "border-default bg-primary-500-bg text-secondary hover:bg-secondary"
+                            : "border-default bg-primary text-secondary hover:bg-secondary"
                         }`}
                       >
                         <GroupIcon className="h-3.5 w-3.5 shrink-0" />
@@ -1355,7 +1355,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                         className={`cursor-pointer flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
                           isPrivate
                             ? "border-primary bg-primary-500 text-white"
-                            : "border-default bg-primary-500-bg text-secondary hover:bg-secondary"
+                            : "border-default bg-primary text-secondary hover:bg-secondary"
                         }`}
                       >
                         <Lock className="h-3.5 w-3.5 shrink-0" />
@@ -1425,7 +1425,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                   <Skeleton className="h-64 w-full" />
                 ) : (
                   <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
-                    <div className="min-w-0 rounded-xl border border-default bg-primary-500-bg p-3 lg:col-span-5">
+                    <div className="min-w-0 rounded-xl border border-default bg-primary p-3 lg:col-span-5">
                       <div className="mb-3 flex items-center justify-between">
                         <span className="text-xs font-semibold text-secondary">
                           Disponibles ({availableColumns.length})
@@ -1484,7 +1484,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                       </div>
                     </div>
 
-                    <div className="min-w-0 rounded-xl border border-default bg-primary-500-bg p-3 lg:col-span-7">
+                    <div className="min-w-0 rounded-xl border border-default bg-primary p-3 lg:col-span-7">
                       <div className="mb-3 flex items-center justify-between">
                         <span className="text-xs font-semibold text-secondary">
                           Ordre d'affichage ({columns.length})
@@ -1567,7 +1567,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
                                 {column.label}
                               </span>
 
-                              <span className="hidden shrink-0 rounded-md bg-primary-500-bg px-2 py-0.5 text-[10px] text-xs font-semibold uppercase tracking-wide text-secondary sm:inline-block">
+                              <span className="hidden shrink-0 rounded-md bg-primary px-2 py-0.5 text-[10px] text-xs font-semibold uppercase tracking-wide text-secondary sm:inline-block">
                                 {column.categoryLabel}
                               </span>
 
@@ -1675,7 +1675,7 @@ const ChantierViewsControl: React.FC<ChantierViewsControlProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-default bg-primary-500-bg px-5 py-4 sm:px-7">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-default bg-primary px-5 py-4 sm:px-7">
             <div className="text-xs text-red-600">
               {columns.length === 0 && detailsLoaded
                 ? "Sélectionnez au moins une colonne."

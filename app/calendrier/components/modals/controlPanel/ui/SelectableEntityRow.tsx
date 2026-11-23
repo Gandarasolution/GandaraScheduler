@@ -170,7 +170,7 @@ export const SelectableEntityRow: React.FC<SelectableEntityRowProps> = ({
                     placeholder={
                       deleteModal.expectedCount !== null ? `Entrez ${deleteModal.expectedCount}` : "Nombre"
                     }
-                    className="w-full border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-500-bg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
+                    className="w-full border border-default rounded-xl px-3 py-1.5 text-xs bg-primary focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
                   />
                 </div>
               </div>
@@ -268,7 +268,7 @@ export const SelectableEntityRow: React.FC<SelectableEntityRowProps> = ({
             className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
               isSelected
                 ? "bg-primary-500 text-white ring-2 ring-primary/20"
-                : "bg-primary-500-bg border border-light hover:bg-primary-500/5 text-primary"
+                : "bg-primary border border-light hover:bg-primary-500/5 text-primary"
             }`}
           >
             <span>{selectButtonLabel}</span>

@@ -318,6 +318,8 @@ export interface User{
   Image?: string;
   /** Statut actif de l'utilisateur (défaut: true) */
   Actif?: boolean;
+  /** Indique si l'utilisateur est verrouillé (non modifiable) */
+  locked?: boolean;
 }
 
 

@@ -426,6 +426,9 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
           IdEquipe: teamId,
         });
         if (response?.success) {
+          employeeService.unlockEmployee(employee.IdPersonnel).catch((err) => {
+            console.error("Erreur lors du déverrouillage de l'employé:", err);
+          });
           return { success: true };
         }
         console.error(

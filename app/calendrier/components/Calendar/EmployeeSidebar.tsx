@@ -145,7 +145,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     return (
       <div
         key={`${reactKeyPrefix}-employee-${employee.IdPersonnel}`}
-        className="relative flex cursor-pointer bg-primary-500-bg border-l border-r border-default"
+        className="relative flex cursor-pointer bg-primary border-l border-r border-default"
         style={{
           height: employeeRowHeight,
           alignItems: 'center',
@@ -238,10 +238,10 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     if (childEmployees.length === 0) return null;
 
     return (
-      <div key={String(child.id)} className="bg-primary-500-bg">
+      <div key={String(child.id)} className="bg-primary">
         
         <div
-          className="flex items-center bg-primary-500-bg"
+          className="flex items-center bg-primary"
           style={{
             height: CELL_HEIGHT,
             paddingLeft: 18,
@@ -368,7 +368,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
               <button
                 // Ajout de "overflow-hidden" ici pour que le bouton rogne ses propres bords dans l'arrondi 4xl
-                className={`relative z-10 flex justify-between items-center px-4 bg-primary-500-bg focus:outline-none cursor-pointer ${
+                className={`relative z-10 flex justify-between items-center px-4 bg-primary focus:outline-none cursor-pointer ${
                   isOpen
                     ? 'rounded-t-4xl border-t border-r border-l border-default w-full'
                     : 'rounded-4xl border border-default w-full'
@@ -405,7 +405,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                
                 
                 {/* 4. Footer */}
-                <div className="relative z-20 w-full h-5 bg-primary-500-bg border-b border-l border-r border-default rounded-b-4xl overflow-hidden" />
+                <div className="relative z-20 w-full h-5 bg-primary border-b border-l border-r border-default rounded-b-4xl overflow-hidden" />
                 
                 {/* Masques extérieurs placés juste en dessous pour cacher les excédents sur les côtés */}
                 <div className="absolute bottom-0 -left-[1px] w-6 h-5 bg-page z-10 pointer-events-none" />

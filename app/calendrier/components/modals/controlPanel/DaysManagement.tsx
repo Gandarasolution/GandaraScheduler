@@ -90,7 +90,7 @@ const NewDayTypeForm = ({
             setError(null);
           }}
           placeholder="Ex: Astreinte, Congé..."
-          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-500-bg shadow-sm hover:shadow-md w-full"
+          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary shadow-sm hover:shadow-md w-full"
         />
       </div>
 
@@ -98,7 +98,7 @@ const NewDayTypeForm = ({
         <label htmlFor="new-color-fond-hex" className="text-xs text-secondary font-medium poppins">
           Couleur Fond
         </label>
-        <div className="flex items-center gap-1.5 bg-primary-500-bg border border-default rounded-xl p-1 shadow-sm">
+        <div className="flex items-center gap-1.5 bg-primary border border-default rounded-xl p-1 shadow-sm">
           <label
             htmlFor="new-color-fond"
             className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
@@ -127,7 +127,7 @@ const NewDayTypeForm = ({
         <label htmlFor="new-color-texte-hex" className="text-xs text-secondary font-medium poppins">
           Couleur Texte
         </label>
-        <div className="flex items-center gap-1.5 bg-primary-500-bg border border-default rounded-xl p-1 shadow-sm">
+        <div className="flex items-center gap-1.5 bg-primary border border-default rounded-xl p-1 shadow-sm">
           <label
             htmlFor="new-color-texte"
             className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
@@ -162,7 +162,7 @@ const NewDayTypeForm = ({
             className={`h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
               isBold
                 ? "bg-primary-500 text-white border-primary shadow-sm"
-                : "bg-primary-500-bg text-primary border-light hover:bg-secondary/10"
+                : "bg-primary text-primary border-light hover:bg-secondary/10"
             }`}
           >
             B
@@ -174,7 +174,7 @@ const NewDayTypeForm = ({
             className={`h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
               isItalic
                 ? "bg-primary-500 text-white border-primary shadow-sm"
-                : "bg-primary-500-bg text-primary border-light hover:bg-secondary/10"
+                : "bg-primary text-primary border-light hover:bg-secondary/10"
             }`}
           >
             I
@@ -184,7 +184,7 @@ const NewDayTypeForm = ({
 
       <div className="flex flex-col gap-1">
         <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
-        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-500-bg">
+        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary">
           <div
             className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
             style={{
@@ -315,14 +315,14 @@ const DayTypeSingleEditor = ({
           value={localType.Libelle || ""}
           onChange={(e) => handleLabelChange(e.target.value)}
           placeholder="Ex: Jour Férié..."
-          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary-500-bg shadow-sm hover:shadow-md w-full"
+          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 poppins text-xs bg-primary shadow-sm hover:shadow-md w-full"
           disabled={dayType.isLocked || !canEdit}
         />
       </div>
 
       <div className="flex flex-col gap-1">
         <span className="text-xs text-secondary font-medium poppins">Couleur Fond</span>
-        <div className="flex items-center gap-1.5 bg-primary-500-bg border border-default rounded-xl p-1 shadow-sm">
+        <div className="flex items-center gap-1.5 bg-primary border border-default rounded-xl p-1 shadow-sm">
           <label
             htmlFor={`color-fond-${dayType.Id}`}
             className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
@@ -350,7 +350,7 @@ const DayTypeSingleEditor = ({
 
       <div className="flex flex-col gap-1">
         <span className="text-xs text-secondary font-medium poppins">Couleur Texte</span>
-        <div className="flex items-center gap-1.5 bg-primary-500-bg border border-default rounded-xl p-1 shadow-sm">
+        <div className="flex items-center gap-1.5 bg-primary border border-default rounded-xl p-1 shadow-sm">
           <label
             htmlFor={`color-texte-${dayType.Id}`}
             className="w-6 h-6 rounded-lg border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
@@ -388,7 +388,7 @@ const DayTypeSingleEditor = ({
             } h-9 px-3.5 rounded-xl border text-sm font-black poppins transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
               localType.isBold
                 ? "bg-primary-500 text-white border-primary shadow-sm"
-                : "bg-primary-500-bg text-primary border-light hover:bg-secondary/10"
+                : "bg-primary text-primary border-light hover:bg-secondary/10"
             }`}
             disabled={!canEdit}
           >
@@ -403,7 +403,7 @@ const DayTypeSingleEditor = ({
             } h-9 px-3.5 rounded-xl border text-sm italic font-serif transition-all duration-150 cursor-pointer flex items-center justify-center active:scale-95 ${
               localType.isItalic
                 ? "bg-primary-500 text-white border-primary shadow-sm"
-                : "bg-primary-500-bg text-primary border-light hover:bg-secondary/10"
+                : "bg-primary text-primary border-light hover:bg-secondary/10"
             }`}
             disabled={!canEdit}
           >
@@ -414,7 +414,7 @@ const DayTypeSingleEditor = ({
 
       <div className="flex flex-col gap-1">
         <span className="text-xs text-secondary font-medium poppins">Aperçu</span>
-        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary-500-bg">
+        <div className="w-12 h-12 border border-light rounded-xl overflow-hidden shrink-0 shadow-sm bg-primary">
           <div
             className="flex flex-col justify-center items-center h-full w-full text-center relative transition-all p-1"
             style={{
@@ -920,7 +920,7 @@ const NonWorkingDaysEditor = ({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-primary-500-bg p-3 rounded-xl border border-light shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-primary p-3 rounded-xl border border-light shadow-sm">
         <div className="flex items-center gap-2 ml-auto">
           <span className="text-xs font-semibold text-secondary whitespace-nowrap">Année :</span>
           <select
@@ -928,7 +928,7 @@ const NonWorkingDaysEditor = ({
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
             disabled={isLoadingYear}
-            className="border border-default rounded-xl px-3 py-1.5 text-xs bg-primary-500-bg font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm disabled:opacity-50"
+            className="border border-default rounded-xl px-3 py-1.5 text-xs bg-primary font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm disabled:opacity-50"
           >
             {availableYears.map((year) => (
               <option key={year} value={year}>
@@ -981,7 +981,7 @@ const NonWorkingDaysEditor = ({
                   setNewDate(e.target.value);
                   if (dateErrorMessage) setDateErrorMessage(null);
                 }}
-                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary-500-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
+                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
               />
 
               <select
@@ -992,7 +992,7 @@ const NonWorkingDaysEditor = ({
                   ""
                 }
                 onChange={(e) => setNewTypeId(e.target.value)}
-                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary-500-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
+                className="border border-default rounded-lg px-2.5 py-1.5 text-xs bg-primary shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
               >
                 {setting.dayTypesOptions?.map((dt: any) => (
                   <option key={dt.Id} value={dt.Id}>
@@ -1027,7 +1027,7 @@ const NonWorkingDaysEditor = ({
           </div>
         ))}
 
-      <div className="bg-primary-500-bg/60 rounded-xl p-3 min-h-[160px] relative flex-1 min-h-0 border border-light overflow-y-auto">
+      <div className="bg-primary/60 rounded-xl p-3 min-h-[160px] relative flex-1 min-h-0 border border-light overflow-y-auto">
         {isLoadingYear ? (
           <div className="py-8">
             <Loader size="md" message={`Chargement...`} />
@@ -1050,13 +1050,13 @@ const NonWorkingDaysEditor = ({
                           type="date"
                           value={editDateValue}
                           onChange={(e) => setEditDateValue(e.target.value)}
-                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary-500-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
+                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none"
                         />
 
                         <select
                           value={editTypeIdValue}
                           onChange={(e) => setEditTypeIdValue(e.target.value)}
-                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary-500-bg shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
+                          className="border border-default rounded-lg px-2 py-1 text-xs bg-primary shadow-sm flex-1 focus:ring-2 focus:ring-primary focus:outline-none truncate"
                         >
                           {setting.dayTypesOptions?.map((dt: any) => (
                             <option key={dt.Id} value={dt.Id}>
@@ -1083,7 +1083,7 @@ const NonWorkingDaysEditor = ({
                           disabled={isSavingEdit}
                           onClick={handleCancelEdit}
                           title="Annuler"
-                          className="text-secondary bg-primary-500-bg p-1.5 rounded-lg border border-light transition-all cursor-pointer shadow-xs hover:bg-secondary/10"
+                          className="text-secondary bg-primary p-1.5 rounded-lg border border-light transition-all cursor-pointer shadow-xs hover:bg-secondary/10"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1105,7 +1105,7 @@ const NonWorkingDaysEditor = ({
                 return (
                   <div
                     key={dateKey}
-                    className="flex items-center justify-between bg-primary-500-bg rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
+                    className="flex items-center justify-between bg-primary rounded-lg p-2.5 shadow-sm border border-light hover:shadow-md transition-all group"
                   >
                     <div className="flex items-center gap-2.5">
                       <div
@@ -1300,7 +1300,7 @@ export const DaysManagementCategoryContent: React.FC<{
                   className={`px-3 py-2 rounded-xl text-xs font-semibold poppins transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 ${
                     selectedDayTypeId === "all"
                       ? "bg-primary-500 text-white ring-2 ring-primary/20"
-                      : "bg-primary-500-bg border border-light hover:bg-primary-500/5 text-primary"
+                      : "bg-primary border border-light hover:bg-primary-500/5 text-primary"
                   }`}
                 >
                   <span>Voir les jours</span>

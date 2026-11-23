@@ -36,10 +36,21 @@ async function getAllUsersActif() {
 }
 
 
+async function lockEmployee(id: number) {
+    return await putRequest(`/demo/employees/lock/${id}`, {}, 'lockEmployee');
+}
+
+async function unlockEmployee(id: number) {
+    return await putRequest(`/demo/employees/unlock/${id}`, {}, 'unlockEmployee');
+}
+
+
 export default {
     getEmployeesPlanning,
     getEmployee,
     updateEquipeEmployee,
     getEmployeesPag,
     getAllUsersActif,
+    lockEmployee,
+    unlockEmployee
 }

@@ -281,7 +281,7 @@ export default function TransferPlanningModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="cursor-pointer min-h-11 rounded-xl border border-default bg-primary-500-bg px-5 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer min-h-11 rounded-xl border border-default bg-primary px-5 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Annuler
               </button>

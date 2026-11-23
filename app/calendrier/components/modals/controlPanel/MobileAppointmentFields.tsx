@@ -333,7 +333,7 @@ const MobileDisplayEditor = ({
                   }}
                   onMouseEnter={() => setHighlightedFieldCode(option.Code)}
                   onMouseLeave={() => setHighlightedFieldCode(null)}
-                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary-500-bg px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
+                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
                     highlightedFieldCode === option.Code ? "ring-2 ring-primary ring-offset-1" : ""
                   }`}
                 >
@@ -363,7 +363,7 @@ const MobileDisplayEditor = ({
                   }}
                   onMouseEnter={() => setHighlightedFieldCode(option.Code)}
                   onMouseLeave={() => setHighlightedFieldCode(null)}
-                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary-500-bg px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
+                  className={`flex cursor-grab items-center gap-1 rounded-lg border border-dashed border-default bg-primary px-2 py-1 text-xs text-primary shadow-2xs active:cursor-grabbing hover:border-primary transition-colors ${
                     highlightedFieldCode === option.Code ? "ring-2 ring-primary ring-offset-1" : ""
                   }`}
                 >

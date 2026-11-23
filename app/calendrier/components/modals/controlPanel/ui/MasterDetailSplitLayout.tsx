@@ -15,7 +15,7 @@ export const MasterDetailSplitLayout: React.FC<{
     {/* PANNEAU DROIT */}
     <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-ultra-light pt-6 lg:pt-0 lg:pl-6 flex flex-col min-h-0 overflow-y-auto">
       {rightContent ?? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-primary-500-bg/40 rounded-xl border border-dashed border-light min-h-[250px]">
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-primary/40 rounded-xl border border-dashed border-light min-h-[250px]">
           <p className="text-sm font-medium text-secondary poppins">Aucune donnée de configuration</p>
         </div>
       )}

@@ -144,7 +144,7 @@ export function PermissionsPanel({
           {/* Tableau des permissions */}
           <div className="max-h-[300px] overflow-y-auto border border-default rounded-lg shadow-sm">
             <table className="w-full text-xs">
-              <thead className="bg-primary-500-bg sticky top-0 z-10 shadow-sm">
+              <thead className="bg-primary sticky top-0 z-10 shadow-sm">
                 <tr>
                   <th className="w-1/3 text-left py-3 px-3 font-semibold text-primary border-b border-default">
                     Utilisateur

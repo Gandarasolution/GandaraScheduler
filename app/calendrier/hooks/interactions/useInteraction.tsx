@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Appointment, Equipe, ImageType, User } from '@/app/calendrier';
+import employeeService from '@/app/service/employee.service';
 
 // Interface complète des props
 interface InteractionProps {
@@ -64,21 +65,40 @@ export const useInteraction = ({
 
   // --- GESTION MENU CONTEXTUEL ---
 
-  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+  const closeContextMenu = useCallback(() => {
+    if (contextMenu?.item.some(item => item.id === 'employeeTeam')) {
+      const idPersonnel = contextMenu?.item.find(item => item.id === 'employeeTeam')?.idPersonnel;
+      employeeService.unlockEmployee(idPersonnel).catch((err) => {
+        console.error("Erreur lors du déverrouillage de l'employé:", err);
+      });
+    }
+
+    setContextMenu(null);
+  }, []);
 
   const handleEmployeeContextMenu = useCallback((e: React.MouseEvent, employee: User) => {
     e.preventDefault();
     e.stopPropagation();
+
+    employeeService.lockEmployee(employee.IdPersonnel)
+    .then(() => {})
+    .catch(() => {
+    
+    });
+
 
     const teamOptions = Object.values(initialTeams).map((team) => (
       <option key={team.Id} value={team.Id}>{team.Nom}</option>
     ));
 
     const items: any[] = [{
+      id: 'employeeTeam',
+      idPersonnel: employee.IdPersonnel,
       label: 'Équipe',
       logo: <span className="w-4 h-4 rounded-full bg-primary-500 inline-block" />,
       control: (
         <select
+          id={`employee-team-select-${employee.IdPersonnel}`}
           value={employee.Equipe ?? ''}
           className="min-w-50 rounded-lg border border-default bg-secondary px-2 py-1 text-sm"
           onClick={(event) => event.stopPropagation()}

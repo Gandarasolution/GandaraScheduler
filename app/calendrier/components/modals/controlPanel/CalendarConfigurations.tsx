@@ -516,7 +516,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                   </p>
                 )}
                 {currentConfig.Group && (
-                  <span className="text-[11px] bg-primary-500-bg text-primary px-2 py-0.5 rounded-md border border-primary/10 font-medium inline-block">
+                  <span className="text-[11px] bg-primary text-primary px-2 py-0.5 rounded-md border border-primary/10 font-medium inline-block">
                     {currentConfig.Group.ChampsPremierGroupePlanningVue &&
                       `Niv.1: ${currentConfig.Group.ChampsPremierGroupePlanningVue}`}
                     {currentConfig.Group.ChampsDeuxiemeGroupePlanningVue &&
@@ -566,7 +566,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                   ? "border-primary bg-primary-500/10 shadow-sm"
                   : config.isLocked
                   ? "border-red-100 bg-red-50/30 opacity-75"
-                  : "border-light bg-primary-500-bg hover:border-primary/40"
+                  : "border-light bg-primary hover:border-primary/40"
               }`}
             >
               <div className="flex items-start gap-3">
@@ -701,7 +701,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
               )}
 
               {/* Nom & Description */}
-              <div className="space-y-3 bg-primary-500-bg p-4 rounded-2xl border border-light">
+              <div className="space-y-3 bg-primary p-4 rounded-2xl border border-light">
                 <div>
                   <label className="block text-xs font-semibold text-primary mb-1">
                     Nom de la configuration <span className="text-red-500">*</span>
@@ -710,7 +710,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                     type="text"
                     value={configName}
                     onChange={(e) => setConfigName(e.target.value)}
-                    className="w-full px-3 py-2 bg-primary-500-bg border border-default rounded-xl text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    className="w-full px-3 py-2 bg-primary border border-default rounded-xl text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none"
                     placeholder="Ex: Vue Technique par contrats"
                   />
                 </div>
@@ -720,7 +720,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                   <textarea
                     value={configDescription}
                     onChange={(e) => setConfigDescription(e.target.value)}
-                    className="w-full px-3 py-2 bg-primary-500-bg border border-default rounded-xl text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    className="w-full px-3 py-2 bg-primary border border-default rounded-xl text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none"
                     placeholder="Donnez un contexte à cette vue..."
                     rows={2}
                   />
@@ -728,7 +728,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
               </div>
 
               {/* Visibilité */}
-              <div className="bg-primary-500-bg border border-light rounded-2xl p-4 space-y-3">
+              <div className="bg-primary border border-light rounded-2xl p-4 space-y-3">
                 <h5 className="text-xs font-bold text-primary">Visibilité</h5>
                 <div className="flex gap-3">
                   <label
@@ -799,7 +799,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
 
               {/* Icône & Arborescence */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-primary-500-bg p-4 rounded-2xl border border-light flex flex-col">
+                <div className="bg-primary p-4 rounded-2xl border border-light flex flex-col">
                   <label className="block text-xs font-semibold text-primary mb-2">Icône de la vue</label>
                   <div
                     onClick={() => handleOpenImageModal(configImage, setConfigImage)}
@@ -832,7 +832,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                   </div>
                 </div>
 
-                <div className="bg-primary-500-bg p-4 rounded-2xl border border-light space-y-2">
+                <div className="bg-primary p-4 rounded-2xl border border-light space-y-2">
                   <label className="block text-xs font-semibold text-primary">Arborescence</label>
                   <div className="flex bg-secondary p-1 rounded-lg border border-light">
                     <span className="text-[10px] uppercase font-bold text-secondary my-auto px-2 w-12">Niv 1</span>
@@ -905,7 +905,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
               </div>
 
               {/* Ressources ciblées */}
-              <div className="bg-primary-500-bg border border-light rounded-2xl p-4 space-y-3">
+              <div className="bg-primary border border-light rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h5 className="text-xs font-bold text-primary">Ressources ciblées</h5>
                   <span className="text-[11px] font-semibold bg-primary-500/10 text-primary px-2 py-0.5 rounded-full">
@@ -975,7 +975,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                                   className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 ${
                                     isSelected
                                       ? "bg-primary-500 text-white border-primary shadow-2xs"
-                                      : "bg-primary-500-bg text-primary border-light hover:border-primary/40"
+                                      : "bg-primary text-primary border-light hover:border-primary/40"
                                   }`}
                                 >
                                   {isSelected && (
@@ -1031,7 +1031,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                               setEditingFilterId(filtre.IdFiltre);
                               setIsAddingFilter(false);
                             }}
-                            className="px-3 py-1.5 bg-primary-500-bg hover:scale-105 border border-light rounded-lg text-xs font-medium text-primary flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
+                            className="px-3 py-1.5 bg-primary hover:scale-105 border border-light rounded-lg text-xs font-medium text-primary flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
                           >
                             <span>+</span>
                             <span>{filtre.LibelleFiltre}</span>
@@ -1078,7 +1078,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
                                 {selectedValues.map((val) => (
                                   <span
                                     key={val.Id}
-                                    className="text-[11px] bg-primary-500-bg text-secondary px-2 py-0.5 rounded border border-light"
+                                    className="text-[11px] bg-primary text-secondary px-2 py-0.5 rounded border border-light"
                                   >
                                     {val.Nom}
                                   </span>

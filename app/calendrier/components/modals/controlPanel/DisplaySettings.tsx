@@ -265,7 +265,7 @@ const DefaultDisplaySettingsEditor = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-modal-title"
-            className="w-full max-w-sm rounded-2xl border border-default bg-primary-500-bg dark:bg-neutral-900 p-5 shadow-xl space-y-4"
+            className="w-full max-w-sm rounded-2xl border border-default bg-primary dark:bg-neutral-900 p-5 shadow-xl space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-1.5">

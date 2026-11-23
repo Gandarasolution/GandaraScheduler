@@ -4,7 +4,7 @@ export const EmptySelectionPlaceholder: React.FC<{
   actionLabel: string;
   targetDescription: string;
 }> = ({ icon, title, actionLabel, targetDescription }) => (
-  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-primary-500-bg/40 rounded-2xl border border-dashed border-light min-h-[300px]">
+  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-primary/40 rounded-2xl border border-dashed border-light min-h-[300px]">
     <div className="w-12 h-12 rounded-full bg-primary-500/10 flex items-center justify-center text-primary mb-3">
       {icon}
     </div>
