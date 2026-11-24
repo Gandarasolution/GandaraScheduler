@@ -24,6 +24,8 @@ import {
 import { getDimensionItemKey, HierarchicalGroupItem } from '../../utils/filters';
 import { FlatRow } from '../../hooks';
 import { GroupIcon } from '@/app/calendrier';
+import { useAuth } from '../../hooks/utils/AuthContext';
+import { Lock } from 'lucide-react';
 
 interface EmployeeSidebarProps {
   dimensionItems: HierarchicalGroupItem[];
@@ -88,6 +90,8 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   overlappingEmployeeIds,
 }) => {
 
+  const { user } = useAuth();
+
   const [hoveredTooltipEmployeeId, setHoveredTooltipEmployeeId] = useState<number | null>(null);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -131,16 +135,31 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     employee: User,
     reactKeyPrefix: string,
     indentLevel: 0 | 1 = 0,
-    item : HierarchicalGroupItem | null = null
+    item: HierarchicalGroupItem | null = null
   ) => {
     const employeeRow = flatRows.find(
-      row => row.type === 'employee' && Number(row.id) === Number(employee.IdPersonnel)
+      (row) => row.type === 'employee' && Number(row.id) === Number(employee.IdPersonnel)
     );
 
     const employeeRowHeight = employeeRow?.height ?? CELL_HEIGHT;
     const isInactive = employee.Actif === false;
     const hasOverlapInWindow = overlappingEmployeeIds.has(Number(employee.IdPersonnel));
     const isTooltipVisible = hoveredTooltipEmployeeId === Number(employee.IdPersonnel);
+
+    // Vérification centralisée du verrou par un autre utilisateur
+    const isLockedByOther = Boolean(
+      employee.isLocked?.status &&
+        Number(employee.isLocked.updatedById) !== Number(user?.IdPersonnel)
+    );
+
+    // Formatage de l'heure d'expiration du verrou (timestamp en ms)
+    const lockExpirationTime =
+      isLockedByOther && employee.isLocked?.timestamp
+        ? new Date(employee.isLocked.timestamp).toLocaleTimeString('fr-FR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : null;
 
     return (
       <div
@@ -161,41 +180,73 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             role="tooltip"
             className="absolute bottom-full left-4 mb-2 z-50 px-3 py-1.5 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none whitespace-nowrap"
           >
-            <div>{employee.Nom} {employee.Prenom} - {employee.IdPersonnel}</div>
-            <div>{item?.name}</div>
-            
-            {/* Flèche positionnée juste sous le tooltip (sans -mt-1) */}
+            <div>
+              {employee.Nom} {employee.Prenom} - {employee.IdPersonnel}
+            </div>
+            {item?.name && <div>{item.name}</div>}
+
+            {isLockedByOther && (
+              <div className="mt-1 pt-1 border-t border-gray-700 flex items-center gap-1.5 text-amber-300">
+                <Lock className="w-3 h-3 shrink-0" />
+                <span>
+                  Verrouillé par{' '}
+                  <strong>
+                    {employee.isLocked?.updatedByNom || `l'utilisateur #${employee.isLocked?.updatedById}`}
+                  </strong>
+                  {lockExpirationTime ? ` (jusqu'à ${lockExpirationTime})` : ''}
+                </span>
+              </div>
+            )}
+
+            {/* Flèche positionnée juste sous le tooltip */}
             <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900" />
           </div>
         )}
 
         <div
-          className="flex px-2 rounded-2xl w-full h-full gap-2 group items-center hover:bg-primary-500-50 transition-colors duration-150 employee-row-item"
+          className={`flex px-2 rounded-2xl w-full h-full gap-2 group items-center transition-colors duration-150 employee-row-item ${
+            isLockedByOther ? 'opacity-65 cursor-not-allowed' : 'hover:bg-primary-50'
+          }`}
           data-employee-id={employee.IdPersonnel}
           onMouseOver={() => updateHighlightedEmployeeRow(employee.IdPersonnel)}
-          onContextMenu={(event) => onEmployeeContextMenu(event, employee)}
+          onContextMenu={(event) => {
+            if (isLockedByOther) return;
+            onEmployeeContextMenu(event, employee);
+          }}
         >
           <div className="relative flex-shrink-0">
             <img
-              src={employee.Image ?? `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`}
+              src={
+                employee.Image ??
+                `https://placehold.co/32x32/cccccc/333333?text=${employee.Nom.charAt(0)}`
+              }
               alt={employee.Nom}
               loading="lazy"
-              className={`w-8 h-8 rounded-full border shadow ${employee.Type === 'INTERIM' ? 'border-interim' : 'border-employee'} ${isInactive ? 'grayscale' : ''}`}
+              className={`w-8 h-8 rounded-full border shadow ${
+                employee.Type === 'INTERIM' ? 'border-interim' : 'border-employee'
+              } ${isInactive || isLockedByOther ? 'grayscale' : ''}`}
             />
 
             {employee.Type === 'INTERIM' && (
               <span
-                className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${isInactive ? 'bg-gray-400' : 'bg-interim'}`}
+                className={`absolute -bottom-1 -right-1 block h-3 w-3 rounded-full border-2 border-white ${
+                  isInactive || isLockedByOther ? 'bg-gray-400' : 'bg-interim'
+                }`}
               />
             )}
           </div>
 
-          <div className="flex flex-col flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <span
-              className={`poppins text-[14px] font-inherit group-hover:font-semibold truncate ${isInactive ? 'text-gray-400' : ''}`}
+              className={`poppins text-[14px] font-inherit group-hover:font-semibold truncate ${
+                isInactive ? 'text-gray-400' : ''
+              }`}
             >
               {employee.Nom + ' ' + employee.Prenom}
             </span>
+            {isLockedByOther && (
+              <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" aria-label="Employé verrouillé" />
+            )}
           </div>
 
           {hasOverlapInWindow && (
@@ -208,18 +259,30 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   onExpandRow(employee.IdPersonnel);
                 }
               }}
-              className={`cursor-pointer ${overlapDisplayMode === 'count' ? '' : 'min-w-[75px]'} text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition`}
+              className={`cursor-pointer ${
+                overlapDisplayMode === 'count' ? '' : 'min-w-[75px]'
+              } text-[10px] font-semibold bg-white text-gray-700 border border-gray-200 rounded-full px-2 py-0.5 shadow-sm hover:bg-gray-50 transition`}
               type="button"
-              title={expandedOverlapRows[employee.IdPersonnel] ? 'Réduire les rendez-vous qui se chevauchent' : 'Développer pour afficher tous les rendez-vous qui se chevauchent'}
+              title={
+                expandedOverlapRows[employee.IdPersonnel]
+                  ? 'Réduire les rendez-vous qui se chevauchent'
+                  : 'Développer pour afficher tous les rendez-vous qui se chevauchent'
+              }
             >
-              {overlapDisplayMode === 'count'
-                ? expandedOverlapRows[employee.IdPersonnel]
-                  ? 'Réduire'
-                  : <>
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
-                      +{`${hiddenOverlapCounts[employee.IdPersonnel] ?? 0}`}
-                    </>
-                : expandedOverlapRows[employee.IdPersonnel] ? 'Réduire' : 'Développer'}
+              {overlapDisplayMode === 'count' ? (
+                expandedOverlapRows[employee.IdPersonnel] ? (
+                  'Réduire'
+                ) : (
+                  <>
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
+                    +{`${hiddenOverlapCounts[employee.IdPersonnel] ?? 0}`}
+                  </>
+                )
+              ) : expandedOverlapRows[employee.IdPersonnel] ? (
+                'Réduire'
+              ) : (
+                'Développer'
+              )}
             </button>
           )}
         </div>

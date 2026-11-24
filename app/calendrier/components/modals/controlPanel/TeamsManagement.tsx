@@ -10,6 +10,8 @@ import {
 import { Combobox, Loader } from "../..";
 import { UserX, Lock } from "lucide-react";
 import { ComboboxOption } from "../../ui/Combobox";
+import { equipeService } from "@/app/service/";
+import { useDataLayer } from "@/app/calendrier";
 
 const TeamMembersEditor = ({
   setting,
@@ -721,6 +723,12 @@ const TeamMembersEditor = ({
 };
 
 
+const isTeamLockedByOther = (team: Equipe): boolean => {
+  if (!team?.isLocked) return false;
+  if (typeof team.isLocked === "boolean") return team.isLocked;
+  return Boolean(team.isLocked.status);
+};
+
 const TeamRow: React.FC<{
   team: Equipe;
   isSelected: boolean;
@@ -747,48 +755,75 @@ const TeamRow: React.FC<{
   const [nom, setNom] = useState(team.Nom);
   useEffect(() => setNom(team.Nom), [team.Nom]);
 
+  const isLocked = isTeamLockedByOther(team);
+  const effectiveCanEdit = canEdit && !isLocked;
+  const effectiveCanDelete = canDelete && !isLocked;
+
   return (
-    <SelectableEntityRow
-      actionId={`team-${team.Id}`}
-      isSelected={isSelected}
-      isDirty={nom !== team.Nom}
-      canEdit={canEdit}
-      canDelete={canDelete}
-      selectButtonLabel="Voir le personnel"
-      deleteModalTitle="Supprimer l'équipe ?"
-      confirmCountLabel="Veuillez saisir le nombre de salarié(s) pour confirmer :"
-      deleteModalDescription={
-        <>
-          Êtes-vous sûr de vouloir supprimer l&apos;équipe <strong className="text-primary">{team.Nom}</strong> ? Cette
-          action est irréversible.
-        </>
-      }
-      onSelect={onSelect}
-      onSave={async () => {
-        const res = await onUpdate?.({ ...team, Nom: nom.trim() });
-        if (res && !res.success) setError(res.message || "Erreur lors de la mise à jour.");
-      }}
-      onCheckDelete={onCheckDelete ? () => onCheckDelete(team.Id) : undefined}
-      onDelete={async (count: number) => {
-        await onDelete?.(team.Id, count);
-      }}
-      setError={setError}
-      registerSaveAction={registerSaveAction}
+    <div
+      className={`transition-all ${
+        isLocked ? "opacity-55 grayscale pointer-events-none select-none" : ""
+      }`}
     >
-      <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-        <label className="text-xs text-secondary font-medium poppins">Nom de l&apos;équipe</label>
-        <input
-          type="text"
-          value={nom}
-          onChange={(e) => {
-            setNom(e.target.value);
-            setError(null);
-          }}
-          disabled={!canEdit}
-          className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary shadow-sm w-full"
-        />
-      </div>
-    </SelectableEntityRow>
+      <SelectableEntityRow
+        actionId={`team-${team.Id}`}
+        isSelected={isSelected}
+        isDirty={!isLocked && nom !== team.Nom}
+        canEdit={effectiveCanEdit}
+        canDelete={effectiveCanDelete}
+        selectButtonLabel={isLocked ? "Verrouillée" : "Voir le personnel"}
+        deleteModalTitle="Supprimer l'équipe ?"
+        confirmCountLabel="Veuillez saisir le nombre de salarié(s) pour confirmer :"
+        deleteModalDescription={
+          <>
+            Êtes-vous sûr de vouloir supprimer l&apos;équipe{" "}
+            <strong className="text-primary">{team.Nom}</strong> ? Cette action est irréversible.
+          </>
+        }
+        onSelect={() => {
+          if (!isLocked) onSelect();
+        }}
+        onSave={async () => {
+          if (isLocked) return;
+          const res = await onUpdate?.({ ...team, Nom: nom.trim() });
+          if (res && !res.success) setError(res.message || "Erreur lors de la mise à jour.");
+        }}
+        onCheckDelete={
+          effectiveCanDelete && onCheckDelete ? () => onCheckDelete(team.Id) : undefined
+        }
+        onDelete={async (count: number) => {
+          if (isLocked) return;
+          await onDelete?.(team.Id, count);
+        }}
+        setError={setError}
+        registerSaveAction={registerSaveAction}
+      >
+        <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-xs text-secondary font-medium poppins">
+              Nom de l&apos;équipe
+            </label>
+            {isLocked && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-secondary bg-black/10 border border-light px-2 py-0.5 rounded-full">
+                <Lock className="w-2.5 h-2.5" />
+                En cours de modification
+              </span>
+            )}
+          </div>
+          <input
+            type="text"
+            value={nom}
+            onChange={(e) => {
+              if (isLocked) return;
+              setNom(e.target.value);
+              setError(null);
+            }}
+            disabled={!effectiveCanEdit}
+            className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary shadow-sm w-full disabled:cursor-not-allowed"
+          />
+        </div>
+      </SelectableEntityRow>
+    </div>
   );
 };
 
@@ -798,7 +833,7 @@ export const TeamsManagementCategoryContent: React.FC<{
   registerSaveAction: (id: string, action: SaveAction | null) => void;
 }> = ({ categoryObj, setApiError, registerSaveAction }) => {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [teams, setTeams] = useState<Equipe[]>([]);
+  const [lockExpiresAt, setLockExpiresAt] = useState<number | null>(null);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -812,6 +847,7 @@ export const TeamsManagementCategoryContent: React.FC<{
     teamsSettingRef.current = teamsSetting;
   }, [teamsSetting]);
 
+  // Charge les équipes dans le DataLayer si initialTeams est encore vide
   const loadTeamsList = useCallback(async () => {
     const fetchFn = teamsSettingRef.current?.fetchEquipes;
     if (typeof fetchFn !== "function") return;
@@ -819,22 +855,9 @@ export const TeamsManagementCategoryContent: React.FC<{
     setIsLoadingTeams(true);
     setApiError(null);
     try {
-      const res = await fetchFn();
-      if (Array.isArray(res)) {
-        setTeams(res);
-      } else if (res?.success && Array.isArray(res.data)) {
-        setTeams(res.data);
-      } else if (res?.success && res.data && typeof res.data === "object") {
-        setTeams(Object.values(res.data));
-      } else if (res && typeof res === "object" && !("success" in res)) {
-        setTeams(Object.values(res));
-      } else if (res && !res.success) {
-        setApiError(res.message || "Erreur lors du chargement des équipes.");
-        setTeams([]);
-      }
+      await fetchFn();
     } catch (err: any) {
       setApiError(err?.message || "Erreur lors du chargement des équipes.");
-      setTeams([]);
     } finally {
       setIsLoadingTeams(false);
     }
@@ -844,15 +867,26 @@ export const TeamsManagementCategoryContent: React.FC<{
     loadTeamsList();
   }, [loadTeamsList]);
 
-  const validTeams = useMemo(
-    () => teams.filter((t: Equipe) => t && t.Id !== null && t.Id !== undefined),
-    [teams]
-  );
+  // Lecture directe depuis initialTeams (toujours synchronisé avec Mercure)
+  const validTeams = useMemo(() => {
+    const rawTeams = teamsSetting?.initialTeams;
+    if (!rawTeams) return [];
+    const list: Equipe[] = Array.isArray(rawTeams) ? rawTeams : Object.values(rawTeams);
+    return list.filter((t: Equipe) => t && t.Id !== null && t.Id !== undefined);
+  }, [teamsSetting?.initialTeams]);
 
   const selectedTeam = useMemo(
     () => validTeams.find((t: Equipe) => String(t.Id) === String(selectedTeamId)),
     [validTeams, selectedTeamId]
   );
+
+  // Si l'équipe actuellement sélectionnée se fait verrouiller par quelqu'un d'autre, on la désélectionne
+  useEffect(() => {
+    if (selectedTeam && isTeamLockedByOther(selectedTeam)) {
+      setSelectedTeamId(null);
+      setLockExpiresAt(null);
+    }
+  }, [selectedTeam]);
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) {
@@ -874,6 +908,83 @@ export const TeamsManagementCategoryContent: React.FC<{
       setIsCreating(false);
     }
   };
+
+  // Normalise le timestamp renvoyé par l'API (en millisecondes)
+  const normalizeTimestampMs = (rawExpiresIn?: number): number => {
+    if (!rawExpiresIn) return Date.now() + 300_000;
+    // Si le timestamp est en secondes (ex: 1732440000), on le convertit en ms
+    if (rawExpiresIn < 1e12) return rawExpiresIn * 1000;
+    return rawExpiresIn;
+  };
+
+  const handleSelectTeam = useCallback(
+    async (team: Equipe) => {
+      if (isTeamLockedByOther(team)) return;
+      setApiError(null);
+
+      if (typeof teamsSetting?.lockEquipe !== "function") {
+        setSelectedTeamId(String(team.Id));
+        return;
+      }
+
+      try {
+        const res = await teamsSetting.lockEquipe(team.Id);
+        const data = res?.data ?? res;
+
+        if (!res?.success && !data?.isLocked) {
+          setApiError(
+            data?.message || res?.message || "Cette équipe est actuellement verrouillée par un autre utilisateur."
+          );
+          return;
+        }
+
+        setSelectedTeamId(String(team.Id));
+        setLockExpiresAt(normalizeTimestampMs(data?.expiresIn ?? res?.expiresIn));
+      } catch (err: any) {
+        setApiError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Cette équipe est actuellement verrouillée par un autre utilisateur."
+        );
+      }
+    },
+    [setApiError, teamsSetting]
+  );
+
+  // Renouvellement automatique du verrou 10 secondes avant le timestamp d'expiration
+  useEffect(() => {
+    if (!selectedTeamId || !lockExpiresAt) return;
+
+    const refreshDelay = Math.max(1000, lockExpiresAt - Date.now() - 10_000);
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await teamsSettingRef.current?.lockEquipe?.(Number(selectedTeamId));
+        const data = res?.data ?? res;
+        if (res?.success || data?.isLocked) {
+          setLockExpiresAt(normalizeTimestampMs(data?.expiresIn ?? res?.expiresIn));
+        } else {
+          // Le verrou a été perdu entre-temps
+          setSelectedTeamId(null);
+          setLockExpiresAt(null);
+        }
+      } catch {
+        setSelectedTeamId(null);
+        setLockExpiresAt(null);
+      }
+    }, refreshDelay);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedTeamId, lockExpiresAt]);
+
+  // Libération automatique du verrou quand on change d'équipe ou ferme la modale
+  useEffect(() => {
+    if (!selectedTeamId) return;
+
+    const currentId = Number(selectedTeamId);
+    return () => {
+      teamsSettingRef.current?.unlockEquipe?.(currentId)?.catch(() => {});
+    };
+  }, [selectedTeamId]);
 
   return (
     <MasterDetailSplitLayout
@@ -920,22 +1031,18 @@ export const TeamsManagementCategoryContent: React.FC<{
                   key={team.Id}
                   team={team}
                   isSelected={String(team.Id) === String(selectedTeamId)}
-                  onSelect={() => setSelectedTeamId(String(team.Id))}
+                  onSelect={() => handleSelectTeam(team)}
                   onUpdate={async (updatedTeam) => {
-                    const res = await teamsSetting.onUpdateTeam?.(updatedTeam);
-                    if (res?.success) {
-                      setTeams((prev) =>
-                        prev.map((t) => (String(t.Id) === String(updatedTeam.Id) ? updatedTeam : t))
-                      );
-                    }
-                    return res;
+                    return await teamsSetting.onUpdateTeam?.(updatedTeam);
                   }}
                   onCheckDelete={teamsSetting.onCheckDeleteTeam}
                   onDelete={async (id, count) => {
                     const res = await teamsSetting.onDeleteTeam?.(id, count);
                     if (res?.success) {
-                      setTeams((prev) => prev.filter((t) => String(t.Id) !== String(id)));
-                      if (String(selectedTeamId) === String(id)) setSelectedTeamId(null);
+                      if (String(selectedTeamId) === String(id)) {
+                        setSelectedTeamId(null);
+                        setLockExpiresAt(null);
+                      }
                     } else if (res && !res.success) {
                       setApiError(res.message || "Erreur lors de la suppression de l'équipe.");
                     }

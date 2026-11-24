@@ -1197,14 +1197,67 @@ function HomePageContent({
         break;
       }
 
-      case 'EMPLOYEE_LOCKED':
-        setGlobalEmployees((prev) => prev.map((emp) => (Number(emp.IdPersonnel) === Number(data.IdPersonnel) ? { ...emp, isLocked: true } : emp)));
+      case 'EMPLOYEE_LOCKED': {
+        const lock = data?.isLocked;
+        dataLayer.setEmployeeLockStatus(
+          data.employeeId,
+          true,
+          lock?.timestamp ?? data.timestamp,
+          lock?.updatedById ?? data.updatedById,
+          lock?.updatedByNom ?? data.updatedByNom
+        );
         break;
+      }
 
       case 'EMPLOYEE_UNLOCKED':
-        setGlobalEmployees((prev) => prev.map((emp) => (Number(emp.IdPersonnel) === Number(data.IdPersonnel) ? { ...emp, isLocked: false } : emp)));
+        dataLayer.setEmployeeLockStatus(data.employeeId, false);
         break;
-        
+
+      case 'TEAM_LOCKED':
+        dataLayer.setTeamLockStatus(data.teamId, true);
+        break;
+
+      case 'TEAM_UNLOCKED':
+        dataLayer.setTeamLockStatus(data.teamId, false);
+        break;
+
+      case "TEAM_CREATED": {
+        if (data?.team?.Id) {
+          dataLayer.upsertTeamInCache(data.equipe);
+        } else {
+          dataLayer.loadTeams();
+        }
+        break;
+      }
+
+      case "TEAM_UPDATED": {
+        if (data?.idEquipe !== undefined && data?.nom !== undefined) {
+          dataLayer.upsertTeamInCache({ Id: Number(data.idEquipe), Nom: data.nom });
+        } else {
+          dataLayer.loadTeams();
+        }
+        break;
+      }
+
+      case "TEAM_DELETED": {
+        if (data?.teamId !== undefined) {
+          dataLayer.removeTeamFromCache(Number(data.idEquipe ?? data.teamId));
+        } else {
+          dataLayer.loadTeams();
+        }
+        break;
+      }
+
+      case 'EMPLOYEE_TEAM_UPDATED':
+        console.log('Mercure: EMPLOYEE_TEAM_UPDATED', data);
+        if (data?.employeeId !== undefined && data?.idEquipe !== undefined) {
+          setGlobalEmployees((prev) =>
+            prev.map((emp) =>
+              Number(emp.IdPersonnel) === Number(data.employeeId) ? { ...emp, Equipe: Number(data.idEquipe) } : emp
+            )
+          );
+        }
+        break;
 
       default:
         console.warn("Action Mercure inconnue :", action);      
@@ -1388,6 +1441,9 @@ function HomePageContent({
                                 ressources: dataLayer.itemsRef.current,
                                 setNotification: setLockNotification,
                                 hasPermission: hasPermission,
+                                lockEmployee: employeeService.lockEmployee,
+                                unlockEmployee: employeeService.unlockEmployee,
+                                user: user,
                               }) || [];
                               if (viewType !== 'chantier-table' || !chantierColumns) return structure;
                               if (chantierColumns.length === 0) return structure;

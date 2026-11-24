@@ -28,6 +28,15 @@ async function getEquipePersonnel(id: number) {
     return await getRequest(`/demo/equipes/${id}/personnel`, 'getEquipePersonnel');
 }
 
+
+async function lockEquipe(id: number) {
+    return await postRequest(`/demo/equipes/${id}/lock`, {}, 'lockEquipe');
+}
+
+async function unlockEquipe(id: number) {
+    return await deleteRequest(`/demo/equipes/${id}/unlock`, {}, 'unlockEquipe');
+}
+
 export default {
     getEquipes,
     createEquipe,
@@ -36,4 +45,6 @@ export default {
     updateEquipe,
     getEquipePersonnel,
     checkDeleteEquipe,
+    lockEquipe,
+    unlockEquipe 
 }

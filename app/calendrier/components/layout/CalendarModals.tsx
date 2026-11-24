@@ -155,7 +155,9 @@ export const CalendarModals = memo(({
     removePersonnelFromTeam,
     fetchTeamMembers,
     onCheckDeleteTeam,
-    loadTeams
+    loadTeams,
+    lockTeam,
+    unlockTeam
   } = useDataLayer();
 
   const loadDisplaySettings = async () => {
@@ -357,11 +359,14 @@ export const CalendarModals = memo(({
             canEdit: hasPermission(172, 3),
             canDelete: hasPermission(172, 3),
             canAdd: hasPermission(172, 3),
+            initialTeams, // <-- Ajouté ici depuis useDataLayer()
             onAddTeam: addTeam,
             onUpdateTeam: updateTeam,
             onDeleteTeam: deleteTeam,
             onCheckDeleteTeam: onCheckDeleteTeam,
-            fetchEquipes: loadTeams
+            fetchEquipes: loadTeams,
+            lockEquipe: lockTeam,
+            unlockEquipe: unlockTeam,
           },
           {
             id: "teamMembersSettings",

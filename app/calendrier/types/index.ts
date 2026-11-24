@@ -29,6 +29,12 @@ export interface Equipe {
   Id: number;
   /** Libellé de l'équipe (LibelleEquipe) */
   Nom: string;  
+  isLocked?: {
+    /** Indique si l'équipe est verrouillée (non modifiable) */
+    status: boolean;
+    /** Date et heure du dernier verrouillage/déverrouillage */
+    timestamp: number;
+  }
 }
 
 
@@ -319,7 +325,16 @@ export interface User{
   /** Statut actif de l'utilisateur (défaut: true) */
   Actif?: boolean;
   /** Indique si l'utilisateur est verrouillé (non modifiable) */
-  locked?: boolean;
+  isLocked?: {
+    /** Statut de verrouillage */
+    status: boolean;
+    /** Timestamp du dernier verrouillage/déverrouillage (en ms) */
+    timestamp?: number;
+    /** ID du personnel ayant verrouillé l'élément */
+    updatedById?: number | null;
+    /** Nom complet du personnel ayant verrouillé l'élément */
+    updatedByNom?: string | null;
+  };
 }
 
 

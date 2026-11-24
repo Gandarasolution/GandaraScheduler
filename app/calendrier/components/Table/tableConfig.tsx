@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CategoryStructure } from ".";
 import { Appointment, AutreItem, ChantierItem, Equipe, Item, User } from "../../types";
 import { AppointmentItem } from "../Calendar";
 import { GenericDataItem } from "./DataTableFrame";
-import { AlertCircle, ArrowRightLeft, Check } from "lucide-react";
+import { AlertCircle, ArrowRightLeft, Check, Lock } from "lucide-react";
+
 
 const getWithSeparator = (num: string, colonne: string): string => {
     if (colonne === 'TM' || colonne === 'HR' || colonne === 'DPF' || colonne === 'RPF' || colonne === 'SH' || colonne === 'SP') {
@@ -25,6 +26,9 @@ export interface TableConfigDeps {
   ressources?: Record<number, Item>;
   setNotification?: (message: string) => void;
   hasPermission?: (permissionId: number, level: number) => boolean;
+  lockEmployee?: (id: number, nomPersonnel: string) => Promise<void>;
+  unlockEmployee?: (id: number) => Promise<void>;
+  user?: User | null;
 }
 
 // 1. Renderer pour les images de Chantiers / Paie (Affiche un mini AppointmentItem)
@@ -240,12 +244,37 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                             </div>
                         );
                     }
+
+                    if (
+                        item.isLocked &&
+                        item.isLocked.status &&
+                        Number(item.isLocked.updatedById) !== Number(deps?.user?.IdPersonnel)
+                    ) {
+                        const lockerName =
+                        item.isLocked.updatedByNom || `l'utilisateur #${item.isLocked.updatedById}`;
+                        const lockMessage = `L'employé est verrouillé par ${lockerName}`;
+
+                        return (
+                        <div
+                            className="flex items-center justify-center gap-1.5 w-full h-full px-2 text-amber-700 bg-amber-500/10 rounded-lg"
+                            title={lockMessage}
+                        >
+                            <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                            <span className="poppins text-xs font-medium truncate">
+                            {lockMessage}
+                            </span>
+                        </div>
+                        );
+                    }
+
                     return (
                         <TeamSelectCell
                             item={item as unknown as User}
                             initialTeams={deps?.initialTeams || {}}
                             onTeamChange={deps?.onTeamChange || (async () => ({ success: true }))}
                             setNotification={deps?.setNotification || (() => {})}
+                            lockEmployee={deps?.lockEmployee || (async () => {})}
+                            unlockEmployee={deps?.unlockEmployee || (async () => {})}
                         />
                     );
                 },
@@ -391,47 +420,88 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
 
   
 interface TeamSelectCellProps {
-  item: any;
+  item: User;
   initialTeams: Record<number, any>;
   onTeamChange: (item: any, newGroupId: number | null) => Promise<{ success: boolean }>;
   setNotification: (message: string) => void;
+  lockEmployee: (id: number, nomPersonnel: string) => Promise<void>;
+  unlockEmployee: (id: number) => Promise<void>;
 }
 
 
-const TeamSelectCell = ({ item, initialTeams, onTeamChange, setNotification }: TeamSelectCellProps) => {
+
+
+const TeamSelectCell = ({
+  item,
+  initialTeams,
+  onTeamChange,
+  setNotification,
+  lockEmployee,
+  unlockEmployee,
+}: TeamSelectCellProps) => {
   const initialValue = item.Equipe || '';
   const [localValue, setLocalValue] = useState<string | number>(initialValue);
   const [isSaving, setIsSaving] = useState(false);
-  const [isError, setIsError] = useState(false); 
+  const [isError, setIsError] = useState(false);
+
+  // Permet de savoir si ce composant détient actuellement un verrou
+  const isLockedByMeRef = useRef(false);
 
   // Maintien de la synchro avec la donnée serveur
   useEffect(() => {
     setLocalValue(item.Equipe || '');
-    setIsError(false); // Réinitialise l'erreur si la donnée serveur change
+    setIsError(false);
   }, [item.Equipe]);
 
   const hasChanged = localValue.toString() !== initialValue.toString();
 
+  const acquireLockIfNeeded = async () => {
+    if (isLockedByMeRef.current || !lockEmployee) return;
+    isLockedByMeRef.current = true;
+    try {
+      await lockEmployee(item.IdPersonnel, `${item.Nom} ${item.Prenom}`);
+    } catch {
+      isLockedByMeRef.current = false;
+    }
+  };
+
+  const releaseLockIfOwned = () => {
+    if (!isLockedByMeRef.current || !unlockEmployee) return;
+    isLockedByMeRef.current = false;
+    unlockEmployee(item.IdPersonnel);
+  };
+
+  // Libération de sécurité si le composant est démonté (changement de page, fermeture modale...)
+  useEffect(() => {
+    return () => {
+      if (isLockedByMeRef.current && unlockEmployee) {
+        isLockedByMeRef.current = false;
+        unlockEmployee(item.IdPersonnel);
+      }
+    };
+  }, [item.IdPersonnel, unlockEmployee]);
+
   const handleSave = () => {
     if (!onTeamChange) return;
-    
+
     setIsSaving(true);
-    setIsError(false); // On réinitialise l'état d'erreur avant de réessayer
-    
+    setIsError(false);
+
     const newGroupId = localValue ? Number(localValue) : null;
 
     onTeamChange(item, newGroupId)
-      .then(response => {
+      .then((response) => {
         if (!response.success) {
-          // En cas d'échec : on déclenche l'erreur, on NE REVERT PAS pour laisser le bouton visible
           setIsError(true);
           setNotification("Erreur lors de la mise à jour de l'équipe. Veuillez réessayer.");
         } else {
-          item.Equipe = newGroupId; // Mise à jour de la valeur dans l'objet item
+          item.Equipe = newGroupId;
+          // Sauvegarde réussie : on libère le verrou
+          releaseLockIfOwned();
         }
       })
       .catch(() => {
-        setIsError(true); // On déclenche l'erreur ici aussi
+        setIsError(true);
         setNotification("Erreur lors de la mise à jour de l'équipe. Veuillez réessayer.");
       })
       .finally(() => {
@@ -445,7 +515,17 @@ const TeamSelectCell = ({ item, initialTeams, onTeamChange, setNotification }: T
         value={localValue}
         onChange={(e) => {
           setLocalValue(e.target.value);
-          setIsError(false); // 👈 On enlève le rouge si l'utilisateur change à nouveau la valeur
+          setIsError(false);
+        }}
+        onFocus={() => {
+          // Couvre aussi la navigation au clavier (Tab) en plus du clic souris
+          acquireLockIfNeeded();
+        }}
+        onBlur={() => {
+          // Si l'utilisateur quitte le select sans aucune modification, on déverrouille
+          if (!hasChanged && !isSaving) {
+            releaseLockIfOwned();
+          }
         }}
         onClick={(e) => e.stopPropagation()}
         disabled={isSaving}
@@ -469,16 +549,16 @@ const TeamSelectCell = ({ item, initialTeams, onTeamChange, setNotification }: T
           }}
           disabled={isSaving}
           className={`cursor-pointer p-1 text-white rounded-md disabled:opacity-50 transition-colors flex-shrink-0 ${
-            isError 
-              ? 'bg-red-500 hover:bg-red-600' // 👈 Rouge en cas d'erreur
-              : 'bg-primary-500 hover:bg-primary-600' // Couleur normale
+            isError
+              ? 'bg-red-500 hover:bg-red-600'
+              : 'bg-primary-500 hover:bg-primary-600'
           }`}
-          title={isError ? "Réessayer" : "Appliquer le changement"}
+          title={isError ? 'Réessayer' : 'Appliquer le changement'}
         >
           {isSaving ? (
             <span className="w-4 h-4 block border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : isError ? (
-            <AlertCircle size={20} /> // 👈 Icône qui change si erreur (optionnel, tu peux garder Check)
+            <AlertCircle size={20} />
           ) : (
             <Check size={20} />
           )}

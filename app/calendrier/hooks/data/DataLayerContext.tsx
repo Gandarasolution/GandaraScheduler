@@ -83,6 +83,14 @@ export interface DataLayerContextType {
     teamId: number
   ) => Promise<{ success: boolean; data?: User[]; message?: string }>;
   onCheckDeleteTeam: (id: number) => Promise<{ checkRequired: boolean; message?: string }>;
+  lockTeam: (teamId: number) => Promise<{ success: boolean; message?: string }>;
+  unlockTeam: (teamId: number) => Promise<{ success: boolean; message?: string }>;
+
+
+  setTeamLockStatus: (teamId: number, isLocked: boolean) => void;
+  setEmployeeLockStatus: (employeeId: number, isLocked: boolean, timestamp?: number, updatedById?: number, updatedByNom?: string) => void;
+  upsertTeamInCache: (team: Partial<Equipe> & { Id: number }) => void;
+  removeTeamFromCache: (teamId: number) => void;
 }
 
 interface DataLayerProviderProps {
@@ -426,9 +434,6 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
           IdEquipe: teamId,
         });
         if (response?.success) {
-          employeeService.unlockEmployee(employee.IdPersonnel).catch((err) => {
-            console.error("Erreur lors du déverrouillage de l'employé:", err);
-          });
           return { success: true };
         }
         console.error(
@@ -673,6 +678,112 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
     [refreshData]
   );
 
+
+  const lockTeam = useCallback(
+    async (teamId: number): Promise<{ success: boolean; expiresIn?: number; message?: string }> => {
+      try {
+        const response = await equipeService.lockEquipe(teamId);
+        const data = response?.data ?? response;
+
+        if (response?.success || data?.isLocked) {
+          setTeams((prev) => ({
+            ...prev,
+            [teamId]: {
+              ...prev[teamId],
+              isLocked: { status: false, timestamp: Date.now() },
+            },
+          }));
+          return {
+            success: true,
+            expiresIn: data?.expiresIn ?? Date.now() + 300_000,
+          };
+        }
+
+        return {
+          success: false,
+          message: data?.message || response?.message || "Erreur lors du verrouillage de l'équipe.",
+        };
+      } catch (error: any) {
+        console.error("Erreur lors du verrouillage de l'équipe:", error);
+        return {
+          success: false,
+          message:
+            error?.response?.data?.message ||
+            error?.message ||
+            "Cette équipe est actuellement verrouillée par un autre utilisateur.",
+        };
+      }
+    },
+    []
+  );
+
+  const unlockTeam = useCallback(
+    async (teamId: number): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const response = await equipeService.unlockEquipe(teamId);
+        if (response?.success || response?.isLocked === false) {
+          setTeams((prev) => ({
+            ...prev,
+            [teamId]: {
+              ...prev[teamId],
+              isLocked: { status: false, timestamp: Date.now() },
+            },
+          }));
+          return { success: true };
+        }
+        return {
+          success: false,
+          message: response?.message || "Erreur lors du déverrouillage de l'équipe.",
+        };
+      } catch (error: any) {
+        console.error("Erreur lors du déverrouillage de l'équipe:", error);
+        return {
+          success: false,
+          message: error?.message || "Erreur lors du déverrouillage de l'équipe.",
+        };
+      }
+    },
+    []
+  );
+
+  
+  const setTeamLockStatus = useCallback((teamId: number, isLocked: boolean) => {
+    setTeams((prev) => ({
+      ...prev,
+      [teamId]: { ...prev[teamId], isLocked: { status: isLocked, timestamp: Date.now() } },
+    }));
+  }, []);
+
+  const setEmployeeLockStatus = useCallback((employeeId: number, isLocked: boolean, timestamp?: number, updatedById?: number, updatedByNom?: string) => {
+    setGlobalEmployees((prev) => prev.map((emp) => (Number(emp.IdPersonnel) === Number(employeeId) ? { ...emp, isLocked : { status: isLocked, timestamp, updatedById, updatedByNom } } : emp)));
+  }, []);
+
+
+  const upsertTeamInCache = useCallback((team: Partial<Equipe> & { Id: number }) => {
+    setTeams((prev) => {
+      const existing = prev[team.Id];
+      return {
+        ...prev,
+        [team.Id]: {
+          ...existing,
+          ...team,
+        } as Equipe,
+      };
+    });
+  }, []);
+
+  const removeTeamFromCache = useCallback((teamId: number) => {
+    setTeams((prev) => {
+      const next = { ...prev };
+      delete next[teamId];
+      return next;
+    });
+    setGlobalEmployees((prev) =>
+      prev.map((emp) => (Number(emp.Equipe) === Number(teamId) ? { ...emp, Equipe: null } : emp))
+    );
+  }, [setGlobalEmployees]);
+
+
   // Mémorisation de la valeur du contexte pour éviter les re-renders inutiles
   const value = useMemo<DataLayerContextType>(
     () => ({
@@ -705,7 +816,13 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
         addPersonnelToTeam,
         removePersonnelFromTeam,
         fetchTeamMembers,
-        onCheckDeleteTeam
+        onCheckDeleteTeam,
+        lockTeam,
+        unlockTeam,
+        setTeamLockStatus,
+        setEmployeeLockStatus,
+        upsertTeamInCache,
+        removeTeamFromCache
     }),
     [
         isLoading,

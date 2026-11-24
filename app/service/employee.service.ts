@@ -1,4 +1,4 @@
-import { getRequest, putRequest } from "./axios.service";
+import { deleteRequest, getRequest, postRequest, putRequest } from "./axios.service";
 
 async function getEmployeesPlanning() {
     return await getRequest(`/demo/employees/planning`, 'getEmployees');
@@ -36,12 +36,12 @@ async function getAllUsersActif() {
 }
 
 
-async function lockEmployee(id: number) {
-    return await putRequest(`/demo/employees/lock/${id}`, {}, 'lockEmployee');
+async function lockEmployee(id: number, nomPersonnel: string) {
+    return await postRequest(`/demo/employees/${id}/lock`, { nomPersonnel }, 'lockEmployee');
 }
 
 async function unlockEmployee(id: number) {
-    return await putRequest(`/demo/employees/unlock/${id}`, {}, 'unlockEmployee');
+    return await deleteRequest(`/demo/employees/${id}/unlock`, {}, 'unlockEmployee');
 }
 
 

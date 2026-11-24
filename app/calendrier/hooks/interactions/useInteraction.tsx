@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Appointment, Equipe, ImageType, User } from '@/app/calendrier';
 import employeeService from '@/app/service/employee.service';
+import { useAuth } from '../utils/AuthContext';
 
 // Interface complète des props
 interface InteractionProps {
@@ -54,6 +55,8 @@ export const useInteraction = ({
     setIsViewDropdownOpen
 }: InteractionProps) => {
 
+  const { user } = useAuth();
+
   // --- ÉTATS LOCAUX ---
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number, item: any[] } | null>(null);
   
@@ -74,17 +77,15 @@ export const useInteraction = ({
     }
 
     setContextMenu(null);
-  }, []);
+  }, [contextMenu]);
 
   const handleEmployeeContextMenu = useCallback((e: React.MouseEvent, employee: User) => {
     e.preventDefault();
     e.stopPropagation();
 
-    employeeService.lockEmployee(employee.IdPersonnel)
+    employeeService.lockEmployee(employee.IdPersonnel, user?.Nom + ' ' + user?.Prenom || 'Inconnu')
     .then(() => {})
-    .catch(() => {
-    
-    });
+    .catch(() => {});
 
 
     const teamOptions = Object.values(initialTeams).map((team) => (

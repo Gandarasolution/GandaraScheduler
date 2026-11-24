@@ -536,20 +536,10 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
     if (!realtimeUpdate || !remotePageItems) return;
 
     const { action, data } = realtimeUpdate;
-
     setRemotePageItems(prevItems => {
       if (!prevItems) return prevItems;
 
       switch (action) {
-        case 'EMPLOYEE_UPDATED':
-          // On cherche la ligne et on fusionne les nouvelles données
-          return prevItems.map(item => {
-            // Compare avec l'ID approprié selon le type de donnée
-            const itemId = item.IdPlanningRessource ?? item.IdPersonnel ?? item.id;
-            const updatedId = data.id ?? data.IdPlanningRessource ?? data.IdPersonnel;
-            
-            return itemId === updatedId ? { ...item, ...data } : item;
-          });
         case 'RESSOURCE_DELETED':
           // On retire la ligne visuellement
           return prevItems.filter(item => {
@@ -590,6 +580,55 @@ const DataTableFrame = <T extends GenericDataItem = GenericDataItem>({
               };
             }
             return item;
+          });
+
+        case 'EMPLOYEE_LOCKED': {
+          const targetEmployeeId = Number(data?.employeeId ?? data?.IdPersonnel ?? data?.id);
+
+          return prevItems.map(item => {
+            const itemId = Number(item.IdPersonnel ?? item.id);
+            if (itemId !== targetEmployeeId) return item;
+
+            return {
+              ...item,
+              isLocked: data.isLocked ?? {
+                status: action === 'EMPLOYEE_LOCKED',
+                timestamp: Date.now(),
+                updatedById: null,
+                updatedByNom: null,
+              },
+            };
+          });
+        }
+        
+
+        case 'EMPLOYEE_UNLOCKED': {
+          const targetEmployeeId = Number(data?.employeeId ?? data?.IdPersonnel ?? data?.id);
+
+          return prevItems.map(item => {
+            const itemId = Number(item.IdPersonnel ?? item.id);
+            if (itemId !== targetEmployeeId) return item;
+
+            return {
+              ...item,
+              isLocked: data.isLocked ?? {
+                status: action === 'EMPLOYEE_UNLOCKED',
+                timestamp: Date.now(),
+                updatedById: null,
+                updatedByNom: null,
+              },
+            };
+          });
+        }
+        
+
+        case 'EMPLOYEE_TEAM_UPDATED':
+          // On cherche la ligne et on fusionne les nouvelles données
+          return prevItems.map(item => {
+            const itemId = item.IdPersonnel ?? item.id;
+            const updatedId = data.employeeId ?? data.IdPersonnel ?? data.id;
+            
+            return itemId === updatedId ? { ...item, Equipe: data.idEquipe } : item;
           });
 
 
