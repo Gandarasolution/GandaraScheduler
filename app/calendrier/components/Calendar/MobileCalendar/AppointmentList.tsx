@@ -117,7 +117,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
       <div
         key={`${column}-insert-row-${rowIndex}`}
         className={`h-3 -my-1 flex items-center rounded transition-colors ${
-          isTarget ? (blocked ? 'bg-red-100/60' : 'bg-primary-500-100/60') : ''
+          isTarget ? (blocked ? 'bg-red-100/60' : 'bg-primary-100/60') : ''
         }`}
         onDragOver={(e) => {
           e.preventDefault();

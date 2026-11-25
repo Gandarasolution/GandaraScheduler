@@ -33,7 +33,9 @@ export interface Equipe {
     /** Indique si l'équipe est verrouillée (non modifiable) */
     status: boolean;
     /** Date et heure du dernier verrouillage/déverrouillage */
-    timestamp: number;
+    expiresAt: number;
+    updatedById?: number | null;
+    updatedByNom?: string | null;
   }
 }
 
@@ -329,7 +331,7 @@ export interface User{
     /** Statut de verrouillage */
     status: boolean;
     /** Timestamp du dernier verrouillage/déverrouillage (en ms) */
-    timestamp?: number;
+    expiresAt?: number;
     /** ID du personnel ayant verrouillé l'élément */
     updatedById?: number | null;
     /** Nom complet du personnel ayant verrouillé l'élément */

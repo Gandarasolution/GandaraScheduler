@@ -10,12 +10,12 @@
  */
 
 import React, { CSSProperties, memo, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { User, CalendarConfig } from '../../types';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
 import {
   TIMELINE_HEADERITEMS_CELL_HEIGHT,
   CONTAINER_PADDING,
-  EMPLOYEE_GROUP_CONTAINER_BORDER_SIZE,
   MARGIN_BETWEEN_TEAMS,
   CELL_HEIGHT,
   EMPLOYEE_GROUP_HEADER_PADDING_Y,
@@ -68,7 +68,6 @@ const CustomArrow = ({ isOpen, small = false }: { isOpen: boolean; small?: boole
   </div>
 );
 
-
 const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   dimensionItems,
   employeesByDimension,
@@ -89,20 +88,27 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   columnEmployeeRef,
   overlappingEmployeeIds,
 }) => {
-
   const { user } = useAuth();
 
-  const [hoveredTooltipEmployeeId, setHoveredTooltipEmployeeId] = useState<number | null>(null);
+  const [hoveredTooltipEmployee, setHoveredTooltipEmployee] = useState<{
+    id: number;
+    rect: DOMRect;
+  } | null>(null);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleMouseEnterEmployee = (employeeId: number) => {
+  const handleMouseEnterEmployee = (
+    employeeId: number,
+    e: React.MouseEvent<HTMLDivElement>
+  ) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+
     // Annule un éventuel timer précédent par sécurité
     if (tooltipTimeoutRef.current) {
       clearTimeout(tooltipTimeoutRef.current);
     }
 
     tooltipTimeoutRef.current = setTimeout(() => {
-      setHoveredTooltipEmployeeId(employeeId);
+      setHoveredTooltipEmployee({ id: employeeId, rect });
     }, 500);
   };
 
@@ -111,7 +117,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
       clearTimeout(tooltipTimeoutRef.current);
       tooltipTimeoutRef.current = null;
     }
-    setHoveredTooltipEmployeeId(null);
+    setHoveredTooltipEmployee(null);
   };
 
   // Nettoyage du timer si le composant est démonté
@@ -122,8 +128,8 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
       }
     };
   }, []);
-  
-  const selectOptions: SelectOptionWithImage[] = availableConfigs.map(config => ({
+
+  const selectOptions: SelectOptionWithImage[] = availableConfigs.map((config) => ({
     id: config.IdPlanningVue,
     name: config.LibellePlanningVue,
     value: config.IdPlanningVue,
@@ -144,7 +150,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     const employeeRowHeight = employeeRow?.height ?? CELL_HEIGHT;
     const isInactive = employee.Actif === false;
     const hasOverlapInWindow = overlappingEmployeeIds.has(Number(employee.IdPersonnel));
-    const isTooltipVisible = hoveredTooltipEmployeeId === Number(employee.IdPersonnel);
+    const isTooltipVisible = hoveredTooltipEmployee?.id === Number(employee.IdPersonnel);
 
     // Vérification centralisée du verrou par un autre utilisateur
     const isLockedByOther = Boolean(
@@ -154,8 +160,8 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
     // Formatage de l'heure d'expiration du verrou (timestamp en ms)
     const lockExpirationTime =
-      isLockedByOther && employee.isLocked?.timestamp
-        ? new Date(employee.isLocked.timestamp).toLocaleTimeString('fr-FR', {
+      isLockedByOther && employee.isLocked?.expiresAt
+        ? new Date(employee.isLocked.expiresAt).toLocaleTimeString('fr-FR', {
             hour: '2-digit',
             minute: '2-digit',
           })
@@ -172,36 +178,47 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
           paddingLeft: indentLevel === 1 ? 32 : 16,
           paddingRight: 12,
         }}
-        onMouseEnter={() => handleMouseEnterEmployee(Number(employee.IdPersonnel))}
+        onMouseEnter={(e) => handleMouseEnterEmployee(Number(employee.IdPersonnel), e)}
         onMouseLeave={handleMouseLeaveEmployee}
       >
-        {isTooltipVisible && (
-          <div
-            role="tooltip"
-            className="absolute bottom-full left-4 mb-2 z-50 px-3 py-1.5 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none whitespace-nowrap"
-          >
-            <div>
-              {employee.Nom} {employee.Prenom} - {employee.IdPersonnel}
-            </div>
-            {item?.name && <div>{item.name}</div>}
-
-            {isLockedByOther && (
-              <div className="mt-1 pt-1 border-t border-gray-700 flex items-center gap-1.5 text-amber-300">
-                <Lock className="w-3 h-3 shrink-0" />
-                <span>
-                  Verrouillé par{' '}
-                  <strong>
-                    {employee.isLocked?.updatedByNom || `l'utilisateur #${employee.isLocked?.updatedById}`}
-                  </strong>
-                  {lockExpirationTime ? ` (jusqu'à ${lockExpirationTime})` : ''}
-                </span>
+        {isTooltipVisible &&
+          hoveredTooltipEmployee &&
+          typeof document !== 'undefined' &&
+          createPortal(
+            <div
+              role="tooltip"
+              style={{
+                position: 'fixed',
+                top: hoveredTooltipEmployee.rect.top - 8,
+                left: hoveredTooltipEmployee.rect.left + 16,
+                transform: 'translateY(-100%)',
+              }}
+              className="z-[9999] px-3 py-1.5 text-xs font-medium text-black bg-page rounded-lg shadow-lg pointer-events-none whitespace-nowrap"
+            >
+              <div>
+                {employee.Nom} {employee.Prenom} - {employee.IdPersonnel}
               </div>
-            )}
+              {item?.name && <div>{item.name}</div>}
 
-            {/* Flèche positionnée juste sous le tooltip */}
-            <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900" />
-          </div>
-        )}
+              {isLockedByOther && (
+                <div className="mt-1 pt-1 border-t border-gray-700 flex items-center gap-1.5 text-primary-500">
+                  <Lock className="w-3 h-3 shrink-0" />
+                  <span>
+                    Verrouillé par{' '}
+                    <strong>
+                      {employee.isLocked?.updatedByNom ||
+                        `l'utilisateur #${employee.isLocked?.updatedById}`}
+                    </strong>
+                    {lockExpirationTime ? ` (jusqu'à ${lockExpirationTime})` : ''}
+                  </span>
+                </div>
+              )}
+
+              {/* Flèche positionnée juste sous le tooltip */}
+              <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900" />
+            </div>,
+            document.body
+          )}
 
         <div
           className={`flex px-2 rounded-2xl w-full h-full gap-2 group items-center transition-colors duration-150 employee-row-item ${
@@ -245,7 +262,10 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
               {employee.Nom + ' ' + employee.Prenom}
             </span>
             {isLockedByOther && (
-              <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" aria-label="Employé verrouillé" />
+              <Lock
+                className="w-3.5 h-3.5 text-primary-500 shrink-0"
+                aria-label="Employé verrouillé"
+              />
             )}
           </div>
 
@@ -274,7 +294,10 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                   'Réduire'
                 ) : (
                   <>
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
+                    <span
+                      className="inline-block h-1.5 w-1.5 rounded-full bg-red-500"
+                      aria-hidden="true"
+                    />
                     +{`${hiddenOverlapCounts[employee.IdPersonnel] ?? 0}`}
                   </>
                 )
@@ -290,10 +313,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     );
   };
 
-  const renderLevel2Group = (
-    child: HierarchicalGroupItem,
-    parentIndex: number
-  ) => {
+  const renderLevel2Group = (child: HierarchicalGroupItem, parentIndex: number) => {
     const childKey = getDimensionItemKey(child.id);
     const childOpen = openItems.includes(childKey);
     const childEmployees = employeesByDimension[String(child.id)] || [];
@@ -302,7 +322,6 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
     return (
       <div key={String(child.id)} className="bg-primary">
-        
         <div
           className="flex items-center bg-primary"
           style={{
@@ -334,9 +353,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
         {childOpen && (
           <div>
-            {childEmployees.map(employee =>
-              renderEmployee(employee, String(child.id), 1)
-            )}
+            {childEmployees.map((employee) => renderEmployee(employee, String(child.id), 1))}
           </div>
         )}
       </div>
@@ -347,14 +364,19 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     <div
       className="min-w-85 max-w-85 pl-2 bg-transparent flex flex-col sticky left-0 z-50 pr-7 overflow-y-scroll scrollbar-hide h-full"
       style={{ scrollbarGutter: 'stable' }}
-      onScroll={handleScrollY}
+      onScroll={(e) => {
+        if (hoveredTooltipEmployee) {
+          handleMouseLeaveEmployee();
+        }
+        handleScrollY(e);
+      }}
       ref={columnEmployeeRef}
     >
       {/* Header avec sélecteur de calendrier */}
       <div
         className="sticky top-0 z-40 flex bg-page justify-center flex-shrink-0"
         style={{
-          height: TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING
+          height: TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING,
         }}
       >
         {calendarConfig && (
@@ -364,7 +386,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
               value={calendarConfig.IdPlanningVue}
               onChange={(value) => {
                 const selectedConfig = availableConfigs.find(
-                  config => config.IdPlanningVue === value
+                  (config) => config.IdPlanningVue === value
                 );
 
                 if (selectedConfig) {
@@ -372,7 +394,12 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                 }
               }}
               illustrationImage={
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 80 80" width="25" height="25">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="10 10 80 80"
+                  width="25"
+                  height="25"
+                >
                   <defs>
                     <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#00c6ff" />
@@ -408,7 +435,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
           marginBottom: MARGIN_BETWEEN_TEAMS,
           width: isOpen ? '304px' : '100%',
           position: 'relative',
-          zIndex: 30 - index
+          zIndex: 30 - index,
         };
 
         return (
@@ -422,7 +449,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
               className="sticky w-full"
               style={{
                 top: stickyTop,
-                zIndex: 10
+                zIndex: 10,
               }}
             >
               {/* Masques de fond pour la zone sticky */}
@@ -430,7 +457,6 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
               <div className="absolute top-0 -right-[1px] w-8 h-8 bg-page" />
 
               <button
-                // Ajout de "overflow-hidden" ici pour que le bouton rogne ses propres bords dans l'arrondi 4xl
                 className={`relative z-10 flex justify-between items-center px-4 bg-primary focus:outline-none cursor-pointer ${
                   isOpen
                     ? 'rounded-t-4xl border-t border-r border-l border-default w-full'
@@ -446,9 +472,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
               >
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <GroupIcon className="h-5 w-5 shrink-0" />
-                  <span className="poppins font-bold truncate block">
-                    {item.name}
-                  </span>
+                  <span className="poppins font-bold truncate block">{item.name}</span>
                 </div>
                 <CustomArrow isOpen={isOpen} />
               </button>
@@ -457,22 +481,18 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             {/* Contenu et Footer */}
             {isOpen && (
               <>
-                {/* 3. Contenu */}
-                
+                {hasChildren
+                  ? item.children!.map((child) => renderLevel2Group(child, index))
+                  : itemEmployees.map((employee) =>
+                      renderEmployee(employee, String(item.id), 0, item)
+                    )}
 
-                  {hasChildren
-                    ? item.children!.map(child => renderLevel2Group(child, index))
-                    : itemEmployees.map(employee =>
-                        renderEmployee(employee, String(item.id), 0, item)
-                      )}
-               
-                
                 {/* 4. Footer */}
                 <div className="relative z-20 w-full h-5 bg-primary border-b border-l border-r border-default rounded-b-4xl overflow-hidden" />
-                
+
                 {/* Masques extérieurs placés juste en dessous pour cacher les excédents sur les côtés */}
                 <div className="absolute bottom-0 -left-[1px] w-6 h-5 bg-page z-10 pointer-events-none" />
-                <div className="absolute bottom-0 -right-[1px] w-6 h-5 bg-page z-10 pointer-events-none" />         
+                <div className="absolute bottom-0 -right-[1px] w-6 h-5 bg-page z-10 pointer-events-none" />
               </>
             )}
           </div>

@@ -434,7 +434,7 @@ const ControlPanelModal: React.FC<ControlPanelModalProps> = ({ onClose, isContro
       case "daysManagement":
         return "w-[min(98vw,1500px)] max-h-[600px]!";
       case "teamsManagement":
-        return "w-[min(98vw,1200px)] max-h-[600px]!";
+        return "w-[min(98vw,1300px)] max-h-[600px]!";
       case "mobileAppointmentFields":
         return "w-[min(95vw,1400px)]";
       case "calendarConfigurations":

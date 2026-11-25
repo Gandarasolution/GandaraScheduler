@@ -22,6 +22,7 @@ import {
   evenementService,
   imageService,
 } from '@/app/service';
+import { useAuth } from '../utils/AuthContext';
 
 // --- Types ---
 export interface ManualEventPayload {
@@ -114,6 +115,7 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
   isMobile = false,
   onError,
 }) => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [teams, setTeams] = useState<Record<number, Equipe>>({});
   const [poleActivites, setPoleActivites] = useState<Record<number, PoleActivite>>({});
@@ -682,7 +684,7 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
   const lockTeam = useCallback(
     async (teamId: number): Promise<{ success: boolean; expiresIn?: number; message?: string }> => {
       try {
-        const response = await equipeService.lockEquipe(teamId);
+        const response = await equipeService.lockEquipe(teamId, user?.Nom + " " + user?.Prenom);
         const data = response?.data ?? response;
 
         if (response?.success || data?.isLocked) {
@@ -690,7 +692,10 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
             ...prev,
             [teamId]: {
               ...prev[teamId],
-              isLocked: { status: false, timestamp: Date.now() },
+              isLocked: { 
+                status: false, 
+                expiresAt: Date.now() 
+              },
             },
           }));
           return {
@@ -726,7 +731,7 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
             ...prev,
             [teamId]: {
               ...prev[teamId],
-              isLocked: { status: false, timestamp: Date.now() },
+              isLocked: { status: false, expiresAt: Date.now() },
             },
           }));
           return { success: true };
@@ -750,7 +755,7 @@ export const DataLayerProvider: React.FC<DataLayerProviderProps> = ({
   const setTeamLockStatus = useCallback((teamId: number, isLocked: boolean) => {
     setTeams((prev) => ({
       ...prev,
-      [teamId]: { ...prev[teamId], isLocked: { status: isLocked, timestamp: Date.now() } },
+      [teamId]: { ...prev[teamId], isLocked: { status: isLocked, expiresAt: Date.now() } },
     }));
   }, []);
 

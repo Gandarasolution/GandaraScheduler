@@ -29,8 +29,8 @@ async function getEquipePersonnel(id: number) {
 }
 
 
-async function lockEquipe(id: number) {
-    return await postRequest(`/demo/equipes/${id}/lock`, {}, 'lockEquipe');
+async function lockEquipe(id: number, nomPersonnel: string) {
+    return await postRequest(`/demo/equipes/${id}/lock`, {nomPersonnel}, 'lockEquipe');
 }
 
 async function unlockEquipe(id: number) {

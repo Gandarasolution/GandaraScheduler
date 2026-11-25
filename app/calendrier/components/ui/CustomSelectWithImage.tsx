@@ -227,8 +227,8 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
                     isDeletingThis
                       ? "bg-red-50 text-red-700"
                       : isSelected
-                        ? "bg-primary-500-100 font-medium text-primary"
-                        : "hover:bg-primary-500-50 hover:text-secondary"
+                        ? "bg-primary-100 font-medium text-primary"
+                        : "hover:bg-primary-50 hover:text-secondary"
                   }`}
                   onClick={() => handleOptionClick(option)}
                   role="option"
@@ -252,7 +252,7 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
                         onClick={(e) => handleEditClick(e, option)}
                         title="Modifier cette vue"
                         aria-label={`Modifier ${getDisplayText(option)}`}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-secondary/70 hover:bg-primary-500/10 hover:text-primary transition-colors cursor-pointer"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-secondary/70 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
@@ -289,13 +289,13 @@ const CustomSelectWithImage: React.FC<CustomSelectWithImageProps> = ({
               <li className="border-t border-default mt-1 px-1 pt-1">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs font-semibold text-primary hover:bg-primary-500/10 transition-colors cursor-pointer"
+                  className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs font-semibold text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                   onClick={() => {
                     onAddOption();
                     setIsOpen(false);
                   }}
                 >
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary-500/10 text-primary">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Plus className="h-3.5 w-3.5" />
                   </div>
                   <span>{addOptionLabel}</span>

@@ -170,7 +170,7 @@ export const CalendarHeader = memo(({
               {/* Bouton Retour Planning (visible si hors calendar) */}
               {viewType !== 'calendar' && (
                 <button
-                  className="p-3 rounded-full hover:bg-primary-500-100 transition cursor-pointer"
+                  className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
                   onClick={() => {setViewType('calendar')}}
                   title="Planning"
                 >
@@ -194,7 +194,7 @@ export const CalendarHeader = memo(({
               {controlPanelDropdownItems.length > 0 && (
                 <div className="relative" ref={settingsDropdownRef}>
                   <button
-                    className="p-3 rounded-full hover:bg-primary-500-100 transition cursor-pointer"
+                    className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
                     onClick={() => setIsSettingsDropdownOpen(!isSettingsDropdownOpen)}
                     title="Paramètres"
                   >
@@ -235,7 +235,7 @@ export const CalendarHeader = memo(({
               {/* Menu Sélection de Vue */} 
               <div className="relative" ref={viewDropdownRef}>
                 <button
-                  className="p-3 rounded-full hover:bg-primary-500-100 transition cursor-pointer"
+                  className="p-3 rounded-full hover:bg-primary-100 transition cursor-pointer"
                   onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
                   title="Changer d’espace"
                 >
@@ -291,7 +291,7 @@ export const CalendarHeader = memo(({
                           group
                           ${
                             viewType === 'calendar'
-                              ? 'bg-primary-500-100 text-primary'
+                              ? 'bg-primary-100 text-primary'
                               : 'text-primary hover:bg-primary-500-50'
                           }
                         `}
@@ -368,7 +368,7 @@ export const CalendarHeader = memo(({
                           group
                           ${
                             viewType === 'chantier-table'
-                              ? 'bg-primary-500-100 text-primary'
+                              ? 'bg-primary-100 text-primary'
                               : 'text-primary hover:bg-primary-500-50'
                           }
                         `}
@@ -418,7 +418,7 @@ export const CalendarHeader = memo(({
                             group
                             ${
                               viewType === 'paie-table'
-                                ? 'bg-primary-500-100 text-primary'
+                                ? 'bg-primary-100 text-primary'
                                 : 'text-primary hover:bg-primary-500-50'
                             }
                           `}
@@ -470,7 +470,7 @@ export const CalendarHeader = memo(({
                             group
                             ${
                               viewType === 'manual-event-table'
-                                ? 'bg-primary-500-100 text-primary'
+                                ? 'bg-primary-100 text-primary'
                                 : 'text-primary hover:bg-primary-500-50'
                             }
                           `}
@@ -524,7 +524,7 @@ export const CalendarHeader = memo(({
                               group
                               ${
                                 viewType === 'employee-table'
-                                  ? 'bg-primary-500-100 text-primary'
+                                  ? 'bg-primary-100 text-primary'
                                   : 'text-primary hover:bg-primary-500-50'
                               }
                             `}
@@ -597,7 +597,7 @@ export const CalendarHeader = memo(({
               {/* Bouton Notifications */}
               <button
                 type="button"
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary-500-100 transition cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary-100 transition cursor-pointer"
                 onClick={() => setIsNotificationsPanelOpen(!isNotificationsPanelOpen)}
                 title="Notifications"
                 aria-label="Notifications"
@@ -630,7 +630,7 @@ export const CalendarHeader = memo(({
               <button
                 type="button"
                 onClick={() => setIsHelpOpen((open) => !open)}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary-500-100 transition cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-primary-100 transition cursor-pointer"
                 title="Aide et raccourcis clavier"
                 aria-label="Aide et raccourcis clavier"
                 ref={helpButtonRef}
@@ -653,8 +653,8 @@ export const CalendarHeader = memo(({
                         <kbd className="rounded border border-default px-1.5 py-0.5 text-xs">{shortcut}</kbd>
                       </div>
                     ))}
-                    <div className="mx-2 my-2 h-px bg-primary-500-100" />
-                    <span>{'Version 17.11.2026'}</span>
+                    <div className="mx-2 my-2 h-px bg-primary-100" />
+                    <span>{'Version 25.11.2026'}</span>
                   </div>
                 </div>
               )}

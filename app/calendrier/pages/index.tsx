@@ -1202,7 +1202,7 @@ function HomePageContent({
         dataLayer.setEmployeeLockStatus(
           data.employeeId,
           true,
-          lock?.timestamp ?? data.timestamp,
+          lock?.expiresAt ?? data.expiresAt,
           lock?.updatedById ?? data.updatedById,
           lock?.updatedByNom ?? data.updatedByNom
         );
@@ -1581,6 +1581,7 @@ function HomePageContent({
               keyOfFilter: keyOfFilter,
               isUploading: interaction.isUploading,
               uploadError: interaction.uploadError,
+              lastMercureEvent,
             }}
           />
 

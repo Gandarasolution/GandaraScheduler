@@ -89,6 +89,7 @@ interface CalendarModalsProps {
     keyOfFilter: { [key: string]: { label: string; type: FilterType; badgeColors?: Record<string, string> } };
     isUploading: boolean;
     uploadError: string | null;
+    lastMercureEvent: { action: string; data: any } | null;
   };
 }
 
@@ -374,6 +375,8 @@ export const CalendarModals = memo(({
             type: "team-members-settings",
             canAdd: hasPermission(172, 3),
             canDelete: hasPermission(172, 3),
+            globalEmployees,
+            lastMercureEvent: data.lastMercureEvent,
             fetAllPersonnel: employeeService.getAllUsersActif,
             fetchTeamMembers,
             onAddPersonnelToTeam: addPersonnelToTeam,
@@ -476,6 +479,7 @@ export const CalendarModals = memo(({
       ]
     }
   ], [
+    data.lastMercureEvent,
     hasPermission,
     includeWeekend,
     respectNonWorkingDays,

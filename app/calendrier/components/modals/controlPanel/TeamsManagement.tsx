@@ -7,16 +7,31 @@ import {
   SelectableEntityRow,
   EmptySelectionPlaceholder,
 } from "./ui";
-import { Combobox, Loader } from "../..";
+import { Combobox, Loader, TrashIcon } from "../..";
 import { UserX, Lock } from "lucide-react";
 import { ComboboxOption } from "../../ui/Combobox";
-import { equipeService } from "@/app/service/";
-import { useDataLayer } from "@/app/calendrier";
+import { useAuth } from "@/app/calendrier/hooks/utils/AuthContext";
+
+
+const isEmployeeLocked = (person: any): boolean => {
+  if (!person?.isLocked) return false;
+  if (typeof person.isLocked === "boolean") return person.isLocked;
+  return Boolean(person.isLocked.status);
+};
+
+
+const getEmployeeLockedByName = (person: any): string | null => {
+  if (!person?.isLocked || typeof person.isLocked !== "object") return null;
+  return person.isLocked.UpdatedByNom ?? person.isLocked.updatedByNom ?? null;
+};
+
 
 const TeamMembersEditor = ({
   setting,
   selectedTeamId,
   selectedTeam,
+  globalEmployees = [],
+  lastMercureEvent,
   teams = [],
   canAdd,
   canDelete,
@@ -25,6 +40,8 @@ const TeamMembersEditor = ({
   selectedTeamId: string | null;
   selectedTeam?: Equipe;
   teams?: Equipe[];
+  globalEmployees?: User[];
+  lastMercureEvent: { action: string; data: any } | null;
   canAdd: boolean;
   canDelete: boolean;
 }) => {
@@ -42,15 +59,21 @@ const TeamMembersEditor = ({
   const [error, setError] = useState<string | null>(null);
 
   const [pendingRemoveMember, setPendingRemoveMember] = useState<User | null>(null);
-  const [pendingTeamTransfer, setPendingTeamTransfer] = useState<{
-    personnelIds: string[];
-    alreadyAssigned: { person: User; currentTeamName: string }[];
-  } | null>(null);
+
+  // Nouveaux états pour la modale dynamique de transfert / verrouillage
+  const [pendingTransferIds, setPendingTransferIds] = useState<string[] | null>(null);
+  const [transferChoices, setTransferChoices] = useState<Record<string, boolean>>({});
 
   const settingRef = useRef(setting);
+  const allPersonnelRef = useRef<User[]>(allPersonnel);
+
   useEffect(() => {
     settingRef.current = setting;
   }, [setting]);
+
+  useEffect(() => {
+    allPersonnelRef.current = allPersonnel;
+  }, [allPersonnel]);
 
   // Chargement de tout le personnel via fetAllPersonnel
   useEffect(() => {
@@ -84,6 +107,125 @@ const TeamMembersEditor = ({
     };
   }, []);
 
+  // 1. Synchronisation dès que globalEmployees change
+  useEffect(() => {
+    if (!Array.isArray(globalEmployees) || globalEmployees.length === 0) return;
+
+    const globalMap = new Map(
+      globalEmployees.map((emp) => [Number(emp.IdPersonnel), emp])
+    );
+
+    setAllPersonnel((prev) =>
+      prev.map((p) => {
+        const updated = globalMap.get(Number(p.IdPersonnel));
+        if (!updated) return p;
+        return {
+          ...p,
+          isLocked: (updated as any).isLocked,
+          Equipe: (updated as any).Equipe ?? (p as any).Equipe,
+          IdEquipe: (updated as any).Equipe ?? (p as any).IdEquipe,
+        };
+      })
+    );
+
+    if (selectedTeamId) {
+      const currentTeamIdNum = Number(selectedTeamId);
+
+      setMembers((prev) => {
+        const updatedExisting = prev
+          .map((m) => {
+            const updated = globalMap.get(Number(m.IdPersonnel));
+            if (!updated) return m;
+            return {
+              ...m,
+              isLocked: (updated as any).isLocked,
+              Equipe: (updated as any).Equipe,
+            };
+          })
+          .filter((m) => {
+            const empTeam = (m as any).Equipe;
+            return empTeam === undefined || empTeam === null || Number(empTeam) === currentTeamIdNum;
+          });
+
+        const existingIds = new Set(updatedExisting.map((m) => Number(m.IdPersonnel)));
+        const newlyAssigned: User[] = [];
+        for (const emp of globalEmployees) {
+          const empId = Number(emp.IdPersonnel);
+          if (Number((emp as any).Equipe) === currentTeamIdNum && !existingIds.has(empId)) {
+            existingIds.add(empId);
+            newlyAssigned.push(emp);
+          }
+        }
+
+        return newlyAssigned.length > 0
+          ? [...updatedExisting, ...newlyAssigned]
+          : updatedExisting;
+      });
+    }
+  }, [globalEmployees, selectedTeamId]);
+
+  // 2. Fallback direct sur l'événement Mercure
+  useEffect(() => {
+    if (!lastMercureEvent) return;
+    const { action, data } = lastMercureEvent;
+
+    if (action === "EMPLOYEE_LOCKED" || action === "EMPLOYEE_UNLOCKED") {
+      const empId = Number(data?.employeeId);
+      const lockState =
+        action === "EMPLOYEE_LOCKED"
+          ? {
+              status: true,
+              ...(typeof data?.isLocked === "object" ? data.isLocked : {}),
+              UpdatedByNom:
+                data?.isLocked?.UpdatedByNom ??
+                data?.isLocked?.updatedByNom ??
+                data?.UpdatedByNom ??
+                data?.updatedByNom ??
+                null,
+            }
+          : false;
+
+      setAllPersonnel((prev) =>
+        prev.map((p) =>
+          Number(p.IdPersonnel) === empId ? ({ ...p, isLocked: lockState } as User) : p
+        )
+      );
+      setMembers((prev) =>
+        prev.map((m) =>
+          Number(m.IdPersonnel) === empId ? ({ ...m, isLocked: lockState } as User) : m
+        )
+      );
+    }
+
+    if (action === "EMPLOYEE_TEAM_UPDATED" && selectedTeamId) {
+      const empId = Number(data?.employeeId);
+      const newTeamId =
+        data?.idEquipe !== null && data?.idEquipe !== undefined
+          ? Number(data.idEquipe)
+          : null;
+
+      setAllPersonnel((prev) =>
+        prev.map((p) =>
+          Number(p.IdPersonnel) === empId
+            ? ({ ...p, Equipe: newTeamId, IdEquipe: newTeamId } as User)
+            : p
+        )
+      );
+
+      if (newTeamId === Number(selectedTeamId)) {
+        setMembers((prev) => {
+          if (prev.some((m) => Number(m.IdPersonnel) === empId)) return prev;
+          const found = allPersonnelRef.current.find(
+            (p) => Number(p.IdPersonnel) === empId
+          );
+          return found ? [...prev, { ...found, Equipe: newTeamId } as User] : prev;
+        });
+      } else {
+        setMembers((prev) => prev.filter((m) => Number(m.IdPersonnel) !== empId));
+      }
+    }
+  }, [lastMercureEvent, selectedTeamId]);
+
   const loadMembers = useCallback(async () => {
     if (!selectedTeamId || typeof settingRef.current.fetchTeamMembers !== "function") return;
     setIsLoadingMembers(true);
@@ -103,24 +245,29 @@ const TeamMembersEditor = ({
     }
   }, [selectedTeamId]);
 
+
+  useEffect(() => {
+    console.log(members);
+  }, [members]);
+
   useEffect(() => {
     if (!selectedTeamId) return;
     setIsOpen(false);
     setShowInactiveMembers(false);
     setShowAssignedPersonnel(false);
     setSelectedPersonnelIds([]);
-    setPendingTeamTransfer(null);
+    setPendingTransferIds(null);
+    setTransferChoices({});
     setFormError(null);
     loadMembers();
   }, [selectedTeamId, loadMembers]);
 
   const formatPersonnelName = useCallback(
     (p: User) =>
-      [p.Prenom, p.Nom].filter(Boolean).join(" ").trim() || `Personnel #${p.IdPersonnel}`,
+      [p.Nom, p.Prenom].filter(Boolean).join(" ").trim() || `Personnel #${p.IdPersonnel}`,
     []
   );
 
-  // Extraction robuste de l'équipe actuelle d'un employé (ID, chaîne ou objet imbriqué)
   const getPersonCurrentTeam = useCallback(
     (person: User): { id: string; name: string } | null => {
       const p = person as any;
@@ -162,6 +309,65 @@ const TeamMembersEditor = ({
     [teams]
   );
 
+  // Calcul réactif des catégories dans la modale (se met à jour en direct avec Mercure)
+  const transferModalData = useMemo(() => {
+    if (!pendingTransferIds || !selectedTeamId) return null;
+
+    const alreadyAssignedUnlocked: { person: User; currentTeamName: string }[] = [];
+    const lockedEmployees: {
+      person: User;
+      currentTeamName: string | null;
+      lockedByName: string | null;
+    }[] = [];
+    const freeEmployees: User[] = [];
+
+    for (const idStr of pendingTransferIds) {
+      const person = allPersonnel.find((p) => String(p.IdPersonnel) === String(idStr));
+      if (!person) continue;
+
+      const currentTeam = getPersonCurrentTeam(person);
+      if (currentTeam && currentTeam.id === String(selectedTeamId).trim()) continue;
+
+      if (isEmployeeLocked(person)) {
+        lockedEmployees.push({
+          person,
+          currentTeamName: currentTeam ? currentTeam.name : null,
+          lockedByName: getEmployeeLockedByName(person),
+        });
+      } else if (currentTeam) {
+        alreadyAssignedUnlocked.push({
+          person,
+          currentTeamName: currentTeam.name,
+        });
+      } else {
+        freeEmployees.push(person);
+      }
+    }
+
+    return {
+      alreadyAssignedUnlocked,
+      lockedEmployees,
+      freeEmployees,
+    };
+  }, [pendingTransferIds, allPersonnel, selectedTeamId, getPersonCurrentTeam]);
+
+  // Initialise automatiquement le choix à `true` (Oui) lorsqu'un employé est déverrouillé en direct
+  useEffect(() => {
+    if (!transferModalData) return;
+    setTransferChoices((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const { person } of transferModalData.alreadyAssignedUnlocked) {
+        const key = String(person.IdPersonnel);
+        if (next[key] === undefined) {
+          next[key] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [transferModalData]);
+
   const inactiveMembersCount = useMemo(
     () => members.filter((m) => m.Actif === false || (m as any).isActif === false).length,
     [members]
@@ -177,25 +383,25 @@ const TeamMembersEditor = ({
     return allPersonnel.filter((p) => !existingIds.has(Number(p.IdPersonnel)));
   }, [allPersonnel, members]);
 
-  // Options formatées pour le Combobox avec indication de l'équipe actuelle
   const comboboxOptions = useMemo(
     () =>
       availablePersonnel
         .map((person) => {
-          const p = person as any;
-          const isLocked = Boolean(p.isLocked);
+          const isLocked = isEmployeeLocked(person);
+          const lockedByName = getEmployeeLockedByName(person);
           const currentTeam = getPersonCurrentTeam(person);
           const hasTeam = currentTeam !== null;
 
-          // 0 = sans équipe, 1 = avec équipe, 2 = locké
-          const phaseOrder = isLocked ? 2 : hasTeam ? 1 : 0;
+          const phaseOrder = hasTeam ? 1 : 0;
 
           let label = `${formatPersonnelName(person)} ( ${person.IdPersonnel} )`;
           if (hasTeam) {
             label += ` — [${currentTeam.name}]`;
           }
           if (isLocked) {
-            label += " (Verrouillé)";
+            label += lockedByName
+              ? ` (Verrouillé par ${lockedByName})`
+              : " (Verrouillé)";
           }
 
           return {
@@ -204,7 +410,6 @@ const TeamMembersEditor = ({
             hasTeam,
             isLocked,
             phaseOrder,
-            disabled: isLocked,
             icon: isLocked ? <Lock className="w-3.5 h-3.5 text-secondary" /> : undefined,
           };
         })
@@ -212,9 +417,8 @@ const TeamMembersEditor = ({
     [availablePersonnel, formatPersonnelName, getPersonCurrentTeam]
   );
 
-  // Masquer par défaut ceux avec une équipe OU verrouillés (visibles au clic sur le bouton)
   const isOptionAlreadyInTeam = useCallback(
-    (opt: ComboboxOption) => Boolean(opt.hasTeam || opt.isLocked),
+    (opt: ComboboxOption) => Boolean(opt.hasTeam),
     []
   );
 
@@ -250,7 +454,13 @@ const TeamMembersEditor = ({
 
         if (addedUsers.length > 0) {
           const addedIdsSet = new Set(addedUsers.map((u) => Number(u.IdPersonnel)));
-          setMembers((prev) => [...prev, ...addedUsers]);
+          setMembers((prev) => {
+            const existingIds = new Set(prev.map((m) => Number(m.IdPersonnel)));
+            const uniqueNewUsers = addedUsers.filter(
+              (u) => !existingIds.has(Number(u.IdPersonnel))
+            );
+            return uniqueNewUsers.length > 0 ? [...prev, ...uniqueNewUsers] : prev;
+          });
           setAllPersonnel((prev) =>
             prev.map((p) =>
               addedIdsSet.has(Number(p.IdPersonnel))
@@ -282,42 +492,48 @@ const TeamMembersEditor = ({
       return;
     }
 
-    const validIds = selectedPersonnelIds.filter((idStr) => {
-      const person = allPersonnel.find((p) => String(p.IdPersonnel) === String(idStr)) as any;
-      return person && !person.isLocked;
+    // Ouvrir la fenêtre récapitulative si au moins un employé est verrouillé OU déjà dans une autre équipe
+    const requiresReview = selectedPersonnelIds.some((idStr) => {
+      const person = allPersonnel.find((p) => String(p.IdPersonnel) === String(idStr));
+      if (!person) return false;
+      if (isEmployeeLocked(person)) return true;
+
+      const currentTeam = getPersonCurrentTeam(person);
+      return currentTeam !== null && currentTeam.id !== String(selectedTeamId).trim();
     });
 
-    if (validIds.length === 0) {
-      setFormError("Les employés sélectionnés sont actuellement verrouillés.");
-      return;
-    }
-
-
-    // Détecter les salariés sélectionnés qui appartiennent déjà à une autre équipe
-    const alreadyAssigned = selectedPersonnelIds
-      .map((idStr) => {
-        const person = allPersonnel.find((p) => String(p.IdPersonnel) === String(idStr));
-        if (!person) return null;
-
-        const currentTeam = getPersonCurrentTeam(person);
-        if (!currentTeam || currentTeam.id === String(selectedTeamId).trim()) return null;
-
-        return {
-          person,
-          currentTeamName: currentTeam.name,
-        };
-      })
-      .filter((item): item is { person: User; currentTeamName: string } => item !== null);
-
-    if (alreadyAssigned.length > 0) {
-      setPendingTeamTransfer({
-        personnelIds: [...selectedPersonnelIds],
-        alreadyAssigned,
-      });
+    if (requiresReview) {
+      const initialChoices: Record<string, boolean> = {};
+      for (const idStr of selectedPersonnelIds) {
+        initialChoices[idStr] = true;
+      }
+      setTransferChoices(initialChoices);
+      setPendingTransferIds([...selectedPersonnelIds]);
       return;
     }
 
     await executeAddMembers(selectedPersonnelIds);
+  };
+
+  const handleConfirmTransferModal = async () => {
+    if (!transferModalData) return;
+
+    // On récupère les employés libres + ceux déjà dans une équipe pour lesquels l'utilisateur a choisi "Oui"
+    const idsToAdd = [
+      ...transferModalData.freeEmployees.map((p) => String(p.IdPersonnel)),
+      ...transferModalData.alreadyAssignedUnlocked
+        .filter(({ person }) => transferChoices[String(person.IdPersonnel)] !== false)
+        .map(({ person }) => String(person.IdPersonnel)),
+    ];
+
+    setPendingTransferIds(null);
+    setTransferChoices({});
+
+    if (idsToAdd.length === 0) {
+      return;
+    }
+
+    await executeAddMembers(idsToAdd);
   };
 
   const executeRemoveMember = async (member: User) => {
@@ -384,6 +600,14 @@ const TeamMembersEditor = ({
     );
   }
 
+  // Nombre total d'employés effectivement validables dans la modale
+  const confirmedCountInModal = transferModalData
+    ? transferModalData.freeEmployees.length +
+      transferModalData.alreadyAssignedUnlocked.filter(
+        ({ person }) => transferChoices[String(person.IdPersonnel)] !== false
+      ).length
+    : 0;
+
   return (
     <div className="flex flex-col gap-4 w-full h-full min-h-0 relative">
       <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-ultra-light">
@@ -421,10 +645,10 @@ const TeamMembersEditor = ({
         </div>
       </div>
 
-      {/* Modale de confirmation de changement d'équipe */}
-      {pendingTeamTransfer && (
+      {/* Modale récapitulative dynamique (Déjà dans une équipe vs Verrouillés) */}
+      {transferModalData && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 rounded-xl">
-          <div className="bg-primary p-5 rounded-2xl shadow-xl max-w-sm w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
+          <div className="bg-primary p-5 rounded-2xl shadow-xl max-w-md w-full space-y-4 border border-light animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center gap-3 text-amber-600">
               <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -434,61 +658,144 @@ const TeamMembersEditor = ({
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              <h5 className="font-semibold text-sm text-primary">Changement d&apos;équipe détecté</h5>
-            </div>
-
-            {pendingTeamTransfer.alreadyAssigned.length === 1 ? (
-              <p className="text-xs text-secondary leading-relaxed">
-                <strong className="text-primary">
-                  {formatPersonnelName(pendingTeamTransfer.alreadyAssigned[0].person)}
-                </strong>{" "}
-                fait déjà partie de l&apos;équipe{" "}
-                <strong className="text-primary">
-                  « {pendingTeamTransfer.alreadyAssigned[0].currentTeamName} »
-                </strong>
-                . Souhaitez-vous vraiment le transférer vers{" "}
-                <strong className="text-primary">
-                  {selectedTeam ? `« ${selectedTeam.Nom} »` : "cette équipe"}
-                </strong>{" "}
-                ?
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-secondary leading-relaxed">
-                  Les membres suivants appartiennent déjà à une autre équipe :
-                </p>
-                <ul className="text-xs text-secondary space-y-1 max-h-28 overflow-y-auto pl-3 list-disc">
-                  {pendingTeamTransfer.alreadyAssigned.map(({ person, currentTeamName }) => (
-                    <li key={person.IdPersonnel}>
-                      <strong className="text-primary">{formatPersonnelName(person)}</strong> (actuellement dans{" "}
-                      <strong className="text-primary">« {currentTeamName} »</strong>)
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-xs text-secondary leading-relaxed">
-                  Souhaitez-vous vraiment changer leur équipe ?
+              <div>
+                <h5 className="font-semibold text-sm text-primary">
+                  Validation de l&apos;ajout à {selectedTeam ? `« ${selectedTeam.Nom} »` : "l'équipe"}
+                </h5>
+                <p className="text-[11px] text-secondary">
+                  Vérifiez les affectations avant de confirmer.
                 </p>
               </div>
-            )}
+            </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+              {/* Section 1 : Personnel non verrouillé mais déjà dans une équipe */}
+              {transferModalData.alreadyAssignedUnlocked.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                    Déjà dans une autre équipe ({transferModalData.alreadyAssignedUnlocked.length})
+                  </p>
+                  <div className="space-y-1.5">
+                    {transferModalData.alreadyAssignedUnlocked.map(({ person, currentTeamName }) => {
+                      const idKey = String(person.IdPersonnel);
+                      const isAccepted = transferChoices[idKey] !== false;
+
+                      return (
+                        <div
+                          key={person.IdPersonnel}
+                          className="flex items-center justify-between gap-2 p-2 rounded-xl border border-light bg-secondary/5"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-primary truncate">
+                              {formatPersonnelName(person)}
+                            </p>
+                            <p className="text-[11px] text-secondary truncate">
+                              Équipe actuelle : <strong className="text-primary">« {currentTeamName} »</strong>
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setTransferChoices((prev) => ({ ...prev, [idKey]: true }))
+                              }
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer ${
+                                isAccepted
+                                  ? "bg-primary-500 text-white border-primary-500 shadow-xs"
+                                  : "bg-primary text-secondary border-light hover:text-primary"
+                              }`}
+                            >
+                              Oui
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setTransferChoices((prev) => ({ ...prev, [idKey]: false }))
+                              }
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer ${
+                                !isAccepted
+                                  ? "bg-red-500 text-white border-red-500 shadow-xs"
+                                  : "bg-primary text-secondary border-light hover:text-primary"
+                              }`}
+                            >
+                              Non
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Section 2 : Personnel verrouillé (aucun bouton Oui/Non) */}
+              {transferModalData.lockedEmployees.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary flex items-center gap-1">
+                    <Lock className="w-3 h-3" />
+                    Personnel verrouillé — non modifiable ({transferModalData.lockedEmployees.length})
+                  </p>
+                  <div className="space-y-1.5">
+                    {transferModalData.lockedEmployees.map(({ person, currentTeamName, lockedByName }) => (
+                      <div
+                        key={person.IdPersonnel}
+                        className="flex items-center justify-between gap-2 p-2 rounded-xl border border-light bg-black/5 opacity-75"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-primary truncate">
+                            {formatPersonnelName(person)}
+                          </p>
+                          {currentTeamName && (
+                            <p className="text-[11px] text-secondary truncate">
+                              Équipe actuelle : « {currentTeamName} »
+                            </p>
+                          )}
+                          <p className="text-[11px] text-amber-700 truncate">
+                            {lockedByName
+                              ? `Verrouillé par ${lockedByName}`
+                              : "Actuellement verrouillé"}
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-secondary bg-black/10 border border-light px-2 py-0.5 rounded-full shrink-0">
+                          <Lock className="w-2.5 h-2.5" />
+                          Verrouillé
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Information sur les employés libres inclus dans la sélection */}
+              {transferModalData.freeEmployees.length > 0 && (
+                <p className="text-[11px] text-secondary pt-1">
+                  + <strong className="text-primary">{transferModalData.freeEmployees.length}</strong>{" "}
+                  autre{transferModalData.freeEmployees.length > 1 ? "s" : ""} membre
+                  {transferModalData.freeEmployees.length > 1 ? "s" : ""} sans équipe seront ajouté
+                  {transferModalData.freeEmployees.length > 1 ? "s" : ""} directement.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-ultra-light">
               <button
                 type="button"
                 className="px-3.5 py-1.5 rounded-xl border border-light text-xs font-semibold text-secondary hover:bg-secondary/10 transition-colors cursor-pointer"
-                onClick={() => setPendingTeamTransfer(null)}
+                onClick={() => {
+                  setPendingTransferIds(null);
+                  setTransferChoices({});
+                }}
               >
-                Non
+                Annuler
               </button>
               <button
                 type="button"
-                className="px-3.5 py-1.5 rounded-xl bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 shadow-sm transition-colors cursor-pointer"
-                onClick={async () => {
-                  const ids = pendingTeamTransfer.personnelIds;
-                  setPendingTeamTransfer(null);
-                  await executeAddMembers(ids);
-                }}
+                disabled={confirmedCountInModal === 0}
+                className="px-3.5 py-1.5 rounded-xl bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleConfirmTransferModal}
               >
-                Oui, confirmer
+                Valider{confirmedCountInModal > 0 ? ` (${confirmedCountInModal})` : ""}
               </button>
             </div>
           </div>
@@ -650,7 +957,7 @@ const TeamMembersEditor = ({
                 const isRemoving = Boolean(removingIds[member.IdPersonnel]);
                 const fullName = formatPersonnelName(member);
                 const isMemberActive = member.Actif !== false && (member as any).isActif !== false;
-                const isMemberLocked = Boolean((member as any).isLocked);
+                const isMemberLocked = isEmployeeLocked(member);
 
                 return (
                   <div
@@ -702,7 +1009,7 @@ const TeamMembersEditor = ({
                         title="Retirer de l'équipe"
                         onClick={() => setPendingRemoveMember(member)}
                       >
-                        {/* ... icône suppression ... */}
+                        <TrashIcon className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -832,6 +1139,7 @@ export const TeamsManagementCategoryContent: React.FC<{
   setApiError: (err: string | null) => void;
   registerSaveAction: (id: string, action: SaveAction | null) => void;
 }> = ({ categoryObj, setApiError, registerSaveAction }) => {
+  const { user } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [lockExpiresAt, setLockExpiresAt] = useState<number | null>(null);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
@@ -922,13 +1230,15 @@ export const TeamsManagementCategoryContent: React.FC<{
       if (isTeamLockedByOther(team)) return;
       setApiError(null);
 
+      setSelectedTeamId(String(team.Id));
+
+
       if (typeof teamsSetting?.lockEquipe !== "function") {
-        setSelectedTeamId(String(team.Id));
         return;
       }
 
       try {
-        const res = await teamsSetting.lockEquipe(team.Id);
+        const res = await teamsSetting.lockEquipe(team.Id, user?.Nom + " " + user?.Prenom);
         const data = res?.data ?? res;
 
         if (!res?.success && !data?.isLocked) {
@@ -938,7 +1248,6 @@ export const TeamsManagementCategoryContent: React.FC<{
           return;
         }
 
-        setSelectedTeamId(String(team.Id));
         setLockExpiresAt(normalizeTimestampMs(data?.expiresIn ?? res?.expiresIn));
       } catch (err: any) {
         setApiError(
@@ -958,7 +1267,7 @@ export const TeamsManagementCategoryContent: React.FC<{
     const refreshDelay = Math.max(1000, lockExpiresAt - Date.now() - 10_000);
     const timer = window.setTimeout(async () => {
       try {
-        const res = await teamsSettingRef.current?.lockEquipe?.(Number(selectedTeamId));
+        const res = await teamsSettingRef.current?.lockEquipe?.(Number(selectedTeamId), user?.Nom + " " + user?.Prenom);
         const data = res?.data ?? res;
         if (res?.success || data?.isLocked) {
           setLockExpiresAt(normalizeTimestampMs(data?.expiresIn ?? res?.expiresIn));
@@ -990,76 +1299,84 @@ export const TeamsManagementCategoryContent: React.FC<{
     <MasterDetailSplitLayout
       leftTitle="Équipes"
       leftContent={
-        <>
+        <div className="flex flex-col gap-3 h-full min-h-0">
+          {/* Section fixe (non scrollable) */}
           {teamsSetting?.canAdd && (
-            <CollapsibleCreateForm
-              addButtonLabel="Ajouter une équipe"
-              headerTitle="Nouvelle équipe"
-              isSubmitting={isCreating}
-              error={formError}
-              onOpen={() => setApiError(null)}
-              onReset={() => {
-                setNewTeamName("");
-                setFormError(null);
-              }}
-              onSubmit={handleCreateTeam}
-            >
-              <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-                <label className="text-xs text-secondary font-medium poppins">Nom de l&apos;équipe</label>
-                <input
-                  type="text"
-                  value={newTeamName}
-                  onChange={(e) => {
-                    setNewTeamName(e.target.value);
-                    if (formError) setFormError(null);
-                  }}
-                  placeholder="Ex: Équipe Technique, Commercial..."
-                  className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary shadow-sm w-full"
-                />
-              </div>
-            </CollapsibleCreateForm>
+            <div className="shrink-0">
+              <CollapsibleCreateForm
+                addButtonLabel="Ajouter une équipe"
+                headerTitle="Nouvelle équipe"
+                isSubmitting={isCreating}
+                error={formError}
+                onOpen={() => setApiError(null)}
+                onReset={() => {
+                  setNewTeamName("");
+                  setFormError(null);
+                }}
+                onSubmit={handleCreateTeam}
+              >
+                <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+                  <label className="text-xs text-secondary font-medium poppins">
+                    Nom de l&apos;équipe
+                  </label>
+                  <input
+                    type="text"
+                    value={newTeamName}
+                    onChange={(e) => {
+                      setNewTeamName(e.target.value);
+                      if (formError) setFormError(null);
+                    }}
+                    placeholder="Ex: Équipe Technique, Commercial..."
+                    className="border border-default rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary poppins text-xs bg-primary shadow-sm w-full"
+                  />
+                </div>
+              </CollapsibleCreateForm>
+            </div>
           )}
 
-          {isLoadingTeams ? (
-            <div className="py-8">
-              <Loader size="md" message="Chargement des équipes..." />
-            </div>
-          ) : validTeams.length > 0 ? (
-            <div className="space-y-3">
-              {validTeams.map((team: Equipe) => (
-                <TeamRow
-                  key={team.Id}
-                  team={team}
-                  isSelected={String(team.Id) === String(selectedTeamId)}
-                  onSelect={() => handleSelectTeam(team)}
-                  onUpdate={async (updatedTeam) => {
-                    return await teamsSetting.onUpdateTeam?.(updatedTeam);
-                  }}
-                  onCheckDelete={teamsSetting.onCheckDeleteTeam}
-                  onDelete={async (id, count) => {
-                    const res = await teamsSetting.onDeleteTeam?.(id, count);
-                    if (res?.success) {
-                      if (String(selectedTeamId) === String(id)) {
-                        setSelectedTeamId(null);
-                        setLockExpiresAt(null);
+          {/* Section scrollable contenant uniquement les équipes */}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            {isLoadingTeams ? (
+              <div className="py-8">
+                <Loader size="md" message="Chargement des équipes..." />
+              </div>
+            ) : validTeams.length > 0 ? (
+              <div className="space-y-3">
+                {validTeams.map((team: Equipe) => (
+                  <TeamRow
+                    key={team.Id}
+                    team={team}
+                    isSelected={String(team.Id) === String(selectedTeamId)}
+                    onSelect={() => handleSelectTeam(team)}
+                    onUpdate={async (updatedTeam) => {
+                      return await teamsSetting.onUpdateTeam?.(updatedTeam);
+                    }}
+                    onCheckDelete={teamsSetting.onCheckDeleteTeam}
+                    onDelete={async (id, count) => {
+                      const res = await teamsSetting.onDeleteTeam?.(id, count);
+                      if (res?.success) {
+                        if (String(selectedTeamId) === String(id)) {
+                          setSelectedTeamId(null);
+                          setLockExpiresAt(null);
+                        }
+                      } else if (res && !res.success) {
+                        setApiError(res.message || "Erreur lors de la suppression de l'équipe.");
                       }
-                    } else if (res && !res.success) {
-                      setApiError(res.message || "Erreur lors de la suppression de l'équipe.");
-                    }
-                  }}
-                  canEdit={teamsSetting.canEdit}
-                  canDelete={teamsSetting.canDelete}
-                  setError={setApiError}
-                  registerSaveAction={registerSaveAction}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-secondary italic text-center py-6">
-              Aucune équipe enregistrée.
-            </p>
-          )}
-        </>
+                    }}
+                    canEdit={teamsSetting.canEdit}
+                    canDelete={teamsSetting.canDelete}
+                    setError={setApiError}
+                    registerSaveAction={registerSaveAction}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-secondary italic text-center py-6">
+                Aucune équipe enregistrée.
+              </p>
+            )}
+          </div>
+        </div>
       }
       rightContent={
         membersSetting && (
@@ -1068,11 +1385,15 @@ export const TeamsManagementCategoryContent: React.FC<{
             selectedTeamId={selectedTeamId}
             selectedTeam={selectedTeam}
             teams={validTeams}
+            globalEmployees={membersSetting.globalEmployees}
+            lastMercureEvent={membersSetting.lastMercureEvent}
             canAdd={membersSetting.canAdd}
             canDelete={membersSetting.canDelete}
           />
         )
       }
+      leftContentClassName="lg:col-span-6!"
+      rightContentClassName="lg:col-span-6!"
     />
   );
 };

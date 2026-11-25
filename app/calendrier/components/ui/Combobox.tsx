@@ -104,8 +104,6 @@ export function Combobox(props: ComboboxProps) {
     return matchesQuery;
   });
 
-  console.log('filteredOptions', filteredOptions);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
