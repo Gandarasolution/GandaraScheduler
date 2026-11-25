@@ -1,13 +1,3 @@
-/**
- * @fileoverview Hook useAppointmentResize - Gestion du redimensionnement des rendez-vous
- * 
- * Centralise toute la logique de resize (gauche/droite) avec gestion des événements souris
- * 
- * @hook useAppointmentResize
- * @author Gandara Solutions
- * @version 1.0.0
- */
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { isWeekend } from 'date-fns';
 import { CELL_WIDTH, DAY_MS, DAY_INTERVALS, HALF_DAY_INTERVALS } from '../../utils/constants';
@@ -22,10 +12,10 @@ interface UseAppointmentResizeParams {
   isFullDay: boolean;
   isDisplayWeekend: boolean;
   onAppointmentResize?: (
-    id: number, 
-    newStart: number, 
-    newEnd: number, 
-    resizeDirection: 'left' | 'right', 
+    id: number,
+    newStart: number,
+    newEnd: number,
+    resizeDirection: 'left' | 'right',
     priority: number
   ) => void | Promise<void>;
   onLockedError?: (message: string) => void;
@@ -39,15 +29,6 @@ interface UseAppointmentResizeReturn {
   handleMouseDown: (e: React.MouseEvent, handleType: 'left' | 'right') => void;
 }
 
-/**
- * Hook pour gérer le redimensionnement d'un rendez-vous
- * 
- * Gère les événements mousedown, mousemove, mouseup pour le resize
- * Calcule les nouvelles dates en fonction du déplacement de la souris
- * 
- * @param params - Paramètres du resize
- * @returns État et handlers pour le resize
- */
 export const useAppointmentResize = ({
   appointmentId,
   startDate,
@@ -58,219 +39,218 @@ export const useAppointmentResize = ({
   onAppointmentResize,
   onLockedError,
 }: UseAppointmentResizeParams): UseAppointmentResizeReturn => {
-  
-  const [isResizingLeft, setIsResizingLeft] = useState(false);
-  const [isResizingRight, setIsResizingRight] = useState(false);
+  const [resizingSide, setResizingSide] = useState<'left' | 'right' | null>(null);
   const [dragStart, setDragStart] = useState<number>(startDate);
   const [dragEnd, setDragEnd] = useState<number>(endDate);
-  
+
+  const resizingSideRef = useRef<'left' | 'right' | null>(null);
   const dragStartRef = useRef<number>(startDate);
   const dragEndRef = useRef<number>(endDate);
-  const initialX = useRef(0);
+  const initialXRef = useRef(0);
+  const lastIntervalsMovedRef = useRef<number | null>(null);
+  const rafIdRef = useRef<number | null>(null);
   const resizeLockPromiseRef = useRef<Promise<boolean> | null>(null);
 
-  const INTERVAL_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
+  // Refs pour les props afin d'éviter de détacher/réattacher les listeners document
+  const latestPropsRef = useRef({
+    appointmentId,
+    startDate,
+    endDate,
+    priority,
+    isFullDay,
+    isDisplayWeekend,
+    onAppointmentResize,
+    onLockedError,
+  });
+  latestPropsRef.current = {
+    appointmentId,
+    startDate,
+    endDate,
+    priority,
+    isFullDay,
+    isDisplayWeekend,
+    onAppointmentResize,
+    onLockedError,
+  };
 
-  // Synchroniser les refs avec les props
   useEffect(() => {
-    dragStartRef.current = startDate;
-    setDragStart(startDate);
+    if (!resizingSideRef.current) {
+      dragStartRef.current = startDate;
+      setDragStart(startDate);
+    }
   }, [startDate]);
 
   useEffect(() => {
-    dragEndRef.current = endDate;
-    setDragEnd(endDate);
+    if (!resizingSideRef.current) {
+      dragEndRef.current = endDate;
+      setDragEnd(endDate);
+    }
   }, [endDate]);
 
-  /**
-   * Ajoute/retire un certain nombre d'intervalles à une date
-   * Gère les week-ends si nécessaire
-   */
-  const addInterval = useCallback((date: number, n: number, intervals: HalfDayInterval[]): number => {      
+  const addInterval = useCallback((date: number, n: number, intervals: HalfDayInterval[], fullDay: boolean, displayWeekend: boolean): number => {
     let currentTs = date;
-    let currentHour = new Date(currentTs).getHours();
-    let idx = intervals.findIndex(interval => 
-        currentHour >= interval.startHour && currentHour < interval.endHour
+    const currentHour = new Date(currentTs).getHours();
+    let idx = intervals.findIndex(
+      (interval) => currentHour >= interval.startHour && currentHour < interval.endHour
     );
     if (idx === -1) idx = 0;
+
     const step = n >= 0 ? 1 : -1;
+    const stepMs = fullDay ? DAY_MS : DAY_MS / 2;
     let remaining = Math.abs(n);
 
     while (remaining > 0) {
-        idx += step;
-        if (idx > 0 ) {
-            idx = 0;
-            currentTs += isFullDay ? DAY_MS : DAY_MS/2; 
-        } else if (idx <= 0) {
-            idx = intervals.length - 1;
-            currentTs -= isFullDay ? DAY_MS : DAY_MS/2; 
+      idx += step;
+      if (idx >= intervals.length) {
+        idx = 0;
+        currentTs += stepMs;
+      } else if (idx < 0) {
+        idx = intervals.length - 1;
+        currentTs -= stepMs;
+      } else {
+        currentTs += step * stepMs;
+      }
+
+      if (!displayWeekend) {
+        while (isWeekend(currentTs)) {
+          currentTs += step * stepMs;
         }
-        if (!isDisplayWeekend) {
-            while (isWeekend(currentTs)) {
-                currentTs += (step * (isFullDay ? DAY_MS : DAY_MS/2));
-            }
-        }
-        remaining--;
+      }
+      remaining--;
     }
     return currentTs;
-  }, [isDisplayWeekend, isFullDay]);
+  }, []);
 
-  /**
-   * Gère le début du resize
-   */
   const handleMouseDown = useCallback((e: React.MouseEvent, handleType: 'left' | 'right') => {
     e.preventDefault();
     e.stopPropagation();
 
-    initialX.current = e.clientX;
-    dragStartRef.current = startDate;
-    dragEndRef.current = endDate;
-    setDragStart(startDate);
-    setDragEnd(endDate);
+    const { appointmentId: id, startDate: sDate, endDate: eDate, onLockedError: onErr } = latestPropsRef.current;
 
-    if (handleType === 'left') {
-      setIsResizingLeft(true);
-    } else {
-      setIsResizingRight(true);
-    }
+    initialXRef.current = e.clientX;
+    lastIntervalsMovedRef.current = 0;
+    dragStartRef.current = sDate;
+    dragEndRef.current = eDate;
+    resizingSideRef.current = handleType;
 
-    // Verrouiller au DÉBUT du resize, pas déverrouiller.
+    setDragStart(sDate);
+    setDragEnd(eDate);
+    setResizingSide(handleType);
+
     resizeLockPromiseRef.current = evenementService
-      .lockQuickEvenement(appointmentId)
+      .lockQuickEvenement(id)
       .then((response) => {
         if (response.success === false) {
-          setIsResizingLeft(false);
-          setIsResizingRight(false);
-
-          onLockedError?.(
-            response.message || 'Un autre utilisateur modifie cet événement.'
-          );
-
+          resizingSideRef.current = null;
+          setResizingSide(null);
+          onErr?.(response.message || 'Un autre utilisateur modifie cet événement.');
           return false;
         }
-
         return true;
       })
       .catch((error) => {
         console.error('Erreur lors du verrouillage du rendez-vous pour le resize :', error);
-        setIsResizingLeft(false);
-        setIsResizingRight(false);
+        resizingSideRef.current = null;
+        setResizingSide(null);
         return false;
       });
-  }, [appointmentId, endDate, onLockedError, startDate]);
+  }, []);
 
-  /**
-   * Gère le mouvement pendant le resize
-   */
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    e.preventDefault();
-    if (!isResizingLeft && !isResizingRight) return;
-    
-    const currentDx = e.clientX - initialX.current;
-    let intervalsMoved = Math.round(currentDx / INTERVAL_WIDTH);
-    const intervals = isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-
-    if (isResizingLeft) {
-      let newStartDate = addInterval(startDate, intervalsMoved, intervals);
-      // Empêcher que le début dépasse la fin
-      if (newStartDate > dragEndRef.current) {
-        newStartDate = addInterval(dragEndRef.current, 0, intervals);
-      }
-      
-      dragStartRef.current = newStartDate;
-      setDragStart(newStartDate);
-    }
-    if (isResizingRight) {
-      
-      let newEndDate = addInterval(endDate, intervalsMoved, intervals);
-      // Empêcher que la fin soit avant le début
-      if (newEndDate < dragStartRef.current) {
-        newEndDate = addInterval(dragStartRef.current, 1, intervals);
-      }    
-      dragEndRef.current = newEndDate;
-      setDragEnd(newEndDate);
-    }
-  }, [isResizingLeft, isResizingRight, startDate, endDate, isFullDay, addInterval, INTERVAL_WIDTH]);
-
-  /**
-   * Gère la fin du resize
-   */
-  const handleMouseUp = useCallback(async () => {
-    const wasResizingRight = isResizingRight;
-    const wasResizingLeft = isResizingLeft;
-
-    // Le geste est terminé visuellement dès le mouseUp.
-    setIsResizingLeft(false);
-    setIsResizingRight(false);
-
-    const lockPromise = resizeLockPromiseRef.current;
-    resizeLockPromiseRef.current = null;
-
-    // Attendre la réponse du lockQuick si elle n'est pas encore arrivée.
-    const lockAcquired = lockPromise ? await lockPromise : false;
-
-    if (!lockAcquired) {
-      return;
-    }
-
-    try {
-      if (wasResizingRight && onAppointmentResize) {
-        await Promise.resolve(
-          onAppointmentResize(
-            appointmentId,
-            dragStartRef.current,
-            dragEndRef.current,
-            'right',
-            priority
-          )
-        );
-      }
-
-      if (wasResizingLeft && onAppointmentResize) {
-        await Promise.resolve(
-          onAppointmentResize(
-            appointmentId,
-            dragStartRef.current,
-            dragEndRef.current,
-            'left',
-            priority
-          )
-        );
-      }
-    } finally {
-      // Déverrouiller uniquement une fois le resize terminé.
-      try {
-        await evenementService.unlockEvenement(appointmentId);
-      } catch (error) {
-        console.error('Erreur lors du déverrouillage après resize :', error);
-      }
-    }
-  }, [
-    isResizingLeft,
-    isResizingRight,
-    onAppointmentResize,
-    appointmentId,
-    priority,
-  ]);
-
-  /**
-   * Attacher/détacher les événements souris
-   */
   useEffect(() => {
-    if (isResizingLeft || isResizingRight) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-    
+    if (!resizingSide) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault();
+      const side = resizingSideRef.current;
+      if (!side) return;
+
+      const { isFullDay: fullDay, isDisplayWeekend: displayWeekend, startDate: sDate, endDate: eDate } = latestPropsRef.current;
+      const intervalWidth = fullDay ? CELL_WIDTH : CELL_WIDTH / 2;
+      const intervalsMoved = Math.round((e.clientX - initialXRef.current) / intervalWidth);
+
+      // Ne rien faire si on reste dans le même cran d'intervalle
+      if (intervalsMoved === lastIntervalsMovedRef.current) return;
+      lastIntervalsMovedRef.current = intervalsMoved;
+
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+
+      rafIdRef.current = requestAnimationFrame(() => {
+        rafIdRef.current = null;
+        const intervals = fullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
+
+        if (side === 'left') {
+          let newStartDate = addInterval(sDate, intervalsMoved, intervals, fullDay, displayWeekend);
+          if (newStartDate > dragEndRef.current) {
+            newStartDate = addInterval(dragEndRef.current, 0, intervals, fullDay, displayWeekend);
+          }
+          if (newStartDate !== dragStartRef.current) {
+            dragStartRef.current = newStartDate;
+            setDragStart(newStartDate);
+          }
+        } else if (side === 'right') {
+          let newEndDate = addInterval(eDate, intervalsMoved, intervals, fullDay, displayWeekend);
+          if (newEndDate < dragStartRef.current) {
+            newEndDate = addInterval(dragStartRef.current, 1, intervals, fullDay, displayWeekend);
+          }
+          if (newEndDate !== dragEndRef.current) {
+            dragEndRef.current = newEndDate;
+            setDragEnd(newEndDate);
+          }
+        }
+      });
+    };
+
+    const handleMouseUp = async () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+
+      const side = resizingSideRef.current;
+      resizingSideRef.current = null;
+      lastIntervalsMovedRef.current = null;
+      setResizingSide(null);
+
+      const lockPromise = resizeLockPromiseRef.current;
+      resizeLockPromiseRef.current = null;
+
+      const lockAcquired = lockPromise ? await lockPromise : false;
+      if (!lockAcquired || !side) return;
+
+      const { appointmentId: id, priority: prio, onAppointmentResize: onResize } = latestPropsRef.current;
+
+      try {
+        if (onResize) {
+          await Promise.resolve(
+            onResize(id, dragStartRef.current, dragEndRef.current, side, prio)
+          );
+        }
+      } finally {
+        try {
+          await evenementService.unlockEvenement(id);
+        } catch (error) {
+          console.error('Erreur lors du déverrouillage après resize :', error);
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
     return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizingLeft, isResizingRight, handleMouseMove, handleMouseUp]);
+  }, [resizingSide, addInterval]);
 
   return {
-    isResizingLeft,
-    isResizingRight,
+    isResizingLeft: resizingSide === 'left',
+    isResizingRight: resizingSide === 'right',
     dragStart,
     dragEnd,
     handleMouseDown,

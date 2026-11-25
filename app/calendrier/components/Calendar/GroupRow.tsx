@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { CELL_WIDTH } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
 
@@ -19,30 +19,38 @@ const GroupRow: React.FC<GroupRowProps> = ({
   isFullDay,
   rowBackgroundColor = 'transparent',
 }) => {
-  const rowWidth = dayInTimeline.length * CELL_WIDTH;
-  const STEP_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
-  
+  const backgroundGridStyle = useMemo<React.CSSProperties>(() => {
+    const STEP_WIDTH = isFullDay ? CELL_WIDTH : CELL_WIDTH / 2;
+    return {
+      width: dayInTimeline.length * CELL_WIDTH,
+      backgroundColor: rowBackgroundColor,
+      backgroundImage: `repeating-linear-gradient(
+        to right,
+        transparent 0px,
+        transparent ${STEP_WIDTH - 1}px,
+        var(--border-100) ${STEP_WIDTH - 1}px,
+        var(--border-100) ${STEP_WIDTH}px
+      )`,
+      boxShadow: 'inset 0 -0.5px 0 0 var(--border-100)',
+      zIndex: 6,
+    };
+  }, [dayInTimeline.length, isFullDay, rowBackgroundColor]);
+
+  const combinedStyle = useMemo<React.CSSProperties>(
+    () => ({
+      ...style,
+      ...backgroundGridStyle,
+    }),
+    [style, backgroundGridStyle]
+  );
 
   return (
-    <div 
+    <div
       id={getRowId('group', itemId)}
       className="calendar-row inactive-row flex w-fit relative"
       data-item-id={`inactive-${itemId}`}
       role="row"
-      style={{
-        ...style,
-        width: rowWidth,
-        backgroundColor: rowBackgroundColor,
-        backgroundImage: `repeating-linear-gradient(
-          to right,
-          transparent 0px,
-          transparent ${STEP_WIDTH - 1}px, /* L'espace vide prend presque toute la largeur */
-          var(--border-100) ${STEP_WIDTH - 1}px, /* Le trait commence ici */
-          var(--border-100) ${STEP_WIDTH}px    /* Et se termine 1px plus loin */
-        )`,
-        boxShadow: 'inset 0 -0.5px 0 0 var(--border-100)', 
-        zIndex: 6,
-      }}
+      style={combinedStyle}
     >
       {todayIndex >= 0 && (
         <div

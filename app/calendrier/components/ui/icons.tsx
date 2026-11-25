@@ -36,10 +36,9 @@ export const GroupIcon: React.FC<GroupIconProps> = ({
 export const TrashIcon: React.FC<GroupIconProps> = ({
   size = 24,
   color = "currentColor",
-  ...props
 }) => {
   return (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-4 w-4" fill="none" stroke={color} viewBox="0 0 24 24" width={size} height={size} xmlns="http://www.w3.org/2000/svg" >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"

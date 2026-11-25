@@ -712,6 +712,11 @@ input[type="date"] { font-variant-numeric: tabular-nums; }
   display: none;
 }
 
+.calendar-rows-grabbing .appointment-item {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 @media screen and (orientation: landscape) and (pointer: coarse) {
   .portrait-only-overlay {
     display: flex;

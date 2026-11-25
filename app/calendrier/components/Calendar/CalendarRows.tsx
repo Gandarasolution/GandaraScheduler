@@ -1,27 +1,16 @@
-/**
- * @fileoverview Composant CalendarRows - Lignes virtualisées du calendrier
- * 
- * Rend les lignes visibles du calendrier (groupes et employés)
- * Utilisé par DesktopCalendarGrid avec virtualisation
- * 
- * @component
- * @author Gandara Solutions
- * @version 1.0.0
- */
-
 import React, { memo } from 'react';
 import { Appointment, Item } from '../../types';
 import EmployeeRow from './EmployeeRow';
 import GroupRow from './GroupRow';
 
 interface CalendarRowsProps {
-  mainScrollRef:React.RefObject<HTMLDivElement>;
-  visibleRows:{
+  mainScrollRef: React.RefObject<HTMLDivElement>;
+  visibleRows: {
     start: number;
     end: number;
     index: number;
     domId: string;
-    type: "group" | "employee";
+    type: 'group' | 'employee';
     id: string | number;
     uniqueKey: string;
     data: any;
@@ -52,10 +41,6 @@ interface CalendarRowsProps {
   onLockedError: (message: string) => void;
 }
 
-/**
- * Composant qui rend les lignes visibles du calendrier
- * Utilisé avec virtualisation pour optimiser les performances
- */
 const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   mainScrollRef,
   visibleRows,
@@ -83,27 +68,22 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
   tagPlacement,
   onLockedError
 }) => {
-  ////console.log('Rendering CalendarRows with visibleRows:', visibleRows);
   return (
-    <>
+    <div className={isGrabbing ? 'calendar-rows-grabbing' : undefined}>
       {visibleRows.map((row) => {
-               
-        const commonProps = {
-          style: {
-            width: '100%',
-            position: 'absolute' as const,
-            top: row.start,
-            height: row.height,
-            left: 0,
-            right: 0,
-          },
+        const rowStyle: React.CSSProperties = {
+          width: '100%',
+          position: 'absolute',
+          top: row.start,
+          height: row.height,
+          left: 0,
+          right: 0,
         };
-       
 
         return row.type === 'group' ? (
           <GroupRow
             key={row.uniqueKey}
-            {...commonProps}
+            style={rowStyle}
             itemId={row.id}
             dayInTimeline={dayInTimeline}
             todayIndex={todayIndex}
@@ -113,7 +93,7 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
           <EmployeeRow
             key={row.uniqueKey}
             mainScrollRef={mainScrollRef}
-            {...commonProps}
+            style={rowStyle}
             employee={row.data}
             dayInTimeline={dayInTimeline}
             appointments={isGrabbing ? EMPTY_APPOINTMENTS : (appointmentsByEmployee[row.id as number] || EMPTY_APPOINTMENTS)}
@@ -140,10 +120,9 @@ const CalendarRows: React.FC<CalendarRowsProps> = memo(({
           />
         );
       })}
-    </>
+    </div>
   );
 });
 
 CalendarRows.displayName = 'CalendarRows';
-
 export default CalendarRows;

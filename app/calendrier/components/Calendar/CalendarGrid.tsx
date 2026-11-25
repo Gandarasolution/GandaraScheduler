@@ -1,30 +1,8 @@
-/**
- * @fileoverview Composant CalendarGrid - Grille principale du calendrier
- * 
- * Ce composant constitue le cœur de l'interface calendrier. Il gère l'affichage
- * de la grille temporelle avec les employés en lignes et les jours en colonnes.
- * 
- * Fonctionnalités principales :
- * - Affichage en grille avec timeline horizontale
- * - Groupement des employés par équipes ou pôles
- * - Système de filtrage avancé
- * - Drag & Drop des rendez-vous
- * - Scroll synchronisé horizontal/vertical
- * - Mode responsive mobile/desktop
- * - Gestion des week-ends et jours fériés
- * - Menu contextuel et interactions
- * 
- * @component CalendarGrid
- * @author Gandara Solutions
- * @version 2.0.0 (Refactored)
- */
-
 "use client";
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isSameDay } from 'date-fns';
 import { Appointment, HalfDayInterval, Equipe, CalendarConfig, Item, User, PoleActivite, MobileAppointmentDisplayConfig } from '../../types';
-import { 
-  useCalendarInteractions
- } from '@/app/calendrier/hooks';
+import { useCalendarInteractions } from '@/app/calendrier/hooks';
 import { DesktopCalendarGrid, MobileCalendar } from '@/app/calendrier/components';
 import type { MobileCalendarState } from './MobileCalendar';
 import { CELL_WIDTH } from '../../utils/constants';
@@ -41,7 +19,7 @@ interface CalendarGridProps {
   initialEmployeeId: number | null;
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
-  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
+  nonWorkingDates: Record<string, { Id: number; TypeJourCode: string }>;
   isMobile: boolean;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
@@ -62,9 +40,8 @@ interface CalendarGridProps {
   onSelectCell: (cell: { employeeId: number; date: number } | null) => void;
   onSelectAppointment: (appointment: Appointment | null) => void;
   onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeIds?: number[]) => Promise<boolean>;
-  //reloadToken?: number;
   mouseUpAfterScroll: () => void;
-  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{success: boolean}>;
+  onAddAppointment?: (appointment: Appointment, item: Item, includeAllNonWorkingDays: boolean, type: 'create' | 'update') => Promise<{ success: boolean }>;
   onLockedError: (message: string) => void;
   onCalendarPositionChange: (position: { date?: number; idPersonnel?: number }) => void;
   mobileState: MobileCalendarState;
@@ -103,32 +80,29 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onSelectCell,
   onSelectAppointment,
   onLoadAppointmentsInRange,
-  //reloadToken,
   mouseUpAfterScroll,
-  onAddAppointment,
   onLockedError,
   onCalendarPositionChange,
   mobileState
 }) => {
-
   const columnEmployeeRef = useRef<HTMLDivElement>(null);
   const [hoverColumnLeft, setHoverColumnLeft] = useState<number | null>(null);
   const hasAutoScrolled = useRef(false);
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
 
-  
-
-
   const handleHoverMove = useCallback(({ colLeft }: { colLeft: number }) => {
-    setHoverColumnLeft(colLeft >= 0 ? colLeft : null);
+    setHoverColumnLeft((prev) => {
+      const next = colLeft >= 0 ? colLeft : null;
+      return prev === next ? prev : next;
+    });
   }, []);
 
-  const { 
-    tableRef, 
-    handleMouseMove, 
-    handleMouseOut, 
+  const {
+    tableRef,
+    handleMouseMove,
+    handleMouseOut,
     handleScrollY,
-    updateHighlightedEmployeeRow 
+    updateHighlightedEmployeeRow
   } = useCalendarInteractions({
     dayInTimeline,
     mainScrollRef,
@@ -136,24 +110,18 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     onHoverMove: handleHoverMove
   });
 
- 
-  // Scroll horizontally to the selected date on initial render (desktop only)
+  // Scroll horizontal initial vers selectedDate (desktop uniquement)
   useEffect(() => {
-    if (isMobile) return;
-    if (hasAutoScrolled.current) return;
+    if (isMobile || hasAutoScrolled.current) return;
     const scroller = mainScrollRef.current;
     if (!scroller) return;
 
-    const selectedDateIdx = dayInTimeline.findIndex((d) => (
-      new Date(d).setHours(0, 0, 0, 0) === new Date(selectedDate).setHours(0, 0, 0, 0)
-    ));
+    const selectedDateIdx = dayInTimeline.findIndex((d) => isSameDay(d, selectedDate));
     if (selectedDateIdx < 0) return;
 
     scroller.scrollLeft = Math.max(0, selectedDateIdx * CELL_WIDTH);
     hasAutoScrolled.current = true;
   }, [dayInTimeline, isMobile, mainScrollRef, selectedDate]);
-    
-
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
@@ -164,95 +132,97 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return () => mediaQuery.removeEventListener('change', updateOrientation);
   }, []);
 
-
+  const mobileItems = useMemo(
+    () => (isMobile || isMobileLandscape ? Object.values(events) : []),
+    [isMobile, isMobileLandscape, events]
+  );
 
   if (isMobile || isMobileLandscape) {
-  return (
-    <>
-      <MobileCalendar
-        employees={employees}
-        teams={initialTeams}
-        appointments={appointments}
-        user={user}
-        items={Object.values(events)}
-        nonWorkingDates={nonWorkingDates}
-        mobileAppointmentDisplay={mobileAppointmentDisplay}
-        mobileState={mobileState}
-      />
+    return (
+      <>
+        <MobileCalendar
+          employees={employees}
+          teams={initialTeams}
+          appointments={appointments}
+          user={user}
+          items={mobileItems}
+          nonWorkingDates={nonWorkingDates}
+          mobileAppointmentDisplay={mobileAppointmentDisplay}
+          mobileState={mobileState}
+        />
 
-      {isMobileLandscape && (
-        <div
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 text-center select-none"
-          style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mb-4 animate-bounce"
-            style={{ color: 'var(--color-primary-500)' }}
+        {isMobileLandscape && (
+          <div
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 text-center select-none"
+            style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
           >
-            <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
-            <path d="M12 18h.01" />
-          </svg>
-          <h2 className="text-lg font-bold mb-2">Mode portrait uniquement</h2>
-          <p className="text-sm max-w-xs" style={{ color: 'var(--text-secondary)' }}>
-            Veuillez pivoter votre téléphone à la verticale pour utiliser le calendrier.
-          </p>
-        </div>
-      )}
-    </>
-  );
-}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mb-4 animate-bounce"
+              style={{ color: 'var(--color-primary-500)' }}
+            >
+              <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+              <path d="M12 18h.01" />
+            </svg>
+            <h2 className="text-lg font-bold mb-2">Mode portrait uniquement</h2>
+            <p className="text-sm max-w-xs" style={{ color: 'var(--text-secondary)' }}>
+              Veuillez pivoter votre téléphone à la verticale pour utiliser le calendrier.
+            </p>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
-      <DesktopCalendarGrid 
-        employees={employees}
-        appointments={appointments}
-        dayInTimeline={dayInTimeline}
-        initialTeams={initialTeams}
-        poleActivites={poleActivites}
-        calendarConfig={calendarConfig}
-        onCalendarConfigChange={onCalendarConfigChange}
-        availableConfigs={availableConfigs}
-        HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
-        isFullDay={isFullDay}
-        events={events}
-        nonWorkingDates={nonWorkingDates}
-        isDisplayWeekend={isDisplayWeekend}
-        tagPlacement={tagPlacement}
-        overlapDisplayMode={overlapDisplayMode}
-        mainScrollRef={mainScrollRef}
-        handleScrollY={handleScrollY}
-        columnEmployeeRef={columnEmployeeRef}
-        tableRef={tableRef}
-        handleMouseOver={handleMouseMove}
-        handleMouseOut={handleMouseOut}
-        onAppointmentMoved={onAppointmentMoved}
-        onCellDoubleClick={onCellDoubleClick}
-        onAppointmentDoubleClick={onAppointmentDoubleClick}
-        onExternalDragDrop={onExternalDragDrop}
-        handleContextMenu={handleContextMenu}
-        handleEmployeeContextMenu={handleEmployeeContextMenu}
-        updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
-        selectedCell={selectedCell}
-        selectedAppointmentId={selectedAppointmentId}
-        onSelectCell={onSelectCell}
-        onSelectAppointment={onSelectAppointment}
-        hoverColumnLeft={hoverColumnLeft}
-        onLoadAppointmentsInRange={onLoadAppointmentsInRange}
-        initialEmployeeId={initialEmployeeId}
-        onCalendarPositionChange={onCalendarPositionChange}
-        //reloadToken={reloadToken}
-        mouseUpAfterScroll={mouseUpAfterScroll}
-        onLockedError={onLockedError}
-      />
+    <DesktopCalendarGrid
+      employees={employees}
+      appointments={appointments}
+      dayInTimeline={dayInTimeline}
+      initialTeams={initialTeams}
+      poleActivites={poleActivites}
+      calendarConfig={calendarConfig}
+      onCalendarConfigChange={onCalendarConfigChange}
+      availableConfigs={availableConfigs}
+      HALF_DAY_INTERVALS={HALF_DAY_INTERVALS}
+      isFullDay={isFullDay}
+      events={events}
+      nonWorkingDates={nonWorkingDates}
+      isDisplayWeekend={isDisplayWeekend}
+      tagPlacement={tagPlacement}
+      overlapDisplayMode={overlapDisplayMode}
+      mainScrollRef={mainScrollRef}
+      handleScrollY={handleScrollY}
+      columnEmployeeRef={columnEmployeeRef}
+      tableRef={tableRef}
+      handleMouseOver={handleMouseMove}
+      handleMouseOut={handleMouseOut}
+      onAppointmentMoved={onAppointmentMoved}
+      onCellDoubleClick={onCellDoubleClick}
+      onAppointmentDoubleClick={onAppointmentDoubleClick}
+      onExternalDragDrop={onExternalDragDrop}
+      handleContextMenu={handleContextMenu}
+      handleEmployeeContextMenu={handleEmployeeContextMenu}
+      updateHighlightedEmployeeRow={updateHighlightedEmployeeRow}
+      selectedCell={selectedCell}
+      selectedAppointmentId={selectedAppointmentId}
+      onSelectCell={onSelectCell}
+      onSelectAppointment={onSelectAppointment}
+      hoverColumnLeft={hoverColumnLeft}
+      onLoadAppointmentsInRange={onLoadAppointmentsInRange}
+      initialEmployeeId={initialEmployeeId}
+      onCalendarPositionChange={onCalendarPositionChange}
+      mouseUpAfterScroll={mouseUpAfterScroll}
+      onLockedError={onLockedError}
+    />
   );
 };
 

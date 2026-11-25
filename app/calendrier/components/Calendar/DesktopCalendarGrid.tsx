@@ -5,8 +5,8 @@ import { TimelineFrame } from './index';
 import CalendarRows from './CalendarRows';
 import EmployeeSidebar from './EmployeeSidebar';
 
-import { 
-  CELL_WIDTH,  
+import {
+  CELL_WIDTH,
   DAY_INTERVALS,
   HOUR_MS,
   CELL_HEIGHT,
@@ -18,12 +18,14 @@ import { getDimensionItemKey, getHierarchicalDimensionItems, groupEmployeesHiera
 import { isSameDay } from 'date-fns';
 import { useSmartScroll } from '../../hooks/interactions/useSmartScroll';
 import { useAutoScrollOnDrag } from '../../hooks/interactions/useAutoScrollOnDrag';
-import { 
-  useCalendarVirtualization, 
-  useCalendarColumns, 
-  useCalendarDragDrop, 
-  useCalendarDataLoader 
+import {
+  useCalendarVirtualization,
+  useCalendarColumns,
+  useCalendarDragDrop,
+  useCalendarDataLoader
 } from '../../hooks';
+
+const EMPTY_APPOINTMENTS: Appointment[] = [];
 
 interface DesktopCalendarGridProps {
   employees: User[];
@@ -37,7 +39,7 @@ interface DesktopCalendarGridProps {
   HALF_DAY_INTERVALS: HalfDayInterval[];
   isFullDay: boolean;
   events: Record<number, Item>;
-  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
+  nonWorkingDates: Record<string, { Id: number; TypeJourCode: string }>;
   isDisplayWeekend: boolean;
   tagPlacement?: 'hover' | 'fixed';
   overlapDisplayMode?: 'button' | 'count';
@@ -79,12 +81,12 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   selectedCell, initialEmployeeId, selectedAppointmentId, onSelectCell, onSelectAppointment, calendarConfig,
   onCalendarConfigChange, availableConfigs, mainScrollRef, handleScrollY, columnEmployeeRef, tableRef, initialTeams,
   poleActivites, onLoadAppointmentsInRange, updateHighlightedEmployeeRow, handleMouseOver, handleMouseOut,
-  hoverColumnLeft, isDisplayWeekend, tagPlacement = 'hover', overlapDisplayMode = 'button', onLockedError, onCalendarPositionChange, mouseUpAfterScroll
+  hoverColumnLeft, isDisplayWeekend, tagPlacement = 'hover', overlapDisplayMode = 'button', onLockedError, mouseUpAfterScroll
 }) => {
-
   const [expandedOverlapRows, setExpandedOverlapRows] = useState<Record<number, boolean>>({});
   const [expandedOverlapCounts, setExpandedOverlapCounts] = useState<Record<number, number>>({});
   const [hiddenOverlapCounts, setHiddenOverlapCounts] = useState<Record<number, number>>({});
+  const [scrollLeftQuantized, setScrollLeftQuantized] = useState(0);
 
   const employeeHeights = useMemo(() => {
     return employees.map(employee => {
@@ -111,22 +113,33 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     scrollSpeed: 10,
   });
 
-  
+  const handleTimelineScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    handleScrollY(e);
+    const step = CELL_WIDTH * 3;
+    const quantized = Math.floor(e.currentTarget.scrollLeft / step) * step;
+    setScrollLeftQuantized((prev) => (prev !== quantized ? quantized : prev));
+  }, [handleScrollY]);
 
- 
+  useEffect(() => {
+    if (mainScrollRef.current) {
+      const step = CELL_WIDTH * 3;
+      setScrollLeftQuantized(Math.floor(mainScrollRef.current.scrollLeft / step) * step);
+    }
+  }, [dayInTimeline, mainScrollRef]);
 
   const { visibleWindowStart, visibleWindowEnd } = useMemo(() => {
-    if (!dayInTimeline.length || !mainScrollRef.current) return { visibleWindowStart: 0, visibleWindowEnd: 0 };
-    const startPx = Math.max(0, mainScrollRef.current.scrollLeft - 50);
-    const endPx = mainScrollRef.current.scrollLeft + mainScrollRef.current.clientWidth + 50;
+    if (!dayInTimeline.length) return { visibleWindowStart: 0, visibleWindowEnd: 0 };
+    const clientWidth = mainScrollRef.current?.clientWidth ?? 1920;
+    const startPx = Math.max(0, scrollLeftQuantized - CELL_WIDTH * 3);
+    const endPx = scrollLeftQuantized + clientWidth + CELL_WIDTH * 6;
     const startIndex = Math.max(0, Math.min(Math.floor(startPx / CELL_WIDTH), dayInTimeline.length - 1));
     const endIndex = Math.max(0, Math.min(Math.ceil(endPx / CELL_WIDTH), dayInTimeline.length - 1));
-    
-    return { 
-      visibleWindowStart: dayInTimeline[startIndex] ?? 0, 
-      visibleWindowEnd: (dayInTimeline[endIndex] ?? 0) + (24 * 60 * 60 * 1000) 
+
+    return {
+      visibleWindowStart: dayInTimeline[startIndex] ?? 0,
+      visibleWindowEnd: (dayInTimeline[endIndex] ?? 0) + 86_400_000
     };
-  }, [dayInTimeline, mainScrollRef.current?.scrollLeft, mainScrollRef.current?.clientWidth]);
+  }, [dayInTimeline, scrollLeftQuantized, mainScrollRef]);
 
   const appointmentsInHorizontalWindow = useMemo(() => {
     return appointments.filter(app => app.FinPlanningEvenement > visibleWindowStart && app.DebutPlanningEvenement < visibleWindowEnd);
@@ -134,35 +147,44 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   const visibleEmployeeIdsInWindow = useMemo(() => {
     const ids = new Set<number>();
-    appointmentsInHorizontalWindow.forEach((app) => {
-      if (app.DebutPlanningEvenement < visibleWindowEnd && app.FinPlanningEvenement > visibleWindowStart) ids.add(app.IdEmploye);
-    });
+    for (let i = 0; i < appointmentsInHorizontalWindow.length; i++) {
+      ids.add(appointmentsInHorizontalWindow[i]!.IdEmploye);
+    }
     return ids;
-  }, [appointmentsInHorizontalWindow, visibleWindowStart, visibleWindowEnd]);
+  }, [appointmentsInHorizontalWindow]);
 
   const overlappingEmployeeIds = useMemo(() => {
     const ids = new Set<number>();
-    const appointmentsByEmployee = new Map<number, Appointment[]>();
+    const appointmentsByEmp = new Map<number, Appointment[]>();
 
-    appointmentsInHorizontalWindow.forEach((appointment) => {
+    for (let i = 0; i < appointmentsInHorizontalWindow.length; i++) {
+      const appointment = appointmentsInHorizontalWindow[i]!;
       const employeeId = Number(appointment.IdEmploye);
-      const employeeAppointments = appointmentsByEmployee.get(employeeId) ?? [];
-      employeeAppointments.push(appointment);
-      appointmentsByEmployee.set(employeeId, employeeAppointments);
-    });
+      let list = appointmentsByEmp.get(employeeId);
+      if (!list) {
+        list = [];
+        appointmentsByEmp.set(employeeId, list);
+      }
+      list.push(appointment);
+    }
 
-    appointmentsByEmployee.forEach((employeeAppointments, employeeId) => {
+    appointmentsByEmp.forEach((employeeAppointments, employeeId) => {
+      if (employeeAppointments.length < 2) return;
       const sortedAppointments = [...employeeAppointments].sort(
         (a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement
       );
-      let latestEnd = 0;
+      let latestEnd = sortedAppointments[0]!.FinPlanningEvenement;
 
-      sortedAppointments.forEach((appointment) => {
-        if (appointment.DebutPlanningEvenement < latestEnd) {
+      for (let i = 1; i < sortedAppointments.length; i++) {
+        const app = sortedAppointments[i]!;
+        if (app.DebutPlanningEvenement < latestEnd) {
           ids.add(employeeId);
+          break;
         }
-        latestEnd = Math.max(latestEnd, appointment.FinPlanningEvenement);
-      });
+        if (app.FinPlanningEvenement > latestEnd) {
+          latestEnd = app.FinPlanningEvenement;
+        }
+      }
     });
 
     return ids;
@@ -182,10 +204,16 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   useEffect(() => {
     setExpandedOverlapRows((previous) => {
+      let hasChanged = false;
       const next: Record<number, boolean> = {};
       overlappingEmployeeIds.forEach((employeeId) => {
-        next[employeeId] = previous[employeeId] ?? true;
+        const val = previous[employeeId] ?? true;
+        next[employeeId] = val;
+        if (previous[employeeId] !== val) hasChanged = true;
       });
+      if (!hasChanged && Object.keys(previous).length === overlappingEmployeeIds.size) {
+        return previous;
+      }
       return next;
     });
   }, [overlappingEmployeeIds]);
@@ -200,9 +228,11 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
       }
 
       const currentKeys = new Set(previous);
+      let added = false;
       dimensionKeys.forEach((key) => {
         if (!knownDimensionKeysRef.current.has(key)) {
           currentKeys.add(key);
+          added = true;
         }
       });
 
@@ -211,7 +241,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         ...dimensionKeys,
       ]);
 
-      return [...currentKeys];
+      return added ? [...currentKeys] : previous;
     });
   }, [dimensionItems]);
 
@@ -234,23 +264,27 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     rowVirtualizer.measure();
   }, [expandedOverlapRows, employeeHeights, rowVirtualizer]);
 
-  const visibleRows = rowVirtualizer.getVirtualItems().map((virtualRow) => {
-    const row = flatRows[virtualRow.index];
-    return {
-      ...row,
-      index: virtualRow.index,
-      start: virtualRow.start,
-      end: virtualRow.start + virtualRow.size,
-      domId: row.type === 'employee' ? getRowId('employee', row.id as number) : getRowId('group', row.id as string)
-    };
-  });
-  
+  const virtualItems = rowVirtualizer.getVirtualItems();
+
+  const visibleRows = useMemo(() => {
+    return virtualItems.map((virtualRow) => {
+      const row = flatRows[virtualRow.index];
+      return {
+        ...row,
+        index: virtualRow.index,
+        start: virtualRow.start,
+        end: virtualRow.start + virtualRow.size,
+        domId: row.type === 'employee' ? getRowId('employee', row.id as number) : getRowId('group', row.id as string)
+      };
+    });
+  }, [virtualItems, flatRows]);
+
   const totalContentHeight = rowVirtualizer.getTotalSize();
 
   const todayIndex = useMemo(() => {
     if (!todayTs) return -1;
     return dayInTimeline.findIndex(day => isSameDay(day, todayTs));
-  }, [dayInTimeline, todayTs]);  
+  }, [dayInTimeline, todayTs]);
 
   const visibleEmployeeIds = useMemo(() => (
     visibleRows.filter((row) => row.type === 'employee').map((row) => Number(row.id))
@@ -259,7 +293,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const { specialColumns } = useCalendarColumns({ dayInTimeline, nonWorkingDates });
 
   const dropRef = useCalendarDragDrop({
-    tableRef, rowBoundaries: visibleRows, 
+    tableRef, rowBoundaries: visibleRows,
     dayInTimeline, HALF_DAY_INTERVALS, isFullDay, nonWorkingDates,
     appointments: appointmentsInHorizontalWindow, onAppointmentMoved, onExternalDragDrop,
   });
@@ -272,7 +306,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const setTableRef = useCallback((node: HTMLDivElement | null) => {
     if (tableRef.current !== node) tableRef.current = node;
     dropRef(node);
-  }, [dropRef]);
+  }, [dropRef, tableRef]);
 
   const handleGridContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!tableRef.current || !visibleRows.length || !dayInTimeline.length) return;
@@ -290,23 +324,26 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     const targetDate = (dayInTimeline[dayIndex] ?? 0) + (intervals[intervalIndex]?.startHour ?? 0) * HOUR_MS;
 
     handleContextMenu(e, 'cell', null, { employeeId: Number(targetRow.id), date: targetDate });
-  }, [HALF_DAY_INTERVALS, dayInTimeline, handleContextMenu, isFullDay, visibleRows, mainScrollRef]);
+  }, [HALF_DAY_INTERVALS, dayInTimeline, handleContextMenu, isFullDay, visibleRows, mainScrollRef, tableRef]);
 
   const appointmentsByEmployee = useMemo(() => {
     const map: Record<number, Appointment[]> = {};
-    const employeeRowIds = new Set(visibleRows.filter(r => r.type === 'employee').map(r => Number(r.id)));
-    
-    visibleRows.forEach(row => { if (row.type === 'employee') map[Number(row.id)] = []; });
-    appointmentsInHorizontalWindow.forEach(app => {
-      if (employeeRowIds.has(Number(app.IdEmploye))) map[Number(app.IdEmploye)].push(app);
-    });
+    for (let i = 0; i < visibleRows.length; i++) {
+      const row = visibleRows[i]!;
+      if (row.type === 'employee') map[Number(row.id)] = [];
+    }
+    for (let i = 0; i < appointmentsInHorizontalWindow.length; i++) {
+      const app = appointmentsInHorizontalWindow[i]!;
+      const bucket = map[Number(app.IdEmploye)];
+      if (bucket) bucket.push(app);
+    }
     return map;
   }, [appointmentsInHorizontalWindow, visibleRows]);
 
-  const toggleItem = (itemId: string | number) => {
+  const toggleItem = useCallback((itemId: string | number) => {
     const itemKey = getDimensionItemKey(itemId);
     setOpenItems(open => open?.includes(itemKey) ? open.filter(id => id !== itemKey) : [...(open || []), itemKey]);
-  };
+  }, []);
 
   const handleCollapseRow = useCallback((employeeId: number) => {
     setExpandedOverlapRows(prev => ({ ...prev, [employeeId]: false }));
@@ -344,7 +381,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   useEffect(() => {
     if (!initialEmployeeId || !flatRows.length || !mainScrollRef.current) return;
     if (initialEmployeeScrolledRef.current === initialEmployeeId) return;
-    
+
     const targetIndex = flatRows.findIndex(row => row.type === 'employee' && Number(row.id) === initialEmployeeId);
     if (targetIndex !== -1) {
       rowVirtualizer.scrollToIndex(targetIndex, { align: 'start' });
@@ -354,13 +391,19 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
 
   useEffect(() => { if (initialEmployeeId === null) initialEmployeeScrolledRef.current = null; }, [initialEmployeeId]);
 
+  const gridStyle = useMemo<React.CSSProperties>(() => ({
+    width: `${dayInTimeline.length * CELL_WIDTH}px`,
+    position: 'relative',
+    height: totalContentHeight,
+  }), [dayInTimeline.length, totalContentHeight]);
+
   return (
     <div className="relative flex h-full flex-row calendar-grid" data-testid="calendar-grid">
       <EmployeeSidebar
         dimensionItems={dimensionItems}
         employeesByDimension={employeesByDimension}
         flatRows={flatRows}
-        overlappingEmployeeIds={overlappingEmployeeIds} 
+        overlappingEmployeeIds={overlappingEmployeeIds}
         openItems={openItems || []}
         expandedOverlapRows={expandedOverlapRows}
         hiddenOverlapCounts={hiddenOverlapCounts}
@@ -376,17 +419,17 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
         handleScrollY={handleScrollY}
         columnEmployeeRef={columnEmployeeRef}
       />
-      
+
       <TimelineFrame
         dayInTimeline={dayInTimeline}
         mainScrollRef={mainScrollRef}
-        onScroll={handleScrollY}
+        onScroll={handleTimelineScroll}
         todayLineColor="#ffcdde"
         nonworkingDates={nonWorkingDates}
       >
         {isGrabbing && (
-          <div 
-            className="absolute left-0 bg-black opacity-30 pointer-events-none z-20" 
+          <div
+            className="absolute left-0 bg-black opacity-30 pointer-events-none z-20"
             style={{
               width: `${dayInTimeline.length * CELL_WIDTH}px`,
               height: totalContentHeight,
@@ -395,45 +438,45 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
           />
         )}
 
-        <div 
+        <div
           className="calendar-table bg-secondary relative"
-          style={{ width: `${dayInTimeline.length * CELL_WIDTH}px`, position: 'relative', height: totalContentHeight }}
+          style={gridStyle}
           onMouseMove={handleMouseOver}
           onMouseOut={handleMouseOut}
           onContextMenu={handleGridContextMenu}
           ref={setTableRef}
         >
           {specialColumns.map((col) => (
-            <div 
-              key={`overlay-${col.key}`} 
-              className={`pointer-events-none absolute top-0 bottom-0 ${col.className}`} 
-              style={{ 
-                left: col.left, 
+            <div
+              key={`overlay-${col.key}`}
+              className={`pointer-events-none absolute top-0 bottom-0 ${col.className}`}
+              style={{
+                left: col.left,
                 width: CELL_WIDTH,
-                backgroundColor: col.CouleurFond, // S'appliquera si défini via le contexte, sinon transparent/géré par CSS
+                backgroundColor: col.CouleurFond,
                 color: col.CouleurTexte,
                 zIndex: 5,
                 opacity: 0.95,
-                borderRight:'1px solid var(--border-100)'
-              }} 
+                borderRight: '1px solid var(--border-100)'
+              }}
             />
           ))}
-          
+
           {hoverColumnLeft !== null && (
             <div
               className="pointer-events-none absolute top-0 bottom-0 bg-cell-hover"
-              style={{ left: hoverColumnLeft, width: CELL_WIDTH, marginLeft: -0, zIndex: 5 }}
+              style={{ left: hoverColumnLeft, width: CELL_WIDTH, zIndex: 5 }}
             />
           )}
 
-          <CalendarRows 
+          <CalendarRows
             visibleRows={visibleRows}
             dayInTimeline={dayInTimeline}
             todayIndex={todayIndex}
             isFullDay={isFullDay}
             isGrabbing={isGrabbing}
             appointmentsByEmployee={appointmentsByEmployee}
-            EMPTY_APPOINTMENTS={[]}
+            EMPTY_APPOINTMENTS={EMPTY_APPOINTMENTS}
             events={events}
             visibleWindowStart={visibleWindowStart}
             visibleWindowEnd={visibleWindowEnd}

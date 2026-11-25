@@ -1,7 +1,3 @@
-/**
- * @fileoverview Hook useCalendarColumns - Gestion des colonnes spéciales du calendrier
- */
-
 import { useMemo } from 'react';
 import { format, isWeekend } from 'date-fns';
 import { isHoliday } from '../../utils/dates';
@@ -18,65 +14,65 @@ export interface ColumnOverlay {
 
 interface UseCalendarColumnsParams {
   dayInTimeline: number[];
-  nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
+  nonWorkingDates: Record<string, { Id: number; TypeJourCode: string }>;
 }
 
 export const useCalendarColumns = ({
   dayInTimeline,
   nonWorkingDates,
 }: UseCalendarColumnsParams): { specialColumns: ColumnOverlay[] } => {
-  
-  // Appel du hook de contexte à la racine du hook (règle de React)
   const { DayTypes } = useDayTypesContext();
+
+  const dayTypesMap = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof DayTypes>[number]>();
+    DayTypes?.forEach((dt) => map.set(String(dt.Id), dt));
+    return map;
+  }, [DayTypes]);
 
   const specialColumns = useMemo(() => {
     const columns: ColumnOverlay[] = [];
+    const ferieInfo = dayTypesMap.get('ferie');
 
-    dayInTimeline.forEach((day, index) => {
+    for (let index = 0; index < dayInTimeline.length; index++) {
+      const day = dayInTimeline[index]!;
       const left = index * CELL_WIDTH;
-      const formattedDate = format(day, 'yyyy-MM-dd');
 
-      const isFerie = isHoliday(day);
-      const isWk = isWeekend(day);
+      if (isHoliday(day)) {
+        columns.push({
+          left,
+          key: day,
+          CouleurFond: ferieInfo?.CouleurFond,
+          CouleurTexte: ferieInfo?.CouleurTexte,
+        });
+        continue;
+      }
+
+      const formattedDate = format(day, 'yyyy-MM-dd');
       const nonWorkingData = nonWorkingDates[formattedDate];
 
-      // Priorité 1 : Férié
-      if (isFerie) {
-        const dayTypeInfo = DayTypes?.find((dt: any) => String(dt.Id) === 'ferie');
-        columns.push({ 
-          left, 
-          key: day, 
-          CouleurFond: dayTypeInfo?.CouleurFond,
-          CouleurTexte: dayTypeInfo?.CouleurTexte,          
-        });
-        return;
-      }
-
-      // Priorité 2 : Personnalisé (Non-working)
       if (nonWorkingData) {
-        const dayTypeInfo = DayTypes?.find((dt: any) => String(dt.Id) === String(nonWorkingData.TypeJourCode));
-        columns.push({ 
-          left, 
-          key: day, 
+        const dayTypeInfo = dayTypesMap.get(String(nonWorkingData.TypeJourCode));
+        columns.push({
+          left,
+          key: day,
           className: 'NON-WORKING',
           CouleurFond: dayTypeInfo?.CouleurFond,
-          CouleurTexte: dayTypeInfo?.CouleurTexte
+          CouleurTexte: dayTypeInfo?.CouleurTexte,
         });
-        return;
+        continue;
       }
 
-      // Priorité 3 : Week-end classique
-      if (isWk) {
-        columns.push({ 
-          left, 
-          key: day, 
+      if (isWeekend(day)) {
+        columns.push({
+          left,
+          key: day,
           className: 'WEEKEND',
         });
       }
-    });
+    }
 
     return columns;
-  }, [dayInTimeline, nonWorkingDates, DayTypes]); // Ne pas oublier d'ajouter DayTypes aux dépendances
+  }, [dayInTimeline, nonWorkingDates, dayTypesMap]);
 
   return { specialColumns };
 };

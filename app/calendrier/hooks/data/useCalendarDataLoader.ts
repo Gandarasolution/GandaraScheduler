@@ -1,20 +1,7 @@
-/**
- * @fileoverview Hook useCalendarDataLoader - Gestion du chargement des données du calendrier
- * 
- * Gère le chargement progressif des rendez-vous selon la fenêtre visible:
- * - Détection des seuils de chargement (soft et hard)
- * - Chargement après arrêt du scroll/grab
- * - Chargement préventif pendant le scroll continu
- * 
- * @hook useCalendarDataLoader
- * @author Gandara Solutions
- * @version 1.0.0
- */
-
 import { useEffect, useRef, useCallback, useMemo } from 'react';
-import { 
-  INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE, 
-  INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER 
+import {
+  INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE,
+  INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER,
 } from '../../utils/constants';
 
 interface UseCalendarDataLoaderParams {
@@ -26,13 +13,13 @@ interface UseCalendarDataLoaderParams {
   onLoadAppointmentsInRange: (startDate: number, endDate: number, employeeIds?: number[]) => Promise<boolean>;
 }
 
-/**
- * Hook pour gérer le chargement progressif des rendez-vous
- * 
- * Stratégie:
- * 1. Chargement "soft" après arrêt du scroll/grab (seuils confortables)
- * 2. Chargement "hard" pendant le scroll continu (seuils critiques)
- */
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+const SOFT_THRESHOLD_BEFORE = (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE - 2) * MS_PER_WEEK;
+const SOFT_THRESHOLD_AFTER = (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER - 2) * MS_PER_WEEK;
+const HARD_THRESHOLD = 3 * 24 * 60 * 60 * 1000;
+const LOAD_BUFFER_BEFORE = INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * MS_PER_WEEK;
+const LOAD_BUFFER_AFTER = INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * MS_PER_WEEK;
+
 export const useCalendarDataLoader = ({
   visibleWindowStart,
   visibleWindowEnd,
@@ -41,104 +28,100 @@ export const useCalendarDataLoader = ({
   visibleEmployeeIds,
   onLoadAppointmentsInRange,
 }: UseCalendarDataLoaderParams): void => {
-
   const isLoadingRef = useRef(false);
-  const visibleWindowStartInitial = useRef(0);
-  const visibleWindowEndInitial = useRef(0);
-  const previousEmployeeIdsKey = useRef<string | null>(null);
-  const employeeIdsKey = useMemo(
-    () => [...new Set(visibleEmployeeIds)].sort((a, b) => a - b).join(','),
+  const loadedStartRef = useRef(0);
+  const loadedEndRef = useRef(0);
+  const loadedEmployeeIdsRef = useRef<Set<number>>(new Set());
+
+  const uniqueEmployeeIds = useMemo(
+    () => Array.from(new Set(visibleEmployeeIds)).sort((a, b) => a - b),
     [visibleEmployeeIds]
   );
+  const employeeIdsKey = useMemo(() => uniqueEmployeeIds.join(','), [uniqueEmployeeIds]);
 
-  // Fonction de chargement centralisée
-  const checkAndLoadData = useCallback((forceCriticalCheck = false, forceReload = false): boolean => {
+  const latestRef = useRef({
+    visibleWindowStart,
+    visibleWindowEnd,
+    uniqueEmployeeIds,
+    onLoadAppointmentsInRange,
+  });
+  latestRef.current = {
+    visibleWindowStart,
+    visibleWindowEnd,
+    uniqueEmployeeIds,
+    onLoadAppointmentsInRange,
+  };
+
+  const checkAndLoadData = useCallback((forceCriticalCheck = false): boolean => {
     if (isLoadingRef.current) return false;
 
-    // Configuration des seuils
-    const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
-    
-    // "Soft Threshold" (Zone de confort) : Utilisé quand on s'arrête
-    const SOFT_THRESHOLD_BEFORE = (INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE - 2) * MS_PER_WEEK;
-    const SOFT_THRESHOLD_AFTER = (INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER - 2) * MS_PER_WEEK;
+    const {
+      visibleWindowStart: winStart,
+      visibleWindowEnd: winEnd,
+      uniqueEmployeeIds: empIds,
+      onLoadAppointmentsInRange: loadFn,
+    } = latestRef.current;
 
-    // "Hard Threshold" (Zone critique) : Utilisé pendant le scroll continu
-    const HARD_THRESHOLD = 3 * 24 * 60 * 60 * 1000; 
+    if (empIds.length === 0 || (winStart === 0 && winEnd === 0)) return false;
 
-    // Choix du seuil selon le mode
     const thresholdBefore = forceCriticalCheck ? HARD_THRESHOLD : SOFT_THRESHOLD_BEFORE;
     const thresholdAfter = forceCriticalCheck ? HARD_THRESHOLD : SOFT_THRESHOLD_AFTER;
 
-    if (visibleEmployeeIds.length === 0) return false;
+    const isFirstLoad = loadedStartRef.current === 0;
+    const isOutOfBoundLeft = !isFirstLoad && winStart < loadedStartRef.current - thresholdBefore;
+    const isOutOfBoundRight = !isFirstLoad && winEnd > loadedEndRef.current + thresholdAfter;
 
-    // Première fenêtre : charger directement les employés actuellement virtualisés.
-    if (!forceReload && visibleWindowStartInitial.current === 0) {
-      visibleWindowStartInitial.current = visibleWindowStart;
-      visibleWindowEndInitial.current = visibleWindowEnd;
-      forceReload = true;
+    // Identifier uniquement les nouveaux employés non encore chargés sur cette plage
+    const missingEmployeeIds = empIds.filter((id) => !loadedEmployeeIdsRef.current.has(id));
+
+    if (!isFirstLoad && !isOutOfBoundLeft && !isOutOfBoundRight && missingEmployeeIds.length === 0) {
+      return false;
     }
 
-    // Vérification des limites
-    const isOutOfBoundLeft = visibleWindowStart < (visibleWindowStartInitial.current - thresholdBefore);
-    const isOutOfBoundRight = visibleWindowEnd > (visibleWindowEndInitial.current + thresholdAfter);
+    isLoadingRef.current = true;
 
-    if (forceReload || isOutOfBoundLeft || isOutOfBoundRight) {
-      //console.log(`Loading data... Mode: ${forceCriticalCheck ? 'CRITICAL' : 'SOFT_STOP'}`);
-      isLoadingRef.current = true;
+    const newLoadStart = isFirstLoad || isOutOfBoundLeft ? winStart - LOAD_BUFFER_BEFORE : loadedStartRef.current;
+    const newLoadEnd = isFirstLoad || isOutOfBoundRight ? winEnd + LOAD_BUFFER_AFTER : loadedEndRef.current;
+    const targetEmployees = isFirstLoad || isOutOfBoundLeft || isOutOfBoundRight ? empIds : missingEmployeeIds;
 
-      const LOAD_BUFFER_BEFORE = INITIAL_APPOINTMENTS_LOAD_WEEKS_BEFORE * MS_PER_WEEK;
-      const LOAD_BUFFER_AFTER = INITIAL_APPOINTMENTS_LOAD_WEEKS_AFTER * MS_PER_WEEK;
+    loadFn(newLoadStart, newLoadEnd, targetEmployees).finally(() => {
+      isLoadingRef.current = false;
+    });
 
-      const newLoadStart = visibleWindowStart - LOAD_BUFFER_BEFORE;
-      const newLoadEnd = visibleWindowEnd + LOAD_BUFFER_AFTER;
-
-      onLoadAppointmentsInRange(newLoadStart, newLoadEnd, visibleEmployeeIds).finally(() => {
-        isLoadingRef.current = false;
-      });
-
-      // Mise à jour optimiste
-      if (forceReload || isOutOfBoundLeft) visibleWindowStartInitial.current = newLoadStart;
-      if (forceReload || isOutOfBoundRight) visibleWindowEndInitial.current = newLoadEnd;
-
-      return true;
+    loadedStartRef.current = newLoadStart;
+    loadedEndRef.current = newLoadEnd;
+    for (let i = 0; i < targetEmployees.length; i++) {
+      loadedEmployeeIdsRef.current.add(targetEmployees[i]!);
     }
 
-    return false;
-  }, [visibleWindowStart, visibleWindowEnd, visibleEmployeeIds, onLoadAppointmentsInRange]);
+    return true;
+  }, []);
 
+  // Chargement initial et changement d'employés virtualisés (scroll vertical)
   useEffect(() => {
-    if (visibleEmployeeIds.length === 0 || (visibleWindowStart === 0 && visibleWindowEnd === 0)) return;
-
-    const employeeIdsChanged = previousEmployeeIdsKey.current !== employeeIdsKey;
-    if (!employeeIdsChanged && visibleWindowStartInitial.current !== 0) return;
+    if (!employeeIdsKey || (visibleWindowStart === 0 && visibleWindowEnd === 0)) return;
 
     const debounceTimer = window.setTimeout(() => {
-      const requestStarted = checkAndLoadData(false, employeeIdsChanged);
-      if (requestStarted) {
-        previousEmployeeIdsKey.current = employeeIdsKey;
-      }
+      checkAndLoadData(false);
     }, 150);
 
     return () => window.clearTimeout(debounceTimer);
-  }, [checkAndLoadData, employeeIdsKey, visibleEmployeeIds.length, visibleWindowStart, visibleWindowEnd]);
+  }, [employeeIdsKey, visibleWindowStart, visibleWindowEnd, checkAndLoadData]);
 
-  
   // SCÉNARIO A : Relâchement du grab
   const prevIsGrabbing = useRef(false);
   useEffect(() => {
     if (prevIsGrabbing.current && !isGrabbing) {
-      // L'utilisateur vient de lâcher la barre
-      checkAndLoadData(false); // Vérification standard (Soft)
+      checkAndLoadData(false);
     }
     prevIsGrabbing.current = isGrabbing;
   }, [isGrabbing, checkAndLoadData]);
 
-  // SCÉNARIO B : Arrêt du scroll (Flèches/Molette)
+  // SCÉNARIO B : Arrêt du scroll
   const prevIsScrolling = useRef(false);
   useEffect(() => {
     if (prevIsScrolling.current && !isScrolling && !isGrabbing) {
-      // L'utilisateur a arrêté de scroller
-      checkAndLoadData(false); // Vérification standard (Soft)       
+      checkAndLoadData(false);
     }
     prevIsScrolling.current = isScrolling;
   }, [isScrolling, isGrabbing, checkAndLoadData]);
@@ -146,8 +129,7 @@ export const useCalendarDataLoader = ({
   // SCÉNARIO C : Limite critique pendant le scroll
   useEffect(() => {
     if (isScrolling && !isGrabbing) {
-      // Vérification avec le mode "Critique" (seuils très courts)
-      checkAndLoadData(true); 
+      checkAndLoadData(true);
     }
   }, [visibleWindowStart, visibleWindowEnd, isScrolling, isGrabbing, checkAndLoadData]);
 };

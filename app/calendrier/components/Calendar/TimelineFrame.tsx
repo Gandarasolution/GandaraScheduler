@@ -1,77 +1,34 @@
-/**
- * @fileoverview Composant TimelineFrame - Cadre réutilisable pour la timeline
- * 
- * Ce composant fournit la structure et les en-têtes d'une timeline avec :
- * - En-tête des mois avec regroupement automatique
- * - En-tête des jours avec numéros de semaine
- * - Ligne verticale de la date actuelle
- * - Zone de contenu scrollable
- * - Gestion responsive et accessibilité
- * 
- * @component TimelineFrame
- * @author Gandara Solutions
- * @version 1.0.0
- */
-
 "use client";
 import React, { useMemo, ReactNode, memo, useEffect, useState, useRef, useCallback } from 'react';
 import { format, isToday, isWeekend } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CELL_WIDTH, TIMELINE_HEADERGROUPS_CELL_HEIGHT, TIMELINE_HEADERITEMS_CELL_HEIGHT } from '../../utils/constants';
 import FlexibleFrame from '../dnd/FlexibleFrame';
-import { getWeekNumber } from '../../utils/dates';
-import { isHoliday } from '../../utils/dates';
+import { getWeekNumber, isHoliday } from '../../utils/dates';
 import { useDayTypesContext } from '../../hooks/data/dayTypesContext';
 import { createPortal } from "react-dom";
 
-
-/**
- * Interface définissant les propriétés du composant TimelineFrame
- * @interface TimelineFrameProps
- */
 interface TimelineFrameProps {
-  /** Liste des dates à afficher dans la timeline (optionnel pour mode custom) */
   dayInTimeline?: number[];
-  /** Configuration des colonnes pour mode custom */
   columns?: {
-    /** Labels pour les groupes/catégories */
     groups: { label: string; span: number }[];
-    /** Labels pour les colonnes individuelles */
     items: string[];
   };
-  nonworkingDates?: Record<string, {Id: number; TypeJourCode: string }>; // Clé: date au format "yyyy-MM-dd"
-  /** Référence pour le scroll principal */
+  nonworkingDates?: Record<string, { Id: number; TypeJourCode: string }>;
   mainScrollRef: React.RefObject<HTMLDivElement | null>;
-  /** Gestionnaire d'événement scroll */
   onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
-  /** Contenu à afficher dans la zone principale (children) */
   children: ReactNode;
-  /** Classes CSS additionnelles pour le conteneur principal */
   className?: string;
-  /** Style inline pour le conteneur principal */
   style?: React.CSSProperties;
-  /** Couleur de la ligne de la date actuelle */
   todayLineColor?: string;
-  /** Afficher les en-têtes de groupes (défaut: true) */
   showGroupHeaders?: boolean;
-  /** Afficher les en-têtes d'items (défaut: true) */
   showItemHeaders?: boolean;
-  /** Classes CSS additionnelles pour la zone de contenu scrollable */
   contentClassName?: string;
-  /** Labels personnalisés pour les mois (remplace les vrais mois) - DEPRECATED: utilisez columns.groups */
   customMonthLabels?: string[];
-  /** Labels personnalisés pour les jours (remplace les dates) - DEPRECATED: utilisez columns.items */
   customDayLabels?: string[];
-  /** Utiliser des cellules de taille automatique au lieu de largeur fixe */
   useAutoCells?: boolean;
 }
 
-/**
- * Composant TimelineFrame - Cadre réutilisable pour timeline
- * 
- * @param {TimelineFrameProps} props - Propriétés du composant
- * @returns {JSX.Element} Structure timeline avec en-têtes et zone de contenu
- */
 const TimelineFrame: React.FC<TimelineFrameProps> = ({
   dayInTimeline,
   columns,
@@ -86,25 +43,32 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
   customDayLabels,
   useAutoCells = false
 }) => {
-
   const { DayTypes } = useDayTypesContext();
 
   const [hoveredHeaderTooltip, setHoveredHeaderTooltip] = useState<{
-    id: number;
+    day: number;
+    dayTypeLabel?: string;
+    isTodayDay: boolean;
     rect: DOMRect;
   } | null>(null);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    
+
+  // Indexation O(1) des DayTypes
+  const dayTypesMap = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof DayTypes>[number]>();
+    DayTypes?.forEach((dt) => map.set(dt.Id, dt));
+    return map;
+  }, [DayTypes]);
 
   const handleMouseEnterItemHeader = useCallback(
-    (itemHeaderId: number, e: React.MouseEvent<HTMLDivElement>) => {
+    (day: number, dayTypeLabel: string | undefined, isTodayDay: boolean, e: React.MouseEvent<HTMLDivElement>) => {
       const rect = e.currentTarget.getBoundingClientRect();
       if (tooltipTimeoutRef.current) {
         clearTimeout(tooltipTimeoutRef.current);
       }
 
       tooltipTimeoutRef.current = setTimeout(() => {
-        setHoveredHeaderTooltip({ id: itemHeaderId, rect });
+        setHoveredHeaderTooltip({ day, dayTypeLabel, isTodayDay, rect });
       }, 500);
     },
     []
@@ -126,15 +90,9 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
     };
   }, []);
 
-    
-  /**
-   * Calcule les groupes et leur portée pour l'en-tête
-   * @returns Liste des groupes avec leur portée
-   */
   const groupsInTimeline = useMemo(() => {
     const groups: { name: string; span: number; key: string }[] = [];
-    
-    // Mode colonnes personnalisées
+
     if (columns) {
       return columns.groups.map((group, index) => ({
         name: group.label,
@@ -142,33 +100,29 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
         key: `group-${index}`
       }));
     }
-    
-    // Mode avec dayInTimeline
+
     if (!dayInTimeline || dayInTimeline.length === 0) return groups;
 
-    // Si on a des labels personnalisés pour les mois, les utiliser
     if (customMonthLabels && customMonthLabels.length > 0) {
-      // Distribuer les jours équitablement entre les catégories
       const daysPerCategory = Math.ceil(dayInTimeline.length / customMonthLabels.length);
-      
+
       customMonthLabels.forEach((label, categoryIndex) => {
         const startIndex = categoryIndex * daysPerCategory;
         const endIndex = Math.min(startIndex + daysPerCategory, dayInTimeline.length);
         const span = endIndex - startIndex;
-        
+
         if (span > 0) {
           groups.push({
             name: label,
-            span: span,
+            span,
             key: `custom-${categoryIndex}`,
           });
         }
       });
-      
+
       return groups;
     }
 
-    // Logique standard pour les vrais mois
     let currentMonth = format(dayInTimeline[0], 'yyyy-MM', { locale: fr });
     let currentMonthStartDayIndex = 0;
 
@@ -194,32 +148,16 @@ const TimelineFrame: React.FC<TimelineFrameProps> = ({
     return groups;
   }, [dayInTimeline, customMonthLabels, columns]);
 
-  /**
-   * Calcule les items/colonnes pour l'en-tête
-   * @returns Liste des items à afficher
-   */
   const itemsInTimeline = useMemo(() => {
-    // Mode colonnes personnalisées
-    if (columns) {
-      return columns.items;
-    }
-    
-    // Mode avec dayInTimeline
+    if (columns) return columns.items;
     if (!dayInTimeline) return [];
-    
-    // Si on a des labels personnalisés pour les jours, les utiliser
-    if (customDayLabels && customDayLabels.length > 0) {
-      return customDayLabels;
-    }
-    
-    // Retourner les dates formatées
+    if (customDayLabels && customDayLabels.length > 0) return customDayLabels;
     return dayInTimeline.map(day => format(day, 'd', { locale: fr }));
   }, [dayInTimeline, customDayLabels, columns]);
 
-const computedHeaders = useMemo(() => {  
+  const computedHeaders = useMemo(() => {
     const headersConfig = [];
 
-    // Niveau 1: Groupes (Mois)
     if (showGroupHeaders) {
       headersConfig.push({
         show: true,
@@ -246,8 +184,9 @@ const computedHeaders = useMemo(() => {
       });
     }
 
-    // Niveau 2: Items (Jours)
     if (showItemHeaders) {
+      const ferieType = dayTypesMap.get('ferie');
+
       headersConfig.push({
         show: true,
         minHeight: TIMELINE_HEADERITEMS_CELL_HEIGHT,
@@ -271,42 +210,48 @@ const computedHeaders = useMemo(() => {
           if (!dayInTimeline || !dayInTimeline[index]) return { span: 1, key: `empty-${index}`, render: () => null };
 
           const day = dayInTimeline[index];
+          const todayDay = isToday(day);
           const holiday = isHoliday(day);
           const weekNumber = getWeekNumber(day);
           const dayKey = format(day, 'yyyy-MM-dd');
-          
-          // Détection du jour non-travaillé
-          const isNonWorking = nonworkingDates && nonworkingDates[dayKey];
 
-          const dayType = DayTypes?.find(dt => dt.Id === nonworkingDates?.[dayKey]?.TypeJourCode);
-          const isTooltipVisible = hoveredHeaderTooltip?.id === Number(day) && (nonworkingDates?.[dayKey]?.TypeJourCode || holiday || isToday(day));
+          const nonWorkingEntry = nonworkingDates?.[dayKey];
+          const dayType = nonWorkingEntry ? dayTypesMap.get(nonWorkingEntry.TypeJourCode) : undefined;
+          const hasTooltipInfo = Boolean(nonWorkingEntry?.TypeJourCode || holiday || todayDay);
 
           let backgroundColor = 'var(--bg-secondary)';
           let textColor = 'var(--text-primary)';
           let isItalic = false;
           let isBold = false;
 
-          if (isToday(day)) {
+          if (todayDay) {
             backgroundColor = 'var(--calendar-bg-today)';
           } else if (holiday) {
-            backgroundColor = `${DayTypes?.find(dt => dt.Id === 'ferie')?.CouleurFond || '#ffe0e0'}`;
-            textColor = `${DayTypes?.find(dt => dt.Id === 'ferie')?.CouleurTexte || 'var(--text-primary)'}`;
-            isItalic = DayTypes?.find(dt => dt.Id === 'ferie')?.isItalic || false;
-            isBold = DayTypes?.find(dt => dt.Id === 'ferie')?.isBold || false;
+            backgroundColor = ferieType?.CouleurFond || '#ffe0e0';
+            textColor = ferieType?.CouleurTexte || 'var(--text-primary)';
+            isItalic = ferieType?.isItalic || false;
+            isBold = ferieType?.isBold || false;
           } else if (isWeekend(day)) {
             backgroundColor = 'var(--calendar-bg-weekend)';
-          } else if (isNonWorking) {
-            backgroundColor = `${dayType?.CouleurFond || '#f9f9f9'}`;
-            textColor = `${dayType?.CouleurTexte || 'var(--text-primary)'}`;
+          } else if (nonWorkingEntry) {
+            backgroundColor = dayType?.CouleurFond || '#f9f9f9';
+            textColor = dayType?.CouleurTexte || 'var(--text-primary)';
             isItalic = dayType?.isItalic || false;
             isBold = dayType?.isBold || false;
           }
 
-          
+          const customLabelParts = customDayLabels?.[index]?.split(' ');
+          const dayNumberLabel = customLabelParts ? customLabelParts[0] : format(day, 'd', { locale: fr });
+          const rawDayName = customLabelParts
+            ? customLabelParts.slice(1).join(' ')
+            : format(day, 'EEE', { locale: fr }).replace('.', '');
+          const dayNameLabel = customLabelParts
+            ? rawDayName
+            : rawDayName.charAt(0).toUpperCase() + rawDayName.slice(1);
 
           return {
             span: 1,
-            key: `item-${index}-${isNonWorking ? 'nw' : 'w'}`,
+            key: `item-${index}-${nonWorkingEntry ? 'nw' : 'w'}`,
             style: {
               maxHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
               minHeight: `${TIMELINE_HEADERITEMS_CELL_HEIGHT}px`,
@@ -322,41 +267,16 @@ const computedHeaders = useMemo(() => {
                   relative day-cell
                 `}
                 style={{
-                  backgroundColor: backgroundColor,
+                  backgroundColor,
                   color: textColor,
                 }}
-                onMouseEnter={(e) => handleMouseEnterItemHeader(day, e)}
-                onMouseLeave={handleMouseLeaveItemHeader}
-
-              >
-                {isTooltipVisible && hoveredHeaderTooltip && typeof document !== 'undefined' &&
-                  createPortal(
-                    <div
-                      role="tooltip"
-                      style={{
-                        position: 'fixed',
-                        top: hoveredHeaderTooltip.rect.bottom - TIMELINE_HEADERITEMS_CELL_HEIGHT - 8,
-                        left: hoveredHeaderTooltip.rect.left + hoveredHeaderTooltip.rect.width / 2,
-                        transform: 'translate(-50%, -100%)',
-                      }}
-                      className="z-[9999] px-3 py-1.5 text-xs font-medium text-black bg-page rounded-lg shadow-lg pointer-events-none whitespace-nowrap"
-                    >
-                      <span className="font-semibold">
-                        {format(day, 'EEEE dd MMMM yyyy', { locale: fr })}
-                      </span>
-                      {isNonWorking && dayType && (
-                        <span className="block text-xs mt-1">{dayType.Libelle}</span>
-                      )}
-                      {isToday(day) && (
-                        <span className="block text-xs mt-1">Aujourd&apos;hui</span>
-                      )}
-
-                      {/* Flèche pointant vers le haut (vers la cellule d'en-tête) */}
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-200" />
-                    </div>,
-                    document.body
-                  )
+                onMouseEnter={
+                  hasTooltipInfo
+                    ? (e) => handleMouseEnterItemHeader(day, dayType?.Libelle, todayDay, e)
+                    : undefined
                 }
+                onMouseLeave={hasTooltipInfo ? handleMouseLeaveItemHeader : undefined}
+              >
                 {new Date(day).getDay() === 1 && (
                   <span
                     className="absolute -top-4 -left-3 z-30 rounded-full p-2 flex items-center justify-center text-white font-bold"
@@ -366,14 +286,8 @@ const computedHeaders = useMemo(() => {
                   </span>
                 )}
                 <div className="flex flex-col justify-center items-center h-full">
-                  <span className="block font-bold text-lg">
-                    {customDayLabels && customDayLabels[index] ? customDayLabels[index].split(' ')[0] : format(day, 'd', { locale: fr })}
-                  </span>
-                  <span className="block text-xs">
-                    {customDayLabels && customDayLabels[index]
-                      ? customDayLabels[index].split(' ').slice(1).join(' ')
-                      : format(day, 'EEE', { locale: fr }).charAt(0).toUpperCase() + format(day, 'EEE', { locale: fr }).slice(1).replace('.', '')}
-                  </span>
+                  <span className="block font-bold text-lg">{dayNumberLabel}</span>
+                  <span className="block text-xs">{dayNameLabel}</span>
                 </div>
               </div>
             )
@@ -383,24 +297,69 @@ const computedHeaders = useMemo(() => {
     }
 
     return headersConfig;
-  }, [showGroupHeaders, showItemHeaders, groupsInTimeline, itemsInTimeline, dayInTimeline, nonworkingDates, customDayLabels, columns, hoveredHeaderTooltip]);
+  }, [
+    showGroupHeaders,
+    showItemHeaders,
+    groupsInTimeline,
+    itemsInTimeline,
+    dayInTimeline,
+    nonworkingDates,
+    customDayLabels,
+    columns,
+    dayTypesMap,
+    handleMouseEnterItemHeader,
+    handleMouseLeaveItemHeader,
+  ]);
 
+  const gridConfig = useMemo(
+    () => ({
+      mode: useAutoCells ? ('auto' as const) : ('fixed' as const),
+      columns: itemsInTimeline.length,
+      cellWidth: CELL_WIDTH,
+      minColumnWidth: CELL_WIDTH,
+    }),
+    [useAutoCells, itemsInTimeline.length]
+  );
 
   return (
-    <FlexibleFrame
-      mainRef={mainScrollRef}
-      onScroll={onScroll}
-      className={contentClassName}
-      gridConfig={{
-        mode: useAutoCells ? 'auto' : 'fixed',
-        columns: itemsInTimeline.length,
-        cellWidth: CELL_WIDTH,
-        minColumnWidth: CELL_WIDTH
-      }}
-      headers={computedHeaders}
-    >
-      {children}
-    </FlexibleFrame>
+    <>
+      <FlexibleFrame
+        mainRef={mainScrollRef}
+        onScroll={onScroll}
+        className={contentClassName}
+        gridConfig={gridConfig}
+        headers={computedHeaders}
+      >
+        {children}
+      </FlexibleFrame>
+
+      {hoveredHeaderTooltip &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            role="tooltip"
+            style={{
+              position: 'fixed',
+              top: hoveredHeaderTooltip.rect.bottom - TIMELINE_HEADERITEMS_CELL_HEIGHT - 8,
+              left: hoveredHeaderTooltip.rect.left + hoveredHeaderTooltip.rect.width / 2,
+              transform: 'translate(-50%, -100%)',
+            }}
+            className="z-[9999] px-3 py-1.5 text-xs font-medium text-black bg-page rounded-lg shadow-lg pointer-events-none whitespace-nowrap"
+          >
+            <span className="font-semibold">
+              {format(hoveredHeaderTooltip.day, 'EEEE dd MMMM yyyy', { locale: fr })}
+            </span>
+            {hoveredHeaderTooltip.dayTypeLabel && (
+              <span className="block text-xs mt-1">{hoveredHeaderTooltip.dayTypeLabel}</span>
+            )}
+            {hoveredHeaderTooltip.isTodayDay && (
+              <span className="block text-xs mt-1">Aujourd&apos;hui</span>
+            )}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-200" />
+          </div>,
+          document.body
+        )}
+    </>
   );
 };
 

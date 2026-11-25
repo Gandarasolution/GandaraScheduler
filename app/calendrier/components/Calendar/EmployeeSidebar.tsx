@@ -1,15 +1,4 @@
-/**
- * @fileoverview Composant EmployeeSidebar - Colonne de gauche du calendrier
- *
- * Affiche la liste hiérarchique des employés groupés avec:
- * - Sélecteur de configuration de calendrier
- * - Groupes repliables/dépliables
- * - Sous-groupes repliables/dépliables
- * - Liste des employés avec avatars
- * - Indicateurs d'état (intérim, inactif)
- */
-
-import React, { CSSProperties, memo, useEffect, useRef, useState } from 'react';
+import React, { CSSProperties, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, CalendarConfig } from '../../types';
 import CustomSelectWithImage, { SelectOptionWithImage } from '../ui/CustomSelectWithImage';
@@ -31,8 +20,8 @@ interface EmployeeSidebarProps {
   dimensionItems: HierarchicalGroupItem[];
   employeesByDimension: Record<string | number, User[]>;
   flatRows: FlatRow[];
-  visibleRows?: any[]; // Reçu du DesktopCalendarGrid
-  totalContentHeight?: number; // Reçu du DesktopCalendarGrid
+  visibleRows?: any[];
+  totalContentHeight?: number;
   openItems: (string | number)[];
   expandedOverlapRows: Record<number, boolean>;
   hiddenOverlapCounts: Record<number, number>;
@@ -50,7 +39,24 @@ interface EmployeeSidebarProps {
   overlappingEmployeeIds: Set<number>;
 }
 
-const CustomArrow = ({ isOpen, small = false }: { isOpen: boolean; small?: boolean }) => (
+const CALENDAR_ILLUSTRATION_SVG = (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 80 80" width="25" height="25">
+    <defs>
+      <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#00c6ff" />
+        <stop offset="100%" stopColor="#0072ff" />
+      </linearGradient>
+      <linearGradient id="gradPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#8e2de2" />
+        <stop offset="100%" stopColor="#4a00e0" />
+      </linearGradient>
+    </defs>
+    <path d="M20 40 Q50 10 80 40 L60 50 Q40 60 20 40 Z" fill="url(#gradBlue)" />
+    <path d="M20 60 Q50 90 80 60 L60 50 Q40 40 20 60 Z" fill="url(#gradPurple)" />
+  </svg>
+);
+
+const CustomArrow = memo(({ isOpen, small = false }: { isOpen: boolean; small?: boolean }) => (
   <div className={`flex items-center justify-center flex-shrink-0 ${small ? 'w-4 h-4' : 'w-5 h-5'}`}>
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -66,7 +72,8 @@ const CustomArrow = ({ isOpen, small = false }: { isOpen: boolean; small?: boole
       />
     </svg>
   </div>
-);
+));
+CustomArrow.displayName = 'CustomArrow';
 
 const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   dimensionItems,
@@ -96,13 +103,12 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
   } | null>(null);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleMouseEnterEmployee = (
+  const handleMouseEnterEmployee = useCallback((
     employeeId: number,
     e: React.MouseEvent<HTMLDivElement>
   ) => {
     const rect = e.currentTarget.getBoundingClientRect();
 
-    // Annule un éventuel timer précédent par sécurité
     if (tooltipTimeoutRef.current) {
       clearTimeout(tooltipTimeoutRef.current);
     }
@@ -110,17 +116,16 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     tooltipTimeoutRef.current = setTimeout(() => {
       setHoveredTooltipEmployee({ id: employeeId, rect });
     }, 500);
-  };
+  }, []);
 
-  const handleMouseLeaveEmployee = () => {
+  const handleMouseLeaveEmployee = useCallback(() => {
     if (tooltipTimeoutRef.current) {
       clearTimeout(tooltipTimeoutRef.current);
       tooltipTimeoutRef.current = null;
     }
     setHoveredTooltipEmployee(null);
-  };
+  }, []);
 
-  // Nettoyage du timer si le composant est démonté
   useEffect(() => {
     return () => {
       if (tooltipTimeoutRef.current) {
@@ -129,11 +134,39 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     };
   }, []);
 
-  const selectOptions: SelectOptionWithImage[] = availableConfigs.map((config) => ({
-    id: config.IdPlanningVue,
-    name: config.LibellePlanningVue,
-    value: config.IdPlanningVue,
-  }));
+  // Indexation O(1) des hauteurs par employé (évite flatRows.find en O(N²))
+  const rowHeightByEmployeeId = useMemo(() => {
+    const map = new Map<number, number>();
+    for (let i = 0; i < flatRows.length; i++) {
+      const row = flatRows[i]!;
+      if (row.type === 'employee') {
+        map.set(Number(row.id), row.height);
+      }
+    }
+    return map;
+  }, [flatRows]);
+
+  const openItemsSet = useMemo(() => new Set(openItems), [openItems]);
+
+  const selectOptions = useMemo<SelectOptionWithImage[]>(
+    () =>
+      availableConfigs.map((config) => ({
+        id: config.IdPlanningVue,
+        name: config.LibellePlanningVue,
+        value: config.IdPlanningVue,
+      })),
+    [availableConfigs]
+  );
+
+  const handleConfigSelect = useCallback(
+    (value: string | number) => {
+      const selectedConfig = availableConfigs.find((config) => config.IdPlanningVue === value);
+      if (selectedConfig) {
+        onCalendarConfigChange(selectedConfig);
+      }
+    },
+    [availableConfigs, onCalendarConfigChange]
+  );
 
   const stickyTop = TIMELINE_HEADERGROUPS_CELL_HEIGHT + CONTAINER_PADDING;
 
@@ -143,22 +176,17 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
     indentLevel: 0 | 1 = 0,
     item: HierarchicalGroupItem | null = null
   ) => {
-    const employeeRow = flatRows.find(
-      (row) => row.type === 'employee' && Number(row.id) === Number(employee.IdPersonnel)
-    );
-
-    const employeeRowHeight = employeeRow?.height ?? CELL_HEIGHT;
+    const employeeId = Number(employee.IdPersonnel);
+    const employeeRowHeight = rowHeightByEmployeeId.get(employeeId) ?? CELL_HEIGHT;
     const isInactive = employee.Actif === false;
-    const hasOverlapInWindow = overlappingEmployeeIds.has(Number(employee.IdPersonnel));
-    const isTooltipVisible = hoveredTooltipEmployee?.id === Number(employee.IdPersonnel);
+    const hasOverlapInWindow = overlappingEmployeeIds.has(employeeId);
+    const isTooltipVisible = hoveredTooltipEmployee?.id === employeeId;
 
-    // Vérification centralisée du verrou par un autre utilisateur
     const isLockedByOther = Boolean(
       employee.isLocked?.status &&
         Number(employee.isLocked.updatedById) !== Number(user?.IdPersonnel)
     );
 
-    // Formatage de l'heure d'expiration du verrou (timestamp en ms)
     const lockExpirationTime =
       isLockedByOther && employee.isLocked?.expiresAt
         ? new Date(employee.isLocked.expiresAt).toLocaleTimeString('fr-FR', {
@@ -178,7 +206,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
           paddingLeft: indentLevel === 1 ? 32 : 16,
           paddingRight: 12,
         }}
-        onMouseEnter={(e) => handleMouseEnterEmployee(Number(employee.IdPersonnel), e)}
+        onMouseEnter={(e) => handleMouseEnterEmployee(employeeId, e)}
         onMouseLeave={handleMouseLeaveEmployee}
       >
         {isTooltipVisible &&
@@ -214,7 +242,6 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                 </div>
               )}
 
-              {/* Flèche positionnée juste sous le tooltip */}
               <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900" />
             </div>,
             document.body
@@ -315,7 +342,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
 
   const renderLevel2Group = (child: HierarchicalGroupItem, parentIndex: number) => {
     const childKey = getDimensionItemKey(child.id);
-    const childOpen = openItems.includes(childKey);
+    const childOpen = openItemsSet.has(childKey);
     const childEmployees = employeesByDimension[String(child.id)] || [];
 
     if (childEmployees.length === 0) return null;
@@ -341,7 +368,6 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <span className="block w-2 h-2 rounded-full bg-[#00957f] flex-shrink-0" />
-
               <span className="poppins text-[14px] font-semibold truncate text-primary">
                 {child.name}
               </span>
@@ -384,36 +410,8 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
             <CustomSelectWithImage
               options={selectOptions}
               value={calendarConfig.IdPlanningVue}
-              onChange={(value) => {
-                const selectedConfig = availableConfigs.find(
-                  (config) => config.IdPlanningVue === value
-                );
-
-                if (selectedConfig) {
-                  onCalendarConfigChange(selectedConfig);
-                }
-              }}
-              illustrationImage={
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="10 10 80 80"
-                  width="25"
-                  height="25"
-                >
-                  <defs>
-                    <linearGradient id="gradBlue" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#00c6ff" />
-                      <stop offset="100%" stopColor="#0072ff" />
-                    </linearGradient>
-                    <linearGradient id="gradPurple" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#8e2de2" />
-                      <stop offset="100%" stopColor="#4a00e0" />
-                    </linearGradient>
-                  </defs>
-                  <path d="M20 40 Q50 10 80 40 L60 50 Q40 60 20 40 Z" fill="url(#gradBlue)" />
-                  <path d="M20 60 Q50 90 80 60 L60 50 Q40 40 20 60 Z" fill="url(#gradPurple)" />
-                </svg>
-              }
+              onChange={handleConfigSelect}
+              illustrationImage={CALENDAR_ILLUSTRATION_SVG}
               placeholder="Sélectionner un calendrier"
               customArrow={<CustomArrow isOpen={false} />}
               className="py-3 px-4 w-full"
@@ -425,7 +423,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
       {/* Groupes niveau 1 */}
       {dimensionItems.map((item, index) => {
         const itemKey = getDimensionItemKey(item.id);
-        const isOpen = openItems.includes(itemKey);
+        const isOpen = openItemsSet.has(itemKey);
         const itemEmployees = employeesByDimension[String(item.id)] || [];
         const hasChildren = Boolean(item.children?.length);
 
@@ -452,7 +450,6 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                 zIndex: 10,
               }}
             >
-              {/* Masques de fond pour la zone sticky */}
               <div className="absolute top-0 -left-[1px] w-8 h-8 bg-page" />
               <div className="absolute top-0 -right-[1px] w-8 h-8 bg-page" />
 
@@ -487,10 +484,7 @@ const EmployeeSidebar: React.FC<EmployeeSidebarProps> = ({
                       renderEmployee(employee, String(item.id), 0, item)
                     )}
 
-                {/* 4. Footer */}
                 <div className="relative z-20 w-full h-5 bg-primary border-b border-l border-r border-default rounded-b-4xl overflow-hidden" />
-
-                {/* Masques extérieurs placés juste en dessous pour cacher les excédents sur les côtés */}
                 <div className="absolute bottom-0 -left-[1px] w-6 h-5 bg-page z-10 pointer-events-none" />
                 <div className="absolute bottom-0 -right-[1px] w-6 h-5 bg-page z-10 pointer-events-none" />
               </>
