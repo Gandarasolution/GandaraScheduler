@@ -100,7 +100,7 @@ export default function Home() {
   // ==============================================================
   const renderStep = () => {
     // ÉTAPE 0 : Non connecté
-    if (!isAuthenticated || !user) return <LoginPage login={login} />;
+    if ((!isAuthenticated || !user)) return <LoginPage login={login} />;
 
     // ÉTAPE 1 : Choix du Planning (S'il y en a plusieurs)
     if (UserPlanning.length > 1 && currentPlanningId === -1) {
@@ -149,11 +149,9 @@ export default function Home() {
     return null;
   };
 
-  return (
-    <>
-      {/* Overlay de blocage en mode paysage (uniquement sur smartphone, pas sur tablette) */}
-      {(isMobile || (isTablet && !hasPermission(229, 3))) && (
-        <div
+  if (isMobile || (isTablet && !hasPermission(229, 3))) {
+    return (
+      <div
           className="portrait-only-overlay fixed inset-0 z-[10000] flex-col items-center justify-center p-6 text-center select-none"
           style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
         >
@@ -178,8 +176,11 @@ export default function Home() {
             Veuillez pivoter votre téléphone à la verticale pour utiliser l'application.
           </p>
         </div>
-      )}
+    )
+  }
 
+  return (
+    <>
       {renderStep()}
     </>
   );
