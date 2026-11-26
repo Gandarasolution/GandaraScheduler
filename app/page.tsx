@@ -149,11 +149,18 @@ export default function Home() {
     return null;
   };
 
-  if (isMobile || (isTablet && !hasPermission(229, 3))) {
-    return (
-      <div
-          className="portrait-only-overlay fixed inset-0 z-[10000] flex-col items-center justify-center p-6 text-center select-none"
-          style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
+  const shouldBlockLandscape = isMobile || (isTablet && !hasPermission(229, 3));
+
+  return (
+    <>
+      {/* Overlay de blocage en mode paysage (actif aussi sur le login) */}
+      {shouldBlockLandscape && (
+        <div
+          className="portrait-only-overlay fixed inset-0 z-[10000] hidden landscape:flex flex-col items-center justify-center p-6 text-center select-none"
+          style={{
+            backgroundColor: 'var(--bg-card, #ffffff)',
+            color: 'var(--text-primary, #1d1d1b)',
+          }}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -166,22 +173,22 @@ export default function Home() {
             strokeLinecap="round"
             strokeLinejoin="round"
             className="mb-4 animate-bounce"
-            style={{ color: 'var(--color-primary-500)' }}
+            style={{ color: 'var(--color-primary-500, #3b82f6)' }}
           >
             <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
             <path d="M12 18h.01" />
           </svg>
           <h2 className="text-lg font-bold mb-2">Mode portrait uniquement</h2>
-          <p className="text-sm max-w-xs" style={{ color: 'var(--text-secondary)' }}>
-            Veuillez pivoter votre téléphone à la verticale pour utiliser l'application.
+          <p className="text-sm max-w-xs" style={{ color: 'var(--text-secondary, #6b7280)' }}>
+            Veuillez pivoter votre appareil à la verticale pour utiliser l'application.
           </p>
         </div>
-    )
-  }
+      )}
 
-  return (
-    <>
-      {renderStep()}
+      {/* Masque complètement le login et l'app en paysage quand le blocage est actif */}
+      <div className={shouldBlockLandscape ? 'landscape:hidden' : undefined}>
+        {renderStep()}
+      </div>
     </>
   );
 }
