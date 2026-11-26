@@ -112,7 +112,7 @@ export default function LoginPage({ login }: LoginPageProps) {
       {/* PARTIE DROITE : Bandeau de connexion */}
       <div
         className="w-full lg:w-[460px] xl:w-[520px] shrink-0 h-full
-        flex flex-col overflow-y-auto overscroll-none
+        flex flex-col justify-between overflow-y-auto overscroll-none
         px-6 pt-12 pb-8 sm:px-12 lg:pt-14 lg:pb-10
         lg:border-l border-light shadow-2xl z-10"
         style={{ backgroundColor: 'var(--bg-card)' }}
@@ -233,12 +233,12 @@ export default function LoginPage({ login }: LoginPageProps) {
         </div>
 
         {/* PIED DE PAGE : Logo Gandara Solution */}
-        <div className="mt-auto pt-14 pb-6 flex flex-col items-center justify-center shrink-0">
+        <div className="mb-15 mt-auto pt-8 pb-2 flex flex-col items-center justify-center shrink-0">          
           <svg
             id="Calque_1"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="42 52 200 68"
-            className="h-11 w-auto opacity-85 hover:opacity-100 transition-opacity"
+            className="h-20 w-auto opacity-85 hover:opacity-100 transition-opacity"
             style={{ color: 'var(--text-primary, #1d1d1b)' }}
             aria-label="Gandara Solution"
           >
