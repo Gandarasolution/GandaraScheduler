@@ -91,33 +91,9 @@ export default function LoginPage({ login }: LoginPageProps) {
     }
   };
 
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-
-    const handleViewportResize = () => {
-      const active = document.activeElement;
-      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
-        active.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    };
-
-    viewport.addEventListener('resize', handleViewportResize);
-    return () => viewport.removeEventListener('resize', handleViewportResize);
-  }, []);
-
-  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    const target = e.currentTarget;
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 150);
-    });
-  };
-
   return (
     <div
-      className="h-dvh w-full flex overflow-hidden"
+      className="fixed inset-0 w-full h-full flex overflow-hidden"
       style={{ backgroundColor: 'var(--bg-primary-500)' }}
     >
       {/* PARTIE GAUCHE : Image plein écran */}
@@ -132,7 +108,7 @@ export default function LoginPage({ login }: LoginPageProps) {
 
       {/* PARTIE DROITE : Bandeau de connexion */}
       <div
-        className="w-full lg:w-[460px] xl:w-[520px] shrink-0 h-full flex flex-col overflow-y-auto overscroll-contain px-6 pt-12 pb-8 sm:px-12 lg:pt-14 lg:pb-10 lg:border-l border-light shadow-2xl z-10"
+        className="w-full lg:w-[460px] xl:w-[520px] shrink-0 h-full flex flex-col overflow-y-auto overscroll-none px-6 pt-12 pb-8 sm:px-12 lg:pt-14 lg:pb-10 lg:border-l border-light shadow-2xl z-10"
         style={{ backgroundColor: 'var(--bg-card)' }}
       >
         <div className="w-full max-w-sm mx-auto">
@@ -169,15 +145,14 @@ export default function LoginPage({ login }: LoginPageProps) {
                   autoComplete="organization"
                   value={companyCode}
                   onChange={(e) => setCompanyCode(e.target.value)}
-                  onFocus={handleInputFocus}
                   required
                   placeholder="Ex: gandara-dev"
                   className="w-full min-h-11 px-4 py-2.5 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
                   style={{ backgroundColor: 'var(--bg-primary-500)', color: 'var(--text-primary)' }}
                 />
-                {/* <p className="text-xs text-tertiary mt-2 poppins">
+                <p className="text-xs text-tertiary mt-2 poppins">
                   Entrez le code fourni par votre administrateur pour accéder à votre environnement.
-                </p> */}
+                </p>
               </div>
             )}
 
@@ -191,7 +166,6 @@ export default function LoginPage({ login }: LoginPageProps) {
                 autoComplete="username"
                 value={formData.login}
                 onChange={(e) => setFormData({ ...formData, login: e.target.value })}
-                onFocus={handleInputFocus}
                 required
                 placeholder="Votre identifiant"
                 className="w-full min-h-11 px-4 py-2.5 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
@@ -210,7 +184,6 @@ export default function LoginPage({ login }: LoginPageProps) {
                   autoComplete="current-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  onFocus={handleInputFocus}
                   required
                   placeholder="••••••••"
                   className="w-full min-h-11 pl-4 pr-12 py-2.5 border border-default rounded-lg focus:outline-none focus:ring-2 ring-color focus:border-primary transition-all poppins text-base"
@@ -254,12 +227,12 @@ export default function LoginPage({ login }: LoginPageProps) {
         </div>
 
         {/* PIED DE PAGE : Logo Gandara Solution */}
-        <div className="mt-30 pt-14 pb-6 flex flex-col items-center justify-center shrink-0">
+        <div className="mt-auto pt-14 pb-6 flex flex-col items-center justify-center shrink-0">
           <svg
             id="Calque_1"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="42 52 200 68"
-            className="h-20 w-auto opacity-85 hover:opacity-100 transition-opacity"
+            className="h-11 w-auto opacity-85 hover:opacity-100 transition-opacity"
             style={{ color: 'var(--text-primary, #1d1d1b)' }}
             aria-label="Gandara Solution"
           >
