@@ -253,6 +253,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: true };
 
     } else {
+      Cookies.remove('client_mercure_url');
+      Cookies.remove('client_api_url');
+      localStorage.removeItem('client_logo_url');
       return { success: false };
     }
   };

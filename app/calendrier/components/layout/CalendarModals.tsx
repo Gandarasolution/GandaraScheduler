@@ -360,7 +360,7 @@ export const CalendarModals = memo(({
             canEdit: hasPermission(172, 3),
             canDelete: hasPermission(172, 3),
             canAdd: hasPermission(172, 3),
-            initialTeams, // <-- Ajouté ici depuis useDataLayer()
+            initialTeams,
             onAddTeam: addTeam,
             onUpdateTeam: updateTeam,
             onDeleteTeam: deleteTeam,
@@ -534,13 +534,17 @@ export const CalendarModals = memo(({
     if (modalsState.selectedAppointmentForm) {
       if (resourceEditMode === 'createRessource') return "Création de la ressource";
       if (resourceEditMode === 'editRessource') {
-        return `Modification de la ressource ${
+        return `Modification  ${
           data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.Type === 'Projet'
-            ? ` - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource}`
-            : ''
+            ? `du chantier - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource}`
+            : 'de la ressource'
         }`;
       }
-      return `Modifier l'Évènement - ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource || 'Ressource inconnue'}`;
+      return `Modifier l'Évènement ${
+        data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.Type === 'Projet'
+          ? `- ${data.items[Number(modalsState.selectedAppointmentForm?.IdPlanningRessource)]?.CodePlanningRessource || 'Chantier inconnue'}`
+          : ''
+      }`;
     }
     return "Ajouter un rendez-vous";
   };

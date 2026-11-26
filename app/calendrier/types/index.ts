@@ -141,6 +141,8 @@ export interface ChantierItem extends BaseItem {
   AdresseChantier: string;
   ChargeAffaire: string;
   ChefChantier: string;
+  NumeroChargeAffaire: string;
+  NumeroChefChantier: string;
   DateOS: string;
   DateFin: string;
   TM: number;

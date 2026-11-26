@@ -145,7 +145,7 @@ export function Combobox(props: ComboboxProps) {
   const handleInputFocus = () => {
     if (!disabled) setIsOpen(true);
   };
-
+  
   return (
     <div ref={containerRef} className="relative space-y-2">
       {/* Champ de recherche */}

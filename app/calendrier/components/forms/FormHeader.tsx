@@ -1,104 +1,44 @@
-/**
- * @fileoverview Composant générique pour l'en-tête de formulaire
- * Gère l'icône, les couleurs et les champs de création/édition de ressource
- * 
- * @component FormHeader
- * @version 1.0.0
- * @remarks Composant agnostique du métier, réutilisable dans n'importe quel contexte
- */
-
 "use client";
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { ColorHexInput } from '../ui';
 
-/**
- * Configuration des couleurs personnalisables
- */
 export interface ColorConfig {
-  /** Couleur de fond */
   background?: string;
-  /** Couleur de bordure */
   border?: string;
-  /** Couleur de texte */
   text?: string;
 }
 
-/**
- * Champ de ressource générique
- */
 export interface ResourceField {
-  /** Nom du champ */
   name: string;
-  /** Label affiché */
   label: string;
-  /** Type de champ (text, checkbox, etc.) */
   type: 'text' | 'checkbox';
-  /** Valeur actuelle */
   value: string | boolean;
-  /** Placeholder pour les inputs texte */
   placeholder?: string;
-  /** Contrainte required */
   required?: boolean;
-  /** Largeur en fraction (1/2, 1/3, etc.) */
   width?: string;
-  /** Message d'erreur */
   error?: string;
 }
 
 export interface FormHeaderProps {
-  /** Configuration de l'icône */
-  icon?: string
-  /** Callback pour ouvrir la modal d'image */
+  icon?: string;
   onIconClick?: () => void;
-  /** Autorise la modification de l'image */
   canEditImage?: boolean;
-  /** Configuration des couleurs */
   colors: ColorConfig;
-  /** Callback pour changement de couleur */
   onColorChange: (colorType: 'background' | 'border' | 'text', value: string) => void;
-  /** Champs de ressource (uniquement si mode création/édition) */
   resourceFields?: ResourceField[];
-  /** Callback pour changement de champ ressource */
   onResourceFieldChange?: (fieldName: string, value: string | boolean) => void;
-  /** Mode mobile (affecte le comportement du clic sur l'icône) */
   isMobile?: boolean;
 }
 
-/**
- * Normalise une couleur en format hexadécimal court (#RRGGBB)
- */
-const normalizeColorForInput = (color: string | undefined, fallback: string = '#1E40AF'): string => {
-  if (!color) return fallback;
-  // Si la couleur a 9 caractères (#RRGGBBAA), on retire les 2 derniers (canal alpha)
-  if (color.length === 9 && color.startsWith('#')) {
-    return color.substring(0, 7);
-  }
-  return color;
+const WIDTH_CLASS_MAP: Record<string, string> = {
+  '1/2': 'w-1/2',
+  '1/3': 'w-1/3',
+  '1/4': 'w-1/4',
+  '1/6': 'w-1/6',
+  full: 'w-full',
 };
 
-/**
- * Composant FormHeader - En-tête de formulaire avec icône et couleurs
- * 
- * Ce composant est complètement agnostique du métier et peut être utilisé
- * dans n'importe quel contexte nécessitant une gestion d'icône, de couleurs
- * et de champs personnalisés.
- * 
- * @example
- * ```tsx
- * <FormHeader
- *   icon={{ src: imageUrl, alt: "Icône" }}
- *   onIconClick={() => openImageModal()}
- *   colors={{ background: '#1E40AF', border: '#1E40AF', text: '#FFFFFF' }}
- *   onColorChange={(type, value) => updateColor(type, value)}
- *   resourceFields={[
- *     { name: 'code', label: 'Code', type: 'text', value: 'CH', width: '1/3' },
- *     { name: 'active', label: 'Actif', type: 'checkbox', value: true, width: '1/6' }
- *   ]}
- *   onResourceFieldChange={(name, value) => updateField(name, value)}
- * />
- * ```
- */
-export const FormHeader: React.FC<FormHeaderProps> = ({
+export const FormHeader: React.FC<FormHeaderProps> = memo(({
   icon,
   onIconClick,
   canEditImage = true,
@@ -108,14 +48,17 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
   onResourceFieldChange,
   isMobile = false,
 }) => {
+  const handleBgChange = useCallback((val: string) => onColorChange('background', val), [onColorChange]);
+  const handleBorderChange = useCallback((val: string) => onColorChange('border', val), [onColorChange]);
+  const handleTextChange = useCallback((val: string) => onColorChange('text', val), [onColorChange]);
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Champs de ressource (si présents) */}
       {resourceFields && resourceFields.length > 0 && (
         <div className="flex flex-col gap-3">
           <div className="flex gap-3">
             {resourceFields.map((field) => (
-              <div key={field.name} className={`w-${field.width || 'full'}`}>
+              <div key={field.name} className={WIDTH_CLASS_MAP[field.width || 'full'] || 'w-full'}>
                 <label htmlFor={field.name} className="block text-xs font-medium text-gray-500 mb-1">
                   {field.label}
                 </label>
@@ -133,9 +76,7 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
                       }`}
                       required={field.required}
                     />
-                    {field.error && (
-                      <p className="text-xs text-red-500 mt-1">{field.error}</p>
-                    )}
+                    {field.error && <p className="text-xs text-red-500 mt-1">{field.error}</p>}
                   </>
                 ) : field.type === 'checkbox' ? (
                   <input
@@ -154,30 +95,29 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
         </div>
       )}
 
-      {/* Section Icône et Couleurs */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mr-2">
         <div className="flex items-start w-full sm:w-[68px]">Icône</div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
-          {/* Container pour l'image */}
-          <div 
-            className="relative group"
+          <div
+            className={`relative group ${canEditImage ? 'cursor-pointer' : ''}`}
             onClick={() => {
-              if (canEditImage && isMobile && onIconClick) onIconClick();
+              if (canEditImage && onIconClick) onIconClick();
             }}
           >
             {icon ? (
               <img
                 src={icon}
+                alt="Icône de la ressource"
                 className="w-12 h-12 object-cover rounded border border-default flex-shrink-0"
               />
             ) : (
               <div className="w-12 h-12 rounded border border-default bg-gray-200 flex items-center justify-center text-gray-400">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  strokeWidth={2} 
-                  stroke="currentColor" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
                   className="w-6 h-6"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -187,53 +127,48 @@ export const FormHeader: React.FC<FormHeaderProps> = ({
             {canEditImage && (
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (!isMobile && onIconClick) onIconClick();
                 }}
                 className="absolute -top-1 -right-1 w-4 h-4 bg-primary-500 text-white rounded-full flex items-center justify-center text-[10px] hover:bg-primary-500 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-sm cursor-pointer"
                 title="Modifier l'image"
               >
                 <svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L10.5 8.207l-3-3L12.146.146zM11.207 9L8 5.793 1.146 12.646a.5.5 0 0 0-.146.354v2.5a.5.5 0 0 0 .5.5h2.5a.5.5 0 0 0 .354-.146L11.207 9zM4 15.5a.5.5 0 0 1-.5-.5v-2.293l8.5-8.5L14.293 6.5 5.793 15H4z"/>
+                  <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L10.5 8.207l-3-3L12.146.146zM11.207 9L8 5.793 1.146 12.646a.5.5 0 0 0-.146.354v2.5a.5.5 0 0 0 .5.5h2.5a.5.5 0 0 0 .354-.146L11.207 9zM4 15.5a.5.5 0 0 1-.5-.5v-2.293l8.5-8.5L14.293 6.5 5.793 15H4z" />
                 </svg>
               </button>
             )}
           </div>
 
-          {/* Sélecteurs de couleur */}
           <div className="flex flex-col gap-2 w-full">
-            {/* Couleur de fond */}
             <ColorHexInput
               id="default-color-fond"
               label="Couleur de fond"
               value={colors.background}
               fallbackColor="#1E40AF"
-              onChange={(val) => onColorChange('background', val)}
+              onChange={handleBgChange}
             />
-
-            {/* Couleur de bordure */}
             <ColorHexInput
               id="default-color-bordure"
               label="Couleur de bordure"
               value={colors.border}
               fallbackColor="#1E40AF"
-              onChange={(val) => onColorChange('border', val)}
+              onChange={handleBorderChange}
             />
-
-            {/* Couleur de texte */}
             <ColorHexInput
               id="default-color-texte"
               label="Couleur de texte"
               value={colors.text}
               fallbackColor="#FFFFFF"
-              onChange={(val) => onColorChange('text', val)}
+              onChange={handleTextChange}
             />
           </div>
         </div>
       </div>
     </div>
   );
-};
+});
 
 export default FormHeader;
 

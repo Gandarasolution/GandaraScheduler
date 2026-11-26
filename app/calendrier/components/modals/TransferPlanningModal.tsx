@@ -6,6 +6,7 @@ import type { User } from "@/app/calendrier/types";
 import Modal from "./Modal";
 import { Loader } from "../..";
 import Combobox, { type ComboboxOption } from "../ui/Combobox";
+import { UserCheck, UserX } from "lucide-react";
 
 type TransferPlanningModalProps = {
   isOpen: boolean;
@@ -113,6 +114,12 @@ export default function TransferPlanningModal({
       targetEmployees.map((emp) => ({
         value: String(emp.IdPersonnel),
         label: `${emp.Nom}`,
+        isActif: emp.Actif !== false,
+        icon: emp.Actif !== false ? (
+          <UserCheck className="h-4 w-4 shrink-0 text-emerald-500" />
+        ) : (
+          <UserX className="h-4 w-4 shrink-0 text-amber-500/80" />
+        )
       })),
     [targetEmployees]
   );
@@ -228,6 +235,7 @@ export default function TransferPlanningModal({
                 onValueChange={(val: string) => setTargetEmployeeId(val)}
                 placeholder="Sélectionnez un collaborateur"
                 disabled={isSubmitting || targetEmployees.length === 0}
+                showInactiveToggle={true}
               />
 
               <p className="mt-2 text-xs text-secondary">

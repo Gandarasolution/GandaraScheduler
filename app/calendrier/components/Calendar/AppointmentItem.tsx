@@ -332,25 +332,37 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const appointmentBorderColor = event?.CouleurBordurePlanningRessource || '#1E40AF';
   const appointmentTextColor = event?.CouleurTextePlanningRessource || '#FFFFFF';
 
- const containerStyle = useMemo<React.CSSProperties>(() => ({
-    width: source === 'demo' ? '100%' : `${appointmentWidthPx}px`,
-    height: `${CELL_HEIGHT}px`,
-    minWidth: `${INTERVAL_WIDTH}px`,
-    pointerEvents: isDragging ? 'none' : 'auto',
-    transform: `translate3d(${computedLeft}px, ${absoluteTop}px, 0)`,
-    left: 0,
-    top: 0,
-    willChange: isDragging || isResizing ? 'transform, width' : 'auto',
-    backgroundColor: isGhost ? 'transparent' : appointmentColor,
-    border: isGhost ? 'none' : `2px solid ${appointmentBorderColor}`,
-    color: appointmentTextColor,
-    transition:
-      isDragging || isResizing || !hasMountedRef.current
-        ? 'none'
-        : 'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.15s ease-in-out, opacity 0.2s ease-in-out',
-    zIndex: isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0))),
-    cursor: (isInactive || isLocked || isReadOnly) ? 'not-allowed' : (isDragging ? 'grabbing' : (source === 'calendar' && canEdit ? 'grab' : 'pointer')),
-  }), [
+  const containerStyle = useMemo<React.CSSProperties>(() => {
+    let transitionValue =
+      'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), width 0.15s ease-out, box-shadow 0.15s ease-in-out, opacity 0.2s ease-in-out';
+
+    if (isDragging || !hasMountedRef.current) {
+      transitionValue = 'none';
+    } else if (isResizing) {
+      // Micro-transition rapide pour "aimanter" fluidement d'un créneau à l'autre
+      transitionValue =
+        'width 0.08s cubic-bezier(0.2, 0, 0, 1), transform 0.08s cubic-bezier(0.2, 0, 0, 1)';
+    }
+
+    return {
+      width: source === 'demo' ? '100%' : `${appointmentWidthPx}px`,
+      height: `${CELL_HEIGHT}px`,
+      minWidth: `${INTERVAL_WIDTH}px`,
+      pointerEvents: isDragging ? 'none' : 'auto',
+      transform: `translate3d(${computedLeft}px, ${absoluteTop}px, 0)`,
+      left: 0,
+      top: 0,
+      willChange: isDragging || isResizing ? 'transform, width' : 'auto',
+      backgroundColor: isGhost ? 'transparent' : appointmentColor,
+      border: isGhost ? 'none' : `2px solid ${appointmentBorderColor}`,
+      color: appointmentTextColor,
+      transition: transitionValue,
+      zIndex: isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0))),
+      cursor: (isInactive || isLocked || isReadOnly)
+        ? 'not-allowed'
+        : (isDragging ? 'grabbing' : (source === 'calendar' && canEdit ? 'grab' : 'pointer')),
+    };
+  }, [
     source, appointmentWidthPx, INTERVAL_WIDTH, isDragging, computedLeft, absoluteTop,
     isResizing, isGhost, appointmentColor, appointmentBorderColor, appointmentTextColor,
     appointment.PlanningEvenementPriorite, isInactive, isLocked, isReadOnly, canEdit

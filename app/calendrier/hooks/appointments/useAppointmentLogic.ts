@@ -1,15 +1,12 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { addHours, eachDayOfInterval } from "date-fns";
+import { eachDayOfInterval } from "date-fns";
 import { Appointment, User, HistoryAction, Item, Tag, AutreItem } from '../../types';
 import { createAppointmentUtils } from '../../utils/appointmentUtils';
 import { getWorkedDayIntervals, isWeekend } from "../../utils/dates";
 import { DAY_INTERVALS, HALF_DAY_INTERVALS } from "../../utils/constants";
 import ressourceService from '@/app/service/ressource.service';
-import { useAuth } from '../utils/AuthContext';
-import imageService from '@/app/service/image.service';
 import displaySettingsService, { DisplaySettings } from '@/app/service/displaySettings.service';
 
-// Type pour les données de répétition
 export type RepeatData = {
   numberCount: number;
   repeatCount: number | null;
@@ -20,7 +17,7 @@ export type RepeatData = {
 type ActionResult = { success: boolean; message?: string };
 
 interface LogicProps {
-  employees:User[];
+  employees: User[];
   appointmentsRef: React.MutableRefObject<Appointment[]>;
   eventsRef: React.MutableRefObject<Record<number, Item>>;
   timelineState: {
@@ -28,9 +25,9 @@ interface LogicProps {
     isDisplayWeekend: boolean;
     includeWeekend: boolean;
     respectNonWorkingDays: boolean;
-    nonWorkingDates: Record<string, {Id: number; TypeJourCode: string }>;
+    nonWorkingDates: Record<string, { Id: number; TypeJourCode: string }>;
   };
-  onUpdate: () => void; // Callback pour forcer le rafraîchissement de l'UI
+  onUpdate: () => void;
   setIsSearchOverlayOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setDimensionsSearchInput: React.Dispatch<React.SetStateAction<string>>;
   onLockedError: (message: string) => void;
@@ -48,53 +45,70 @@ interface LogicProps {
   };
 }
 
-export const useAppointmentLogic = ({ 
+const isApiSuccess = (resp: any): boolean => {
+  if (!resp || resp.success === false) return false;
+  if (typeof resp.error !== 'undefined') return !resp.error;
+  if (typeof resp.data?.error !== 'undefined') return !resp.data.error;
+  return resp.success === true || typeof resp.error === 'undefined';
+};
+
+const getApiErrorMessage = (resp: any): string => {
+  const message =
+    resp?.message ??
+    resp?.data?.message ??
+    resp?.data?.data ??
+    (typeof resp?.data === 'string' ? resp.data : undefined);
+
+  return typeof message === 'string' && message.trim()
+    ? message
+    : 'Le serveur a refusé la sauvegarde.';
+};
+
+const cloneAppointments = (list: Appointment[]): Appointment[] =>
+  list.map((app) => ({ ...app }));
+
+export const useAppointmentLogic = ({
   employees,
-  appointmentsRef, 
-  eventsRef, 
-  timelineState, 
+  appointmentsRef,
+  eventsRef,
+  timelineState,
   onUpdate,
   setIsSearchOverlayOpen,
   setDimensionsSearchInput,
   api,
-  onLockedError
+  onLockedError,
 }: LogicProps) => {
-  
-  const { currentPlanningId } = useAuth();
-  
-  // --- Initialisation des Utilitaires ---
-  const appointmentUtils = useMemo(() => createAppointmentUtils(employees), []);
-  
+  // Indexation O(1) des employés par IdPersonnel
+  const employeesMap = useMemo(() => {
+    const map = new Map<number, User>();
+    for (let i = 0; i < employees.length; i++) {
+      const emp = employees[i]!;
+      map.set(Number(emp.IdPersonnel), emp);
+    }
+    return map;
+  }, [employees]);
+
+  const appointmentUtils = useMemo(() => createAppointmentUtils(employees), [employees]);
+
   // --- Refs pour la persistance hors rendu ---
   const history = useRef<HistoryAction[]>([]);
   const [historyVersion, setHistoryVersion] = useState(0);
   const clipboardAppointment = useRef<Appointment | null>(null);
   const timestampCounter = useRef(1000);
-  const timelineStateRef = useRef(timelineState);
 
-  useEffect(() => {
-    timelineStateRef.current = timelineState;
-  }, [timelineState]);
-
-
-
-  // --- États UI nécessaires à la logique ---
+  // --- États UI ---
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ employeeId: number; date: number } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newAppointmentInfo, setNewAppointmentInfo] = useState<{ date: number; employeeId: number } | null>(null);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
-  
-  
-  // États pour les actions complexes
   const [repeatData, setRepeatData] = useState<RepeatData | null>(null);
   const [extendData, setExtendData] = useState<number | null>(null);
-  
-  // État de l'alerte de confirmation
+
   const [alertState, setAlertState] = useState<{
     isVisible: boolean;
-    title: "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?" | "Êtes-vous sûr de vouloir diviser ce rendez-vous ?" | string;
+    title: string;
     onConfirm: () => void;
     onCancel: () => void;
     fetchToLockAppointment?: () => Promise<any>;
@@ -105,421 +119,433 @@ export const useAppointmentLogic = ({
     onCancel: () => {},
   });
 
-  const isApiSuccess = useCallback((resp: any) => {
-    if (!resp || resp.success === false) return false;
+  // Ref centralisant toutes les dépendances volatiles pour stabiliser les useCallback
+  const latestRef = useRef({
+    timelineState,
+    selectedAppointment,
+    selectedCell,
+    repeatData,
+    extendData,
+    employeesMap,
+    appointmentUtils,
+    api,
+    onUpdate,
+    onLockedError,
+    setIsSearchOverlayOpen,
+    setDimensionsSearchInput,
+  });
+  latestRef.current = {
+    timelineState,
+    selectedAppointment,
+    selectedCell,
+    repeatData,
+    extendData,
+    employeesMap,
+    appointmentUtils,
+    api,
+    onUpdate,
+    onLockedError,
+    setIsSearchOverlayOpen,
+    setDimensionsSearchInput,
+  };
 
-    if (typeof resp.error !== 'undefined') {
-      return !resp.error;
-    }
+  // --- Helpers internes ---
+  const addMissingResourcesToCache = useCallback(
+    (resources: Item[]) => {
+      if (!Array.isArray(resources) || resources.length === 0) return;
 
-    if (typeof resp.data?.error !== 'undefined') {
-      return !resp.data.error;
-    }
-
-    return resp.success === true || typeof resp.error === 'undefined';
-  }, []);
-
-  const getApiErrorMessage = useCallback((resp: any) => {
-    const message = resp?.message
-      ?? resp?.data?.message
-      ?? resp?.data?.data
-      ?? (typeof resp?.data === 'string' ? resp.data : undefined);
-
-    return typeof message === 'string' && message.trim()
-      ? message
-      : 'Le serveur a refusé la sauvegarde.';
-  }, []);
-
-  const addMissingResourcesToCache = useCallback((resources: Item[]) => {
-    if (!Array.isArray(resources) || resources.length === 0) return;
-
-    const existingIds = new Set(Object.values(eventsRef.current).map((item) => Number(item.IdPlanningRessource)));
-    const toAdd = resources.filter((resource) => {
-      const resourceId = Number(resource?.IdPlanningRessource);
-      return Number.isFinite(resourceId) && !existingIds.has(resourceId);
-    });
-
-    if (toAdd.length > 0) {
-      eventsRef.current = { ...eventsRef.current, ...toAdd.reduce((acc, item) => ({ ...acc, [item.IdPlanningRessource]: item }), {}) };
-    }
-  }, [eventsRef]);
-
-  const getCachedResourceById = useCallback((resourceId?: number, fallback?: Item) => {
-    if (!resourceId) return fallback;
-    return eventsRef.current[resourceId] || fallback;
-  }, [eventsRef]);
-  
-
-  /**
-   * Réorganise les priorités des rendez-vous qui chevauchent quand un rdv change de priorité
-   */
-  const reorganizePriorities = useCallback((
-    movedAppointmentId: number,
-    newPriority: number,
-    employeeId: number,
-    startDate: number,
-    endDate: number
-  ) => {
-    // Trouver tous les rdv qui chevauchent (même employé et même période)
-    const overlappingAppointments = appointmentsRef.current.filter(app => 
-      app.IdPlanningEvenement !== movedAppointmentId &&
-      app.IdEmploye === employeeId &&
-      app.DebutPlanningEvenement < endDate &&
-      app.FinPlanningEvenement > startDate
-    );
-
-    // Réorganiser : tous les rdv avec priorité >= newPriority doivent être décalés
-    overlappingAppointments.forEach(app => {
-      if ((app.PlanningEvenementPriorite ?? 0) >= newPriority) {        
-        app.PlanningEvenementPriorite = (app.PlanningEvenementPriorite ?? 0) + 1;
-      }
-    });
-  }, [appointmentsRef]);
-
-  const normalizePriorities = useCallback((employeeIds?: number[]) => {
-    const employeeFilter = employeeIds ? new Set(employeeIds.map(Number)) : undefined;
-    const appointmentsByEmployee = new Map<number, Appointment[]>();
-
-    appointmentsRef.current.forEach((app) => {
-      const employeeId = Number(app.IdEmploye);
-      if (employeeFilter && !employeeFilter.has(employeeId)) return;
-
-      const employeeAppointments = appointmentsByEmployee.get(employeeId) || [];
-      employeeAppointments.push(app);
-      appointmentsByEmployee.set(employeeId, employeeAppointments);
-    });
-
-    appointmentsByEmployee.forEach((employeeAppointments) => {
-      const sorted = [...employeeAppointments].sort(
-        (a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement
-      );
-      const groups: Appointment[][] = [];
-      let currentGroup: Appointment[] = [];
-      let groupEnd = 0;
-
-      sorted.forEach((app) => {
-        if (currentGroup.length > 0 && app.DebutPlanningEvenement >= groupEnd) {
-          groups.push(currentGroup);
-          currentGroup = [];
+      let updatedCache: Record<number, Item> | null = null;
+      for (let i = 0; i < resources.length; i++) {
+        const resource = resources[i];
+        const resourceId = Number(resource?.IdPlanningRessource);
+        if (Number.isFinite(resourceId) && !eventsRef.current[resourceId]) {
+          if (!updatedCache) updatedCache = { ...eventsRef.current };
+          updatedCache[resourceId] = resource!;
         }
+      }
 
-        currentGroup.push(app);
-        groupEnd = Math.max(groupEnd, app.FinPlanningEvenement);
-      });
+      if (updatedCache) {
+        eventsRef.current = updatedCache;
+      }
+    },
+    [eventsRef]
+  );
 
-      if (currentGroup.length > 0) groups.push(currentGroup);
+  const uploadImageIfNeeded = useCallback(
+    async (image?: { id: number; image: string }): Promise<{ success: boolean; imageId?: number; message?: string }> => {
+      if (!image || image.id !== 0) {
+        return { success: true, imageId: image?.id };
+      }
+      const result = await latestRef.current.api.addImage(image.image);
+      if (!result.success || !result.id) {
+        return { success: false, message: result.message || "Erreur lors de l'ajout de l'image." };
+      }
+      return { success: true, imageId: result.id };
+    },
+    []
+  );
 
-      groups.forEach((group) => {
-        group
-          .sort((a, b) => {
-            const priorityDifference =
-              (a.PlanningEvenementPriorite ?? 0) - (b.PlanningEvenementPriorite ?? 0);
-            return priorityDifference || a.DebutPlanningEvenement - b.DebutPlanningEvenement;
-          })
-          .forEach((app, index) => {
-            app.PlanningEvenementPriorite = index;
-          });
-      });
-    });
-  }, [appointmentsRef]);
+  const buildEventApiPayload = useCallback(
+    (app: {
+      DebutPlanningEvenement: number;
+      FinPlanningEvenement: number;
+      IdEmploye: number;
+      IdPlanningRessource: number;
+      AnnotationPlanningEvenement?: string;
+      PlanningEvenementPriorite?: number;
+      Etiquette?: Tag;
+    }) => {
+      const employee = latestRef.current.employeesMap.get(Number(app.IdEmploye));
+      return {
+        DebutPlanningEvenement: app.DebutPlanningEvenement,
+        FinPlanningEvenement: app.FinPlanningEvenement,
+        Type: employee?.Type,
+        IdEmploye: app.IdEmploye,
+        IdPlanningRessource: app.IdPlanningRessource,
+        AnnotationPlanningEvenement: app.AnnotationPlanningEvenement,
+        PlanningEvenementPriorite: app.PlanningEvenementPriorite ?? 0,
+        IdPlanningEtiquette: app.Etiquette?.IdPlanningEtiquette,
+      };
+    },
+    []
+  );
 
-  const persistPriorityChanges = useCallback(async (
-    previousAppointments: Appointment[],
-    excludedId?: number
-  ) => {
-    if (!api?.updateEvenement) return;
+  // --- GESTION DES PRIORITÉS ---
+  const reorganizePriorities = useCallback(
+    (movedAppointmentId: number, newPriority: number, employeeId: number, startDate: number, endDate: number) => {
+      const targetEmpId = Number(employeeId);
+      const list = appointmentsRef.current;
+      for (let i = 0; i < list.length; i++) {
+        const app = list[i]!;
+        if (
+          app.IdPlanningEvenement !== movedAppointmentId &&
+          Number(app.IdEmploye) === targetEmpId &&
+          app.DebutPlanningEvenement < endDate &&
+          app.FinPlanningEvenement > startDate &&
+          (app.PlanningEvenementPriorite ?? 0) >= newPriority
+        ) {
+          app.PlanningEvenementPriorite = (app.PlanningEvenementPriorite ?? 0) + 1;
+        }
+      }
+    },
+    [appointmentsRef]
+  );
 
-    const previousById = new Map(
-      previousAppointments.map((app) => [app.IdPlanningEvenement, app])
-    );
-    const changedAppointments = appointmentsRef.current.filter((app) => {
-      const previous = previousById.get(app.IdPlanningEvenement);
-      return previous &&
-        app.IdPlanningEvenement !== excludedId &&
-        (app.PlanningEvenementPriorite ?? 0) !== (previous.PlanningEvenementPriorite ?? 0);
-    });
+  const normalizePriorities = useCallback(
+    (employeeIds?: number[]) => {
+      const employeeFilter = employeeIds ? new Set(employeeIds.map(Number)) : undefined;
+      const appointmentsByEmployee = new Map<number, Appointment[]>();
 
-    try {
-      await Promise.all(changedAppointments.map((app) => {
-        const employee = employees.find(
-          (item) => Number(item.IdPersonnel) === Number(app.IdEmploye)
+      for (let i = 0; i < appointmentsRef.current.length; i++) {
+        const app = appointmentsRef.current[i]!;
+        const employeeId = Number(app.IdEmploye);
+        if (employeeFilter && !employeeFilter.has(employeeId)) continue;
+
+        let list = appointmentsByEmployee.get(employeeId);
+        if (!list) {
+          list = [];
+          appointmentsByEmployee.set(employeeId, list);
+        }
+        list.push(app);
+      }
+
+      appointmentsByEmployee.forEach((employeeAppointments) => {
+        if (employeeAppointments.length === 0) return;
+        const sorted = [...employeeAppointments].sort(
+          (a, b) => a.DebutPlanningEvenement - b.DebutPlanningEvenement
         );
 
-        return api.updateEvenement(String(app.IdPlanningEvenement), {
-          DebutPlanningEvenement: app.DebutPlanningEvenement,
-          FinPlanningEvenement: app.FinPlanningEvenement,
-          Type: employee?.Type,
-          IdEmploye: app.IdEmploye,
-          IdPlanningRessource: app.IdPlanningRessource,
-          AnnotationPlanningEvenement: app.AnnotationPlanningEvenement,
-          PlanningEvenementPriorite: app.PlanningEvenementPriorite ?? 0,
-          IdPlanningEtiquette: app.Etiquette?.IdPlanningEtiquette,
-        });
-      }));
-    } catch (error) {
-      console.error('Erreur lors de la persistance des priorités réorganisées', error);
-      onLockedError('Les priorités des rendez-vous chevauchants n’ont pas pu être sauvegardées.');
-    }
-  }, [api, appointmentsRef, employees, onLockedError]);
+        let currentGroup: Appointment[] = [];
+        let groupEnd = 0;
 
+        const flushGroup = (group: Appointment[]) => {
+          group.sort(
+            (a, b) =>
+              (a.PlanningEvenementPriorite ?? 0) - (b.PlanningEvenementPriorite ?? 0) ||
+              a.DebutPlanningEvenement - b.DebutPlanningEvenement
+          );
+          for (let i = 0; i < group.length; i++) {
+            group[i]!.PlanningEvenementPriorite = i;
+          }
+        };
 
+        for (let i = 0; i < sorted.length; i++) {
+          const app = sorted[i]!;
+          if (currentGroup.length > 0 && app.DebutPlanningEvenement >= groupEnd) {
+            flushGroup(currentGroup);
+            currentGroup = [];
+          }
+          currentGroup.push(app);
+          if (app.FinPlanningEvenement > groupEnd) {
+            groupEnd = app.FinPlanningEvenement;
+          }
+        }
 
-  const getPriorityForNewAppointment = useCallback((employeeId: number, startDate: number, endDate: number, id: number) => {
-    const overlappingAppointments = appointmentsRef.current.filter(app =>
-      Number(app.IdEmploye) === Number(employeeId) &&
-      app.DebutPlanningEvenement < endDate &&
-      app.FinPlanningEvenement > startDate &&
-      app.IdPlanningEvenement !== id
-    );
+        if (currentGroup.length > 0) flushGroup(currentGroup);
+      });
+    },
+    [appointmentsRef]
+  );
 
-    if (overlappingAppointments.length === 0) {
-      return 0;
-    }
-    return Math.max(...overlappingAppointments.map(app => app.PlanningEvenementPriorite ?? 0)) + 1;
-  }, [appointmentsRef]);
+  const persistPriorityChanges = useCallback(
+    async (previousAppointments: Appointment[], excludedId?: number) => {
+      const { api: currentApi, onLockedError: handleErr } = latestRef.current;
+      if (!currentApi?.updateEvenement) return;
 
+      const previousPriorityById = new Map<number, number>();
+      for (let i = 0; i < previousAppointments.length; i++) {
+        const prev = previousAppointments[i]!;
+        previousPriorityById.set(prev.IdPlanningEvenement, prev.PlanningEvenementPriorite ?? 0);
+      }
+
+      const changedAppointments = appointmentsRef.current.filter((app) => {
+        if (app.IdPlanningEvenement === excludedId) return false;
+        const prevPrio = previousPriorityById.get(app.IdPlanningEvenement);
+        return prevPrio !== undefined && (app.PlanningEvenementPriorite ?? 0) !== prevPrio;
+      });
+
+      if (changedAppointments.length === 0) return;
+
+      try {
+        await Promise.all(
+          changedAppointments.map((app) =>
+            currentApi.updateEvenement(String(app.IdPlanningEvenement), buildEventApiPayload(app))
+          )
+        );
+      } catch (error) {
+        console.error('Erreur lors de la persistance des priorités réorganisées', error);
+        handleErr('Les priorités des rendez-vous chevauchants n’ont pas pu être sauvegardées.');
+      }
+    },
+    [appointmentsRef, buildEventApiPayload]
+  );
+
+  const getPriorityForNewAppointment = useCallback(
+    (employeeId: number, startDate: number, endDate: number, id: number) => {
+      const targetEmpId = Number(employeeId);
+      let maxPriority = -1;
+      const list = appointmentsRef.current;
+
+      for (let i = 0; i < list.length; i++) {
+        const app = list[i]!;
+        if (
+          Number(app.IdEmploye) === targetEmpId &&
+          app.DebutPlanningEvenement < endDate &&
+          app.FinPlanningEvenement > startDate &&
+          app.IdPlanningEvenement !== id
+        ) {
+          const prio = app.PlanningEvenementPriorite ?? 0;
+          if (prio > maxPriority) maxPriority = prio;
+        }
+      }
+
+      return maxPriority + 1;
+    },
+    [appointmentsRef]
+  );
 
   // --- GESTION DE L'HISTORIQUE (UNDO) ---
+  const saveAppointmentState = useCallback(
+    (
+      appointment: Appointment | null,
+      type: 'create' | 'update' | 'delete' | 'move' | 'resize_split',
+      previousAppointment?: Appointment,
+      createdAppointments?: Appointment[]
+    ) => {
+      if (!appointment) return;
 
-  /**
-   * Sauvegarde l'état actuel d'un rendez-vous dans l'historique
-   * @param appointment Rendez-vous à sauvegarder
-   * @param type Type d'action ('create', 'update', 'delete', 'move', 'resize_split')
-   * @param previousAppointment État précédent du rendez-vous (pour 'update', 'move', 'resize_split')
-   * @param createdAppointments Rendez-vous créés (pour 'resize_split')
-   */
-  const saveAppointmentState = useCallback((
-    appointment: Appointment | null, 
-    type: 'create' | 'update' | 'delete' | 'move' | 'resize_split', 
-    previousAppointment?: Appointment,
-    createdAppointments?: Appointment[]
-  ) => {
-    if (!appointment) return;
-        
-    history.current.push({
-      type,
-      timestamp: ++timestampCounter.current,
-      appointment: { ...appointment },
-      previousAppointment: previousAppointment ? { ...previousAppointment } : undefined,
-      createdAppointments: createdAppointments ? createdAppointments.map(app => ({ ...app })) : undefined,
-      appointments: appointmentsRef.current.map(app => ({ ...app })) // Sauvegarde snapshot sécurité
-    });
+      history.current.push({
+        type,
+        timestamp: ++timestampCounter.current,
+        appointment: { ...appointment },
+        previousAppointment: previousAppointment ? { ...previousAppointment } : undefined,
+        createdAppointments: createdAppointments ? cloneAppointments(createdAppointments) : undefined,
+        appointments: cloneAppointments(appointmentsRef.current),
+      });
 
-    if (history.current.length > 50) {
-      history.current.shift();
-    }
-    setHistoryVersion((version) => version + 1);
-  }, [appointmentsRef]);
+      if (history.current.length > 50) {
+        history.current.shift();
+      }
+      setHistoryVersion((version) => version + 1);
+    },
+    [appointmentsRef]
+  );
 
-  const undoLastAction = useCallback(async () => {    
-    if (history.current.length === 0) {
-      return;
-    }
+  const undoLastAction = useCallback(async () => {
+    if (history.current.length === 0) return;
 
     const lastAction = history.current.pop();
     if (!lastAction) return;
     setHistoryVersion((version) => version + 1);
 
-    const before =  appointmentsRef.current
+    const { api: currentApi, onUpdate: triggerUpdate } = latestRef.current;
+    const before = cloneAppointments(appointmentsRef.current);
 
     switch (lastAction.type) {
-      case 'create':
-        // Annuler une création = supprimer le rendez-vous
+      case 'create': {
         if (lastAction.appointment) {
-          appointmentsRef.current = appointmentsRef.current.filter(app => app.IdPlanningEvenement !== lastAction.appointment!.IdPlanningEvenement);
+          const targetId = lastAction.appointment.IdPlanningEvenement;
+          appointmentsRef.current = appointmentsRef.current.filter(
+            (app) => app.IdPlanningEvenement !== targetId
+          );
 
-          const result = await api?.deleteEvenement(String(lastAction.appointment.IdPlanningEvenement));
-          if (result.success === false || result.error === 1) {
+          const result = await currentApi?.deleteEvenement(String(targetId));
+          if (!isApiSuccess(result)) {
             appointmentsRef.current = before;
           }
         }
         break;
+      }
 
-      case 'delete':
-        // Annuler une suppression = restaurer le rendez-vous
+      case 'delete': {
         if (lastAction.appointment) {
-          appointmentsRef.current.push({ ...lastAction.appointment });
-
-          const payload = {
-            DebutPlanningEvenement: lastAction.appointment.DebutPlanningEvenement,
-            FinPlanningEvenement: lastAction.appointment.FinPlanningEvenement,
-            IdEmploye: lastAction.appointment.IdEmploye,
-            IdPlanningRessource: lastAction.appointment.IdPlanningRessource,
-            AnnotationPlanningEvenement: lastAction.appointment.AnnotationPlanningEvenement,
-            PlanningEvenementPriorite: lastAction.appointment.PlanningEvenementPriorite,
-            IdPlanningEtiquette: lastAction.appointment.Etiquette?.IdPlanningEtiquette,
-          };
-
-          const result = await api?.createEvenement(payload);
-          if (result.success === false || result.error === 1) {
+          appointmentsRef.current = [...appointmentsRef.current, { ...lastAction.appointment }];
+          const result = await currentApi?.createEvenement(buildEventApiPayload(lastAction.appointment));
+          if (!isApiSuccess(result)) {
             appointmentsRef.current = before;
           }
         }
         break;
+      }
 
       case 'update':
-      case 'move':
-        // Annuler une modification/déplacement = restaurer l'ancien état
+      case 'move': {
         if (lastAction.previousAppointment) {
-          appointmentsRef.current = appointmentsRef.current.map(app =>
-            app.IdPlanningEvenement === lastAction.previousAppointment!.IdPlanningEvenement ? { ...lastAction.previousAppointment! } : app
+          const prevApp = lastAction.previousAppointment;
+          appointmentsRef.current = appointmentsRef.current.map((app) =>
+            app.IdPlanningEvenement === prevApp.IdPlanningEvenement ? { ...prevApp } : app
           );
-          const payload = {
-            DebutPlanningEvenement: lastAction.previousAppointment.DebutPlanningEvenement,
-            FinPlanningEvenement: lastAction.previousAppointment.FinPlanningEvenement,
-            IdEmploye: lastAction.previousAppointment.IdEmploye,
-            IdPlanningRessource: lastAction.previousAppointment.IdPlanningRessource,
-            AnnotationPlanningEvenement: lastAction.previousAppointment.AnnotationPlanningEvenement,
-            PlanningEvenementPriorite: lastAction.previousAppointment.PlanningEvenementPriorite,
-            IdPlanningEtiquette: lastAction.previousAppointment.Etiquette?.IdPlanningEtiquette,
-          };
 
-          const result = await api?.createEvenement(payload);
-          if (result.success === false || result.error === 1) {
+          const result = await currentApi?.updateEvenement(
+            String(prevApp.IdPlanningEvenement),
+            buildEventApiPayload(prevApp)
+          );
+          if (!isApiSuccess(result)) {
             appointmentsRef.current = before;
           }
-
         }
         break;
+      }
 
-      case 'resize_split':
-        // Annuler une division automatique (ex: déplacement sur plusieurs jours)
+      case 'resize_split': {
         if (lastAction.previousAppointment && lastAction.createdAppointments) {
-          // Restaurer le RDV principal
-          appointmentsRef.current = appointmentsRef.current.map(app =>
-            app.IdPlanningEvenement === lastAction.previousAppointment!.IdPlanningEvenement ? { ...lastAction.previousAppointment! } : app
-          );
-          
-          // Supprimer les RDV créés par le split
-          const createdIds = lastAction.createdAppointments.map(app => app.IdPlanningEvenement);
-          appointmentsRef.current = appointmentsRef.current.filter(app => !createdIds.includes(app.IdPlanningEvenement));
+          const prevApp = lastAction.previousAppointment;
+          const createdIds = new Set(lastAction.createdAppointments.map((app) => app.IdPlanningEvenement));
+
+          appointmentsRef.current = appointmentsRef.current
+            .filter((app) => !createdIds.has(app.IdPlanningEvenement))
+            .map((app) => (app.IdPlanningEvenement === prevApp.IdPlanningEvenement ? { ...prevApp } : app));
 
           try {
-            const result = await Promise.all([
-              // Restaurer le RDV principal
-              api?.updateEvenement(String(lastAction.previousAppointment.IdPlanningEvenement), {
-                DebutPlanningEvenement: lastAction.previousAppointment.DebutPlanningEvenement,
-                FinPlanningEvenement: lastAction.previousAppointment.FinPlanningEvenement,
-                IdEmploye: lastAction.previousAppointment.IdEmploye,
-                IdPlanningRessource: lastAction.previousAppointment.IdPlanningRessource,
-                AnnotationPlanningEvenement: lastAction.previousAppointment.AnnotationPlanningEvenement,
-                PlanningEvenementPriorite: lastAction.previousAppointment.PlanningEvenementPriorite,
-                IdPlanningEtiquette: lastAction.previousAppointment.Etiquette?.IdPlanningEtiquette,
-              }),
-
-              api?.deleteEvenements(lastAction.createdAppointments.map(app => String(app.IdPlanningEvenement)))
+            const results = await Promise.all([
+              currentApi?.updateEvenement(String(prevApp.IdPlanningEvenement), buildEventApiPayload(prevApp)),
+              currentApi?.deleteEvenements(lastAction.createdAppointments.map((app) => String(app.IdPlanningEvenement))),
             ]);
-            if (result.some(res => res?.success === false || res?.error === 1)) {
+            if (results.some((res) => !isApiSuccess(res))) {
               appointmentsRef.current = before;
             }
-            
           } catch (error) {
             console.error('Error occurred while undoing resize_split:', error);
+            appointmentsRef.current = before;
           }
-
         }
         break;
+      }
     }
-    onUpdate(); // Rafraichir l'interface
-  }, [appointmentsRef, onUpdate]);
+
+    triggerUpdate();
+  }, [appointmentsRef, buildEventApiPayload]);
 
   // --- FONCTIONS CRUD INTERNES ---
-
-  // Resize interne (mise à jour simple)
-  const updateAppointmentBounds = useCallback((
-    data: { id: number; newStartDate: number; newEndDate: number; newEmployee?: User, annotation?: string, Etiquette?: Tag },
-    saveToHistory: boolean = true,
-    newPriority?: number,
-    syncWithApi: boolean = true,
-    reorganizeOverlappingPriorities: boolean = true,
-  ) => {
+  const updateAppointmentBounds = useCallback(
+    (
+      data: { id: number; newStartDate: number; newEndDate: number; newEmployee?: User; annotation?: string; Etiquette?: Tag },
+      saveToHistory: boolean = true,
+      newPriority?: number,
+      syncWithApi: boolean = true,
+      reorganizeOverlappingPriorities: boolean = true
+    ) => {
       const { id, newStartDate, newEndDate, newEmployee, annotation, Etiquette } = data;
-
-      //console.log('updateAppointmentBounds called with:', data);
-      const appointmentToResize = appointmentsRef.current.find(app => Number(app.IdPlanningEvenement) === Number(id));
+      const numericId = Number(id);
+      const appointmentToResize = appointmentsRef.current.find(
+        (app) => Number(app.IdPlanningEvenement) === numericId
+      );
       if (!appointmentToResize) return;
 
-      const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
+      const previousAppointments = cloneAppointments(appointmentsRef.current);
 
       if (saveToHistory) {
         saveAppointmentState(appointmentToResize, 'update', { ...appointmentToResize });
       }
 
-      
-      appointmentsRef.current = appointmentsRef.current.map((app) =>
-        Number(app.IdPlanningEvenement) === Number(id)
-          ? {
-              ...app,
-              DebutPlanningEvenement: newStartDate,
-              FinPlanningEvenement: newEndDate,
-              IdEmploye: newEmployee ? newEmployee.IdPersonnel : app.IdEmploye,
-              PlanningEvenementPriorite: newPriority !== undefined ? newPriority : app.PlanningEvenementPriorite,
-              AnnotationPlanningEvenement: annotation !== undefined ? annotation : app.AnnotationPlanningEvenement,
-              Etiquette: Etiquette
-            }
-          : app
-      );
+      let updatedAppointment: Appointment | undefined;
+      appointmentsRef.current = appointmentsRef.current.map((app) => {
+        if (Number(app.IdPlanningEvenement) !== numericId) return app;
+        updatedAppointment = {
+          ...app,
+          DebutPlanningEvenement: newStartDate,
+          FinPlanningEvenement: newEndDate,
+          IdEmploye: newEmployee ? newEmployee.IdPersonnel : app.IdEmploye,
+          PlanningEvenementPriorite: newPriority !== undefined ? newPriority : app.PlanningEvenementPriorite,
+          AnnotationPlanningEvenement: annotation !== undefined ? annotation : app.AnnotationPlanningEvenement,
+          Etiquette,
+        };
+        return updatedAppointment;
+      });
 
       if (newPriority !== undefined && newEmployee && reorganizeOverlappingPriorities) {
         reorganizePriorities(id, newPriority, newEmployee.IdPersonnel, newStartDate, newEndDate);
         normalizePriorities([Number(newEmployee.IdPersonnel)]);
       }
-      const updatedAppointment = appointmentsRef.current.find(app => Number(app.IdPlanningEvenement) === Number(id));
-      if (!syncWithApi || !updatedAppointment || !api?.updateEvenement) return;
 
-      void api.updateEvenement(String(id), {
-        DebutPlanningEvenement: updatedAppointment.DebutPlanningEvenement,
-        FinPlanningEvenement: updatedAppointment.FinPlanningEvenement,
-        Type: newEmployee?.Type,
-        IdEmploye: newEmployee?.IdPersonnel,
-        IdPlanningRessource: updatedAppointment.IdPlanningRessource,
-        AnnotationPlanningEvenement: updatedAppointment.AnnotationPlanningEvenement,
-        PlanningEvenementPriorite: updatedAppointment.PlanningEvenementPriorite,
-        IdPlanningEtiquette: updatedAppointment.Etiquette?.IdPlanningEtiquette,
-      }).then((resp) => {
-        if (isApiSuccess(resp)) {
-          return;
-        }
+      const { api: currentApi, onUpdate: triggerUpdate } = latestRef.current;
+      if (!syncWithApi || !updatedAppointment || !currentApi?.updateEvenement) return;
 
-        appointmentsRef.current = previousAppointments;
-      }).catch((err) => {
-        console.error('Erreur réseau updateEvenement', err);
-        appointmentsRef.current = previousAppointments;
-      });
-  }, [appointmentsRef, onUpdate, saveAppointmentState, api, employees, reorganizePriorities, normalizePriorities, isApiSuccess]);
+      void currentApi
+        .updateEvenement(String(id), {
+          DebutPlanningEvenement: updatedAppointment.DebutPlanningEvenement,
+          FinPlanningEvenement: updatedAppointment.FinPlanningEvenement,
+          Type: newEmployee?.Type,
+          IdEmploye: newEmployee?.IdPersonnel,
+          IdPlanningRessource: updatedAppointment.IdPlanningRessource,
+          AnnotationPlanningEvenement: updatedAppointment.AnnotationPlanningEvenement,
+          PlanningEvenementPriorite: updatedAppointment.PlanningEvenementPriorite,
+          IdPlanningEtiquette: updatedAppointment.Etiquette?.IdPlanningEtiquette,
+        })
+        .then((resp) => {
+          if (!isApiSuccess(resp)) {
+            appointmentsRef.current = previousAppointments;
+            triggerUpdate();
+          }
+        })
+        .catch((err) => {
+          console.error('Erreur réseau updateEvenement', err);
+          appointmentsRef.current = previousAppointments;
+          triggerUpdate();
+        });
+    },
+    [appointmentsRef, saveAppointmentState, reorganizePriorities, normalizePriorities]
+  );
 
-  // Création unitaire d'un RDV
-  const createAppointment = useCallback((
-    data: { startDate: number; endDate: number; employeeId: number; ressource: Item; priority: number },
-    saveToHistory: boolean = true,
-    description?: string,
-    syncWithApi: boolean = true
-  ): Appointment | null => {
+  const createAppointment = useCallback(
+    (
+      data: { startDate: number; endDate: number; employeeId: number; ressource: Item; priority: number },
+      saveToHistory: boolean = true,
+      description?: string,
+      syncWithApi: boolean = true
+    ): Appointment | null => {
       const { startDate, endDate, employeeId, ressource, priority } = data;
-      const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
+      const { employeesMap: empMap, api: currentApi, onUpdate: triggerUpdate, onLockedError: handleErr } = latestRef.current;
 
-      if (!employee) {
-        return null;
-      }
+      const employee = empMap.get(Number(employeeId));
+      if (!employee) return null;
 
-      //console.log(new Date(startDate), new Date(endDate));
+      const idTemp = Date.now() + Math.floor(Math.random() * 1000);
+      const previousAppointments = cloneAppointments(appointmentsRef.current);
 
-      const payload = {
-        AnnotationPlanningEvenement: description || `Nouveau rendez-vous`,
-        DebutPlanningEvenement: startDate,
-        FinPlanningEvenement: endDate,
-        IdEmploye: employeeId,
-        Type: employee.Type,
-        IdPlanningRessource: ressource.IdPlanningRessource,
-        PlanningEvenementPriorite: priority,
-      };
-
-      const idTemp = Date.now();
-
-      const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
       const localAppointment: Appointment = {
-        IdPlanningEvenement: idTemp, // ID temporaire pour le rendu local
-        AnnotationPlanningEvenement: description || `Nouveau rendez-vous`,
+        IdPlanningEvenement: idTemp,
+        AnnotationPlanningEvenement: description || 'Nouveau rendez-vous',
         DebutPlanningEvenement: startDate,
         FinPlanningEvenement: endDate,
         IdEmploye: employeeId,
@@ -528,29 +554,35 @@ export const useAppointmentLogic = ({
         isLocked: false,
       };
 
-      appointmentsRef.current.push(localAppointment);
-      onUpdate();
+      appointmentsRef.current = [...appointmentsRef.current, localAppointment];
+      triggerUpdate();
 
-      // Mode local uniquement : pas de synchronisation BDD.
-      if (!syncWithApi || !api?.createEvenement) {
+      if (!syncWithApi || !currentApi?.createEvenement) {
         if (saveToHistory) {
           saveAppointmentState(localAppointment, 'create');
         }
         return localAppointment;
       }
 
-      
-      api.createEvenement(payload)
+      const payload = {
+        AnnotationPlanningEvenement: localAppointment.AnnotationPlanningEvenement,
+        DebutPlanningEvenement: startDate,
+        FinPlanningEvenement: endDate,
+        IdEmploye: employeeId,
+        Type: employee.Type,
+        IdPlanningRessource: ressource.IdPlanningRessource,
+        PlanningEvenementPriorite: priority,
+      };
+
+      currentApi
+        .createEvenement(payload)
         .then((resp) => {
           try {
-
-            //console.log('createEvenement response:', resp);
-
-            if (resp && resp.success) {
+            if (isApiSuccess(resp)) {
               const apiData = resp?.data;
-              const apiResources = Array.isArray(apiData?.ressources) ? apiData.ressources : [];
-              
-              addMissingResourcesToCache(apiResources);
+              if (Array.isArray(apiData?.ressources)) {
+                addMissingResourcesToCache(apiData.ressources);
+              }
 
               const apiCreated = Array.isArray(apiData?.appointments)
                 ? apiData.appointments[0]
@@ -558,57 +590,60 @@ export const useAppointmentLogic = ({
                   ? resp.data[0]
                   : resp.data;
 
-              if (!apiCreated) {
-                return;
-              }
+              if (!apiCreated) return;
 
-              appointmentsRef.current = appointmentsRef.current.map((app) =>{
+              appointmentsRef.current = appointmentsRef.current.map((app) => {
                 if (Number(app.IdPlanningEvenement) === Number(idTemp)) {
-                  const a = {...app, IdPlanningEvenement: apiCreated.IdPlanningEvenement, PlanningEvenementPriorite: apiCreated.PlanningEvenementPriorite };
+                  const finalized: Appointment = {
+                    ...app,
+                    IdPlanningEvenement: apiCreated.IdPlanningEvenement,
+                    PlanningEvenementPriorite: apiCreated.PlanningEvenementPriorite ?? app.PlanningEvenementPriorite,
+                  };
                   if (saveToHistory) {
-                    saveAppointmentState(a, 'create');
+                    saveAppointmentState(finalized, 'create');
                   }
-                  return a;
+                  return finalized;
                 }
                 return app;
               });
-              onUpdate();
-              
+              triggerUpdate();
               return;
             }
 
-            onLockedError(resp?.message);
+            handleErr(getApiErrorMessage(resp));
             appointmentsRef.current = previousAppointments;
+            triggerUpdate();
           } catch (e) {
             console.error('Erreur traitement réponse createEvenement', e);
             appointmentsRef.current = previousAppointments;
-            onUpdate();
+            triggerUpdate();
           }
         })
         .catch((err) => {
           console.error('Erreur réseau createEvenement', err);
           appointmentsRef.current = previousAppointments;
+          triggerUpdate();
         });
 
       return localAppointment;
-    }, [appointmentsRef, onUpdate, saveAppointmentState, api, employees, eventsRef, addMissingResourcesToCache, getCachedResourceById]);
-
-  // --- GESTION DES PRIORITÉS ---
+    },
+    [appointmentsRef, saveAppointmentState, addMissingResourcesToCache]
+  );
 
   // --- LOGIQUE MÉTIER COMPLEXE (Move, Split, Save) ---
-
-  const moveAppointment = useCallback(async (
-    data: {
-      id: number;
-      newStartDate: number;
-      newEndDate: number;
-      newEmployeeId: number;
-      idRessource: number;
-      resizeDirection?: 'left' | 'right';
-    },
-    saveToHistory: boolean = true,
-    requestedPriority?: number,
-  ): Promise<ActionResult> => {
+  const moveAppointment = useCallback(
+    async (
+      data: {
+        id: number;
+        newStartDate: number;
+        newEndDate: number;
+        newEmployeeId: number;
+        idRessource: number;
+        resizeDirection?: 'left' | 'right';
+      },
+      saveToHistory: boolean = true,
+      requestedPriority?: number
+    ): Promise<ActionResult> => {
       const {
         id,
         newStartDate,
@@ -618,22 +653,22 @@ export const useAppointmentLogic = ({
         resizeDirection = 'right',
       } = data;
 
-      //console.log('moveAppointment called with:', data);
+      const {
+        employeesMap: empMap,
+        timelineState: state,
+        api: currentApi,
+        onUpdate: triggerUpdate,
+        onLockedError: handleErr,
+      } = latestRef.current;
+
       const appointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
-      if (!appointment) {
-        return { success: false, message: 'Rendez-vous introuvable.' };
-      }
-      const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(newEmployeeId));
-      if (!employee) {   
-        return { success: false, message: 'Employé introuvable.' };
-      }
+      if (!appointment) return { success: false, message: 'Rendez-vous introuvable.' };
 
-      const ressource = eventsRef.current[Number(idRessource)] ;
-      if (!ressource) {
-        
-        return { success: false, message: 'Ressource introuvable.' };
-      }
+      const employee = empMap.get(Number(newEmployeeId));
+      if (!employee) return { success: false, message: 'Employé introuvable.' };
 
+      const ressource = eventsRef.current[Number(idRessource)];
+      if (!ressource) return { success: false, message: 'Ressource introuvable.' };
 
       const hasSameBounds =
         appointment.DebutPlanningEvenement === newStartDate &&
@@ -644,100 +679,88 @@ export const useAppointmentLogic = ({
         (appointment.PlanningEvenementPriorite ?? 0) === requestedPriority;
 
       if (hasSameBounds && hasSamePriority) {
-        api?.unlockEvenement(appointment.IdPlanningEvenement).catch((err) => {
+        currentApi?.unlockEvenement(appointment.IdPlanningEvenement).catch((err) => {
           console.error('Erreur lors du déverrouillage du rendez-vous:', err);
         });
         return { success: true, message: 'Aucun changement détecté.' };
       }
 
-
       const previousAppointment = saveToHistory ? { ...appointment } : undefined;
-      const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
+      const previousAppointments = cloneAppointments(appointmentsRef.current);
 
-      const state = timelineStateRef.current;
-
-      // Calcul des intervalles (Jours/Demi-journées)
       const intervalType = state.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS;
-      
-
       const days = getWorkedDayIntervals(
-        newStartDate, 
+        newStartDate,
         newEndDate,
         intervalType,
         state.respectNonWorkingDays,
         (state.isDisplayWeekend && state.includeWeekend) || !state.isDisplayWeekend,
         state.nonWorkingDates
-      );  
-
+      );
 
       if (days.length === 0) {
         return { success: false, message: 'Aucun créneau valide pour effectuer cette action.' };
       }
 
-      const newPriority = requestedPriority ?? getPriorityForNewAppointment(newEmployeeId, newStartDate, newEndDate, id);
+      const newPriority =
+        requestedPriority ?? getPriorityForNewAppointment(newEmployeeId, newStartDate, newEndDate, id);
 
-      const applyLocalMove = () => {
-        const createdAppointments: Appointment[] = [];
+      const createdAppointments: Appointment[] = [];
+      const processIntervals = (startIndex: number, endIndex: number, step: number, mainIndex: number) => {
+        const mainDay = days[mainIndex]!;
+        const mainStart = resizeDirection === 'left' ? mainDay.start : newStartDate;
+        const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
 
-        const processIntervals = (startIndex: number, endIndex: number, step: number, mainIndex: number) => {
-          const mainDay = days[mainIndex];
-          const mainStart = resizeDirection === 'left' ? mainDay.start : newStartDate;
-          const mainEnd = resizeDirection === 'right' ? mainDay.end : newEndDate;
+        updateAppointmentBounds(
+          {
+            id: appointment.IdPlanningEvenement,
+            newStartDate: mainStart,
+            newEndDate: mainEnd,
+            newEmployee: employee,
+            Etiquette: appointment.Etiquette,
+            annotation: appointment.AnnotationPlanningEvenement,
+          },
+          false,
+          newPriority,
+          false,
+          false
+        );
 
-         
-          updateAppointmentBounds(
+        for (let i = startIndex; i !== endIndex; i += step) {
+          const day = days[i]!;
+          const newApp = createAppointment(
             {
-              id: appointment.IdPlanningEvenement,
-              newStartDate: mainStart,
-              newEndDate: mainEnd,
-              newEmployee: employee,
-              Etiquette: appointment.Etiquette,
-              annotation: appointment.AnnotationPlanningEvenement
+              startDate: day.start,
+              endDate: day.end,
+              employeeId: newEmployeeId,
+              ressource,
+              priority: newPriority,
             },
             false,
-            newPriority,
-            false,
+            appointment.AnnotationPlanningEvenement,
             false
           );
-
-          for (let i = startIndex; i !== endIndex; i += step) {
-            const day = days[i];
-            const newApp = createAppointment(
-              {
-                startDate: day.start,
-                endDate: day.end,
-                employeeId: newEmployeeId,
-                ressource: ressource,
-                priority: newPriority,
-              },
-              false,
-              appointment.AnnotationPlanningEvenement,
-              false
-            );
-            if (newApp) createdAppointments.push(newApp);
-          }
-        };
-
-        if (resizeDirection === 'right') {
-          processIntervals(1, days.length, 1, 0);
-        } else {
-          processIntervals(days.length - 2, -1, -1, days.length - 1);
+          if (newApp) createdAppointments.push(newApp);
         }
-
-        if (saveToHistory && previousAppointment) {
-          const updatedAppointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
-          if (updatedAppointment) {
-            const actionType = createdAppointments.length > 0 ? 'resize_split' : 'move';
-            saveAppointmentState(updatedAppointment, actionType, previousAppointment, createdAppointments);
-          }
-        }
-
-        onUpdate();
       };
 
-      applyLocalMove();
+      if (resizeDirection === 'right') {
+        processIntervals(1, days.length, 1, 0);
+      } else {
+        processIntervals(days.length - 2, -1, -1, days.length - 1);
+      }
 
-      if (!api?.updateEvenement) {
+      if (saveToHistory && previousAppointment) {
+        const updatedAppointment = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
+        if (updatedAppointment) {
+          const actionType = createdAppointments.length > 0 ? 'resize_split' : 'move';
+          saveAppointmentState(updatedAppointment, actionType, previousAppointment, createdAppointments);
+        }
+      }
+
+      triggerUpdate();
+
+      if (!currentApi?.updateEvenement) {
         await persistPriorityChanges(previousAppointments, id);
         return { success: true };
       }
@@ -753,79 +776,85 @@ export const useAppointmentLogic = ({
         IdPlanningEtiquette: appointment.Etiquette?.IdPlanningEtiquette,
       };
 
-      try{
-        const resp = await api.updateEvenement(String(id), payload);
+      try {
+        const resp = await currentApi.updateEvenement(String(id), payload);
         if (!isApiSuccess(resp)) {
           appointmentsRef.current = previousAppointments;
-          onUpdate();
-          onLockedError(resp?.message);
+          triggerUpdate();
+          handleErr(getApiErrorMessage(resp));
+          return { success: false, message: resp?.message };
+        }
 
-          return { success: false, message: resp.message};
-        } else {
-          const data = resp?.data;
-          for (const res of Array.isArray(data) ? data : []) {
+        const responseData = resp?.data;
+        if (Array.isArray(responseData) && responseData.length > 0) {
+          const updatesById = new Map<number, Appointment>();
+          for (let i = 0; i < responseData.length; i++) {
+            const res = responseData[i];
             if (res?.IdPlanningEvenement) {
-              const normalizedRes = {
+              updatesById.set(Number(res.IdPlanningEvenement), {
                 ...res,
-                IdEmploye: Number(res.IdEmploye) // Force la conversion en number
-              };
-              appointmentsRef.current = appointmentsRef.current.map(app => 
-                app.IdPlanningEvenement === res.IdPlanningEvenement ? normalizedRes : app
-              );
+                IdEmploye: Number(res.IdEmploye),
+              });
             }
           }
-          return { success: true };
+          if (updatesById.size > 0) {
+            appointmentsRef.current = appointmentsRef.current.map(
+              (app) => updatesById.get(Number(app.IdPlanningEvenement)) ?? app
+            );
+            triggerUpdate();
+          }
         }
-      }catch (error) {
+        return { success: true };
+      } catch (error) {
         console.error('Erreur réseau updateEvenement', error);
         appointmentsRef.current = previousAppointments;
-        onUpdate();
-        onLockedError('Impossible de mettre à jour l\'événement sur le serveur. Veuillez réessayer.');
+        triggerUpdate();
+        handleErr("Impossible de mettre à jour l'événement sur le serveur. Veuillez réessayer.");
         return { success: false, message: 'Erreur réseau' };
       }
-      
-      
-  }, [appointmentsRef, employees, timelineStateRef, updateAppointmentBounds, createAppointment, saveAppointmentState, onUpdate, reorganizePriorities, api, isApiSuccess, persistPriorityChanges]);
+    },
+    [
+      appointmentsRef,
+      eventsRef,
+      getPriorityForNewAppointment,
+      updateAppointmentBounds,
+      createAppointment,
+      saveAppointmentState,
+      persistPriorityChanges,
+    ]
+  );
 
-  // Sauvegarde depuis le formulaire (Création ou Édition)
-
-  //Ajout de gestion de modification ressource + événement -> faire une route commune qui appelle les deux procédure stockée
-  //Séparé la modification d'un événement et la cration d'une ressource pour éviter les problèmes de synchronisation et de logique métier (ex: changement de ressource d'un rdv existant)
-  const handleSaveAppointment = useCallback(async (
-    appointment: Appointment,
-    eventUpdate: Item,
-    includeNonWorkingDays: boolean,
-    type: 'create' | 'update'
-  ): Promise<{ success: boolean; message?: string }> => {
-      // Vérifier si l'événement est désactivé (pour les types absence/autre)      
+  const handleSaveAppointment = useCallback(
+    async (
+      appointment: Appointment,
+      eventUpdate: Item,
+      includeNonWorkingDays: boolean,
+      type: 'create' | 'update'
+    ): Promise<{ success: boolean; message?: string }> => {
       if ('Actif' in eventUpdate && !eventUpdate.Actif) {
         return { success: false, message: 'Cette rubrique est désactivée.' };
       }
 
-      if (type === 'update' && !api?.updateEvenementAndRessource) {
+      const { api: currentApi, employeesMap: empMap, timelineState: state, onUpdate: triggerUpdate } = latestRef.current;
+
+      if (type === 'update' && !currentApi?.updateEvenementAndRessource) {
         return { success: false, message: 'API de mise à jour indisponible.' };
       }
-      else if (type === 'create' && !api?.createEvenement) {
+      if (type === 'create' && !currentApi?.createEvenement) {
         return { success: false, message: 'API de création indisponible.' };
       }
 
-      const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(appointment.IdEmploye));
+      const employee = empMap.get(Number(appointment.IdEmploye));
 
       try {
-        if(eventUpdate.Image?.id === 0){
-          let result: { success: boolean; id?: number; message?: string } = { success: true };
-
-          const imageBase64 = eventUpdate.Image.image;
-
-          result = await api.addImage(imageBase64)
-
-          if(!result.success || !result.id) {
-            return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
-          }
-          eventUpdate.Image.id = result.id;
-            
+        const imgResult = await uploadImageIfNeeded(eventUpdate.Image);
+        if (!imgResult.success) {
+          return { success: false, message: imgResult.message };
         }
-        //console.log('handleSaveAppointment called with:', eventUpdate);
+        if (eventUpdate.Image && imgResult.imageId !== undefined) {
+          eventUpdate.Image.id = imgResult.imageId;
+        }
+
         const payload = {
           DebutPlanningEvenement: appointment.DebutPlanningEvenement,
           FinPlanningEvenement: appointment.FinPlanningEvenement,
@@ -839,43 +868,44 @@ export const useAppointmentLogic = ({
             CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
             CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
             CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
-            IdPlanningImage: eventUpdate.Image?.id,
+            IdPlanningImage: imgResult.imageId,
           },
         };
 
-        const apiResp = type === 'update'
-          ? await api!.updateEvenementAndRessource!(String(appointment.IdPlanningEvenement), payload)
-          : await api!.createEvenement!({
-              ...payload,
-              IdPlanningEvenement: appointment.IdPlanningEvenement,
-            });
+        const apiResp =
+          type === 'update'
+            ? await currentApi.updateEvenementAndRessource(String(appointment.IdPlanningEvenement), payload)
+            : await currentApi.createEvenement({
+                ...payload,
+                IdPlanningEvenement: appointment.IdPlanningEvenement,
+              });
 
         if (!isApiSuccess(apiResp)) {
           return { success: false, message: getApiErrorMessage(apiResp) };
         }
 
-        const apiResources = Array.isArray(apiResp?.data?.ressources) ? apiResp.data.ressources : [];
-        addMissingResourcesToCache(apiResources);
+        if (Array.isArray(apiResp?.data?.ressources)) {
+          addMissingResourcesToCache(apiResp.data.ressources);
+        }
 
         const days = getWorkedDayIntervals(
           appointment.DebutPlanningEvenement,
           appointment.FinPlanningEvenement,
-          timelineState.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-          includeNonWorkingDays || !timelineState.isDisplayWeekend,
-          timelineState.includeWeekend || !timelineState.isDisplayWeekend,
-          timelineState.nonWorkingDates
+          state.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+          includeNonWorkingDays || !state.isDisplayWeekend,
+          state.includeWeekend || !state.isDisplayWeekend,
+          state.nonWorkingDates
         );
 
-
-        let previousAppointment: Appointment | undefined;
-        if (type === 'update') {
-          previousAppointment = appointmentsRef.current.find(app => app.IdPlanningEvenement === appointment.IdPlanningEvenement);
-        }
+        const previousAppointment =
+          type === 'update'
+            ? appointmentsRef.current.find((app) => app.IdPlanningEvenement === appointment.IdPlanningEvenement)
+            : undefined;
 
         const createdAppointments: Appointment[] = [];
-
         const createExtraAppointments = (fromIndex = 1) => {
-          days.slice(fromIndex).forEach(day => {
+          for (let i = fromIndex; i < days.length; i++) {
+            const day = days[i]!;
             const newApp = createAppointment(
               {
                 startDate: day.start,
@@ -889,15 +919,15 @@ export const useAppointmentLogic = ({
               false
             );
             if (newApp) createdAppointments.push(newApp);
-          });
+          }
         };
 
         if (type === 'update') {
           updateAppointmentBounds(
             {
               id: appointment.IdPlanningEvenement,
-              newStartDate: days[0].start,
-              newEndDate: days[0].end,
+              newStartDate: days[0]!.start,
+              newEndDate: days[0]!.end,
               newEmployee: employee,
               annotation: appointment.AnnotationPlanningEvenement,
               Etiquette: appointment.Etiquette,
@@ -907,35 +937,49 @@ export const useAppointmentLogic = ({
             false
           );
 
-          eventsRef.current[Number(eventUpdate.IdPlanningRessource)] = {
-              ...eventsRef.current[Number(eventUpdate.IdPlanningRessource)],
+          const resId = Number(eventUpdate.IdPlanningRessource);
+          if (eventsRef.current[resId]) {
+            eventsRef.current[resId] = {
+              ...eventsRef.current[resId]!,
               CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
               CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
               CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
               Image: eventUpdate.Image,
-          };
+            };
+          }
 
           reorganizePriorities(
             appointment.IdPlanningEvenement,
             appointment.PlanningEvenementPriorite ?? 0,
             appointment.IdEmploye as number,
-            days[0].start,
-            days[0].end
-          );          
+            days[0]!.start,
+            days[0]!.end
+          );
 
-          if (days.length > 1) {
-            createExtraAppointments(1);
+          if (days.length > 1) createExtraAppointments(1);
+          triggerUpdate();
+
+          if (previousAppointment) {
+            const updatedAppointment = appointmentsRef.current.find(
+              (app) => app.IdPlanningEvenement === appointment.IdPlanningEvenement
+            );
+            if (updatedAppointment) {
+              saveAppointmentState(
+                updatedAppointment,
+                createdAppointments.length > 0 ? 'resize_split' : 'update',
+                previousAppointment,
+                createdAppointments.length > 0 ? createdAppointments : undefined
+              );
+            }
           }
-          onUpdate();
         } else {
           const createdMain = createAppointment(
             {
-              startDate: days[0].start,
-              endDate: days[0].end,
+              startDate: days[0]!.start,
+              endDate: days[0]!.end,
               employeeId: appointment.IdEmploye as number,
               ressource: eventUpdate,
               priority: appointment.PlanningEvenementPriorite ?? 0,
-
             },
             false,
             appointment.AnnotationPlanningEvenement,
@@ -948,45 +992,29 @@ export const useAppointmentLogic = ({
               : Array.isArray(apiResp?.data)
                 ? apiResp.data[0]
                 : apiResp?.data;
+
             if (apiCreated?.IdPlanningEvenement) {
-              appointmentsRef.current = appointmentsRef.current.map(app =>
+              createdMain.IdPlanningEvenement = apiCreated.IdPlanningEvenement;
+              appointmentsRef.current = appointmentsRef.current.map((app) =>
                 app.IdPlanningEvenement === createdMain.IdPlanningEvenement
-                  ? {
-                      ...app,
-                      IdPlanningEvenement: apiCreated.IdPlanningEvenement,
-                    }
+                  ? { ...app, IdPlanningEvenement: apiCreated.IdPlanningEvenement }
                   : app
               );
             }
             saveAppointmentState(createdMain, 'create');
           }
 
-          if (days.length > 1) {
-            createExtraAppointments(1);
-          }
-          onUpdate();
-        }
-
-        if (type === 'update' && previousAppointment) {
-          const updatedAppointment = appointmentsRef.current.find(app => app.IdPlanningEvenement === appointment.IdPlanningEvenement);
-          if (updatedAppointment) {
-            if (createdAppointments.length > 0) {
-              saveAppointmentState(updatedAppointment, 'resize_split', previousAppointment, createdAppointments);
-            } else {
-              saveAppointmentState(updatedAppointment, 'update', previousAppointment);
-            }
-          }
+          if (days.length > 1) createExtraAppointments(1);
+          triggerUpdate();
         }
 
         return { success: true };
       } catch (error) {
         console.error('Erreur réseau handleSaveAppointment', error);
         const status = (error as { response?: { status?: number } })?.response?.status;
-        const serverMessage = (error as {
-          response?: { data?: { message?: unknown } };
-          message?: unknown;
-        })?.response?.data?.message
-          ?? (error as { message?: unknown })?.message;
+        const serverMessage =
+          (error as { response?: { data?: { message?: unknown } } })?.response?.data?.message ??
+          (error as { message?: unknown })?.message;
 
         if (typeof serverMessage === 'string' && serverMessage.trim()) {
           return { success: false, message: serverMessage };
@@ -994,254 +1022,245 @@ export const useAppointmentLogic = ({
 
         return {
           success: false,
-          message: status && status >= 500
-            ? 'Une erreur interne est survenue sur le serveur.'
-            : 'Impossible de sauvegarder l\'événement sur le serveur.',
+          message:
+            status && status >= 500
+              ? 'Une erreur interne est survenue sur le serveur.'
+              : "Impossible de sauvegarder l'événement sur le serveur.",
         };
       }
-  }, [appointmentsRef, eventsRef, timelineState, createAppointment, saveAppointmentState, onUpdate, api, isApiSuccess, getApiErrorMessage, updateAppointmentBounds, reorganizePriorities, addMissingResourcesToCache]);
+    },
+    [
+      appointmentsRef,
+      eventsRef,
+      uploadImageIfNeeded,
+      addMissingResourcesToCache,
+      createAppointment,
+      updateAppointmentBounds,
+      reorganizePriorities,
+      saveAppointmentState,
+    ]
+  );
 
-  
-  // --- ACTIONS UTILISATEUR (Delete, Divide, Repeat, Extend) ---
+  // --- ACTIONS UTILISATEUR ---
+  const handleDeleteAppointmentConfirm = useCallback(
+    (appointmentToDelete?: Appointment) => {
+      const appointment = appointmentToDelete || latestRef.current.selectedAppointment;
+      const id = appointment?.IdPlanningEvenement;
+      if (!id) return;
 
-  const handleDeleteAppointmentConfirm = useCallback((appointmentToDelete?: Appointment) => {
-    // Utiliser le paramètre ou le state
-    const appointment = appointmentToDelete || selectedAppointment;
-    const id = appointment?.IdPlanningEvenement;
-    
-    if (!id) return;
+      setAlertState({
+        isVisible: true,
+        title: "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?",
+        onConfirm: () => {
+          const { api: currentApi, onUpdate: triggerUpdate } = latestRef.current;
+          const appointmentInRef = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
+          if (appointmentInRef) {
+            saveAppointmentState(appointmentInRef, 'delete');
+          }
 
-    setAlertState({
-      isVisible: true,
-      title: "Êtes-vous sûr de vouloir supprimer ce rendez-vous ?",
-      onConfirm: () => {
-        const appointmentInRef = appointmentsRef.current.find(app => app.IdPlanningEvenement === id);
-        if (appointmentInRef) {
-          saveAppointmentState(appointmentInRef, 'delete');
-        }
+          const previousAppointments = cloneAppointments(appointmentsRef.current);
+          appointmentsRef.current = appointmentsRef.current.filter((app) => app.IdPlanningEvenement !== id);
+          normalizePriorities(appointmentInRef ? [Number(appointmentInRef.IdEmploye)] : undefined);
+          triggerUpdate();
 
-        const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
-        appointmentsRef.current = appointmentsRef.current.filter((app) => app.IdPlanningEvenement !== id);
-        normalizePriorities(appointmentInRef ? [Number(appointmentInRef.IdEmploye)] : undefined);
-        onUpdate();
+          if (currentApi?.deleteEvenement) {
+            void currentApi
+              .deleteEvenement(String(id))
+              .then((resp) => {
+                if (isApiSuccess(resp)) {
+                  void persistPriorityChanges(previousAppointments, id);
+                  return;
+                }
+                appointmentsRef.current = previousAppointments;
+                triggerUpdate();
+              })
+              .catch((err) => {
+                console.error('Erreur réseau deleteEvenement', err);
+                appointmentsRef.current = previousAppointments;
+                triggerUpdate();
+              });
+          }
 
-        if (api?.deleteEvenement) {
-          void api.deleteEvenement(String(id))
-            .then((resp) => {
-              if (isApiSuccess(resp)) {
-                void persistPriorityChanges(previousAppointments, id);
-                return;
-              }
+          setIsModalOpen(false);
+          setSelectedAppointment(null);
+          setAlertState((prev) => ({ ...prev, isVisible: false }));
+        },
+        onCancel: () => {
+          latestRef.current.api?.unlockEvenement(id).catch((err) => {
+            console.error('Erreur lors du déverrouillage du rendez-vous:', err);
+          });
+          setAlertState((prev) => ({ ...prev, isVisible: false }));
+        },
+        fetchToLockAppointment: () => latestRef.current.api?.lockEvenement(id),
+      });
+    },
+    [appointmentsRef, saveAppointmentState, normalizePriorities, persistPriorityChanges]
+  );
 
-              appointmentsRef.current = previousAppointments;
-              onUpdate();
-            })
-            .catch((err) => {
-              console.error('Erreur réseau deleteEvenement', err);
-              appointmentsRef.current = previousAppointments;
-              onUpdate();
-            });
-        }
+  const handleDivideAppointment = useCallback(
+    async (appointment: Appointment) => {
+      const { timelineState: state, employeesMap: empMap, api: currentApi, onUpdate: triggerUpdate } = latestRef.current;
+      const id = appointment.IdPlanningEvenement;
+      const previousAppointments = cloneAppointments(appointmentsRef.current);
+      const originalAppointment = { ...appointment };
+      const { DebutPlanningEvenement: startDate, FinPlanningEvenement: endDate, IdEmploye: employeeId } = appointment;
 
-        setIsModalOpen(false);
-        setSelectedAppointment(null);
-        setAlertState(prev => ({ ...prev, isVisible: false }));
-      },
-      onCancel: () => {
-        api?.unlockEvenement(id).catch((err) => {
-          console.error('Erreur lors du déverrouillage du rendez-vous:', err);
-        });
-        setAlertState(prev => ({ ...prev, isVisible: false }));
-      },
-      fetchToLockAppointment: () => api?.lockEvenement(id),
-    });
-  }, [selectedAppointment, appointmentsRef, saveAppointmentState, onUpdate, api, isApiSuccess, normalizePriorities, persistPriorityChanges]);
+      const allDates = eachDayOfInterval({ start: startDate, end: endDate });
+      const skipWeekend = !state.isDisplayWeekend && !state.includeWeekend;
+      const validDates = skipWeekend
+        ? allDates.filter((date) => !isWeekend(date.getTime()))
+        : allDates;
 
-  const handleDivideAppointment = useCallback(async (appointment: Appointment) => {
-    const id = appointment.IdPlanningEvenement;
+      if (validDates.length === 0) return;
 
+      const intervalsPerDay = state.isFullDay ? 1 : 2;
+      const totalIntervals = validDates.length * intervalsPerDay;
+      const halfIntervals = Math.floor(totalIntervals / 2);
+      const splitDayIndex = Math.floor(halfIntervals / intervalsPerDay);
+      const splitDateObj = validDates[splitDayIndex];
+      if (!splitDateObj) return;
 
-    const previousAppointments = { ...appointmentsRef.current };
-    const originalAppointment = { ...appointment };
-    const { DebutPlanningEvenement: startDate, FinPlanningEvenement: endDate, IdEmploye: employeeId } = appointment;
+      let splitDate = splitDateObj.getTime();
+      if (!state.isFullDay && halfIntervals % 2 !== 0) {
+        splitDate += 12 * 60 * 60 * 1000;
+      }
 
-    // 1. On liste tous les jours de l'intervalle
-    const allDates = eachDayOfInterval({ start: startDate, end: endDate });
+      const employee = empMap.get(Number(employeeId));
+      const ressource = eventsRef.current[Number(appointment.IdPlanningRessource)];
+      if (!employee || !ressource) return;
 
-    // 2. On FILTRE pour ne garder que les jours "travaillés" (on exclut les week-ends si nécessaire)
-    const validDates = allDates.filter(date => {
-        const isWknd = isWeekend(date.getTime()); // ou date (selon comment est faite ta fonction isWeekend)
-        const skipWeekend = !timelineState.isDisplayWeekend && !timelineState.includeWeekend;
-        return !(isWknd && skipWeekend);
-    });
+      updateAppointmentBounds(
+        {
+          id,
+          newStartDate: startDate,
+          newEndDate: splitDate,
+          newEmployee: employee,
+        },
+        false,
+        appointment.PlanningEvenementPriorite,
+        false
+      );
 
-    // 3. On calcule le nombre d'intervalles par jour (1 pour FullDay, 2 pour Demi-journée)
-    const intervalsPerDay = timelineState.isFullDay ? 1 : 2;
-    const totalIntervals = validDates.length * intervalsPerDay;
+      const newAppointment = createAppointment(
+        {
+          startDate: splitDate,
+          endDate,
+          employeeId: employee.IdPersonnel as number,
+          ressource,
+          priority: appointment.PlanningEvenementPriorite ?? 0,
+        },
+        false,
+        appointment.AnnotationPlanningEvenement,
+        false
+      );
 
-    // 4. On trouve l'intervalle du milieu
-    const halfIntervals = Math.floor(totalIntervals / 2);
-
-    // 5. On déduit l'index du jour dans notre tableau filtré
-    const splitDayIndex = Math.floor(halfIntervals / intervalsPerDay);
-    const splitDateObj = validDates[splitDayIndex];
-
-    // 6. On convertit en timestamp
-    let splitDate = splitDateObj.getTime();
-
-    // 7. Si on est en demi-journée et que la coupure tombe l'après-midi, on rajoute 12h
-    if (!timelineState.isFullDay && (halfIntervals % 2 !== 0)) {
-        splitDate += (12 * 60 * 60 * 1000); // Ajoute 12 heures en millisecondes
-    }
-
-    const employee = employees.find(emp => Number(emp.IdPersonnel) === Number(employeeId));
-
-    const ressource = eventsRef.current[Number(appointment.IdPlanningRessource)];
-
-    if (!employee || !ressource) {
-      return;
-    }
-
-    //console.log(new Date(splitDate).toLocaleString(), 'Date de coupure calculée pour la division du rendez-vous');
-  
-
-    // 1. Redimensionner l'original
-    updateAppointmentBounds(
-      {
-        id: appointment.IdPlanningEvenement,
-        newStartDate: startDate,
-        newEndDate: splitDate,
-        newEmployee: employee,
-      },
-      false,
-      appointment.PlanningEvenementPriorite,
-      false
-    );
-    
-    // 2. Créer le nouveau
-    const newAppointment = createAppointment(
-      {
-        startDate: splitDate,
-        endDate,
-        employeeId: employee?.IdPersonnel as number,
-        ressource: ressource,
-        priority: appointment.PlanningEvenementPriorite ?? 0,
-      },
-      false,
-      appointment.AnnotationPlanningEvenement,
-      false
-    );
-    
-    if (!newAppointment) {
-      appointmentsRef.current = previousAppointments;
-      onUpdate();
-      return;
-    }
-
-    onUpdate();
-
-
-    await api?.divideEvenement?.(String(id), {
-      DateCoupure: splitDate,
-    }).then((resp) => {
-      if (isApiSuccess(resp)) {
-        const newid = resp?.data?.NouvelIdEvenement;
-
-        if (newid) {
-          appointmentsRef.current = appointmentsRef.current.map(app => 
-            app.IdPlanningEvenement === -1 ? { ...app, IdPlanningEvenement: newid } : app
-          );
-        }
-
-        //notificationService.appointmentUpdated();
+      if (!newAppointment) {
+        appointmentsRef.current = previousAppointments;
+        triggerUpdate();
         return;
       }
-      appointmentsRef.current = previousAppointments;
-      onUpdate();
-    })
-    .catch((err) => {
-      console.error('Erreur réseau divideEvenement', err);
-      appointmentsRef.current = previousAppointments;
-      onUpdate();
-    });
-    
 
-    // // 3. Sauvegarder l'action complète
-    
-    
-    const modifiedOriginal = appointmentsRef.current.find(app => app.IdPlanningEvenement === id);
-    if (modifiedOriginal) {
-      saveAppointmentState(originalAppointment, 'resize_split', originalAppointment, [newAppointment]);
-    }
+      triggerUpdate();
 
-    setIsModalOpen(false);
-    setSelectedAppointment(null);
-  }, [appointmentsRef, timelineState, updateAppointmentBounds, saveAppointmentState, onUpdate, createAppointment]);
+      try {
+        const resp = await currentApi?.divideEvenement?.(String(id), { DateCoupure: splitDate });
+        if (isApiSuccess(resp)) {
+          const newId = resp?.data?.NouvelIdEvenement;
+          if (newId) {
+            appointmentsRef.current = appointmentsRef.current.map((app) =>
+              Number(app.IdPlanningEvenement) === Number(newAppointment.IdPlanningEvenement)
+                ? { ...app, IdPlanningEvenement: newId }
+                : app
+            );
+          }
+          triggerUpdate();
 
-  const handleDivideConfirm = useCallback( async (appointment: Appointment) => {
+          const modifiedOriginal = appointmentsRef.current.find((app) => app.IdPlanningEvenement === id);
+          if (modifiedOriginal) {
+            saveAppointmentState(originalAppointment, 'resize_split', originalAppointment, [newAppointment]);
+          }
+        } else {
+          appointmentsRef.current = previousAppointments;
+          triggerUpdate();
+        }
+      } catch (err) {
+        console.error('Erreur réseau divideEvenement', err);
+        appointmentsRef.current = previousAppointments;
+        triggerUpdate();
+      }
+
+      setIsModalOpen(false);
+      setSelectedAppointment(null);
+    },
+    [appointmentsRef, eventsRef, updateAppointmentBounds, createAppointment, saveAppointmentState]
+  );
+
+  const handleDivideConfirm = useCallback(
+    async (appointment: Appointment) => {
       setAlertState({
-          isVisible: true,
-          title: "Êtes-vous sûr de vouloir diviser ce rendez-vous ?",
-          onConfirm: () => {
-              handleDivideAppointment(appointment);
-              setAlertState(prev => ({ ...prev, isVisible: false }));
-          },
-          onCancel: () => {
-            api?.unlockEvenement(appointment.IdPlanningEvenement).catch((err) => {
-              console.error('Erreur lors du déverrouillage du rendez-vous:', err);
-            });
-            setAlertState(prev => ({ ...prev, isVisible: false }));
-          },
-          fetchToLockAppointment: () => api?.lockEvenement(appointment.IdPlanningEvenement),
+        isVisible: true,
+        title: "Êtes-vous sûr de vouloir diviser ce rendez-vous ?",
+        onConfirm: () => {
+          void handleDivideAppointment(appointment);
+          setAlertState((prev) => ({ ...prev, isVisible: false }));
+        },
+        onCancel: () => {
+          latestRef.current.api?.unlockEvenement(appointment.IdPlanningEvenement).catch((err) => {
+            console.error('Erreur lors du déverrouillage du rendez-vous:', err);
+          });
+          setAlertState((prev) => ({ ...prev, isVisible: false }));
+        },
+        fetchToLockAppointment: () => latestRef.current.api?.lockEvenement(appointment.IdPlanningEvenement),
       });
-  }, [selectedAppointment, handleDivideAppointment]);
+    },
+    [handleDivideAppointment]
+  );
 
   const handleRepeat = useCallback(async (): Promise<ActionResult> => {
-    if (!repeatData || !selectedAppointment) {
+    const {
+      repeatData: rData,
+      selectedAppointment: selApp,
+      appointmentUtils: utils,
+      timelineState: state,
+      employeesMap: empMap,
+      api: currentApi,
+      onUpdate: triggerUpdate,
+    } = latestRef.current;
+
+    if (!rData || !selApp) {
       return { success: false, message: 'Aucun rendez-vous sélectionné pour la répétition.' };
     }
-    
+    if (!currentApi?.repeatEvenement) {
+      return { success: false, message: 'API de répétition indisponible.' };
+    }
 
-    const { repeatCount, endDate, repeatInterval, numberCount } = repeatData;
-    
-    const newAppointments = appointmentUtils.createRepeatedAppointments({
-      appointment: selectedAppointment,
-      repeatInterval,
-      repeatCount: repeatCount ?? 0,
-      endDate: endDate ?? undefined,
-      numberCount: numberCount,
-      isFullDay: timelineState.isFullDay,
-      nonWorkingDates: timelineState.nonWorkingDates,
-      includeWeekend: timelineState.includeWeekend,
-      includeNonWorkingDays: timelineState.respectNonWorkingDays,
+    const newAppointments = utils.createRepeatedAppointments({
+      appointment: selApp,
+      repeatInterval: rData.repeatInterval,
+      repeatCount: rData.repeatCount ?? 0,
+      endDate: rData.endDate ?? undefined,
+      numberCount: rData.numberCount,
+      isFullDay: state.isFullDay,
+      nonWorkingDates: state.nonWorkingDates,
+      includeWeekend: state.includeWeekend,
+      includeNonWorkingDays: state.respectNonWorkingDays,
     });
-    
+
     const payloads = {
-      IdPlanningEvenement: Number(selectedAppointment.IdPlanningEvenement),
-      Type: employees.find(emp => Number(emp.IdPersonnel) === Number(selectedAppointment.IdEmploye))?.Type,
-      IdEmploye: Number(selectedAppointment.IdEmploye),
-      IdPlanningRessource: Number(selectedAppointment.IdPlanningRessource),
-      AnnotationPlanningEvenement: selectedAppointment.AnnotationPlanningEvenement,
-      Date: newAppointments.map(app => {
-        return {
-          DebutPlanningEvenement: app.DebutPlanningEvenement,
-          FinPlanningEvenement: app.FinPlanningEvenement,
-        }
-      }),
-    }
-     
-    const previousAppointments = appointmentsRef.current.map(app => ({ ...app }));
+      IdPlanningEvenement: Number(selApp.IdPlanningEvenement),
+      Type: empMap.get(Number(selApp.IdEmploye))?.Type,
+      IdEmploye: Number(selApp.IdEmploye),
+      IdPlanningRessource: Number(selApp.IdPlanningRessource),
+      AnnotationPlanningEvenement: selApp.AnnotationPlanningEvenement,
+      Date: newAppointments.map((app) => ({
+        DebutPlanningEvenement: app.DebutPlanningEvenement,
+        FinPlanningEvenement: app.FinPlanningEvenement,
+      })),
+    };
 
-    if (!api?.repeatEvenement) {
-      const message = 'API de répétition indisponible.';
-      return { success: false, message };
-    }
-
-    const result = await api.repeatEvenement(payloads)
-    .then((resp) => {
-      //console.log('repeatEvenement response:', resp);
+    try {
+      const resp = await currentApi.repeatEvenement(payloads);
       if (isApiSuccess(resp)) {
-        //console.log('repeatEvenement success:', resp);
         const createdIds = resp?.data;
         if (Array.isArray(createdIds) && createdIds.length === newAppointments.length) {
           const repeatedAppointments = newAppointments.map((app, index) => ({
@@ -1249,484 +1268,458 @@ export const useAppointmentLogic = ({
             IdPlanningEvenement: Number(createdIds[index]),
           }));
           appointmentsRef.current = [...appointmentsRef.current, ...repeatedAppointments];
-    
-          //console.log('Rendez-vous répétés créés localement:', repeatedAppointments);
-          onUpdate();
-          return { success: true } as ActionResult;
+          triggerUpdate();
+          setRepeatData(null);
+          return { success: true };
         }
-
-        const message = 'Réponse serveur invalide lors de la répétition.';
-        return { success: false, message } as ActionResult;
-      }else {
-        appointmentsRef.current = previousAppointments;
-        onUpdate();
-        const message = 'Le serveur a refusé la création des rendez-vous répétés.';
-        return { success: false, message } as ActionResult;
+        return { success: false, message: 'Réponse serveur invalide lors de la répétition.' };
       }
-    })
-    .catch((err) => {      
-      console.error('Erreur réseau repeatEvenement', err);
-      appointmentsRef.current = previousAppointments;
-      onUpdate();
-      const message = 'Impossible de créer les rendez-vous répétés sur le serveur';
-      return { success: false, message } as ActionResult;
-    });
 
-    if (!result.success) {
-      return result;
+      return { success: false, message: 'Le serveur a refusé la création des rendez-vous répétés.' };
+    } catch (err) {
+      console.error('Erreur réseau repeatEvenement', err);
+      return { success: false, message: 'Impossible de créer les rendez-vous répétés sur le serveur' };
     }
-    onUpdate();
-    setRepeatData(null);
-    return { success: true };
-  }, [repeatData, selectedAppointment, appointmentUtils, timelineState, appointmentsRef, onUpdate]);
+  }, [appointmentsRef]);
 
   const handleExtend = useCallback(async (): Promise<ActionResult> => {
-    if (!extendData || !selectedAppointment) {
+    const { extendData: extDate, selectedAppointment: selApp } = latestRef.current;
+    if (!extDate || !selApp) {
       return { success: false, message: 'Aucun rendez-vous sélectionné pour la prolongation.' };
     }
 
-    const ressource = eventsRef.current[Number(selectedAppointment.IdPlanningRessource)];
+    const ressource = eventsRef.current[Number(selApp.IdPlanningRessource)];
     if (!ressource) {
       return { success: false, message: 'Ressource introuvable. Le rendez-vous ne peut pas être étendu.' };
     }
-    
+
     const result = await moveAppointment({
-      id: selectedAppointment.IdPlanningEvenement,
-      newStartDate: selectedAppointment.DebutPlanningEvenement,
-      newEndDate: extendData,
-      newEmployeeId: selectedAppointment.IdEmploye as number,
+      id: selApp.IdPlanningEvenement,
+      newStartDate: selApp.DebutPlanningEvenement,
+      newEndDate: extDate,
+      newEmployeeId: selApp.IdEmploye as number,
       idRessource: ressource.IdPlanningRessource,
-      resizeDirection: selectedAppointment.FinPlanningEvenement < extendData ? 'right' : 'left',
+      resizeDirection: selApp.FinPlanningEvenement < extDate ? 'right' : 'left',
     });
 
-    if (!result.success) {
-      return result;
-    }
+    if (!result.success) return result;
 
     setExtendData(null);
     return { success: true };
-  }, [extendData, selectedAppointment, moveAppointment]);
+  }, [eventsRef, moveAppointment]);
 
   // --- INTERACTION EXTERNE (Drag & Drop, Search) ---
-
   const createAppointmentFromDrag = useCallback(
-    async (item: Item, date: number, intervalName: "morning" | "afternoon" | "day", employeeId: number, priority: number) => {
-      
-      const startHour = intervalName === "day" ? DAY_INTERVALS[0].startHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].startHour : HALF_DAY_INTERVALS[1].startHour;
-      const endHour = intervalName === "day" ? DAY_INTERVALS[0].endHour : intervalName === "morning" ? HALF_DAY_INTERVALS[0].endHour : HALF_DAY_INTERVALS[1].endHour;
-      
+    async (
+      item: Item,
+      date: number,
+      intervalName: "morning" | "afternoon" | "day",
+      employeeId: number,
+      priority: number
+    ) => {
+      const interval =
+        intervalName === "day"
+          ? DAY_INTERVALS[0]!
+          : intervalName === "morning"
+            ? HALF_DAY_INTERVALS[0]!
+            : HALF_DAY_INTERVALS[1]!;
 
-      const startDate =  new Date(date).setHours(startHour, 0, 0, 0);
-      const endDate = new Date(date).setHours(endHour);      
+      const startDate = new Date(date).setHours(interval.startHour, 0, 0, 0);
+      const endDate = new Date(date).setHours(interval.endHour);
 
-      //console.log('priority:', priority);
-      // Crée un RDV localement (avec id temporaire). La logique de createAppointment
-      // va déclencher l'appel API en arrière-plan et mettre à jour l'ID lorsque la
-      // réponse serveur sera reçue.
-      createAppointment(
-        {
-          startDate,
-          endDate,
-          employeeId,
-          ressource: item,
-          priority,
-        },
-        true,
-      );
+      createAppointment({ startDate, endDate, employeeId, ressource: item, priority }, true);
 
-      setIsSearchOverlayOpen(false);
-      setDimensionsSearchInput('');
+      latestRef.current.setIsSearchOverlayOpen(false);
+      latestRef.current.setDimensionsSearchInput('');
     },
-    [createAppointment, setIsSearchOverlayOpen, setDimensionsSearchInput]
+    [createAppointment]
   );
 
-  const handleSearchItemAction = useCallback((event: Item) => {
-      if(!selectedCell) return;
-      
-      // Vérifier si l'événement est désactivé (pour les types absence/autre)
-      if ('actif' in event && !event.actif) {
-        return;
-      }  
+  const handleSearchItemAction = useCallback(
+    (event: Item) => {
+      const { selectedCell: cell, timelineState: state } = latestRef.current;
+      if (!cell) return;
+      if ('Actif' in event && !event.Actif) return;
+
+      const durationMs = state.isFullDay
+        ? 23 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000
+        : 11 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000;
+
       createAppointment(
         {
-          startDate: selectedCell.date,
-          endDate: selectedCell.date + (timelineState.isFullDay ? 23 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000 : 11 * 60 * 60 * 1000 + 59 * 60 * 1000 + 59 * 1000),
-          employeeId: selectedCell.employeeId,
+          startDate: cell.date,
+          endDate: cell.date + durationMs,
+          employeeId: cell.employeeId,
           ressource: event,
-          priority: 0, // Valeur par défaut, à remplacer si nécessaire
+          priority: 0,
         },
-        true,
+        true
       );
-  }, [selectedCell, timelineState.isFullDay, handleSaveAppointment, employees]);
+    },
+    [createAppointment]
+  );
 
   // --- PRESSE-PAPIER ---
-
   const copyAppointmentToClipboard = useCallback((app: Appointment) => {
     if (app) {
       clipboardAppointment.current = app;
       return clipboardAppointment.current;
-    } 
+    }
     return null;
-  }, [appointmentUtils]);
-
-  const pasteAppointment = useCallback( async (targetCell?: { employeeId: number; date: number } | null) => {
-    const cell = targetCell || selectedCell;
-    if (!clipboardAppointment.current || !cell) return;
-
-    const a = clipboardAppointment.current;
-    const startDate = a.DebutPlanningEvenement;
-    const endDate = a.FinPlanningEvenement;
-    const diff = endDate - startDate;
-    
-    const newStartDate = cell.date;
-    const newEndDate = newStartDate + diff;
-  
-    const days = getWorkedDayIntervals(
-      newStartDate, 
-      newEndDate,
-      timelineState.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
-      timelineState.respectNonWorkingDays,
-      timelineState.includeWeekend,
-      timelineState.nonWorkingDates
-    );
-    
-    if (days.length === 0) {
-      return;
-    }
-
-    const payload = {
-      DebutPlanningEvenement: cell.date,
-      FinPlanningEvenement: cell.date + (a.FinPlanningEvenement - a.DebutPlanningEvenement),
-      Type: employees.find(emp => Number(emp.IdPersonnel) === Number(cell.employeeId))?.Type,
-      IdEmploye: cell.employeeId,
-      AnnotationPlanningEvenement: a.AnnotationPlanningEvenement,
-      IdPlanningRessource: a.IdPlanningRessource,
-    };
-
-    if (!api?.createEvenement) {
-      return;
-    }
-
-    
-    await api.createEvenement({ ...payload })
-    .then((resp) => {;
-      //console.log('Response from createEvenement:', resp);
-    if (!isApiSuccess(resp)) {
-      const apiMessage = resp?.message || 'Le serveur a refusé la création du rendez-vous.';
-      return;
-    }
-
-    const apiData = resp?.data;
-    const apiResources = Array.isArray(apiData?.ressources) ? apiData.ressources : [];
-    addMissingResourcesToCache(apiResources);
-
-    const responseAppointments = Array.isArray(apiData?.appointments)
-      ? apiData.appointments
-      : Array.isArray(resp?.data)
-        ? resp.data
-        : (apiData ? [apiData] : []);
-
-    const createdAppointments: Appointment[] = responseAppointments
-      .filter((app: any) => app && typeof app === 'object')
-      .map((app: any) => ({
-        ...app,
-        IdPlanningEvenement: Number(app.IdPlanningEvenement),
-        DebutPlanningEvenement: app.DebutPlanningEvenement ?? payload.DebutPlanningEvenement,
-        FinPlanningEvenement: app.FinPlanningEvenement ?? payload.FinPlanningEvenement,
-        IdEmploye: Number(app.IdEmploye ?? payload.IdEmploye),
-        IdPlanningRessource: Number(app.IdPlanningRessource ?? payload.IdPlanningRessource),
-        AnnotationPlanningEvenement: app.AnnotationPlanningEvenement ?? a.AnnotationPlanningEvenement,
-      }));
-
-    if (createdAppointments.length === 0) {
-      return;
-    }
-
-    createdAppointments.forEach((app) => {
-      saveAppointmentState(app, 'create');
-    });
-
-    appointmentsRef.current = [...appointmentsRef.current, ...createdAppointments];
-    onUpdate();
-    })
-    .catch((err) => {
-      console.error('Erreur réseau pasteAppointment/createEvenement', err);
-    });
-  }, [selectedCell, timelineState, appointmentsRef, onUpdate, api, isApiSuccess, addMissingResourcesToCache]);
-
-  // Handler pour ouvrir la modal d'édition
-  const handleOpenEditModal = useCallback(async (appointment: Appointment) => {
-    const isCreatingResource = appointment.IdPlanningEvenement === -1;
-    const defaultItem: Item = {
-      IdPlanningRessource: -1,
-      CodePlanningRessource: '',
-      LibellePlanningRessource: '',
-      CouleurFondPlanningRessource: '#1E40AF',
-      CouleurBordurePlanningRessource: '#1E40AF',
-      CouleurTextePlanningRessource: '#FFFFFF',
-      Actif: true,
-      Etiquettes: [],
-      Type: 'Rubrique Perso',
-      Verrou: false,
-      Category: ''
-    };
-    let item = eventsRef.current[Number(appointment.IdPlanningRessource)] || defaultItem;
-
-    if (isCreatingResource) {
-      try {
-        const result = await displaySettingsService.getDisplaySettings();
-        if (result?.success === false) {
-          throw new Error(result.message || 'Impossible de récupérer les paramètres d’affichage.');
-        }
-
-        const settings = result?.data;
-        const defaultImage = settings?.ImageParDefaut;
-        const imageId = defaultImage ? Number(defaultImage.id) : NaN;
-
-        item = {
-          ...item,
-          CouleurFondPlanningRessource: settings?.CouleurFondParDefaut || item.CouleurFondPlanningRessource,
-          CouleurBordurePlanningRessource: settings?.CouleurBordureParDefaut || item.CouleurBordurePlanningRessource,
-          CouleurTextePlanningRessource: settings?.CouleurTexteParDefaut || item.CouleurTextePlanningRessource,
-          ...(defaultImage && Number.isFinite(imageId)
-            ? { Image: { id: imageId, image: defaultImage.url } }
-            : {}),
-        };
-      } catch (error) {
-        console.error('Erreur lors de la récupération des paramètres d’affichage par défaut', error);
-      }
-    }
-
-    setSelectedAppointment(appointment);
-    setSelectedItem(item);
-    setIsModalOpen(true);
-  }, [eventsRef]);
-
-  const handleAddManualRessource = useCallback( async (dimension: AutreItem): Promise<{ success: boolean, message?: string }> => {
-    // Marquer les Items de type 'Rubrique Perso' comme manuels
-
-    dimension.IdPlanningRessource = Date.now(); // Générer un ID unique temporaire
-    const newItem = dimension.Type === 'Rubrique Perso' 
-      ? { ...dimension, isManual: true } 
-      : dimension;
-    eventsRef.current[Number(dimension.IdPlanningRessource)] = newItem;
-
-    try {
-      if(dimension.Image?.id === 0){
-        let result: { success: boolean; id?: number; message?: string } = { success: true };
-
-        const imageBase64 = dimension.Image.image;
-
-        result = await api.addImage(imageBase64)
-
-        if(!result.success || !result.id) {
-          return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
-        }
-        dimension.Image.id = result.id;
-          
-      }
-
-      const apiPayload = {
-        CodePlanningRessource: dimension.CodePlanningRessource,
-        LibellePlanningRessource: dimension.LibellePlanningRessource,
-        CouleurFondPlanningRessource: dimension.CouleurFondPlanningRessource,
-        CouleurBordurePlanningRessource: dimension.CouleurBordurePlanningRessource,
-        CouleurTextePlanningRessource: dimension.CouleurTextePlanningRessource,
-        Actif: dimension.Actif,
-        IdPlanningImage: dimension.Image?.id,
-      };
-      const result = await ressourceService.addRessourceManual(apiPayload);
-      //console.log('Résultat de l\'ajout de ressource', result);
-      if (isApiSuccess(result) && result.data) {
-        const newId = result.data;
-        // Mettre à jour l'ID de la ressource dans le cache et tous les rendez-vous qui l'utilisent
-        const oldId = dimension.IdPlanningRessource;
-        if (oldId !== newId) {
-          // Mettre à jour la ressource dans le cache
-          eventsRef.current[Number(newId)] = {
-            ...eventsRef.current[Number(oldId)],
-            IdPlanningRessource: newId,
-          };
-          delete eventsRef.current[Number(oldId)];
-        }
-        //console.log('Ressource ajoutée avec succès, ID:', newId);
-      } else {
-        const message = result?.message || 'Le serveur a refusé l\'ajout de la ressource.';
-          // Nettoyer la ressource ajoutée localement en cas d'échec
-        delete eventsRef.current[Number(dimension.IdPlanningRessource)];
-        return { success: false, message: message };
-      }
-    } catch (error) {
-      console.error('Erreur réseau lors de l\'ajout de la ressource', error);
-      return { success: false, message: error instanceof Error ? error.message : 'Erreur inconnue' };
-    }
-
-    //console.log('Ressource ajoutée avec succès');
-    
-    setIsModalOpen(false);
-    onUpdate();
-    return { success: true };
   }, []);
 
+  const pasteAppointment = useCallback(
+    async (targetCell?: { employeeId: number; date: number } | null) => {
+      const { selectedCell: currentCell, timelineState: state, employeesMap: empMap, api: currentApi, onUpdate: triggerUpdate } = latestRef.current;
+      const cell = targetCell || currentCell;
+      const copied = clipboardAppointment.current;
+      if (!copied || !cell || !currentApi?.createEvenement) return;
 
-  const handleEditRessource = useCallback(async (dimension: Item): Promise<{ success: boolean, message?: string }> => {
-    try{
+      const diff = copied.FinPlanningEvenement - copied.DebutPlanningEvenement;
+      const newStartDate = cell.date;
+      const newEndDate = newStartDate + diff;
 
-      if(dimension.Image?.id === 0){
-        let result: { success: boolean; id?: number; message?: string } = { success: true };
-
-        const imageBase64 = dimension.Image.image;
-
-        result = await api.addImage(imageBase64)
-
-        if(!result.success || !result.id) {
-          return { success: false, message: result.message || 'Erreur lors de l\'ajout de l\'image.' };
-        }
-        dimension.Image.id = result.id;
-          
-      }
-
-      const apiPayload = {
-        CouleurFondPlanningRessource: dimension.CouleurFondPlanningRessource,
-        CouleurBordurePlanningRessource: dimension.CouleurBordurePlanningRessource,
-        CouleurTextePlanningRessource: dimension.CouleurTextePlanningRessource,
-        ...(dimension.Type === 'Rubrique Perso' ? 
-          { 
-            CodePlanningRessource: dimension.CodePlanningRessource,
-            LibellePlanningRessource: dimension.LibellePlanningRessource,
-            Actif: dimension.Actif,
-          } : {}),
-        IdPlanningImage: dimension.Image?.id,
-      };
-      const result = await ressourceService.editRessource(dimension.IdPlanningRessource, apiPayload);
-      //console.log('Résultat de la modification de ressource', result);
-      if (!isApiSuccess(result)) {
-        const message = result?.message || 'Le serveur a refusé la modification de la ressource.';
-        return { success: false, message };
-      }     }
-    catch(error){
-      console.error('Erreur réseau lors de la modification de la ressource', error);
-      return { success: false, message: 'Erreur réseau' };
-    }
-
-    setIsModalOpen(false);
-    onUpdate();
-    return { success: true };
-  }, []);
-
-  const handleDeleteManualRessource = useCallback((dimensionId: number, forceDelete: boolean = false) => {
-    
-    // Vérifier si la rubrique est utilisée dans le planning
-    const isUsedInPlanning = appointmentsRef.current.some(
-      appointment => appointment.IdPlanningRessource === dimensionId
-    );
-    
-    
-
-    if (isUsedInPlanning && !forceDelete) {
-      // Retourner un objet indiquant qu'une confirmation est nécessaire
-      return {
-        success: false,
-        requiresConfirmation: true,
-        isUsedInPlanning: true,
-        message: 'Cette rubrique est utilisée dans le planning.'
-      };
-    }
-
-    if (forceDelete) {
-
-      //console.log("oui on force delete");
-      
-      // Suppression forcée : supprimer la rubrique et tous les RDV associés
-      delete eventsRef.current[Number(dimensionId)];
-      appointmentsRef.current = appointmentsRef.current.filter(
-        appointment => appointment.IdPlanningRessource !== dimensionId
+      const days = getWorkedDayIntervals(
+        newStartDate,
+        newEndDate,
+        state.isFullDay ? DAY_INTERVALS : HALF_DAY_INTERVALS,
+        state.respectNonWorkingDays,
+        state.includeWeekend,
+        state.nonWorkingDates
       );
-    } else {
-      return {
-        success: false,
-        requiresConfirmation: true,
-        isUsedInPlanning: false,
-        message: 'Cette rubrique n\'est pas utilisée dans le planning. Voulez-vous la supprimer ?'
+
+      if (days.length === 0) return;
+
+      const payload = {
+        DebutPlanningEvenement: newStartDate,
+        FinPlanningEvenement: newEndDate,
+        Type: empMap.get(Number(cell.employeeId))?.Type,
+        IdEmploye: cell.employeeId,
+        AnnotationPlanningEvenement: copied.AnnotationPlanningEvenement,
+        IdPlanningRessource: copied.IdPlanningRessource,
       };
-    }
 
-    onUpdate();
-    return {
-      success: true,
-      requiresConfirmation: false,
-      isUsedInPlanning: false,
-      message: 'Rubrique supprimée avec succès.'
-    };
-  }, []);
+      try {
+        const resp = await currentApi.createEvenement(payload);
+        if (!isApiSuccess(resp)) return;
 
-  const handleDeactivateDimension = useCallback((dimensionId: number) => {
-    // Désactiver la rubrique au lieu de la supprimer
-    eventsRef.current[Number(dimensionId)] = {
-      ...eventsRef.current[Number(dimensionId)],
-      Actif: false
-    } as Item;
-    onUpdate();
-    return {
-      success: true,
-      message: 'Rubrique désactivée avec succès. Elle reste visible mais ne peut plus être utilisée.'
-    };
-  }, []);
+        const apiData = resp?.data;
+        if (Array.isArray(apiData?.ressources)) {
+          addMissingResourcesToCache(apiData.ressources);
+        }
 
+        const responseAppointments = Array.isArray(apiData?.appointments)
+          ? apiData.appointments
+          : Array.isArray(resp?.data)
+            ? resp.data
+            : apiData
+              ? [apiData]
+              : [];
 
+        const createdAppointments: Appointment[] = responseAppointments
+          .filter((app: any) => app && typeof app === 'object')
+          .map((app: any) => ({
+            ...app,
+            IdPlanningEvenement: Number(app.IdPlanningEvenement),
+            DebutPlanningEvenement: app.DebutPlanningEvenement ?? payload.DebutPlanningEvenement,
+            FinPlanningEvenement: app.FinPlanningEvenement ?? payload.FinPlanningEvenement,
+            IdEmploye: Number(app.IdEmploye ?? payload.IdEmploye),
+            IdPlanningRessource: Number(app.IdPlanningRessource ?? payload.IdPlanningRessource),
+            AnnotationPlanningEvenement: app.AnnotationPlanningEvenement ?? copied.AnnotationPlanningEvenement,
+          }));
 
-  const applyDisplaySettingsToAllEvents = useCallback(async ( value: DisplaySettings ): Promise<{ success: boolean; message?: string }> => {
-    
-      const result = await ressourceService.appliedEvenementDefaultSettings(Object.keys(eventsRef.current))
-        .catch((err) => {
-          console.error('Erreur réseau lors de l\'application des paramètres par défaut aux événements', err);
-          return { success: false, message: 'Erreur réseau lors de l\'application des paramètres par défaut aux événements' };
-        });
+        if (createdAppointments.length === 0) return;
 
-      
-      if (!isApiSuccess(result)) {
-        console.error('Erreur lors de l\'application des paramètres par défaut aux événements', result?.message);
-        return { success: false, message: result?.message || 'Erreur lors de l\'application des paramètres par défaut aux événements' };
+        for (let i = 0; i < createdAppointments.length; i++) {
+          saveAppointmentState(createdAppointments[i]!, 'create');
+        }
+
+        appointmentsRef.current = [...appointmentsRef.current, ...createdAppointments];
+        triggerUpdate();
+      } catch (err) {
+        console.error('Erreur réseau pasteAppointment/createEvenement', err);
       }
-      else {
+    },
+    [appointmentsRef, addMissingResourcesToCache, saveAppointmentState]
+  );
+
+  // --- GESTION DES RESSOURCES ---
+  const handleOpenEditModal = useCallback(
+    async (appointment: Appointment) => {
+      const isCreatingResource = appointment.IdPlanningEvenement === -1;
+      const defaultItem: Item = {
+        IdPlanningRessource: -1,
+        CodePlanningRessource: '',
+        LibellePlanningRessource: '',
+        CouleurFondPlanningRessource: '#1E40AF',
+        CouleurBordurePlanningRessource: '#1E40AF',
+        CouleurTextePlanningRessource: '#FFFFFF',
+        Actif: true,
+        Etiquettes: [],
+        Type: 'Rubrique Perso',
+        Verrou: false,
+        Category: '',
+      };
+      let item = eventsRef.current[Number(appointment.IdPlanningRessource)] || defaultItem;
+
+      if (isCreatingResource) {
+        try {
+          const result = await displaySettingsService.getDisplaySettings();
+          if (result?.success === false) {
+            throw new Error(result.message || 'Impossible de récupérer les paramètres d’affichage.');
+          }
+
+          const settings = result?.data;
+          const defaultImage = settings?.ImageParDefaut;
+          const imageId = defaultImage ? Number(defaultImage.id) : NaN;
+
+          item = {
+            ...item,
+            CouleurFondPlanningRessource: settings?.CouleurFondParDefaut || item.CouleurFondPlanningRessource,
+            CouleurBordurePlanningRessource: settings?.CouleurBordureParDefaut || item.CouleurBordurePlanningRessource,
+            CouleurTextePlanningRessource: settings?.CouleurTexteParDefaut || item.CouleurTextePlanningRessource,
+            ...(defaultImage && Number.isFinite(imageId)
+              ? { Image: { id: imageId, image: defaultImage.url } }
+              : {}),
+          };
+        } catch (error) {
+          console.error('Erreur lors de la récupération des paramètres d’affichage par défaut', error);
+        }
+      }
+
+      setSelectedAppointment(appointment);
+      setSelectedItem(item);
+      setIsModalOpen(true);
+    },
+    [eventsRef]
+  );
+
+  const handleAddManualRessource = useCallback(
+    async (dimension: AutreItem): Promise<{ success: boolean; message?: string }> => {
+      const tempId = Date.now();
+      const newItem =
+        dimension.Type === 'Rubrique Perso'
+          ? { ...dimension, IdPlanningRessource: tempId, isManual: true }
+          : { ...dimension, IdPlanningRessource: tempId };
+
+      eventsRef.current[tempId] = newItem;
+
+      try {
+        const imgResult = await uploadImageIfNeeded(dimension.Image);
+        if (!imgResult.success) {
+          delete eventsRef.current[tempId];
+          return { success: false, message: imgResult.message };
+        }
+
+        const apiPayload = {
+          CodePlanningRessource: dimension.CodePlanningRessource,
+          LibellePlanningRessource: dimension.LibellePlanningRessource,
+          CouleurFondPlanningRessource: dimension.CouleurFondPlanningRessource,
+          CouleurBordurePlanningRessource: dimension.CouleurBordurePlanningRessource,
+          CouleurTextePlanningRessource: dimension.CouleurTextePlanningRessource,
+          Actif: dimension.Actif,
+          IdPlanningImage: imgResult.imageId,
+        };
+
+        const result = await ressourceService.addRessourceManual(apiPayload);
+        if (isApiSuccess(result) && result.data) {
+          const newId = Number(result.data);
+          eventsRef.current[newId] = {
+            ...eventsRef.current[tempId]!,
+            IdPlanningRessource: newId,
+            ...(newItem.Image && imgResult.imageId !== undefined
+              ? { Image: { ...newItem.Image, id: imgResult.imageId } }
+              : {}),
+          };
+          if (tempId !== newId) {
+            delete eventsRef.current[tempId];
+          }
+        } else {
+          delete eventsRef.current[tempId];
+          return {
+            success: false,
+            message: result?.message || "Le serveur a refusé l'ajout de la ressource.",
+          };
+        }
+      } catch (error) {
+        delete eventsRef.current[tempId];
+        console.error("Erreur réseau lors de l'ajout de la ressource", error);
+        return { success: false, message: error instanceof Error ? error.message : 'Erreur inconnue' };
+      }
+
+      setIsModalOpen(false);
+      latestRef.current.onUpdate();
+      return { success: true };
+    },
+    [eventsRef, uploadImageIfNeeded]
+  );
+
+  const handleEditRessource = useCallback(
+    async (dimension: Item): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const imgResult = await uploadImageIfNeeded(dimension.Image);
+        if (!imgResult.success) {
+          return { success: false, message: imgResult.message };
+        }
+        if (dimension.Image && imgResult.imageId !== undefined) {
+          dimension.Image.id = imgResult.imageId;
+        }
+
+        const apiPayload = {
+          CouleurFondPlanningRessource: dimension.CouleurFondPlanningRessource,
+          CouleurBordurePlanningRessource: dimension.CouleurBordurePlanningRessource,
+          CouleurTextePlanningRessource: dimension.CouleurTextePlanningRessource,
+          ...(dimension.Type === 'Rubrique Perso'
+            ? {
+                CodePlanningRessource: dimension.CodePlanningRessource,
+                LibellePlanningRessource: dimension.LibellePlanningRessource,
+                Actif: dimension.Actif,
+              }
+            : {}),
+          IdPlanningImage: imgResult.imageId,
+        };
+
+        const result = await ressourceService.editRessource(dimension.IdPlanningRessource, apiPayload);
+        if (!isApiSuccess(result)) {
+          return {
+            success: false,
+            message: result?.message || 'Le serveur a refusé la modification de la ressource.',
+          };
+        }
+      } catch (error) {
+        console.error('Erreur réseau lors de la modification de la ressource', error);
+        return { success: false, message: 'Erreur réseau' };
+      }
+
+      setIsModalOpen(false);
+      latestRef.current.onUpdate();
+      return { success: true };
+    },
+    [uploadImageIfNeeded]
+  );
+
+  const handleDeleteManualRessource = useCallback(
+    (dimensionId: number, forceDelete: boolean = false) => {
+      const targetId = Number(dimensionId);
+      const isUsedInPlanning = appointmentsRef.current.some(
+        (appointment) => Number(appointment.IdPlanningRessource) === targetId
+      );
+
+      if (isUsedInPlanning && !forceDelete) {
+        return {
+          success: false,
+          requiresConfirmation: true,
+          isUsedInPlanning: true,
+          message: 'Cette rubrique est utilisée dans le planning.',
+        };
+      }
+
+      if (!forceDelete) {
+        return {
+          success: false,
+          requiresConfirmation: true,
+          isUsedInPlanning: false,
+          message: "Cette rubrique n'est pas utilisée dans le planning. Voulez-vous la supprimer ?",
+        };
+      }
+
+      delete eventsRef.current[targetId];
+      appointmentsRef.current = appointmentsRef.current.filter(
+        (appointment) => Number(appointment.IdPlanningRessource) !== targetId
+      );
+
+      latestRef.current.onUpdate();
+      return {
+        success: true,
+        requiresConfirmation: false,
+        isUsedInPlanning: false,
+        message: 'Rubrique supprimée avec succès.',
+      };
+    },
+    [appointmentsRef, eventsRef]
+  );
+
+  const handleDeactivateDimension = useCallback(
+    (dimensionId: number) => {
+      const targetId = Number(dimensionId);
+      if (eventsRef.current[targetId]) {
+        eventsRef.current[targetId] = {
+          ...eventsRef.current[targetId]!,
+          Actif: false,
+        } as Item;
+      }
+      latestRef.current.onUpdate();
+      return {
+        success: true,
+        message: 'Rubrique désactivée avec succès. Elle reste visible mais ne peut plus être utilisée.',
+      };
+    },
+    [eventsRef]
+  );
+
+  const applyDisplaySettingsToAllEvents = useCallback(
+    async (_value: DisplaySettings): Promise<{ success: boolean; message?: string }> => {
+      try {
+        const result = await ressourceService.appliedEvenementDefaultSettings(Object.keys(eventsRef.current));
+        if (!isApiSuccess(result)) {
+          return {
+            success: false,
+            message: result?.message || "Erreur lors de l'application des paramètres par défaut aux événements",
+          };
+        }
+
         const data = result?.data;
         if (Array.isArray(data)) {
-          data.forEach((eventUpdate: any) => {
+          for (let i = 0; i < data.length; i++) {
+            const eventUpdate = data[i];
             const eventId = Number(eventUpdate.IdPlanningRessource);
-            console.log('Mise à jour de l\'événement avec ID:', eventId, 'avec les nouvelles valeurs:', eventUpdate);
             if (eventsRef.current[eventId]) {
               eventsRef.current[eventId] = {
-                ...eventsRef.current[eventId],
+                ...eventsRef.current[eventId]!,
                 CouleurFondPlanningRessource: eventUpdate.CouleurFondPlanningRessource,
                 CouleurBordurePlanningRessource: eventUpdate.CouleurBordurePlanningRessource,
                 CouleurTextePlanningRessource: eventUpdate.CouleurTextePlanningRessource,
                 Image: eventUpdate.Image,
               };
             }
-          });
+          }
         }
-        onUpdate();
+
+        latestRef.current.onUpdate();
         return { success: true };
+      } catch (err) {
+        console.error("Erreur réseau lors de l'application des paramètres par défaut aux événements", err);
+        return {
+          success: false,
+          message: "Erreur réseau lors de l'application des paramètres par défaut aux événements",
+        };
       }
-  }, []);
-
-
-  
-
+    },
+    [eventsRef]
+  );
 
   return {
     // États exposés
-    selectedAppointment, setSelectedAppointment,
-    selectedCell, setSelectedCell,
-    isModalOpen, setIsModalOpen,
-    repeatData, setRepeatData,
-    extendData, setExtendData,
-    alertState, setAlertState,
-    newAppointmentInfo, setNewAppointmentInfo,
-    selectedItem, setSelectedItem,
-    selectedEmployee, setSelectedEmployee,
+    selectedAppointment,
+    setSelectedAppointment,
+    selectedCell,
+    setSelectedCell,
+    isModalOpen,
+    setIsModalOpen,
+    repeatData,
+    setRepeatData,
+    extendData,
+    setExtendData,
+    alertState,
+    setAlertState,
+    newAppointmentInfo,
+    setNewAppointmentInfo,
+    selectedItem,
+    setSelectedItem,
+    selectedEmployee,
+    setSelectedEmployee,
     clipboardAppointment: clipboardAppointment.current,
-    
+
     // Méthodes principales
     handleSaveAppointment,
     moveAppointment,
@@ -1744,12 +1737,11 @@ export const useAppointmentLogic = ({
     handleRepeat,
     handleExtend,
     handleSearchItemAction,
-    
+
     // Utils
     undoLastAction,
     canUndo: historyVersion > 0,
     copyAppointmentToClipboard,
     pasteAppointment,
-
   };
 };

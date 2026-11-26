@@ -298,7 +298,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                 );
                 }
             },
-            { key: 'actions', label: 'Actions', sortable: false, width: 180,
+            { key: 'actions', label: 'Actions', sortable: false, width: 220,
                 renderer: (_value: any, item: GenericDataItem) => (
                     <div className="flex items-center justify-center w-full h-full">
                         <button
@@ -310,7 +310,7 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
                             className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors cursor-pointer"
                         >
                             <ArrowRightLeft className="w-4 h-4" /> 
-                            Transférer
+                            Transférer planning
                         </button>
                     </div>
                 )

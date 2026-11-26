@@ -65,7 +65,7 @@ import calendarConfigService from '@/app/service/calendarConfig.service';
 // --- UTILITAIRES ---
 import { createSearchAndFilterUtils, FilterType, ActiveFilters } from "../utils/searchAndFilterUtils";
 import { Appointment, User, Item } from '../types';
-import type { Notification } from '../types';
+import type { ImageType, Notification } from '../types';
 import { useAuth, useCurrentUser } from '../hooks/utils/AuthContext';
 import { useMercureSync } from '../hooks/utils/useMercureSync';
 import TopNotification from '../components/ui/TopNotification';
@@ -1530,36 +1530,39 @@ function HomePageContent({
 
               // Images
               closeImageModal: interaction.handleCloseImageModal,
-              handleImageSelect: (newImage) => {
-                const selectedType = appointmentLogic.selectedItem?.Type;
-                const canEditSelectedResourceImage =
-                  selectedType === 'Projet'
-                    ? hasPermission(214, 22)
-                    : selectedType === 'Paie' || selectedType === 'Rubrique Perso'
-                      ? hasPermission(214, 23)
-                      : true;
-
-                if (!canEditSelectedResourceImage) {
+              handleImageSelect: useCallback((newImage: ImageType) => {
+                if (viewType === 'employee-table') {
+                  const id = appointmentLogic.selectedEmployee?.IdPersonnel ?? null;
+                  if (id !== null) {
+                    dataLayer.updateEmployeeImage(id, newImage);
+                  }
                   interaction.handleCloseImageModal();
                   return;
                 }
 
-                if (viewType === 'employee-table') {
-                  const id = appointmentLogic.selectedEmployee?.IdPersonnel || null;
-                  if (id === null) return;
-                  dataLayer.updateEmployeeImage(id, newImage);
-                } else {
-                  const id = appointmentLogic.selectedItem?.IdPlanningRessource || null;
-                  if (id === null) return;
-                  appointmentLogic.setSelectedItem(prev => {
-                    if (prev) {
-                      return { ...prev, Image: { id: newImage.id, image: newImage.image } };
-                    }
-                    return prev;
-                  });
-                }
+                appointmentLogic.setSelectedItem((prev) => {
+                  const baseItem = prev ?? ({
+                    IdPlanningRessource: -1,
+                    CodePlanningRessource: '',
+                    LibellePlanningRessource: '',
+                    CouleurFondPlanningRessource: '#1E40AF',
+                    CouleurBordurePlanningRessource: '#1E40AF',
+                    CouleurTextePlanningRessource: '#FFFFFF',
+                    Actif: true,
+                    Etiquettes: [],
+                    Type: 'Rubrique Perso',
+                    Verrou: false,
+                    Category: '',
+                  } as Item);
+
+                  return {
+                    ...baseItem,
+                    Image: { id: newImage.id, image: newImage.image },
+                  };
+                });
+
                 interaction.handleCloseImageModal();
-              },
+              }, [viewType, appointmentLogic, dataLayer, interaction]),
               handleImageUpload: interaction.handleImageUpload,
               openImageModalForEvent: () => interaction.handleOpenImageModal(),
               fetchPaginatedImages: dataLayer.fetchPaginatedImages,

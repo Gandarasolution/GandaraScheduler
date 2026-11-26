@@ -211,23 +211,27 @@ export const useAppointmentResize = ({
       const side = resizingSideRef.current;
       resizingSideRef.current = null;
       lastIntervalsMovedRef.current = null;
-      setResizingSide(null);
 
       const lockPromise = resizeLockPromiseRef.current;
       resizeLockPromiseRef.current = null;
 
       const lockAcquired = lockPromise ? await lockPromise : false;
-      if (!lockAcquired || !side) return;
+      if (!lockAcquired || !side) {
+        setResizingSide(null);
+        return;
+      }
 
       const { appointmentId: id, priority: prio, onAppointmentResize: onResize } = latestPropsRef.current;
 
       try {
         if (onResize) {
+          // On attend la mise à jour optimiste du state parent AVANT de repasser isResizing à false
           await Promise.resolve(
             onResize(id, dragStartRef.current, dragEndRef.current, side, prio)
           );
         }
       } finally {
+        setResizingSide(null);
         try {
           await evenementService.unlockEvenement(id);
         } catch (error) {

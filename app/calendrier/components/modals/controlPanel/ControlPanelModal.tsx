@@ -51,6 +51,8 @@ export const previewItem = {
   AdresseChantier: "Rue Jean Wyrsch 25000 BESANCON",
   Identifiant: "41 lgt wyrsch",
   PoleActivite: "TRAVAUX CVC2",
+  NumeroChargeAffaire: "07 06 05 04 02",
+  NumeroChefChantier: "07 06 05 04 02",
 } as unknown as Item;
 
 export const previewEmployee: User = {
