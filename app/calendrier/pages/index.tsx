@@ -397,8 +397,9 @@ function HomePageContent({
   const handleSearchOverlayItemAction = useCallback((item: SearchableItem) => {
     if (effectiveIsMobile) {
       // Vérifier les permissions selon le type d'événement
-      const canCreate = (item.Type === 'Projet' && hasPermission(214, 22)) || 
-                        (item.Type === 'Paie' && hasPermission(214, 23));
+      const canCreate = (item.Type === 'Projet' && hasPermission(231, 3)) || 
+                        (item.Type === 'Paie' && hasPermission(232, 3)) || 
+                        (item.Type === 'Rubrique Perso' && hasPermission(233, 3));
       
       if (!canCreate) {
         return;
@@ -448,8 +449,9 @@ function HomePageContent({
   }, []);
 
   const handleSelectMobileItem = useCallback((item: Item) => {
-    const canCreate = (item.Type === 'Projet' && hasPermission(214, 22)) ||
-      (item.Type === 'Paie' && hasPermission(214, 23));
+    const canCreate = (item.Type === 'Projet' && hasPermission(232, 3)) ||
+      (item.Type === 'Paie' && hasPermission(231, 3)) ||
+      (item.Type === 'Rubrique Perso' && hasPermission(233, 3));
     if (!canCreate) return;
     setSelectedItem(item);
     setShowSearchModal(false);
@@ -496,7 +498,7 @@ function HomePageContent({
 
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
-    return viewType === 'chantier-table' 
+    return viewType === 'chantier-table' && hasPermission(232, 3)
       ? ressourceService.getRessourcesProjet(
           limit, 
           pageNum, 
@@ -511,11 +513,11 @@ function HomePageContent({
           })()), 
           timeoutMs
         )
-      : viewType === 'employee-table' && hasPermission(214, 23) 
+      : viewType === 'employee-table' && hasPermission(234, 3) 
         ? (employeeService.getEmployeesPag as any)(limit, pageNum, searchInput, activeFilters, timeoutMs) 
-        : viewType === 'manual-event-table' && hasPermission(214, 23) 
+        : viewType === 'manual-event-table' && hasPermission(232, 3) 
           ? (ressourceService.getManualEvents as any)(limit, pageNum, searchInput, activeFilters, timeoutMs) 
-          : viewType === 'paie-table' && hasPermission(214, 23) 
+          : viewType === 'paie-table' && hasPermission(231, 3) 
             ? (ressourceService.getRubriquePaie as any)(limit, pageNum, searchInput, activeFilters, timeoutMs) 
             : undefined;
   }, [chantierViewId, viewType, searchInput, activeFilters]);

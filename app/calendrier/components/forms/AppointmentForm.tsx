@@ -122,6 +122,21 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
     return false;
   }, [formDataItemType?.Type, hasPermission]);
 
+
+const canEdit = useMemo(() => {
+  if (item.Type === 'Projet') {
+      return hasPermission(232, 23);
+    }
+    if (item.Type === 'Paie') {
+      return hasPermission(231, 23);
+    }
+    if (item.Type === 'Rubrique Perso') {
+      return hasPermission(234, 23);
+    }
+
+    return false;
+}, [item.Type, hasPermission]);
+
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);
 
@@ -732,6 +747,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
                   ? 'La date de fin doit être postérieure à la date de début'
                   : undefined
               }
+              canEdit={canEdit}
             />
 
             <EmployeeSelector
@@ -739,6 +755,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               selectedEmployeeId={formDataAppointment.IdEmploye}
               onEmployeeChange={handleEmployeeChange}
               label="Affecté"
+              canEdit={canEdit}
             />
           </>
         )}
@@ -793,6 +810,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
             label="Annotations"
             placeholder="Ajoutez des annotations..."
             height={96}
+            canEdit={canEdit}
           />
 
           {hasPermissionsPanel && (
@@ -827,6 +845,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
               isDeleting={DeletingTag}
               isCreating={isCreatingTag}
               error={tagError}
+              canEdit={canEdit}
             />
           )}
         </div>

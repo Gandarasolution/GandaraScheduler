@@ -79,8 +79,20 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   onLockedError
 }) => {
   const { hasPermission } = useAuth();
-  const canEdit = useMemo(() => hasPermission(214, 23), [hasPermission]);
-  const canDragPerm = useMemo(() => canEdit || hasPermission(214, 22), [canEdit, hasPermission]);
+  const canEdit = useMemo(() => {
+    if (event.Type === 'Projet') {
+      return hasPermission(232, 23);
+    }
+    if (event.Type === 'Paie') {
+      return hasPermission(231, 23);
+    }
+    if (event.Type === 'Rubrique Perso') {
+      return hasPermission(234, 23);
+    }
+
+    return false
+  }, [hasPermission]);
+  const canDragPerm = useMemo(() => canEdit , [canEdit]);
 
   const dragOffsetRef = useRef(0);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -63,6 +63,7 @@ export interface EmployeeSelectorProps {
   placeholder?: string;
   /** Disabled */
   disabled?: boolean;
+  canEdit?: boolean;
 }
 
 /**
@@ -75,7 +76,10 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   label = "Affecté",
   placeholder = "Sélectionner...",
   disabled = false,
+  canEdit = true,
 }) => {
+  const isDisabled = disabled || !canEdit;
+
   return (
     <div className="flex flex-col gap-2">
       {label && <label htmlFor="employeeId" className="block text-sm font-medium">{label}</label>}
@@ -83,8 +87,11 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         id="employeeId"
         name="employeeId"
         value={selectedEmployeeId || ''}
-        onChange={(e) => onEmployeeChange(Number(e.target.value))}
-        disabled={disabled}
+        onChange={(e) => {
+          if (!canEdit) return;
+          onEmployeeChange(Number(e.target.value));
+        }}
+        disabled={isDisabled}
         className="w-full p-2 border border-default rounded-xl focus:outline-none focus:ring-2 focus:ring-color bg-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {!selectedEmployeeId && <option value="">{placeholder}</option>}
@@ -118,11 +125,14 @@ export interface AnnotationsFieldProps {
   maxLength?: number;
   /** Disabled */
   disabled?: boolean;
+
+  canEdit?: boolean;
 }
 
 /**
  * Composant AnnotationsField - Champ de texte multiligne pour annotations
  */
+
 export const AnnotationsField: React.FC<AnnotationsFieldProps> = ({
   value,
   onChange,
@@ -131,16 +141,22 @@ export const AnnotationsField: React.FC<AnnotationsFieldProps> = ({
   height = 96,
   maxLength,
   disabled = false,
+  canEdit = true,
 }) => {
+  const isDisabled = disabled || !canEdit;
+
   return (
     <div className="flex flex-col gap-6">
       {label && <label className="text-sm font-medium">{label}</label>}
       <textarea
         value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          if (!canEdit) return;
+          onChange(e.target.value);
+        }}
         placeholder={placeholder}
         maxLength={maxLength}
-        disabled={disabled}
+        disabled={isDisabled}
         style={{ height: `${height}px` }}
         className="w-full p-3 border border-default rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-color text-sm disabled:opacity-50 disabled:cursor-not-allowed"
       />
