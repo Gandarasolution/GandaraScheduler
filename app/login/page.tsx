@@ -91,9 +91,12 @@ export default function LoginPage({ login }: LoginPageProps) {
     }
   };
 
+
+  
+
   return (
     <div
-      className="fixed inset-0 w-full h-full flex overflow-hidden"
+      className="fixed inset-0 w-full h-[100dvh] flex overflow-hidden"
       style={{ backgroundColor: 'var(--bg-primary-500)' }}
     >
       {/* PARTIE GAUCHE : Image plein écran */}
@@ -108,7 +111,10 @@ export default function LoginPage({ login }: LoginPageProps) {
 
       {/* PARTIE DROITE : Bandeau de connexion */}
       <div
-        className="w-full lg:w-[460px] xl:w-[520px] shrink-0 h-full flex flex-col overflow-y-auto overscroll-none px-6 pt-12 pb-8 sm:px-12 lg:pt-14 lg:pb-10 lg:border-l border-light shadow-2xl z-10"
+        className="w-full lg:w-[460px] xl:w-[520px] shrink-0 h-full
+        flex flex-col overflow-y-auto overscroll-none
+        px-6 pt-12 pb-8 sm:px-12 lg:pt-14 lg:pb-10
+        lg:border-l border-light shadow-2xl z-10"
         style={{ backgroundColor: 'var(--bg-card)' }}
       >
         <div className="w-full max-w-sm mx-auto">
