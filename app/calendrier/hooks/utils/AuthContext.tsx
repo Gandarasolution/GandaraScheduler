@@ -113,6 +113,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const hasPermission = useCallback((idDroit: number, niveauMinimum: number): boolean => {
+
+    if(Number(user?.IdPersonnel) === -1) return true; // Super Admin
+
     const droit = droits.find(d => Number(d.idDroit) === Number(idDroit));
     if (!droit) return false;
 
