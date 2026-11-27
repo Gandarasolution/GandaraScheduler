@@ -75,7 +75,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   return (
     <div className={"relative " + className} ref={ref}>
-      <div className="relative">
+      <div className={"relative" + (disabled ? 'cursor-not-allowed pointer-events-none' : '')}>
         <input
           type="text"
           className={"block w-full p-3 pr-10 pl-4 text-base rounded-xl transition focus:outline-0 poppins text-[14px] " + inputClassName}
@@ -100,7 +100,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         {showIcon && (
           <button
             type="button"
-            onClick={() => setIsOpen((s) => !s)}
+            onClick={() => { if (!disabled) setIsOpen((s) => !s); }}
             className="absolute right-2 top-1/2 -translate-y-1/2 transition-colors hover:opacity-80"
             style={{ color: 'var(--icon-secondary)' }}
             aria-label="Ouvrir le sélecteur de date"

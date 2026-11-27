@@ -371,6 +371,10 @@ function HomePageContent({
   const handleTableRowClick = useCallback((item: any) => {
     if (viewType === 'employee-table') return;
 
+    if (item.Type === 'Projet' && !hasPermission(232, 3)) return;
+    if (item.Type === 'Paie' && !hasPermission(231, 3)) return;
+    if (item.Type === 'Rubrique Perso' && !hasPermission(233, 3)) return;
+
     const resourceId = Number(item.IdPlanningRessource);
     if (!Number.isFinite(resourceId)) return;
 
@@ -498,7 +502,7 @@ function HomePageContent({
 
   // --- FONCTIONS DE RECHERCHE PAGINÉE (Mémorisées pour éviter les re-rendus inutiles) ---
   const handlePaginatedSearch = useCallback(( limit: number = 20, pageNum: number = 1, timeoutMs: number = 15000) => {    
-    return viewType === 'chantier-table' && hasPermission(232, 3)
+    return viewType === 'chantier-table' && hasPermission(232, 2)
       ? ressourceService.getRessourcesProjet(
           limit, 
           pageNum, 
@@ -513,11 +517,11 @@ function HomePageContent({
           })()), 
           timeoutMs
         )
-      : viewType === 'employee-table' && hasPermission(234, 3) 
+      : viewType === 'employee-table' && hasPermission(234, 2) 
         ? (employeeService.getEmployeesPag as any)(limit, pageNum, searchInput, activeFilters, timeoutMs) 
-        : viewType === 'manual-event-table' && hasPermission(232, 3) 
+        : viewType === 'manual-event-table' && hasPermission(232, 2) 
           ? (ressourceService.getManualEvents as any)(limit, pageNum, searchInput, activeFilters, timeoutMs) 
-          : viewType === 'paie-table' && hasPermission(231, 3) 
+          : viewType === 'paie-table' && hasPermission(231, 2) 
             ? (ressourceService.getRubriquePaie as any)(limit, pageNum, searchInput, activeFilters, timeoutMs) 
             : undefined;
   }, [chantierViewId, viewType, searchInput, activeFilters]);
@@ -766,10 +770,7 @@ function HomePageContent({
       }
 
       if (!hasInitializedEmployeesRef.current) {
-        const employeesResponse =
-          hasPermission(214, 23) || hasPermission(214, 22)
-            ? await employeeService.getEmployeesPlanning()
-            : await employeeService.getEmployee(user.IdPersonnel);
+        const employeesResponse = await employeeService.getEmployeesPlanning()
 
         if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
           setGlobalEmployees(employeesResponse.data);
@@ -837,10 +838,7 @@ function HomePageContent({
     const initializePaieTableAndManualEventTable = async () => {
       if (!isMounted || hasInitializedEmployeesRef.current) return;
       hasInitializedEmployeesRef.current = true;
-      const employeesResponse =
-        hasPermission(214, 23) || hasPermission(214, 22)
-          ? await employeeService.getEmployeesPlanning()
-          : null;
+      const employeesResponse = await employeeService.getEmployeesPlanning()
 
       if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
@@ -863,7 +861,7 @@ function HomePageContent({
       viewType === "paie-table" ||
       viewType === "manual-event-table"
     ) {
-      if (hasPermission(214, 23) || hasPermission(214, 22)) {
+      if ((viewType === "paie-table" && (hasPermission(231, 2)) || (viewType === "manual-event-table" && hasPermission(233, 2)))) {
         initializePaieTableAndManualEventTable();
       } else {
         setErrorPlanning({
@@ -982,9 +980,8 @@ function HomePageContent({
       setGlobalEmployees([]);
       dataLayer.resetPlanningData();
 
-      const employeesResponse = hasPermission(214, 23) || hasPermission(214, 22)
-        ? await employeeService.getEmployeesPlanning()
-        : await employeeService.getEmployee(user.IdPersonnel);
+      const employeesResponse = await employeeService.getEmployeesPlanning()
+        
 
       if (employeesResponse?.success && Array.isArray(employeesResponse.data)) {
         setGlobalEmployees(employeesResponse.data);
@@ -1347,10 +1344,7 @@ function HomePageContent({
                           setLoadCalendar(true);
                         }}
                       />
-                    ) : (
-                      (effectiveIsMobile ||
-                      currentCalendarConfig ||
-                      hasPermission(214, 21)) && (
+                    ) : ((effectiveIsMobile ||currentCalendarConfig ) && (
                         <div className="relative flex flex-col h-full w-full">
 
                           {/* Bloque les interactions pendant le chargement */}
@@ -1474,7 +1468,14 @@ function HomePageContent({
                             refreshKey={dataLayer.appointmentsVersion + tableRefreshVersion}
                             loadingElement={<Loader message="Chargement des données..." />}
                             showGroupHeaders={viewType === 'chantier-table'}
-                            onRowClick={viewType === 'employee-table' ? undefined : handleTableRowClick}
+                            onRowClick={
+                              (viewType === 'employee-table' 
+                                || viewType === 'chantier-table' && !hasPermission(232, 3) 
+                                || viewType === 'paie-table' && !hasPermission(231, 3)
+                                || viewType === 'manual-event-table' && !hasPermission(233, 3)) 
+                                  ? undefined 
+                                  : handleTableRowClick
+                            }
                             onRightClick={viewType === 'employee-table' ? undefined : interaction.handleDataTableContextMenu}
                             heightCell={60}
                           />

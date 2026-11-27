@@ -199,7 +199,6 @@ export interface Appointment{
   /** Étiquette sélectionnée pour ce rendez-vous (optionnel) */
   Etiquette?: Tag;
   EtapeValidation?: string; // Étape de validation du rendez-vous (ex: "En attente", "Validé", etc.)
-  isReadOnly?: boolean; // Indique si le rendez-vous est en lecture seule (non modifiable)
   /** Indice de priorité pour le chevauchement (nombre plus élevé = au-dessus de la pile) */
   PlanningEvenementPriorite?: number;
   

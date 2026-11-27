@@ -19,6 +19,7 @@ type ColorHexInputProps = {
   label: string;
   value?: string;
   fallbackColor: string;
+  canEdit?: boolean;
   onChange: (value: string) => void;
 };
 
@@ -27,7 +28,9 @@ export const ColorHexInput = ({
   label,
   value,
   fallbackColor,
+  canEdit = true,
   onChange,
+
 }: ColorHexInputProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,16 +82,16 @@ export const ColorHexInput = ({
       {/* Pastille cliquable */}
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="w-4 h-4 border border-default cursor-pointer hover:scale-105 transition-transform shrink-0 shadow-sm"
+        onClick={() => {if (canEdit) setIsOpen((prev) => !prev);}}
+        className={"w-4 h-4 border border-default transition-transform shrink-0 shadow-sm" + (canEdit ? " cursor-pointer hover:scale-105" : " cursor-default")}
         style={{ backgroundColor: displayColor }}
         title={`Choisir ${label.toLowerCase()}`}
         aria-expanded={isOpen}
       />
       <label
         htmlFor={id}
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="text-sm text-primary cursor-pointer select-none"
+        onClick={() => {if (canEdit) setIsOpen((prev) => !prev);}}
+        className={"text-sm text-primary select-none" + (canEdit ? "cursor-pointer" : " cursor-default")}
       >
         {label}
       </label>

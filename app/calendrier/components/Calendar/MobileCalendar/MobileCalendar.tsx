@@ -96,9 +96,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   useEffect(() => {
     if (selectedEmployee || employees.length === 0) return;
 
-    const defaultEmployee = hasPermission(214, 22) || hasPermission(214, 23)
-      ? employees[0]
-      : employees.find(emp => emp.IdPersonnel === user.IdPersonnel);
+    const defaultEmployee = employees[0]
 
     if (defaultEmployee) {
       setSelectedEmployee(defaultEmployee);
@@ -123,9 +121,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
   }, [onLoadAppointmentsInRange, selectedDate, selectedEmployee]);
   
   const visibleEmployees = useMemo(() => {
-    const baseEmployees = hasPermission(214, 22) || hasPermission(214, 23)
-      ? employees 
-      : employees.filter(emp => Number(emp.IdPersonnel) === Number(user.IdPersonnel));
+    const baseEmployees = employees 
     
     return baseEmployees.filter(emp => {
       if (emp.Actif !== false) {
@@ -258,7 +254,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           <div className="w-full max-w-4xl mx-auto md:px-2">
-            {/* Employee Selector - visible seulement pour les admins et managers */}
             {(hasPermission(214, 22) || hasPermission(214, 23)) && employees.length > 0 && (
               <EmployeeSelector 
                 employees={visibleEmployees}
@@ -288,7 +283,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
         </main>
 
         {/* Modal de recherche d'événement */}
-        {(hasPermission(214, 22) || hasPermission(214, 23)) && showSearchModal && (
+        {/* {(hasPermission(214, 22) || hasPermission(214, 23)) && showSearchModal && (
           <SearchOverlay
             isOpen={showSearchModal}
             onClose={() => {
@@ -354,10 +349,10 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
             enableDragDetection={false}
             maxWidth="md"
           />
-        )}
+        )} */}
 
         {/* Modal d'ajout de rendez-vous */}
-        {(hasPermission(214, 22) || hasPermission(214, 23)) && showAppointmentForm && (
+        {/* {(hasPermission(214, 22) || hasPermission(214, 23)) && showAppointmentForm && (
           <div 
             className="fixed inset-0 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-6 animate-in fade-in duration-200"
             style={{ backgroundColor: 'var(--bg-overlay)' }}
@@ -374,7 +369,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 boxShadow: 'var(--shadow-2xl)'
               }}
             >
-              {/* Header du modal */}
               <div 
                 className="flex items-center justify-between px-6 py-4 sticky top-0 z-10"
                 style={{
@@ -406,7 +400,6 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
                 </button>
               </div>
               
-              {/* Contenu scrollable */}
               <div className="flex-1 overflow-y-auto p-6">
                 <AppointmentForm
                   appointments={appointments}
@@ -430,7 +423,7 @@ export const MobileCalendar: React.FC<MobileCalendarGridProps> = ({
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
       </div>
     </div>

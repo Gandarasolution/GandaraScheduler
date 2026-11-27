@@ -81,13 +81,13 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const { hasPermission } = useAuth();
   const canEdit = useMemo(() => {
     if (event.Type === 'Projet') {
-      return hasPermission(232, 23);
+      return hasPermission(232, 3) || hasPermission(225, 3);
     }
     if (event.Type === 'Paie') {
-      return hasPermission(231, 23);
+      return hasPermission(231, 3) || hasPermission(226, 3);
     }
     if (event.Type === 'Rubrique Perso') {
-      return hasPermission(234, 23);
+      return hasPermission(234, 3) || hasPermission(226, 3);
     }
 
     return false
@@ -103,7 +103,6 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   const startDate = appointment.DebutPlanningEvenement;
   const endDate = appointment.FinPlanningEvenement;
   const isLocked = appointment.isLocked === true;
-  const isReadOnly = appointment.isReadOnly === true;
 
   const {
     isResizingLeft,
@@ -157,7 +156,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       endDate,
       dragOffset: dragOffsetRef.current,
     }),
-    canDrag: () => !isResizing && !isLocked && !isReadOnly && !isInactive && canDragPerm,
+    canDrag: () => !isResizing && !isLocked  && !isInactive && canDragPerm,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -178,17 +177,17 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
   });
 
   const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (isReadOnly || isLocked || isInactive || source === 'demo') return;
+    if (isLocked || isInactive || source === 'demo') return;
     const rect = e.currentTarget.getBoundingClientRect();
     dragOffsetRef.current = e.clientX - rect.left;
-  }, [isInactive, isLocked, isReadOnly, source]);
+  }, [isInactive, isLocked, source]);
 
   useEffect(() => {
     hasMountedRef.current = true;
   }, []);
 
   useEffect(() => {
-    if (!isDragging || dragLockSentRef.current || isReadOnly || isLocked || isInactive || source === 'demo') {
+    if (!isDragging || dragLockSentRef.current || isLocked || isInactive || source === 'demo') {
       return;
     }
 
@@ -209,53 +208,47 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
         console.error('Erreur lors du verrouillage rapide du rendez-vous :', error);
         return false;
       });
-  }, [isDragging, appointment.IdPlanningEvenement, isInactive, isLocked, isReadOnly, onLockedError, source]);
+  }, [isDragging, appointment.IdPlanningEvenement, isInactive, isLocked, onLockedError, source]);
 
   const handleAppointmentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    if (isReadOnly) return;
+    if (source === 'demo') return;
     if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
 
     clickTimeoutRef.current = setTimeout(() => {
       clickTimeoutRef.current = null;
       onClick?.(appointment);
     }, 220);
-  }, [appointment, isReadOnly, onClick]);
+  }, [appointment, onClick]);
 
   const handleAppointmentDoubleClick = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    if (source === 'demo') return;
     if (clickTimeoutRef.current) {
       clearTimeout(clickTimeoutRef.current);
       clickTimeoutRef.current = null;
     }
-    if (isLocked || isReadOnly) return;
+    if (isLocked) return;
 
-    if ((!isInactive && canEdit) || source === 'demo') {
-      if (source === 'demo') {
-        onDoubleClick?.(appointment);
-        return;
-      }
-
+    if ((!isInactive )) {
+       
       try {
-        const response = await evenementService.lockQuickEvenement(appointment.IdPlanningEvenement);
-        if (response.success === false) {
-          onLockedError?.(response.message || 'Un autre utilisateur modifie cet événement.');
-          return;
+        if (canEdit) {
+          const response = await evenementService.lockQuickEvenement(appointment.IdPlanningEvenement);
+          if (response.success === false) {
+            onLockedError?.(response.message || 'Un autre utilisateur modifie cet événement.');
+            return;
+          }
         }
         onDoubleClick?.(appointment);
       } catch (error) {
         console.error('Erreur lors du verrouillage avant ouverture du formulaire :', error);
       }
     }
-  }, [appointment, canEdit, isInactive, isLocked, isReadOnly, onDoubleClick, onLockedError, source]);
+  }, [appointment, canEdit, isInactive, isLocked, onDoubleClick, onLockedError, source]);
 
   const onContextMenuHandler = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (isReadOnly) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
     if (!handleContextMenu) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
@@ -289,7 +282,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       employeeId: Number(appointment.IdEmploye),
       date: targetDate
     });
-  }, [INTERVAL_WIDTH, appointment, endDate, handleContextMenu, isDisplayWeekend, isFullDay, isReadOnly, startDate]);
+  }, [INTERVAL_WIDTH, appointment, endDate, handleContextMenu, isDisplayWeekend, isFullDay, startDate]);
 
   useEffect(() => {
     return () => {
@@ -336,9 +329,9 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
     return {
       titleText: event.LibellePlanningRessource,
       primaryLabel: event.LibellePlanningRessource,
-      secondaryLabel: appointment.isReadOnly ? (appointment.EtapeValidation ?? '') : chargeeAffaire,
+      secondaryLabel: chargeeAffaire,
     };
-  }, [event, appointment.isReadOnly, appointment.EtapeValidation, chargeeAffaire]);
+  }, [event, appointment.EtapeValidation, chargeeAffaire]);
 
   const appointmentColor = event?.CouleurFondPlanningRessource || '#1E40AF';
   const appointmentBorderColor = event?.CouleurBordurePlanningRessource || '#1E40AF';
@@ -370,20 +363,20 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       color: appointmentTextColor,
       transition: transitionValue,
       zIndex: isGhost ? 30 : (isDragging ? 40 : (20 + (appointment.PlanningEvenementPriorite || 0))),
-      cursor: (isInactive || isLocked || isReadOnly)
+      cursor: (isInactive || isLocked)
         ? 'not-allowed'
-        : (isDragging ? 'grabbing' : (source === 'calendar' && canEdit ? 'grab' : 'pointer')),
+        : (isDragging ? 'grabbing' : (source === 'calendar' && canEdit ? 'grab' : source === 'demo' ? 'default' : 'pointer')),
     };
   }, [
     source, appointmentWidthPx, INTERVAL_WIDTH, isDragging, computedLeft, absoluteTop,
     isResizing, isGhost, appointmentColor, appointmentBorderColor, appointmentTextColor,
-    appointment.PlanningEvenementPriorite, isInactive, isLocked, isReadOnly, canEdit
+    appointment.PlanningEvenementPriorite, isInactive, isLocked, canEdit
   ]);
 
   const hasSpaceForBothHandles = appointmentWidthPx >= 60;
   const isSmallAppointment = appointmentWidthPx < (INTERVAL_WIDTH * 1.5);
   const handleWidth = `${Math.min(appointmentWidthPx * 0.1, 12)}px`;
-  const canInteract = source === 'calendar' && !isInactive && !isLocked && !isReadOnly;
+  const canInteract = source === 'calendar' && !isInactive && !isLocked ;
 
   const attachDragRef = useCallback((node: HTMLDivElement | null) => {
     if (node && canInteract && canEdit) drag(node);
@@ -395,7 +388,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({
       onClick={handleAppointmentClick}
       onDoubleClick={handleAppointmentDoubleClick}
       onContextMenu={onContextMenuHandler}
-      onMouseDown={canEdit && !isReadOnly ? handleDragStart : undefined}
+      onMouseDown={canEdit  ? handleDragStart : undefined}
       className={`
         appointment-item rounded-xl text-sm
         flex flex-shrink-0 items-center gap-2 overflow-visible whitespace-nowrap text-ellipsis
@@ -564,7 +557,6 @@ const arePropsEqual = (prev: AppointmentItemProps, next: AppointmentItemProps) =
   return (
     prev.appointment.IdPlanningEvenement === next.appointment.IdPlanningEvenement &&
     prev.appointment.isLocked === next.appointment.isLocked &&
-    prev.appointment.isReadOnly === next.appointment.isReadOnly &&
     prev.appointment.EtapeValidation === next.appointment.EtapeValidation &&
     prev.appointment.DebutPlanningEvenement === next.appointment.DebutPlanningEvenement &&
     prev.appointment.FinPlanningEvenement === next.appointment.FinPlanningEvenement &&

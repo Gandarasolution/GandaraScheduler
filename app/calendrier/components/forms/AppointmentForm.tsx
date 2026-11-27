@@ -55,7 +55,6 @@ const APPOINTMENT_DIRTY_KEYS = [
   'IdEmploye',
   'IdPlanningRessource',
   'Etiquette',
-  'isReadOnly',
   'PlanningEvenementPriorite',
   'DebutPlanningEvenement',
   'FinPlanningEvenement',
@@ -114,28 +113,20 @@ const AppointmentForm: React.FC<AppointmentFormProps> = memo(({
   const [formEndDate, setFormEndDate] = useState(() => new Date(appointment.FinPlanningEvenement));
   const [formDataItemType, setFormDataItemType] = useState<Item>(item);
 
-  const canEditImage = useMemo(() => {
-    if (formDataItemType?.Type === 'Projet') return hasPermission(225, 3);
-    if (formDataItemType?.Type === 'Paie' || formDataItemType?.Type === 'Rubrique Perso') {
-      return hasPermission(226, 3);
-    }
-    return false;
-  }, [formDataItemType?.Type, hasPermission]);
 
+  const canEdit = useMemo(() => {
+    if (item.Type === 'Projet') {
+        return hasPermission(232, 3);
+      }
+      if (item.Type === 'Paie') {
+        return hasPermission(231, 3);
+      }
+      if (item.Type === 'Rubrique Perso') {
+        return hasPermission(234, 3);
+      }
 
-const canEdit = useMemo(() => {
-  if (item.Type === 'Projet') {
-      return hasPermission(232, 23);
-    }
-    if (item.Type === 'Paie') {
-      return hasPermission(231, 23);
-    }
-    if (item.Type === 'Rubrique Perso') {
-      return hasPermission(234, 23);
-    }
-
-    return false;
-}, [item.Type, hasPermission]);
+      return false;
+  }, [item.Type, hasPermission]);
 
   const [dateValidationError, setDateValidationError] = useState(false);
   const [codeValidationError, setCodeValidationError] = useState(false);
@@ -687,8 +678,8 @@ const canEdit = useMemo(() => {
   );
 
   const handleOpenImageClick = useMemo(
-    () => (canEditImage ? () => handleOpenImageModal(formDataItemType?.IdPlanningRessource) : undefined),
-    [canEditImage, handleOpenImageModal, formDataItemType?.IdPlanningRessource]
+    () => (canEdit ? () => handleOpenImageModal(formDataItemType?.IdPlanningRessource) : undefined),
+    [canEdit, handleOpenImageModal, formDataItemType?.IdPlanningRessource]
   );
 
   if (isLoading && loadingFallback) {
@@ -712,7 +703,7 @@ const canEdit = useMemo(() => {
         <FormHeader
           icon={formDataItemType?.Image?.image || undefined}
           onIconClick={handleOpenImageClick}
-          canEditImage={canEditImage}
+          canEdit={canEdit}
           colors={colors}
           onColorChange={handleColorChange}
           resourceFields={resourceFields}

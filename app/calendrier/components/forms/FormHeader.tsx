@@ -22,7 +22,7 @@ export interface ResourceField {
 export interface FormHeaderProps {
   icon?: string;
   onIconClick?: () => void;
-  canEditImage?: boolean;
+  canEdit?: boolean;
   colors: ColorConfig;
   onColorChange: (colorType: 'background' | 'border' | 'text', value: string) => void;
   resourceFields?: ResourceField[];
@@ -41,7 +41,7 @@ const WIDTH_CLASS_MAP: Record<string, string> = {
 export const FormHeader: React.FC<FormHeaderProps> = memo(({
   icon,
   onIconClick,
-  canEditImage = true,
+  canEdit = true,
   colors,
   onColorChange,
   resourceFields,
@@ -99,9 +99,9 @@ export const FormHeader: React.FC<FormHeaderProps> = memo(({
         <div className="flex items-start w-full sm:w-[68px]">Icône</div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
           <div
-            className={`relative group ${canEditImage ? 'cursor-pointer' : ''}`}
+            className={`relative group ${canEdit? 'cursor-pointer' : ''}`}
             onClick={() => {
-              if (canEditImage && onIconClick) onIconClick();
+              if (canEdit && onIconClick) onIconClick();
             }}
           >
             {icon ? (
@@ -124,7 +124,7 @@ export const FormHeader: React.FC<FormHeaderProps> = memo(({
                 </svg>
               </div>
             )}
-            {canEditImage && (
+            {canEdit && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -148,6 +148,7 @@ export const FormHeader: React.FC<FormHeaderProps> = memo(({
               value={colors.background}
               fallbackColor="#1E40AF"
               onChange={handleBgChange}
+              canEdit={canEdit}
             />
             <ColorHexInput
               id="default-color-bordure"
@@ -155,6 +156,7 @@ export const FormHeader: React.FC<FormHeaderProps> = memo(({
               value={colors.border}
               fallbackColor="#1E40AF"
               onChange={handleBorderChange}
+              canEdit={canEdit}
             />
             <ColorHexInput
               id="default-color-texte"
@@ -162,6 +164,7 @@ export const FormHeader: React.FC<FormHeaderProps> = memo(({
               value={colors.text}
               fallbackColor="#FFFFFF"
               onChange={handleTextChange}
+              canEdit={canEdit}
             />
           </div>
         </div>

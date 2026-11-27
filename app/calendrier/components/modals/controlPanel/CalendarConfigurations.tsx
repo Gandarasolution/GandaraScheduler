@@ -533,7 +533,7 @@ export const CalendarConfigurationsEditor = ({ setting, onFormStateChange, regis
         {/* En-tête liste + bouton création */}
         <div className="flex items-center justify-between gap-3">
           <h4 className="text-sm font-semibold text-primary">Vues disponibles</h4>
-          {hasPermission(214, 23) && (
+          {hasPermission(221, 3) && (
             <button
               type="button"
               onClick={() => {

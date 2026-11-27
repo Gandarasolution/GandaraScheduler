@@ -243,10 +243,10 @@ export const CalendarViewProvider: React.FC<CalendarViewProviderProps> = ({
 
   const [viewType, setViewTypeState] = useState<ViewType>(() => {
     const savedView = getStoredValue<ViewType>('viewType', 'calendar');
-    if ((!hasPermission(232, 3) && (savedView === 'chantier-table'))
-        || (!hasPermission(231, 3) && (savedView === 'paie-table'))
-        || (!hasPermission(233, 3) && (savedView === 'manual-event-table'))
-        || (!hasPermission(234, 3) && (savedView === 'employee-table'))
+    if ((!hasPermission(232, 2) && (savedView === 'chantier-table'))
+        || (!hasPermission(231, 2) && (savedView === 'paie-table'))
+        || (!hasPermission(233, 2) && (savedView === 'manual-event-table'))
+        || (!hasPermission(234, 2) && (savedView === 'employee-table'))
     ) {
       return 'calendar';
     }
@@ -375,10 +375,10 @@ export const CalendarViewProvider: React.FC<CalendarViewProviderProps> = ({
 
   const setViewType = useCallback(
     (v: ViewType) => {
-      if ((!hasPermission(232, 3) && (v === 'chantier-table'))
-        || (!hasPermission(231, 3) && (v === 'paie-table'))
-        || (!hasPermission(233, 3) && (v === 'manual-event-table'))
-        || (!hasPermission(234, 3) && (v === 'employee-table'))
+      if ((!hasPermission(232, 2) && (v === 'chantier-table'))
+        || (!hasPermission(231, 2) && (v === 'paie-table'))
+        || (!hasPermission(233, 2) && (v === 'manual-event-table'))
+        || (!hasPermission(234, 2) && (v === 'employee-table'))
       ) {
         updatePersistedState('viewType', setViewTypeState, 'calendar' as ViewType);
         return;

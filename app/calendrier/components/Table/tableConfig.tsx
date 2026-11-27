@@ -231,93 +231,94 @@ export const getTableStructure = (viewType: string, deps: TableConfigDeps = {}):
             key: 'all',
             label: '',
             attributes: [
-            { key: 'Image', label: '', sortable: false, width:60, renderer: (value: any, item: GenericDataItem) => imageRendererEmployee(value, item as unknown as User, deps)},
-            { key: 'Code', label: 'Code', width: 100},
-            { key: 'Nom', label: 'Nom' },
-            { key: 'Prenom', label: 'Prénom'}, 
-            { key: 'Equipe', label: 'Équipe', 
-                renderer: (value: any, item: GenericDataItem) => {
-                    if (!deps?.hasPermission?.(172, 3)) {
-                        return (
-                            <div className="flex items-center justify-center w-full h-full">
-                                <span className="poppins">{value || 'Aucune équipe'}</span>
+                { key: 'Image', label: '', sortable: false, width:60, renderer: (value: any, item: GenericDataItem) => imageRendererEmployee(value, item as unknown as User, deps)},
+                { key: 'Code', label: 'Code', width: 100},
+                { key: 'Nom', label: 'Nom' },
+                { key: 'Prenom', label: 'Prénom'}, 
+                { key: 'Equipe', label: 'Équipe', 
+                    renderer: (value: any, item: GenericDataItem) => {
+                        if (!deps?.hasPermission?.(172, 3) || !deps?.hasPermission?.(234, 3)) {
+                            return (
+                                <div className="flex items-center justify-center w-full h-full">
+                                    <span className="poppins">{deps?.initialTeams?.[value]?.Nom || 'Aucune équipe'}</span>
+                                </div>
+                            );
+                        }
+
+                        if (
+                            item.isLocked &&
+                            item.isLocked.status &&
+                            Number(item.isLocked.updatedById) !== Number(deps?.user?.IdPersonnel)
+                        ) {
+                            const lockerName =
+                            item.isLocked.updatedByNom || `l'utilisateur #${item.isLocked.updatedById}`;
+                            const lockMessage = `L'employé est verrouillé par ${lockerName}`;
+
+                            return (
+                            <div
+                                className="flex items-center justify-center gap-1.5 w-full h-full px-2 text-amber-700 bg-amber-500/10 rounded-lg"
+                                title={lockMessage}
+                            >
+                                <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                                <span className="poppins text-xs font-medium truncate">
+                                {lockMessage}
+                                </span>
                             </div>
-                        );
-                    }
-
-                    if (
-                        item.isLocked &&
-                        item.isLocked.status &&
-                        Number(item.isLocked.updatedById) !== Number(deps?.user?.IdPersonnel)
-                    ) {
-                        const lockerName =
-                        item.isLocked.updatedByNom || `l'utilisateur #${item.isLocked.updatedById}`;
-                        const lockMessage = `L'employé est verrouillé par ${lockerName}`;
+                            );
+                        }
 
                         return (
-                        <div
-                            className="flex items-center justify-center gap-1.5 w-full h-full px-2 text-amber-700 bg-amber-500/10 rounded-lg"
-                            title={lockMessage}
-                        >
-                            <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-                            <span className="poppins text-xs font-medium truncate">
-                            {lockMessage}
-                            </span>
-                        </div>
+                            <TeamSelectCell
+                                item={item as unknown as User}
+                                initialTeams={deps?.initialTeams || {}}
+                                onTeamChange={deps?.onTeamChange || (async () => ({ success: true }))}
+                                setNotification={deps?.setNotification || (() => {})}
+                                lockEmployee={deps?.lockEmployee || (async () => {})}
+                                unlockEmployee={deps?.unlockEmployee || (async () => {})}
+                            />
                         );
-                    }
-
-                    return (
-                        <TeamSelectCell
-                            item={item as unknown as User}
-                            initialTeams={deps?.initialTeams || {}}
-                            onTeamChange={deps?.onTeamChange || (async () => ({ success: true }))}
-                            setNotification={deps?.setNotification || (() => {})}
-                            lockEmployee={deps?.lockEmployee || (async () => {})}
-                            unlockEmployee={deps?.unlockEmployee || (async () => {})}
-                        />
-                    );
+                    },
                 },
-            },
-            { key: 'Type', label: 'Type', 
-                renderer: (value: string) => {
-                const typeColors: Record<string, string> = {
-                    'INTERIM': 'bg-interim text-white',
-                    'SALARIE': 'bg-employee text-white',
-                };
-                const colorClass = typeColors[value] || 'bg-gray-100 text-gray-800';
-                // Capitalize first letter
-                const label = value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
-                
-                return (
-                    <div className="flex items-center justify-center w-full h-full">
-                    <span className={`inline-flex w-[80px] h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
-                        {label}
-                    </span>
-                    </div>
-                );
-                }
-            },
-            { key: 'actions', label: 'Actions', sortable: false, width: 220,
-                renderer: (_value: any, item: GenericDataItem) => (
-                    <div className="flex items-center justify-center w-full h-full">
-                        <button
-                            type="button"
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                deps.onTransfer?.(item as unknown as User);
-                            }}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors cursor-pointer"
-                        >
-                            <ArrowRightLeft className="w-4 h-4" /> 
-                            Transférer planning
-                        </button>
-                    </div>
-                )
-            }
+                { key: 'Type', label: 'Type', 
+                    renderer: (value: string) => {
+                    const typeColors: Record<string, string> = {
+                        'INTERIM': 'bg-interim text-white',
+                        'SALARIE': 'bg-employee text-white',
+                    };
+                    const colorClass = typeColors[value] || 'bg-gray-100 text-gray-800';
+                    // Capitalize first letter
+                    const label = value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+                    
+                    return (
+                        <div className="flex items-center justify-center w-full h-full">
+                        <span className={`inline-flex w-[80px] h-[25px] justify-center items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+                            {label}
+                        </span>
+                        </div>
+                    );
+                    }
+                },
+                ...deps?.hasPermission?.(234, 3) ? [
+                    { key: 'actions', label: 'Actions', sortable: false, width: 220,
+                        renderer: (_value: any, item: GenericDataItem) => (
+                            <div className="flex items-center justify-center w-full h-full">
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        deps.onTransfer?.(item as unknown as User);
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white border border-primary rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors cursor-pointer"
+                                >
+                                    <ArrowRightLeft className="w-4 h-4" /> 
+                                    Transférer planning
+                                </button>
+                            </div>
+                        )
+                    }
+                ] : []
             ]
-        }
-        ]
+        }]
     if (viewType === 'manual-event-table')
         return [
     {

@@ -65,7 +65,7 @@ const VIEW_MENU_SECTIONS: ViewMenuItem[][] = [
       headerTitle: 'Liste des chantiers',
       action: 'setView',
       target: 'chantier-table',
-      isAllowed: (hasPermission) => hasPermission(232, 3),
+      isAllowed: (hasPermission) => hasPermission(232, 2),
       isActive: (viewType) => viewType === 'chantier-table',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
@@ -79,7 +79,7 @@ const VIEW_MENU_SECTIONS: ViewMenuItem[][] = [
       headerTitle: 'Rubrique Paie',
       action: 'setView',
       target: 'paie-table',
-      isAllowed: (hasPermission) => hasPermission(231, 3),
+      isAllowed: (hasPermission) => hasPermission(231, 2),
       isActive: (viewType) => viewType === 'paie-table',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
@@ -94,7 +94,7 @@ const VIEW_MENU_SECTIONS: ViewMenuItem[][] = [
       headerTitle: 'Rubrique personnalisée',
       action: 'setView',
       target: 'manual-event-table',
-      isAllowed: (hasPermission) => hasPermission(233, 3),
+      isAllowed: (hasPermission) => hasPermission(233, 2),
       isActive: (viewType) => viewType === 'manual-event-table',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
@@ -110,7 +110,7 @@ const VIEW_MENU_SECTIONS: ViewMenuItem[][] = [
       headerTitle: 'Liste du personnel',
       action: 'setView',
       target: 'employee-table',
-      isAllowed: (hasPermission) => hasPermission(234, 3),
+      isAllowed: (hasPermission) => hasPermission(234, 2),
       isActive: (viewType) => viewType === 'employee-table',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
@@ -615,7 +615,7 @@ export const CalendarHeader = memo(({
           )}
 
           {/* Bouton Ajouter Évènement / Ressource */}
-          {(hasPermission(231, 3) || hasPermission(232, 3) || hasPermission(233, 3)) && (viewType === 'calendar' || viewType === 'manual-event-table') && (
+          {(hasPermission(231, 3) || hasPermission(232, 3) || hasPermission(233, 3)) && (viewType === 'calendar' || (viewType === 'manual-event-table' && hasPermission(233, 3))) && (
             <button
               className="transition px-3 py-2 rounded-2xl cursor-pointer text-white font-semibold shadow active:scale-95 pointer-events-auto bg-primary-500"
               type="button"
