@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Appointment, Item, User } from '../../types';
 import { CELL_WIDTH, DAY_INTERVALS, HALF_DAY_INTERVALS, HOUR_MS, CELL_HEIGHT } from '../../utils/constants';
 import { getRowId } from '../../utils/domIds';
@@ -63,31 +63,6 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   onLockedError,
   rowBackgroundColor = 'transparent'
 }) => {
-  const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
-
-  useEffect(() => {
-    setExpandedGroups({});
-  }, [collapseTrigger]);
-
-  const handleAppointmentResize = useCallback((id: number, newStartDate: number, newEndDate: number, resizeDirection: 'left' | 'right', priority: number) => {
-    const appointmentToResize = appointments.find((app) => app.IdPlanningEvenement === id);
-    if (!appointmentToResize) return;
-
-    onAppointmentMoved(
-      {
-        id,
-        newStartDate,
-        newEndDate,
-        newEmployeeId: employee.IdPersonnel as number,
-        idRessource: appointmentToResize.IdPlanningRessource as number,
-        resizeDirection,
-      },
-      true,
-      priority
-    );
-  }, [onAppointmentMoved, employee.IdPersonnel, appointments]);
-
-  const timelineStart = dayInTimeline[0] || 0;
 
   const overlappingGroups = useMemo(() => {
     if (!appointments.length) return [];
@@ -137,6 +112,36 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
 
     return groups;
   }, [appointments, employee.IdPersonnel, visibleWindowEnd, visibleWindowStart]);
+
+  const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
+  const overlappingGroupsRef = useRef(overlappingGroups);
+  overlappingGroupsRef.current = overlappingGroups;
+
+  useEffect(() => {
+    setExpandedGroups({});
+  }, [collapseTrigger]);
+
+  const handleAppointmentResize = useCallback((id: number, newStartDate: number, newEndDate: number, resizeDirection: 'left' | 'right', priority: number) => {
+    const appointmentToResize = appointments.find((app) => app.IdPlanningEvenement === id);
+    if (!appointmentToResize) return;
+
+    onAppointmentMoved(
+      {
+        id,
+        newStartDate,
+        newEndDate,
+        newEmployeeId: employee.IdPersonnel as number,
+        idRessource: appointmentToResize.IdPlanningRessource as number,
+        resizeDirection,
+      },
+      true,
+      priority
+    );
+  }, [onAppointmentMoved, employee.IdPersonnel, appointments]);
+
+  const timelineStart = dayInTimeline[0] || 0;
+
+  
 
   useEffect(() => {
     const hiddenOverlapCount = overlappingGroups.reduce(
@@ -207,13 +212,15 @@ const EmployeeRow: React.FC<EmployeeRowProps> = ({
   }, [overlappingGroups, timelineStart, isFullDay, isDisplayWeekend, tagPlacement, expandedGroups]);
 
   useEffect(() => {
-    if (expandTrigger === undefined) return;
+    if (!expandTrigger) return;
     setExpandedGroups((previous) => {
       const next = { ...previous };
-      overlappingGroups.forEach((group) => { next[group.key] = true; });
+      overlappingGroupsRef.current.forEach((group) => {
+        next[group.key] = true;
+      });
       return next;
     });
-  }, [expandTrigger, overlappingGroups]);
+  }, [expandTrigger]);
 
   useEffect(() => {
     const maxExpandedOverlap = overlappingGroups.reduce((maxOverlap, group) => {

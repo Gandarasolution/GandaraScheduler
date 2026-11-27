@@ -583,7 +583,7 @@ export const CalendarHeader = memo(({
 
           {/* Toggle Weekend / Full Day */}
           {viewType === 'calendar' && (
-            <div className="border border-default rounded-xl flex items-center multi-op">
+            <div className="border border-default rounded-xl flex items-center multi-op bg-secondary">
               <button
                 type="button"
                 className="transition btn-header cursor-pointer border-r border-default px-3 py-2"

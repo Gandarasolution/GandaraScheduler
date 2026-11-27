@@ -87,6 +87,7 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   const [expandedOverlapCounts, setExpandedOverlapCounts] = useState<Record<number, number>>({});
   const [hiddenOverlapCounts, setHiddenOverlapCounts] = useState<Record<number, number>>({});
   const [scrollLeftQuantized, setScrollLeftQuantized] = useState(0);
+  const userCollapsedEmployeesRef = useRef<Set<number>>(new Set());
 
   const employeeHeights = useMemo(() => {
     return employees.map(employee => {
@@ -206,11 +207,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
     setExpandedOverlapRows((previous) => {
       let hasChanged = false;
       const next: Record<number, boolean> = {};
+
       overlappingEmployeeIds.forEach((employeeId) => {
-        const val = previous[employeeId] ?? true;
+        const isManuallyCollapsed = userCollapsedEmployeesRef.current.has(employeeId);
+        const val = isManuallyCollapsed ? false : (previous[employeeId] ?? false);
         next[employeeId] = val;
         if (previous[employeeId] !== val) hasChanged = true;
       });
+
       if (!hasChanged && Object.keys(previous).length === overlappingEmployeeIds.size) {
         return previous;
       }
@@ -346,12 +350,14 @@ const DesktopCalendarGrid: React.FC<DesktopCalendarGridProps> = ({
   }, []);
 
   const handleCollapseRow = useCallback((employeeId: number) => {
+    userCollapsedEmployeesRef.current.add(employeeId);
     setExpandedOverlapRows(prev => ({ ...prev, [employeeId]: false }));
     setExpandedOverlapCounts(prev => ({ ...prev, [employeeId]: 0 }));
     setCollapseTriggers(prev => ({ ...prev, [employeeId]: (prev[employeeId] || 0) + 1 }));
   }, []);
 
   const handleExpandRow = useCallback((employeeId: number) => {
+    userCollapsedEmployeesRef.current.delete(employeeId);
     setExpandedOverlapRows(prev => ({ ...prev, [employeeId]: true }));
     setExpandTriggers(prev => ({ ...prev, [employeeId]: (prev[employeeId] || 0) + 1 }));
   }, []);
